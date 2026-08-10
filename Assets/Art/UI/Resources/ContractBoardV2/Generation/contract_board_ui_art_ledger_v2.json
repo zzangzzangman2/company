@@ -1,0 +1,726 @@
+{
+  "schema": "family-company.contract-board-ui-art.v2",
+  "generator": "Codex built-in image_gen",
+  "fallback_used": false,
+  "reference_screenshot": "C:\\Users\\godho\\AppData\\Local\\Temp\\codex-clipboard-d3b7b44c-e14a-442f-92ec-a7a6f7364614.png",
+  "selected_mockup": "A",
+  "selection_reason": "A preserves the clearest three-card information rhythm, gives the bottom two contracts equal weight, and decomposes cleanly into reusable 9-slice surfaces with less decorative frame overhead.",
+  "rejected_mockup_b_reason": "B has stronger nostalgia but its leather header and layered folder tabs consume more content area and increase small-resolution hierarchy risk.",
+  "rejected_generated_motif": "alert_rejected was not exported because its exclamation symbol could be read as baked glyph content.",
+  "prompts": {
+    "mockup_a": "EDIT AND REDESIGN REFERENCE: use the supplied current family-company contract-board screenshot only as an information-architecture reference; replace its visual design completely. Create a shippable 2048x1152, exact 16:9 game UI mockup for an early-2000s Korean family-company management game, warm hand-painted 2D illustration with restrained nostalgic stationery and accounting-ledger motifs, but modern production-grade pixel-perfect alignment. HARD REQUIREMENTS: 64 px safe area, 24 px primary gutters, crisp orthogonal grid. Top opaque HUD bar about 92 px high. Left opaque family column about 300 px wide containing exactly four equal stacked portrait/stat cards with generous empty portrait frames and stat bar placeholders. Center contains exactly three equal-width opaque request cards in one row, with consistent title zone, metadata zones, body zones, reward strip, and one button zone each. Bottom center contains one opaque progress-contract tray with exactly two equal contract slots. Right contains one opaque quick-actions rail with a precise 2-column by 3-row button grid. Main surfaces are solid high-contrast warm ivory, never transparent; background is a dedicated low-contrast illustrated contract-board/ledger desk scene, clearly not the observed office room. Unified 14 px corner radius, 2 px dark-teal ink border, one consistent soft shadow, warm ivory, muted teal, dusty coral, honey-gold accent palette, dark ink reserved for future text contrast 4.5:1. Show selected tab and normal/hover/pressed/disabled button appearances through color and depth only. ABSOLUTELY NO letters, numbers, Korean, English, fake writing, glyphs, logos, watermark, captions, or readable text anywhere; use only blank rectangles, short neutral rule lines, empty portrait frames and icon-free shapes. No overlapping controls, no cut-off corner element, no glass panels, no office showing through content. Straight-on UI presentation, no perspective, no device frame.",
+    "mockup_b": "EDIT AND REDESIGN REFERENCE: use the supplied current family-company contract-board screenshot only as an information-architecture reference; discard its existing visual style. Create an alternate shippable 2048x1152, exact 16:9 game UI mockup for an early-2000s Korean family-company management game. Art direction: warm illustrated Korean stationery shop meets family bookkeeping desk—cloth-bound ledger, index cards, subtle wood and paper fibers—yet the layout is a contemporary game HUD with exact pixel alignment and strong hierarchy. HARD GRID: 64 px safe area, 20-24 px gutters, top opaque status shelf, left column with exactly four equal family cards and large empty portrait wells, center with exactly three equal request-folder cards, bottom with exactly two equal ongoing-contract cards, right narrow rail with exactly six quick-action buttons in 2x3. Use solid opaque cream and pale celadon surfaces over a very low-contrast dedicated contract board backdrop; never show the office through panels. One shared 12-14 px radius, one consistent dark brown-teal keyline, one consistent down-right shadow. Palette warm cream, kraft beige, celadon teal, persimmon coral, mustard-gold, very dark ink for future readable text. Include a clear selected tab and five distinct button visual states—normal, hover, pressed, disabled, selected—using blank sample controls and color/depth only. ABSOLUTELY NO readable text, no letters, no numbers, no Korean, no English, no fake handwriting, no glyphs, no logos, no watermark. Placeholder content must be empty blocks, bars, dots, or portrait silhouettes only. No bevel mismatch, crooked lines, overlaps, cropped top-right elements, translucent panels, or perspective. Straight-on full-screen UI mockup.",
+    "background": "EDIT STYLE REFERENCE: derive only the warm early-2000s Korean family-company bookkeeping atmosphere and palette from the supplied selected UI mockup. Produce a standalone exact 16:9, 2048x1152-ready LOW-CONTRAST CONTRACT BOARD BACKGROUND illustration with no UI panels at all: straight-on warm walnut desk surface and large muted kraft accounting ledger sheets, faint blank grid rulings, subtle cloth-bound ledger corners, one understated brass clip and soft ambient vignette. The center 80 percent must stay calm, low-detail and low-contrast so opaque UI surfaces remain readable. Distinct from an office observation room: NO office desks, windows, computers, people or chairs. Warm cream, walnut, muted teal and honey accents. ABSOLUTELY NO writing, no letters, no numbers, no Korean, no English, no fake handwriting, no logos, no watermark, no interface frames, no readable marks.",
+    "panels": "EDIT STYLE REFERENCE: extract the selected mockup's warm ivory, muted teal, honey-gold and dark-teal-ink visual language into a clean Unity UI skin source atlas. Pure uniform #FF00FF chroma-key background covering every pixel outside the assets. Straight-on orthographic shapes, no perspective. EXACTLY a 3-row by 2-column grid with six isolated blank assets and very large gutters, no touching: row 1 = one wide blank outer panel shell, one tall blank request card; row 2 = one horizontal blank family stat card, one wide blank ongoing-contract tray; row 3 = one blank normal tab, one blank selected tab. Every asset uses the SAME 14px-style rounded corner, 2px dark-teal keyline, warm ivory opaque fill, and consistent restrained down-right shadow; selected tab uses muted teal fill and honey edge. Interiors completely blank and uniform so they can be 9-sliced; corners crisp and symmetrical. ABSOLUTELY NO text, letters, numbers, Korean, English, fake writing, icons, dots, portrait, logo, watermark, labels, separators or grid lines inside the assets. No decorative objects, no background texture beyond very subtle paper grain on the assets. Exactly six assets, never add extras.",
+    "buttons": "EDIT STYLE REFERENCE: create a Unity UI button-state source strip matching the selected mockup. Pure uniform #FF00FF chroma-key background outside assets. EXACTLY one row of five isolated identical-size wide rounded rectangle buttons with large equal gutters, straight-on, no perspective. Left to right states: normal warm ivory with muted-teal rim; hover slightly brighter with a clean honey highlight; pressed visibly inset/down with shorter shadow and darker fill; disabled low-saturation gray-beige with reduced contrast; selected solid muted teal with a honey-gold inner rim. Same 14px-style radius, 2px dark-teal keyline, restrained consistent shadow family. Button faces entirely blank. ABSOLUTELY NO text, letters, numbers, Korean, English, icons, glyphs, dots, fake writing, labels, watermark, logo, extra shapes or extra buttons. Exactly five buttons.",
+    "icons": "EDIT STYLE REFERENCE: create a compact Unity UI icon and badge motif source atlas matching the selected warm family-company ledger UI. Pure uniform #FF00FF chroma-key background outside motifs. EXACTLY a 2-row by 4-column grid, eight isolated centered motifs with large equal gutters and no touching. Row 1: blank wax-seal badge silhouette, simple analog clock face with hands but no numerals, stacked coin motif with no currency mark, three-bar progress motif. Row 2: folder-tab motif, brass pushpin motif, simple family group silhouette medallion with four abstract heads, small alert badge made only of an exclamation-like geometric notch without any letter. Warm ivory, muted teal, dusty coral, honey gold, dark-teal outlines, restrained soft shadow, straight-on, no perspective. ABSOLUTELY NO text, letters, numbers, Korean, English, currency symbols, fake writing, logos, watermark or extra motifs. Exactly eight motifs."
+  },
+  "records": {
+    "mockup_a": {
+      "original_path": "Assets/Art/UI/Resources/ContractBoardV2/Mockups/SourceOriginal/contract_board_mockup_a_original_v2.png",
+      "original_sha256": "8949ee059cad1a0bb13f1d46a5a5f526177a8f17378f4e2d8a12787381839512",
+      "final_path": "Assets/Art/UI/Resources/ContractBoardV2/Mockups/Final/contract_board_mockup_a_2048x1152_v2.png",
+      "final_sha256": "e77716f3d95c12b2138d4dcc7c55151b502d46223893c29d7428a85888f30e4f",
+      "original_size": [
+        1672,
+        941
+      ],
+      "final_size": [
+        2048,
+        1152
+      ]
+    },
+    "mockup_b": {
+      "original_path": "Assets/Art/UI/Resources/ContractBoardV2/Mockups/SourceOriginal/contract_board_mockup_b_original_v2.png",
+      "original_sha256": "8ee5f4d33e3e5d27b615f5ca7b0f67d3b2040acca952f4c15e9655e5c8185db8",
+      "final_path": "Assets/Art/UI/Resources/ContractBoardV2/Mockups/Final/contract_board_mockup_b_2048x1152_v2.png",
+      "final_sha256": "5242f028cba8661959560b66d526e57f266a453a97e1bf94e6e4323bcf055e8c",
+      "original_size": [
+        1672,
+        941
+      ],
+      "final_size": [
+        2048,
+        1152
+      ]
+    },
+    "background": {
+      "original_path": "Assets/Art/UI/Resources/ContractBoardV2/Background/SourceOriginal/contract_board_background_original_v2.png",
+      "original_sha256": "8ecc0e6cd62a8afd5c7abfd2d104ab3ef0a28740edd8a5f2fed8a0428e80eaba",
+      "final_path": "Assets/Art/UI/Resources/ContractBoardV2/Background/Final/contract_board_background_2048x1152_v2.png",
+      "final_sha256": "61e860a474daf8c02296470a8178a120d4f3a06f40df83907fcd3874fce79b54",
+      "original_size": [
+        1672,
+        941
+      ],
+      "final_size": [
+        2048,
+        1152
+      ]
+    },
+    "panels_source": {
+      "original_path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/SourceOriginal/contract_board_panels_chroma_original_v2.png",
+      "original_sha256": "6ef2917fe6cf140b089756ed565c9fa5827815f008cf07e30e1d4ed27aee7fd2",
+      "alpha_path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/SourceAlpha/contract_board_panels_alpha_v2.png",
+      "alpha_sha256": "af7479d22969762dc25b1ec3b0aaad4439055b1d77193bc83148db57e9eacd1a",
+      "original_size": [
+        1448,
+        1086
+      ],
+      "alpha_size": [
+        1448,
+        1086
+      ]
+    },
+    "buttons_source": {
+      "original_path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/SourceOriginal/contract_board_buttons_chroma_original_v2.png",
+      "original_sha256": "b4cc4c3ccda38db668e66ef170758929040e9259161d603d8aa15d22c3b0aca3",
+      "alpha_path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/SourceAlpha/contract_board_buttons_alpha_v2.png",
+      "alpha_sha256": "090297ac9fb1c5a73c905675fba7bf8a2e4b04bd4fd73f64c3fb7d14a4910452",
+      "original_size": [
+        1983,
+        793
+      ],
+      "alpha_size": [
+        1983,
+        793
+      ]
+    },
+    "icons_source": {
+      "original_path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/SourceOriginal/contract_board_icons_chroma_original_v2.png",
+      "original_sha256": "3057d4d90b06739040dd2aa79a9770413189edd2c400a66d32b8989dc0136e67",
+      "alpha_path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/SourceAlpha/contract_board_icons_alpha_v2.png",
+      "alpha_sha256": "a3efe4965ac80697f587ced3e2af9873016bdb929f8187688f4275b4d5a63f90",
+      "original_size": [
+        1672,
+        941
+      ],
+      "alpha_size": [
+        1672,
+        941
+      ]
+    }
+  },
+  "final_assets": [
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Panels/contract_board_panel_9slice_v2.png",
+      "sha256": "64888cdb02843fd02f7596eff275197f73fb4eb5109c5553049f0f8ec17c518e",
+      "size": [
+        1024,
+        512
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 15247,
+      "sprite_border": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Panels/contract_board_request_card_9slice_v2.png",
+      "sha256": "ccfb6f46983530aeecf83e0be410806bfe1faef4fef88e67108c5251efafb1be",
+      "size": [
+        512,
+        640
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 12938,
+      "sprite_border": [
+        48,
+        48,
+        48,
+        48
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Panels/contract_board_family_card_9slice_v2.png",
+      "sha256": "0c0061bde7acbef82795bd1489065d9df59d808454f154687f112518315f44b3",
+      "size": [
+        640,
+        320
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 10883,
+      "sprite_border": [
+        48,
+        48,
+        48,
+        48
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Panels/contract_board_contract_tray_9slice_v2.png",
+      "sha256": "668dd2504281735773e900cbb57a9751ca2edd9c3734a3cdc3ecabb15f69ceef",
+      "size": [
+        1024,
+        320
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 15236,
+      "sprite_border": [
+        48,
+        48,
+        48,
+        48
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Panels/contract_board_tab_normal_9slice_v2.png",
+      "sha256": "5a3af8fa7a1893814d87a0a612fbd930b3d03849e15c57dd9a706a3de67fc5c3",
+      "size": [
+        512,
+        160
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 4605,
+      "sprite_border": [
+        40,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Panels/contract_board_tab_selected_9slice_v2.png",
+      "sha256": "79c4aef8bebc2b0688de505bccc15ba82c3a0983564a2bb0407bb3c68cb6c037",
+      "size": [
+        512,
+        160
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 4669,
+      "sprite_border": [
+        40,
+        40,
+        40,
+        40
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Buttons/contract_board_button_normal_9slice_v2.png",
+      "sha256": "cd0c363990bf6edbdd1591a5852b6b0cdb5b6805ba6a4a98a6a296626a9c7267",
+      "size": [
+        384,
+        128
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 1753,
+      "sprite_border": [
+        36,
+        36,
+        36,
+        36
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Buttons/contract_board_button_hover_9slice_v2.png",
+      "sha256": "55d60101787abbd7f477ff0e84f9d9a4153df329e3bf4c115fa9647992a09969",
+      "size": [
+        384,
+        128
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 1824,
+      "sprite_border": [
+        36,
+        36,
+        36,
+        36
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Buttons/contract_board_button_pressed_9slice_v2.png",
+      "sha256": "93dba47aad97023f85dacc96b0fb7589e90cc8abd2278b0d1d9be854fd9d2f05",
+      "size": [
+        384,
+        128
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 1875,
+      "sprite_border": [
+        36,
+        36,
+        36,
+        36
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Buttons/contract_board_button_disabled_9slice_v2.png",
+      "sha256": "a6cf1b726dd593f479ab7a5380cef28daba025ab16de98c7af11430a167b4605",
+      "size": [
+        384,
+        128
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 1907,
+      "sprite_border": [
+        36,
+        36,
+        36,
+        36
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Buttons/contract_board_button_selected_9slice_v2.png",
+      "sha256": "b22f6af45de908153e64b8f77a73d2eea12ff85a9b64b7f6cf9f7954ecb82ce7",
+      "size": [
+        384,
+        128
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 1858,
+      "sprite_border": [
+        36,
+        36,
+        36,
+        36
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Icons/contract_board_icon_seal_blank_v2.png",
+      "sha256": "04feefb47ab6419fbaa486a181b51bf5d5f12b5bfcb12e0c8e81849fd63de52e",
+      "size": [
+        256,
+        256
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 2822,
+      "sprite_border": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Icons/contract_board_icon_clock_v2.png",
+      "sha256": "f6f41e6f94bd0ecdbf82c2565c9558cda5739e720f93c1877120b8b8e086ed4c",
+      "size": [
+        256,
+        256
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 2759,
+      "sprite_border": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Icons/contract_board_icon_coins_v2.png",
+      "sha256": "5b78528cd187e1fdc45ac4d985ebf800694e47e1b6d3db2b96077e5a04b68003",
+      "size": [
+        256,
+        256
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 3104,
+      "sprite_border": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Icons/contract_board_icon_progress_v2.png",
+      "sha256": "8ec8c6dc3a82e918aba5da0aa12c1f779a5cf5c7637353f6c1fd421006b69670",
+      "size": [
+        256,
+        256
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 1954,
+      "sprite_border": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Icons/contract_board_icon_folder_v2.png",
+      "sha256": "15276cb442981d2714c2e35c81910cc00e2be06d734d10b5eee48d83e8bdb348",
+      "size": [
+        256,
+        256
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 3256,
+      "sprite_border": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Icons/contract_board_icon_pin_v2.png",
+      "sha256": "6a979cce6d8e3a1d81fd61c6450595d8eead8ba56eed5d4851c7a7edb710f985",
+      "size": [
+        256,
+        256
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 2537,
+      "sprite_border": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "Assets/Art/UI/Resources/ContractBoardV2/Skin/Final/Icons/contract_board_icon_family_v2.png",
+      "sha256": "f29e9fe4b50cc5fc9494a665d3737701d508e27844cd04d3b33f4ce7c27ab5ca",
+      "size": [
+        256,
+        256
+      ],
+      "alpha_min": 0,
+      "alpha_max": 255,
+      "partial_alpha_pixels": 2744,
+      "sprite_border": [
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "qa": {
+    "path": "Assets/Art/UI/Resources/ContractBoardV2/QA/contract_board_skin_kit_contact_v2.png",
+    "sha256": "6160e315a7e75086447e72cb707d0af018bd56b5d58fa1a9e483d834ffe32a22",
+    "size": [
+      2048,
+      1152
+    ],
+    "alpha_min": 255,
+    "alpha_max": 255,
+    "partial_alpha_pixels": 0,
+    "sprite_border": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "import_policy": {
+    "filter": "Bilinear",
+    "mipmaps": false,
+    "compression": "Uncompressed",
+    "pixels_per_unit": 100,
+    "pivot": [
+      0.5,
+      0.5
+    ]
+  },
+  "implementation_contract": {
+    "mockup_is_reference_only": true,
+    "runtime_consumes": [
+      "Background/Final",
+      "Skin/Final"
+    ],
+    "layout": "Unity grid anchors and 9-slice assets; never a single clickable background image"
+  },
+  "qa_metrics": {
+    "final_unique_sha256_count": 18,
+    "alpha_edge_stats": {
+      "contract_board_panel_9slice_v2.png": {
+        "size": [
+          1024,
+          512
+        ],
+        "partial_alpha_pixels": 15247,
+        "visible_bbox": [
+          18,
+          10,
+          1005,
+          501
+        ]
+      },
+      "contract_board_request_card_9slice_v2.png": {
+        "size": [
+          512,
+          640
+        ],
+        "partial_alpha_pixels": 12938,
+        "visible_bbox": [
+          15,
+          10,
+          495,
+          629
+        ]
+      },
+      "contract_board_family_card_9slice_v2.png": {
+        "size": [
+          640,
+          320
+        ],
+        "partial_alpha_pixels": 10883,
+        "visible_bbox": [
+          15,
+          10,
+          623,
+          309
+        ]
+      },
+      "contract_board_contract_tray_9slice_v2.png": {
+        "size": [
+          1024,
+          320
+        ],
+        "partial_alpha_pixels": 15236,
+        "visible_bbox": [
+          53,
+          10,
+          970,
+          309
+        ]
+      },
+      "contract_board_tab_normal_9slice_v2.png": {
+        "size": [
+          512,
+          160
+        ],
+        "partial_alpha_pixels": 4605,
+        "visible_bbox": [
+          10,
+          24,
+          501,
+          135
+        ]
+      },
+      "contract_board_tab_selected_9slice_v2.png": {
+        "size": [
+          512,
+          160
+        ],
+        "partial_alpha_pixels": 4669,
+        "visible_bbox": [
+          10,
+          24,
+          501,
+          135
+        ]
+      },
+      "contract_board_button_normal_9slice_v2.png": {
+        "size": [
+          384,
+          128
+        ],
+        "partial_alpha_pixels": 1753,
+        "visible_bbox": [
+          98,
+          8,
+          285,
+          119
+        ]
+      },
+      "contract_board_button_hover_9slice_v2.png": {
+        "size": [
+          384,
+          128
+        ],
+        "partial_alpha_pixels": 1824,
+        "visible_bbox": [
+          98,
+          8,
+          284,
+          119
+        ]
+      },
+      "contract_board_button_pressed_9slice_v2.png": {
+        "size": [
+          384,
+          128
+        ],
+        "partial_alpha_pixels": 1875,
+        "visible_bbox": [
+          99,
+          8,
+          284,
+          119
+        ]
+      },
+      "contract_board_button_disabled_9slice_v2.png": {
+        "size": [
+          384,
+          128
+        ],
+        "partial_alpha_pixels": 1907,
+        "visible_bbox": [
+          98,
+          8,
+          284,
+          119
+        ]
+      },
+      "contract_board_button_selected_9slice_v2.png": {
+        "size": [
+          384,
+          128
+        ],
+        "partial_alpha_pixels": 1858,
+        "visible_bbox": [
+          99,
+          8,
+          284,
+          119
+        ]
+      },
+      "contract_board_icon_seal_blank_v2.png": {
+        "size": [
+          256,
+          256
+        ],
+        "partial_alpha_pixels": 2822,
+        "visible_bbox": [
+          16,
+          16,
+          239,
+          239
+        ]
+      },
+      "contract_board_icon_clock_v2.png": {
+        "size": [
+          256,
+          256
+        ],
+        "partial_alpha_pixels": 2759,
+        "visible_bbox": [
+          18,
+          16,
+          237,
+          239
+        ]
+      },
+      "contract_board_icon_coins_v2.png": {
+        "size": [
+          256,
+          256
+        ],
+        "partial_alpha_pixels": 3104,
+        "visible_bbox": [
+          27,
+          16,
+          227,
+          239
+        ]
+      },
+      "contract_board_icon_progress_v2.png": {
+        "size": [
+          256,
+          256
+        ],
+        "partial_alpha_pixels": 1954,
+        "visible_bbox": [
+          16,
+          89,
+          239,
+          166
+        ]
+      },
+      "contract_board_icon_folder_v2.png": {
+        "size": [
+          256,
+          256
+        ],
+        "partial_alpha_pixels": 3256,
+        "visible_bbox": [
+          16,
+          38,
+          239,
+          217
+        ]
+      },
+      "contract_board_icon_pin_v2.png": {
+        "size": [
+          256,
+          256
+        ],
+        "partial_alpha_pixels": 2537,
+        "visible_bbox": [
+          63,
+          16,
+          191,
+          239
+        ]
+      },
+      "contract_board_icon_family_v2.png": {
+        "size": [
+          256,
+          256
+        ],
+        "partial_alpha_pixels": 2744,
+        "visible_bbox": [
+          20,
+          16,
+          235,
+          239
+        ]
+      }
+    },
+    "dark_ink_rgb": [
+      36,
+      52,
+      54
+    ],
+    "surface_contrast": {
+      "contract_board_panel_9slice_v2.png": {
+        "median_surface_rgb": [
+          252,
+          240,
+          222
+        ],
+        "dark_ink_contrast": 11.521
+      },
+      "contract_board_request_card_9slice_v2.png": {
+        "median_surface_rgb": [
+          252,
+          240,
+          222
+        ],
+        "dark_ink_contrast": 11.521
+      },
+      "contract_board_family_card_9slice_v2.png": {
+        "median_surface_rgb": [
+          252,
+          241,
+          223
+        ],
+        "dark_ink_contrast": 11.6
+      },
+      "contract_board_contract_tray_9slice_v2.png": {
+        "median_surface_rgb": [
+          252,
+          240,
+          223
+        ],
+        "dark_ink_contrast": 11.528
+      }
+    },
+    "project_guid_count": 2600
+  }
+}
