@@ -127,7 +127,8 @@ function Get-CanonicalBuildSnapshot {
     $head = Invoke-CanonicalGitText $project @('rev-parse', 'HEAD')
     $branch = Invoke-CanonicalGitText $project @('branch', '--show-current')
     $diff = Invoke-CanonicalGitText $project @(
-        'diff', '--no-ext-diff', '--binary', 'HEAD', '--', 'Assets', 'Packages', 'ProjectSettings')
+        'diff', '--no-ext-diff', '--binary', '--ignore-space-at-eol', 'HEAD', '--',
+        'Assets', 'Packages', 'ProjectSettings')
     $untrackedText = Invoke-CanonicalGitText $project @(
         'ls-files', '--others', '--exclude-standard', '--', 'Assets', 'Packages', 'ProjectSettings')
     $untracked = @()
