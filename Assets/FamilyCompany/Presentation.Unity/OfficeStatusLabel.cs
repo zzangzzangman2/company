@@ -8,11 +8,19 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private OfficeWorkerAgent agent;
         [SerializeField] private TextMesh textMesh;
 
+        public OfficeWorkerAgent Agent => agent;
+
         public void Configure(string newDisplayName, OfficeWorkerAgent newAgent, TextMesh newTextMesh)
         {
             displayName = newDisplayName ?? string.Empty;
             agent = newAgent;
             textMesh = newTextMesh;
+            Refresh();
+        }
+
+        public void SetDisplayName(string newDisplayName)
+        {
+            displayName = newDisplayName ?? string.Empty;
             Refresh();
         }
 
@@ -30,4 +38,3 @@ namespace FamilyCompany.Presentation.Unity
         }
     }
 }
-

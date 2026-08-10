@@ -269,6 +269,10 @@ namespace FamilyCompany.Editor
                 throw new InvalidOperationException("Pixelated camera effect is missing.");
             }
 
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<Presentation.Unity.PrototypeBootstrap>();
+            if (bootstrap == null) throw new InvalidOperationException("Prototype bootstrap is missing.");
+            bootstrap.InitializeNow();
+            var coordinator = bootstrap.InitializeOfficeTaskBridgeNow();
             var agents = UnityEngine.Object.FindObjectsByType<Presentation.Unity.OfficeWorkerAgent>(FindObjectsSortMode.None);
             if (agents.Length < 3)
             {
@@ -286,6 +290,16 @@ namespace FamilyCompany.Editor
             if (agents.All(agent => agent.AgentId != "older_sister"))
             {
                 throw new InvalidOperationException("Moving older sister agent is missing.");
+            }
+
+            if (agents.All(agent => agent.AgentId != "father") || agents.All(agent => agent.AgentId != "mother"))
+            {
+                throw new InvalidOperationException("Moving parent placeholder agents are missing.");
+            }
+
+            if (agents.Any(agent => agent.AgentId == "employee_a" || agent.AgentId == "employee_b"))
+            {
+                throw new InvalidOperationException("The four-person starting company still contains hired employee placeholders.");
             }
 
             foreach (var movingAgent in agents)
@@ -308,6 +322,59 @@ namespace FamilyCompany.Editor
                         $"Agent {movingAgent.AgentId} did not physically traverse the office route.");
                 }
             }
+
+            ValidatePhysicalContractWork(bootstrap, coordinator, agents);
+        }
+
+        private static void ValidatePhysicalContractWork(
+            Presentation.Unity.PrototypeBootstrap bootstrap,
+            Presentation.Unity.OfficeContractTaskCoordinator coordinator,
+            Presentation.Unity.OfficeWorkerAgent[] agents)
+        {
+            if (coordinator == null) throw new InvalidOperationException("Office contract task coordinator is missing.");
+            var offer = new SubcontractOffer(
+                "physical-office-contract",
+                "physical-validation-client",
+                "실제 이동 검증용 고객사",
+                ContractServiceType.WebsiteMaintenance,
+                "홈페이지 출력물 최종 확인",
+                1,
+                4,
+                2,
+                50_000,
+                300_000,
+                0);
+            var acceptance = bootstrap.State.Contracts.Accept(
+                offer,
+                bootstrap.State.Company,
+                bootstrap.State.Time.ElapsedMinutes);
+            AssertEqual(true, acceptance.Accepted, "physical contract accepted");
+
+            var sister = agents.First(agent => agent.AgentId == "older_sister");
+            foreach (var candidate in agents)
+            {
+                candidate.GetComponent<CharacterController>().enabled = candidate == sister;
+            }
+
+            sister.InitializeNow();
+            coordinator.ResetAssignments();
+            coordinator.InitializeNow();
+            var start = sister.transform.position;
+            AssertEqual(true, coordinator.AssignContractWork(offer.OfferId, "older_sister", 4), "physical contract assigned");
+            for (var index = 0; index < 1600 && coordinator.CompletedTaskCount == 0; index++)
+            {
+                sister.Tick(0.05f);
+            }
+
+            if (Vector3.Distance(start, sister.transform.position) < 0.5f)
+            {
+                throw new InvalidOperationException("Assigned family member did not physically move to contract work.");
+            }
+
+            AssertEqual(1, coordinator.CompletedTaskCount, "physical task completion count");
+            AssertEqual(offer.OfferId, coordinator.LastCompletedOfferId, "physical task offer ID");
+            AssertEqual(true, coordinator.LastWorkResult != null && coordinator.LastWorkResult.Completed, "physical task contract completion");
+            AssertEqual(SubcontractStatus.Completed, bootstrap.State.Contracts.Get(offer.OfferId).Status, "physical contract status");
         }
 
         private static void AssertEqual<T>(T expected, T actual, string label)

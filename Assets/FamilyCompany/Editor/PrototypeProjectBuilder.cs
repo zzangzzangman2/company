@@ -45,7 +45,7 @@ namespace FamilyCompany.Editor
             scene.name = "Prototype01";
 
             var systems = new GameObject("Systems");
-            systems.AddComponent<PrototypeBootstrap>();
+            var bootstrap = systems.AddComponent<PrototypeBootstrap>();
 
             var environment = new GameObject("Environment");
             CreateHome(environment.transform);
@@ -54,9 +54,13 @@ namespace FamilyCompany.Editor
 
             var characters = new GameObject("Characters");
             var player = CreatePlayer(characters.transform);
-            CreateParentPlaceholders(characters.transform);
             CreateSister(characters.transform, officeLayout);
-            CreateMovingWorkers(characters.transform, officeLayout);
+            CreateMovingFamilyPlaceholders(characters.transform, officeLayout);
+            var coordinator = systems.AddComponent<OfficeContractTaskCoordinator>();
+            coordinator.Configure(
+                bootstrap,
+                characters.GetComponentsInChildren<OfficeWorkerAgent>(),
+                officeLayout.AllWaypoints);
             CreateCamera(player.transform);
             CreateLighting();
 
@@ -276,7 +280,7 @@ namespace FamilyCompany.Editor
             CreateStatusLabel("누나 · 20살", agent, sister.transform, 2.25f);
         }
 
-        private static void CreateMovingWorkers(Transform parent, OfficeLayout office)
+        private static void CreateMovingFamilyPlaceholders(Transform parent, OfficeLayout office)
         {
             var blue = GetMaterial("WorkerBlue", new Color(0.32f, 0.64f, 0.82f));
             var coral = GetMaterial("WorkerCoral", new Color(0.88f, 0.49f, 0.39f));
@@ -292,8 +296,8 @@ namespace FamilyCompany.Editor
                 office.CorridorEast, office.CorridorCenter, office.CorridorWest, office.Reception,
                 office.CorridorWest, office.CorridorCenter
             };
-            CreateWorkerPlaceholder("employee_a", "직원 A", blue, routeA, 0, 1.45f, parent);
-            CreateWorkerPlaceholder("employee_b", "직원 B", coral, routeB, 0, 1.55f, parent);
+            CreateWorkerPlaceholder("father", "아빠 · 46살 · 임시 에셋", blue, routeA, 0, 1.45f, parent);
+            CreateWorkerPlaceholder("mother", "엄마 · 44살 · 임시 에셋", coral, routeB, 0, 1.55f, parent);
         }
 
         private static void CreateWorkerPlaceholder(
@@ -559,6 +563,12 @@ namespace FamilyCompany.Editor
             public OfficeWaypoint Printer;
             public OfficeWaypoint Meeting;
             public OfficeWaypoint Lounge;
+
+            public OfficeWaypoint[] AllWaypoints => new[]
+            {
+                Reception, CorridorWest, CorridorCenter, CorridorEast,
+                DeskA, DeskB, DeskC, DeskD, Printer, Meeting, Lounge
+            };
         }
     }
 }

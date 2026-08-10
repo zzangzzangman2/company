@@ -15,19 +15,48 @@ namespace FamilyCompany.Presentation.Unity
         private string _notice = "Prototype 0.1";
         private GUIStyle _titleStyle;
         private GUIStyle _bodyStyle;
+        private OfficeContractTaskCoordinator _contractTaskCoordinator;
 
         public GameState State => _state;
 
         private void Awake()
         {
-            _saveRepository = new UnityJsonSaveRepository();
-            ResetState();
+            InitializeNow();
+        }
+
+        private void Start()
+        {
+            InitializeOfficeTaskBridgeNow();
+        }
+
+        public void InitializeNow()
+        {
+            if (_saveRepository == null) _saveRepository = new UnityJsonSaveRepository();
+            if (_state == null) ResetState();
+        }
+
+        public OfficeContractTaskCoordinator InitializeOfficeTaskBridgeNow()
+        {
+            InitializeNow();
+            var agents = FindObjectsByType<OfficeWorkerAgent>(FindObjectsSortMode.None);
+            RemapLegacyFamilyAgents(agents);
+            var waypoints = FindObjectsByType<OfficeWaypoint>(FindObjectsSortMode.None);
+            _contractTaskCoordinator = GetComponent<OfficeContractTaskCoordinator>();
+            if (_contractTaskCoordinator == null)
+            {
+                _contractTaskCoordinator = gameObject.AddComponent<OfficeContractTaskCoordinator>();
+            }
+
+            _contractTaskCoordinator.Configure(this, agents, waypoints);
+            _contractTaskCoordinator.InitializeNow();
+            return _contractTaskCoordinator;
         }
 
         private void ResetState()
         {
             _state = PrototypeStateFactory.Create();
             _runner = new SimulationRunner(_state);
+            _contractTaskCoordinator?.ResetAssignments();
             _notice = "새 게임 시작";
         }
 
@@ -80,6 +109,7 @@ namespace FamilyCompany.Presentation.Unity
                     {
                         _state = GameSaveMapper.FromDto(save);
                         _runner = new SimulationRunner(_state);
+                        _contractTaskCoordinator?.ResetAssignments();
                         _notice = "불러오기 완료";
                     }
                     else
@@ -106,6 +136,26 @@ namespace FamilyCompany.Presentation.Unity
             _titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 21, fontStyle = FontStyle.Bold };
             _bodyStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, wordWrap = true };
         }
+
+        private static void RemapLegacyFamilyAgents(OfficeWorkerAgent[] agents)
+        {
+            foreach (var agent in agents)
+            {
+                if (agent.AgentId == "employee_a") agent.SetAgentId("father");
+                if (agent.AgentId == "employee_b") agent.SetAgentId("mother");
+            }
+
+            foreach (var label in FindObjectsByType<OfficeStatusLabel>(FindObjectsSortMode.None))
+            {
+                if (label.Agent == null) continue;
+                if (label.Agent.AgentId == "father") label.SetDisplayName("아빠 · 46살 · 임시 에셋");
+                if (label.Agent.AgentId == "mother") label.SetDisplayName("엄마 · 44살 · 임시 에셋");
+            }
+
+            var oldFather = GameObject.Find("Father Placeholder (46)");
+            var oldMother = GameObject.Find("Mother Placeholder (44)");
+            if (oldFather != null) oldFather.SetActive(false);
+            if (oldMother != null) oldMother.SetActive(false);
+        }
     }
 }
-

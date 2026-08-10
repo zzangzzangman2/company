@@ -18,14 +18,30 @@ namespace FamilyCompany.Presentation.Unity
         private int _completedStops;
         private float _waitRemaining;
         private bool _initialized;
+        private string _assignedTaskId = string.Empty;
+        private OfficeWaypoint _assignedWaypoint;
+        private float _assignedWorkRemaining;
+        private bool _assignedWaypointReached;
+        private int _completedAssignments;
+
+        public event Action<OfficeWorkerAgent, string> AssignedTaskCompleted;
 
         public string AgentId => agentId;
         public int RouteCount => route?.Length ?? 0;
         public OfficeActivity CurrentActivity { get; private set; } = OfficeActivity.Walking;
-        public string CurrentActivityLabel => ActivityLabel(CurrentActivity);
+        public string CurrentActivityLabel => HasAssignedTask
+            ? $"계약 · {ActivityLabel(CurrentActivity)}"
+            : ActivityLabel(CurrentActivity);
         public int CompletedStops => _completedStops;
+        public int CompletedAssignments => _completedAssignments;
+        public bool HasAssignedTask => _assignedWaypoint != null;
+        public string AssignedTaskId => _assignedTaskId;
         public OfficeWaypoint TargetWaypoint =>
-            route != null && route.Length > 0 ? route[Mathf.Clamp(_nextWaypointIndex, 0, route.Length - 1)] : null;
+            HasAssignedTask
+                ? _assignedWaypoint
+                : route != null && route.Length > 0
+                    ? route[Mathf.Clamp(_nextWaypointIndex, 0, route.Length - 1)]
+                    : null;
 
         public void Configure(
             string id,
@@ -42,9 +58,40 @@ namespace FamilyCompany.Presentation.Unity
             _initialized = false;
         }
 
+        public void SetAgentId(string id)
+        {
+            agentId = string.IsNullOrWhiteSpace(id) ? throw new ArgumentException("Agent ID is required.", nameof(id)) : id;
+        }
+
+        public bool AssignOfficeTask(string taskId, OfficeWaypoint waypoint, float workSeconds)
+        {
+            if (string.IsNullOrWhiteSpace(taskId)) throw new ArgumentException("Task ID is required.", nameof(taskId));
+            if (waypoint == null) throw new ArgumentNullException(nameof(waypoint));
+            if (workSeconds <= 0f) throw new ArgumentOutOfRangeException(nameof(workSeconds));
+            if (!_initialized) InitializeNow();
+            if (HasAssignedTask) return false;
+
+            _assignedTaskId = taskId;
+            _assignedWaypoint = waypoint;
+            _assignedWorkRemaining = workSeconds;
+            _assignedWaypointReached = false;
+            _waitRemaining = 0f;
+            return true;
+        }
+
+        public void CancelAssignedTask()
+        {
+            _assignedTaskId = string.Empty;
+            _assignedWaypoint = null;
+            _assignedWorkRemaining = 0f;
+            _assignedWaypointReached = false;
+        }
+
         public void InitializeNow()
         {
             _controller = GetComponent<CharacterController>();
+            _completedAssignments = 0;
+            CancelAssignedTask();
             if (route == null || route.Length == 0)
             {
                 _initialized = true;
@@ -65,7 +112,14 @@ namespace FamilyCompany.Presentation.Unity
         public void Tick(float deltaTime)
         {
             if (!_initialized) InitializeNow();
-            if (route == null || route.Length == 0 || deltaTime <= 0f) return;
+            if (deltaTime <= 0f) return;
+            if (HasAssignedTask)
+            {
+                TickAssignedTask(deltaTime);
+                return;
+            }
+
+            if (route == null || route.Length == 0) return;
             if (_waitRemaining > 0f)
             {
                 _waitRemaining = Mathf.Max(0f, _waitRemaining - deltaTime);
@@ -74,17 +128,51 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             var target = route[_nextWaypointIndex];
-            var displacement = target.transform.position - transform.position;
-            displacement.y = 0f;
-            if (displacement.magnitude <= arrivalDistance)
+            if (MoveToward(target, deltaTime))
             {
-                transform.position = new Vector3(target.transform.position.x, transform.position.y, target.transform.position.z);
                 CurrentActivity = target.Activity;
                 _completedStops++;
                 _waitRemaining = ResolveStaySeconds(target);
                 _nextWaypointIndex = (_nextWaypointIndex + 1) % route.Length;
                 spriteAnimator?.SetWorldVelocity(Vector3.zero);
                 return;
+            }
+
+        }
+
+        private void TickAssignedTask(float deltaTime)
+        {
+            if (!_assignedWaypointReached)
+            {
+                if (MoveToward(_assignedWaypoint, deltaTime))
+                {
+                    _assignedWaypointReached = true;
+                    CurrentActivity = _assignedWaypoint.Activity;
+                    spriteAnimator?.SetWorldVelocity(Vector3.zero);
+                }
+
+                return;
+            }
+
+            CurrentActivity = _assignedWaypoint.Activity;
+            _assignedWorkRemaining = Mathf.Max(0f, _assignedWorkRemaining - deltaTime);
+            spriteAnimator?.SetWorldVelocity(Vector3.zero);
+            if (_assignedWorkRemaining > 0f) return;
+
+            var completedTaskId = _assignedTaskId;
+            CancelAssignedTask();
+            _completedAssignments++;
+            AssignedTaskCompleted?.Invoke(this, completedTaskId);
+        }
+
+        private bool MoveToward(OfficeWaypoint target, float deltaTime)
+        {
+            var displacement = target.transform.position - transform.position;
+            displacement.y = 0f;
+            if (displacement.magnitude <= arrivalDistance)
+            {
+                transform.position = new Vector3(target.transform.position.x, transform.position.y, target.transform.position.z);
+                return true;
             }
 
             CurrentActivity = OfficeActivity.Walking;
@@ -97,6 +185,8 @@ namespace FamilyCompany.Presentation.Unity
             {
                 transform.forward = Vector3.Slerp(transform.forward, velocity.normalized, Mathf.Clamp01(deltaTime * 10f));
             }
+
+            return false;
         }
 
         private void Awake()
