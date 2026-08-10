@@ -834,6 +834,7 @@ namespace FamilyCompany.Editor
             {
                 throw new InvalidOperationException("Office autonomy coordinator is missing.");
             }
+            OfficeSeatingBuilderValidation.ValidateCurrentScene();
             var agents = UnityEngine.Object.FindObjectsByType<Presentation.Unity.OfficeWorkerAgent>(FindObjectsSortMode.None);
             if (agents.Length < 3)
             {

@@ -1,7 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using FamilyCompany.Infrastructure.Unity;
 using FamilyCompany.Presentation.Unity;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
+using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
+using FamilyCompany.Simulation.OfficeSeating;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -75,6 +80,8 @@ namespace FamilyCompany.Editor
             player.AddComponent<PlayerOfficeWorkInteractor>().Configure(bootstrap, officeLayout.AllWaypoints);
             CreateSister(characters.transform, officeLayout);
             CreateMovingFamilyMembers(characters.transform, officeLayout);
+            var seating = CreateOfficeSeatingRuntime(officeLayout);
+            ConfigureOfficeSeatingAnimations(player, characters);
             var coordinator = systems.AddComponent<OfficeContractTaskCoordinator>();
             coordinator.Configure(
                 bootstrap,
@@ -85,6 +92,8 @@ namespace FamilyCompany.Editor
                 bootstrap,
                 characters.GetComponentsInChildren<OfficeWorkerAgent>(),
                 officeLayout.AllWaypoints);
+            autonomyCoordinator.ConfigureSeatingRuntime(seating.Registry, seating.State);
+            autonomyCoordinator.InitializeNow();
             var cameraFollow = CreateCamera(player.transform);
             cameraFollow.ConfigureOfficeFraming(new Vector3(14f, 0f, 0f), new Vector2(16f, 14f), 6.6f);
             officeLayout.Root.gameObject.AddComponent<OfficeVisualV2Presenter>().Configure(
@@ -94,6 +103,7 @@ namespace FamilyCompany.Editor
                 new Vector3(14f, 0f, 0f),
                 new Vector2(16f, 14f));
             CreateLighting();
+            OfficeSeatingBuilderValidation.ValidateCurrentScene();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
@@ -350,6 +360,172 @@ namespace FamilyCompany.Editor
             };
             CreateFamilyWorker("father", "아빠 · 46살", routeA, 0, 1.45f, parent);
             CreateFamilyWorker("mother", "엄마 · 44살", routeB, 0, 1.55f, parent);
+        }
+
+        private static OfficeSeatingBuildResult CreateOfficeSeatingRuntime(OfficeLayout office)
+        {
+            var root = new GameObject("Office Seating Runtime");
+            root.transform.SetParent(office.Root, false);
+            var seats = new[]
+            {
+                CreateOfficeSeat(
+                    "desk_a", "업무 책상 A · 누나",
+                    OfficeVisualV2Calibration.DeskAApproachArt,
+                    OfficeVisualV2Calibration.DeskASitArt,
+                    OfficeVisualV2Calibration.DeskAMonitorArt,
+                    office.DeskA, "older_sister", root.transform),
+                CreateOfficeSeat(
+                    "desk_b", "업무 책상 B · 엄마",
+                    OfficeVisualV2Calibration.DeskBApproachArt,
+                    OfficeVisualV2Calibration.DeskBSitArt,
+                    OfficeVisualV2Calibration.DeskBMonitorArt,
+                    office.DeskB, "mother", root.transform),
+                CreateOfficeSeat(
+                    "desk_c", "업무 책상 C · 아빠",
+                    OfficeVisualV2Calibration.DeskCApproachArt,
+                    OfficeVisualV2Calibration.DeskCSitArt,
+                    OfficeVisualV2Calibration.DeskCMonitorArt,
+                    office.DeskC, "father", root.transform),
+                CreateOfficeSeat(
+                    "desk_d", "업무 책상 D · 플레이어",
+                    OfficeVisualV2Calibration.DeskDApproachArt,
+                    OfficeVisualV2Calibration.DeskDSitArt,
+                    OfficeVisualV2Calibration.DeskDMonitorArt,
+                    office.DeskD, "player", root.transform)
+            };
+
+            var registry = root.AddComponent<OfficeSeatRegistry>();
+            registry.Configure(seats);
+            registry.Rebuild();
+            if (registry.SeatCount != 4)
+                throw new InvalidOperationException($"Office seating registry requires four valid desks, got {registry.SeatCount}.");
+
+            var definitions = registry.Definitions.Select(item =>
+                new FamilyCompany.Simulation.OfficeSeating.OfficeSeatDefinition(
+                    item.SeatId,
+                    new FamilyCompany.Simulation.OfficeSeating.OfficeSeatPosition(
+                        item.SitPosition.X,
+                        item.SitPosition.Z)));
+            var state = new OfficeSeatingState(definitions);
+            AssignSeat(state, "desk_a", "older_sister");
+            AssignSeat(state, "desk_b", "mother");
+            AssignSeat(state, "desk_c", "father");
+            AssignSeat(state, "desk_d", "player");
+            return new OfficeSeatingBuildResult(registry, state);
+        }
+
+        private static OfficeSeatAuthoring CreateOfficeSeat(
+            string seatId,
+            string displayName,
+            Vector2 approachArt,
+            Vector2 sitArt,
+            Vector2 monitorArt,
+            OfficeWaypoint semanticDestination,
+            string longTermAssignedMemberId,
+            Transform parent)
+        {
+            var root = new GameObject("Office Seat - " + seatId);
+            root.transform.SetParent(parent, false);
+            root.transform.position = OfficeVisualV2Calibration.ArtPixelToWorld(sitArt);
+            var approach = CreateSeatAnchor("Approach Anchor", approachArt, root.transform);
+            var sit = CreateSeatAnchor("Sit Anchor", sitArt, root.transform);
+            var look = CreateSeatAnchor("Computer Look Target", monitorArt, root.transform);
+            var hotspot = root.AddComponent<BoxCollider>();
+            hotspot.isTrigger = true;
+            hotspot.center = new Vector3(0f, 0.65f, 0f);
+            hotspot.size = new Vector3(0.90f, 1.30f, 0.90f);
+
+            var authoring = root.AddComponent<OfficeSeatAuthoring>();
+            authoring.Configure(
+                seatId,
+                approach,
+                sit,
+                look,
+                hotspot,
+                OfficeSeatForegroundOcclusionMode.BehindForeground,
+                false,
+                OfficeSeatFacing8.North,
+                displayName,
+                semanticDestination);
+            if (!authoring.TryResolveFacing(out var facing))
+                throw new InvalidOperationException($"Office seat '{seatId}' cannot resolve ComputerLookTarget facing.");
+            authoring.Configure(
+                seatId,
+                approach,
+                sit,
+                look,
+                hotspot,
+                OfficeSeatForegroundOcclusionMode.BehindForeground,
+                true,
+                facing,
+                displayName,
+                semanticDestination,
+                longTermAssignedMemberId);
+            return authoring;
+        }
+
+        private static Transform CreateSeatAnchor(string name, Vector2 artPixel, Transform parent)
+        {
+            var anchor = new GameObject(name).transform;
+            anchor.SetParent(parent);
+            anchor.position = OfficeVisualV2Calibration.ArtPixelToWorld(artPixel);
+            return anchor;
+        }
+
+        private static void AssignSeat(OfficeSeatingState state, string seatId, string memberId)
+        {
+            if (!state.TryAssign(seatId, memberId, out var result))
+                throw new InvalidOperationException(
+                    $"Failed to assign office seat '{seatId}' to '{memberId}': {result.Failure}.");
+        }
+
+        private static void ConfigureOfficeSeatingAnimations(GameObject player, GameObject characters)
+        {
+            var bindings = new Dictionary<string, DirectionalSpriteAnimator>(StringComparer.Ordinal)
+            {
+                { "player", player.GetComponent<DirectionalSpriteAnimator>() }
+            };
+            foreach (var agent in characters.GetComponentsInChildren<OfficeWorkerAgent>())
+            {
+                if (!bindings.TryAdd(agent.AgentId, agent.SpriteAnimator))
+                    throw new InvalidOperationException("Duplicate family seating animator: " + agent.AgentId);
+            }
+            foreach (var memberId in new[] { "player", "older_sister", "father", "mother" })
+            {
+                if (!bindings.TryGetValue(memberId, out var animator) || animator == null)
+                    throw new InvalidOperationException("Missing family seating animator: " + memberId);
+                animator.ConfigureOfficeSeating(
+                    LoadOfficeSeatingFrames(memberId, OfficeSeatingAnimationClip.SitDown),
+                    LoadOfficeSeatingFrames(memberId, OfficeSeatingAnimationClip.Work),
+                    LoadOfficeSeatingFrames(memberId, OfficeSeatingAnimationClip.StandUp));
+            }
+
+            if (player.GetComponent<OfficePlayerSeatingPresenter>() == null)
+                player.AddComponent<OfficePlayerSeatingPresenter>();
+        }
+
+        private static Sprite[] LoadOfficeSeatingFrames(
+            string memberId,
+            OfficeSeatingAnimationClip clip)
+        {
+            var frameCount = OfficeSeatingAnimationFrames.FrameCount(clip);
+            var result = new Sprite[frameCount * OfficeSeatingAnimationFrames.DirectionCount];
+            for (var frame = 0; frame < frameCount; frame++)
+            {
+                for (var direction = 0; direction < OfficeSeatingAnimationFrames.DirectionCount; direction++)
+                {
+                    var index = OfficeSeatingAnimationFrames.FlattenedIndex(clip, direction, frame);
+                    var path = OfficeSeatingAnimationFrames.AssetPath(
+                        memberId,
+                        (OfficeSeatFacing8)direction,
+                        clip,
+                        frame);
+                    result[index] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                    if (result[index] == null)
+                        throw new InvalidDataException("Missing office seating frame: " + path);
+                }
+            }
+            return result;
         }
 
         private static void CreateFamilyWorker(
@@ -670,6 +846,18 @@ namespace FamilyCompany.Editor
                 DeskA, DeskB, DeskC, DeskD, Printer, Meeting, Lounge, Exit,
                 DeskCStaging, DeskCSide, DeskDStaging, DeskDSide, ReceptionSide, ExitApproach
             };
+        }
+
+        private sealed class OfficeSeatingBuildResult
+        {
+            public OfficeSeatingBuildResult(OfficeSeatRegistry registry, OfficeSeatingState state)
+            {
+                Registry = registry;
+                State = state;
+            }
+
+            public OfficeSeatRegistry Registry { get; }
+            public OfficeSeatingState State { get; }
         }
     }
 }
