@@ -39,11 +39,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             if (bootstrap == null) throw new ArgumentNullException(nameof(bootstrap));
             if (registry == null) throw new ArgumentNullException(nameof(registry));
             if (state == null) throw new ArgumentNullException(nameof(state));
-            if (_state != null && _state != state) ReleaseImmediately();
+            ReleaseImmediately();
             _bootstrap = bootstrap;
             _registry = registry;
             _state = state;
             CacheComponents();
+            _workInteractor?.SetSeatedWorkGateRequired(IsReady());
         }
 
         public void ResetOfficeSeatingRuntime()
@@ -52,6 +53,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             _bootstrap = null;
             _registry = null;
             _state = null;
+            _workInteractor?.SetSeatedWorkGateRequired(false);
         }
 
         private void Awake()
@@ -61,25 +63,48 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
 
         private void Update()
         {
-            if (!IsReady()) return;
-            var wantsSeat = _workInteractor.IsWorking;
+            var runtimeReady = IsReady();
+            _workInteractor?.SetSeatedWorkGateRequired(runtimeReady);
+            if (HasActiveClaim && !HasValidSeatBinding())
+            {
+                ReleaseImmediately();
+                return;
+            }
+            if (!runtimeReady) return;
+
+            var wantsSeat = _workInteractor.WantsOfficeSeat;
             if (_phase == OfficeWorkerSeatingPhase.None)
             {
                 if (wantsSeat) TryBeginSeating();
                 return;
             }
 
-            if (!wantsSeat) _releaseRequested = true;
+            if (!wantsSeat)
+            {
+                _releaseRequested = true;
+                _workInteractor.SetSeatedWorkReady(false);
+            }
             switch (_phase)
             {
                 case OfficeWorkerSeatingPhase.SittingDown:
                     if (!_animator.IsOfficeSeatingTransitionComplete) return;
-                    _animator.BeginSeatedWork();
+                    if (_releaseRequested)
+                    {
+                        BeginStandingUp();
+                        return;
+                    }
+                    if (!_animator.BeginSeatedWork())
+                    {
+                        ReleaseImmediately();
+                        return;
+                    }
                     _phase = OfficeWorkerSeatingPhase.Working;
-                    if (_releaseRequested) BeginStandingUp();
+                    _workInteractor.SetSeatingTransitionBlocked(false);
+                    _workInteractor.SetSeatedWorkReady(true);
                     break;
                 case OfficeWorkerSeatingPhase.Working:
                     if (_releaseRequested) BeginStandingUp();
+                    else _workInteractor.SetSeatedWorkReady(true);
                     break;
                 case OfficeWorkerSeatingPhase.StandingUp:
                     if (!_animator.IsOfficeSeatingTransitionComplete) return;
@@ -91,6 +116,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
         private void OnDestroy()
         {
             ReleaseImmediately();
+            _workInteractor?.SetSeatedWorkGateRequired(false);
+        }
+
+        private void OnDisable()
+        {
+            ReleaseImmediately();
+            _workInteractor?.SetSeatedWorkGateRequired(false);
         }
 
         private bool TryBeginSeating()
@@ -117,7 +149,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
                 .ThenBy(item => item.Seat.SeatId, StringComparer.Ordinal)
                 .Select(item => item.Seat)
                 .FirstOrDefault();
-            if (candidate == null || !_registry.TryGetAuthoring(candidate.SeatId, out var authoring))
+            if (candidate == null || !_registry.TryGetAuthoring(candidate.SeatId, out var authoring) ||
+                !authoring.HasRuntimeAnchors)
                 return false;
 
             var token =
@@ -142,6 +175,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             _claim = claim;
             _seat = authoring;
             _releaseRequested = false;
+            _workInteractor.SetSeatedWorkReady(false);
+            _workInteractor.SetSeatingTransitionBlocked(true);
             SuspendPlayerMovement();
             var sit = authoring.SitAnchor.position;
             transform.position = new Vector3(sit.x, transform.position.y, sit.z);
@@ -158,6 +193,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
         private void BeginStandingUp()
         {
             if (_phase == OfficeWorkerSeatingPhase.StandingUp) return;
+            _workInteractor?.SetSeatedWorkReady(false);
+            _workInteractor?.SetSeatingTransitionBlocked(true);
             if (!_animator.BeginStandUp())
             {
                 ReleaseImmediately();
@@ -168,7 +205,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
 
         private void FinishStandingUp()
         {
-            if (_seat != null)
+            if (_seat != null && _seat.HasRuntimeAnchors)
             {
                 var approach = _seat.ApproachAnchor.position;
                 transform.position = new Vector3(approach.x, transform.position.y, approach.z);
@@ -184,6 +221,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             _releaseRequested = false;
             _phase = OfficeWorkerSeatingPhase.None;
             _animator?.ResumeWalkingAfterSeating();
+            _workInteractor?.SetSeatedWorkReady(false);
+            _workInteractor?.SetSeatingTransitionBlocked(false);
             RestorePlayerMovement();
         }
 
@@ -205,6 +244,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
                    _workInteractor != null &&
                    _animator != null &&
                    _animator.HasOfficeSeatingFrames;
+        }
+
+        private bool HasActiveClaim => _claim != null && !_claim.IsReleased;
+
+        private bool HasValidSeatBinding()
+        {
+            if (!HasActiveClaim || _registry == null || _seat == null || !_seat.HasRuntimeAnchors)
+                return false;
+            return _registry.TryGetAuthoring(_claim.SeatId, out var registered) && registered == _seat;
         }
 
         private void CacheComponents()

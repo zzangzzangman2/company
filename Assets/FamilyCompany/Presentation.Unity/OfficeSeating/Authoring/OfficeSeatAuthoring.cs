@@ -33,6 +33,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
         public OfficeSeatForegroundOcclusionMode ForegroundOcclusionMode => foregroundOcclusionMode;
         public bool ValidateExpectedFacing => validateExpectedFacing;
         public OfficeSeatFacing8 ExpectedFacing => expectedFacing;
+        public bool HasRuntimeAnchors =>
+            approachAnchor != null && sitAnchor != null && computerLookTarget != null &&
+            IsFinite(approachAnchor.position) && IsFinite(sitAnchor.position) &&
+            IsFinite(computerLookTarget.position);
 
         public void Configure(
             string newSeatId,

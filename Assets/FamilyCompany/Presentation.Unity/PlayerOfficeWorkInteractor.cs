@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using UnityEngine;
@@ -16,9 +17,29 @@ namespace FamilyCompany.Presentation.Unity
         private float _workProgress;
         private string _workingOfferId = string.Empty;
         private OfficeWaypoint _workingWaypoint;
+        private readonly OfficePlayerWorkGate _workGate = new OfficePlayerWorkGate();
 
-        public bool IsWorking => !string.IsNullOrEmpty(_workingOfferId);
+        public bool IsWorking => _workGate.HasActiveWork;
+        public OfficeActivity CurrentActivity => _workGate.CurrentActivity;
+        public bool WantsOfficeSeat => _workGate.WantsOfficeSeat;
+        public bool IsSeatedWorkReady => _workGate.IsSeatedWorkReady;
+        public bool IsSeatingTransitionBlocked => _workGate.IsTransitionBlocked;
         public float WorkProgress01 => Mathf.Clamp01(_workProgress / Mathf.Max(0.05f, secondsPerPersonHour));
+
+        public void SetSeatedWorkGateRequired(bool required)
+        {
+            _workGate.SetSeatedWorkGateRequired(required);
+        }
+
+        public void SetSeatedWorkReady(bool ready)
+        {
+            _workGate.SetSeatedWorkReady(ready);
+        }
+
+        public void SetSeatingTransitionBlocked(bool blocked)
+        {
+            _workGate.SetTransitionBlocked(blocked);
+        }
 
         public void Configure(PrototypeBootstrap newBootstrap, OfficeWaypoint[] newWaypoints)
         {
@@ -78,9 +99,11 @@ namespace FamilyCompany.Presentation.Unity
                 _workingOfferId = contract.Offer.OfferId;
                 _workingWaypoint = waypoint;
                 _workProgress = 0f;
+                _workGate.Begin(requiredActivity);
                 bootstrap.SetWorldNotice($"{contract.Offer.Title} 직접 작업 중 · E를 계속 누르세요.");
             }
 
+            if (!_workGate.CanAccumulateProgress) return;
             _workProgress += Time.deltaTime;
             if (_workProgress < secondsPerPersonHour) return;
             _workProgress = 0f;
@@ -131,6 +154,7 @@ namespace FamilyCompany.Presentation.Unity
             _workProgress = 0f;
             _workingOfferId = string.Empty;
             _workingWaypoint = null;
+            _workGate.End();
         }
 
         private static float FlatDistance(Vector3 left, Vector3 right)

@@ -213,7 +213,8 @@ namespace FamilyCompany.Presentation.Unity
                 throw new ArgumentException("Seat claim member does not match this agent.", nameof(claim));
             if (!string.Equals(claim.SeatId, seat.SeatId, StringComparison.Ordinal))
                 throw new ArgumentException("Seat claim does not match the authored seat.", nameof(claim));
-            if (!_seatRuntimeEnabled || !HasOfficeSeatingAnimation || HasActiveSeatClaim) return false;
+            if (!_seatRuntimeEnabled || !HasOfficeSeatingAnimation || HasActiveSeatClaim ||
+                !seat.HasRuntimeAnchors) return false;
             if (!_initialized) InitializeNow();
 
             SetAwayPresentation(false);
@@ -365,6 +366,13 @@ namespace FamilyCompany.Presentation.Unity
 
         private void TickSeat(float deltaTime)
         {
+            if (!HasValidSeatBinding())
+            {
+                ReleaseSeatImmediately();
+                ResumeMovementAfterSeatRelease();
+                return;
+            }
+
             switch (SeatingPhase)
             {
                 case OfficeWorkerSeatingPhase.MovingToApproach:
@@ -391,7 +399,7 @@ namespace FamilyCompany.Presentation.Unity
                     spriteAnimator?.SetWorldVelocity(Vector3.zero);
                     if (spriteAnimator == null || spriteAnimator.IsOfficeSeatingTransitionComplete)
                     {
-                        var approach = _seatAuthoring == null ? transform.position : _seatAuthoring.ApproachAnchor.position;
+                        var approach = _seatAuthoring.ApproachAnchor.position;
                         transform.position = new Vector3(approach.x, transform.position.y, approach.z);
                         ReleaseSeatImmediately();
                         ResumeMovementAfterSeatRelease();
@@ -460,6 +468,11 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
             SeatingPhase = OfficeWorkerSeatingPhase.StandingUp;
+        }
+
+        private bool HasValidSeatBinding()
+        {
+            return HasActiveSeatClaim && _seatAuthoring != null && _seatAuthoring.HasRuntimeAnchors;
         }
 
         private void ReleaseSeatImmediately()
@@ -728,6 +741,11 @@ namespace FamilyCompany.Presentation.Unity
         }
 
         private void OnDestroy()
+        {
+            ReleaseSeatImmediately();
+        }
+
+        private void OnDisable()
         {
             ReleaseSeatImmediately();
         }

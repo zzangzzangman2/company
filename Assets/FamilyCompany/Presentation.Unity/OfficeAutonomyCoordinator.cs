@@ -33,11 +33,11 @@ namespace FamilyCompany.Presentation.Unity
             OfficeWorkerAgent[] newAgents,
             OfficeWaypoint[] newWaypoints)
         {
+            ResetSeatingRuntimeBindings();
             bootstrap = newBootstrap;
             agents = newAgents ?? Array.Empty<OfficeWorkerAgent>();
             waypoints = newWaypoints ?? Array.Empty<OfficeWaypoint>();
             _initialized = false;
-            _seatingInitialized = false;
         }
 
         public void ConfigureSeatingRuntime(
@@ -45,6 +45,7 @@ namespace FamilyCompany.Presentation.Unity
             OfficeSeatingState existingState = null,
             OfficeSeatPlacementPanel placementPanel = null)
         {
+            ResetSeatingRuntimeBindings();
             seatRegistry = newSeatRegistry == null
                 ? throw new ArgumentNullException(nameof(newSeatRegistry))
                 : newSeatRegistry;
@@ -76,9 +77,12 @@ namespace FamilyCompany.Presentation.Unity
             InitializeSeatingRuntime();
 
             var reserved = new HashSet<OfficeWaypoint>(
-                agents.Where(item => item != null && item.HasAssignedTask && item.TargetWaypoint != null)
+                agents.Where(item => item != null && item.isActiveAndEnabled &&
+                                             item.HasAssignedTask && item.TargetWaypoint != null)
                     .Select(item => item.TargetWaypoint));
-            foreach (var agent in agents.Where(item => item != null).OrderBy(item => item.AgentId, StringComparer.Ordinal))
+            foreach (var agent in agents
+                         .Where(item => item != null && item.isActiveAndEnabled)
+                         .OrderBy(item => item.AgentId, StringComparer.Ordinal))
             {
                 agent.SetOfficeSeatingRuntimeEnabled(IsSeatingRuntimeReady && agent.HasOfficeSeatingAnimation);
                 var member = bootstrap.State.Family.Members.FirstOrDefault(item => item.MemberId == agent.AgentId);
@@ -158,14 +162,15 @@ namespace FamilyCompany.Presentation.Unity
             RefreshNow();
         }
 
+        private void OnDisable()
+        {
+            ResetSeatingRuntimeBindings();
+            _initialized = false;
+        }
+
         private void OnDestroy()
         {
-            _playerSeatingPresenter?.ResetOfficeSeatingRuntime();
-            foreach (var agent in agents.Where(item => item != null))
-            {
-                agent.ResetOfficeSeatingRuntime();
-                agent.SetOfficeSeatingRuntimeEnabled(false);
-            }
+            ResetSeatingRuntimeBindings();
         }
 
         private void InitializeSeatingRuntime()
@@ -219,6 +224,20 @@ namespace FamilyCompany.Presentation.Unity
                         $"Office seating state is missing authored seat '{definition.SeatId}'.");
                 }
             }
+        }
+
+        private void ResetSeatingRuntimeBindings()
+        {
+            if (_playerSeatingPresenter != null)
+                _playerSeatingPresenter.ResetOfficeSeatingRuntime();
+            _playerSeatingPresenter = null;
+            foreach (var agent in agents.Where(item => item != null))
+            {
+                agent.ResetOfficeSeatingRuntime();
+                agent.SetOfficeSeatingRuntimeEnabled(false);
+            }
+            _seatingInitialized = false;
+            _refreshRemaining = 0f;
         }
 
         private bool EnsureSeatDestination(
