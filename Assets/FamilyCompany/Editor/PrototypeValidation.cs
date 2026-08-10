@@ -329,6 +329,142 @@ namespace FamilyCompany.Editor
             AssertEqual(25, structuralBreach.Asks[0].QueueRecoveryTargetQuantity, "order book structural recovery ceiling");
             AssertApproximately(240d, structuralBreach.TradeStrength, 0d, "order book structural breach strength cap");
 
+            var placedDate = new DateTime(2000, 1, 3);
+            var firstPending = new MarketPendingOrder(
+                "first",
+                MarketPendingOrderSide.Buy,
+                "queue_audit_stock",
+                10000,
+                20,
+                20,
+                placedDate,
+                600,
+                1,
+                100);
+            var secondPending = new MarketPendingOrder(
+                "second",
+                MarketPendingOrderSide.Buy,
+                "queue_audit_stock",
+                10000,
+                30,
+                30,
+                placedDate,
+                600,
+                2,
+                120);
+            var cancelledPending = MarketPendingOrderRules.Cancel(
+                new[] { firstPending, secondPending },
+                firstPending.Id);
+            AssertEqual(1, cancelledPending.Count, "pending cancel count");
+            AssertApproximately(100d, cancelledPending[0].QueueAheadQuantity, 0d, "pending cancel FIFO release");
+            AssertApproximately(
+                140d,
+                MarketPendingOrderRules.QueueAheadForNewOrder(
+                    book,
+                    "queue_audit_stock",
+                    MarketPendingOrderSide.Buy,
+                    10000,
+                    new[] { firstPending },
+                    immediateFillOccurred: false),
+                0d,
+                "pending new order queue ahead");
+            var lowBuy = new MarketPendingOrder(
+                "low",
+                MarketPendingOrderSide.Buy,
+                "queue_audit_stock",
+                900,
+                1,
+                1,
+                placedDate,
+                600,
+                1);
+            var highBuy = new MarketPendingOrder(
+                "high",
+                MarketPendingOrderSide.Buy,
+                "queue_audit_stock",
+                950,
+                1,
+                1,
+                placedDate,
+                600,
+                2);
+            AssertEqual(
+                "high,low",
+                string.Join(",", MarketPendingOrderRules.InExchangePriority(new[] { lowBuy, highBuy }).Select(order => order.Id)),
+                "pending buy price priority");
+            var earlierSell = new MarketPendingOrder(
+                "sell",
+                MarketPendingOrderSide.Sell,
+                "queue_audit_stock",
+                1050,
+                1,
+                1,
+                placedDate,
+                600,
+                0);
+            AssertEqual(
+                "sell,high",
+                string.Join(",", MarketPendingOrderRules.InExchangePriority(new[] { highBuy, earlierSell }).Select(order => order.Id)),
+                "pending cross-side chronological merge");
+            var queueConsumption = MarketPendingOrderRules.ConsumeRestingQueue(
+                secondPending,
+                book,
+                10000,
+                50);
+            AssertEqual(50, queueConsumption.ConsumedQuantity, "pending external queue consumption");
+            AssertApproximately(70d, queueConsumption.QueueAheadQuantity, 0d, "pending external queue remainder");
+            AssertEqual(0, queueConsumption.RemainingCapacity, "pending queue consumes capacity first");
+            var afterPartialFill = MarketPendingOrderRules.AfterFill(
+                new[] { firstPending, secondPending },
+                firstPending,
+                5);
+            AssertApproximately(
+                115d,
+                afterPartialFill.Single(order => order.Id == secondPending.Id).QueueAheadQuantity,
+                0d,
+                "pending later FIFO advances on fill");
+            AssertApproximately(
+                15d,
+                afterPartialFill.Single(order => order.Id == firstPending.Id).RemainingQuantity,
+                0d,
+                "pending partial remainder");
+            var cashPending = new MarketPendingOrder(
+                "cash",
+                MarketPendingOrderSide.Buy,
+                "queue_audit_stock",
+                9000,
+                10,
+                10,
+                placedDate,
+                600,
+                3);
+            AssertEqual(
+                90_450L,
+                MarketPendingOrderRules.PendingBuyReservedCash(100_000, new[] { cashPending }, 0.005m),
+                "pending buy reservation includes fee");
+            AssertEqual(
+                9_550L,
+                MarketPendingOrderRules.AvailableBrokerageCash(100_000, new[] { cashPending }, 0.005m),
+                "pending available brokerage cash");
+            var sellPending = new MarketPendingOrder(
+                "sell-reserve",
+                MarketPendingOrderSide.Sell,
+                "queue_audit_stock",
+                10000,
+                3,
+                3,
+                placedDate,
+                600,
+                4);
+            AssertApproximately(
+                3d,
+                MarketPendingOrderRules.PendingReservedUnits(
+                    new[] { cashPending, sellPending },
+                    "queue_audit_stock",
+                    MarketPendingOrderSide.Sell),
+                0d,
+                "pending sell reserved units");
+
             AssertEqual(
                 "4,23,5,5,2,5,5,3,30,41",
                 string.Join(",", MarketOrderBookRules.SplitTradeQuantity("hanbit_telecom", 6015, 617, 4929, 123)),

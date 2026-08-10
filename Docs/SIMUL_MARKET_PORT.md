@@ -42,7 +42,7 @@ Claude도 역사 조사 전에 `simul/DATA_SOURCES.md`, `simul/flutter_app/lib/g
 - 시장가·지정가, 부분 체결, 우선순위, 상하한가, 수수료와 세금
 - 재고와 현금 보존 테스트부터 작성
 
-상태: 2026-08-10 진행 중. cadence/frame/capacity, 다단계 지정가 체결, 절대 가격 소비 건너뛰기, 체결가 depth walk, 개별 print 분할, 7+7 표시 상수와 FIFO 재생 상태기를 순수 C#으로 옮겼다. 누적 소비 snapshot은 소수 단위 floor, 동일 watermark 멱등성, 누적 delta만 차감, 1~9주 잔량 행 숨김, 구조적 벽 90% 돌파와 회복 상한을 Dart와 동일하게 처리한다. Dart 직접 생성 fixture는 `Assets/FamilyCompany/Tests/Fixtures/simul_order_book_golden_v1.json`이며 SHA-256은 `1A28D79148B24C9311EA19BFD25C2E51691B1E5B52B0E44FFE204F5273497DD9`다. 원본 Unity 6000.3.21f1에서 확장된 소비 snapshot 골든, Korea History V1 등록부·2000년 상장 종목·씬 런타임 카탈로그를 함께 검증해 `FAMILY_COMPANY_VALIDATION: PASS`를 확인했다.
+상태: 2026-08-10 진행 중. cadence/frame/capacity, 다단계 지정가 체결, 절대 가격 소비 건너뛰기, 체결가 depth walk, 개별 print 분할, 7+7 표시 상수와 FIFO 재생 상태기를 순수 C#으로 옮겼다. 누적 소비 snapshot은 소수 단위 floor, 동일 watermark 멱등성, 누적 delta만 차감, 1~9주 잔량 행 숨김, 구조적 벽 90% 돌파와 회복 상한을 Dart와 동일하게 처리한다. 플레이어 지정가 잔량은 매수 고가·매도 저가 우선, 동일 가격 날짜/분/sequence/ID FIFO, 앞 주문 취소·부분체결에 따른 뒤 queue-ahead 해제, 외부 호가 대기량 선소진, 수수료 포함 매수 현금 예약과 매도 잔량 예약을 동일하게 처리한다. Dart 직접 생성 fixture는 `Assets/FamilyCompany/Tests/Fixtures/simul_order_book_golden_v1.json`이며 SHA-256은 `1A28D79148B24C9311EA19BFD25C2E51691B1E5B52B0E44FFE204F5273497DD9`다. 원본 Unity 6000.3.21f1에서 확장된 소비 snapshot·대기주문 큐, Korea History V1 등록부·2000년 상장 종목·씬 런타임 카탈로그를 함께 검증해 `FAMILY_COMPANY_VALIDATION: PASS`를 확인했다.
 
 ### S3. 시세 생성과 정보
 
