@@ -59,6 +59,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.UI
             RefreshSeatView();
         }
 
+        public void ResetOfficeSeatingRuntime()
+        {
+            _actions = null;
+            Close();
+        }
+
         public void BindClickController(OfficeSeatClickController controller)
         {
             DetachController();

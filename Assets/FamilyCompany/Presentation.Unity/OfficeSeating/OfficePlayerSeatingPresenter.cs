@@ -70,7 +70,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
                 ReleaseImmediately();
                 return;
             }
-            if (!runtimeReady) return;
+            if (!runtimeReady)
+            {
+                if (HasActiveClaim) ReleaseImmediately();
+                return;
+            }
 
             var wantsSeat = _workInteractor.WantsOfficeSeat;
             if (_phase == OfficeWorkerSeatingPhase.None)
@@ -150,7 +154,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
                 .Select(item => item.Seat)
                 .FirstOrDefault();
             if (candidate == null || !_registry.TryGetAuthoring(candidate.SeatId, out var authoring) ||
-                !authoring.HasRuntimeAnchors)
+                !authoring.IsRuntimeValid)
                 return false;
 
             var token =
@@ -205,7 +209,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
 
         private void FinishStandingUp()
         {
-            if (_seat != null && _seat.HasRuntimeAnchors)
+            if (_seat != null && _seat.IsRuntimeValid)
             {
                 var approach = _seat.ApproachAnchor.position;
                 transform.position = new Vector3(approach.x, transform.position.y, approach.z);
@@ -240,7 +244,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             return _bootstrap != null &&
                    _bootstrap.State != null &&
                    _registry != null &&
+                   _registry.isActiveAndEnabled &&
+                   _registry.SeatCount > 0 &&
                    _state != null &&
+                   StateMatchesRegistry() &&
                    _workInteractor != null &&
                    _animator != null &&
                    _animator.HasOfficeSeatingFrames;
@@ -250,9 +257,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
 
         private bool HasValidSeatBinding()
         {
-            if (!HasActiveClaim || _registry == null || _seat == null || !_seat.HasRuntimeAnchors)
+            if (!HasActiveClaim || _registry == null || _seat == null || !_seat.IsRuntimeValid)
                 return false;
             return _registry.TryGetAuthoring(_claim.SeatId, out var registered) && registered == _seat;
+        }
+
+        private bool StateMatchesRegistry()
+        {
+            var definitions = _registry.Definitions;
+            if (_state.SeatCount != definitions.Count) return false;
+            for (var index = 0; index < definitions.Count; index++)
+            {
+                var definition = definitions[index];
+                if (!_state.TryGetSeat(definition.SeatId, out var seat) ||
+                    !seat.Position.X.Equals((double)definition.SitPosition.X) ||
+                    !seat.Position.Z.Equals((double)definition.SitPosition.Z))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private void CacheComponents()

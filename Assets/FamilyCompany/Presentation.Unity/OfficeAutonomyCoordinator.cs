@@ -24,9 +24,15 @@ namespace FamilyCompany.Presentation.Unity
         private bool _seatingInitialized;
         private OfficeSeatingState _seatingState;
         private OfficePlayerSeatingPresenter _playerSeatingPresenter;
+        private readonly Dictionary<string, string> _retainedSeatAssignments =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+        private int _seatingRegistryRevision = -1;
 
         public OfficeSeatingState SeatingState => _seatingState;
-        public bool IsSeatingRuntimeReady => _seatingInitialized && _seatingState != null;
+        public bool IsSeatingRuntimeReady =>
+            _seatingInitialized && _seatingState != null &&
+            seatRegistry != null && seatRegistry.isActiveAndEnabled &&
+            seatRegistry.SeatCount > 0 && seatRegistry.RuntimeRevision == _seatingRegistryRevision;
 
         public void Configure(
             PrototypeBootstrap newBootstrap,
@@ -50,6 +56,9 @@ namespace FamilyCompany.Presentation.Unity
                 ? throw new ArgumentNullException(nameof(newSeatRegistry))
                 : newSeatRegistry;
             _seatingState = existingState;
+            _retainedSeatAssignments.Clear();
+            CapturePersistentAssignments(_seatingState);
+            _seatingRegistryRevision = -1;
             if (placementPanel != null) seatPlacementPanel = placementPanel;
             _seatingInitialized = false;
         }
@@ -175,28 +184,42 @@ namespace FamilyCompany.Presentation.Unity
 
         private void InitializeSeatingRuntime()
         {
-            if (_seatingInitialized) return;
             if (seatRegistry == null)
                 seatRegistry = FindFirstObjectByType<OfficeSeatRegistry>();
-            if (seatRegistry == null) return;
+            if (seatRegistry == null || !seatRegistry.isActiveAndEnabled)
+            {
+                if (_seatingInitialized) ResetSeatingRuntimeBindings();
+                return;
+            }
 
             seatRegistry.Rebuild();
-            if (seatRegistry.SeatCount == 0) return;
-            if (_seatingState == null)
+            var revision = seatRegistry.RuntimeRevision;
+            var definitions = seatRegistry.Definitions;
+            if (definitions.Count == 0)
             {
-                var definitions = seatRegistry.Definitions
-                    .Select(item => new FamilyCompany.Simulation.OfficeSeating.OfficeSeatDefinition(
-                        item.SeatId,
-                        new FamilyCompany.Simulation.OfficeSeating.OfficeSeatPosition(
-                            item.SitPosition.X,
-                            item.SitPosition.Z)))
-                    .ToArray();
-                _seatingState = new OfficeSeatingState(definitions);
+                if (_seatingState != null) CapturePersistentAssignments(_seatingState);
+                if (_seatingInitialized || _seatingState != null) ResetSeatingRuntimeBindings();
+                _seatingState = null;
+                _seatingRegistryRevision = revision;
+                seatPlacementPanel?.ResetOfficeSeatingRuntime();
+                return;
             }
-            else
+
+            var stateMatches = StateMatchesDefinitions(_seatingState, definitions);
+            if (!stateMatches)
             {
-                ValidateSeatingStateMatchesRegistry();
+                CapturePersistentAssignments(_seatingState);
+                ResetSeatingRuntimeBindings();
+                _seatingState = CreateSeatingState(definitions);
+                RestorePersistentAssignments(_seatingState, definitions);
+                stateMatches = true;
             }
+            else if (_seatingInitialized && revision != _seatingRegistryRevision)
+            {
+                ResetSeatingRuntimeBindings();
+            }
+
+            if (_seatingInitialized && revision == _seatingRegistryRevision && stateMatches) return;
 
             if (seatPlacementPanel == null)
                 seatPlacementPanel = FindFirstObjectByType<OfficeSeatPlacementPanel>();
@@ -209,21 +232,74 @@ namespace FamilyCompany.Presentation.Unity
                     _playerSeatingPresenter = playerController.gameObject.AddComponent<OfficePlayerSeatingPresenter>();
                 _playerSeatingPresenter.Configure(bootstrap, seatRegistry, _seatingState);
             }
+            _seatingRegistryRevision = revision;
             _seatingInitialized = true;
         }
 
-        private void ValidateSeatingStateMatchesRegistry()
+        private static OfficeSeatingState CreateSeatingState(
+            IReadOnlyList<OfficeSeating.Authoring.OfficeSeatDefinition> definitions)
         {
-            if (_seatingState.SeatCount != seatRegistry.SeatCount)
-                throw new InvalidOperationException("Office seating state and authored registry have different seat counts.");
-            foreach (var definition in seatRegistry.Definitions)
+            return new OfficeSeatingState(definitions.Select(item =>
+                new FamilyCompany.Simulation.OfficeSeating.OfficeSeatDefinition(
+                    item.SeatId,
+                    new FamilyCompany.Simulation.OfficeSeating.OfficeSeatPosition(
+                        item.SitPosition.X,
+                        item.SitPosition.Z))));
+        }
+
+        private static bool StateMatchesDefinitions(
+            OfficeSeatingState state,
+            IReadOnlyList<OfficeSeating.Authoring.OfficeSeatDefinition> definitions)
+        {
+            if (state == null || state.SeatCount != definitions.Count) return false;
+            for (var index = 0; index < definitions.Count; index++)
             {
-                if (!_seatingState.TryGetSeat(definition.SeatId, out _))
+                var definition = definitions[index];
+                if (!state.TryGetSeat(definition.SeatId, out var seat) ||
+                    !seat.Position.X.Equals((double)definition.SitPosition.X) ||
+                    !seat.Position.Z.Equals((double)definition.SitPosition.Z))
                 {
-                    throw new InvalidOperationException(
-                        $"Office seating state is missing authored seat '{definition.SeatId}'.");
+                    return false;
                 }
             }
+            return true;
+        }
+
+        private void CapturePersistentAssignments(OfficeSeatingState state)
+        {
+            if (state == null) return;
+            var seatsInState = new HashSet<string>(
+                state.GetSeats().Select(item => item.SeatId),
+                StringComparer.Ordinal);
+            foreach (var seatId in seatsInState) _retainedSeatAssignments.Remove(seatId);
+
+            var assignments = state.ExportPersistentAssignments().Assignments;
+            for (var index = 0; index < assignments.Count; index++)
+            {
+                var assignment = assignments[index];
+                var duplicateMemberSeats = _retainedSeatAssignments
+                    .Where(item => string.Equals(item.Value, assignment.MemberId, StringComparison.Ordinal))
+                    .Select(item => item.Key)
+                    .ToArray();
+                foreach (var duplicateSeat in duplicateMemberSeats)
+                    _retainedSeatAssignments.Remove(duplicateSeat);
+                _retainedSeatAssignments[assignment.SeatId] = assignment.MemberId;
+            }
+        }
+
+        private void RestorePersistentAssignments(
+            OfficeSeatingState state,
+            IReadOnlyList<OfficeSeating.Authoring.OfficeSeatDefinition> definitions)
+        {
+            var validIds = new HashSet<string>(definitions.Select(item => item.SeatId), StringComparer.Ordinal);
+            var seenMembers = new HashSet<string>(StringComparer.Ordinal);
+            var assignments = _retainedSeatAssignments
+                .Where(item => validIds.Contains(item.Key))
+                .OrderBy(item => item.Key, StringComparer.Ordinal)
+                .Where(item => seenMembers.Add(item.Value))
+                .Select(item => new OfficeSeatAssignment(item.Key, item.Value))
+                .ToArray();
+            state.TryImportPersistentAssignments(new OfficeSeatingAssignmentSnapshot(assignments), out _);
         }
 
         private void ResetSeatingRuntimeBindings()
@@ -231,6 +307,7 @@ namespace FamilyCompany.Presentation.Unity
             if (_playerSeatingPresenter != null)
                 _playerSeatingPresenter.ResetOfficeSeatingRuntime();
             _playerSeatingPresenter = null;
+            seatPlacementPanel?.ResetOfficeSeatingRuntime();
             foreach (var agent in agents.Where(item => item != null))
             {
                 agent.ResetOfficeSeatingRuntime();

@@ -214,7 +214,7 @@ namespace FamilyCompany.Presentation.Unity
             if (!string.Equals(claim.SeatId, seat.SeatId, StringComparison.Ordinal))
                 throw new ArgumentException("Seat claim does not match the authored seat.", nameof(claim));
             if (!_seatRuntimeEnabled || !HasOfficeSeatingAnimation || HasActiveSeatClaim ||
-                !seat.HasRuntimeAnchors) return false;
+                !seat.IsRuntimeValid) return false;
             if (!_initialized) InitializeNow();
 
             SetAwayPresentation(false);
@@ -472,7 +472,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private bool HasValidSeatBinding()
         {
-            return HasActiveSeatClaim && _seatAuthoring != null && _seatAuthoring.HasRuntimeAnchors;
+            return HasActiveSeatClaim && _seatAuthoring != null && _seatAuthoring.IsRuntimeValid;
         }
 
         private void ReleaseSeatImmediately()

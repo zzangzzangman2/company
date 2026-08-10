@@ -15,12 +15,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
             new Dictionary<string, OfficeSeatDefinition>(StringComparer.Ordinal);
         private readonly List<OfficeSeatDefinition> _definitions =
             new List<OfficeSeatDefinition>();
+        private bool _snapshotBuilt;
+        private int _runtimeRevision;
 
         public int SeatCount
         {
             get
             {
-                PruneDestroyedAuthoring();
+                EnsureRuntimeSnapshot();
                 return _definitions.Count;
             }
         }
@@ -29,8 +31,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
         {
             get
             {
-                PruneDestroyedAuthoring();
-                return _definitions;
+                EnsureRuntimeSnapshot();
+                return _definitions.ToArray();
+            }
+        }
+
+        public int RuntimeRevision
+        {
+            get
+            {
+                EnsureRuntimeSnapshot();
+                return _runtimeRevision;
             }
         }
 
@@ -39,6 +50,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
             seats = configuredSeats == null
                 ? Array.Empty<OfficeSeatAuthoring>()
                 : (OfficeSeatAuthoring[])configuredSeats.Clone();
+            _snapshotBuilt = false;
         }
 
         public OfficeSeatValidationReport ValidateRegistry()
@@ -48,52 +60,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
 
         public void Rebuild()
         {
-            seats = RemoveDestroyedAuthoring(seats);
-            var report = ValidateRegistry();
-            foreach (var issue in report.Issues)
-            {
-                if (issue.Severity == OfficeSeatValidationSeverity.Warning)
-                    Debug.LogWarning($"OFFICE_SEAT_AUTHORING_WARNING [{issue.Code}] {issue.Message}", this);
-            }
-
-            if (report.HasErrors)
-                throw new InvalidOperationException("Invalid office seat authoring:\n" + report.FormatErrors());
-
-            _authoringById.Clear();
-            _definitionById.Clear();
-            _definitions.Clear();
-            foreach (var seat in seats)
-            {
-                if (!seat.TryBuildDefinition(out var definition, out var seatReport) || seatReport.HasErrors)
-                    throw new InvalidOperationException($"Office seat failed after registry validation: {seat.SeatId}.");
-                _authoringById.Add(definition.SeatId, seat);
-                _definitionById.Add(definition.SeatId, definition);
-                _definitions.Add(definition);
-            }
-
-            _definitions.Sort((left, right) => string.CompareOrdinal(left.SeatId, right.SeatId));
+            RefreshRuntimeSnapshot(true);
         }
 
         public bool TryGetAuthoring(string seatId, out OfficeSeatAuthoring authoring)
         {
-            var canonicalId = CanonicalLookupId(seatId);
-            if (!_authoringById.TryGetValue(canonicalId, out authoring)) return false;
-            if (authoring != null && authoring.HasRuntimeAnchors) return true;
-
-            if (authoring == null) RemoveRegisteredSeat(canonicalId);
-            authoring = null;
-            return false;
+            EnsureRuntimeSnapshot();
+            return _authoringById.TryGetValue(CanonicalLookupId(seatId), out authoring);
         }
 
         public bool TryGetDefinition(string seatId, out OfficeSeatDefinition definition)
         {
-            var canonicalId = CanonicalLookupId(seatId);
-            if (!TryGetAuthoring(canonicalId, out _))
-            {
-                definition = null;
-                return false;
-            }
-            return _definitionById.TryGetValue(canonicalId, out definition);
+            EnsureRuntimeSnapshot();
+            return _definitionById.TryGetValue(CanonicalLookupId(seatId), out definition);
         }
 
         public OfficeSeatDefinition GetRequiredDefinition(string seatId)
@@ -143,33 +122,87 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
             Rebuild();
         }
 
-        private void PruneDestroyedAuthoring()
+        private void EnsureRuntimeSnapshot()
         {
-            if (_authoringById.Count == 0) return;
-            var staleIds = new List<string>();
-            foreach (var pair in _authoringById)
-            {
-                if (pair.Value == null) staleIds.Add(pair.Key);
-            }
-            foreach (var seatId in staleIds) RemoveRegisteredSeat(seatId);
+            RefreshRuntimeSnapshot(false);
         }
 
-        private void RemoveRegisteredSeat(string canonicalId)
+        private void RefreshRuntimeSnapshot(bool logExcludedSeats)
         {
-            _authoringById.Remove(canonicalId);
-            _definitionById.Remove(canonicalId);
-            _definitions.RemoveAll(item => string.Equals(item.SeatId, canonicalId, StringComparison.Ordinal));
-        }
-
-        private static OfficeSeatAuthoring[] RemoveDestroyedAuthoring(OfficeSeatAuthoring[] source)
-        {
-            if (source == null || source.Length == 0) return Array.Empty<OfficeSeatAuthoring>();
-            var liveOrActualNull = new List<OfficeSeatAuthoring>(source.Length);
+            var nextAuthoring = new Dictionary<string, OfficeSeatAuthoring>(StringComparer.Ordinal);
+            var nextDefinitions = new Dictionary<string, OfficeSeatDefinition>(StringComparer.Ordinal);
+            var orderedDefinitions = new List<OfficeSeatDefinition>();
+            var excludedCount = 0;
+            var source = seats ?? Array.Empty<OfficeSeatAuthoring>();
             foreach (var seat in source)
             {
-                if (ReferenceEquals(seat, null) || seat != null) liveOrActualNull.Add(seat);
+                if (seat == null || !seat.IsRuntimeValid)
+                {
+                    excludedCount++;
+                    continue;
+                }
+                if (!seat.TryBuildDefinition(out var definition, out var report) || report.HasErrors ||
+                    nextAuthoring.ContainsKey(definition.SeatId))
+                {
+                    excludedCount++;
+                    continue;
+                }
+
+                nextAuthoring.Add(definition.SeatId, seat);
+                nextDefinitions.Add(definition.SeatId, definition);
+                orderedDefinitions.Add(definition);
             }
-            return liveOrActualNull.ToArray();
+            orderedDefinitions.Sort((left, right) => string.CompareOrdinal(left.SeatId, right.SeatId));
+
+            var changed = !_snapshotBuilt || !SnapshotMatches(nextAuthoring, orderedDefinitions);
+            if (changed)
+            {
+                _authoringById.Clear();
+                _definitionById.Clear();
+                _definitions.Clear();
+                foreach (var pair in nextAuthoring) _authoringById.Add(pair.Key, pair.Value);
+                foreach (var pair in nextDefinitions) _definitionById.Add(pair.Key, pair.Value);
+                _definitions.AddRange(orderedDefinitions);
+                _runtimeRevision++;
+                _snapshotBuilt = true;
+            }
+
+            if (logExcludedSeats && changed && excludedCount > 0)
+                Debug.LogWarning($"OFFICE_SEAT_RUNTIME_EXCLUDED count={excludedCount}", this);
+        }
+
+        private bool SnapshotMatches(
+            IReadOnlyDictionary<string, OfficeSeatAuthoring> nextAuthoring,
+            IReadOnlyList<OfficeSeatDefinition> nextDefinitions)
+        {
+            if (_authoringById.Count != nextAuthoring.Count || _definitions.Count != nextDefinitions.Count)
+                return false;
+            foreach (var pair in nextAuthoring)
+            {
+                if (!_authoringById.TryGetValue(pair.Key, out var current) || current != pair.Value)
+                    return false;
+            }
+            for (var index = 0; index < nextDefinitions.Count; index++)
+            {
+                if (!DefinitionMatches(_definitions[index], nextDefinitions[index])) return false;
+            }
+            return true;
+        }
+
+        private static bool DefinitionMatches(OfficeSeatDefinition left, OfficeSeatDefinition right)
+        {
+            return string.Equals(left.SeatId, right.SeatId, StringComparison.Ordinal) &&
+                   left.ApproachPosition.X.Equals(right.ApproachPosition.X) &&
+                   left.ApproachPosition.Y.Equals(right.ApproachPosition.Y) &&
+                   left.ApproachPosition.Z.Equals(right.ApproachPosition.Z) &&
+                   left.SitPosition.X.Equals(right.SitPosition.X) &&
+                   left.SitPosition.Y.Equals(right.SitPosition.Y) &&
+                   left.SitPosition.Z.Equals(right.SitPosition.Z) &&
+                   left.ComputerLookPosition.X.Equals(right.ComputerLookPosition.X) &&
+                   left.ComputerLookPosition.Y.Equals(right.ComputerLookPosition.Y) &&
+                   left.ComputerLookPosition.Z.Equals(right.ComputerLookPosition.Z) &&
+                   left.ResolvedFacing == right.ResolvedFacing &&
+                   left.ForegroundOcclusionMode == right.ForegroundOcclusionMode;
         }
 
         private static string CanonicalLookupId(string seatId)

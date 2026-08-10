@@ -37,6 +37,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
             approachAnchor != null && sitAnchor != null && computerLookTarget != null &&
             IsFinite(approachAnchor.position) && IsFinite(sitAnchor.position) &&
             IsFinite(computerLookTarget.position);
+        public bool IsRuntimeValid => isActiveAndEnabled && HasRuntimeAnchors;
 
         public void Configure(
             string newSeatId,
