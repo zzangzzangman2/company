@@ -1,6 +1,7 @@
 using System;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
+using FamilyCompany.Simulation.Navigation;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -20,6 +21,7 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private Sprite[] standUpFrames = Array.Empty<Sprite>();
         [SerializeField] private float seatingTransitionFrameSeconds = 0.11f;
         [SerializeField] private float seatedWorkFrameSeconds = 0.14f;
+        [SerializeField, Range(0f, 20f)] private float facingHysteresisDegrees = 7.5f;
         private Vector3 _worldVelocity;
         private float _frameClock;
         private int _walkFrame;
@@ -207,7 +209,7 @@ namespace FamilyCompany.Presentation.Unity
 
             if (IsMoving)
             {
-                _lastDirection = ResolveDirection(_worldVelocity);
+                _lastDirection = ResolveDirection(_worldVelocity, _lastDirection, facingHysteresisDegrees);
                 _frameClock += Mathf.Max(0f, deltaTime);
                 var effectiveFrameSeconds = ResolveEffectiveFrameSeconds();
                 while (_frameClock >= effectiveFrameSeconds)
@@ -230,6 +232,19 @@ namespace FamilyCompany.Presentation.Unity
             var angleFromSouth = Mathf.Atan2(-horizontal, -vertical) * Mathf.Rad2Deg;
             var octant = Mathf.RoundToInt(angleFromSouth / 45f);
             return (octant % DirectionCount + DirectionCount) % DirectionCount;
+        }
+
+        public static int ResolveDirectionWithHysteresisFromAxes(
+            float horizontal,
+            float vertical,
+            int currentDirection,
+            float hysteresisDegrees = 7.5f)
+        {
+            return OfficeFacingHysteresisRules.ResolveDirection(
+                horizontal,
+                vertical,
+                currentDirection,
+                hysteresisDegrees);
         }
 
         private void Update()
@@ -380,7 +395,10 @@ namespace FamilyCompany.Presentation.Unity
             }
         }
 
-        private static int ResolveDirection(Vector3 velocity)
+        private static int ResolveDirection(
+            Vector3 velocity,
+            int currentDirection,
+            float hysteresisDegrees)
         {
             var targetCamera = Camera.main;
             var cameraRight = targetCamera == null ? Vector3.right : targetCamera.transform.right;
@@ -391,7 +409,11 @@ namespace FamilyCompany.Presentation.Unity
             cameraForward.Normalize();
             var horizontal = Vector3.Dot(velocity, cameraRight);
             var vertical = Vector3.Dot(velocity, cameraForward);
-            return ResolveDirectionFromAxes(horizontal, vertical);
+            return ResolveDirectionWithHysteresisFromAxes(
+                horizontal,
+                vertical,
+                currentDirection,
+                hysteresisDegrees);
         }
 
         private float ResolveEffectiveFrameSeconds()
