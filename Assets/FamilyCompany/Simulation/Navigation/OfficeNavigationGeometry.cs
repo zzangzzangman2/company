@@ -163,5 +163,135 @@ namespace FamilyCompany.Simulation.Navigation
         public const int MaxExpandedNodes = MaxGridCells;
         public const float MinimumCellSize = 0.10f;
         public const float MaximumCellSize = 1.00f;
+        public const float DefaultMaximumProjectionDistance = 1.25f;
+
+        public static bool TryResolveGridDimensions(
+            OfficeNavBounds bounds,
+            float cellSize,
+            out int width,
+            out int height,
+            out int cellCount)
+        {
+            width = 0;
+            height = 0;
+            cellCount = 0;
+            if (cellSize < MinimumCellSize || cellSize > MaximumCellSize ||
+                float.IsNaN(cellSize) || float.IsInfinity(cellSize))
+                return false;
+            var widthValue = Math.Ceiling(((double)bounds.MaxX - bounds.MinX) / cellSize);
+            var heightValue = Math.Ceiling(((double)bounds.MaxZ - bounds.MinZ) / cellSize);
+            if (double.IsNaN(widthValue) || double.IsInfinity(widthValue) ||
+                double.IsNaN(heightValue) || double.IsInfinity(heightValue) ||
+                widthValue < 1d || heightValue < 1d ||
+                widthValue > MaxGridCells || heightValue > MaxGridCells)
+                return false;
+            var resolvedWidth = (long)widthValue;
+            var resolvedHeight = (long)heightValue;
+            if (resolvedWidth > MaxGridCells / resolvedHeight) return false;
+            width = (int)resolvedWidth;
+            height = (int)resolvedHeight;
+            cellCount = width * height;
+            return true;
+        }
+    }
+
+    public static class OfficeNavigationPathAcceptance
+    {
+        public static bool CanUseForSemanticDestination(OfficeNavPath path)
+        {
+            return path != null && path.Waypoints.Count > 0 && !path.GoalProjected;
+        }
+
+        public static bool CanUseForRecovery(OfficeNavPath path)
+        {
+            return path != null && path.Waypoints.Count > 0;
+        }
+    }
+
+    public static class OfficeNavigationGeometryQueries
+    {
+        private const float Epsilon = 0.000001f;
+
+        public static bool SegmentIntersectsClosedRectangle(
+            OfficeNavPoint start,
+            OfficeNavPoint end,
+            float minX,
+            float minZ,
+            float maxX,
+            float maxZ)
+        {
+            if (maxX < minX || maxZ < minZ) throw new ArgumentOutOfRangeException(nameof(maxX));
+            var deltaX = end.X - start.X;
+            var deltaZ = end.Z - start.Z;
+            var minimumTime = 0f;
+            var maximumTime = 1f;
+            if (!ClipSegmentAxis(start.X, deltaX, minX, maxX, ref minimumTime, ref maximumTime))
+                return false;
+            return ClipSegmentAxis(start.Z, deltaZ, minZ, maxZ, ref minimumTime, ref maximumTime);
+        }
+
+        public static float InteriorDepth(
+            OfficeNavPoint point,
+            float minX,
+            float minZ,
+            float maxX,
+            float maxZ)
+        {
+            if (point.X < minX || point.X > maxX || point.Z < minZ || point.Z > maxZ) return 0f;
+            return Math.Min(
+                Math.Min(point.X - minX, maxX - point.X),
+                Math.Min(point.Z - minZ, maxZ - point.Z));
+        }
+
+        public static bool IsPointInClosedRectangle(
+            OfficeNavPoint point,
+            float minX,
+            float minZ,
+            float maxX,
+            float maxZ)
+        {
+            return point.X >= minX && point.X <= maxX && point.Z >= minZ && point.Z <= maxZ;
+        }
+
+        public static bool MovesTowardNearestBoundary(
+            OfficeNavPoint start,
+            OfficeNavPoint end,
+            float minX,
+            float minZ,
+            float maxX,
+            float maxZ)
+        {
+            if (!IsPointInClosedRectangle(start, minX, minZ, maxX, maxZ))
+                return false;
+            var depth = InteriorDepth(start, minX, minZ, maxX, maxZ);
+            return Math.Abs(start.X - minX - depth) <= Epsilon && end.X < start.X - Epsilon ||
+                   Math.Abs(maxX - start.X - depth) <= Epsilon && end.X > start.X + Epsilon ||
+                   Math.Abs(start.Z - minZ - depth) <= Epsilon && end.Z < start.Z - Epsilon ||
+                   Math.Abs(maxZ - start.Z - depth) <= Epsilon && end.Z > start.Z + Epsilon;
+        }
+
+        private static bool ClipSegmentAxis(
+            float origin,
+            float delta,
+            float minimum,
+            float maximum,
+            ref float minimumTime,
+            ref float maximumTime)
+        {
+            if (Math.Abs(delta) <= Epsilon)
+                return origin >= minimum - Epsilon && origin <= maximum + Epsilon;
+            var first = (minimum - origin) / delta;
+            var second = (maximum - origin) / delta;
+            if (first > second)
+            {
+                var swap = first;
+                first = second;
+                second = swap;
+            }
+
+            minimumTime = Math.Max(minimumTime, first);
+            maximumTime = Math.Min(maximumTime, second);
+            return maximumTime + Epsilon >= minimumTime;
+        }
     }
 }

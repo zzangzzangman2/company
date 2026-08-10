@@ -34,6 +34,7 @@ namespace FamilyCompany.Presentation.Unity
         private IOfficeSeatedWorkAnimationSession _officeWorkSession;
         private int _preSeatingSortingOrder;
         private bool _seatingSortingOrderActive;
+        private bool _navigationAnimationSuppressed;
 
         public int CurrentDirection => _lastDirection;
         public int CurrentWalkFrame => _walkFrame;
@@ -64,6 +65,7 @@ namespace FamilyCompany.Presentation.Unity
         public bool IsOfficeWorkHookActive => _officeWorkSession != null;
         public bool IsOfficeWorkSafeToStand =>
             _officeWorkSession == null || _officeWorkSession.IsSafeToStand;
+        public bool IsNavigationAnimationSuppressed => _navigationAnimationSuppressed;
 
         public void Configure(SpriteRenderer renderer, Sprite[] frames, float secondsPerFrame = 0.11f)
         {
@@ -127,6 +129,15 @@ namespace FamilyCompany.Presentation.Unity
             ApplyOfficeSeatOcclusion(occlusionMode);
             ApplyFrame();
             return true;
+        }
+
+        public void SetNavigationAnimationSuppressed(bool suppressed)
+        {
+            if (_navigationAnimationSuppressed == suppressed) return;
+            _navigationAnimationSuppressed = suppressed;
+            _worldVelocity = Vector3.zero;
+            _frameClock = 0f;
+            if (!suppressed) ApplyFrame();
         }
 
         public Sprite GetFrame(int direction, int walkFrame)
@@ -205,8 +216,8 @@ namespace FamilyCompany.Presentation.Unity
                 ApplyFrame();
                 return;
             }
+            if (_navigationAnimationSuppressed) return;
             if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
-
             if (IsMoving)
             {
                 _lastDirection = ResolveDirection(_worldVelocity, _lastDirection, facingHysteresisDegrees);

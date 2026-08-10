@@ -45,6 +45,7 @@ namespace FamilyCompany.Presentation.Unity
         private Vector3 _navigationTargetPosition;
         private bool _navigationTargetValid;
         private bool _pathUnavailable;
+        private bool _navigationGoalProjected;
         private float _replanRemaining;
         private Vector3 _currentVelocity;
         private Vector3 _desiredVelocity;
@@ -66,9 +67,11 @@ namespace FamilyCompany.Presentation.Unity
         private int _seatFacing;
         private OfficeSeatApproachRequest _seatApproachRequest;
         private Action<OfficeWorkerAgent, OfficeSeatApproachHandoff> _seatApproachReady;
+        private Action<OfficeWorkerAgent, OfficeSeatApproachTermination> _seatApproachTerminated;
         private bool _seatHandoffReady;
 
         public event Action<OfficeWorkerAgent, string> AssignedTaskCompleted;
+        public event Action<OfficeWorkerAgent, OfficeSeatApproachTermination> SeatApproachTerminated;
 
         public string AgentId => agentId;
         public int RouteCount => route?.Length ?? 0;
@@ -169,7 +172,6 @@ namespace FamilyCompany.Presentation.Unity
             if (workSeconds <= 0f) throw new ArgumentOutOfRangeException(nameof(workSeconds));
             if (!_initialized) InitializeNow();
             if (HasAssignedTask) return false;
-            CancelSeatApproachInternal(false);
             SetAwayPresentation(false);
 
             _assignedTaskId = taskId;
@@ -182,7 +184,7 @@ namespace FamilyCompany.Presentation.Unity
             {
                 if (waypoint.Activity != OfficeActivity.Work) ClearSeatDestination();
             }
-            else
+            else if (!HasSeatApproach)
             {
                 BeginNavigation(waypoint);
             }
@@ -201,22 +203,36 @@ namespace FamilyCompany.Presentation.Unity
 
         public bool TryBeginSeatApproach(
             OfficeSeatApproachRequest request,
-            Action<OfficeWorkerAgent, OfficeSeatApproachHandoff> onReady)
+            Action<OfficeWorkerAgent, OfficeSeatApproachHandoff> onReady,
+            Action<OfficeWorkerAgent, OfficeSeatApproachTermination> onTerminated)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
+            if (onReady == null) throw new ArgumentNullException(nameof(onReady));
+            if (onTerminated == null) throw new ArgumentNullException(nameof(onTerminated));
             if (!_initialized) InitializeNow();
-            if (HasAssignedTask || HasSeatApproach) return false;
+            if (HasActiveSeatClaim || HasSeatApproach) return false;
             SetAwayPresentation(false);
             _seatApproachRequest = request;
             _seatApproachReady = onReady;
+            _seatApproachTerminated = onTerminated;
             _seatHandoffReady = false;
+            spriteAnimator?.SetNavigationAnimationSuppressed(false);
             BeginNavigation(request.ApproachPosition, null);
             return true;
         }
 
         public void ReleaseSeatHandoff(bool resumeAutonomy = true)
         {
-            CancelSeatApproachInternal(resumeAutonomy);
+            TerminateSeatApproach(
+                OfficeSeatApproachTerminationReason.ReleasedByOwner,
+                resumeAutonomy);
+        }
+
+        public void TerminateSeatApproach(
+            OfficeSeatApproachTerminationReason reason,
+            bool resumeNavigation = true)
+        {
+            CancelSeatApproachInternal(resumeNavigation, reason, true);
         }
 
         public void SetAutonomousDestination(string intentId, OfficeWaypoint waypoint, string statusLabel)
@@ -322,7 +338,10 @@ namespace FamilyCompany.Presentation.Unity
             _navigationWorld?.Register(this);
             SetAwayPresentation(false);
             _completedAssignments = 0;
-            CancelSeatApproachInternal(false);
+            CancelSeatApproachInternal(
+                false,
+                OfficeSeatApproachTerminationReason.AgentReinitialized,
+                true);
             ClearAutonomousDestination();
             CancelAssignedTask();
             _currentVelocity = Vector3.zero;
@@ -361,21 +380,34 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
             if (deltaTime <= 0f) return;
+            var stepCount = OfficeNavigationMotionIntegrator.CalculateStepCount(deltaTime);
+            for (var stepIndex = 0; stepIndex < stepCount; stepIndex++)
+            {
+                TickStep(OfficeNavigationMotionIntegrator.ResolveStepDelta(
+                    deltaTime,
+                    stepIndex,
+                    stepCount));
+            }
+        }
+
+        private void TickStep(float deltaTime)
+        {
             _replanRemaining = Mathf.Max(0f, _replanRemaining - deltaTime);
             if (HasActiveSeatClaim)
             {
                 TickSeat(deltaTime);
                 return;
             }
-            if (HasAssignedTask)
-            {
-                TickAssignedTask(deltaTime);
-                return;
-            }
 
             if (HasSeatApproach)
             {
                 TickSeatApproach(deltaTime);
+                return;
+            }
+
+            if (HasAssignedTask)
+            {
+                TickAssignedTask(deltaTime);
                 return;
             }
 
@@ -669,10 +701,24 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
 
-            if (!MoveAlongNavigation(_seatApproachRequest.ApproachPosition, null, deltaTime)) return;
+            if (!MoveAlongNavigation(_seatApproachRequest.ApproachPosition, null, deltaTime))
+            {
+                var settledUnavailable = _navigationWorld == null ||
+                                         (!_navigationWorld.IsRebuildPending &&
+                                          (!_navigationWorld.IsReady || _pathUnavailable));
+                if (_navigationGoalProjected || settledUnavailable)
+                {
+                    TerminateSeatApproach(
+                        OfficeSeatApproachTerminationReason.NavigationInvalidated,
+                        true);
+                }
+
+                return;
+            }
             ResetNavigation();
             _seatHandoffReady = true;
             StopMotion(deltaTime);
+            spriteAnimator?.SetNavigationAnimationSuppressed(true);
             var request = _seatApproachRequest;
             _seatApproachReady?.Invoke(
                 this,
@@ -763,6 +809,13 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             if (_navigationWorld == null) _navigationWorld = OfficeNavigationWorld.ResolveFor(this);
+            if (_navigationWorld == null || !_navigationWorld.IsReady || _navigationWorld.IsRebuildPending)
+            {
+                CurrentActivity = OfficeActivity.Walking;
+                StopMotion(deltaTime);
+                return false;
+            }
+
             var worldRevision = _navigationWorld == null ? -1 : _navigationWorld.Revision;
             if ((_navigationRevision != worldRevision || _pathUnavailable) && _replanRemaining <= 0f)
             {
@@ -784,6 +837,7 @@ namespace FamilyCompany.Presentation.Unity
             _navigationPoints = Array.Empty<Vector3>();
             _navigationPointIndex = 0;
             _pathUnavailable = true;
+            _navigationGoalProjected = false;
             if (!_navigationTargetValid) return;
             if (_navigationWorld == null) _navigationWorld = OfficeNavigationWorld.ResolveFor(this);
             if (_navigationWorld == null ||
@@ -794,6 +848,14 @@ namespace FamilyCompany.Presentation.Unity
                     out OfficeNavPath path))
             {
                 _navigationRevision = _navigationWorld == null ? -1 : _navigationWorld.Revision;
+                _replanRemaining = 0.24f;
+                return;
+            }
+
+            if (!OfficeNavigationPathAcceptance.CanUseForSemanticDestination(path))
+            {
+                _navigationGoalProjected = path.GoalProjected;
+                _navigationRevision = _navigationWorld.Revision;
                 _replanRemaining = 0.24f;
                 return;
             }
@@ -809,6 +871,7 @@ namespace FamilyCompany.Presentation.Unity
             _navigationPointIndex = 0;
             _navigationRevision = _navigationWorld.Revision;
             _pathUnavailable = false;
+            _navigationGoalProjected = false;
             _replanRemaining = 0.12f;
             SkipReachedPoints();
         }
@@ -867,7 +930,12 @@ namespace FamilyCompany.Presentation.Unity
 
             var slowing = trafficVelocity.sqrMagnitude + 0.0001f < _currentVelocity.sqrMagnitude;
             var rate = slowing ? deceleration : acceleration;
-            _currentVelocity = Vector3.MoveTowards(_currentVelocity, trafficVelocity, Mathf.Max(0.1f, rate) * deltaTime);
+            var motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
+                ToNavPoint(_currentVelocity),
+                ToNavPoint(trafficVelocity),
+                Mathf.Max(0.1f, rate),
+                deltaTime);
+            _currentVelocity = ToVector3(motion.Velocity);
             var before = transform.position;
             if (_controller == null || !_controller.enabled)
             {
@@ -876,7 +944,28 @@ namespace FamilyCompany.Presentation.Unity
                 return false;
             }
 
-            var movement = _currentVelocity * deltaTime;
+            var clampedDisplacement = OfficeNavigationMotionIntegrator.ClampDisplacement(
+                motion.Displacement,
+                distance);
+            var movement = ToVector3(clampedDisplacement);
+            if (!clampedDisplacement.Equals(motion.Displacement))
+            {
+                _currentVelocity = Vector3.zero;
+            }
+
+            var horizontalEnd = before + new Vector3(movement.x, 0f, movement.z);
+            if (_navigationWorld != null &&
+                !_navigationWorld.IsMovementCollisionFree(before, horizontalEnd, NavigationRadius))
+            {
+                _currentVelocity = Vector3.zero;
+                _desiredVelocity = Vector3.zero;
+                _navigationRevision = -1;
+                _replanRemaining = 0f;
+                _stuckSeconds += deltaTime;
+                spriteAnimator?.SetWorldVelocity(Vector3.zero);
+                return false;
+            }
+
             movement.y = !_controller.isGrounded ? -2f * deltaTime : -0.15f * deltaTime;
             _controller.Move(movement);
             var actual = transform.position - before;
@@ -942,28 +1031,50 @@ namespace FamilyCompany.Presentation.Unity
             _navigationDestination = null;
             _navigationTargetValid = false;
             _pathUnavailable = false;
+            _navigationGoalProjected = false;
             _desiredVelocity = Vector3.zero;
             _currentVelocity = Vector3.zero;
             _stuckSeconds = 0f;
             _isYielding = false;
         }
 
-        private void CancelSeatApproachInternal(bool resumeAutonomy)
+        private void CancelSeatApproachInternal(
+            bool resumeNavigation,
+            OfficeSeatApproachTerminationReason reason,
+            bool notifyOwner)
         {
+            var request = _seatApproachRequest;
+            var callback = _seatApproachTerminated;
             _seatApproachRequest = null;
             _seatApproachReady = null;
+            _seatApproachTerminated = null;
             _seatHandoffReady = false;
-            if (!resumeAutonomy) return;
-            if (_autonomyWaypoint != null) BeginNavigation(_autonomyWaypoint);
+            spriteAnimator?.SetNavigationAnimationSuppressed(false);
+            if (request != null && notifyOwner)
+            {
+                var termination = new OfficeSeatApproachTermination(
+                    request.RequestId,
+                    request.SeatId,
+                    reason);
+                callback?.Invoke(this, termination);
+                SeatApproachTerminated?.Invoke(this, termination);
+            }
+
+            if (!resumeNavigation) return;
+            if (_assignedWaypoint != null) BeginNavigation(_assignedWaypoint);
+            else if (_autonomyWaypoint != null) BeginNavigation(_autonomyWaypoint);
+            else ResetNavigation();
         }
 
         private void StopMotion(float deltaTime)
         {
             _desiredVelocity = Vector3.zero;
-            _currentVelocity = Vector3.MoveTowards(
-                _currentVelocity,
-                Vector3.zero,
-                Mathf.Max(0.1f, deceleration) * Mathf.Max(0f, deltaTime));
+            var motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
+                ToNavPoint(_currentVelocity),
+                new OfficeNavPoint(0f, 0f),
+                Mathf.Max(0.1f, deceleration),
+                Mathf.Max(0f, deltaTime));
+            _currentVelocity = ToVector3(motion.Velocity);
             if (_currentVelocity.sqrMagnitude < 0.0025f) _currentVelocity = Vector3.zero;
             spriteAnimator?.SetWorldVelocity(_currentVelocity);
             _isYielding = false;
@@ -1026,6 +1137,11 @@ namespace FamilyCompany.Presentation.Unity
         private void OnDisable()
         {
             _navigationWorld?.Unregister(this);
+            CancelSeatApproachInternal(
+                false,
+                OfficeSeatApproachTerminationReason.AgentDisabled,
+                true);
+            ResetNavigation();
             spriteAnimator?.SetWorldVelocity(Vector3.zero);
             ReleaseSeatImmediately();
         }
@@ -1058,6 +1174,10 @@ namespace FamilyCompany.Presentation.Unity
             right.y = 0f;
             return Vector3.Distance(left, right);
         }
+
+        private static OfficeNavPoint ToNavPoint(Vector3 value) => new OfficeNavPoint(value.x, value.z);
+
+        private static Vector3 ToVector3(OfficeNavPoint value) => new Vector3(value.X, 0f, value.Z);
 
         private static int PositiveModulo(int value, int divisor)
         {

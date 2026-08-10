@@ -11,6 +11,10 @@ namespace FamilyCompany.Editor
             int paths,
             int replans,
             int segmentChecks,
+            int oracleSegmentChecks,
+            int counterexampleChecks,
+            int motionPartitionChecks,
+            int trafficPermutationChecks,
             float maximumStretch,
             int maximumExpandedNodes,
             int deadlockTicks)
@@ -19,6 +23,10 @@ namespace FamilyCompany.Editor
             Paths = paths;
             Replans = replans;
             SegmentChecks = segmentChecks;
+            OracleSegmentChecks = oracleSegmentChecks;
+            CounterexampleChecks = counterexampleChecks;
+            MotionPartitionChecks = motionPartitionChecks;
+            TrafficPermutationChecks = trafficPermutationChecks;
             MaximumStretch = maximumStretch;
             MaximumExpandedNodes = maximumExpandedNodes;
             DeadlockTicks = deadlockTicks;
@@ -28,6 +36,10 @@ namespace FamilyCompany.Editor
         public int Paths { get; }
         public int Replans { get; }
         public int SegmentChecks { get; }
+        public int OracleSegmentChecks { get; }
+        public int CounterexampleChecks { get; }
+        public int MotionPartitionChecks { get; }
+        public int TrafficPermutationChecks { get; }
         public float MaximumStretch { get; }
         public int MaximumExpandedNodes { get; }
         public int DeadlockTicks { get; }
@@ -63,6 +75,7 @@ namespace FamilyCompany.Editor
             var pathCount = 0;
             var replanCount = 0;
             var segmentChecks = 0;
+            var oracleSegmentChecks = 0;
             var maximumStretch = 0f;
             var maximumExpanded = 0;
             for (var seed = 0; seed < seedCount; seed++)
@@ -84,7 +97,14 @@ namespace FamilyCompany.Editor
                         $"seed {seed} destination {destinationIndex} deterministic replay path");
                     Require(PathsEqual(first, second),
                         $"seed {seed} destination {destinationIndex} deterministic replay equality");
-                    ValidateCollisionFree(pathfinder, first, seed, destinationIndex, ref segmentChecks);
+                    ValidateCollisionFree(
+                        pathfinder,
+                        obstacles,
+                        first,
+                        seed,
+                        destinationIndex,
+                        ref segmentChecks,
+                        ref oracleSegmentChecks);
                     var stretch = first.RawGridCostMetres <= 0.0001f
                         ? 1f
                         : first.LengthMetres / first.RawGridCostMetres;
@@ -94,6 +114,21 @@ namespace FamilyCompany.Editor
                     maximumExpanded = Math.Max(maximumExpanded, first.ExpandedNodes);
                     pathCount++;
                 }
+
+                var reversedObstacles = new List<OfficeNavObstacle>(obstacles);
+                reversedObstacles.Reverse();
+                var reversedPathfinder = new DeterministicOfficePathfinder(
+                    Bounds,
+                    CellSize,
+                    reversedObstacles,
+                    AgentRadius);
+                var deterministicDestination = SemanticDestinations[seed % SemanticDestinations.Length];
+                Require(pathfinder.TryFindPath(start, deterministicDestination, out var orderedPath),
+                    $"seed {seed} ordered obstacle determinism path");
+                Require(reversedPathfinder.TryFindPath(start, deterministicDestination, out var reversedPath),
+                    $"seed {seed} reversed obstacle determinism path");
+                Require(PathsEqual(orderedPath, reversedPath),
+                    $"seed {seed} obstacle-order independent tie-break");
 
                 var changed = new List<OfficeNavObstacle>(obstacles)
                 {
@@ -109,18 +144,31 @@ namespace FamilyCompany.Editor
                 Require(changedPathfinder.TryFindPath(Starts[0], Starts[2], out var replanB),
                     $"seed {seed} placement replan B");
                 Require(PathsEqual(replanA, replanB), $"seed {seed} placement replan determinism");
-                ValidateCollisionFree(changedPathfinder, replanA, seed, -1, ref segmentChecks);
+                ValidateCollisionFree(
+                    changedPathfinder,
+                    changed,
+                    replanA,
+                    seed,
+                    -1,
+                    ref segmentChecks,
+                    ref oracleSegmentChecks);
                 replanCount++;
             }
 
-            ValidateBlockedEndpointProjection();
+            var counterexampleChecks = ValidateCounterexamples();
             ValidateFacingHysteresis();
+            var motionPartitionChecks = ValidateMotionPartitioning();
+            var trafficPermutationChecks = ValidateTrafficPermutationIndependence();
             var deadlockTicks = ValidateDeadlockRecovery();
             return new OfficeNavigationRegressionReport(
                 seedCount,
                 pathCount,
                 replanCount,
                 segmentChecks,
+                oracleSegmentChecks,
+                counterexampleChecks,
+                motionPartitionChecks,
+                trafficPermutationChecks,
                 maximumStretch,
                 maximumExpanded,
                 deadlockTicks);
@@ -178,10 +226,12 @@ namespace FamilyCompany.Editor
 
         private static void ValidateCollisionFree(
             DeterministicOfficePathfinder pathfinder,
+            IReadOnlyList<OfficeNavObstacle> obstacles,
             OfficeNavPath path,
             int seed,
             int destinationIndex,
-            ref int segmentChecks)
+            ref int segmentChecks,
+            ref int oracleSegmentChecks)
         {
             Require(path.Waypoints.Count > 0, $"seed {seed} destination {destinationIndex} non-empty path");
             for (var index = 0; index < path.Waypoints.Count; index++)
@@ -191,25 +241,180 @@ namespace FamilyCompany.Editor
                 if (index == 0) continue;
                 Require(pathfinder.IsSegmentWalkable(path.Waypoints[index - 1], path.Waypoints[index]),
                     $"seed {seed} destination {destinationIndex} segment {index - 1}->{index} overlap");
+                Require(IndependentSegmentIsClear(
+                        path.Waypoints[index - 1],
+                        path.Waypoints[index],
+                        pathfinder.Bounds,
+                        obstacles,
+                        AgentRadius + 0.04f),
+                    $"seed {seed} destination {destinationIndex} independent oracle segment {index - 1}->{index}");
                 segmentChecks++;
+                oracleSegmentChecks++;
             }
         }
 
-        private static void ValidateBlockedEndpointProjection()
+        private static int ValidateCounterexamples()
         {
-            var obstacle = new OfficeNavObstacle("projection-blocker", 4f, 4f, 6f, 6f);
+            var checks = 0;
+            ValidateExactWorldSegmentCounterexample();
+            checks++;
+            ValidatePartialBoundaryCell();
+            checks++;
+            ValidateDiagonalCornerCutting();
+            checks++;
+            ValidateProjectionPolicy();
+            checks += 3;
+            ValidateObstacleEscapeDirection();
+            checks += 3;
+            ValidateCapacityLimits();
+            checks += 3;
+            return checks;
+        }
+
+        private static void ValidateExactWorldSegmentCounterexample()
+        {
+            var pathfinder = new DeterministicOfficePathfinder(
+                new OfficeNavBounds(0f, 0f, 4f, 4f),
+                1f,
+                new[] { new OfficeNavObstacle("blocked-cell", 1.10f, 1.10f, 1.90f, 1.90f) },
+                0f,
+                0f);
+            var start = new OfficeNavPoint(3.971f, 1.834f);
+            var end = new OfficeNavPoint(1.061f, 0.981f);
+            Require(!pathfinder.IsSegmentWalkable(start, end), "exact world segment counterexample forward");
+            Require(!pathfinder.IsSegmentWalkable(end, start), "exact world segment counterexample reverse");
+            Require(!IndependentSegmentIsClear(
+                    start,
+                    end,
+                    pathfinder.Bounds,
+                    new[] { new OfficeNavObstacle("blocked-cell", 1f, 1f, 2f, 2f) },
+                    0f),
+                "exact world segment independent oracle detects blocked cell");
+        }
+
+        private static void ValidatePartialBoundaryCell()
+        {
+            var bounds = new OfficeNavBounds(0f, 0f, 1.05f, 1f);
+            var goal = new OfficeNavPoint(1.025f, 0.5f);
+            var pathfinder = new DeterministicOfficePathfinder(
+                bounds,
+                0.20f,
+                new[] { new OfficeNavObstacle("tail", 1.01f, 0.20f, 1.04f, 0.80f) },
+                0f,
+                0f);
+            Require(pathfinder.Width == 6, "partial boundary ceil width");
+            Require(!pathfinder.IsPointWalkable(goal), "partial boundary obstacle blocks tail point");
+            if (pathfinder.TryFindPath(new OfficeNavPoint(0.5f, 0.5f), goal, out var path))
+                Require(path.GoalProjected, "partial boundary goal cannot be accepted without projection");
+        }
+
+        private static void ValidateDiagonalCornerCutting()
+        {
+            var pathfinder = new DeterministicOfficePathfinder(
+                new OfficeNavBounds(0f, 0f, 2f, 2f),
+                1f,
+                new[]
+                {
+                    new OfficeNavObstacle("east-block", 1.10f, 0.10f, 1.90f, 0.90f),
+                    new OfficeNavObstacle("north-block", 0.10f, 1.10f, 0.90f, 1.90f)
+                },
+                0f,
+                0f);
+            Require(!pathfinder.TryFindPath(
+                    new OfficeNavPoint(0.5f, 0.5f),
+                    new OfficeNavPoint(1.5f, 1.5f),
+                    out _),
+                "diagonal movement cannot cut between two blocked cardinal cells");
+        }
+
+        private static void ValidateProjectionPolicy()
+        {
+            var smallObstacle = new OfficeNavObstacle("projection-blocker", 4.70f, 4.70f, 5.30f, 5.30f);
             var pathfinder = new DeterministicOfficePathfinder(
                 new OfficeNavBounds(0f, 0f, 10f, 10f),
                 CellSize,
-                new[] { obstacle },
+                new[] { smallObstacle },
                 AgentRadius);
-            Require(pathfinder.TryFindPath(new OfficeNavPoint(5f, 5f), new OfficeNavPoint(4.5f, 4.5f), out var path),
-                "blocked endpoint projection path");
-            Require(path.StartProjected && path.GoalProjected, "blocked endpoints projected");
-            Require(path.Waypoints.Count > 0 &&
-                    pathfinder.IsPointWalkable(path.Waypoints[0]) &&
-                    pathfinder.IsPointWalkable(path.Waypoints[path.Waypoints.Count - 1]),
-                "blocked endpoint projection targets are walkable");
+            Require(pathfinder.TryFindPath(new OfficeNavPoint(3f, 5f), new OfficeNavPoint(5f, 5f), out var projected),
+                "near blocked endpoint can produce recovery path");
+            Require(projected.GoalProjected, "near blocked endpoint is explicitly projected");
+            Require(!OfficeNavigationPathAcceptance.CanUseForSemanticDestination(projected),
+                "projected goal is rejected for semantic completion");
+
+            var largePathfinder = new DeterministicOfficePathfinder(
+                new OfficeNavBounds(0f, 0f, 10f, 10f),
+                CellSize,
+                new[] { new OfficeNavObstacle("large", 2f, 2f, 8f, 8f) },
+                AgentRadius);
+            Require(!largePathfinder.TryFindPath(
+                    new OfficeNavPoint(1f, 5f),
+                    new OfficeNavPoint(5f, 5f),
+                    out _),
+                "far blocked endpoint projection is rejected");
+
+            var disconnected = new DeterministicOfficePathfinder(
+                new OfficeNavBounds(0f, 0f, 10f, 10f),
+                CellSize,
+                new[] { new OfficeNavObstacle("wall", 4.8f, 0f, 5.2f, 10f) },
+                AgentRadius);
+            Require(!disconnected.TryFindPath(
+                    new OfficeNavPoint(3f, 5f),
+                    new OfficeNavPoint(7f, 5f),
+                    out _),
+                "projection cannot cross unreachable component");
+        }
+
+        private static void ValidateObstacleEscapeDirection()
+        {
+            var start = new OfficeNavPoint(0.25f, 1f);
+            Require(OfficeNavigationGeometryQueries.MovesTowardNearestBoundary(
+                    start,
+                    new OfficeNavPoint(-0.10f, 1.20f),
+                    0f,
+                    0f,
+                    2f,
+                    2f),
+                "embedded agent can move monotonically through its nearest boundary");
+            Require(!OfficeNavigationGeometryQueries.MovesTowardNearestBoundary(
+                    start,
+                    new OfficeNavPoint(2.25f, 1f),
+                    0f,
+                    0f,
+                    2f,
+                    2f),
+                "embedded agent cannot tunnel through the far side of an obstacle");
+            Require(OfficeNavigationGeometryQueries.MovesTowardNearestBoundary(
+                    new OfficeNavPoint(0f, 1f),
+                    new OfficeNavPoint(-0.10f, 1f),
+                    0f,
+                    0f,
+                    2f,
+                    2f),
+                "agent touching a closed obstacle boundary can escape outward");
+        }
+
+        private static void ValidateCapacityLimits()
+        {
+            var tooMany = new List<OfficeNavObstacle>();
+            for (var index = 0; index <= OfficeNavigationLimits.MaxObstacles; index++)
+                tooMany.Add(new OfficeNavObstacle($"cap-{index:D3}", 1f, 1f, 1.1f, 1.1f));
+            RequireThrows<ArgumentOutOfRangeException>(
+                () => new DeterministicOfficePathfinder(Bounds, CellSize, tooMany, AgentRadius),
+                "obstacle cap rejects unbounded allocation");
+            RequireThrows<ArgumentOutOfRangeException>(
+                () => new DeterministicOfficePathfinder(
+                    new OfficeNavBounds(0f, 0f, 100f, 100f),
+                    OfficeNavigationLimits.MinimumCellSize,
+                    Array.Empty<OfficeNavObstacle>(),
+                    AgentRadius),
+                "grid cap rejects unbounded allocation");
+            RequireThrows<ArgumentOutOfRangeException>(
+                () => new DeterministicOfficePathfinder(
+                    new OfficeNavBounds(-float.MaxValue, -1f, float.MaxValue, 1f),
+                    OfficeNavigationLimits.MinimumCellSize,
+                    Array.Empty<OfficeNavObstacle>(),
+                    AgentRadius),
+                "grid dimension overflow fails closed before allocation");
         }
 
         private static void ValidateFacingHysteresis()
@@ -251,6 +456,8 @@ namespace FamilyCompany.Editor
             var bStuck = 0f;
             var aReached = false;
             var bReached = false;
+            var recoverySide = 0f;
+            var observedRecovery = false;
             for (var tick = 1; tick <= 800; tick++)
             {
                 var aDesired = aReached ? new OfficeNavPoint(0f, 0f) : (aGoal - aPosition).Normalized * speed;
@@ -259,6 +466,15 @@ namespace FamilyCompany.Editor
                 var bState = new OfficeTrafficAgentState("agent_b", bPosition, bDesired, radius, bStuck);
                 var aDecision = OfficeNavigationTrafficRules.Resolve(aState, new[] { bState });
                 var bDecision = OfficeNavigationTrafficRules.Resolve(bState, new[] { aState });
+                if (bDecision.RecoveryWeight > 0f && Math.Abs(bDecision.RecoveryDirection.Z) > 0.0001f)
+                {
+                    observedRecovery = true;
+                    var currentSide = Math.Sign(bDecision.RecoveryDirection.Z);
+                    if (Math.Abs(recoverySide) > 0.1f)
+                        Require(Math.Abs(currentSide - recoverySide) <= 0.1f,
+                            "deadlock recovery does not oscillate between lateral sides");
+                    recoverySide = currentSide;
+                }
                 var aVelocity = ResolveVelocity(aDesired, aDecision, speed);
                 var bVelocity = ResolveVelocity(bDesired, bDecision, speed);
                 var nextA = ClampCorridor(aPosition + aVelocity * deltaTime, radius);
@@ -285,7 +501,11 @@ namespace FamilyCompany.Editor
                     "deadlock recovery agent overlap");
                 aReached = aReached || OfficeNavPoint.Distance(aPosition, aGoal) <= 0.12f;
                 bReached = bReached || OfficeNavPoint.Distance(bPosition, bGoal) <= 0.12f;
-                if (aReached && bReached) return tick;
+                if (aReached && bReached)
+                {
+                    Require(observedRecovery, "deadlock regression exercised lateral recovery");
+                    return tick;
+                }
             }
 
             throw new InvalidOperationException(
@@ -307,6 +527,198 @@ namespace FamilyCompany.Editor
             return new OfficeNavPoint(
                 Math.Max(radius, Math.Min(10f - radius, value.X)),
                 Math.Max(radius, Math.Min(2f - radius, value.Z)));
+        }
+
+        private static int ValidateMotionPartitioning()
+        {
+            var checks = 0;
+            var current = new OfficeNavPoint(0.25f, -0.10f);
+            var target = new OfficeNavPoint(1.60f, 0.35f);
+            const float rate = 3.25f;
+            const float total = 0.80f;
+            var one = OfficeNavigationMotionIntegrator.IntegrateVelocity(current, target, rate, total);
+            var splitA = OfficeNavigationMotionIntegrator.IntegrateVelocity(current, target, rate, 0.30f);
+            var splitB = OfficeNavigationMotionIntegrator.IntegrateVelocity(splitA.Velocity, target, rate, 0.50f);
+            Require(OfficeNavPoint.Distance(one.Velocity, splitB.Velocity) <= 0.00001f,
+                "motion velocity is partition independent");
+            Require(OfficeNavPoint.Distance(
+                        one.Displacement,
+                        splitA.Displacement + splitB.Displacement) <= 0.00001f,
+                "motion displacement is partition independent");
+            checks += 2;
+
+            var largeDelta = OfficeNavigationMotionIntegrator.IntegrateVelocity(
+                new OfficeNavPoint(0f, 0f),
+                new OfficeNavPoint(2f, 0f),
+                6f,
+                2f);
+            var clamped = OfficeNavigationMotionIntegrator.ClampDisplacement(largeDelta.Displacement, 0.35f);
+            Require(clamped.Magnitude <= 0.350001f, "large delta displacement clamps to waypoint distance");
+            checks++;
+
+            var largeStepCount = OfficeNavigationMotionIntegrator.CalculateStepCount(2f);
+            Require(largeStepCount == 40, "large delta is divided into deterministic bounded steps");
+            var reconstructedDelta = 0f;
+            for (var index = 0; index < largeStepCount; index++)
+            {
+                var step = OfficeNavigationMotionIntegrator.ResolveStepDelta(2f, index, largeStepCount);
+                Require(step > 0f && step <= OfficeNavigationMotionIntegrator.MaximumStableStepSeconds + 0.000001f,
+                    "large delta step remains within collision probe horizon");
+                reconstructedDelta += step;
+            }
+
+            Require(Math.Abs(reconstructedDelta - 2f) <= 0.00001f,
+                "large delta slicing preserves elapsed time");
+            checks += 2;
+            return checks;
+        }
+
+        private static int ValidateTrafficPermutationIndependence()
+        {
+            var self = new OfficeTrafficAgentState(
+                "agent_m",
+                new OfficeNavPoint(5f, 1f),
+                new OfficeNavPoint(1f, 0f),
+                0.28f,
+                0.95f);
+            var left = new OfficeTrafficAgentState(
+                "agent_a",
+                new OfficeNavPoint(5.7f, 1f),
+                new OfficeNavPoint(-1f, 0f),
+                0.28f,
+                0.1f);
+            var right = new OfficeTrafficAgentState(
+                "agent_z",
+                new OfficeNavPoint(4.4f, 1.2f),
+                new OfficeNavPoint(0.8f, -0.1f),
+                0.28f,
+                0.2f);
+            var forward = OfficeNavigationTrafficRules.Resolve(self, new[] { left, right });
+            var reverse = OfficeNavigationTrafficRules.Resolve(self, new[] { right, left });
+            Require(TrafficDecisionsEqual(forward, reverse), "traffic decision is peer-order independent");
+            return 1;
+        }
+
+        private static bool TrafficDecisionsEqual(OfficeTrafficDecision left, OfficeTrafficDecision right)
+        {
+            return Math.Abs(left.ForwardScale - right.ForwardScale) <= 0.000001f &&
+                   OfficeNavPoint.Distance(left.RecoveryDirection, right.RecoveryDirection) <= 0.000001f &&
+                   Math.Abs(left.RecoveryWeight - right.RecoveryWeight) <= 0.000001f &&
+                   left.IsYielding == right.IsYielding &&
+                   left.ShouldReplan == right.ShouldReplan;
+        }
+
+        private static bool IndependentSegmentIsClear(
+            OfficeNavPoint start,
+            OfficeNavPoint end,
+            OfficeNavBounds bounds,
+            IReadOnlyList<OfficeNavObstacle> obstacles,
+            float inflation)
+        {
+            if (!bounds.Contains(start) || !bounds.Contains(end)) return false;
+            var width = Math.Max(1, (int)Math.Ceiling(bounds.Width / CellSize));
+            var height = Math.Max(1, (int)Math.Ceiling(bounds.Depth / CellSize));
+            var minCellX = Math.Max(0, Math.Min(width - 1,
+                (int)Math.Floor((Math.Min(start.X, end.X) - bounds.MinX) / CellSize)));
+            var maxCellX = Math.Max(0, Math.Min(width - 1,
+                (int)Math.Floor((Math.Max(start.X, end.X) - bounds.MinX) / CellSize)));
+            var minCellZ = Math.Max(0, Math.Min(height - 1,
+                (int)Math.Floor((Math.Min(start.Z, end.Z) - bounds.MinZ) / CellSize)));
+            var maxCellZ = Math.Max(0, Math.Min(height - 1,
+                (int)Math.Floor((Math.Max(start.Z, end.Z) - bounds.MinZ) / CellSize)));
+            for (var z = minCellZ; z <= maxCellZ; z++)
+            {
+                for (var x = minCellX; x <= maxCellX; x++)
+                {
+                    var cellMinX = bounds.MinX + x * CellSize;
+                    var cellMinZ = bounds.MinZ + z * CellSize;
+                    var cellMaxX = Math.Min(bounds.MaxX, cellMinX + CellSize);
+                    var cellMaxZ = Math.Min(bounds.MaxZ, cellMinZ + CellSize);
+                    var blocked = false;
+                    for (var obstacleIndex = 0; obstacleIndex < obstacles.Count; obstacleIndex++)
+                    {
+                        var obstacle = obstacles[obstacleIndex];
+                        if (obstacle.MaxX + inflation >= cellMinX &&
+                            obstacle.MinX - inflation <= cellMaxX &&
+                            obstacle.MaxZ + inflation >= cellMinZ &&
+                            obstacle.MinZ - inflation <= cellMaxZ)
+                        {
+                            blocked = true;
+                            break;
+                        }
+                    }
+
+                    if (blocked && IndependentSegmentIntersectsRectangle(
+                            start, end, cellMinX, cellMinZ, cellMaxX, cellMaxZ))
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IndependentSegmentIntersectsRectangle(
+            OfficeNavPoint start,
+            OfficeNavPoint end,
+            float minX,
+            float minZ,
+            float maxX,
+            float maxZ)
+        {
+            return IndependentPointInside(start, minX, minZ, maxX, maxZ) ||
+                   IndependentPointInside(end, minX, minZ, maxX, maxZ) ||
+                   IndependentSegmentsIntersect(start, end, new OfficeNavPoint(minX, minZ), new OfficeNavPoint(maxX, minZ)) ||
+                   IndependentSegmentsIntersect(start, end, new OfficeNavPoint(maxX, minZ), new OfficeNavPoint(maxX, maxZ)) ||
+                   IndependentSegmentsIntersect(start, end, new OfficeNavPoint(maxX, maxZ), new OfficeNavPoint(minX, maxZ)) ||
+                   IndependentSegmentsIntersect(start, end, new OfficeNavPoint(minX, maxZ), new OfficeNavPoint(minX, minZ));
+        }
+
+        private static bool IndependentPointInside(
+            OfficeNavPoint point,
+            float minX,
+            float minZ,
+            float maxX,
+            float maxZ)
+        {
+            return point.X >= minX && point.X <= maxX && point.Z >= minZ && point.Z <= maxZ;
+        }
+
+        private static bool IndependentSegmentsIntersect(
+            OfficeNavPoint firstStart,
+            OfficeNavPoint firstEnd,
+            OfficeNavPoint secondStart,
+            OfficeNavPoint secondEnd)
+        {
+            const float epsilon = 0.000001f;
+            var firstSideA = IndependentCross(firstStart, firstEnd, secondStart);
+            var firstSideB = IndependentCross(firstStart, firstEnd, secondEnd);
+            var secondSideA = IndependentCross(secondStart, secondEnd, firstStart);
+            var secondSideB = IndependentCross(secondStart, secondEnd, firstEnd);
+            if ((firstSideA > epsilon && firstSideB < -epsilon || firstSideA < -epsilon && firstSideB > epsilon) &&
+                (secondSideA > epsilon && secondSideB < -epsilon || secondSideA < -epsilon && secondSideB > epsilon))
+                return true;
+            return Math.Abs(firstSideA) <= epsilon && IndependentOnSegment(firstStart, firstEnd, secondStart) ||
+                   Math.Abs(firstSideB) <= epsilon && IndependentOnSegment(firstStart, firstEnd, secondEnd) ||
+                   Math.Abs(secondSideA) <= epsilon && IndependentOnSegment(secondStart, secondEnd, firstStart) ||
+                   Math.Abs(secondSideB) <= epsilon && IndependentOnSegment(secondStart, secondEnd, firstEnd);
+        }
+
+        private static float IndependentCross(OfficeNavPoint start, OfficeNavPoint end, OfficeNavPoint point)
+        {
+            return (end.X - start.X) * (point.Z - start.Z) -
+                   (end.Z - start.Z) * (point.X - start.X);
+        }
+
+        private static bool IndependentOnSegment(
+            OfficeNavPoint start,
+            OfficeNavPoint end,
+            OfficeNavPoint point)
+        {
+            const float epsilon = 0.000001f;
+            return point.X >= Math.Min(start.X, end.X) - epsilon &&
+                   point.X <= Math.Max(start.X, end.X) + epsilon &&
+                   point.Z >= Math.Min(start.Z, end.Z) - epsilon &&
+                   point.Z <= Math.Max(start.Z, end.Z) + epsilon;
         }
 
         private static void AxesFromSouthAngle(float degrees, out float horizontal, out float vertical)
@@ -332,6 +744,21 @@ namespace FamilyCompany.Editor
         private static void Require(bool condition, string label)
         {
             if (!condition) throw new InvalidOperationException("Office navigation regression failed: " + label + ".");
+        }
+
+        private static void RequireThrows<TException>(Action action, string label)
+            where TException : Exception
+        {
+            try
+            {
+                action();
+            }
+            catch (TException)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException("Office navigation regression failed: " + label + ".");
         }
 
         private struct StableTestRandom

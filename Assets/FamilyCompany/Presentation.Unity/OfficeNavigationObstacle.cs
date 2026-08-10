@@ -24,10 +24,23 @@ namespace FamilyCompany.Presentation.Unity
             OfficeNavigationWorld.NotifyObstacleMutation();
         }
 
-        private void OnEnable() => OfficeNavigationWorld.NotifyObstacleMutation();
+        private void OnEnable()
+        {
+            transform.hasChanged = false;
+            OfficeNavigationWorld.NotifyObstacleMutation();
+        }
+
         private void OnDisable() => OfficeNavigationWorld.NotifyObstacleMutation();
+        private void OnDestroy() => OfficeNavigationWorld.NotifyObstacleMutation();
         private void OnValidate() => OfficeNavigationWorld.NotifyObstacleMutation();
         private void OnTransformParentChanged() => OfficeNavigationWorld.NotifyObstacleMutation();
         private void OnTransformChildrenChanged() => OfficeNavigationWorld.NotifyObstacleMutation();
+
+        private void LateUpdate()
+        {
+            if (!transform.hasChanged) return;
+            transform.hasChanged = false;
+            OfficeNavigationWorld.NotifyObstacleMutation();
+        }
     }
 }

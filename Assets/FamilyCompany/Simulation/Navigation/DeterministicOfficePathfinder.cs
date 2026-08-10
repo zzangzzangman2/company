@@ -7,19 +7,28 @@ namespace FamilyCompany.Simulation.Navigation
     {
         private const int CardinalCost = 1000;
         private const int DiagonalCost = 1414;
+        private const float SegmentEpsilon = 0.000001f;
 
         private readonly OfficeNavBounds _bounds;
         private readonly float _cellSize;
+        private readonly float _maximumProjectionDistance;
         private readonly int _width;
         private readonly int _height;
         private readonly bool[] _blocked;
+        private readonly int[] _g;
+        private readonly int[] _parent;
+        private readonly bool[] _closed;
+        private readonly bool[] _reachable;
+        private readonly int[] _queue;
+        private readonly MinHeap _heap;
 
         public DeterministicOfficePathfinder(
             OfficeNavBounds bounds,
             float cellSize,
             IReadOnlyList<OfficeNavObstacle> obstacles,
             float agentRadius,
-            float clearance = 0.04f)
+            float clearance = 0.04f,
+            float maximumProjectionDistance = OfficeNavigationLimits.DefaultMaximumProjectionDistance)
         {
             if (cellSize < OfficeNavigationLimits.MinimumCellSize ||
                 cellSize > OfficeNavigationLimits.MaximumCellSize ||
@@ -29,6 +38,9 @@ namespace FamilyCompany.Simulation.Navigation
                 float.IsNaN(agentRadius) || float.IsInfinity(agentRadius) ||
                 float.IsNaN(clearance) || float.IsInfinity(clearance))
                 throw new ArgumentOutOfRangeException(nameof(agentRadius));
+            if (maximumProjectionDistance < 0f ||
+                float.IsNaN(maximumProjectionDistance) || float.IsInfinity(maximumProjectionDistance))
+                throw new ArgumentOutOfRangeException(nameof(maximumProjectionDistance));
             if (obstacles == null) throw new ArgumentNullException(nameof(obstacles));
             if (obstacles.Count > OfficeNavigationLimits.MaxObstacles)
                 throw new ArgumentOutOfRangeException(nameof(obstacles),
@@ -36,14 +48,23 @@ namespace FamilyCompany.Simulation.Navigation
 
             _bounds = bounds;
             _cellSize = cellSize;
-            _width = Math.Max(1, (int)Math.Floor(bounds.Width / cellSize));
-            _height = Math.Max(1, (int)Math.Floor(bounds.Depth / cellSize));
-            var cellCount = checked(_width * _height);
-            if (cellCount > OfficeNavigationLimits.MaxGridCells)
+            _maximumProjectionDistance = maximumProjectionDistance;
+            if (!OfficeNavigationLimits.TryResolveGridDimensions(
+                    bounds,
+                    cellSize,
+                    out _width,
+                    out _height,
+                    out var cellCount))
                 throw new ArgumentOutOfRangeException(nameof(bounds),
-                    $"Grid contains {cellCount} cells; cap is {OfficeNavigationLimits.MaxGridCells}.");
+                    $"Grid dimensions are invalid or exceed {OfficeNavigationLimits.MaxGridCells} cells.");
 
             _blocked = new bool[cellCount];
+            _g = new int[cellCount];
+            _parent = new int[cellCount];
+            _closed = new bool[cellCount];
+            _reachable = new bool[cellCount];
+            _queue = new int[cellCount];
+            _heap = new MinHeap(Math.Min(cellCount, 256));
             var inflation = agentRadius + clearance;
             for (var obstacleIndex = 0; obstacleIndex < obstacles.Count; obstacleIndex++)
             {
@@ -68,36 +89,36 @@ namespace FamilyCompany.Simulation.Navigation
         public int Height => _height;
         public int CellCount => _blocked.Length;
         public float CellSize => _cellSize;
+        public float MaximumProjectionDistance => _maximumProjectionDistance;
         public OfficeNavBounds Bounds => _bounds;
 
         public bool TryFindPath(OfficeNavPoint start, OfficeNavPoint goal, out OfficeNavPath path)
         {
             path = null;
-            if (!TryProjectToWalkable(start, out var startIndex, out var startProjected) ||
-                !TryProjectToWalkable(goal, out var goalIndex, out var goalProjected))
+            if (!TryProjectToWalkable(start, null, out var startIndex, out var startProjected))
                 return false;
+            BuildReachableSet(startIndex);
+            if (!TryProjectToWalkable(goal, _reachable, out var goalIndex, out var goalProjected)) return false;
 
-            var g = new int[_blocked.Length];
-            var parent = new int[_blocked.Length];
-            var closed = new bool[_blocked.Length];
-            for (var index = 0; index < g.Length; index++)
+            for (var index = 0; index < _g.Length; index++)
             {
-                g[index] = int.MaxValue;
-                parent[index] = -1;
+                _g[index] = int.MaxValue;
+                _parent[index] = -1;
+                _closed[index] = false;
             }
 
-            var heap = new MinHeap(Math.Min(_blocked.Length, 256));
-            g[startIndex] = 0;
+            _heap.Clear();
+            _g[startIndex] = 0;
             var initialH = Heuristic(startIndex, goalIndex);
-            heap.Push(new HeapEntry(startIndex, initialH, initialH));
+            _heap.Push(new HeapEntry(startIndex, initialH, initialH));
             var expanded = 0;
             var found = false;
-            while (heap.Count > 0 && expanded < OfficeNavigationLimits.MaxExpandedNodes)
+            while (_heap.Count > 0 && expanded < OfficeNavigationLimits.MaxExpandedNodes)
             {
-                var current = heap.Pop();
-                if (closed[current.Index]) continue;
-                if (g[current.Index] == int.MaxValue || current.F != g[current.Index] + current.H) continue;
-                closed[current.Index] = true;
+                var current = _heap.Pop();
+                if (_closed[current.Index]) continue;
+                if (_g[current.Index] == int.MaxValue || current.F != _g[current.Index] + current.H) continue;
+                _closed[current.Index] = true;
                 expanded++;
                 if (current.Index == goalIndex)
                 {
@@ -115,39 +136,42 @@ namespace FamilyCompany.Simulation.Navigation
                         var nextZ = currentZ + dz;
                         if (!IsInside(nextX, nextZ)) continue;
                         var nextIndex = ToIndex(nextX, nextZ);
-                        if (_blocked[nextIndex] || closed[nextIndex]) continue;
+                        if (_blocked[nextIndex] || _closed[nextIndex]) continue;
                         if (dx != 0 && dz != 0 &&
                             (_blocked[ToIndex(currentX + dx, currentZ)] ||
                              _blocked[ToIndex(currentX, currentZ + dz)]))
                             continue;
 
                         var stepCost = dx == 0 || dz == 0 ? CardinalCost : DiagonalCost;
-                        var candidate = g[current.Index] + stepCost;
-                        if (candidate >= g[nextIndex]) continue;
-                        g[nextIndex] = candidate;
-                        parent[nextIndex] = current.Index;
+                        var candidate = _g[current.Index] + stepCost;
+                        if (candidate >= _g[nextIndex]) continue;
+                        _g[nextIndex] = candidate;
+                        _parent[nextIndex] = current.Index;
                         var h = Heuristic(nextIndex, goalIndex);
-                        heap.Push(new HeapEntry(nextIndex, candidate + h, h));
+                        _heap.Push(new HeapEntry(nextIndex, candidate + h, h));
                     }
                 }
             }
 
             if (!found) return false;
-            var raw = Reconstruct(parent, startIndex, goalIndex);
+            var raw = Reconstruct(_parent, startIndex, goalIndex);
             var simplified = Simplify(raw);
             var points = new List<OfficeNavPoint>(simplified.Count + 4);
             for (var index = 0; index < simplified.Count; index++)
                 points.Add(CellCenter(simplified[index]));
-            if (!startProjected && points.Count > 0) points[0] = start;
-            if (!goalProjected && points.Count > 0) points[points.Count - 1] = goal;
-            points = EaseCorners(points, Math.Min(0.24f, _cellSize * 0.9f));
+            AttachExactStart(points, start, startProjected);
+            AttachExactGoal(points, goal, goalProjected);
+            var uneased = points;
+            points = EaseCorners(uneased, Math.Min(0.24f, _cellSize * 0.9f));
+            if (!ArePointsWalkable(points)) points = uneased;
+            if (!ArePointsWalkable(points)) return false;
             path = new OfficeNavPath(
                 points.ToArray(),
                 startProjected,
                 goalProjected,
                 expanded,
                 raw.Count,
-                g[goalIndex] * _cellSize / CardinalCost);
+                _g[goalIndex] * _cellSize / CardinalCost);
             return true;
         }
 
@@ -160,28 +184,86 @@ namespace FamilyCompany.Simulation.Navigation
         public bool IsSegmentWalkable(OfficeNavPoint start, OfficeNavPoint end)
         {
             if (!_bounds.Contains(start) || !_bounds.Contains(end)) return false;
-            return HasLineOfSight(PointToIndex(start), PointToIndex(end));
+            var minCellX = ClampX((int)Math.Floor((Math.Min(start.X, end.X) - _bounds.MinX) / _cellSize));
+            var maxCellX = ClampX((int)Math.Floor((Math.Max(start.X, end.X) - _bounds.MinX) / _cellSize));
+            var minCellZ = ClampZ((int)Math.Floor((Math.Min(start.Z, end.Z) - _bounds.MinZ) / _cellSize));
+            var maxCellZ = ClampZ((int)Math.Floor((Math.Max(start.Z, end.Z) - _bounds.MinZ) / _cellSize));
+            for (var z = minCellZ; z <= maxCellZ; z++)
+            {
+                for (var x = minCellX; x <= maxCellX; x++)
+                {
+                    if (!_blocked[ToIndex(x, z)]) continue;
+                    CellBounds(x, z, out var minX, out var minZ, out var maxX, out var maxZ);
+                    if (OfficeNavigationGeometryQueries.SegmentIntersectsClosedRectangle(
+                            start, end, minX, minZ, maxX, maxZ))
+                        return false;
+                }
+            }
+
+            return true;
         }
 
-        private bool TryProjectToWalkable(OfficeNavPoint point, out int result, out bool projected)
+        private void AttachExactStart(List<OfficeNavPoint> points, OfficeNavPoint start, bool projected)
+        {
+            if (projected || points.Count == 0 ||
+                OfficeNavPoint.Distance(points[0], start) <= SegmentEpsilon)
+                return;
+            if (points.Count > 1 && IsSegmentWalkable(start, points[1])) points[0] = start;
+            else points.Insert(0, start);
+        }
+
+        private void AttachExactGoal(List<OfficeNavPoint> points, OfficeNavPoint goal, bool projected)
+        {
+            if (projected || points.Count == 0 ||
+                OfficeNavPoint.Distance(points[points.Count - 1], goal) <= SegmentEpsilon)
+                return;
+            if (points.Count > 1 && IsSegmentWalkable(points[points.Count - 2], goal))
+                points[points.Count - 1] = goal;
+            else
+                points.Add(goal);
+        }
+
+        private bool ArePointsWalkable(IReadOnlyList<OfficeNavPoint> points)
+        {
+            if (points == null || points.Count == 0) return false;
+            for (var index = 0; index < points.Count; index++)
+            {
+                if (!IsPointWalkable(points[index])) return false;
+                if (index > 0 && !IsSegmentWalkable(points[index - 1], points[index])) return false;
+            }
+
+            return true;
+        }
+
+        private bool TryProjectToWalkable(
+            OfficeNavPoint point,
+            IReadOnlyList<bool> allowed,
+            out int result,
+            out bool projected)
         {
             var clampedX = Math.Max(_bounds.MinX, Math.Min(_bounds.MaxX - 0.0001f, point.X));
             var clampedZ = Math.Max(_bounds.MinZ, Math.Min(_bounds.MaxZ - 0.0001f, point.Z));
             var clamped = new OfficeNavPoint(clampedX, clampedZ);
             var direct = PointToIndex(clamped);
-            if (!_blocked[direct])
+            var pointWasClamped = !_bounds.Contains(point);
+            if (!_blocked[direct] && (allowed == null || allowed[direct]))
             {
                 result = direct;
-                projected = !_bounds.Contains(point);
+                projected = pointWasClamped;
+                if (projected && OfficeNavPoint.Distance(point, CellCenter(direct)) >
+                    _maximumProjectionDistance + SegmentEpsilon)
+                    return false;
                 return true;
             }
 
             result = -1;
             var bestDistance = float.MaxValue;
+            var maximumDistanceSquared = _maximumProjectionDistance * _maximumProjectionDistance;
             for (var index = 0; index < _blocked.Length; index++)
             {
-                if (_blocked[index]) continue;
-                var distance = (CellCenter(index) - clamped).SqrMagnitude;
+                if (_blocked[index] || (allowed != null && !allowed[index])) continue;
+                var distance = (CellCenter(index) - point).SqrMagnitude;
+                if (distance > maximumDistanceSquared + SegmentEpsilon) continue;
                 if (distance > bestDistance + 0.000001f) continue;
                 if (Math.Abs(distance - bestDistance) <= 0.000001f && index > result) continue;
                 bestDistance = distance;
@@ -190,6 +272,37 @@ namespace FamilyCompany.Simulation.Navigation
 
             projected = true;
             return result >= 0;
+        }
+
+        private void BuildReachableSet(int startIndex)
+        {
+            Array.Clear(_reachable, 0, _reachable.Length);
+            var read = 0;
+            var write = 0;
+            _reachable[startIndex] = true;
+            _queue[write++] = startIndex;
+            while (read < write)
+            {
+                var current = _queue[read++];
+                GetCoordinates(current, out var currentX, out var currentZ);
+                for (var dz = -1; dz <= 1; dz++)
+                {
+                    for (var dx = -1; dx <= 1; dx++)
+                    {
+                        if (dx == 0 && dz == 0) continue;
+                        var nextX = currentX + dx;
+                        var nextZ = currentZ + dz;
+                        if (!IsOpen(nextX, nextZ)) continue;
+                        if (dx != 0 && dz != 0 &&
+                            (!IsOpen(currentX + dx, currentZ) || !IsOpen(currentX, currentZ + dz)))
+                            continue;
+                        var next = ToIndex(nextX, nextZ);
+                        if (_reachable[next]) continue;
+                        _reachable[next] = true;
+                        _queue[write++] = next;
+                    }
+                }
+            }
         }
 
         private List<int> Reconstruct(int[] parent, int start, int goal)
@@ -271,43 +384,7 @@ namespace FamilyCompany.Simulation.Navigation
 
         private bool HasLineOfSight(int startIndex, int endIndex)
         {
-            GetCoordinates(startIndex, out var x0, out var z0);
-            GetCoordinates(endIndex, out var x1, out var z1);
-            var dx = Math.Abs(x1 - x0);
-            var dz = Math.Abs(z1 - z0);
-            var stepX = Math.Sign(x1 - x0);
-            var stepZ = Math.Sign(z1 - z0);
-            var x = x0;
-            var z = z0;
-            var advancedX = 0;
-            var advancedZ = 0;
-            if (_blocked[ToIndex(x, z)]) return false;
-            while (advancedX < dx || advancedZ < dz)
-            {
-                var decision = (1 + 2 * advancedX) * dz - (1 + 2 * advancedZ) * dx;
-                if (decision == 0)
-                {
-                    if (!IsOpen(x + stepX, z) || !IsOpen(x, z + stepZ)) return false;
-                    x += stepX;
-                    z += stepZ;
-                    advancedX++;
-                    advancedZ++;
-                }
-                else if (decision < 0)
-                {
-                    x += stepX;
-                    advancedX++;
-                }
-                else
-                {
-                    z += stepZ;
-                    advancedZ++;
-                }
-
-                if (!IsOpen(x, z)) return false;
-            }
-
-            return true;
+            return IsSegmentWalkable(CellCenter(startIndex), CellCenter(endIndex));
         }
 
         private bool IsOpen(int x, int z) => IsInside(x, z) && !_blocked[ToIndex(x, z)];
@@ -326,17 +403,16 @@ namespace FamilyCompany.Simulation.Navigation
         private OfficeNavPoint CellCenter(int index)
         {
             GetCoordinates(index, out var x, out var z);
-            return new OfficeNavPoint(
-                _bounds.MinX + (x + 0.5f) * _cellSize,
-                _bounds.MinZ + (z + 0.5f) * _cellSize);
+            CellBounds(x, z, out var minX, out var minZ, out var maxX, out var maxZ);
+            return new OfficeNavPoint((minX + maxX) * 0.5f, (minZ + maxZ) * 0.5f);
         }
 
         private void CellBounds(int x, int z, out float minX, out float minZ, out float maxX, out float maxZ)
         {
             minX = _bounds.MinX + x * _cellSize;
             minZ = _bounds.MinZ + z * _cellSize;
-            maxX = minX + _cellSize;
-            maxZ = minZ + _cellSize;
+            maxX = Math.Min(_bounds.MaxX, minX + _cellSize);
+            maxZ = Math.Min(_bounds.MaxZ, minZ + _cellSize);
         }
 
         private void GetCoordinates(int index, out int x, out int z)
@@ -380,6 +456,11 @@ namespace FamilyCompany.Simulation.Navigation
             }
 
             public int Count => _items.Count;
+
+            public void Clear()
+            {
+                _items.Clear();
+            }
 
             public void Push(HeapEntry value)
             {

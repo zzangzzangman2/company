@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using FamilyCompany.Simulation.Navigation;
 using UnityEngine;
 
@@ -12,6 +11,8 @@ namespace FamilyCompany.Presentation.Unity
     {
         private const string RuntimeObjectName = "Office Dynamic Navigation";
         private const float PollIntervalSeconds = 0.10f;
+        private const float TrafficSafetyProbeSeconds = 0.28f;
+        private const int MaxObstacleCandidates = OfficeNavigationLimits.MaxObstacles * 8;
 
         [SerializeField, Range(OfficeNavigationLimits.MinimumCellSize, OfficeNavigationLimits.MaximumCellSize)]
         private float cellSize = 0.25f;
@@ -21,9 +22,19 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField, Min(0.5f)] private float navigationBodyHeight = 1.75f;
 
         private readonly List<OfficeNavObstacle> _obstacles = new List<OfficeNavObstacle>();
+        private readonly List<OfficeNavObstacle> _scratchObstacles = new List<OfficeNavObstacle>();
+        private readonly List<ObstacleCandidate> _colliderCandidates = new List<ObstacleCandidate>();
+        private readonly List<ObstacleCandidate> _rendererCandidates = new List<ObstacleCandidate>();
+        private readonly List<Collider> _colliderScan = new List<Collider>();
+        private readonly List<MeshRenderer> _rendererScan = new List<MeshRenderer>();
+        private readonly List<ObstacleCandidate> _liveObstacles = new List<ObstacleCandidate>();
+        private readonly List<ObstacleCandidate> _scratchLiveObstacles = new List<ObstacleCandidate>();
         private readonly Dictionary<int, PathfinderCacheEntry> _pathfinders =
             new Dictionary<int, PathfinderCacheEntry>();
         private readonly HashSet<OfficeWorkerAgent> _agents = new HashSet<OfficeWorkerAgent>();
+        private readonly List<OfficeWorkerAgent> _agentSnapshotScratch = new List<OfficeWorkerAgent>();
+        private OfficeTrafficAgentState[] _trafficSnapshot = Array.Empty<OfficeTrafficAgentState>();
+        private int _trafficSnapshotCount;
         private Transform _officeRoot;
         private Collider _surfaceCollider;
         private Renderer _surfaceRenderer;
@@ -32,13 +43,17 @@ namespace FamilyCompany.Presentation.Unity
         private float _pollRemaining;
         private float _dirtyRemaining;
         private int _observedExternalMutation;
+        private bool _candidatesDirty = true;
         private bool _dirty;
         private bool _ready;
+        private string _failureReason = string.Empty;
         private static int s_externalMutation;
 
         public int Revision { get; private set; }
         public int ObstacleCount => _obstacles.Count;
         public bool IsReady => _ready;
+        public bool IsRebuildPending => _dirty;
+        public string FailureReason => _failureReason;
         public OfficeNavBounds NavigationBounds => _navigationBounds;
         public ulong ObstacleFingerprint => _fingerprint;
 
@@ -53,18 +68,28 @@ namespace FamilyCompany.Presentation.Unity
         public static OfficeNavigationWorld ResolveFor(OfficeWorkerAgent agent)
         {
             if (agent == null) throw new ArgumentNullException(nameof(agent));
-            var existing = FindObjectsByType<OfficeNavigationWorld>(FindObjectsSortMode.None)
-                .Where(item => item != null && item.enabled)
-                .OrderBy(item => HierarchyKey(item.transform), StringComparer.Ordinal)
-                .FirstOrDefault(item => item.Contains(agent.transform.position));
+            var officeRoot = FindOfficeRoot();
+            if (officeRoot == null) return null;
+            var worlds = FindObjectsByType<OfficeNavigationWorld>(FindObjectsSortMode.None);
+            Array.Sort(worlds, CompareWorlds);
+            OfficeNavigationWorld existing = null;
+            for (var index = 0; index < worlds.Length; index++)
+            {
+                var item = worlds[index];
+                if (item == null || !item.enabled) continue;
+                if (item._officeRoot == officeRoot || item.transform.IsChildOf(officeRoot))
+                {
+                    existing = item;
+                    break;
+                }
+            }
+
             if (existing != null)
             {
                 existing.Register(agent);
                 return existing;
             }
 
-            var officeRoot = FindOfficeRoot();
-            if (officeRoot == null) return null;
             var runtimeObject = new GameObject(RuntimeObjectName);
             runtimeObject.transform.SetParent(officeRoot, false);
             var created = runtimeObject.AddComponent<OfficeNavigationWorld>();
@@ -76,6 +101,7 @@ namespace FamilyCompany.Presentation.Unity
         public void ConfigureRuntime(Transform root)
         {
             _officeRoot = root != null ? root : throw new ArgumentNullException(nameof(root));
+            _candidatesDirty = true;
             ResolveSurface();
             RebuildImmediately();
         }
@@ -93,9 +119,9 @@ namespace FamilyCompany.Presentation.Unity
         public bool TryFindPath(Vector3 start, Vector3 goal, float agentRadius, out OfficeNavPath path)
         {
             path = null;
-            EnsureConfigured();
-            if (!_ready) return false;
-            return GetPathfinder(agentRadius).TryFindPath(
+            if (!TryPrepareNavigationRead()) return false;
+            if (!TryGetPathfinder(agentRadius, out var pathfinder)) return false;
+            return pathfinder.TryFindPath(
                 new OfficeNavPoint(start.x, start.z),
                 new OfficeNavPoint(goal.x, goal.z),
                 out path);
@@ -104,14 +130,57 @@ namespace FamilyCompany.Presentation.Unity
         public bool IsPathCollisionFree(OfficeNavPath path, float agentRadius)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
-            EnsureConfigured();
-            if (!_ready || path.Waypoints.Count == 0) return false;
-            var pathfinder = GetPathfinder(agentRadius);
+            if (!TryPrepareNavigationRead() || path.Waypoints.Count == 0) return false;
+            if (!TryGetPathfinder(agentRadius, out var pathfinder)) return false;
             for (var index = 0; index < path.Waypoints.Count; index++)
             {
                 if (!pathfinder.IsPointWalkable(path.Waypoints[index])) return false;
                 if (index > 0 &&
                     !pathfinder.IsSegmentWalkable(path.Waypoints[index - 1], path.Waypoints[index]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public bool IsMovementCollisionFree(Vector3 start, Vector3 end, float agentRadius)
+        {
+            if (!TryPrepareNavigationRead()) return false;
+            var startPoint = ToPoint(start);
+            var endPoint = ToPoint(end);
+            var inflation = Mathf.Max(0.05f, agentRadius) + Mathf.Max(0f, characterClearance);
+            for (var index = 0; index < _liveObstacles.Count; index++)
+            {
+                var candidate = _liveObstacles[index];
+                if (!candidate.TryGetBounds(out var bounds))
+                {
+                    _candidatesDirty = true;
+                    MarkDirty();
+                    return false;
+                }
+
+                var extra = candidate.Marker == null ? 0f : candidate.Marker.ExtraClearance;
+                var minX = bounds.min.x - inflation - extra;
+                var minZ = bounds.min.z - inflation - extra;
+                var maxX = bounds.max.x + inflation + extra;
+                var maxZ = bounds.max.z + inflation + extra;
+                var startDepth = OfficeNavigationGeometryQueries.InteriorDepth(
+                    startPoint, minX, minZ, maxX, maxZ);
+                if (OfficeNavigationGeometryQueries.IsPointInClosedRectangle(
+                        startPoint, minX, minZ, maxX, maxZ))
+                {
+                    var endDepth = OfficeNavigationGeometryQueries.InteriorDepth(
+                        endPoint, minX, minZ, maxX, maxZ);
+                    var movesOutward = OfficeNavigationGeometryQueries.MovesTowardNearestBoundary(
+                        startPoint, endPoint, minX, minZ, maxX, maxZ);
+                    if (movesOutward &&
+                        (startDepth <= 0.0001f || endDepth + 0.0001f < startDepth))
+                        continue;
+                    return false;
+                }
+
+                if (OfficeNavigationGeometryQueries.SegmentIntersectsClosedRectangle(
+                        startPoint, endPoint, minX, minZ, maxX, maxZ))
                     return false;
             }
 
@@ -126,23 +195,13 @@ namespace FamilyCompany.Presentation.Unity
             out bool shouldReplan,
             out bool isYielding)
         {
-            var peers = _agents
-                .Where(item => item != null && item != self && item.NavigationCanMove && !item.IsPresentationAway)
-                .OrderBy(item => item.AgentId, StringComparer.Ordinal)
-                .Select(item => new OfficeTrafficAgentState(
-                    item.AgentId,
-                    ToPoint(item.transform.position),
-                    ToPoint(item.NavigationDesiredVelocity),
-                    item.NavigationRadius,
-                    item.NavigationStuckSeconds))
-                .ToArray();
             var selfState = new OfficeTrafficAgentState(
                 self.AgentId,
                 ToPoint(self.transform.position),
                 ToPoint(desiredVelocity),
                 Mathf.Max(0.05f, radius),
                 stuckSeconds);
-            var decision = OfficeNavigationTrafficRules.Resolve(selfState, peers);
+            var decision = OfficeNavigationTrafficRules.Resolve(selfState, _trafficSnapshot);
             shouldReplan = decision.ShouldReplan;
             isYielding = decision.IsYielding;
             var speed = new Vector2(desiredVelocity.x, desiredVelocity.z).magnitude;
@@ -155,7 +214,21 @@ namespace FamilyCompany.Presentation.Unity
                     decision.RecoveryDirection.Z) * (speed * decision.RecoveryWeight);
             }
 
-            return Vector3.ClampMagnitude(resolved, speed);
+            resolved = Vector3.ClampMagnitude(resolved, speed);
+            if (IsVelocitySafe(self, resolved, radius)) return resolved;
+
+            if (decision.RecoveryWeight > 0f && speed > 0.0001f)
+            {
+                var retreat = -desiredVelocity.normalized * (speed * decision.RecoveryWeight);
+                if (IsVelocitySafe(self, retreat, radius))
+                {
+                    shouldReplan = true;
+                    return retreat;
+                }
+            }
+
+            shouldReplan = true;
+            return Vector3.zero;
         }
 
         public void MarkDirty()
@@ -168,15 +241,44 @@ namespace FamilyCompany.Presentation.Unity
         public void RebuildImmediately()
         {
             EnsureConfigured(false);
-            if (_officeRoot == null || (_surfaceCollider == null && _surfaceRenderer == null))
+            if (_officeRoot == null)
             {
-                _ready = false;
+                FailClosed("Office navigation root is unavailable.");
                 return;
             }
 
-            var collected = CollectObstacles(out var fingerprint);
+            if (_surfaceCollider == null && _surfaceRenderer == null) ResolveSurface();
+            if (_surfaceCollider == null && _surfaceRenderer == null)
+            {
+                FailClosed("Office navigation surface is unavailable.");
+                return;
+            }
+
+            if (!CanBuildGrid(out var gridFailure))
+            {
+                FailClosed(gridFailure);
+                return;
+            }
+
+            if (_candidatesDirty && !TryRefreshObstacleCandidates(out var candidateFailure))
+            {
+                FailClosed(candidateFailure);
+                return;
+            }
+            if (!TryCollectObstacles(
+                    _scratchObstacles,
+                    _scratchLiveObstacles,
+                    out var fingerprint,
+                    out var collectionFailure))
+            {
+                FailClosed(collectionFailure);
+                return;
+            }
+
             _obstacles.Clear();
-            _obstacles.AddRange(collected);
+            _obstacles.AddRange(_scratchObstacles);
+            _liveObstacles.Clear();
+            _liveObstacles.AddRange(_scratchLiveObstacles);
             _fingerprint = fingerprint;
             _pathfinders.Clear();
             Revision++;
@@ -184,6 +286,7 @@ namespace FamilyCompany.Presentation.Unity
             _dirtyRemaining = 0f;
             _observedExternalMutation = s_externalMutation;
             _ready = true;
+            _failureReason = string.Empty;
         }
 
         private void Awake()
@@ -193,19 +296,25 @@ namespace FamilyCompany.Presentation.Unity
 
         private void Update()
         {
+            RefreshTrafficSnapshot();
             if (!_ready) EnsureConfigured();
             if (!_ready) return;
-            if (_observedExternalMutation != s_externalMutation)
-            {
-                _observedExternalMutation = s_externalMutation;
-                MarkDirty();
-            }
+            ObserveExternalMutation();
 
             _pollRemaining -= Time.unscaledDeltaTime;
             if (_pollRemaining <= 0f)
             {
                 _pollRemaining = PollIntervalSeconds;
-                var current = ComputeFingerprintOnly();
+                if (!TryCollectObstacles(
+                        _scratchObstacles,
+                        null,
+                        out var current,
+                        out var collectionFailure))
+                {
+                    FailClosed(collectionFailure);
+                    return;
+                }
+
                 if (current != _fingerprint) MarkDirty();
             }
 
@@ -218,6 +327,8 @@ namespace FamilyCompany.Presentation.Unity
         {
             _agents.Clear();
             _pathfinders.Clear();
+            _trafficSnapshot = Array.Empty<OfficeTrafficAgentState>();
+            _trafficSnapshotCount = 0;
         }
 
         private void EnsureConfigured(bool rebuild = true)
@@ -225,8 +336,13 @@ namespace FamilyCompany.Presentation.Unity
             if (_officeRoot == null) _officeRoot = FindOfficeRoot();
             if (_officeRoot == null) return;
             if (_surfaceCollider == null && _surfaceRenderer == null) ResolveSurface();
-            if (rebuild && !_ready && (_surfaceCollider != null || _surfaceRenderer != null))
+            var mutationChanged = _observedExternalMutation != s_externalMutation;
+            if (rebuild && !_ready && (_surfaceCollider != null || _surfaceRenderer != null) &&
+                (string.IsNullOrEmpty(_failureReason) || mutationChanged))
+            {
+                if (mutationChanged) _candidatesDirty = true;
                 RebuildImmediately();
+            }
         }
 
         private bool Contains(Vector3 position)
@@ -239,21 +355,32 @@ namespace FamilyCompany.Presentation.Unity
 
         private void ResolveSurface()
         {
-            _surfaceCollider = _officeRoot.GetComponentsInChildren<Collider>(true)
-                .Where(item => item != null && item.gameObject.name.IndexOf("Office Floor", StringComparison.OrdinalIgnoreCase) >= 0)
-                .OrderBy(item => HierarchyKey(item.transform), StringComparer.Ordinal)
-                .FirstOrDefault();
-            if (_surfaceCollider != null)
+            _surfaceCollider = null;
+            _surfaceRenderer = null;
+            if (_officeRoot == null) return;
+            var colliders = _officeRoot.GetComponentsInChildren<Collider>(true);
+            Array.Sort(colliders, CompareComponents);
+            for (var index = 0; index < colliders.Length; index++)
             {
-                SetBounds(_surfaceCollider.bounds);
-                return;
+                var item = colliders[index];
+                if (item == null || !IsOfficeFloor(item.gameObject.name)) continue;
+                _surfaceCollider = item;
+                break;
             }
 
-            _surfaceRenderer = _officeRoot.GetComponentsInChildren<Renderer>(true)
-                .Where(item => item != null && item.gameObject.name.IndexOf("Office Floor", StringComparison.OrdinalIgnoreCase) >= 0)
-                .OrderBy(item => HierarchyKey(item.transform), StringComparer.Ordinal)
-                .FirstOrDefault();
-            if (_surfaceRenderer != null) SetBounds(_surfaceRenderer.bounds);
+            var renderers = _officeRoot.GetComponentsInChildren<Renderer>(true);
+            Array.Sort(renderers, CompareComponents);
+            for (var index = 0; index < renderers.Length; index++)
+            {
+                var item = renderers[index];
+                if (item == null || !IsOfficeFloor(item.gameObject.name)) continue;
+                _surfaceRenderer = item;
+                break;
+            }
+
+            if (_surfaceCollider != null) SetBounds(_surfaceCollider.bounds);
+            else if (_surfaceRenderer != null) SetBounds(_surfaceRenderer.bounds);
+            _candidatesDirty = true;
         }
 
         private void SetBounds(Bounds bounds)
@@ -265,109 +392,334 @@ namespace FamilyCompany.Presentation.Unity
                 bounds.max.z);
         }
 
-        private List<OfficeNavObstacle> CollectObstacles(out ulong fingerprint)
+        private bool TryRefreshObstacleCandidates(out string failure)
         {
-            var result = new List<OfficeNavObstacle>();
-            var contributed = new HashSet<int>();
-            var surfaceTop = _surfaceCollider != null ? _surfaceCollider.bounds.max.y : _surfaceRenderer.bounds.max.y;
-            foreach (var collider in FindObjectsByType<Collider>(FindObjectsSortMode.None)
-                         .Where(item => item != null)
-                         .OrderBy(item => HierarchyKey(item.transform), StringComparer.Ordinal))
+            failure = string.Empty;
+            _colliderCandidates.Clear();
+            _rendererCandidates.Clear();
+            _colliderScan.Clear();
+            _rendererScan.Clear();
+            if (_officeRoot == null)
             {
+                failure = "Office navigation root is unavailable.";
+                return false;
+            }
+
+            _officeRoot.GetComponentsInChildren(true, _colliderScan);
+            if (_colliderScan.Count > MaxObstacleCandidates)
+            {
+                failure = $"Office navigation collider scan exceeded {MaxObstacleCandidates} candidates.";
+                return false;
+            }
+
+            _colliderScan.Sort(CompareComponents);
+            for (var index = 0; index < _colliderScan.Count; index++)
+            {
+                var collider = _colliderScan[index];
+                if (collider == null) continue;
+                _colliderCandidates.Add(new ObstacleCandidate(
+                    collider,
+                    null,
+                    collider.GetComponent<OfficeNavigationObstacle>(),
+                    HierarchyKey(collider.transform) + ":collider"));
+            }
+
+            _officeRoot.GetComponentsInChildren(true, _rendererScan);
+            if (_rendererScan.Count > MaxObstacleCandidates)
+            {
+                failure = $"Office navigation renderer scan exceeded {MaxObstacleCandidates} candidates.";
+                return false;
+            }
+
+            _rendererScan.Sort(CompareComponents);
+            for (var index = 0; index < _rendererScan.Count; index++)
+            {
+                var renderer = _rendererScan[index];
+                if (renderer == null) continue;
+                _rendererCandidates.Add(new ObstacleCandidate(
+                    null,
+                    renderer,
+                    renderer.GetComponent<OfficeNavigationObstacle>(),
+                    HierarchyKey(renderer.transform) + ":renderer"));
+            }
+
+            _candidatesDirty = false;
+            return true;
+        }
+
+        private bool TryCollectObstacles(
+            List<OfficeNavObstacle> result,
+            List<ObstacleCandidate> liveResult,
+            out ulong fingerprint,
+            out string failure)
+        {
+            result.Clear();
+            liveResult?.Clear();
+            fingerprint = 0UL;
+            failure = string.Empty;
+            if (_surfaceCollider == null && _surfaceRenderer == null)
+            {
+                failure = "Office navigation surface was destroyed.";
+                return false;
+            }
+
+            if (_candidatesDirty && !TryRefreshObstacleCandidates(out failure)) return false;
+            var surfaceTop = _surfaceCollider != null
+                ? _surfaceCollider.bounds.max.y
+                : _surfaceRenderer.bounds.max.y;
+            for (var index = 0; index < _colliderCandidates.Count; index++)
+            {
+                var candidate = _colliderCandidates[index];
+                var collider = candidate.Collider;
+                if (collider == null)
+                {
+                    _candidatesDirty = true;
+                    continue;
+                }
+
                 if (collider == _surfaceCollider || collider is CharacterController ||
                     !collider.enabled || !collider.gameObject.activeInHierarchy || collider.isTrigger)
                     continue;
-                var marker = collider.GetComponentInParent<OfficeNavigationObstacle>();
-                if (marker != null && marker.PassableDecoration) continue;
+                if (collider.GetComponentInParent<OfficeWorkerAgent>() != null ||
+                    collider.GetComponentInParent<PrototypePlayerController>() != null)
+                    continue;
+                if (candidate.Marker != null && candidate.Marker.PassableDecoration) continue;
                 if (!OverlapsNavigationHeight(collider.bounds, surfaceTop)) continue;
-                AddObstacle(result, contributed, collider.GetInstanceID(),
-                    HierarchyKey(collider.transform) + ":collider", collider.bounds,
-                    marker == null ? 0f : marker.ExtraClearance);
+                if (!TryAddObstacle(result, liveResult, candidate, collider.bounds, out failure)) return false;
             }
 
-            foreach (var renderer in FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None)
-                         .Where(item => item != null)
-                         .OrderBy(item => HierarchyKey(item.transform), StringComparer.Ordinal))
+            for (var index = 0; index < _rendererCandidates.Count; index++)
             {
+                var candidate = _rendererCandidates[index];
+                var renderer = candidate.Renderer;
+                if (renderer == null)
+                {
+                    _candidatesDirty = true;
+                    continue;
+                }
+
                 if (renderer == _surfaceRenderer || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
                     continue;
-                if (renderer.GetComponentInParent<OfficeWorkerAgent>() != null ||
-                    renderer.GetComponentInParent<PrototypePlayerController>() != null)
+                if (candidate.Marker == null || candidate.Marker.PassableDecoration ||
+                    !candidate.Marker.UseRendererFootprintWhenColliderMissing)
                     continue;
-                var marker = renderer.GetComponentInParent<OfficeNavigationObstacle>();
-                if (marker != null && marker.PassableDecoration) continue;
-                if (renderer.GetComponent<Collider>() != null) continue;
-                if (marker != null && !marker.UseRendererFootprintWhenColliderMissing) continue;
+                if (renderer.GetComponent<Collider>() != null || IsPresentationOnly(renderer)) continue;
                 if (!OverlapsNavigationHeight(renderer.bounds, surfaceTop)) continue;
-                AddObstacle(result, contributed, renderer.GetInstanceID(),
-                    HierarchyKey(renderer.transform) + ":renderer", renderer.bounds,
-                    marker == null ? 0f : marker.ExtraClearance);
+                if (!TryAddObstacle(result, liveResult, candidate, renderer.bounds, out failure)) return false;
             }
 
-            result.Sort((left, right) => string.CompareOrdinal(left.ObstacleId, right.ObstacleId));
-            if (result.Count > OfficeNavigationLimits.MaxObstacles)
-                throw new InvalidOperationException(
-                    $"Office navigation collected {result.Count} obstacles; cap is {OfficeNavigationLimits.MaxObstacles}.");
+            result.Sort(CompareObstacles);
             fingerprint = Fingerprint(result);
-            return result;
+            return true;
         }
 
-        private ulong ComputeFingerprintOnly()
-        {
-            CollectObstacles(out var fingerprint);
-            return fingerprint;
-        }
-
-        private void AddObstacle(
+        private bool TryAddObstacle(
             ICollection<OfficeNavObstacle> target,
-            ISet<int> contributed,
-            int contributorId,
-            string obstacleId,
+            ICollection<ObstacleCandidate> liveTarget,
+            ObstacleCandidate candidate,
             Bounds bounds,
-            float extraClearance)
+            out string failure)
         {
-            if (!contributed.Add(contributorId)) return;
+            failure = string.Empty;
+            var extraClearance = candidate.Marker == null ? 0f : candidate.Marker.ExtraClearance;
             var minX = bounds.min.x - extraClearance;
             var minZ = bounds.min.z - extraClearance;
             var maxX = bounds.max.x + extraClearance;
             var maxZ = bounds.max.z + extraClearance;
             if (maxX < _navigationBounds.MinX || minX > _navigationBounds.MaxX ||
                 maxZ < _navigationBounds.MinZ || minZ > _navigationBounds.MaxZ)
-                return;
-            target.Add(new OfficeNavObstacle(obstacleId, minX, minZ, maxX, maxZ));
+                return true;
+            if (target.Count >= OfficeNavigationLimits.MaxObstacles)
+            {
+                failure = $"Office navigation obstacle cap {OfficeNavigationLimits.MaxObstacles} was exceeded.";
+                return false;
+            }
+
+            minX = Mathf.Max(minX, _navigationBounds.MinX);
+            minZ = Mathf.Max(minZ, _navigationBounds.MinZ);
+            maxX = Mathf.Min(maxX, _navigationBounds.MaxX);
+            maxZ = Mathf.Min(maxZ, _navigationBounds.MaxZ);
+            target.Add(new OfficeNavObstacle(candidate.ObstacleId, minX, minZ, maxX, maxZ));
+            liveTarget?.Add(candidate);
+            return true;
         }
 
-        private DeterministicOfficePathfinder GetPathfinder(float agentRadius)
+        private bool TryGetPathfinder(float agentRadius, out DeterministicOfficePathfinder pathfinder)
         {
+            pathfinder = null;
+            if (!_ready) return false;
             var radiusKey = Mathf.RoundToInt(Mathf.Max(0.05f, agentRadius) * 1000f);
             if (_pathfinders.TryGetValue(radiusKey, out var cache) && cache.Revision == Revision)
-                return cache.Pathfinder;
-            cache = new PathfinderCacheEntry(
-                Revision,
-                new DeterministicOfficePathfinder(
+            {
+                pathfinder = cache.Pathfinder;
+                return true;
+            }
+
+            try
+            {
+                pathfinder = new DeterministicOfficePathfinder(
                     _navigationBounds,
                     cellSize,
                     _obstacles,
                     radiusKey / 1000f,
-                    characterClearance));
+                    characterClearance);
+            }
+            catch (Exception exception) when (
+                exception is ArgumentOutOfRangeException || exception is OverflowException)
+            {
+                FailClosed("Office navigation pathfinder rejected its bounds: " + exception.Message);
+                pathfinder = null;
+                return false;
+            }
+
+            cache = new PathfinderCacheEntry(Revision, pathfinder);
             _pathfinders[radiusKey] = cache;
-            return cache.Pathfinder;
+            return true;
         }
 
         private bool OverlapsNavigationHeight(Bounds bounds, float surfaceTop) =>
             bounds.max.y > surfaceTop + maximumStepHeight &&
             bounds.min.y < surfaceTop + navigationBodyHeight;
 
+        private bool CanBuildGrid(out string failure)
+        {
+            failure = string.Empty;
+            if (!OfficeNavigationLimits.TryResolveGridDimensions(
+                    _navigationBounds,
+                    cellSize,
+                    out _,
+                    out _,
+                    out var count))
+            {
+                failure =
+                    $"Office navigation grid is invalid or exceeds {OfficeNavigationLimits.MaxGridCells} cells.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private void FailClosed(string reason)
+        {
+            var changed = _ready || !string.Equals(_failureReason, reason, StringComparison.Ordinal);
+            _ready = false;
+            _dirty = false;
+            _dirtyRemaining = 0f;
+            _failureReason = reason ?? "Office navigation is unavailable.";
+            _observedExternalMutation = s_externalMutation;
+            _pathfinders.Clear();
+            _obstacles.Clear();
+            _liveObstacles.Clear();
+            if (changed) Revision++;
+        }
+
+        private bool TryPrepareNavigationRead()
+        {
+            ObserveExternalMutation();
+            EnsureConfigured();
+            if (_officeRoot == null)
+            {
+                FailClosed("Office navigation root is unavailable.");
+                return false;
+            }
+
+            if (_surfaceCollider == null && _surfaceRenderer == null)
+            {
+                FailClosed("Office navigation surface was destroyed.");
+                return false;
+            }
+
+            return _ready && !_dirty;
+        }
+
+        private bool ObserveExternalMutation()
+        {
+            if (_observedExternalMutation == s_externalMutation) return false;
+            _candidatesDirty = true;
+            MarkDirty();
+            return true;
+        }
+
+        private void RefreshTrafficSnapshot()
+        {
+            _agentSnapshotScratch.Clear();
+            foreach (var agent in _agents)
+            {
+                if (agent == null || !agent.NavigationCanMove || agent.IsPresentationAway) continue;
+                _agentSnapshotScratch.Add(agent);
+            }
+
+            _agentSnapshotScratch.Sort(CompareAgents);
+            if (_trafficSnapshot.Length != _agentSnapshotScratch.Count)
+                _trafficSnapshot = new OfficeTrafficAgentState[_agentSnapshotScratch.Count];
+            _trafficSnapshotCount = _agentSnapshotScratch.Count;
+            for (var index = 0; index < _trafficSnapshotCount; index++)
+            {
+                var agent = _agentSnapshotScratch[index];
+                _trafficSnapshot[index] = new OfficeTrafficAgentState(
+                    agent.AgentId,
+                    ToPoint(agent.transform.position),
+                    ToPoint(agent.NavigationDesiredVelocity),
+                    agent.NavigationRadius,
+                    agent.NavigationStuckSeconds);
+            }
+        }
+
+        private bool IsVelocitySafe(OfficeWorkerAgent self, Vector3 velocity, float radius)
+        {
+            velocity.y = 0f;
+            if (velocity.sqrMagnitude <= 0.000001f) return true;
+            var start = self.transform.position;
+            var end = start + velocity * TrafficSafetyProbeSeconds;
+            return IsMovementCollisionFree(start, end, radius);
+        }
+
+        private static bool IsPresentationOnly(Renderer renderer)
+        {
+            if (renderer.GetComponentInParent<Canvas>() != null) return true;
+            var name = renderer.gameObject.name;
+            return name.IndexOf("Foreground", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("Label", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("Guide", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("VFX", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsOfficeFloor(string name) =>
+            !string.IsNullOrEmpty(name) &&
+            name.IndexOf("Office Floor", StringComparison.OrdinalIgnoreCase) >= 0;
+
         private static Transform FindOfficeRoot()
         {
             var exact = GameObject.Find("FAMILY OFFICE V0.2");
             if (exact != null) return exact.transform;
-            var floor = FindObjectsByType<Collider>(FindObjectsSortMode.None)
-                .Where(item => item != null && item.gameObject.name.IndexOf("Office Floor", StringComparison.OrdinalIgnoreCase) >= 0)
-                .OrderBy(item => HierarchyKey(item.transform), StringComparer.Ordinal)
-                .FirstOrDefault();
-            return floor == null ? null : floor.transform.parent;
+            var colliders = FindObjectsByType<Collider>(FindObjectsSortMode.None);
+            Array.Sort(colliders, CompareComponents);
+            for (var index = 0; index < colliders.Length; index++)
+            {
+                var item = colliders[index];
+                if (item != null && IsOfficeFloor(item.gameObject.name)) return item.transform.parent;
+            }
+
+            return null;
         }
+
+        private static int CompareWorlds(OfficeNavigationWorld left, OfficeNavigationWorld right) =>
+            string.CompareOrdinal(
+                left == null ? string.Empty : HierarchyKey(left.transform),
+                right == null ? string.Empty : HierarchyKey(right.transform));
+
+        private static int CompareComponents<T>(T left, T right) where T : Component =>
+            string.CompareOrdinal(
+                left == null ? string.Empty : HierarchyKey(left.transform),
+                right == null ? string.Empty : HierarchyKey(right.transform));
+
+        private static int CompareAgents(OfficeWorkerAgent left, OfficeWorkerAgent right) =>
+            string.CompareOrdinal(
+                left == null ? string.Empty : left.AgentId,
+                right == null ? string.Empty : right.AgentId);
+
+        private static int CompareObstacles(OfficeNavObstacle left, OfficeNavObstacle right) =>
+            string.CompareOrdinal(left.ObstacleId, right.ObstacleId);
 
         private static string HierarchyKey(Transform value)
         {
@@ -435,6 +787,44 @@ namespace FamilyCompany.Presentation.Unity
 
             public int Revision { get; }
             public DeterministicOfficePathfinder Pathfinder { get; }
+        }
+
+        private sealed class ObstacleCandidate
+        {
+            public ObstacleCandidate(
+                Collider collider,
+                MeshRenderer renderer,
+                OfficeNavigationObstacle marker,
+                string obstacleId)
+            {
+                Collider = collider;
+                Renderer = renderer;
+                Marker = marker;
+                ObstacleId = obstacleId;
+            }
+
+            public Collider Collider { get; }
+            public MeshRenderer Renderer { get; }
+            public OfficeNavigationObstacle Marker { get; }
+            public string ObstacleId { get; }
+
+            public bool TryGetBounds(out Bounds bounds)
+            {
+                if (Collider != null && Collider.enabled && Collider.gameObject.activeInHierarchy)
+                {
+                    bounds = Collider.bounds;
+                    return true;
+                }
+
+                if (Renderer != null && Renderer.enabled && Renderer.gameObject.activeInHierarchy)
+                {
+                    bounds = Renderer.bounds;
+                    return true;
+                }
+
+                bounds = default;
+                return false;
+            }
         }
     }
 }

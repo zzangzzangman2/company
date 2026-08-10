@@ -4,6 +4,31 @@ using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
 {
+    public enum OfficeSeatApproachTerminationReason
+    {
+        ReleasedByOwner = 0,
+        AgentDisabled = 1,
+        AgentReinitialized = 2,
+        NavigationInvalidated = 3
+    }
+
+    public readonly struct OfficeSeatApproachTermination
+    {
+        public OfficeSeatApproachTermination(
+            string requestId,
+            string seatId,
+            OfficeSeatApproachTerminationReason reason)
+        {
+            RequestId = requestId ?? string.Empty;
+            SeatId = seatId ?? string.Empty;
+            Reason = reason;
+        }
+
+        public string RequestId { get; }
+        public string SeatId { get; }
+        public OfficeSeatApproachTerminationReason Reason { get; }
+    }
+
     public sealed class OfficeSeatApproachRequest
     {
         public OfficeSeatApproachRequest(
@@ -66,10 +91,13 @@ namespace FamilyCompany.Presentation.Unity
             OfficeWorkerAgent agent,
             OfficeSeatAuthoring seat,
             string requestId,
-            Action<OfficeWorkerAgent, OfficeSeatApproachHandoff> onReady)
+            Action<OfficeWorkerAgent, OfficeSeatApproachHandoff> onReady,
+            Action<OfficeWorkerAgent, OfficeSeatApproachTermination> onTerminated)
         {
             if (agent == null) throw new ArgumentNullException(nameof(agent));
             if (seat == null) throw new ArgumentNullException(nameof(seat));
+            if (onReady == null) throw new ArgumentNullException(nameof(onReady));
+            if (onTerminated == null) throw new ArgumentNullException(nameof(onTerminated));
             if (!seat.TryBuildDefinition(out var definition, out var report) || report.HasErrors)
                 return false;
             var request = new OfficeSeatApproachRequest(
@@ -79,7 +107,7 @@ namespace FamilyCompany.Presentation.Unity
                 ToVector(definition.SitPosition),
                 new Vector3(definition.LookDirectionX, 0f, definition.LookDirectionZ),
                 definition.ResolvedFacing);
-            return agent.TryBeginSeatApproach(request, onReady);
+            return agent.TryBeginSeatApproach(request, onReady, onTerminated);
         }
 
         private static Vector3 ToVector(OfficeSeatPosition value) => new Vector3(value.X, value.Y, value.Z);

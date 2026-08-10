@@ -53,6 +53,85 @@ namespace FamilyCompany.Simulation.Navigation
         public bool ShouldReplan { get; }
     }
 
+    public readonly struct OfficeMotionIntegrationResult
+    {
+        public OfficeMotionIntegrationResult(OfficeNavPoint velocity, OfficeNavPoint displacement)
+        {
+            Velocity = velocity;
+            Displacement = displacement;
+        }
+
+        public OfficeNavPoint Velocity { get; }
+        public OfficeNavPoint Displacement { get; }
+    }
+
+    public static class OfficeNavigationMotionIntegrator
+    {
+        public const float MaximumStableStepSeconds = 0.05f;
+
+        public static OfficeMotionIntegrationResult IntegrateVelocity(
+            OfficeNavPoint currentVelocity,
+            OfficeNavPoint targetVelocity,
+            float changePerSecond,
+            float deltaTime)
+        {
+            if (changePerSecond <= 0f || float.IsNaN(changePerSecond) || float.IsInfinity(changePerSecond))
+                throw new ArgumentOutOfRangeException(nameof(changePerSecond));
+            if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+                throw new ArgumentOutOfRangeException(nameof(deltaTime));
+            if (deltaTime <= 0f)
+                return new OfficeMotionIntegrationResult(currentVelocity, new OfficeNavPoint(0f, 0f));
+
+            var difference = targetVelocity - currentVelocity;
+            var differenceMagnitude = difference.Magnitude;
+            if (differenceMagnitude <= 0.000001f)
+                return new OfficeMotionIntegrationResult(targetVelocity, targetVelocity * deltaTime);
+
+            var timeToTarget = differenceMagnitude / changePerSecond;
+            if (timeToTarget >= deltaTime)
+            {
+                var next = currentVelocity + difference * (changePerSecond * deltaTime / differenceMagnitude);
+                return new OfficeMotionIntegrationResult(
+                    next,
+                    (currentVelocity + next) * (0.5f * deltaTime));
+            }
+
+            var rampDisplacement = (currentVelocity + targetVelocity) * (0.5f * timeToTarget);
+            var steadyDisplacement = targetVelocity * (deltaTime - timeToTarget);
+            return new OfficeMotionIntegrationResult(targetVelocity, rampDisplacement + steadyDisplacement);
+        }
+
+        public static OfficeNavPoint ClampDisplacement(OfficeNavPoint displacement, float maximumDistance)
+        {
+            if (maximumDistance < 0f || float.IsNaN(maximumDistance) || float.IsInfinity(maximumDistance))
+                throw new ArgumentOutOfRangeException(nameof(maximumDistance));
+            var magnitude = displacement.Magnitude;
+            if (magnitude <= maximumDistance || magnitude <= 0.000001f) return displacement;
+            return displacement * (maximumDistance / magnitude);
+        }
+
+        public static int CalculateStepCount(float deltaTime)
+        {
+            if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+                throw new ArgumentOutOfRangeException(nameof(deltaTime));
+            return deltaTime <= 0f
+                ? 0
+                : Math.Max(1, (int)Math.Ceiling(deltaTime / MaximumStableStepSeconds - 0.000001f));
+        }
+
+        public static float ResolveStepDelta(float deltaTime, int stepIndex, int stepCount)
+        {
+            if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+                throw new ArgumentOutOfRangeException(nameof(deltaTime));
+            if (stepCount != CalculateStepCount(deltaTime))
+                throw new ArgumentOutOfRangeException(nameof(stepCount));
+            if (stepIndex < 0 || stepIndex >= stepCount)
+                throw new ArgumentOutOfRangeException(nameof(stepIndex));
+            if (stepIndex < stepCount - 1) return MaximumStableStepSeconds;
+            return deltaTime - MaximumStableStepSeconds * (stepCount - 1);
+        }
+    }
+
     public static class OfficeNavigationTrafficRules
     {
         public const float PredictionSeconds = 0.55f;
@@ -125,10 +204,17 @@ namespace FamilyCompany.Simulation.Navigation
             unchecked
             {
                 uint hash = 2166136261;
-                var text = first + "|" + second;
-                for (var index = 0; index < text.Length; index++)
+                for (var index = 0; index < first.Length; index++)
                 {
-                    hash ^= text[index];
+                    hash ^= first[index];
+                    hash *= 16777619;
+                }
+
+                hash ^= '|';
+                hash *= 16777619;
+                for (var index = 0; index < second.Length; index++)
+                {
+                    hash ^= second[index];
                     hash *= 16777619;
                 }
 
