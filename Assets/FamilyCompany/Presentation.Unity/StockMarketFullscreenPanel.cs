@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using FamilyCompany.Infrastructure.Unity;
+using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.History;
 using FamilyCompany.Simulation.Market;
 using UnityEngine;
@@ -39,7 +40,6 @@ namespace FamilyCompany.Presentation.Unity
         private static readonly string[] PlaybackLabels = { "정지", "5분", "15분", "50분" };
         private static readonly int[] PlaybackMinutes = { 0, 5, 15, 50 };
         private static readonly int[] PlaybackAnimationRates = { 0, 1, 3, 10 };
-        private const long IsolatedPracticeBrokerageCash = 50_000L;
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
         private const uint NativeMouseLeftDown = 0x0002;
         private const uint NativeMouseLeftUp = 0x0004;
@@ -75,7 +75,9 @@ namespace FamilyCompany.Presentation.Unity
         private bool _cameraFollowWasEnabled;
         private bool _worldInteractionSuppressed;
         private readonly List<MarketSecurityDefinition> _securities = new List<MarketSecurityDefinition>();
+        private GameState _boundGameState;
         private StockMarketRuntimeSession _runtimeSession;
+        private CompanyBrokerageTransferService _transferService;
         private int _selectedSecurityIndex;
         private bool _open;
         private PrimarySection _primarySection = PrimarySection.Explore;
@@ -95,7 +97,9 @@ namespace FamilyCompany.Presentation.Unity
         private string _amendOrderId = string.Empty;
         private string _amendPriceText = string.Empty;
         private string _amendQuantityText = string.Empty;
+        private string _transferAmountText = "100000";
         private string _orderNotice = "호가를 누르면 지정가가 입력됩니다.";
+        private string _transferNotice = "회사 현금과 증권 예수금 사이에서 이체합니다.";
         private bool _marketOrder;
         private Vector2 _watchlistScroll;
         private Vector2 _activityScroll;
@@ -155,6 +159,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!Application.isPlaying) return;
             if (_bootstrap == null) _bootstrap = FindFirstObjectByType<PrototypeBootstrap>();
+            SynchronizeGameStateBinding();
             var canShow = _bootstrap != null &&
                           _bootstrap.State != null &&
                           _bootstrap.UiScreen == PrototypeUiScreen.Playing;
@@ -165,7 +170,11 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             if (Input.GetKeyDown(KeyCode.F3)) ToggleNow();
-            if (!_open) return;
+            if (!_open)
+            {
+                FlushRuntimeToGameState();
+                return;
+            }
 
             var minutesToAdvance = ConsumeRealtimeGameMinutes(Time.unscaledDeltaTime);
             if (_realtimeQaObserving)
@@ -173,17 +182,26 @@ namespace FamilyCompany.Presentation.Unity
                 _realtimeQaAdvancedMinutes += minutesToAdvance;
                 return;
             }
-            if (minutesToAdvance <= 0) return;
+            if (minutesToAdvance <= 0)
+            {
+                FlushRuntimeToGameState();
+                return;
+            }
 
             var date = CurrentDate;
             var clock = MarketSessionClock.At(_marketMinute, MarketTradingCalendar.IsTradingDay(date));
-            if (clock.Phase == MarketSessionPhase.Closed || clock.Phase == MarketSessionPhase.Holiday) return;
+            if (clock.Phase == MarketSessionPhase.Closed || clock.Phase == MarketSessionPhase.Holiday)
+            {
+                FlushRuntimeToGameState();
+                return;
+            }
 
             EnsureRuntimeSession();
             _runtimeSession?.AdvanceMinutes(
                 minutesToAdvance,
                 PlaybackAnimationRates[_playbackIndex]);
             SyncSelectedRuntimeView();
+            FlushRuntimeToGameState();
         }
 
         private int ConsumeRealtimeGameMinutes(double unscaledDeltaSeconds)
@@ -193,12 +211,14 @@ namespace FamilyCompany.Presentation.Unity
 
         private void OnDestroy()
         {
+            FlushRuntimeToGameState();
             RestoreWorldInteraction();
             if (_whiteTexture != null) Destroy(_whiteTexture);
         }
 
         private void OnDisable()
         {
+            FlushRuntimeToGameState();
             RestoreWorldInteraction();
         }
 
@@ -506,6 +526,7 @@ namespace FamilyCompany.Presentation.Unity
         public void OpenNow()
         {
             if (_bootstrap == null || _bootstrap.State == null) return;
+            SynchronizeGameStateBinding();
             SuppressWorldInteraction();
             _open = true;
             _marketMinute = Mathf.Clamp(
@@ -515,13 +536,13 @@ namespace FamilyCompany.Presentation.Unity
             RefreshSecurities();
             EnsureRuntimeSession();
             SyncSelectedRuntimeView();
-            _realtimeClock.Reset();
         }
 
         public void CloseNow()
         {
             _open = false;
             _realtimeClock.Reset();
+            FlushRuntimeToGameState();
             RestoreWorldInteraction();
         }
 
@@ -589,6 +610,7 @@ namespace FamilyCompany.Presentation.Unity
             finally
             {
                 GUI.matrix = previousMatrix;
+                FlushRuntimeToGameState();
             }
         }
 
@@ -601,7 +623,7 @@ namespace FamilyCompany.Presentation.Unity
                     ? PanelSurface
                     : new Color(PanelSurface.r, PanelSurface.g, PanelSurface.b, 0.90f));
             DrawSolid(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), MarketLine);
-            GUI.Label(new Rect(24f, 13f, 280f, 34f), "가족회사 증권 실습", _titleStyle);
+            GUI.Label(new Rect(24f, 13f, 280f, 34f), "가족회사 주식시장", _titleStyle);
 
             var tradingDay = MarketTradingCalendar.IsTradingDay(CurrentDate);
             var clock = MarketSessionClock.At(_marketMinute, tradingDay);
@@ -644,7 +666,7 @@ namespace FamilyCompany.Presentation.Unity
             }
             GUI.Label(
                 new Rect(layout.CanvasWidth - 510f, 4f, 252f, 18f),
-                $"격리 실습 예수금 {(_runtimeSession?.BrokerageCash ?? 0L):N0}원",
+                $"회사 증권 예수금 {(_runtimeSession?.BrokerageCash ?? 0L):N0}원",
                 _tinyStyle);
             GUI.Label(
                 new Rect(controlsX, 66f, 300f, 16f),
@@ -712,7 +734,7 @@ namespace FamilyCompany.Presentation.Unity
         private void DrawAccountSummary(Rect rect)
         {
             GUI.Label(new Rect(rect.x, rect.y, rect.width, 30f), "내 투자", _headingStyle);
-            DrawMetricCard(new Rect(rect.x, rect.y + 44f, rect.width, 70f), "격리 실습 예수금", $"{(_runtimeSession?.BrokerageCash ?? 0L):N0}원");
+            DrawMetricCard(new Rect(rect.x, rect.y + 44f, rect.width, 70f), "회사 증권 예수금", $"{(_runtimeSession?.BrokerageCash ?? 0L):N0}원");
             DrawMetricCard(new Rect(rect.x, rect.y + 124f, rect.width, 70f), "세션 전체", $"보유 {_runtimeSession?.Positions.Count ?? 0} · 미체결 {_runtimeSession?.PendingOrders.Count ?? 0} · 관심 {_runtimeSession?.FavoriteAssetIds.Count ?? 0}");
             GUI.Label(new Rect(rect.x, rect.y + 212f, rect.width, 26f), "전체 보유 종목", _headingStyle);
             var y = rect.y + 246f;
@@ -1095,7 +1117,7 @@ namespace FamilyCompany.Presentation.Unity
             var clock = MarketSessionClock.At(_marketMinute, MarketTradingCalendar.IsTradingDay(CurrentDate));
             var orderSessionLabel = clock.Phase == MarketSessionPhase.OpeningTransition
                 ? $"개장 동시호가 접수 · 주문 가능 {(_runtimeSession?.AvailableBrokerageCash ?? 0L):N0}원"
-                : $"실습 주문 가능 {(_runtimeSession?.AvailableBrokerageCash ?? 0L):N0}원";
+                : $"회사 주문 가능 {(_runtimeSession?.AvailableBrokerageCash ?? 0L):N0}원";
             GUI.Label(new Rect(rect.x, rect.y + 38f, rect.width, 22f), orderSessionLabel, _smallStyle);
 
             if (DrawButton(new Rect(rect.x, rect.y + 76f, rect.width * 0.5f - 5f, 40f), "지정가", !_marketOrder, actionColor)) _marketOrder = false;
@@ -1139,7 +1161,7 @@ namespace FamilyCompany.Presentation.Unity
             GUI.Label(new Rect(rect.x, noticeY, rect.width, 58f), _orderNotice, new GUIStyle(_smallStyle) { wordWrap = true });
             if (DrawButton(new Rect(rect.x, noticeY + 68f, rect.width, 50f), isBuy ? "매수 주문" : "매도 주문", true, actionColor))
                 ValidateAndStageOrder(isBuy);
-            GUI.Label(new Rect(rect.x, noticeY + 130f, rect.width, 52f), "50,000원 격리 실습계좌에만 반영됩니다. 회사 현금·장부·Save와의 이체는 통합 승인 전까지 차단됩니다.", new GUIStyle(_tinyStyle) { wordWrap = true });
+            GUI.Label(new Rect(rect.x, noticeY + 130f, rect.width, 52f), "주문·체결·미체결 예약금은 회사 증권계좌와 Save에 즉시 반영됩니다. 입출금은 잔고 탭에서 처리합니다.", new GUIStyle(_tinyStyle) { wordWrap = true });
         }
 
         private void DrawPendingOrders(Rect rect, bool correctionMode)
@@ -1242,14 +1264,75 @@ namespace FamilyCompany.Presentation.Unity
         private void DrawOrderBalance(Rect rect)
         {
             GUI.Label(new Rect(rect.x, rect.y, rect.width, 30f), "잔고", _headingStyle);
-            DrawMetricCard(new Rect(rect.x, rect.y + 48f, rect.width, 72f), "격리 실습 예수금", $"{(_runtimeSession?.BrokerageCash ?? 0L):N0}원");
-            DrawMetricCard(new Rect(rect.x, rect.y + 132f, rect.width, 72f), "주문 가능", $"{(_runtimeSession?.AvailableBrokerageCash ?? 0L):N0}원");
+            DrawMetricCard(new Rect(rect.x, rect.y + 48f, rect.width, 72f), "회사 현금", $"{(_boundGameState?.Company.CashWon ?? 0L):N0}원");
+            DrawMetricCard(new Rect(rect.x, rect.y + 132f, rect.width, 72f), "증권 예수금", $"{(_runtimeSession?.BrokerageCash ?? 0L):N0}원");
+            DrawMetricCard(new Rect(rect.x, rect.y + 216f, rect.width, 72f), "주문 가능", $"{(_runtimeSession?.AvailableBrokerageCash ?? 0L):N0}원");
             var selected = SelectedSecurity;
             var owned = selected == null ? 0 : _runtimeSession?.PositionUnits(selected.CompanyId) ?? 0;
             var average = selected == null ? 0d : _runtimeSession?.AverageCost(selected.CompanyId) ?? 0d;
-            DrawMetricCard(new Rect(rect.x, rect.y + 216f, rect.width, 72f), "보유 수량", $"{owned:N0}주");
-            DrawMetricCard(new Rect(rect.x, rect.y + 300f, rect.width, 72f), "평균 매입가", $"{average:N0}원");
-            DrawMetricCard(new Rect(rect.x, rect.y + 384f, rect.width, 72f), "미체결", $"{_runtimeSession?.PendingOrders.Count ?? 0}건");
+            DrawMetricCard(new Rect(rect.x, rect.y + 300f, rect.width, 72f), "보유 수량", $"{owned:N0}주");
+            DrawMetricCard(new Rect(rect.x, rect.y + 384f, rect.width, 72f), "평균 매입가", $"{average:N0}원");
+            DrawMetricCard(new Rect(rect.x, rect.y + 468f, rect.width, 72f), "미체결", $"{_runtimeSession?.PendingOrders.Count ?? 0}건");
+
+            GUI.Label(new Rect(rect.x, rect.y + 558f, rect.width, 24f), "회사계좌 이체", _headingStyle);
+            _transferAmountText = GUI.TextField(
+                new Rect(rect.x, rect.y + 592f, rect.width, 43f),
+                _transferAmountText,
+                19,
+                _inputStyle);
+            var halfWidth = rect.width * 0.5f - 5f;
+            if (DrawButton(new Rect(rect.x, rect.y + 647f, halfWidth, 42f), "증권계좌 입금", true, UpRed))
+                SubmitBrokerageTransfer(true);
+            if (DrawButton(new Rect(rect.x + halfWidth + 10f, rect.y + 647f, halfWidth, 42f), "회사계좌 출금", true, SellBlue))
+                SubmitBrokerageTransfer(false);
+            GUI.Label(
+                new Rect(rect.x, rect.y + 700f, rect.width, 64f),
+                _transferNotice,
+                new GUIStyle(_tinyStyle) { wordWrap = true });
+        }
+
+        private void SubmitBrokerageTransfer(bool companyToBrokerage)
+        {
+            if (_boundGameState == null || _runtimeSession == null || _transferService == null)
+            {
+                _transferNotice = "회사 증권계좌를 불러오지 못했습니다.";
+                return;
+            }
+
+            if (!long.TryParse(
+                    _transferAmountText.Replace(",", string.Empty),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var amountWon) || amountWon <= 0)
+            {
+                _transferNotice = "이체 금액은 1원 이상의 정수 원으로 입력하세요.";
+                return;
+            }
+
+            var result = companyToBrokerage
+                ? _transferService.Deposit(_boundGameState.Time.ElapsedMinutes, amountWon)
+                : _transferService.Withdraw(_boundGameState.Time.ElapsedMinutes, amountWon);
+            _transferNotice = result.Accepted
+                ? $"{(companyToBrokerage ? "입금" : "출금")} 완료 · {amountWon:N0}원 · 회사 현금 {result.CompanyCashWon:N0}원 · 증권 예수금 {result.BrokerageCashWon:N0}원"
+                : TransferRejectionMessage(result.RejectionReason);
+            FlushRuntimeToGameState();
+        }
+
+        private static string TransferRejectionMessage(BrokerageTransferRejectionReason reason)
+        {
+            switch (reason)
+            {
+                case BrokerageTransferRejectionReason.InsufficientCompanyCash:
+                    return "회사 현금이 부족합니다.";
+                case BrokerageTransferRejectionReason.InsufficientAvailableBrokerageCash:
+                    return "미체결 매수 예약금을 제외한 출금 가능 예수금이 부족합니다.";
+                case BrokerageTransferRejectionReason.DuplicateTransaction:
+                    return "이미 처리된 이체입니다.";
+                case BrokerageTransferRejectionReason.Overflow:
+                    return "이체 후 금액이 long 원 범위를 벗어납니다.";
+                default:
+                    return "이체 금액을 확인하세요.";
+            }
         }
 
         private void ValidateAndStageOrder(bool isBuy)
@@ -1353,17 +1436,74 @@ namespace FamilyCompany.Presentation.Unity
 
         private void EnsureRuntimeSession()
         {
+            SynchronizeGameStateBinding();
             if (_runtimeSession != null && _runtimeSession.Date == CurrentDate) return;
-            if (_securities.Count == 0 || _bootstrap?.State == null) return;
-            var accountState = _runtimeSession?.ExportBrokerageState();
-            _runtimeSession = new StockMarketRuntimeSession(
-                _bootstrap.State.WorldSeed,
-                CurrentDate,
-                IsolatedPracticeBrokerageCash,
-                _securities,
-                _marketMinute);
-            if (accountState != null && !_runtimeSession.TryApplyBrokerageState(accountState, out var error))
-                _orderNotice = $"거래일 변경 계좌 승계 실패 · {error}";
+            if (_securities.Count == 0 || _boundGameState == null) return;
+
+            try
+            {
+                if (_runtimeSession == null)
+                {
+                    var binding = StockMarketGameStateBridge.Load(
+                        _boundGameState,
+                        CurrentDate,
+                        _securities,
+                        _marketMinute);
+                    _runtimeSession = binding.Session;
+                    _playbackIndex = Mathf.Clamp(binding.PlaybackIndex, 0, PlaybackLabels.Length - 1);
+                    _realtimeClock.Restore(binding.RealtimeResidualSeconds);
+                }
+                else
+                {
+                    var accountState = _runtimeSession.ExportBrokerageState();
+                    var nextSession = new StockMarketRuntimeSession(
+                        _boundGameState.WorldSeed,
+                        CurrentDate,
+                        0L,
+                        _securities,
+                        _marketMinute);
+                    if (!nextSession.TryApplyBrokerageState(accountState, out var error))
+                        throw new InvalidOperationException($"Trading-date brokerage carry failed: {error}");
+                    _runtimeSession = nextSession;
+                    _realtimeClock.Reset();
+                }
+
+                _transferService = new CompanyBrokerageTransferService(
+                    _boundGameState.Company,
+                    _runtimeSession);
+                FlushRuntimeToGameState();
+            }
+            catch (Exception exception)
+            {
+                _runtimeSession = null;
+                _transferService = null;
+                _orderNotice = $"회사 증권계좌 복원 실패 · {exception.Message}";
+                _transferNotice = _orderNotice;
+            }
+        }
+
+        private void SynchronizeGameStateBinding()
+        {
+            var current = _bootstrap?.State;
+            if (ReferenceEquals(_boundGameState, current)) return;
+            _boundGameState = current;
+            _runtimeSession = null;
+            _transferService = null;
+            _snapshot = null;
+            _playbackIndex = 1;
+            _realtimeClock.Reset();
+        }
+
+        private void FlushRuntimeToGameState()
+        {
+            if (_runtimeSession == null || _boundGameState == null ||
+                !ReferenceEquals(_boundGameState, _bootstrap?.State))
+                return;
+            StockMarketGameStateBridge.Flush(
+                _boundGameState,
+                _runtimeSession,
+                _realtimeClock.AccumulatedSeconds,
+                _playbackIndex);
         }
 
         private void SyncSelectedRuntimeView()

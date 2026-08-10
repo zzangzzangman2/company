@@ -100,6 +100,15 @@ namespace FamilyCompany.Editor
                 null,
                 false);
             var date = new DateTime(2000, 1, 4);
+            var emptyBinding = StockMarketGameStateBridge.Load(
+                state,
+                date,
+                new[] { security },
+                MarketSessionClock.DayStartMinute);
+            AssertEqual(0L, emptyBinding.Session.BrokerageCash, "new company brokerage starts empty");
+            if (emptyBinding.RestoredFullSession)
+                throw new InvalidOperationException("Uninitialized stock state was reported as a full restore.");
+
             var session = new StockMarketRuntimeSession(
                 state.WorldSeed,
                 date,
@@ -158,8 +167,8 @@ namespace FamilyCompany.Editor
                 state.Company.Ledger.Last().TotalCreditWon,
                 "brokerage withdrawal balanced ledger");
 
-            var sourceStock = session.ExportSessionState(0.4d, 2);
-            state.ReplaceStockMarketState(sourceStock);
+            StockMarketGameStateBridge.Flush(state, session, 0.4d, 2);
+            var sourceStock = state.StockMarket;
             var restoredState = GameSaveMapper.FromDto(GameSaveMapper.ToDto(state));
             AssertEqual(state.Company.CashWon, restoredState.Company.CashWon, "company cash save round trip");
             AssertEqual(state.Company.Ledger.Count, restoredState.Company.Ledger.Count, "brokerage ledger save round trip");
@@ -170,14 +179,15 @@ namespace FamilyCompany.Editor
             AssertEqual(sourceStock.MarketMinute, restoredState.StockMarket.MarketMinute, "stock clock save round trip");
             AssertEqual(sourceStock.OpeningAuctionProcessCount, restoredState.StockMarket.OpeningAuctionProcessCount, "opening idempotency counter save round trip");
 
-            var restoredSession = new StockMarketRuntimeSession(
-                restoredState.WorldSeed,
+            var restoredBinding = StockMarketGameStateBridge.Load(
+                restoredState,
                 date,
-                0,
                 new[] { security },
                 restoredState.StockMarket.MarketMinute);
-            if (!restoredSession.TryApplySessionState(restoredState.StockMarket, out var restoreError))
-                throw new InvalidOperationException($"Stock session save apply failed: {restoreError}");
+            var restoredSession = restoredBinding.Session;
+            if (!restoredBinding.RestoredFullSession || restoredBinding.PlaybackIndex != 2 ||
+                Math.Abs(restoredBinding.RealtimeResidualSeconds - 0.4d) > 0.000001d)
+                throw new InvalidOperationException("GameState bridge did not restore the full same-day session.");
             restoredSession.SetMarketMinute(MarketSessionClock.OpenMinute);
             AssertEqual(openingProcessCount, restoredSession.OpeningAuctionProcessCount, "opening auction remained idempotent after load");
             AssertEqual(session.BrokerageCash, restoredSession.BrokerageCash, "live brokerage cash after load");
@@ -188,6 +198,44 @@ namespace FamilyCompany.Editor
             restoredClock.Restore(restoredState.StockMarket.RealtimeResidualSeconds);
             if (Math.Abs(restoredClock.AccumulatedSeconds - 0.4d) > 0.000001d)
                 throw new InvalidOperationException("Realtime stock clock residual was not restored.");
+
+            var nextDateBinding = StockMarketGameStateBridge.Load(
+                restoredState,
+                date.AddDays(1),
+                new[] { security },
+                MarketSessionClock.DayStartMinute);
+            if (nextDateBinding.RestoredFullSession || nextDateBinding.RealtimeResidualSeconds != 0d)
+                throw new InvalidOperationException("Changed trading date incorrectly restored stale session timing.");
+            AssertEqual(restoredSession.BrokerageCash, nextDateBinding.Session.BrokerageCash, "next-date brokerage cash carry");
+            AssertEqual(restoredSession.PendingOrders.Count, nextDateBinding.Session.PendingOrders.Count, "next-date pending-order carry");
+
+            var automaticIdState = PrototypeStateFactory.Create(99174);
+            var automaticIdSession = new StockMarketRuntimeSession(
+                automaticIdState.WorldSeed,
+                date,
+                0L,
+                new[] { security });
+            var automaticTransfers = new CompanyBrokerageTransferService(
+                automaticIdState.Company,
+                automaticIdSession);
+            if (!automaticTransfers.Deposit(automaticIdState.Time.ElapsedMinutes, 1).Accepted ||
+                !automaticTransfers.Deposit(automaticIdState.Time.ElapsedMinutes, 1).Accepted)
+                throw new InvalidOperationException("Automatic stock transfer IDs rejected valid same-minute transfers.");
+            var automaticIds = automaticIdState.Company.Ledger
+                .Where(item => item.TransactionId.StartsWith("stock-transfer-deposit-", StringComparison.Ordinal))
+                .Select(item => item.TransactionId)
+                .ToArray();
+            if (automaticIds.Length != 2 || automaticIds.Distinct(StringComparer.Ordinal).Count() != 2)
+                throw new InvalidOperationException("Automatic stock transfer IDs were not unique.");
+            foreach (var transaction in automaticIdState.Company.Ledger)
+                AssertEqual(transaction.TotalDebitWon, transaction.TotalCreditWon, "automatic transfer balanced ledger");
+
+            var optionalV5 = GameSaveMapper.ToDto(PrototypeStateFactory.Create(99175));
+            optionalV5.schemaVersion = 5;
+            optionalV5.stockMarket = null;
+            var optionalRestored = GameSaveMapper.FromDto(optionalV5);
+            if (optionalRestored.StockMarket.Initialized || optionalRestored.StockMarket.Brokerage.CashWon != 0L)
+                throw new InvalidOperationException("Save V5 without optional stockMarket did not restore safely.");
             Console.WriteLine("STOCK_MARKET_COMPANY_ACCOUNT_SAVE_VALIDATION: PASS");
         }
 

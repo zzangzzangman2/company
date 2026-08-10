@@ -159,8 +159,8 @@ namespace FamilyCompany.Simulation.Market
     /// Pure C# stock runtime owned by the stock presentation. It turns the
     /// already-ported SIMUL pricing, 10-level book, fill, FIFO pending-order,
     /// fee and calendar rules into one live state shared by quote, order, tape
-    /// and balance panels. GameState/save integration intentionally remains a
-    /// separate boundary so the common save schema is not mutated here.
+    /// and balance panels. StockMarketGameStateBridge owns the explicit
+    /// GameState/save boundary; this runtime remains free of Unity dependencies.
     /// </summary>
     public sealed class StockMarketRuntimeSession
     {

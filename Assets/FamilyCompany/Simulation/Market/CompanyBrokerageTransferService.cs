@@ -75,6 +75,11 @@ namespace FamilyCompany.Simulation.Market
             }
         }
 
+        public BrokerageTransferResult Deposit(long elapsedMinute, long amountWon)
+        {
+            return Deposit(NextTransactionId(elapsedMinute, true), elapsedMinute, amountWon);
+        }
+
         public BrokerageTransferResult Withdraw(
             string transactionId,
             long elapsedMinute,
@@ -97,6 +102,11 @@ namespace FamilyCompany.Simulation.Market
             }
         }
 
+        public BrokerageTransferResult Withdraw(long elapsedMinute, long amountWon)
+        {
+            return Withdraw(NextTransactionId(elapsedMinute, false), elapsedMinute, amountWon);
+        }
+
         private BrokerageTransferRejectionReason ValidateCommon(string transactionId, long amountWon)
         {
             if (amountWon <= 0 || string.IsNullOrWhiteSpace(transactionId))
@@ -104,6 +114,20 @@ namespace FamilyCompany.Simulation.Market
             return _company.Ledger.Any(item => item.TransactionId == transactionId)
                 ? BrokerageTransferRejectionReason.DuplicateTransaction
                 : BrokerageTransferRejectionReason.None;
+        }
+
+        private string NextTransactionId(long elapsedMinute, bool companyToBrokerage)
+        {
+            var direction = companyToBrokerage ? "deposit" : "withdraw";
+            var prefix = $"stock-transfer-{direction}-{elapsedMinute}";
+            for (var sequence = 1; sequence < int.MaxValue; sequence += 1)
+            {
+                var candidate = $"{prefix}-{sequence}";
+                if (_company.Ledger.All(item => item.TransactionId != candidate))
+                    return candidate;
+            }
+
+            throw new InvalidOperationException("Stock transfer transaction ID space is exhausted.");
         }
 
         private BrokerageTransferResult Accepted(long amountWon)
