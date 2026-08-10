@@ -312,6 +312,11 @@ namespace FamilyCompany.Editor
         {
             var sisterFrames = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.SisterFrameFolder });
             AssertEqual(8, sisterFrames.Length, "sister directional frame count");
+            var titleHero = AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeProjectBuilder.TitleHeroAssetPath);
+            if (titleHero == null || titleHero.width < 1600 || titleHero.height < 900)
+            {
+                throw new InvalidOperationException("Widescreen generated title hero is missing or too small.");
+            }
             var scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(PrototypeProjectBuilder.ScenePath);
             if (scene == null) throw new InvalidOperationException("Prototype scene is missing.");
 

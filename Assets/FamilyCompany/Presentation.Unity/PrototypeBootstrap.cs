@@ -25,6 +25,7 @@ namespace FamilyCompany.Presentation.Unity
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
         private const int ReferenceHeight = 1080;
+        private const string TitleHeroResourcePath = "Title/family_company_title_hero_v1";
         private GameState _state;
         private SimulationRunner _runner;
         private UnityJsonSaveRepository[] _saveSlots;
@@ -38,6 +39,7 @@ namespace FamilyCompany.Presentation.Unity
         private GUIStyle _slotStyle;
         private GUIStyle _panelStyle;
         private Texture2D _solidTexture;
+        private Texture2D _titleHeroTexture;
         private int _styleHeight;
         private int _activeSlot = UnityJsonSaveRepository.MinimumSlot;
         private int _pendingNewGameSlot;
@@ -414,28 +416,46 @@ namespace FamilyCompany.Presentation.Unity
             if (GUILayout.Button("종료", _buttonStyle, GUILayout.Height(56f))) Application.Quit();
             GUILayout.Space(18f);
             GUILayout.Label(_notice, _bodyStyle);
+            GUILayout.Space(7f);
+            GUILayout.Label("2000년의 작은 하청 사무실에서 시작해 실제 회사들과 경쟁하고 역사를 바꾸세요.", _smallStyle);
             GUILayout.EndArea();
-
-            var infoWidth = Mathf.Clamp(Screen.width * 0.30f, 440f, 630f);
-            var infoRect = new Rect(Screen.width - infoWidth - Screen.width * 0.055f, Screen.height * 0.18f, infoWidth, Screen.height * 0.56f);
-            DrawSolid(infoRect, new Color(0.05f, 0.10f, 0.14f, 0.88f));
-            GUILayout.BeginArea(new Rect(infoRect.x + 34f, infoRect.y + 30f, infoRect.width - 68f, infoRect.height - 60f));
-            GUILayout.Label("첫 사무실", _headingStyle);
-            GUILayout.Space(12f);
-            GUILayout.Label("직원 4명 · 자본금 500만원", _bodyStyle);
-            GUILayout.Label("지역 홈페이지·전산 하청부터 시작", _bodyStyle);
-            GUILayout.Label("실제 회사와 경쟁하고 역사를 바꾸는 경영 시뮬레이션", _bodyStyle);
-            GUILayout.FlexibleSpace();
-            GUILayout.Label("F11  전체 화면 전환\nESC  게임 메뉴\nCtrl+S  현재 슬롯 빠른 저장", _smallStyle);
-            GUILayout.EndArea();
+            GUI.Label(
+                new Rect(Screen.width - 360f, Screen.height - 108f, 320f, 72f),
+                "F11  전체 화면 전환\nESC  게임 메뉴\nCtrl+S  현재 슬롯 빠른 저장",
+                _smallStyle);
         }
 
         private void DrawMenuBackground(string eyebrow)
         {
-            DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0.025f, 0.055f, 0.075f, 1f));
-            DrawSolid(new Rect(Screen.width * 0.58f, 0f, Screen.width * 0.42f, Screen.height), new Color(0.12f, 0.35f, 0.35f, 0.24f));
+            var fullScreen = new Rect(0f, 0f, Screen.width, Screen.height);
+            if (_titleHeroTexture == null) _titleHeroTexture = Resources.Load<Texture2D>(TitleHeroResourcePath);
+            if (_titleHeroTexture != null) DrawTextureAspectFill(fullScreen, _titleHeroTexture);
+            else DrawSolid(fullScreen, new Color(0.025f, 0.055f, 0.075f, 1f));
+            DrawSolid(fullScreen, new Color(0.01f, 0.025f, 0.035f, 0.12f));
+            DrawSolid(new Rect(0f, 0f, Screen.width * 0.53f, Screen.height), new Color(0.01f, 0.025f, 0.035f, 0.48f));
             DrawSolid(new Rect(0f, Screen.height - 14f, Screen.width, 14f), new Color(0.96f, 0.49f, 0.38f, 1f));
             GUI.Label(new Rect(Screen.width * 0.075f, 46f, Screen.width * 0.6f, 40f), eyebrow, _smallStyle);
+        }
+
+        private static void DrawTextureAspectFill(Rect target, Texture texture)
+        {
+            var targetAspect = target.width / target.height;
+            var textureAspect = texture.width / (float)texture.height;
+            var source = new Rect(0f, 0f, 1f, 1f);
+            if (targetAspect > textureAspect)
+            {
+                var visibleHeight = textureAspect / targetAspect;
+                source.y = (1f - visibleHeight) * 0.5f;
+                source.height = visibleHeight;
+            }
+            else
+            {
+                var visibleWidth = targetAspect / textureAspect;
+                source.x = (1f - visibleWidth) * 0.5f;
+                source.width = visibleWidth;
+            }
+
+            GUI.DrawTextureWithTexCoords(target, texture, source, true);
         }
 
         private void DrawGameHud()

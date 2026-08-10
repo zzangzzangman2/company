@@ -14,6 +14,7 @@ namespace FamilyCompany.Editor
         public const string ScenePath = "Assets/FamilyCompany/Scenes/Prototype01.unity";
         public const string SisterPortraitAssetPath = "Assets/Art/Characters/OlderSister/older_sister_casual_neutral_v2.png";
         public const string SisterPixelSheetPath = "Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v2.png";
+        public const string TitleHeroAssetPath = "Assets/Art/UI/Resources/Title/family_company_title_hero_v1.png";
         public const string SisterFrameFolder = "Assets/Art/Characters/OlderSister/Pixel/Frames";
         private const string MaterialFolder = "Assets/FamilyCompany/Generated/Materials";
         private static readonly string[] SisterFrameNames =
