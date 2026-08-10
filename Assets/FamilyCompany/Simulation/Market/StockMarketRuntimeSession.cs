@@ -182,6 +182,7 @@ namespace FamilyCompany.Simulation.Market
 
         private readonly int _worldSeed;
         private readonly Dictionary<string, AssetState> _assets;
+        private readonly HashSet<string> _knownAssetIds;
         private readonly Dictionary<string, PositionState> _positions =
             new Dictionary<string, PositionState>(StringComparer.Ordinal);
         private List<MarketPendingOrder> _pendingOrders = new List<MarketPendingOrder>();
@@ -202,7 +203,8 @@ namespace FamilyCompany.Simulation.Market
             DateTime date,
             long openingBrokerageCash,
             IEnumerable<MarketSecurityDefinition> securities,
-            int initialMarketMinute = MarketSessionClock.DayStartMinute)
+            int initialMarketMinute = MarketSessionClock.DayStartMinute,
+            IEnumerable<string> knownAssetIds = null)
         {
             if (openingBrokerageCash < 0) throw new ArgumentOutOfRangeException(nameof(openingBrokerageCash));
             if (securities == null) throw new ArgumentNullException(nameof(securities));
@@ -219,6 +221,16 @@ namespace FamilyCompany.Simulation.Market
                     security => security.CompanyId,
                     security => new AssetState { Security = security },
                     StringComparer.Ordinal);
+            _knownAssetIds = new HashSet<string>(_assets.Keys, StringComparer.Ordinal);
+            if (knownAssetIds != null)
+            {
+                foreach (var assetId in knownAssetIds)
+                {
+                    if (string.IsNullOrWhiteSpace(assetId))
+                        throw new ArgumentException("Known market asset IDs cannot be blank.", nameof(knownAssetIds));
+                    _knownAssetIds.Add(assetId);
+                }
+            }
             foreach (var state in _assets.Values) RebuildAsset(state, recordTape: false);
         }
 
@@ -228,6 +240,7 @@ namespace FamilyCompany.Simulation.Market
         public int CanonicalMinuteUpdateCount => _canonicalMinuteUpdateCount;
         public bool OpeningAuctionProcessed => _openingAuctionProcessed;
         public int OpeningAuctionProcessCount => _openingAuctionProcessCount;
+        public int InactivePendingOrderCancellationCount { get; private set; }
         public long BrokerageCash { get; private set; }
         public IReadOnlyList<MarketPendingOrder> PendingOrders =>
             new ReadOnlyCollection<MarketPendingOrder>(_pendingOrders.ToArray());
@@ -393,6 +406,7 @@ namespace FamilyCompany.Simulation.Market
                 BrokerageCash,
                 _positions
                     .Where(entry => entry.Value.Units > 0)
+                    .OrderBy(entry => entry.Key, StringComparer.Ordinal)
                     .Select(entry => new BrokeragePositionStateDto(
                         entry.Key,
                         entry.Value.Units,
@@ -486,7 +500,9 @@ namespace FamilyCompany.Simulation.Market
                 var positions = new Dictionary<string, PositionState>(StringComparer.Ordinal);
                 foreach (var item in source.Positions)
                 {
-                    if (!_assets.ContainsKey(item.AssetId) || positions.ContainsKey(item.AssetId) ||
+                    if (!_knownAssetIds.Contains(item.AssetId))
+                        throw new InvalidOperationException($"Unknown brokerage position asset: {item.AssetId}");
+                    if (positions.ContainsKey(item.AssetId) ||
                         item.Units <= 0 || !IsFinite(item.AverageCostWon) || item.AverageCostWon < 0d)
                         throw new InvalidOperationException($"Invalid brokerage position: {item.AssetId}");
                     positions.Add(item.AssetId, new PositionState
@@ -496,10 +512,18 @@ namespace FamilyCompany.Simulation.Market
                     });
                 }
 
-                var pending = source.PendingOrders.Select(item => item.ToDomain()).ToList();
-                if (pending.Select(order => order.Id).Distinct(StringComparer.Ordinal).Count() != pending.Count ||
-                    pending.Any(order => !_assets.ContainsKey(order.AssetId)))
-                    throw new InvalidOperationException("Invalid or duplicate pending brokerage order.");
+                var importedPending = source.PendingOrders.Select(item => item.ToDomain()).ToList();
+                if (importedPending.Select(order => order.Id).Distinct(StringComparer.Ordinal).Count() != importedPending.Count)
+                    throw new InvalidOperationException("Duplicate pending brokerage order ID.");
+                var unknownPending = importedPending.FirstOrDefault(order => !_knownAssetIds.Contains(order.AssetId));
+                if (unknownPending != null)
+                    throw new InvalidOperationException($"Unknown pending brokerage asset: {unknownPending.AssetId}");
+                // Known but currently non-tradable orders expire deterministically.
+                // Their sequence and order journal remain, while cash/unit reservations release.
+                var pending = importedPending
+                    .Where(order => _assets.ContainsKey(order.AssetId))
+                    .ToList();
+                var inactivePendingCancellationCount = importedPending.Count - pending.Count;
                 var reservedBuy = TotalPendingBuyReservation(pending);
                 if (reservedBuy > source.CashWon)
                     throw new InvalidOperationException("Pending buy reservation exceeds brokerage cash.");
@@ -513,14 +537,21 @@ namespace FamilyCompany.Simulation.Market
                 }
 
                 var trades = source.PlayerTrades.Select(item => item.ToDomain()).ToList();
-                if (trades.Any(item => !_assets.ContainsKey(item.AssetId) || item.Quantity <= 0 || item.Price <= 0))
+                var unknownTrade = trades.FirstOrDefault(item => !_knownAssetIds.Contains(item.AssetId));
+                if (unknownTrade != null)
+                    throw new InvalidOperationException($"Unknown brokerage trade asset: {unknownTrade.AssetId}");
+                if (trades.Any(item => item.Quantity <= 0 || item.Price <= 0))
                     throw new InvalidOperationException("Invalid brokerage trade history.");
                 var journal = source.OrderJournal.Select(item => item.ToDomain()).ToList();
-                if (journal.Any(item => !_assets.ContainsKey(item.AssetId) || item.Sequence < 0))
+                var unknownJournal = journal.FirstOrDefault(item => !_knownAssetIds.Contains(item.AssetId));
+                if (unknownJournal != null)
+                    throw new InvalidOperationException($"Unknown brokerage journal asset: {unknownJournal.AssetId}");
+                if (journal.Any(item => item.Sequence < 0))
                     throw new InvalidOperationException("Invalid brokerage order journal.");
                 var favorites = new HashSet<string>(source.FavoriteAssetIds, StringComparer.Ordinal);
-                if (favorites.Any(id => !_assets.ContainsKey(id)))
-                    throw new InvalidOperationException("Favorite list contains an unknown asset.");
+                var unknownFavorite = favorites.FirstOrDefault(id => !_knownAssetIds.Contains(id));
+                if (unknownFavorite != null)
+                    throw new InvalidOperationException($"Unknown favorite brokerage asset: {unknownFavorite}");
 
                 BrokerageCash = source.CashWon;
                 _positions.Clear();
@@ -535,6 +566,7 @@ namespace FamilyCompany.Simulation.Market
                 foreach (var favorite in favorites) _favoriteAssetIds.Add(favorite);
                 _orderSequence = source.OrderSequence;
                 _journalSequence = source.JournalSequence;
+                InactivePendingOrderCancellationCount = inactivePendingCancellationCount;
                 return true;
             }
             catch (Exception exception)

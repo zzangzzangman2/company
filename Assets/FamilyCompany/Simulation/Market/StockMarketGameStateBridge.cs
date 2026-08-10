@@ -29,6 +29,8 @@ namespace FamilyCompany.Simulation.Market
     /// Pure boundary between the long-lived GameState snapshot and the live
     /// stock runtime. Same-day restores preserve session idempotency counters;
     /// a changed trading date carries only the company brokerage account.
+    /// Callers pass the immutable historical asset ID set so delisted account
+    /// history is preserved without accepting unknown/corrupt identifiers.
     /// </summary>
     public static class StockMarketGameStateBridge
     {
@@ -36,7 +38,8 @@ namespace FamilyCompany.Simulation.Market
             GameState state,
             DateTime date,
             IEnumerable<MarketSecurityDefinition> securities,
-            int initialMarketMinute)
+            int initialMarketMinute,
+            IEnumerable<string> knownAssetIds = null)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
             if (securities == null) throw new ArgumentNullException(nameof(securities));
@@ -48,7 +51,8 @@ namespace FamilyCompany.Simulation.Market
                 date,
                 0L,
                 securities,
-                sameTradingDate ? stored.MarketMinute : initialMarketMinute);
+                sameTradingDate ? stored.MarketMinute : initialMarketMinute,
+                knownAssetIds);
 
             if (!stored.Initialized)
                 return new StockMarketRuntimeBinding(session, 0d, 1, false);

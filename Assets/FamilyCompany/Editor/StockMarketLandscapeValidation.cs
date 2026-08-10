@@ -84,6 +84,8 @@ namespace FamilyCompany.Editor
 
             ValidateLiveRuntimeSession();
             ValidateCompanyBrokerageSaveRoundTrip();
+            ValidateListingSetBrokerageCarry();
+            ValidateResidualCloseReopenEquivalence();
 
             Console.WriteLine("STOCK_MARKET_LANDSCAPE_VALIDATION: PASS");
         }
@@ -237,6 +239,312 @@ namespace FamilyCompany.Editor
             if (optionalRestored.StockMarket.Initialized || optionalRestored.StockMarket.Brokerage.CashWon != 0L)
                 throw new InvalidOperationException("Save V5 without optional stockMarket did not restore safely.");
             Console.WriteLine("STOCK_MARKET_COMPANY_ACCOUNT_SAVE_VALIDATION: PASS");
+        }
+
+        private static void ValidateListingSetBrokerageCarry()
+        {
+            var previousDate = new DateTime(2002, 4, 1);
+            var currentDate = new DateTime(2002, 4, 2);
+            var delisted = new MarketSecurityDefinition(
+                "kr_lg_electronics",
+                "LG전자(구주)",
+                "KOSPI",
+                "003550",
+                new DateTime(1970, 1, 1),
+                previousDate,
+                false);
+            var current = new MarketSecurityDefinition(
+                "kr_samsung_electronics",
+                "삼성전자",
+                "KOSPI",
+                "005930",
+                new DateTime(1975, 6, 11),
+                null,
+                false);
+            var knownAssetIds = new[] { delisted.CompanyId, current.CompanyId };
+            var previousSecurities = new[] { delisted, current };
+            var currentSecurities = new[] { current };
+            var state = PrototypeStateFactory.Create(77221);
+            var previousSession = new StockMarketRuntimeSession(
+                state.WorldSeed,
+                previousDate,
+                0L,
+                previousSecurities,
+                MarketSessionClock.OpenMinute,
+                knownAssetIds);
+            var legacyPending = new MarketPendingOrder(
+                "stock-legacy-open-1",
+                MarketPendingOrderSide.Buy,
+                delisted.CompanyId,
+                10_000L,
+                2d,
+                2d,
+                previousDate,
+                MarketSessionClock.OpenMinute,
+                11,
+                30d);
+            var activePending = new MarketPendingOrder(
+                "stock-current-open-1",
+                MarketPendingOrderSide.Buy,
+                current.CompanyId,
+                5_000L,
+                1d,
+                1d,
+                previousDate,
+                MarketSessionClock.OpenMinute,
+                12,
+                10d);
+            var legacyTrade = new StockMarketTradePrint(
+                delisted.CompanyId,
+                MarketSessionClock.OpenMinute,
+                1,
+                12_000L,
+                4,
+                true,
+                true);
+            var legacyJournal = new StockMarketOrderJournalEntry(
+                4,
+                delisted.CompanyId,
+                MarketSessionClock.OpenMinute,
+                true,
+                false,
+                10_000L,
+                2,
+                0,
+                2,
+                0d);
+            var legacyAccount = new BrokerageAccountStateDto(
+                500_000L,
+                new[] { new BrokeragePositionStateDto(delisted.CompanyId, 4, 12_060d) },
+                new[]
+                {
+                    new BrokeragePendingOrderStateDto(legacyPending),
+                    new BrokeragePendingOrderStateDto(activePending)
+                },
+                new[] { new BrokerageTradeStateDto(legacyTrade) },
+                new[] { new BrokerageOrderJournalStateDto(legacyJournal) },
+                new[] { delisted.CompanyId },
+                12,
+                4);
+            if (!previousSession.TryApplyBrokerageState(legacyAccount, out var previousError))
+                throw new InvalidOperationException($"Historical brokerage setup failed: {previousError}");
+            state.ReplaceStockMarketState(previousSession.ExportSessionState(0.25d, 1));
+
+            var carried = StockMarketGameStateBridge.Load(
+                state,
+                currentDate,
+                currentSecurities,
+                MarketSessionClock.OpenMinute,
+                knownAssetIds);
+            var session = carried.Session;
+            AssertEqual(4, session.PositionUnits(delisted.CompanyId), "delisted holding carry");
+            AssertEqual(1, session.PlayerTradeHistory(delisted.CompanyId).Count, "delisted trade carry");
+            if (!session.IsFavorite(delisted.CompanyId))
+                throw new InvalidOperationException("Delisted favorite was not preserved.");
+            AssertEqual(1, session.PendingOrders.Count, "only delisted open order deterministic cancellation");
+            AssertEqual(current.CompanyId, session.PendingOrders[0].AssetId, "current open order preservation");
+            AssertEqual(1, session.InactivePendingOrderCancellationCount, "delisted open order cancellation count");
+            AssertEqual(
+                session.BrokerageCash - MarketTradingCosts.BuyReservation(currentDate, 5_000L),
+                session.AvailableBrokerageCash,
+                "delisted reservation release with current reservation preserved");
+
+            var carriedState = session.ExportBrokerageState();
+            AssertEqual(1, carriedState.Positions.Count, "delisted holding export");
+            AssertEqual(1, carriedState.PlayerTrades.Count, "delisted trade export");
+            AssertEqual(1, carriedState.FavoriteAssetIds.Count, "delisted favorite export");
+            AssertEqual(1, carriedState.OrderJournal.Count, "delisted journal export");
+            AssertEqual(1, carriedState.PendingOrders.Count, "current pending export");
+            AssertEqual(12, carriedState.OrderSequence, "delisted canceled order sequence preservation");
+
+            var inactiveOrder = session.PlaceOrder(
+                delisted.CompanyId,
+                true,
+                false,
+                10_000L,
+                1);
+            if (inactiveOrder.Accepted)
+                throw new InvalidOperationException("A delisted asset accepted a new order.");
+            var currentView = session.ViewFor(current.CompanyId);
+            var currentRange = MarketPricingRules.DailyPriceRange(
+                currentView.PreviousClose,
+                currentDate,
+                current.PriceRuleMarket);
+            var currentOrder = session.PlaceOrder(
+                current.CompanyId,
+                true,
+                false,
+                currentRange.Lower,
+                1);
+            if (!currentOrder.Accepted)
+                throw new InvalidOperationException("A currently listed asset rejected a valid order.");
+
+            var corruptId = "corrupt_unknown_asset";
+            var emptyPositions = Array.Empty<BrokeragePositionStateDto>();
+            var emptyPending = Array.Empty<BrokeragePendingOrderStateDto>();
+            var emptyTrades = Array.Empty<BrokerageTradeStateDto>();
+            var emptyJournal = Array.Empty<BrokerageOrderJournalStateDto>();
+            var emptyFavorites = Array.Empty<string>();
+            var corruptStates = new[]
+            {
+                new BrokerageAccountStateDto(
+                    500_000L,
+                    new[] { new BrokeragePositionStateDto(corruptId, 1, 1_000d) },
+                    emptyPending,
+                    emptyTrades,
+                    emptyJournal,
+                    emptyFavorites,
+                    0,
+                    0),
+                new BrokerageAccountStateDto(
+                    500_000L,
+                    emptyPositions,
+                    new[] { new BrokeragePendingOrderStateDto(new MarketPendingOrder(
+                        "corrupt-order",
+                        MarketPendingOrderSide.Buy,
+                        corruptId,
+                        1_000L,
+                        1d,
+                        1d,
+                        previousDate,
+                        MarketSessionClock.OpenMinute,
+                        1,
+                        0d)) },
+                    emptyTrades,
+                    emptyJournal,
+                    emptyFavorites,
+                    1,
+                    0),
+                new BrokerageAccountStateDto(
+                    500_000L,
+                    emptyPositions,
+                    emptyPending,
+                    new[] { new BrokerageTradeStateDto(new StockMarketTradePrint(
+                        corruptId,
+                        MarketSessionClock.OpenMinute,
+                        1,
+                        1_000L,
+                        1,
+                        true,
+                        true)) },
+                    emptyJournal,
+                    emptyFavorites,
+                    0,
+                    0),
+                new BrokerageAccountStateDto(
+                    500_000L,
+                    emptyPositions,
+                    emptyPending,
+                    emptyTrades,
+                    emptyJournal,
+                    new[] { corruptId },
+                    0,
+                    0)
+            };
+            foreach (var corrupt in corruptStates)
+            {
+                if (session.TryApplyBrokerageState(corrupt, out _))
+                    throw new InvalidOperationException("Unknown corrupt brokerage asset was silently accepted.");
+            }
+
+            Console.WriteLine("STOCK_MARKET_LISTING_SET_CARRY_VALIDATION: PASS");
+        }
+
+        private static void ValidateResidualCloseReopenEquivalence()
+        {
+            var date = new DateTime(2000, 1, 4);
+            var security = new MarketSecurityDefinition(
+                "residual-fifo-company",
+                "잔여시간검증회사",
+                "KOSPI",
+                "000004",
+                new DateTime(1990, 1, 1),
+                null,
+                false);
+            var securities = new[] { security };
+            var state = PrototypeStateFactory.Create(77222);
+            var continuousSession = new StockMarketRuntimeSession(
+                state.WorldSeed,
+                date,
+                1_000_000_000L,
+                securities,
+                MarketSessionClock.OpenMinute);
+            var view = continuousSession.ViewFor(security.CompanyId);
+            var range = MarketPricingRules.DailyPriceRange(
+                view.PreviousClose,
+                date,
+                security.PriceRuleMarket);
+            for (var index = 0; index < 2; index += 1)
+            {
+                var order = continuousSession.PlaceOrder(
+                    security.CompanyId,
+                    true,
+                    false,
+                    range.Lower,
+                    index + 2);
+                if (!order.Accepted || order.RemainingQuantity <= 0)
+                    throw new InvalidOperationException("Residual FIFO setup order did not remain pending.");
+            }
+
+            var continuousClock = new StockMarketRealtimeClock();
+            AssertEqual(0, continuousClock.Consume(0.4d, 5), "residual close setup partial tick");
+            StockMarketGameStateBridge.Flush(
+                state,
+                continuousSession,
+                continuousClock.AccumulatedSeconds,
+                1);
+            if (Math.Abs(state.StockMarket.RealtimeResidualSeconds - 0.4d) > 0.000001d)
+                throw new InvalidOperationException("Close flush did not preserve 0.4 realtime residual.");
+            var reopenedState = GameSaveMapper.FromDto(GameSaveMapper.ToDto(state));
+
+            var continuousMinutes = continuousClock.Consume(0.6d, 5);
+            continuousSession.AdvanceMinutes(continuousMinutes, 1);
+
+            var reopenedBinding = StockMarketGameStateBridge.Load(
+                reopenedState,
+                date,
+                securities,
+                MarketSessionClock.OpenMinute,
+                new[] { security.CompanyId });
+            var reopenedClock = new StockMarketRealtimeClock();
+            reopenedClock.Restore(reopenedBinding.RealtimeResidualSeconds);
+            var reopenedMinutes = reopenedClock.Consume(0.6d, 5);
+            reopenedBinding.Session.AdvanceMinutes(reopenedMinutes, 1);
+
+            AssertEqual(5, continuousMinutes, "continuous 0.4 plus 0.6 tick");
+            AssertEqual(continuousMinutes, reopenedMinutes, "reopened 0.4 plus 0.6 tick");
+            AssertRuntimeContinuationEqual(
+                continuousSession,
+                reopenedBinding.Session,
+                "residual close/reopen");
+            Console.WriteLine("STOCK_MARKET_RESIDUAL_REOPEN_VALIDATION: PASS");
+        }
+
+        private static void AssertRuntimeContinuationEqual(
+            StockMarketRuntimeSession expected,
+            StockMarketRuntimeSession actual,
+            string label)
+        {
+            AssertEqual(expected.MarketMinute, actual.MarketMinute, $"{label} minute");
+            AssertEqual(expected.BrokerageCash, actual.BrokerageCash, $"{label} cash");
+            var expectedTape = expected.TradeTape.Select(print =>
+                $"{print.AssetId}:{print.MarketMinute}:{print.LiquidityPulse}:{print.Price}:{print.Quantity}:{print.IsBuy}:{print.IsPlayer}");
+            var actualTape = actual.TradeTape.Select(print =>
+                $"{print.AssetId}:{print.MarketMinute}:{print.LiquidityPulse}:{print.Price}:{print.Quantity}:{print.IsBuy}:{print.IsPlayer}");
+            if (!expectedTape.SequenceEqual(actualTape, StringComparer.Ordinal))
+                throw new InvalidOperationException($"{label} tape sequence mismatch");
+
+            var expectedOrders = expected.PendingOrders.OrderBy(order => order.Id, StringComparer.Ordinal).ToArray();
+            var actualOrders = actual.PendingOrders.OrderBy(order => order.Id, StringComparer.Ordinal).ToArray();
+            AssertEqual(expectedOrders.Length, actualOrders.Length, $"{label} FIFO count");
+            for (var index = 0; index < expectedOrders.Length; index += 1)
+            {
+                AssertEqual(expectedOrders[index].Id, actualOrders[index].Id, $"{label} FIFO ID");
+                AssertEqual(expectedOrders[index].PlacedSequence, actualOrders[index].PlacedSequence, $"{label} FIFO sequence");
+                if (Math.Abs(expectedOrders[index].RemainingQuantity - actualOrders[index].RemainingQuantity) > 0.000001d ||
+                    Math.Abs(expectedOrders[index].QueueAheadQuantity - actualOrders[index].QueueAheadQuantity) > 0.000001d)
+                    throw new InvalidOperationException($"{label} FIFO quantity mismatch");
+            }
         }
 
         private static void ValidateRealtimeClock()

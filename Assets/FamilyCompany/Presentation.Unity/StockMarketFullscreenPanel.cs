@@ -75,6 +75,7 @@ namespace FamilyCompany.Presentation.Unity
         private bool _cameraFollowWasEnabled;
         private bool _worldInteractionSuppressed;
         private readonly List<MarketSecurityDefinition> _securities = new List<MarketSecurityDefinition>();
+        private readonly HashSet<string> _knownBrokerageAssetIds = new HashSet<string>(StringComparer.Ordinal);
         private GameState _boundGameState;
         private StockMarketRuntimeSession _runtimeSession;
         private CompanyBrokerageTransferService _transferService;
@@ -540,9 +541,8 @@ namespace FamilyCompany.Presentation.Unity
 
         public void CloseNow()
         {
-            _open = false;
-            _realtimeClock.Reset();
             FlushRuntimeToGameState();
+            _open = false;
             RestoreWorldInteraction();
         }
 
@@ -1404,12 +1404,18 @@ namespace FamilyCompany.Presentation.Unity
         {
             var selectedId = SelectedSecurity?.CompanyId;
             _securities.Clear();
+            _knownBrokerageAssetIds.Clear();
             _catalogError = null;
             try
             {
                 if (_catalog == null) _catalog = FindFirstObjectByType<KoreaHistoryV1RuntimeCatalog>();
                 if (_catalog == null || !_catalog.IsConfigured)
                     throw new InvalidOperationException("Korea History V1 카탈로그가 씬에 없습니다.");
+                foreach (var company in _catalog.Registry.Companies)
+                {
+                    if (company.ListingHistory.Any(listing => listing.IsDomesticExchange))
+                        _knownBrokerageAssetIds.Add(company.CompanyId);
+                }
                 _securities.AddRange(_catalog.ListedSecuritiesAt(CurrentDate));
                 _securities.Sort((left, right) => string.Compare(left.DisplayNameKo, right.DisplayNameKo, StringComparison.Ordinal));
             }
@@ -1448,7 +1454,8 @@ namespace FamilyCompany.Presentation.Unity
                         _boundGameState,
                         CurrentDate,
                         _securities,
-                        _marketMinute);
+                        _marketMinute,
+                        _knownBrokerageAssetIds);
                     _runtimeSession = binding.Session;
                     _playbackIndex = Mathf.Clamp(binding.PlaybackIndex, 0, PlaybackLabels.Length - 1);
                     _realtimeClock.Restore(binding.RealtimeResidualSeconds);
@@ -1461,7 +1468,8 @@ namespace FamilyCompany.Presentation.Unity
                         CurrentDate,
                         0L,
                         _securities,
-                        _marketMinute);
+                        _marketMinute,
+                        _knownBrokerageAssetIds);
                     if (!nextSession.TryApplyBrokerageState(accountState, out var error))
                         throw new InvalidOperationException($"Trading-date brokerage carry failed: {error}");
                     _runtimeSession = nextSession;
@@ -1471,6 +1479,10 @@ namespace FamilyCompany.Presentation.Unity
                 _transferService = new CompanyBrokerageTransferService(
                     _boundGameState.Company,
                     _runtimeSession);
+                if (_runtimeSession.InactivePendingOrderCancellationCount > 0)
+                {
+                    _orderNotice = $"현재 거래할 수 없는 종목의 미체결 주문 {_runtimeSession.InactivePendingOrderCancellationCount:N0}건을 취소하고 예약금을 해제했습니다.";
+                }
                 FlushRuntimeToGameState();
             }
             catch (Exception exception)
