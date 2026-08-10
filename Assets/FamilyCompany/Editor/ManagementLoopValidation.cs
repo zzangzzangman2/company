@@ -2,6 +2,7 @@ using System;
 using FamilyCompany.Save;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
+using FamilyCompany.Simulation.ManagementUi;
 using FamilyCompany.Simulation.Prototype;
 using UnityEditor;
 using UnityEngine;
@@ -90,18 +91,8 @@ namespace FamilyCompany.Editor
                     throw new InvalidOperationException("Career and relationship memories did not accumulate.");
                 }
                 AssertEqual(starter.RequiredDevelopment, restored.Contracts.Get(starter.OfferId).Offer.RequiredDevelopment, "contract stats round trip");
-                var dashboard = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    "Assets/Art/UI/Resources/OfficeManagementDashboard_v1.png");
-                if (dashboard == null || dashboard.width < 1600 || dashboard.height < 900)
-                {
-                    throw new InvalidOperationException("ImageGen management dashboard is missing or too small.");
-                }
-                var businessDashboard = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    "Assets/Art/UI/Resources/BusinessExpansionDashboard_v1.png");
-                if (businessDashboard == null || businessDashboard.width < 1600 || businessDashboard.height < 900)
-                {
-                    throw new InvalidOperationException("ImageGen business expansion dashboard is missing or too small.");
-                }
+                ManagementUiLayoutMetrics.Validate(
+                    ManagementUiLayoutMetrics.Calculate(1920, 1080, UiSafeInsets.None));
                 Debug.Log("FAMILY_COMPANY_MANAGEMENT_VALIDATION: PASS");
             }
             catch (Exception exception)

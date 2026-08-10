@@ -4,7 +4,9 @@
   "references": [
     "FamilyCompany.Simulation",
     "FamilyCompany.Save",
-    "FamilyCompany.Infrastructure.Unity"
+    "FamilyCompany.Infrastructure.Unity",
+    "UnityEngine.UI",
+    "Unity.TextMeshPro"
   ],
   "autoReferenced": true,
   "allowUnsafeCode": false

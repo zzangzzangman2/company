@@ -22,12 +22,14 @@ namespace FamilyCompany.Presentation.Unity
         private Camera _camera;
         private float _orthographicVelocity;
         private float _zoomOffset;
+        private bool _officeObservationForced;
 
         public bool IsOfficeFramingActive { get; private set; }
         public bool OfficeFramingEnabled => officeFramingEnabled;
         public Vector3 OfficeCenter => officeCenter;
         public Vector2 OfficeSize => officeSize;
         public float OfficeOrthographicSize => officeOrthographicSize;
+        public bool IsOfficeObservationForced => _officeObservationForced;
 
         public void SetTarget(Transform value)
         {
@@ -58,6 +60,26 @@ namespace FamilyCompany.Presentation.Unity
                 orthographicSize,
                 minimumOrthographicSize,
                 maximumOrthographicSize);
+        }
+
+        public void SetOfficeObservationForced(bool value, bool snapImmediately)
+        {
+            _officeObservationForced = value;
+            _zoomOffset = 0f;
+            if (!snapImmediately || target == null) return;
+
+            var frameOffice = value || (officeFramingEnabled && IsTargetInsideOfficeBounds());
+            var focus = frameOffice ? officeCenter : target.position;
+            var activeOffset = frameOffice ? officeOffset : offset;
+            var lookHeight = frameOffice ? officeLookHeight : 1.2f;
+            transform.position = focus + activeOffset;
+            transform.LookAt(focus + Vector3.up * lookHeight);
+            _velocity = Vector3.zero;
+            _orthographicVelocity = 0f;
+            IsOfficeFramingActive = frameOffice;
+            if (_camera == null) _camera = GetComponent<Camera>();
+            if (_camera != null && _camera.orthographic)
+                _camera.orthographicSize = frameOffice ? officeOrthographicSize : defaultOrthographicSize;
         }
 
         private void Awake()
@@ -101,7 +123,12 @@ namespace FamilyCompany.Presentation.Unity
 
         private bool IsTargetInsideOffice()
         {
-            if (!officeFramingEnabled || target == null) return false;
+            return officeFramingEnabled && (_officeObservationForced || IsTargetInsideOfficeBounds());
+        }
+
+        private bool IsTargetInsideOfficeBounds()
+        {
+            if (target == null) return false;
             var halfWidth = officeSize.x * 0.5f;
             var halfDepth = officeSize.y * 0.5f;
             var position = target.position;

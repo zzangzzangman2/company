@@ -821,6 +821,10 @@ namespace FamilyCompany.Editor
             AssertEqual(true, bootstrap.HasSession, "new game session");
             AssertEqual(2, bootstrap.ActiveSlot, "new game slot");
             AssertEqual(Presentation.Unity.PrototypeUiScreen.Playing, bootstrap.UiScreen, "new game frontend screen");
+            bootstrap.ShowManagementNow();
+            AssertEqual(Presentation.Unity.PrototypeUiScreen.Management, bootstrap.UiScreen, "management overlay screen");
+            bootstrap.CloseManagementNow();
+            AssertEqual(Presentation.Unity.PrototypeUiScreen.Playing, bootstrap.UiScreen, "office observation return screen");
             bootstrap.ShowPauseMenuNow();
             AssertEqual(Presentation.Unity.PrototypeUiScreen.PauseMenu, bootstrap.UiScreen, "pause frontend screen");
             bootstrap.ResumeGameNow();
