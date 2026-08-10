@@ -244,9 +244,11 @@ namespace FamilyCompany.Editor
             }
 
             Physics.SyncTransforms();
-            var corridors = waypoints.Where(item => item.Activity == OfficeActivity.Walking)
+            var corridors = waypoints.Where(item => item.IsMainCorridor)
                 .OrderBy(item => item.transform.position.x)
+                .ThenBy(item => item.WaypointId, StringComparer.Ordinal)
                 .ToArray();
+            Require(corridors.Length >= 3, "Office requires at least three main corridor waypoints.");
             for (var index = 1; index < corridors.Length; index++)
             {
                 AssertClearHorizontalSegment(corridors[index - 1].transform.position, corridors[index].transform.position,
@@ -255,14 +257,34 @@ namespace FamilyCompany.Editor
 
             foreach (var destination in waypoints.Where(item => item.Activity != OfficeActivity.Walking))
             {
+                var approachPath = destination.ApproachPath;
+                Require(approachPath.All(item => item != null),
+                    $"Office destination {destination.WaypointId} contains a null approach waypoint.");
+                var entry = approachPath.Length > 0 ? approachPath[0] : destination;
                 var corridor = corridors.OrderBy(item =>
-                        (item.transform.position - destination.transform.position).sqrMagnitude)
+                        (item.transform.position - entry.transform.position).sqrMagnitude)
                     .First();
-                AssertClearHorizontalSegment(corridor.transform.position, destination.transform.position,
-                    $"{corridor.WaypointId}->{destination.WaypointId}");
+                AssertClearHorizontalSegment(corridor.transform.position, entry.transform.position,
+                    $"{corridor.WaypointId}->{entry.WaypointId}");
+                for (var index = 1; index < approachPath.Length; index++)
+                {
+                    AssertClearHorizontalSegment(
+                        approachPath[index - 1].transform.position,
+                        approachPath[index].transform.position,
+                        $"{approachPath[index - 1].WaypointId}->{approachPath[index].WaypointId}");
+                }
+
+                if (entry != destination)
+                {
+                    var lastApproach = approachPath[approachPath.Length - 1];
+                    AssertClearHorizontalSegment(lastApproach.transform.position, destination.transform.position,
+                        $"{lastApproach.WaypointId}->{destination.WaypointId}");
+                }
             }
 
-            Append($"NAVIGATION_GEOMETRY_PASS | corridors={corridors.Length} | destinations={waypoints.Length - corridors.Length}");
+            Append($"NAVIGATION_GEOMETRY_PASS | mainCorridors={corridors.Length} | " +
+                   $"approachWaypoints={waypoints.Count(item => item.Activity == OfficeActivity.Walking && !item.IsMainCorridor)} | " +
+                   $"destinations={waypoints.Count(item => item.Activity != OfficeActivity.Walking)}");
         }
 
         private static void ValidateEveryNpcReachesEverySemanticDestination(OfficeWorkerAgent[] agents)
@@ -315,7 +337,9 @@ namespace FamilyCompany.Editor
                         }
 
                         Require(reached,
-                            $"{movingAgent.AgentId} could not reach semantic destination {activity} ({target.WaypointId}).");
+                            $"{movingAgent.AgentId} could not reach semantic destination {activity} ({target.WaypointId}); " +
+                            $"position={movingAgent.transform.position}, target={target.transform.position}, " +
+                            $"currentActivity={movingAgent.CurrentActivity}.");
                     }
 
                     Require(!movingAgent.IsPresentationAway,

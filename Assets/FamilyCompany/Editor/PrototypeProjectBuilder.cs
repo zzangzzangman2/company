@@ -176,7 +176,10 @@ namespace FamilyCompany.Editor
                 Reception = CreateCalibratedWaypoint("reception", OfficeVisualV2Calibration.ReceptionArt, OfficeActivity.Reception, 2.5f, 4.5f, waypointRoot.transform),
                 CorridorWest = CreateCalibratedWaypoint("corridor_west", OfficeVisualV2Calibration.CorridorWestArt, OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
                 CorridorCenter = CreateCalibratedWaypoint("corridor_center", OfficeVisualV2Calibration.CorridorCenterArt, OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
-                CorridorEast = CreateCalibratedWaypoint("corridor_east", OfficeVisualV2Calibration.CorridorEastArt, OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
+                // The calibrated east art point lies beyond the front meeting partition.
+                // Keep navigation on the verified west-side staging lane and project only
+                // the character visual to the independently measured art anchor.
+                CorridorEast = CreateWaypoint("corridor_east", new Vector3(16.3f, 0.05f, -1.25f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
                 DeskA = CreateCalibratedWaypoint("desk_a", OfficeVisualV2Calibration.DeskAApproachArt, OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
                 DeskB = CreateCalibratedWaypoint("desk_b", OfficeVisualV2Calibration.DeskBApproachArt, OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
                 // Desk C's exact inverse art point overlaps the legacy reception collider.
@@ -189,6 +192,7 @@ namespace FamilyCompany.Editor
                 Lounge = CreateCalibratedWaypoint("lounge", OfficeVisualV2Calibration.LoungeSafeArt, OfficeActivity.Break, 2.5f, 5f, waypointRoot.transform),
                 Exit = CreateCalibratedWaypoint("office_exit", OfficeVisualV2Calibration.ExitArt, OfficeActivity.Outside, 0f, 0f, waypointRoot.transform)
             };
+            layout.CorridorEast.ConfigureArtAnchor(OfficeVisualV2Calibration.CorridorEastArt);
             layout.DeskC.ConfigureArtAnchor(OfficeVisualV2Calibration.DeskCApproachArt);
             layout.DeskCStaging = CreateWaypoint("desk_c_staging", new Vector3(9.7f, 0.05f, -1.25f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform);
             layout.DeskCSide = CreateWaypoint("desk_c_side", new Vector3(9.7f, 0.05f, -3.5f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform);
