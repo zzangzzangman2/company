@@ -60,3 +60,9 @@
 - 작은 한글은 넓은 행간과 높은 명암 대비를 우선하고, 사무실 화면 위에 놓일 때 반투명 배경이나 외곽선을 별도로 설계한다.
 - `simul`의 세로 모바일 줄바꿈·좌표·패널 비율은 재사용하지 않는다. 1920×1080/16:9 PC 가로 풀화면과 넓은 사무실 동시 표시를 기준으로 새로 배치한다.
 - 후속 시각 작업이 필요하면 밝고 캐주얼한 가로 ImageGen 비주얼을 먼저 만들고 Unity 글자·버튼은 이미지와 분리한다.
+
+## 2026-08-11 / TMP Essential Resources 동반 폰트
+
+- `Assets/TextMesh Pro/Fonts/LiberationSans.ttf`는 Unity가 TextMesh Pro Essential Resources로 배포하는 서드파티 폰트이며 SIL Open Font License 1.1을 따른다. 저장소에 넣은 이유는 Docs/DECISIONS.md의 2026-08-11 항목에 있다.
+- 이 폰트는 TMP 기본 폰트 에셋과 폴백 용도로만 존재하며 한글 UI 정본이 아니다. 관리 UI의 한글 표시는 계속 Maplestory Bold/Light와 Pretendard Variable이 담당한다.
+- `ManagementUiV2Presenter`는 한글 카탈로그가 비었거나 불완전할 때만 Unity 내장 `LegacyRuntime.ttf`로 폴백하고 `MANAGEMENT_UI_FONT_FALLBACK` 오류를 남긴다. 이 오류가 보이면 한글 정본 폰트가 빠진 것이므로 폴백에 의존해 출시하지 않는다.

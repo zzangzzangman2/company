@@ -325,3 +325,12 @@
 - 교정 이력: 편의점·PC방·비디오 대여·가족 외식은 승인 구도와 시대 소품을 보존한 채 플레이어 머리만 ImageGen 무모자 편집했다. 만화책 대여는 작은 단행본·촘촘한 책등·낮은 책장·대여 묶음이 분명하고 LP류가 없도록, 목욕탕은 목욕 후 공용 대기 휴게실·단정한 휴게복·무노출이 되도록 전체 재생성했다.
 - QA: 12종 모두 1920×1080 RGBA·알파 255 자동 검사 통과. 가족 4인 정체성, 무모자 플레이어, 시대 소품, 무문자, 넓은 16:9 구도를 접촉 시트와 개별 원본으로 육안 확인했다.
 - 전체 프롬프트·참조 역할·후처리·활동별 QA 원장: `Docs/LEISURE_VISUAL_SPEC.md`
+
+## 2026-08-11 Office 행동·UI 아트와 TMP 리소스 통합
+
+- 가족 사무실 행동 아트: `Assets/Art/Characters/` 아래 727개 파일을 추가했다. 통합 검증에서 가족 4인 각 48프레임이 전부 고유하고 pivot이 bottom-center임을 확인했다(`FAMILY_SPRITES_PASS`).
+- 계약 보드 UI 아트 키트: `Assets/Art/UI/Resources/ContractBoardV2/` 아래 32개 파일. 배경 `contract_board_background_2048x1152_v2.png`, 목업 A/B, 9-slice 버튼 4종(normal/hover/pressed/disabled), 접촉 시트 `contract_board_skin_kit_contact_v2.png`, 생성 원장 `contract_board_ui_art_ledger_v2.json`, 원본 보존 `SourceOriginal/`을 포함한다. `ContractBoardUiArtValidation`으로 프레임·버튼·배경을 검사해 통과했다.
+- 관리 UI 스킨 카탈로그: `Assets/FamilyCompany/Presentation.Unity/Resources/ManagementUI/ManagementUiSkin_v1.asset`.
+- 좌석 미세행동 프레임셋: `Assets/FamilyCompany/Content/OfficeWorkActions/`의 `player`·`father`·`mother`·`older_sister` 4종. 에셋은 존재하지만 런타임 훅은 아직 연결되지 않았다(`hook=fallback`).
+- Unity 공식 TMP Essential Resources: `Assets/TextMesh Pro/` 37개 파일. 이 중 `Fonts/LiberationSans.ttf`는 Unity가 배포하는 서드파티 폰트이며 SIL Open Font License를 따른다. 사용자 생성 에셋이 아니므로 원본을 편집하지 않고 무변형으로 보존한다.
+- 사용자가 권리를 보유하는 생성 에셋과 Unity 배포 리소스를 구분해 기록한다. 위 항목 중 TMP Essential Resources만 서드파티 배포물이다.

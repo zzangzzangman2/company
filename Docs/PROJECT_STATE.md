@@ -1,7 +1,7 @@
 # PROJECT STATE
 
-최종 갱신: 2026-08-10
-현재 단계: Management V0.8 + Market Port S2 / 가족 자율 행동·실제 이동과 SIMUL 호가·체결 정확 이식
+최종 갱신: 2026-08-11
+현재 단계: Office Runtime V1 통합 완료 / Management V0.8 + Market Port S2 / 가족 자율 행동·실제 이동과 SIMUL 호가·체결 정확 이식
 Unity: 6000.3.21f1
 
 ## 현재 목표
@@ -94,27 +94,32 @@ Unity: 6000.3.21f1
 - 회복·외부 활동 12종의 SIMUL-v3 ImageGen 16:9 장면과 메타·자산 등록 완료.
 - 좌석 애니메이터가 유일한 Sprite writer로 남는 pull-only `OfficeSeatedWorkMicroActionAdapter`와 결정적 프레임셋 주입 경계를 구현했다. 아트가 없거나 일부 동작만 있으면 기존 Work 6프레임으로 복귀하며, micro-action 시간 분할·Drink 하한/간격·기립 handoff·writer rollback 회귀를 고정했다.
 - partial 좌석 topology에서 구성원별 실제 claim 가능 여부만 seating gate를 켜고, transition 중 Animator disable/destroy/frame 소실과 GameState session 교체 시 claim·movement writer를 복원하도록 보강했다. 동일 token은 단일 공유 wrapper를 반환하고 NPC approach는 오차 없는 precision path로 도착한다.
+- 좌석 배정·앉기·좌석 미세행동·가구 회피 이동·관찰 중심 관리 UI v2·행동/UI 아트를 단일 통합 worktree(`codex/today-integration`)에 결합하고 공유 `Prototype01`에서 실제 PlayMode 30초 전 구간을 통과했다. 계약 작업 → 저에너지 휴게실 회복 → 3인 동시 퇴실 → 복귀 → 전원 사무실 재진입을 1920×1080 캡처 5장으로 확인했다.
+- Unity 공식 TMP Essential Resources를 저장소에 포함해 동적 한글 폰트 설정·셰이더가 빌드 PC와 무관하게 준비되도록 했다.
+- 관리 UI v2 런타임 폰트 생성 결함을 수정했다. `TMP_FontAsset.CreateFontAsset`가 `fallbackFontAssetTable`을 null로 남기는데 그 위에 `Add`를 호출해 `PrototypeBootstrap.Awake`가 매 프레임 중단되고 있었다(30초 실행에서 NullReference 4,001회). 이 예외가 `ConfigureDisplayDefaults`·`ShowMainMenuNow`·`TryStartFrontendQaCapture`를 통째로 건너뛰게 만들었고, 수정 후 같은 실행에서 0회다.
+- 이동이 막힌 프레임에서 속도를 0으로 만들고 영구 정지하던 결함을 수정했다. 막힌 걸음은 의미 목적지 방향을 기준으로 0~180° 미끄러짐 탐색(최소 탈출 보폭 0.06m)으로 강등된다. 정지 프레임이 속도를 0으로 만들면 다음 프레임 변위도 0이 되어 탐색 자체가 불가능해지므로 최소 보폭이 필수다. 이 결함 때문에 엄마·누나가 책상 이탈 직후 좌표에 고정되어 퇴실 시나리오가 실패하고 있었다.
+- `CharacterOfficeRuntimeQa`의 PLAY_SNAPSHOT이 좌석 단계·claim·seating clip·work hook·safe-stand·목표 활동을 함께 기록하도록 보강했다. 정지 원인이 좌석 생명주기인지 이동 차단인지 로그만으로 판별된다.
 
 ## 진행 중
 
 - Stock 실제 회사/증권계좌 UI와 Save 연결은 완료했다. 남은 범위는 체결별 회사 총계정원장 전기, 외부 생성 tape/orderbook 전체 상태 영속화, 시세·뉴스·유동성 S3와 기업행동 S4의 역사 연결이다.
-- OfficeVisualV2는 scale 1.00 정적 교정에서 4명 고유 bbox, 가구 교차 0, 발점 오차 0, IoU 0과 왼쪽 블록 제거를 통과했다. 그러나 1280 정규화 최대 3px로 ≤1px 기준 FAIL이고 CharacterController 이동·30초 퇴실/복귀 미검증, 공유 `Prototype01`은 scale 1.35라 최종 PASS가 아니다.
-- 네 가족 좌석 애니메이션 4명×112=448프레임과 contact sheet 8장·GIF 4개는 검증 완료했다. 기존 Office autonomy·씬의 런타임 좌석 연결은 미완료다.
+- OfficeVisualV2는 scale 1.00 정적 교정에서 4명 고유 bbox, 가구 교차 0, 발점 오차 0, IoU 0과 왼쪽 블록 제거를 통과했다. CharacterController 실제 이동과 30초 퇴실/복귀는 2026-08-11 공유 `Prototype01`에서 검증했다. 남은 범위는 1280 정규화 최대 3px를 ≤1px로 낮추는 것과 공유 씬 scale 1.35를 1.00으로 재생성하는 것이다.
+- 네 가족 좌석 애니메이션 4명×112=448프레임과 contact sheet 8장·GIF 4개는 검증 완료했고, 기존 Office autonomy·씬의 런타임 좌석 연결도 2026-08-11 완료했다.
 - 회복·외부 활동 12장과 순수 규칙을 GameState·Save·실제 선택 UI에 연결하는 통합이 남았다.
-- 실제 `OfficeWorkActionFrameSet` 에셋은 아직 없으며, 좌석 micro-action의 실제 Sprite 연결·PlayMode 시각 검증은 Art 산출물 통합 뒤에 남았다.
+- 가족 4인 `OfficeWorkActionFrameSet` 에셋은 `Assets/FamilyCompany/Content/OfficeWorkActions/`에 추가했으나 런타임 훅은 아직 살아 있지 않다. 빌더 검증은 `hook=fallback`, PlayMode 스냅샷은 전원 `hook=False`로 좌석 Work 6프레임 fallback만 재생 중이다. 프레임셋을 실제 세션에 연결하고 8방향 micro-action을 눈으로 확인하는 작업이 남았다.
+- 관리 UI v2가 `-batchmode` PlayMode에서 `MANAGEMENT_UI_MISSING_GLYPH: 우리 가족회사`를 1회 남긴다. 같은 저장소에서 `ManagementUiV2Validation`의 한글 글리프 검사는 통과하고 카탈로그도 실제 한글 폰트(Maplestory Bold/Light, Pretendard Variable)를 정확히 참조하므로 배치모드 동적 아틀라스 한정 현상으로 보이나, 실제 Windows player 빌드에서 한글 표시를 확인해야 확정된다.
 
 ## 다음 작업
 
-1. 좌석 캐릭터 착석/업무/기립 프레임과 AutonomyNeeds를 기존 자율행동에 한 번만 연결하고 중복 좌석·이중 에너지/스트레스 차감을 막는다.
-2. OfficeVisualV2의 1280 정규화 오차를 ≤1px로 낮추고 CharacterController 실제 이동·30초 퇴실/복귀를 검증한 뒤 공유 씬을 scale 1.00으로 재생성한다.
-3. Stock 외부 생성 tape/orderbook 전체 상태를 Save 경계에 영속화하고 역사 코퍼스/골든 패리티·다음 거래일 이벤트를 추가한다.
-4. 완성된 회복 활동 12장·순수 규칙을 GameState·Save·16:9 선택 UI에 연결한다.
+1. `Assets/FamilyCompany/Content/OfficeWorkActions/`의 가족 4인 프레임셋을 좌석 애니메이터 세션에 실제로 연결하고 8방향 micro-action과 안전 기립 handoff를 PlayMode에서 눈으로 검증한다. 현재는 `hook=fallback`/`hook=False`로 좌석 Work 6프레임만 재생된다.
+2. 실제 Windows player 빌드에서 관리 UI v2의 한글 표시를 확인해 `MANAGEMENT_UI_MISSING_GLYPH`가 `-batchmode` 한정 현상인지 확정한다.
+3. OfficeVisualV2의 1280 정규화 오차를 ≤1px로 낮추고 공유 씬을 scale 1.00으로 재생성한다.
+4. Stock 외부 생성 tape/orderbook 전체 상태를 Save 경계에 영속화하고 역사 코퍼스/골든 패리티·다음 거래일 이벤트를 추가한다.
 5. 완성된 회복 활동 12장·순수 규칙을 GameState·Save·16:9 선택 UI에 연결한다.
 6. 생성 호가 snapshot과 구조적 벽 실제 회복·취소를 Dart golden으로 고정하고 Unity에 이식한다.
 7. 시장가/지정가 실제 체결마다 투자자산·수수료·거래세·실현손익을 회사 총계정원장에 전기하고 재고/현금 보존을 검증한다.
 8. 시세 경로·뉴스·기술 수준·유동성 구간 S3와 기업행동 S4를 History V1 조건부 사건에 연결한다.
 9. 직원 후보 8인을 고용 뒤에만 48프레임 이동 NPC로 생성하고 실제 능력치·업무 배치에 연결한다.
-10. 가족별 `OfficeWorkActionFrameSet`을 정본 경로에 추가한 뒤 좌석 Work 6프레임 fallback, 8방향 micro-action, 안전 기립 handoff를 실제 PlayMode에서 검증한다.
 
 ## 검증 기록
 
@@ -179,6 +184,11 @@ Unity: 6000.3.21f1
 - 2026-08-10: Stock 회사계좌 canonical 통합 완료. 50,000원 fixture 제거, 실제 회사↔증권계좌 입출금·균형분개·예약금 보호, `GameState` flush/load·Save V5 optional, 날짜별 상장집합 변경 시 비거래 종목 승계와 미지 ID 거절, 0.4초 residual 및 FIFO 재개 결정성을 Unity `STOCK_MARKET_*_VALIDATION` 4종과 전체 `PrototypeValidation`에서 함께 통과함. 외부 생성 tape/orderbook 전체 영속화와 S3/S4는 미완료로 유지함.
 - 2026-08-10: seating 6개 선형 커밋과 micro-action 런타임을 전용 통합 브랜치에 결합하고 pull-only adapter를 추가함. 아트 없음·부분 아트 fallback, 8방향 첫/끝 프레임, 구성원 불일치, safe-stop/disable/destroy 멱등성, push Presenter 시작/프레임 소실 예외 rollback을 독립 하네스로 통과함. 30분 단일/1초 분할 타임라인 일치, 첫 Drink 300초 이후, 모든 `int` seed에 대해 구조적으로 30분 5회 이하인 간격과 범위 분산 4,096 seed·지정 가족 4명 표본, huge delta guard를 확인했으며 전체 5개 어셈블리 외부 컴파일은 경고·오류 0. Unity와 실제 아트는 실행하지 않음.
 - 2026-08-10: seating 독립 리뷰 MAJOR 5 회귀를 보강함. Desk C/D 누락 시 father/player gate 해제와 기존 생산성 진행, transition 중 Animator lifecycle/frame-loss 취소, 동일 topology의 새 게임/불러오기 GameState identity rebind, 동일 seat/member/token 단일 wrapper 공유, NPC approach precision exact settle을 standalone 하네스와 통합 source guard로 확인함. 전체 5개 어셈블리 외부 컴파일은 `58/6/3/40/36` 소스, 경고·오류 0이며 Unity/PlayMode는 실행하지 않음.
+- 2026-08-11: 통합 worktree `codex/today-integration`에서 Unity 6000.3.21f1 검증 4종 모두 exit 0. `PrototypeValidation.Run` → `FAMILY_COMPANY_VALIDATION: PASS`, `OFFICE_SEATING_BUILDER_VALIDATION: PASS components=4 seats=4 frames=448 hook=fallback`, `SCENE_LINKAGE_PASS family=4 npcAgents=3 framesPerFamily=48 candidates=0`, `OFFICE_VISUAL_V2_ASSET_READY_PASS colliders=24 occupancy=90.4%`. `ManagementUiV2Validation.RunFromCommandLine` → `MANAGEMENT_UI_V2_VALIDATION: PASS`(TMP Settings 존재와 한글 글리프 포함 검사 포함). `ContractBoardUiArtValidation.ValidateOrThrow` → PASS.
+- 2026-08-11: `CharacterOfficeRuntimeQa.StartThirtySecondPlayModeBatch` 실제 PlayMode 30초 `PLAYMODE_PASS`(exit 0, timeScale 4, 1920×1080). 정적 구간은 가족 4인 각 48프레임 전부 고유·bottom-center pivot, 카메라 기준 8옥탄트, 6단계 애니메이션, 통로 3·approach 6·목적지 9, NPC 3인 전원 desk/reception/printer/meeting/lounge/exit/return 도달 가능, 자율 분기 recovery=lounge·schedule=exit·return=in-office를 통과했다. 실행 구간은 `PLAYMODE_CONTRACT_PRIORITY_PASS assigned=3 distinctWorkpoints=3` → `PLAYMODE_RECOVERY_ROUTE_PASS` → `PLAYMODE_DEPARTURE_ROUTE_PASS minute=900` → `PLAYMODE_RETURN_PASS minute=1440` → `PLAYMODE_ALL_RETURNED_PASS positions=inside-office` → `PLAYMODE_FINAL_PASS contractResume=3 departureReturn=observed`이며 캡처 5장은 `Artifacts/CharacterOfficeRuntimeQa/`에 있다.
+- 2026-08-11: 위 PASS 이전 두 차례 실패의 실제 원인을 고쳤다. 첫 실패는 `ManagementUiV2Presenter.LoadFonts`가 null `fallbackFontAssetTable`에 `Add`를 호출해 NullReference 4,001회로 `PrototypeBootstrap.Awake`를 중단시킨 것이고, 두 번째 실패는 이동 차단 프레임이 속도를 0으로 만들어 엄마·누나가 책상 이탈 직후 `(14.59,3.46)`·`(11.42,3.48)`에 영구 고정된 것이다. 도착 판정이나 검사 기준을 느슨하게 바꾸지 않고 폰트 폴백 테이블 초기화와 미끄러짐 강등으로 해결했다.
+- 2026-08-11: 재현 명령. 검증 3종은 `Unity.exe -batchmode -nographics -quit -projectPath <worktree> -executeMethod <Method> -logFile Logs\<name>.log`. PlayMode QA는 캡처 때문에 `-nographics`와 `-quit` 없이 `Unity.exe -batchmode -projectPath <worktree> -executeMethod FamilyCompany.Editor.CharacterOfficeRuntimeQa.StartThirtySecondPlayModeBatch -logFile Logs\character-office-playmode.log`로 실행한다.
+- 2026-08-11: 미해결 관찰. PASS한 PlayMode 로그에도 `MANAGEMENT_UI_MISSING_GLYPH: 우리 가족회사`가 1회 남는다. 별도로 `UnityEditor.Search.SearchDatabase.GetDefaultSearchDatabase`의 `ArgumentOutOfRangeException`이 1회 나오지만 이는 에디터 검색 인덱서 내부 문제로 프로젝트 코드와 무관하다.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ### 2026-08-10 OfficeVisualV2 calibration handoff
