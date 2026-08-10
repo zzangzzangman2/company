@@ -13,26 +13,20 @@ namespace FamilyCompany.Editor
     public static class PrototypeProjectBuilder
     {
         public const string ScenePath = "Assets/FamilyCompany/Scenes/Prototype01.unity";
-        public const string PlayerPixelSheetPath = "Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png";
-        public const string PlayerFrameFolder = "Assets/Art/Characters/Player/Pixel/Frames";
+        public const string PlayerPixelSheetPath = "Assets/Art/Characters/Player/Pixel/HighMotion/player_pixel_walk8dir6_a_v1.png";
+        public const string PlayerFrameFolder = "Assets/Art/Characters/Player/Pixel/HighMotion/Frames";
         public const string SisterPortraitAssetPath = "Assets/Art/Characters/OlderSister/older_sister_casual_neutral_v2.png";
-        public const string SisterPixelSheetPath = "Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v2.png";
+        public const string SisterPixelSheetPath = "Assets/Art/Characters/OlderSister/Pixel/HighMotion/older_sister_pixel_walk8dir6_a_v1.png";
         public const string TitleHeroAssetPath = "Assets/Art/UI/Resources/Title/family_company_title_hero_v1.png";
         public const string KoreaHistoryRegistryAssetPath = "Assets/FamilyCompany/Content/History/company_registry_korea_2000_2026.json";
-        public const string SisterFrameFolder = "Assets/Art/Characters/OlderSister/Pixel/Frames";
+        public const string SisterFrameFolder = "Assets/Art/Characters/OlderSister/Pixel/HighMotion/Frames";
         public const string OfficeModuleAtlasPath = "Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png";
         public const string OfficeModuleFolder = "Assets/Art/Office/Pixel/Modules";
         private const string MaterialFolder = "Assets/FamilyCompany/Generated/Materials";
         private static readonly string[] PlayerFrameNames =
-        {
-            "player_south_a", "player_west_a", "player_north_a", "player_east_a",
-            "player_south_b", "player_west_b", "player_north_b", "player_east_b"
-        };
+            HighMotionCharacterArtBuilder.GetFrameNames("player");
         private static readonly string[] SisterFrameNames =
-        {
-            "sister_south_a", "sister_west_a", "sister_north_a", "sister_east_a",
-            "sister_south_b", "sister_west_b", "sister_north_b", "sister_east_b"
-        };
+            HighMotionCharacterArtBuilder.GetFrameNames("older_sister");
         private static readonly string[] OfficeModuleNames =
         {
             "office_workstation", "office_swivel_chair", "office_reception_counter", "office_meeting_table",
@@ -56,8 +50,8 @@ namespace FamilyCompany.Editor
             EnsureFolder("Assets/FamilyCompany/Scenes");
             EnsureFolder("Assets/FamilyCompany/Generated");
             EnsureFolder(MaterialFolder);
-            ConfigurePlayerPixelSheet();
-            ConfigureSisterPixelSheet();
+            HighMotionCharacterArtBuilder.ConfigureAll();
+            OfficeVisualV2AssetImporter.ConfigureExistingAssets();
             ConfigureOfficeModuleAtlas();
             CreateMaterials();
 
@@ -78,14 +72,27 @@ namespace FamilyCompany.Editor
 
             var characters = new GameObject("Characters");
             var player = CreatePlayer(characters.transform);
+            player.AddComponent<PlayerOfficeWorkInteractor>().Configure(bootstrap, officeLayout.AllWaypoints);
             CreateSister(characters.transform, officeLayout);
-            CreateMovingFamilyPlaceholders(characters.transform, officeLayout);
+            CreateMovingFamilyMembers(characters.transform, officeLayout);
             var coordinator = systems.AddComponent<OfficeContractTaskCoordinator>();
             coordinator.Configure(
                 bootstrap,
                 characters.GetComponentsInChildren<OfficeWorkerAgent>(),
                 officeLayout.AllWaypoints);
-            CreateCamera(player.transform);
+            var autonomyCoordinator = systems.AddComponent<OfficeAutonomyCoordinator>();
+            autonomyCoordinator.Configure(
+                bootstrap,
+                characters.GetComponentsInChildren<OfficeWorkerAgent>(),
+                officeLayout.AllWaypoints);
+            var cameraFollow = CreateCamera(player.transform);
+            cameraFollow.ConfigureOfficeFraming(new Vector3(14f, 0f, 0f), new Vector2(16f, 14f), 6.6f);
+            officeLayout.Root.gameObject.AddComponent<OfficeVisualV2Presenter>().Configure(
+                player.transform,
+                characters.transform,
+                officeLayout.Root,
+                new Vector3(14f, 0f, 0f),
+                new Vector2(16f, 14f));
             CreateLighting();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -165,17 +172,22 @@ namespace FamilyCompany.Editor
             waypointRoot.transform.SetParent(office.transform);
             var layout = new OfficeLayout
             {
+                Root = office.transform,
                 Reception = CreateWaypoint("reception", new Vector3(8.5f, 0.05f, -3.35f), OfficeActivity.Reception, 2.5f, 4.5f, waypointRoot.transform),
                 CorridorWest = CreateWaypoint("corridor_west", new Vector3(9.5f, 0.05f, 0f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
                 CorridorCenter = CreateWaypoint("corridor_center", new Vector3(14.2f, 0.05f, 0f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
                 CorridorEast = CreateWaypoint("corridor_east", new Vector3(18.3f, 0.05f, 0f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
                 DeskA = CreateWaypoint("desk_a", new Vector3(11.4f, 0.05f, 3.35f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
                 DeskB = CreateWaypoint("desk_b", new Vector3(14.6f, 0.05f, 3.35f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
-                DeskC = CreateWaypoint("desk_c", new Vector3(11.4f, 0.05f, -3.35f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
-                DeskD = CreateWaypoint("desk_d", new Vector3(14.6f, 0.05f, -3.35f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
+                // Lower-row desks must be approached from the north, where the authored main
+                // corridor sits. The former z=-3.35 points were behind the desk colliders and
+                // forced CharacterController paths straight through Desk C/D.
+                DeskC = CreateWaypoint("desk_c", new Vector3(11.4f, 0.05f, -1.25f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
+                DeskD = CreateWaypoint("desk_d", new Vector3(14.6f, 0.05f, -1.25f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
                 Printer = CreateWaypoint("printer", new Vector3(8.6f, 0.05f, 3.75f), OfficeActivity.Printing, 1.5f, 3f, waypointRoot.transform),
                 Meeting = CreateWaypoint("meeting", new Vector3(18.6f, 0.05f, 3.05f), OfficeActivity.Meeting, 3f, 5f, waypointRoot.transform),
-                Lounge = CreateWaypoint("lounge", new Vector3(18.8f, 0.05f, -3.6f), OfficeActivity.Break, 2.5f, 5f, waypointRoot.transform)
+                Lounge = CreateWaypoint("lounge", new Vector3(18.8f, 0.05f, -3.6f), OfficeActivity.Break, 2.5f, 5f, waypointRoot.transform),
+                Exit = CreateWaypoint("office_exit", new Vector3(6.45f, 0.05f, 0f), OfficeActivity.Outside, 0f, 0f, waypointRoot.transform)
             };
             return layout;
         }
@@ -259,25 +271,17 @@ namespace FamilyCompany.Editor
 
             var visual = new GameObject("Pixel Visual");
             visual.transform.SetParent(player.transform, false);
-            visual.transform.localPosition = new Vector3(0f, 1.05f, 0f);
+            visual.transform.localPosition = new Vector3(0f, 0.05f, 0f);
             var renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = frames[0];
+            renderer.sprite = frames[DirectionalSpriteAnimator.DirectionCount * 2];
             renderer.sortingOrder = 22;
             renderer.spriteSortPoint = SpriteSortPoint.Pivot;
             visual.AddComponent<BillboardFacingCamera>();
             var animator = player.AddComponent<DirectionalSpriteAnimator>();
-            animator.Configure(renderer, frames, 0.18f);
+            animator.Configure(renderer, frames, 0.11f);
             player.AddComponent<PrototypePlayerController>();
             CreateLabel("나 · 14살\n직접 이동", player.transform.position + new Vector3(0f, 2.3f, 0f), player.transform);
             return player;
-        }
-
-        private static void CreateParentPlaceholders(Transform parent)
-        {
-            var fatherMaterial = GetMaterial("FatherPlaceholder", new Color(0.32f, 0.43f, 0.64f));
-            var motherMaterial = GetMaterial("MotherPlaceholder", new Color(0.79f, 0.45f, 0.55f));
-            CreatePlaceholder("Father Placeholder (46)", "아빠 자리 · 46살\n최종 에셋 대기", new Vector3(-14.3f, 1f, -1.5f), fatherMaterial, parent);
-            CreatePlaceholder("Mother Placeholder (44)", "엄마 자리 · 44살\n최종 에셋 대기", new Vector3(-12.4f, 1f, 2.9f), motherMaterial, parent);
         }
 
         private static void CreateSister(Transform parent, OfficeLayout office)
@@ -301,23 +305,21 @@ namespace FamilyCompany.Editor
 
             var visual = new GameObject("Pixel Visual");
             visual.transform.SetParent(sister.transform, false);
-            visual.transform.localPosition = new Vector3(0f, 1.05f, 0f);
+            visual.transform.localPosition = new Vector3(0f, 0.05f, 0f);
             var renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = frames[0];
+            renderer.sprite = frames[DirectionalSpriteAnimator.DirectionCount * 2];
             renderer.sortingOrder = 20;
             renderer.spriteSortPoint = SpriteSortPoint.Pivot;
             visual.AddComponent<BillboardFacingCamera>();
             var animator = sister.AddComponent<DirectionalSpriteAnimator>();
-            animator.Configure(renderer, frames, 0.2f);
+            animator.Configure(renderer, frames, 0.11f);
             var agent = sister.AddComponent<OfficeWorkerAgent>();
             agent.Configure("older_sister", route, 1.65f, 0, animator);
             CreateStatusLabel("누나 · 20살", agent, sister.transform, 2.25f);
         }
 
-        private static void CreateMovingFamilyPlaceholders(Transform parent, OfficeLayout office)
+        private static void CreateMovingFamilyMembers(Transform parent, OfficeLayout office)
         {
-            var blue = GetMaterial("WorkerBlue", new Color(0.32f, 0.64f, 0.82f));
-            var coral = GetMaterial("WorkerCoral", new Color(0.88f, 0.49f, 0.39f));
             var routeA = new[]
             {
                 office.DeskC, office.CorridorCenter, office.CorridorWest, office.Printer,
@@ -330,48 +332,48 @@ namespace FamilyCompany.Editor
                 office.CorridorEast, office.CorridorCenter, office.CorridorWest, office.Reception,
                 office.CorridorWest, office.CorridorCenter
             };
-            CreateWorkerPlaceholder("father", "아빠 · 46살 · 임시 에셋", blue, routeA, 0, 1.45f, parent);
-            CreateWorkerPlaceholder("mother", "엄마 · 44살 · 임시 에셋", coral, routeB, 0, 1.55f, parent);
+            CreateFamilyWorker("father", "아빠 · 46살", routeA, 0, 1.45f, parent);
+            CreateFamilyWorker("mother", "엄마 · 44살", routeB, 0, 1.55f, parent);
         }
 
-        private static void CreateWorkerPlaceholder(
+        private static void CreateFamilyWorker(
             string agentId,
             string displayName,
-            Material material,
             OfficeWaypoint[] route,
             int startIndex,
             float speed,
             Transform parent)
         {
-            var root = new GameObject($"{displayName} - MOVING PLACEHOLDER");
+            var frames = LoadFrames(
+                HighMotionCharacterArtBuilder.GetFrameFolder(agentId),
+                HighMotionCharacterArtBuilder.GetFrameNames(agentId),
+                agentId);
+            var root = new GameObject($"{displayName} - PIXEL MOVING");
             root.transform.SetParent(parent);
             root.transform.position = route[startIndex].transform.position;
             var controller = root.AddComponent<CharacterController>();
-            controller.height = 1.45f;
+            controller.height = 1.7f;
             controller.radius = 0.3f;
-            controller.center = new Vector3(0f, 0.72f, 0f);
+            controller.center = new Vector3(0f, 0.85f, 0f);
+            controller.skinWidth = 0.04f;
 
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Chibi Body";
-            body.transform.SetParent(root.transform, false);
-            body.transform.localPosition = new Vector3(0f, 0.62f, 0f);
-            body.transform.localScale = new Vector3(0.48f, 0.52f, 0.48f);
-            body.GetComponent<Renderer>().sharedMaterial = material;
-            Object.DestroyImmediate(body.GetComponent<Collider>());
-            var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            head.name = "Chibi Head";
-            head.transform.SetParent(root.transform, false);
-            head.transform.localPosition = new Vector3(0f, 1.22f, 0f);
-            head.transform.localScale = new Vector3(0.68f, 0.68f, 0.68f);
-            head.GetComponent<Renderer>().sharedMaterial = _beige;
-            Object.DestroyImmediate(head.GetComponent<Collider>());
+            var visual = new GameObject("Pixel Visual");
+            visual.transform.SetParent(root.transform, false);
+            visual.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            var renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = frames[DirectionalSpriteAnimator.DirectionCount * 2];
+            renderer.sortingOrder = 20;
+            renderer.spriteSortPoint = SpriteSortPoint.Pivot;
+            visual.AddComponent<BillboardFacingCamera>();
+            var animator = root.AddComponent<DirectionalSpriteAnimator>();
+            animator.Configure(renderer, frames, 0.11f);
 
             var agent = root.AddComponent<OfficeWorkerAgent>();
-            agent.Configure(agentId, route, speed, startIndex);
-            CreateStatusLabel(displayName, agent, root.transform, 1.95f);
+            agent.Configure(agentId, route, speed, startIndex, animator);
+            CreateStatusLabel(displayName, agent, root.transform, 1.75f);
         }
 
-        private static void CreateCamera(Transform player)
+        private static IsometricCameraFollow CreateCamera(Transform player)
         {
             var cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
@@ -385,7 +387,8 @@ namespace FamilyCompany.Editor
             cameraObject.transform.LookAt(player.position + Vector3.up * 0.8f);
             var follow = cameraObject.AddComponent<IsometricCameraFollow>();
             follow.Configure(player, offset, 7.2f);
-            cameraObject.AddComponent<PixelatedCameraEffect>().Configure(360);
+            cameraObject.AddComponent<PixelatedCameraEffect>().ConfigureAdaptive(360, 540);
+            return follow;
         }
 
         private static void CreateLighting()
@@ -439,16 +442,6 @@ namespace FamilyCompany.Editor
             }
 
             return result;
-        }
-
-        private static void ConfigureSisterPixelSheet()
-        {
-            ConfigurePixelAtlas(SisterPixelSheetPath, SisterFrameFolder, SisterFrameNames, 4, 2, 180f);
-        }
-
-        private static void ConfigurePlayerPixelSheet()
-        {
-            ConfigurePixelAtlas(PlayerPixelSheetPath, PlayerFrameFolder, PlayerFrameNames, 4, 2, 180f);
         }
 
         private static void ConfigureOfficeModuleAtlas()
@@ -551,17 +544,6 @@ namespace FamilyCompany.Editor
             labelObject.AddComponent<OfficeStatusLabel>().Configure(displayName, agent, textMesh);
         }
 
-        private static GameObject CreatePlaceholder(string name, string label, Vector3 position, Material material, Transform parent)
-        {
-            var placeholder = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            placeholder.name = name;
-            placeholder.transform.SetParent(parent);
-            placeholder.transform.position = position;
-            placeholder.GetComponent<Renderer>().sharedMaterial = material;
-            CreateLabel(label, position + new Vector3(0f, 1.7f, 0f), placeholder.transform);
-            return placeholder;
-        }
-
         private static GameObject CreateCube(
             string name,
             Vector3 position,
@@ -627,6 +609,7 @@ namespace FamilyCompany.Editor
 
         private sealed class OfficeLayout
         {
+            public Transform Root;
             public OfficeWaypoint Reception;
             public OfficeWaypoint CorridorWest;
             public OfficeWaypoint CorridorCenter;
@@ -638,11 +621,12 @@ namespace FamilyCompany.Editor
             public OfficeWaypoint Printer;
             public OfficeWaypoint Meeting;
             public OfficeWaypoint Lounge;
+            public OfficeWaypoint Exit;
 
             public OfficeWaypoint[] AllWaypoints => new[]
             {
                 Reception, CorridorWest, CorridorCenter, CorridorEast,
-                DeskA, DeskB, DeskC, DeskD, Printer, Meeting, Lounge
+                DeskA, DeskB, DeskC, DeskD, Printer, Meeting, Lounge, Exit
             };
         }
     }

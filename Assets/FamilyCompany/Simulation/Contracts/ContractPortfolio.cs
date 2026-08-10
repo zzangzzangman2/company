@@ -11,7 +11,8 @@ namespace FamilyCompany.Simulation.Contracts
         None = 0,
         ContractNotActive = 1,
         DeadlinePassed = 2,
-        MemberEnergyInsufficient = 3
+        MemberEnergyInsufficient = 3,
+        MemberUnavailable = 4
     }
 
     public sealed class ContractAcceptanceResult
@@ -174,6 +175,13 @@ namespace FamilyCompany.Simulation.Contracts
             }
 
             var member = family.Get(memberId);
+            var schedule = FamilyScheduleRules.Resolve(
+                member.Role,
+                FamilyCompany.Simulation.Core.GameTime.CampaignStart.AddMinutes(elapsedMinute));
+            if (!schedule.CanPerformCompanyWork)
+            {
+                return RejectedWork(ContractWorkRejectionReason.MemberUnavailable);
+            }
             var applicableHours = Math.Min(requestedPersonHours, contract.RemainingPersonHours);
             var energyCost = checked(applicableHours * EnergyCostPerPersonHour);
             if (member.Energy < energyCost)

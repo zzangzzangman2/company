@@ -32,7 +32,8 @@
 - 윤곽선은 순검정 한 색이 아니라 짙은 갈색·남색·청록 계열의 통제된 픽셀 선을 사용한다.
 - 피부, 머리, 천, 플라스틱, 금속, 나무는 각각 다른 밝기층과 제한된 한 픽셀 하이라이트로 구분한다.
 - 픽셀 군집이 선명해야 하며 블러, 반투명 에어브러시, 과도한 디더링, 생성형 잔노이즈를 금지한다.
-- 캐릭터 시트는 4열 `정면·왼쪽·뒤·오른쪽`, 2행 `걷기 A·걷기 B`를 고정한다. 모든 칸의 키, 머리 높이, 발 기준선과 카메라 높이를 맞춘다.
+- 고동작 캐릭터 정본은 인물별 A/B 2장이다. 각 장은 1536×1024, 6열×4행이며 A는 `남·남서·서·북서`, B는 `북·북동·동·남동`, 각 행은 접지·하강·통과를 좌우로 반복하는 걷기 6프레임이다.
+- 생성 시트의 시각 간격은 셀 경계와 다를 수 있으므로 24개 실제 실루엣을 검출하고 상체 중심·발 기준선으로 정렬한 256×256 단일 프레임을 런타임에 사용한다. 구형 4×2 시트는 정체성·카메라 참조용 레거시로만 보존한다.
 - 런타임 투명 PNG는 Point 필터, mipmap 없음, 무압축, 180 PPU를 기본으로 한다.
 - 도트 크로마 원본은 피사체에 없는 마젠타를 쓰고, 픽셀 가장자리는 하드 키 제거로 알파 0/255를 유지한다.
 
@@ -63,7 +64,7 @@
 
 - 카메라: 직교 투영, 약 45도 회전, 플레이어 추적
 - 렌더: 낮은 내부 해상도로 축소 후 Point 필터 확대
-- 캐릭터: 4방향 이상, 최소 2프레임 걷기, 발 위치를 기준으로 정렬
+- 캐릭터: 8방향, 방향별 6프레임 걷기, 상체 중심과 발 위치를 기준으로 정렬
 - 공간: 따뜻한 나무 바닥, 크림·민트 벽, 복숭아색과 청록 포인트
 - 형태: 둥글고 귀엽지만 통로와 상호작용 지점은 명확하게 읽힌다.
 - 시대감: 2000년대 초반 한국풍. 베이지 CRT, 유선 전화, 팩스·프린터, 종이 서류를 사용한다.
@@ -85,23 +86,22 @@
 
 ## 플레이어 도트 정본
 
-- `Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png`
-- 14살 플레이어의 빨간 뉴스보이캡, 짧은 짙은 갈색 머리, 갈색 눈, 흰색 후드 윈드브레이커, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화를 고정한다.
-- 4열 정면·왼쪽·뒤·오른쪽, 2행 걷기 A·B이며 파란 캡슐 placeholder를 대체한다.
+- `Assets/Art/Characters/Player/Pixel/HighMotion/player_pixel_walk8dir6_{a,b}_v1.png`
+- 14살 플레이어의 짧고 헝클어진 짙은 갈색 머리, 갈색 눈, 흰색 후드 윈드브레이커, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화를 고정한다. 모자는 쓰지 않는다.
+- 8방향×6프레임이며 파란 캡슐 placeholder와 구형 4방향 런타임을 대체한다.
 
-## 누나 도트 정본 후보
+## 누나 도트 정본
 
-- Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v2.png
-- 4열: 정면, 왼쪽, 뒤, 오른쪽
-- 2행: 걷기 A, 걷기 B
+- `Assets/Art/Characters/OlderSister/Pixel/HighMotion/older_sister_pixel_walk8dir6_{a,b}_v1.png`
+- 8방향, 방향별 걷기 6프레임
 - 기존 20살 누나의 양갈래, 리본, 청록색 눈, 나시티, 돌핀팬츠, 맨발 정본을 유지한다.
 
 ## 부모 원화·도트 정본
 
 - 아빠 원화: `Assets/Art/Characters/Father/father_office_neutral_v1.png`
-- 아빠 도트: `Assets/Art/Characters/Father/Pixel/father_pixel_walk4x2_v1.png`
+- 아빠 도트: `Assets/Art/Characters/Father/Pixel/HighMotion/father_pixel_walk8dir6_{a,b}_v1.png`
 - 엄마 원화: `Assets/Art/Characters/Mother/mother_office_neutral_v1.png`
-- 엄마 도트: `Assets/Art/Characters/Mother/Pixel/mother_pixel_walk4x2_v1.png`
+- 엄마 도트: `Assets/Art/Characters/Mother/Pixel/HighMotion/mother_pixel_walk8dir6_{a,b}_v1.png`
 - 부모는 플레이어·누나보다 성숙한 얼굴 비율과 체형을 유지하며, 아빠 46살·엄마 44살의 나이가 읽혀야 한다.
 
 ## 직원 후보 도트 정본
@@ -109,7 +109,7 @@
 - 루트: `Assets/Art/Characters/Employees/`
 - 대상: 김서아·이지안·최이서·정아린·박하은·한수아·오지우·윤채아
 - 각 `Portraits/`의 `simul` 정본 원화 9종은 변경하지 않는다.
-- 각 `Pixel/<id>_pixel_walk4x2_v1.png`는 원화의 얼굴, 머리, 복장, 대표 소지품을 유지한 런타임 번역이다.
+- 각 `Pixel/HighMotion/<id>_pixel_walk8dir6_{a,b}_v1.png`는 원화의 얼굴, 머리, 복장, 대표 소지품을 유지한 런타임 번역이다.
 - 공통 셀 순서와 Point·180 PPU·하드 알파 규칙은 다른 가족 도트와 같다.
 
 ## 사무실 도트 모듈 정본

@@ -572,7 +572,7 @@ namespace FamilyCompany.Editor
             AssertEqual(source.Company.CashWon, restored.Company.CashWon, "save cash");
             AssertEqual(source.Family.Get("older_sister").Energy, restored.Family.Get("older_sister").Energy, "save sister energy");
             AssertEqual(source.Events.Count, restored.Events.Count, "save event count");
-            AssertEqual(4, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
+            AssertEqual(5, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
             AssertEqual(source.Contracts.Contracts.Count, restored.Contracts.Contracts.Count, "save contract count");
             var restoredContract = restored.Contracts.Get(offer.OfferId);
             AssertEqual(acceptance.Contract.Status, restoredContract.Status, "save contract status");
@@ -772,10 +772,11 @@ namespace FamilyCompany.Editor
 
         private static void ValidateAssetsAndScene()
         {
+            HighMotionCharacterArtBuilder.Validate();
             var sisterFrames = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.SisterFrameFolder });
-            AssertEqual(8, sisterFrames.Length, "sister directional frame count");
+            AssertEqual(48, sisterFrames.Length, "sister high-motion directional frame count");
             var playerFrames = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.PlayerFrameFolder });
-            AssertEqual(8, playerFrames.Length, "player directional frame count");
+            AssertEqual(48, playerFrames.Length, "player high-motion directional frame count");
             var officeModules = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.OfficeModuleFolder });
             AssertEqual(12, officeModules.Length, "office pixel module count");
             var titleHero = AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeProjectBuilder.TitleHeroAssetPath);
@@ -785,6 +786,8 @@ namespace FamilyCompany.Editor
             }
             var scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(PrototypeProjectBuilder.ScenePath);
             if (scene == null) throw new InvalidOperationException("Prototype scene is missing.");
+
+            CharacterOfficeRuntimeQa.ValidateSceneLinkage();
 
             EditorSceneManager.OpenScene(PrototypeProjectBuilder.ScenePath);
             var camera = Camera.main;
@@ -823,6 +826,14 @@ namespace FamilyCompany.Editor
             bootstrap.ResumeGameNow();
             AssertEqual(Presentation.Unity.PrototypeUiScreen.Playing, bootstrap.UiScreen, "resume frontend screen");
             var coordinator = bootstrap.InitializeOfficeTaskBridgeNow();
+            if (playerController.GetComponent<Presentation.Unity.PlayerOfficeWorkInteractor>() == null)
+            {
+                throw new InvalidOperationException("Player direct office work interaction is missing.");
+            }
+            if (UnityEngine.Object.FindFirstObjectByType<Presentation.Unity.OfficeAutonomyCoordinator>() == null)
+            {
+                throw new InvalidOperationException("Office autonomy coordinator is missing.");
+            }
             var agents = UnityEngine.Object.FindObjectsByType<Presentation.Unity.OfficeWorkerAgent>(FindObjectsSortMode.None);
             if (agents.Length < 3)
             {
@@ -844,8 +855,12 @@ namespace FamilyCompany.Editor
 
             if (agents.All(agent => agent.AgentId != "father") || agents.All(agent => agent.AgentId != "mother"))
             {
-                throw new InvalidOperationException("Moving parent placeholder agents are missing.");
+                throw new InvalidOperationException("Moving parent pixel agents are missing.");
             }
+
+            if (agents.Where(agent => agent.AgentId == "father" || agent.AgentId == "mother")
+                .Any(agent => agent.GetComponent<Presentation.Unity.DirectionalSpriteAnimator>() == null))
+                throw new InvalidOperationException("Parent high-motion pixel animation is missing.");
 
             if (agents.Any(agent => agent.AgentId == "employee_a" || agent.AgentId == "employee_b"))
             {

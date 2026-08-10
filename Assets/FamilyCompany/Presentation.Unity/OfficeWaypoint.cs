@@ -36,9 +36,9 @@ namespace FamilyCompany.Presentation.Unity
                 case OfficeActivity.Printing: return new Color(0.45f, 0.78f, 0.95f);
                 case OfficeActivity.Meeting: return new Color(0.52f, 0.78f, 0.68f);
                 case OfficeActivity.Break: return new Color(1f, 0.78f, 0.38f);
+                case OfficeActivity.Outside: return new Color(0.75f, 0.75f, 0.82f);
                 default: return new Color(0.42f, 0.72f, 0.95f);
             }
         }
     }
 }
-

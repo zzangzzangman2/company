@@ -74,13 +74,17 @@ namespace FamilyCompany.Editor
                 AssertEqual(true, state.Growth.ProductProject.Resolved, "product resolved");
 
                 var dto = GameSaveMapper.ToDto(state);
-                AssertEqual(4, dto.schemaVersion, "save schema");
+                AssertEqual(5, dto.schemaVersion, "save schema");
                 var restored = GameSaveMapper.FromDto(dto);
                 AssertEqual(true, restored.Growth.ResearchCenterUnlocked, "research center round trip");
                 AssertEqual(true, restored.Growth.HasTechnology(ResearchTechnologyIds.MarketAnalysis), "research round trip");
                 AssertEqual(true, restored.Growth.ProductProject.Resolved, "product round trip");
                 AssertEqual(true, restored.Growth.HasOwnedBusiness(BusinessIndustry.WebAndSoftware), "owned business round trip");
                 AssertEqual(2, restored.Growth.OwnedBusinesses.Count, "business expansion round trip");
+                AssertEqual(
+                    state.Family.Get("older_sister").Autonomy.CompletedWorkBlocks,
+                    restored.Family.Get("older_sister").Autonomy.CompletedWorkBlocks,
+                    "office autonomy round trip");
                 if (restored.Family.Get("player").CareerMemories.Count < 4)
                 {
                     throw new InvalidOperationException("Career and relationship memories did not accumulate.");

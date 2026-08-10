@@ -10,7 +10,9 @@ namespace FamilyCompany.Simulation.Family
         ContractCompleted = 0,
         BusinessFounded = 1,
         ProductLaunched = 2,
-        ContractFailed = 3
+        ContractFailed = 3,
+        OfficeBond = 4,
+        OfficeConflict = 5
     }
 
     public sealed class CareerMemoryState

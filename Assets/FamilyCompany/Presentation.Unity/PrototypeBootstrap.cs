@@ -7,6 +7,7 @@ using FamilyCompany.Save;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.Prototype;
 using UnityEngine;
@@ -34,7 +35,6 @@ namespace FamilyCompany.Presentation.Unity
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
         private const int ReferenceHeight = 1080;
-        private const string TitleHeroResourcePath = "Title/family_company_title_hero_v1";
         private const string ManagementDashboardResourcePath = "OfficeManagementDashboard_v1";
         private const string BusinessExpansionDashboardResourcePath = "BusinessExpansionDashboard_v1";
         private static readonly string[] ContractClientIds = { "samsung-electronics", "lg-electronics", "sk-telecom" };
@@ -52,8 +52,6 @@ namespace FamilyCompany.Presentation.Unity
         private GUIStyle _slotStyle;
         private GUIStyle _panelStyle;
         private Texture2D _solidTexture;
-        private Texture2D _titleHeroTexture;
-        private Texture2D _menuGradientTexture;
         private Texture2D _managementDashboardTexture;
         private Texture2D _businessExpansionDashboardTexture;
         private int _styleHeight;
@@ -63,6 +61,9 @@ namespace FamilyCompany.Presentation.Unity
         private PrototypeUiScreen _screen = PrototypeUiScreen.MainMenu;
         private PrototypeUiScreen _slotReturnScreen = PrototypeUiScreen.MainMenu;
         private OfficeContractTaskCoordinator _contractTaskCoordinator;
+        private TitleMoneyRainRenderer _titleMoneyRainRenderer;
+        private OfficeAutonomyCoordinator _officeAutonomyCoordinator;
+        private PlayerOfficeWorkInteractor _playerWorkInteractor;
         private OfficeManagementTab _managementTab = OfficeManagementTab.Contracts;
         private GUIStyle _managementHeadingStyle;
         private GUIStyle _managementBodyStyle;
@@ -84,6 +85,7 @@ namespace FamilyCompany.Presentation.Unity
         private void Awake()
         {
             InitializeNow();
+            EnsureTitleMoneyRainRenderer();
             if (!Application.isPlaying) return;
             ConfigureDisplayDefaults();
             ShowMainMenuNow();
@@ -126,7 +128,13 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (Application.isPlaying && Time.timeScale == 0f) Time.timeScale = 1f;
             if (_solidTexture != null) Destroy(_solidTexture);
-            if (_menuGradientTexture != null) Destroy(_menuGradientTexture);
+        }
+
+        private void EnsureTitleMoneyRainRenderer()
+        {
+            if (_titleMoneyRainRenderer != null) return;
+            _titleMoneyRainRenderer = GetComponent<TitleMoneyRainRenderer>();
+            if (_titleMoneyRainRenderer == null) _titleMoneyRainRenderer = gameObject.AddComponent<TitleMoneyRainRenderer>();
         }
 
         public void InitializeNow()
@@ -149,6 +157,7 @@ namespace FamilyCompany.Presentation.Unity
             var agents = FindObjectsByType<OfficeWorkerAgent>(FindObjectsSortMode.None);
             RemapLegacyFamilyAgents(agents);
             var waypoints = FindObjectsByType<OfficeWaypoint>(FindObjectsSortMode.None);
+            waypoints = EnsureOfficeExitWaypoint(waypoints);
             _contractTaskCoordinator = GetComponent<OfficeContractTaskCoordinator>();
             if (_contractTaskCoordinator == null)
             {
@@ -157,7 +166,40 @@ namespace FamilyCompany.Presentation.Unity
 
             _contractTaskCoordinator.Configure(this, agents, waypoints);
             _contractTaskCoordinator.InitializeNow();
+            _officeAutonomyCoordinator = GetComponent<OfficeAutonomyCoordinator>();
+            if (_officeAutonomyCoordinator == null)
+            {
+                _officeAutonomyCoordinator = gameObject.AddComponent<OfficeAutonomyCoordinator>();
+            }
+
+            _officeAutonomyCoordinator.Configure(this, agents, waypoints);
+            _officeAutonomyCoordinator.InitializeNow();
+            var playerController = FindFirstObjectByType<PrototypePlayerController>();
+            if (playerController != null)
+            {
+                _playerWorkInteractor = playerController.GetComponent<PlayerOfficeWorkInteractor>();
+                if (_playerWorkInteractor == null)
+                    _playerWorkInteractor = playerController.gameObject.AddComponent<PlayerOfficeWorkInteractor>();
+                _playerWorkInteractor.Configure(this, waypoints);
+            }
             return _contractTaskCoordinator;
+        }
+
+        private static OfficeWaypoint[] EnsureOfficeExitWaypoint(OfficeWaypoint[] waypoints)
+        {
+            if (waypoints.Any(item => item != null && item.Activity == OfficeActivity.Outside)) return waypoints;
+            var reception = waypoints.FirstOrDefault(item => item != null && item.Activity == OfficeActivity.Reception);
+            if (reception == null) return waypoints;
+            var exitObject = new GameObject("Runtime Office Exit Waypoint");
+            exitObject.transform.position = reception.transform.position + Vector3.left * 1.4f + Vector3.forward * 3.35f;
+            var exit = exitObject.AddComponent<OfficeWaypoint>();
+            exit.Configure("office_exit_runtime", OfficeActivity.Outside, 0f, 0f);
+            return waypoints.Concat(new[] { exit }).ToArray();
+        }
+
+        public void SetWorldNotice(string message)
+        {
+            _notice = message ?? string.Empty;
         }
 
         public void ShowMainMenuNow()
@@ -257,11 +299,13 @@ namespace FamilyCompany.Presentation.Unity
                 repository.Save(GameSaveMapper.ToDto(_state));
                 _activeSlot = slot;
                 _notice = $"슬롯 {slot} 저장 완료 · {DateTime.Now:HH:mm:ss}";
+                if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Confirm);
                 return true;
             }
             catch (Exception exception)
             {
                 _notice = $"저장 실패: {exception.Message}";
+                if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
                 return false;
             }
         }
@@ -274,22 +318,26 @@ namespace FamilyCompany.Presentation.Unity
                 if (!repository.TryLoad(out var save))
                 {
                     _notice = $"슬롯 {slot}에 저장 데이터가 없습니다.";
+                    if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
                     return false;
                 }
 
                 _state = GameSaveMapper.FromDto(save);
                 _runner = new SimulationRunner(_state);
                 _contractTaskCoordinator?.ResetAssignments();
+                _officeAutonomyCoordinator?.RefreshNow();
                 _activeSlot = slot;
                 _hasSession = true;
                 _screen = PrototypeUiScreen.Playing;
                 SetSimulationPaused(false);
                 _notice = $"슬롯 {slot} 불러오기 완료";
+                if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Confirm);
                 return true;
             }
             catch (Exception exception)
             {
                 _notice = $"불러오기 실패: {exception.Message}";
+                if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
                 return false;
             }
         }
@@ -314,12 +362,14 @@ namespace FamilyCompany.Presentation.Unity
             _state = PrototypeStateFactory.Create();
             _runner = new SimulationRunner(_state);
             _contractTaskCoordinator?.ResetAssignments();
+            _officeAutonomyCoordinator?.RefreshNow();
             _reportedOfficeTaskCount = 0;
         }
 
         private void ConfigureDisplayDefaults()
         {
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-familyCompanyCaptureMoneyRain") >= 0) return;
             if (!Application.isEditor && Screen.fullScreenMode == FullScreenMode.Windowed)
             {
                 var resolution = Screen.currentResolution;
@@ -437,6 +487,8 @@ namespace FamilyCompany.Presentation.Unity
             GUILayout.Label("가족회사", _titleStyle);
             GUILayout.Label("네 식구가 시작한 가장 작은 회사", _subtitleStyle);
             GUILayout.Space(34f);
+            var previousBackgroundColor = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.72f, 0.93f, 0.88f, 1f);
             if (GUILayout.Button("처음하기", _buttonStyle, GUILayout.Height(62f))) ShowNewGameSlotsNow();
 
             GUI.enabled = HasAnySave;
@@ -451,6 +503,7 @@ namespace FamilyCompany.Presentation.Unity
             GUILayout.Label(_notice, _bodyStyle);
             GUILayout.Space(7f);
             GUILayout.Label("2000년의 작은 하청 사무실에서 시작해 실제 회사들과 경쟁하고 역사를 바꾸세요.", _smallStyle);
+            GUI.backgroundColor = previousBackgroundColor;
             GUILayout.EndArea();
             GUI.Label(
                 new Rect(Screen.width - 360f, Screen.height - 108f, 320f, 72f),
@@ -461,55 +514,11 @@ namespace FamilyCompany.Presentation.Unity
         private void DrawMenuBackground(string eyebrow)
         {
             var fullScreen = new Rect(0f, 0f, Screen.width, Screen.height);
-            if (_titleHeroTexture == null) _titleHeroTexture = Resources.Load<Texture2D>(TitleHeroResourcePath);
-            if (_titleHeroTexture != null) DrawTextureAspectFill(fullScreen, _titleHeroTexture);
-            else DrawSolid(fullScreen, new Color(0.025f, 0.055f, 0.075f, 1f));
-            DrawSolid(fullScreen, new Color(0.01f, 0.025f, 0.035f, 0.12f));
-            DrawMenuGradient(new Rect(0f, 0f, Screen.width * 0.64f, Screen.height));
+            EnsureTitleMoneyRainRenderer();
+            if (_titleMoneyRainRenderer != null) _titleMoneyRainRenderer.Draw(fullScreen);
+            else DrawSolid(fullScreen, new Color(1f, 0.96f, 0.86f, 1f));
             DrawSolid(new Rect(0f, Screen.height - 14f, Screen.width, 14f), new Color(0.96f, 0.49f, 0.38f, 1f));
             GUI.Label(new Rect(Screen.width * 0.075f, 46f, Screen.width * 0.6f, 40f), eyebrow, _smallStyle);
-        }
-
-        private void DrawMenuGradient(Rect target)
-        {
-            if (_menuGradientTexture == null)
-            {
-                _menuGradientTexture = new Texture2D(64, 1, TextureFormat.RGBA32, false)
-                {
-                    filterMode = FilterMode.Bilinear,
-                    wrapMode = TextureWrapMode.Clamp
-                };
-                for (var index = 0; index < _menuGradientTexture.width; index++)
-                {
-                    var progress = index / (float)(_menuGradientTexture.width - 1);
-                    var alpha = Mathf.Pow(1f - progress, 1.7f) * 0.62f;
-                    _menuGradientTexture.SetPixel(index, 0, new Color(0.01f, 0.025f, 0.035f, alpha));
-                }
-                _menuGradientTexture.Apply(false, true);
-            }
-
-            GUI.DrawTexture(target, _menuGradientTexture, ScaleMode.StretchToFill, true);
-        }
-
-        private static void DrawTextureAspectFill(Rect target, Texture texture)
-        {
-            var targetAspect = target.width / target.height;
-            var textureAspect = texture.width / (float)texture.height;
-            var source = new Rect(0f, 0f, 1f, 1f);
-            if (targetAspect > textureAspect)
-            {
-                var visibleHeight = textureAspect / targetAspect;
-                source.y = (1f - visibleHeight) * 0.5f;
-                source.height = visibleHeight;
-            }
-            else
-            {
-                var visibleWidth = targetAspect / textureAspect;
-                source.x = (1f - visibleWidth) * 0.5f;
-                source.width = visibleWidth;
-            }
-
-            GUI.DrawTextureWithTexCoords(target, texture, source, true);
         }
 
         private void DrawGameHud()
@@ -571,8 +580,8 @@ namespace FamilyCompany.Presentation.Unity
                 GUI.Label(DashboardRect(142f, y, 124f, 30f), $"{member.DisplayName} · {member.AgeAt(_state.Time)}살", _managementBodyStyle);
                 GUI.Label(DashboardRect(142f, y + 32f, 124f, 45f), member.CompanyDuty, _managementSmallStyle);
                 GUI.Label(
-                    DashboardRect(60f, y + 80f, 205f, 34f),
-                    $"개발 {member.Stats.Development}  속도 {member.Stats.Speed}  체력 {member.Energy}",
+                    DashboardRect(60f, y + 77f, 205f, 43f),
+                    $"개발 {member.Stats.Development} · 속도 {member.Stats.Speed}\n체력 {member.Energy} · 스트레스 {member.Stress} · {member.Autonomy.ActionLabel}",
                     _managementSmallStyle);
             }
         }
@@ -695,8 +704,13 @@ namespace FamilyCompany.Presentation.Unity
                 _state.Growth,
                 _state.Time.ElapsedMinutes);
             _notice = result.Accepted
-                ? $"계약 수락 · {offer.ExactClientDisplayName} / {offer.Title}"
+                ? $"계약 수락 · {offer.ExactClientDisplayName} / {offer.Title} · 나는 해당 작업 장소에서 E로 직접 참여 가능"
                 : ContractRejectionLabel(result.Decision.RejectionReason);
+            if (Application.isPlaying)
+            {
+                if (result.Accepted) GameAudioCoordinator.Instance.PlayPaperSfx(GamePaperSfx.Place);
+                else GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
+            }
         }
 
         private void DrawActiveContract(SubcontractState contract, float x)
@@ -710,10 +724,17 @@ namespace FamilyCompany.Presentation.Unity
             for (var memberIndex = 0; memberIndex < _state.Family.Members.Count; memberIndex++)
             {
                 var member = _state.Family.Members[memberIndex];
-                GUI.enabled = member.Energy >= 8;
+                var schedule = FamilyScheduleRules.Resolve(member.Role, _state.Time.Now);
+                var isPlayer = member.Role == FamilyRole.Player;
+                var buttonLabel = isPlayer
+                    ? "나 · 직접"
+                    : schedule.CanPerformCompanyWork
+                        ? $"{member.DisplayName} 4h"
+                        : $"{member.DisplayName} · {ScheduleShortLabel(schedule.Kind)}";
+                GUI.enabled = member.Energy >= 8 && schedule.CanPerformCompanyWork && !isPlayer;
                 if (GUI.Button(
                         DashboardRect(x + memberIndex * 101f, 820f, 94f, 39f),
-                        $"{member.DisplayName} 4h",
+                        buttonLabel,
                         _managementButtonStyle))
                 {
                     TryAssignContractWork(contract.Offer.OfferId, member.MemberId);
@@ -724,6 +745,20 @@ namespace FamilyCompany.Presentation.Unity
 
         private void TryAssignContractWork(string offerId, string memberId)
         {
+            var member = _state.Family.Get(memberId);
+            if (member.Role == FamilyRole.Player)
+            {
+                _notice = "나는 월드에서 직접 책상과 상호작용해 작업에 참여합니다. 직접 작업 연결은 다음 단계에서 추가됩니다.";
+                return;
+            }
+
+            var schedule = FamilyScheduleRules.Resolve(member.Role, _state.Time.Now);
+            if (!schedule.CanPerformCompanyWork)
+            {
+                _notice = $"{member.DisplayName}은 지금 {schedule.Label} 중이라 회사 작업을 맡을 수 없습니다.";
+                return;
+            }
+
             if (_contractTaskCoordinator == null) InitializeOfficeTaskBridgeNow();
             if (_contractTaskCoordinator != null && _contractTaskCoordinator.AssignContractWork(offerId, memberId, 4))
             {
@@ -731,7 +766,23 @@ namespace FamilyCompany.Presentation.Unity
             }
             else
             {
-                _notice = "해당 가족이 이미 작업 중이거나 사용할 책상이 없습니다.";
+                _notice = _contractTaskCoordinator != null &&
+                          !string.IsNullOrWhiteSpace(_contractTaskCoordinator.LastAssignmentFailureLabel)
+                    ? _contractTaskCoordinator.LastAssignmentFailureLabel
+                    : "해당 가족이 이미 작업 중이거나 사용할 책상이 없습니다.";
+            }
+        }
+
+        private static string ScheduleShortLabel(FamilyScheduleKind kind)
+        {
+            switch (kind)
+            {
+                case FamilyScheduleKind.School: return "학교";
+                case FamilyScheduleKind.OutsideSales: return "영업";
+                case FamilyScheduleKind.HouseholdDuty: return "가사";
+                case FamilyScheduleKind.OutsideCommitment: return "외출";
+                case FamilyScheduleKind.Sleep: return "수면";
+                default: return "자리 비움";
             }
         }
 
@@ -1004,17 +1055,29 @@ namespace FamilyCompany.Presentation.Unity
 
         private void AdvanceTime(long minutes)
         {
+            var previousMinute = _state.Time.ElapsedMinutes;
             var failedBefore = _state.Contracts.Contracts.Count(item => item.Status == SubcontractStatus.Failed);
             var productWasResolved = _state.Growth.ProductProject?.Resolved ?? false;
             _runner.AdvanceMinutes(minutes);
+            _officeAutonomyCoordinator?.RefreshNow();
             var failedAfter = _state.Contracts.Contracts.Count(item => item.Status == SubcontractStatus.Failed);
+            var latestIncident = _state.Family.Members
+                .Where(item => item.Autonomy.LastIncidentMinute > previousMinute)
+                .OrderByDescending(item => item.Autonomy.LastIncidentMinute)
+                .FirstOrDefault();
             if (failedAfter > failedBefore)
             {
                 _notice = $"마감 실패 {failedAfter - failedBefore}건 · 위약금과 평판이 반영됐습니다.";
+                if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
             }
             else if (!productWasResolved && (_state.Growth.ProductProject?.Resolved ?? false))
             {
                 _notice = $"제품 출시 완료 · 매출 {_state.Growth.ProductProject.RevenueWon:N0}원";
+                if (Application.isPlaying) GameAudioCoordinator.Instance.PlayCoinsSfx(true);
+            }
+            else if (latestIncident != null)
+            {
+                _notice = latestIncident.Autonomy.LastIncidentSummary;
             }
             else
             {
@@ -1033,6 +1096,12 @@ namespace FamilyCompany.Presentation.Unity
                 : result.Applied
                     ? $"작업 {result.AppliedPersonHours}시간 반영"
                     : "작업을 반영하지 못했습니다. 체력과 마감을 확인하세요.";
+            if (Application.isPlaying)
+            {
+                if (result.Completed) GameAudioCoordinator.Instance.PlayCoinsSfx(result.RewardWon >= 500_000);
+                else if (result.Applied) GameAudioCoordinator.Instance.PlayPaperSfx(GamePaperSfx.Rustle);
+                else GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
+            }
         }
 
         private static string ContractStatusLabel(SubcontractStatus status)
@@ -1072,9 +1141,9 @@ namespace FamilyCompany.Presentation.Unity
 
         private void DrawPauseMenu()
         {
-            DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0f, 0f, 0f, 0.66f));
+            DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0.20f, 0.40f, 0.42f, 0.46f));
             var rect = CenteredRect(540f, 570f);
-            DrawSolid(rect, new Color(0.035f, 0.075f, 0.095f, 0.98f));
+            DrawSolid(rect, new Color(1f, 0.97f, 0.88f, 0.98f));
             GUILayout.BeginArea(new Rect(rect.x + 50f, rect.y + 42f, rect.width - 100f, rect.height - 84f));
             GUILayout.Label("게임 메뉴", _headingStyle);
             GUILayout.Label($"현재 저장 슬롯 · {_activeSlot}", _smallStyle);
@@ -1090,11 +1159,11 @@ namespace FamilyCompany.Presentation.Unity
 
         private void DrawSlotPicker(string title, string description, bool canUseEmptySlot)
         {
-            DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0f, 0f, 0f, _hasSession ? 0.68f : 0.18f));
+            DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0.20f, 0.40f, 0.42f, _hasSession ? 0.46f : 0.08f));
             var panelWidth = Mathf.Min(1380f, Screen.width - 120f);
             var panelHeight = Mathf.Min(650f, Screen.height - 130f);
             var panel = CenteredRect(panelWidth, panelHeight);
-            DrawSolid(panel, new Color(0.035f, 0.075f, 0.095f, 0.98f));
+            DrawSolid(panel, new Color(1f, 0.97f, 0.88f, 0.98f));
             GUI.Label(new Rect(panel.x + 44f, panel.y + 35f, panel.width - 88f, 45f), title, _headingStyle);
             GUI.Label(new Rect(panel.x + 44f, panel.y + 82f, panel.width - 88f, 34f), description, _bodyStyle);
 
@@ -1102,6 +1171,8 @@ namespace FamilyCompany.Presentation.Unity
             var cardY = panel.y + 145f;
             var cardWidth = (panel.width - 88f - gap * 2f) / 3f;
             var cardHeight = panel.height - 245f;
+            var previousBackgroundColor = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.78f, 0.92f, 0.96f, 1f);
             for (var slot = UnityJsonSaveRepository.MinimumSlot; slot <= UnityJsonSaveRepository.MaximumSlot; slot++)
             {
                 var repository = GetRepository(slot);
@@ -1122,6 +1193,7 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             if (GUI.Button(new Rect(panel.x + 44f, panel.yMax - 72f, 180f, 42f), "뒤로", _buttonStyle)) ReturnFromSlotScreen();
+            GUI.backgroundColor = previousBackgroundColor;
         }
 
         private string BuildSlotLabel(UnityJsonSaveRepository repository)
@@ -1139,9 +1211,9 @@ namespace FamilyCompany.Presentation.Unity
 
         private void DrawNewGameConfirmation()
         {
-            DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0f, 0f, 0f, 0.58f));
+            DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0.20f, 0.40f, 0.42f, 0.34f));
             var panel = CenteredRect(620f, 340f);
-            DrawSolid(panel, new Color(0.035f, 0.075f, 0.095f, 0.99f));
+            DrawSolid(panel, new Color(1f, 0.97f, 0.88f, 0.99f));
             GUILayout.BeginArea(new Rect(panel.x + 48f, panel.y + 42f, panel.width - 96f, panel.height - 84f));
             GUILayout.Label($"SLOT {_pendingNewGameSlot} 덮어쓰기", _headingStyle);
             GUILayout.Space(16f);
@@ -1163,17 +1235,24 @@ namespace FamilyCompany.Presentation.Unity
 
         private void DrawSolid(Rect rect, Color color)
         {
-            if (_solidTexture == null)
-            {
-                _solidTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-                _solidTexture.SetPixel(0, 0, Color.white);
-                _solidTexture.Apply();
-            }
+            EnsureSolidTexture();
 
             var previous = GUI.color;
             GUI.color = color;
             GUI.DrawTexture(rect, _solidTexture);
             GUI.color = previous;
+        }
+
+        private void EnsureSolidTexture()
+        {
+            if (_solidTexture != null) return;
+            _solidTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            _solidTexture.SetPixel(0, 0, Color.white);
+            _solidTexture.Apply(false, true);
         }
 
         private void EnsureStyles()
@@ -1187,33 +1266,34 @@ namespace FamilyCompany.Presentation.Unity
             _managementButtonStyle = null;
             _managementTabStyle = null;
             var scale = Mathf.Clamp(targetHeight / (float)ReferenceHeight, 0.75f, 1.35f);
+            EnsureSolidTexture();
             _titleStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = Mathf.RoundToInt(70f * scale),
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.96f, 0.91f, 0.77f) }
+                normal = { textColor = new Color(0.08f, 0.30f, 0.31f) }
             };
             _subtitleStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = Mathf.RoundToInt(27f * scale),
-                normal = { textColor = new Color(0.68f, 0.83f, 0.80f) }
+                normal = { textColor = new Color(0.20f, 0.48f, 0.46f) }
             };
             _headingStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = Mathf.RoundToInt(30f * scale),
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.96f, 0.91f, 0.77f) }
+                normal = { textColor = new Color(0.08f, 0.30f, 0.31f) }
             };
             _bodyStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = Mathf.RoundToInt(18f * scale),
                 wordWrap = true,
-                normal = { textColor = Color.white }
+                normal = { textColor = new Color(0.12f, 0.27f, 0.28f) }
             };
             _smallStyle = new GUIStyle(_bodyStyle)
             {
                 fontSize = Mathf.RoundToInt(14f * scale),
-                normal = { textColor = new Color(0.68f, 0.83f, 0.80f) }
+                normal = { textColor = new Color(0.25f, 0.46f, 0.45f) }
             };
             _buttonStyle = new GUIStyle(GUI.skin.button)
             {
@@ -1222,9 +1302,12 @@ namespace FamilyCompany.Presentation.Unity
                 alignment = TextAnchor.MiddleLeft,
                 padding = new RectOffset(22, 18, 8, 8),
                 margin = new RectOffset(0, 0, 0, 10),
-                normal = { textColor = Color.white },
-                hover = { textColor = new Color(1f, 0.82f, 0.55f) }
+                normal = { textColor = new Color(0.08f, 0.28f, 0.29f) },
+                hover = { textColor = new Color(0.89f, 0.28f, 0.25f) }
             };
+            _buttonStyle.normal.background = _solidTexture;
+            _buttonStyle.hover.background = _solidTexture;
+            _buttonStyle.active.background = _solidTexture;
             _slotStyle = new GUIStyle(GUI.skin.button)
             {
                 fontSize = Mathf.RoundToInt(18f * scale),
@@ -1232,9 +1315,12 @@ namespace FamilyCompany.Presentation.Unity
                 alignment = TextAnchor.UpperLeft,
                 wordWrap = true,
                 padding = new RectOffset(24, 24, 24, 20),
-                normal = { textColor = Color.white },
-                hover = { textColor = new Color(1f, 0.82f, 0.55f) }
+                normal = { textColor = new Color(0.08f, 0.28f, 0.29f) },
+                hover = { textColor = new Color(0.89f, 0.28f, 0.25f) }
             };
+            _slotStyle.normal.background = _solidTexture;
+            _slotStyle.hover.background = _solidTexture;
+            _slotStyle.active.background = _solidTexture;
             _panelStyle = new GUIStyle(GUI.skin.box);
         }
 

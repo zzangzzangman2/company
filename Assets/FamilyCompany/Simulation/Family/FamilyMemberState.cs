@@ -17,7 +17,8 @@ namespace FamilyCompany.Simulation.Family
             int trust = 50,
             int stress = 0,
             EmployeeStats stats = null,
-            IEnumerable<CareerMemoryState> careerMemories = null)
+            IEnumerable<CareerMemoryState> careerMemories = null,
+            OfficeAutonomyState autonomy = null)
         {
             if (string.IsNullOrWhiteSpace(memberId))
             {
@@ -33,6 +34,7 @@ namespace FamilyCompany.Simulation.Family
             Trust = Clamp100(trust);
             Stress = Clamp100(stress);
             Stats = stats ?? EmployeeStats.StarterFor(role);
+            Autonomy = autonomy ?? new OfficeAutonomyState();
             _careerMemories = careerMemories == null
                 ? new List<CareerMemoryState>()
                 : new List<CareerMemoryState>(careerMemories);
@@ -51,6 +53,7 @@ namespace FamilyCompany.Simulation.Family
         public int Trust { get; private set; }
         public int Stress { get; private set; }
         public EmployeeStats Stats { get; }
+        public OfficeAutonomyState Autonomy { get; }
         private readonly List<CareerMemoryState> _careerMemories;
         public IReadOnlyList<CareerMemoryState> CareerMemories => _careerMemories;
 

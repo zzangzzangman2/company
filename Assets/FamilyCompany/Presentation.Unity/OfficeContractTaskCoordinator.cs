@@ -3,10 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.Family;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
 {
+    public enum OfficeAssignmentFailure
+    {
+        None = 0,
+        StateUnavailable = 1,
+        ContractNotActive = 2,
+        MemberUnavailable = 3,
+        AgentNotFound = 4,
+        AgentBusy = 5,
+        WaypointUnavailable = 6,
+        AgentRejected = 7
+    }
+
     public sealed class OfficeContractTaskCoordinator : MonoBehaviour
     {
         private sealed class PendingWork
@@ -35,6 +48,8 @@ namespace FamilyCompany.Presentation.Unity
         public int CompletedTaskCount { get; private set; }
         public string LastCompletedOfferId { get; private set; } = string.Empty;
         public ContractWorkResult LastWorkResult { get; private set; }
+        public OfficeAssignmentFailure LastAssignmentFailure { get; private set; }
+        public string LastAssignmentFailureLabel { get; private set; } = string.Empty;
 
         public void Configure(
             PrototypeBootstrap newBootstrap,
@@ -68,16 +83,54 @@ namespace FamilyCompany.Presentation.Unity
             if (string.IsNullOrWhiteSpace(memberId)) throw new ArgumentException("Member ID is required.", nameof(memberId));
             if (personHours <= 0) throw new ArgumentOutOfRangeException(nameof(personHours));
             InitializeNow();
-            if (bootstrap == null || bootstrap.State == null) return false;
+            if (bootstrap == null || bootstrap.State == null)
+            {
+                return FailAssignment(
+                    OfficeAssignmentFailure.StateUnavailable,
+                    "게임 상태를 준비하지 못했습니다.");
+            }
 
             var contract = bootstrap.State.Contracts.Get(offerId);
-            if (contract.Status != SubcontractStatus.Active) return false;
+            if (contract.Status != SubcontractStatus.Active)
+            {
+                return FailAssignment(
+                    OfficeAssignmentFailure.ContractNotActive,
+                    "진행 중인 계약이 아닙니다.");
+            }
+
+            var member = bootstrap.State.Family.Get(memberId);
+            var schedule = FamilyScheduleRules.Resolve(member.Role, bootstrap.State.Time.Now);
+            if (!schedule.CanPerformCompanyWork)
+            {
+                return FailAssignment(
+                    OfficeAssignmentFailure.MemberUnavailable,
+                    $"현재 {schedule.Label}이라 회사 업무를 할 수 없습니다.");
+            }
+
             var agent = agents.FirstOrDefault(item => item != null && item.AgentId == memberId);
-            if (agent == null || agent.HasAssignedTask) return false;
+            if (agent == null)
+            {
+                return FailAssignment(
+                    OfficeAssignmentFailure.AgentNotFound,
+                    "해당 가족은 직접 조작 대상이거나 사무실 이동 에이전트가 없습니다.");
+            }
+
+            if (agent.HasAssignedTask)
+            {
+                return FailAssignment(
+                    OfficeAssignmentFailure.AgentBusy,
+                    "해당 가족은 이미 계약 업무 중입니다.");
+            }
 
             var activity = ResolveActivity(contract);
-            var candidates = waypoints.Where(item => item != null && item.Activity == activity).ToArray();
-            if (candidates.Length == 0) return false;
+            var candidates = ResolveWaypointCandidates(agent, activity);
+            if (candidates.Length == 0)
+            {
+                return FailAssignment(
+                    OfficeAssignmentFailure.WaypointUnavailable,
+                    "사용할 업무 지점이 없습니다.");
+            }
+
             var waypointIndex = StableRandom.StableRandomInt(
                 $"office-contract:{bootstrap.State.WorldSeed}:{offerId}:{memberId}:{_taskSequence}",
                 candidates.Length);
@@ -87,11 +140,14 @@ namespace FamilyCompany.Presentation.Unity
             _pending.Add(taskId, new PendingWork(offerId, memberId, appliedHours));
             if (agent.AssignOfficeTask(taskId, candidates[waypointIndex], appliedHours * secondsPerPersonHour))
             {
+                ClearAssignmentFailure();
                 return true;
             }
 
             _pending.Remove(taskId);
-            return false;
+            return FailAssignment(
+                OfficeAssignmentFailure.AgentRejected,
+                "이동 에이전트가 업무 배정을 받지 못했습니다.");
         }
 
         public void ResetAssignments()
@@ -106,6 +162,7 @@ namespace FamilyCompany.Presentation.Unity
             CompletedTaskCount = 0;
             LastWorkResult = null;
             LastCompletedOfferId = string.Empty;
+            ClearAssignmentFailure();
         }
 
         private void Awake()
@@ -141,6 +198,40 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             _initialized = false;
+        }
+
+        private OfficeWaypoint[] ResolveWaypointCandidates(OfficeWorkerAgent assignedAgent, OfficeActivity activity)
+        {
+            var candidates = waypoints
+                .Where(item => item != null && item.Activity == activity)
+                .OrderBy(item => item.WaypointId, StringComparer.Ordinal)
+                .ToArray();
+            if (activity != OfficeActivity.Work && activity != OfficeActivity.Printing)
+            {
+                return candidates;
+            }
+
+            var occupiedTargets = new HashSet<OfficeWaypoint>(
+                agents
+                    .Where(item => item != null && item != assignedAgent && item.TargetWaypoint != null)
+                    .Select(item => item.TargetWaypoint));
+            var unoccupiedCandidates = candidates
+                .Where(item => !occupiedTargets.Contains(item))
+                .ToArray();
+            return unoccupiedCandidates.Length > 0 ? unoccupiedCandidates : candidates;
+        }
+
+        private bool FailAssignment(OfficeAssignmentFailure failure, string label)
+        {
+            LastAssignmentFailure = failure;
+            LastAssignmentFailureLabel = label ?? string.Empty;
+            return false;
+        }
+
+        private void ClearAssignmentFailure()
+        {
+            LastAssignmentFailure = OfficeAssignmentFailure.None;
+            LastAssignmentFailureLabel = string.Empty;
         }
 
         private static OfficeActivity ResolveActivity(SubcontractState contract)

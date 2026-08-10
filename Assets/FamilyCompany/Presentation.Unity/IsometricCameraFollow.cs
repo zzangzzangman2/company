@@ -10,8 +10,24 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private float minimumOrthographicSize = 5f;
         [SerializeField] private float maximumOrthographicSize = 10f;
         [SerializeField] private float zoomSpeed = 0.75f;
+        [SerializeField] private bool officeFramingEnabled;
+        [SerializeField] private Vector3 officeCenter = new Vector3(14f, 0f, 0f);
+        [SerializeField] private Vector2 officeSize = new Vector2(16f, 14f);
+        [SerializeField] private Vector3 officeOffset = new Vector3(0f, 13.5f, -13.5f);
+        [SerializeField] private float officeLookHeight = 0.6f;
+        [SerializeField] private float defaultOrthographicSize = 7.2f;
+        [SerializeField] private float officeOrthographicSize = 6.6f;
+        [SerializeField] private float orthographicSmoothTime = 0.16f;
         private Vector3 _velocity;
         private Camera _camera;
+        private float _orthographicVelocity;
+        private float _zoomOffset;
+
+        public bool IsOfficeFramingActive { get; private set; }
+        public bool OfficeFramingEnabled => officeFramingEnabled;
+        public Vector3 OfficeCenter => officeCenter;
+        public Vector2 OfficeSize => officeSize;
+        public float OfficeOrthographicSize => officeOrthographicSize;
 
         public void SetTarget(Transform value)
         {
@@ -28,6 +44,20 @@ namespace FamilyCompany.Presentation.Unity
                 _camera.orthographic = true;
                 _camera.orthographicSize = orthographicSize;
             }
+
+            defaultOrthographicSize = orthographicSize;
+            _zoomOffset = 0f;
+        }
+
+        public void ConfigureOfficeFraming(Vector3 center, Vector2 size, float orthographicSize)
+        {
+            officeFramingEnabled = true;
+            officeCenter = center;
+            officeSize = new Vector2(Mathf.Max(1f, size.x), Mathf.Max(1f, size.y));
+            officeOrthographicSize = Mathf.Clamp(
+                orthographicSize,
+                minimumOrthographicSize,
+                maximumOrthographicSize);
         }
 
         private void Awake()
@@ -41,18 +71,44 @@ namespace FamilyCompany.Presentation.Unity
             var scroll = Input.mouseScrollDelta.y;
             if (Mathf.Abs(scroll) > 0.01f)
             {
-                _camera.orthographicSize = Mathf.Clamp(
-                    _camera.orthographicSize - scroll * zoomSpeed,
-                    minimumOrthographicSize,
-                    maximumOrthographicSize);
+                var baseSize = IsTargetInsideOffice() ? officeOrthographicSize : defaultOrthographicSize;
+                _zoomOffset = Mathf.Clamp(
+                    _zoomOffset - scroll * zoomSpeed,
+                    minimumOrthographicSize - baseSize,
+                    maximumOrthographicSize - baseSize);
             }
         }
 
         private void LateUpdate()
         {
             if (target == null) return;
-            transform.position = Vector3.SmoothDamp(transform.position, target.position + offset, ref _velocity, smoothTime);
-            transform.LookAt(target.position + Vector3.up * 1.2f);
+            IsOfficeFramingActive = IsTargetInsideOffice();
+            var focus = IsOfficeFramingActive ? officeCenter : target.position;
+            var activeOffset = IsOfficeFramingActive ? officeOffset : offset;
+            var lookHeight = IsOfficeFramingActive ? officeLookHeight : 1.2f;
+            transform.position = Vector3.SmoothDamp(transform.position, focus + activeOffset, ref _velocity, smoothTime);
+            transform.LookAt(focus + Vector3.up * lookHeight);
+
+            if (_camera == null || !_camera.orthographic) return;
+            var baseSize = IsOfficeFramingActive ? officeOrthographicSize : defaultOrthographicSize;
+            var desiredSize = Mathf.Clamp(baseSize + _zoomOffset, minimumOrthographicSize, maximumOrthographicSize);
+            _camera.orthographicSize = Mathf.SmoothDamp(
+                _camera.orthographicSize,
+                desiredSize,
+                ref _orthographicVelocity,
+                orthographicSmoothTime);
+        }
+
+        private bool IsTargetInsideOffice()
+        {
+            if (!officeFramingEnabled || target == null) return false;
+            var halfWidth = officeSize.x * 0.5f;
+            var halfDepth = officeSize.y * 0.5f;
+            var position = target.position;
+            return position.x >= officeCenter.x - halfWidth &&
+                   position.x <= officeCenter.x + halfWidth &&
+                   position.z >= officeCenter.z - halfDepth &&
+                   position.z <= officeCenter.z + halfDepth;
         }
     }
 }

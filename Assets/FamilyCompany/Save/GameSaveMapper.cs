@@ -47,6 +47,20 @@ namespace FamilyCompany.Save
                     teamwork = member.Stats.Teamwork,
                     loyalty = member.Stats.Loyalty,
                     potential = member.Stats.Potential,
+                    autonomy = new OfficeAutonomySaveDto
+                    {
+                        currentAction = (int)member.Autonomy.CurrentAction,
+                        targetLocation = (int)member.Autonomy.TargetLocation,
+                        actionStartedMinute = member.Autonomy.ActionStartedMinute,
+                        actionEndsMinute = member.Autonomy.ActionEndsMinute,
+                        lastProcessedMinute = member.Autonomy.LastProcessedMinute,
+                        completedWorkBlocks = member.Autonomy.CompletedWorkBlocks,
+                        completedBreaks = member.Autonomy.CompletedBreaks,
+                        burnoutCount = member.Autonomy.BurnoutCount,
+                        lastIncidentSummary = member.Autonomy.LastIncidentSummary,
+                        lastIncidentMinute = member.Autonomy.LastIncidentMinute,
+                        lastSocialEventDay = member.Autonomy.LastSocialEventDay
+                    },
                     careerMemories = member.CareerMemories.Select(memory => new CareerMemorySaveDto
                     {
                         memoryId = memory.MemoryId,
@@ -152,7 +166,7 @@ namespace FamilyCompany.Save
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4)
+            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -194,6 +208,22 @@ namespace FamilyCompany.Save
                             memory.bondDelta,
                             memory.colleagueMemberIds))
                     : Enumerable.Empty<CareerMemoryState>();
+                var autonomy = save.schemaVersion >= 5
+                    ? member.autonomy == null
+                        ? throw new InvalidOperationException("Office autonomy data is incomplete.")
+                        : new OfficeAutonomyState(
+                            (AutonomousOfficeAction)member.autonomy.currentAction,
+                            (OfficeSemanticLocation)member.autonomy.targetLocation,
+                            member.autonomy.actionStartedMinute,
+                            member.autonomy.actionEndsMinute,
+                            member.autonomy.lastProcessedMinute,
+                            member.autonomy.completedWorkBlocks,
+                            member.autonomy.completedBreaks,
+                            member.autonomy.burnoutCount,
+                            member.autonomy.lastIncidentSummary,
+                            member.autonomy.lastIncidentMinute,
+                            member.autonomy.lastSocialEventDay)
+                    : new OfficeAutonomyState(lastProcessedMinute: save.elapsedMinutes);
                 return new FamilyMemberState(
                     member.memberId,
                     member.displayName,
@@ -204,7 +234,8 @@ namespace FamilyCompany.Save
                     member.trust,
                     member.stress,
                     stats,
-                    careerMemories);
+                    careerMemories,
+                    autonomy);
             }));
             var events = new DeterministicEventQueue(save.events.Select(item => new ScheduledEvent(
                 item.eventId,

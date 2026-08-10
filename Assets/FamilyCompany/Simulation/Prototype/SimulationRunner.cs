@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FamilyCompany.Simulation.Events;
+using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
 
 namespace FamilyCompany.Simulation.Prototype
@@ -21,24 +22,17 @@ namespace FamilyCompany.Simulation.Prototype
                 throw new ArgumentOutOfRangeException(nameof(minutes));
             }
 
-            var oldDay = _state.Time.ElapsedMinutes / 1440;
             _state.Time.Advance(minutes);
+            AutonomousOfficeSimulation.AdvanceTo(
+                _state.WorldSeed,
+                _state.Family,
+                _state.Time.ElapsedMinutes);
             _state.Contracts.FailOverdue(_state.Time.ElapsedMinutes, _state.Company, _state.Family);
             _state.Growth.ResolveProductIfDue(
                 _state.WorldSeed,
                 _state.Time.ElapsedMinutes,
                 _state.Family,
                 _state.Company);
-            var newDay = _state.Time.ElapsedMinutes / 1440;
-            for (var day = oldDay; day < newDay; day++)
-            {
-                foreach (var member in _state.Family.Members)
-                {
-                    member.ChangeEnergy(-8);
-                    member.ChangeStress(1);
-                }
-            }
-
             var due = _state.Events.DequeueDue(_state.Time.ElapsedMinutes);
             foreach (var scheduledEvent in due)
             {

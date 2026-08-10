@@ -1,0 +1,11 @@
+Maplestory typeface
+
+Copyright (c) NEXON Korea Corporation. All rights reserved.
+
+This application uses the Maplestory typeface provided by NEXON Korea.
+The typeface is free for personal and corporate use and may be bundled or
+embedded with this copyright notice. The distributed font files must not be
+modified or sold by themselves.
+
+Official source and terms:
+https://maplestory.nexon.com/Media/Font

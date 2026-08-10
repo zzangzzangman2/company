@@ -7,7 +7,7 @@ namespace FamilyCompany.Presentation.Unity
         Work = 2,
         Printing = 3,
         Meeting = 4,
-        Break = 5
+        Break = 5,
+        Outside = 6
     }
 }
-

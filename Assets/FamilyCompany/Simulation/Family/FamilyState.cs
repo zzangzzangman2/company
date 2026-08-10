@@ -58,6 +58,38 @@ namespace FamilyCompany.Simulation.Family
             }
         }
 
+        public void RecordPairCareerMemory(
+            string memoryId,
+            string firstMemberId,
+            string secondMemberId,
+            BusinessIndustry industry,
+            CareerMemoryKind kind,
+            string summary,
+            long occurredMinute,
+            int bondDelta)
+        {
+            if (string.IsNullOrWhiteSpace(memoryId)) throw new ArgumentException("Memory ID is required.", nameof(memoryId));
+            if (firstMemberId == secondMemberId) throw new ArgumentException("Relationship members must be different.");
+            var first = Get(firstMemberId);
+            var second = Get(secondMemberId);
+            first.RecordCareerMemory(new CareerMemoryState(
+                $"{memoryId}:{first.MemberId}",
+                industry,
+                kind,
+                summary,
+                occurredMinute,
+                bondDelta,
+                new[] { second.MemberId }));
+            second.RecordCareerMemory(new CareerMemoryState(
+                $"{memoryId}:{second.MemberId}",
+                industry,
+                kind,
+                summary,
+                occurredMinute,
+                bondDelta,
+                new[] { first.MemberId }));
+        }
+
         public int RelationshipScore(string memberId, string otherMemberId)
         {
             if (memberId == otherMemberId) throw new ArgumentException("Relationship members must be different.");

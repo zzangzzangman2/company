@@ -18,12 +18,12 @@
 - 시작 나이: 14
 - 임시 생일: 1985-08-10
 - 역할: 창업 아이디어, 제품 방향, 시장 조사, 현장 행동
-- 런타임 외형 정본: 짧은 짙은 갈색 머리, 갈색 눈, 빨간 뉴스보이캡
+- 런타임 외형 정본: 짧고 헝클어진 짙은 갈색 머리, 갈색 눈, **모자 없음**
 - 런타임 의상 정본: 흰색 후드 윈드브레이커와 남색 트리밍, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화
 - 정본 범위: 플레이어를 월드에서 식별하는 조작 말의 외형이다. 별도 VN 초상화나 실존 사용자 얼굴을 의미하지 않는다.
 - 기반 디자인: 기존 `simul` 타이틀의 14살 플레이어 디자인
-- 런타임 이동 정본: Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png
-- 런타임 방향: 정면·왼쪽·뒤·오른쪽, 방향별 걷기 2프레임
+- 런타임 이동 정본: `Assets/Art/Characters/Player/Pixel/HighMotion/player_pixel_walk8dir6_{a,b}_v1.png`
+- 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
 ### 누나
 
@@ -36,8 +36,8 @@
 - 신발 정본: 맨발. 두 발이 보이는 전신 원화를 기본으로 한다.
 - 초기 회사 역할: 운영, 고객 응대, 사무 지원. 세부 성격과 직책은 임시다.
 - 기반 에셋: 기존 경마장 표 판매원
-- 런타임 이동 정본: Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v2.png
-- 런타임 방향: 정면·왼쪽·뒤·오른쪽, 방향별 걷기 2프레임
+- 런타임 이동 정본: `Assets/Art/Characters/OlderSister/Pixel/HighMotion/older_sister_pixel_walk8dir6_{a,b}_v1.png`
+- 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
 ### 아빠
 
@@ -48,8 +48,8 @@
 - 외형 정본: 짧고 단정한 숯검정 가르마 머리와 관자놀이의 옅은 새치, 짙은 갈색 눈, 가는 은색 사각 안경, 넓은 어깨의 46살 성인
 - 의상 정본: 소매를 걷은 탁한 청록 셔츠, 차콜 슬랙스, 갈색 벨트·구두, 아날로그 손목시계
 - 정본 원화: Assets/Art/Characters/Father/father_office_neutral_v1.png
-- 런타임 이동 정본: Assets/Art/Characters/Father/Pixel/father_pixel_walk4x2_v1.png
-- 런타임 방향: 정면·왼쪽·뒤·오른쪽, 방향별 걷기 2프레임
+- 런타임 이동 정본: `Assets/Art/Characters/Father/Pixel/HighMotion/father_pixel_walk8dir6_{a,b}_v1.png`
+- 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
 ### 엄마
 
@@ -60,15 +60,15 @@
 - 외형 정본: 부드러운 성인형 얼굴, 어깨 길이의 짙은 밤색 머리와 낮은 하프업 트위스트, 갈색 눈, 단단하고 부드러운 체형의 44살 성인
 - 의상 정본: 더스티 피치 카디건, 크림 블라우스, 짙은 청록 A라인 스커트, 짙은 갈색 로퍼, 진주 귀걸이, 아날로그 손목시계
 - 정본 원화: Assets/Art/Characters/Mother/mother_office_neutral_v1.png
-- 런타임 이동 정본: Assets/Art/Characters/Mother/Pixel/mother_pixel_walk4x2_v1.png
-- 런타임 방향: 정면·왼쪽·뒤·오른쪽, 방향별 걷기 2프레임
+- 런타임 이동 정본: `Assets/Art/Characters/Mother/Pixel/HighMotion/mother_pixel_walk8dir6_{a,b}_v1.png`
+- 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
 ## 향후 직원 후보 8인
 
 - `simul`의 김서아·이지안·최이서·정아린·박하은·한수아·오지우·윤채아를 향후 고용 가능한 직원 후보 에셋 풀로 사용한다.
 - 각 인물의 정본 전신 원화 9종과 정체성 앵커는 외형·표정·복장을 바꾸지 않고 그대로 보존한다.
 - 에셋 루트: Assets/Art/Characters/Employees/
-- 인물별 런타임 도트는 정면·왼쪽·뒤·오른쪽과 방향별 걷기 2프레임을 가진다.
+- 인물별 런타임 도트는 8방향과 방향별 걷기 6프레임을 가진다. 정본 루트는 각 인물의 `Pixel/HighMotion/`이다.
 - 이 8인은 시작 시점의 4인 가족 창업팀에 자동 합류하지 않으며, 이후 고용 시스템에서 해금·채용한다.
 
 ## 에셋 권리
