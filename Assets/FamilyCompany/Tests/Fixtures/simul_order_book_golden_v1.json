@@ -1,0 +1,631 @@
+{
+  "schema": "simul-order-book-golden-v1",
+  "source": "simul/flutter_app/lib/game/order_book.dart",
+  "cadence": {
+    "ordinaryTurnoversEok": [
+      1.0,
+      50.0,
+      100.0,
+      500.0,
+      2000.0,
+      5000.0,
+      10000.0,
+      15000.0,
+      60000.0
+    ],
+    "ordinaryPulses": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      3,
+      4,
+      4
+    ],
+    "fastThreeTicks": 5,
+    "extremeSixTicks": 7,
+    "fivePercentSessionMove": 1,
+    "aboveSixPercentSessionMove": 5,
+    "unsupportedSparseImbalance": 1,
+    "supportedLiquidImbalance": 7,
+    "paused": 0
+  },
+  "frames": {
+    "minute": 617,
+    "slotFrames": [
+      4928,
+      4929,
+      4930,
+      4931,
+      4932,
+      4933,
+      4934,
+      4935
+    ],
+    "pendingAfterSlotTwoThroughSeven": [
+      4931,
+      4932,
+      4933,
+      4934,
+      4935
+    ]
+  },
+  "cumulativeCapacity": {
+    "capacity": 1001,
+    "fourSlots": [
+      0,
+      250,
+      501,
+      751,
+      1001
+    ],
+    "sevenSlots": [
+      0,
+      143,
+      286,
+      429,
+      572,
+      715,
+      858,
+      1001
+    ]
+  },
+  "marketMath": {
+    "positivePriceChangePercent": 4.4987146529562985,
+    "negativePriceChangePercent": -0.3856041131105398,
+    "balancedStrength": 100.0,
+    "buyOnlyStrength": 999.0,
+    "sellOnlyStrength": 0.0,
+    "maxQuoteUnknownShares": 100000000,
+    "maxQuoteTenMillionShares": 500000
+  },
+  "fills": {
+    "buy450Through10150": {
+      "side": "ask",
+      "filledQuantity": 450,
+      "notional": 4547500,
+      "averagePrice": 10105.555555555555,
+      "worstPrice": 10150.0,
+      "fills": [
+        {
+          "levelIndex": 0,
+          "price": 10050.0,
+          "quantity": 100
+        },
+        {
+          "levelIndex": 1,
+          "price": 10100.0,
+          "quantity": 200
+        },
+        {
+          "levelIndex": 2,
+          "price": 10150.0,
+          "quantity": 150
+        }
+      ]
+    },
+    "sell250Through9950": {
+      "side": "bid",
+      "filledQuantity": 250,
+      "notional": 2493500,
+      "averagePrice": 9974.0,
+      "worstPrice": 9950.0,
+      "fills": [
+        {
+          "levelIndex": 0,
+          "price": 10000.0,
+          "quantity": 120
+        },
+        {
+          "levelIndex": 1,
+          "price": 9950.0,
+          "quantity": 130
+        }
+      ]
+    },
+    "skipConsumedBestAsk": {
+      "side": "ask",
+      "filledQuantity": 150,
+      "notional": 1515000,
+      "averagePrice": 10100.0,
+      "worstPrice": 10100.0,
+      "fills": [
+        {
+          "levelIndex": 1,
+          "price": 10100.0,
+          "quantity": 150
+        }
+      ]
+    }
+  },
+  "transitions": {
+    "risePartialSecondAsk": {
+      "price": 10100.0,
+      "consumedUnits": 250,
+      "targetReached": false,
+      "consumedAsks": [
+        {
+          "price": 10050.0,
+          "quantity": 100
+        },
+        {
+          "price": 10100.0,
+          "quantity": 150
+        }
+      ],
+      "consumedBids": [],
+      "fills": [
+        {
+          "side": "ask",
+          "price": 10050.0,
+          "quantity": 100,
+          "remainingQuantity": 0,
+          "structuralBreach": false,
+          "boundaryCrossed": true
+        },
+        {
+          "side": "ask",
+          "price": 10100.0,
+          "quantity": 150,
+          "remainingQuantity": 50,
+          "structuralBreach": false,
+          "boundaryCrossed": false
+        }
+      ]
+    },
+    "fallThroughSecondBid": {
+      "price": 9950.0,
+      "consumedUnits": 360,
+      "targetReached": true,
+      "consumedAsks": [],
+      "consumedBids": [
+        {
+          "price": 10000.0,
+          "quantity": 120
+        },
+        {
+          "price": 9950.0,
+          "quantity": 240
+        }
+      ],
+      "fills": [
+        {
+          "side": "bid",
+          "price": 10000.0,
+          "quantity": 120,
+          "remainingQuantity": 0,
+          "structuralBreach": false,
+          "boundaryCrossed": true
+        },
+        {
+          "side": "bid",
+          "price": 9950.0,
+          "quantity": 240,
+          "remainingQuantity": 0,
+          "structuralBreach": false,
+          "boundaryCrossed": true
+        }
+      ]
+    }
+  },
+  "consumption": {
+    "fractionalHalfIgnored": {
+      "asks": [
+        {
+          "side": "ask",
+          "price": 10050.0,
+          "quantity": 100,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "ask",
+          "price": 10100.0,
+          "quantity": 200,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "ask",
+          "price": 10150.0,
+          "quantity": 300,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "bids": [
+        {
+          "side": "bid",
+          "price": 10000.0,
+          "quantity": 120,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9950.0,
+          "quantity": 240,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9900.0,
+          "quantity": 360,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "totalAskQuantity": 600,
+      "totalBidQuantity": 720,
+      "tradeStrength": 120.0,
+      "sourceLastTradePrice": null,
+      "appliedAskConsumptionByPrice": {
+        "10050.0": 0.5
+      },
+      "appliedBidConsumptionByPrice": {},
+      "appliedCapacityConsumptionUnits": 1
+    },
+    "cumulative40": {
+      "asks": [
+        {
+          "side": "ask",
+          "price": 10050.0,
+          "quantity": 60,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 100
+        },
+        {
+          "side": "ask",
+          "price": 10100.0,
+          "quantity": 200,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "ask",
+          "price": 10150.0,
+          "quantity": 300,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "bids": [
+        {
+          "side": "bid",
+          "price": 10000.0,
+          "quantity": 120,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9950.0,
+          "quantity": 240,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9900.0,
+          "quantity": 360,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "totalAskQuantity": 560,
+      "totalBidQuantity": 720,
+      "tradeStrength": 128.57142857142858,
+      "sourceLastTradePrice": 10050.0,
+      "appliedAskConsumptionByPrice": {
+        "10050.0": 40.0
+      },
+      "appliedBidConsumptionByPrice": {},
+      "appliedCapacityConsumptionUnits": 40
+    },
+    "repeated40Idempotent": {
+      "asks": [
+        {
+          "side": "ask",
+          "price": 10050.0,
+          "quantity": 60,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 100
+        },
+        {
+          "side": "ask",
+          "price": 10100.0,
+          "quantity": 200,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "ask",
+          "price": 10150.0,
+          "quantity": 300,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "bids": [
+        {
+          "side": "bid",
+          "price": 10000.0,
+          "quantity": 120,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9950.0,
+          "quantity": 240,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9900.0,
+          "quantity": 360,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "totalAskQuantity": 560,
+      "totalBidQuantity": 720,
+      "tradeStrength": 128.57142857142858,
+      "sourceLastTradePrice": 10050.0,
+      "appliedAskConsumptionByPrice": {
+        "10050.0": 40.0
+      },
+      "appliedBidConsumptionByPrice": {},
+      "appliedCapacityConsumptionUnits": 40
+    },
+    "cumulative70AppliesOnlyDelta": {
+      "asks": [
+        {
+          "side": "ask",
+          "price": 10050.0,
+          "quantity": 30,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 100
+        },
+        {
+          "side": "ask",
+          "price": 10100.0,
+          "quantity": 200,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "ask",
+          "price": 10150.0,
+          "quantity": 300,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "bids": [
+        {
+          "side": "bid",
+          "price": 10000.0,
+          "quantity": 120,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9950.0,
+          "quantity": 240,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9900.0,
+          "quantity": 360,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "totalAskQuantity": 530,
+      "totalBidQuantity": 720,
+      "tradeStrength": 135.8490566037736,
+      "sourceLastTradePrice": 10050.0,
+      "appliedAskConsumptionByPrice": {
+        "10050.0": 70.0
+      },
+      "appliedBidConsumptionByPrice": {},
+      "appliedCapacityConsumptionUnits": 70
+    },
+    "tinyRemainderHidden": {
+      "asks": [
+        {
+          "side": "ask",
+          "price": 10100.0,
+          "quantity": 200,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "ask",
+          "price": 10150.0,
+          "quantity": 300,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "bids": [
+        {
+          "side": "bid",
+          "price": 10000.0,
+          "quantity": 120,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9950.0,
+          "quantity": 240,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9900.0,
+          "quantity": 360,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "totalAskQuantity": 500,
+      "totalBidQuantity": 720,
+      "tradeStrength": 144.0,
+      "sourceLastTradePrice": 10050.0,
+      "appliedAskConsumptionByPrice": {
+        "10050.0": 95.0
+      },
+      "appliedBidConsumptionByPrice": {},
+      "appliedCapacityConsumptionUnits": 95
+    },
+    "structuralWallBreachAtNinetyPercent": {
+      "asks": [
+        {
+          "side": "ask",
+          "price": 10050.0,
+          "quantity": 10,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": true,
+          "queueRecoveryTargetQuantity": 25
+        }
+      ],
+      "bids": [
+        {
+          "side": "bid",
+          "price": 10000.0,
+          "quantity": 120,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9950.0,
+          "quantity": 240,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        },
+        {
+          "side": "bid",
+          "price": 9900.0,
+          "quantity": 360,
+          "isWall": false,
+          "isStructuralWall": false,
+          "isStructuralBreached": false,
+          "queueRecoveryTargetQuantity": 0
+        }
+      ],
+      "totalAskQuantity": 10,
+      "totalBidQuantity": 720,
+      "tradeStrength": 240.0,
+      "sourceLastTradePrice": 10050.0,
+      "appliedAskConsumptionByPrice": {
+        "10050.0": 90.0
+      },
+      "appliedBidConsumptionByPrice": {},
+      "appliedCapacityConsumptionUnits": 90
+    }
+  },
+  "splitPrints": {
+    "one": [
+      1
+    ],
+    "oneHundredTwentyThree": [
+      4,
+      23,
+      5,
+      5,
+      2,
+      5,
+      5,
+      3,
+      30,
+      41
+    ],
+    "tenThousand": [
+      4,
+      2515,
+      5,
+      5,
+      2,
+      5,
+      5,
+      3,
+      3138,
+      4318
+    ]
+  }
+}

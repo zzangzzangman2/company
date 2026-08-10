@@ -61,6 +61,16 @@ namespace FamilyCompany.Simulation.Company
             }));
         }
 
+        public void RecordContractPenalty(string transactionId, long elapsedMinute, long amountWon, string memo)
+        {
+            RequirePositive(amountWon);
+            Post(new LedgerTransaction(transactionId, elapsedMinute, memo, new[]
+            {
+                new LedgerLine(AccountCode.OperatingExpense, amountWon, 0),
+                new LedgerLine(AccountCode.Cash, 0, amountWon)
+            }));
+        }
+
         public void ChangeReputation(int delta)
         {
             Reputation = Math.Max(0, Math.Min(100, Reputation + delta));
@@ -89,4 +99,3 @@ namespace FamilyCompany.Simulation.Company
         }
     }
 }
-

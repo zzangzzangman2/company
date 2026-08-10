@@ -96,6 +96,22 @@
 - 2행: 걷기 A, 걷기 B
 - 기존 20살 누나의 양갈래, 리본, 청록색 눈, 나시티, 돌핀팬츠, 맨발 정본을 유지한다.
 
+## 부모 원화·도트 정본
+
+- 아빠 원화: `Assets/Art/Characters/Father/father_office_neutral_v1.png`
+- 아빠 도트: `Assets/Art/Characters/Father/Pixel/father_pixel_walk4x2_v1.png`
+- 엄마 원화: `Assets/Art/Characters/Mother/mother_office_neutral_v1.png`
+- 엄마 도트: `Assets/Art/Characters/Mother/Pixel/mother_pixel_walk4x2_v1.png`
+- 부모는 플레이어·누나보다 성숙한 얼굴 비율과 체형을 유지하며, 아빠 46살·엄마 44살의 나이가 읽혀야 한다.
+
+## 직원 후보 도트 정본
+
+- 루트: `Assets/Art/Characters/Employees/`
+- 대상: 김서아·이지안·최이서·정아린·박하은·한수아·오지우·윤채아
+- 각 `Portraits/`의 `simul` 정본 원화 9종은 변경하지 않는다.
+- 각 `Pixel/<id>_pixel_walk4x2_v1.png`는 원화의 얼굴, 머리, 복장, 대표 소지품을 유지한 런타임 번역이다.
+- 공통 셀 순서와 Point·180 PPU·하드 알파 규칙은 다른 가족 도트와 같다.
+
 ## 사무실 도트 모듈 정본
 
 - 아틀라스: `Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png`

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using FamilyCompany.Simulation.Core;
 
 namespace FamilyCompany.Simulation.Family
@@ -13,7 +15,9 @@ namespace FamilyCompany.Simulation.Family
             string companyDuty,
             int energy = 100,
             int trust = 50,
-            int stress = 0)
+            int stress = 0,
+            EmployeeStats stats = null,
+            IEnumerable<CareerMemoryState> careerMemories = null)
         {
             if (string.IsNullOrWhiteSpace(memberId))
             {
@@ -28,6 +32,14 @@ namespace FamilyCompany.Simulation.Family
             Energy = Clamp100(energy);
             Trust = Clamp100(trust);
             Stress = Clamp100(stress);
+            Stats = stats ?? EmployeeStats.StarterFor(role);
+            _careerMemories = careerMemories == null
+                ? new List<CareerMemoryState>()
+                : new List<CareerMemoryState>(careerMemories);
+            if (_careerMemories.Select(item => item.MemoryId).Distinct(StringComparer.Ordinal).Count() != _careerMemories.Count)
+            {
+                throw new InvalidOperationException("Career memory IDs must be unique per member.");
+            }
         }
 
         public string MemberId { get; }
@@ -38,6 +50,9 @@ namespace FamilyCompany.Simulation.Family
         public int Energy { get; private set; }
         public int Trust { get; private set; }
         public int Stress { get; private set; }
+        public EmployeeStats Stats { get; }
+        private readonly List<CareerMemoryState> _careerMemories;
+        public IReadOnlyList<CareerMemoryState> CareerMemories => _careerMemories;
 
         public int AgeAt(GameTime time)
         {
@@ -48,10 +63,17 @@ namespace FamilyCompany.Simulation.Family
         public void ChangeTrust(int delta) => Trust = Clamp100(Trust + delta);
         public void ChangeStress(int delta) => Stress = Clamp100(Stress + delta);
 
+        public void RecordCareerMemory(CareerMemoryState memory)
+        {
+            if (memory == null) throw new ArgumentNullException(nameof(memory));
+            if (_careerMemories.Any(item => item.MemoryId == memory.MemoryId)) return;
+            _careerMemories.Add(memory);
+            ChangeTrust(memory.BondDelta);
+        }
+
         private static int Clamp100(int value)
         {
             return Math.Max(0, Math.Min(100, value));
         }
     }
 }
-

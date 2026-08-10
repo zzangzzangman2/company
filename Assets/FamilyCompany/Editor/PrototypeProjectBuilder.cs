@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using FamilyCompany.Infrastructure.Unity;
 using FamilyCompany.Presentation.Unity;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -17,6 +18,7 @@ namespace FamilyCompany.Editor
         public const string SisterPortraitAssetPath = "Assets/Art/Characters/OlderSister/older_sister_casual_neutral_v2.png";
         public const string SisterPixelSheetPath = "Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v2.png";
         public const string TitleHeroAssetPath = "Assets/Art/UI/Resources/Title/family_company_title_hero_v1.png";
+        public const string KoreaHistoryRegistryAssetPath = "Assets/FamilyCompany/Content/History/company_registry_korea_2000_2026.json";
         public const string SisterFrameFolder = "Assets/Art/Characters/OlderSister/Pixel/Frames";
         public const string OfficeModuleAtlasPath = "Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png";
         public const string OfficeModuleFolder = "Assets/Art/Office/Pixel/Modules";
@@ -64,6 +66,10 @@ namespace FamilyCompany.Editor
 
             var systems = new GameObject("Systems");
             var bootstrap = systems.AddComponent<PrototypeBootstrap>();
+            var historyRegistry = AssetDatabase.LoadAssetAtPath<TextAsset>(KoreaHistoryRegistryAssetPath);
+            if (historyRegistry == null)
+                throw new InvalidOperationException($"Missing Korea History V1 registry: {KoreaHistoryRegistryAssetPath}");
+            systems.AddComponent<KoreaHistoryV1RuntimeCatalog>().Configure(historyRegistry);
 
             var environment = new GameObject("Environment");
             CreateHome(environment.transform);

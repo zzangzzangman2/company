@@ -1,0 +1,366 @@
+{
+  "schemaVersion": 1,
+  "schemaName": "family_company_history_baseline",
+  "generatedDate": "2026-08-10",
+  "author": "claude",
+  "scopeNote": "Korea History V1. At least 60 real Korean companies for 2000..2026, at least 25 companies detailed for 2000-01-01..2003-12-31, later entry/exit anchors, macro anchors and sourced acquisition evidence.",
+  "encodingRules": {
+    "encoding": "UTF-8 without BOM",
+    "commentsAllowed": false,
+    "dateFormat": "YYYY-MM-DD",
+    "openEndedDateValue": "",
+    "moneyUnit": "integer, unit declared per field",
+    "dictionariesAllowed": false,
+    "topLevelShape": "object with explicit named arrays, never a bare array and never dynamic keys"
+  },
+  "files": [
+    {
+      "fileName": "sources.json",
+      "rootArrayField": "sources",
+      "entityName": "SourceRecord",
+      "description": "Every historical claim resolves to at least one entry here."
+    },
+    {
+      "fileName": "company_registry_korea_2000_2026.json",
+      "rootArrayField": "companies",
+      "entityName": "KoreaCompany",
+      "description": "Korean company registry for 2000..2026. Real dated names only. displayNameKo is what the game shows."
+    },
+    {
+      "fileName": "company_events_korea_2000_2003.json",
+      "rootArrayField": "events",
+      "entityName": "HistoricalEvent",
+      "description": "Conditional baseline events for Korean companies, restricted to 2000-01-01..2003-12-31. Company references resolve against the Korean registry."
+    },
+    {
+      "fileName": "company_entry_exit_korea_2004_2026_anchor.json",
+      "rootArrayField": "anchors",
+      "entityName": "EntryExitAnchor",
+      "description": "Thin entry and exit markers for Korean companies from 2004 to 2026."
+    },
+    {
+      "fileName": "macro_timeline_korea_2000_2026_anchor.json",
+      "rootArrayField": "anchors",
+      "entityName": "MacroAnchor",
+      "description": "Korean macro and industry-transition skeleton for 2000..2026."
+    },
+    {
+      "fileName": "acquisition_evidence_korea.json",
+      "rootArrayField": "candidates",
+      "entityName": "AcquisitionCandidate",
+      "description": "Dated, sourced evidence of distress and asset-level sale opportunities. Never stores an invented purchase price."
+    }
+  ],
+  "entities": [
+    {
+      "entityName": "HistoricalEvent",
+      "fields": [
+        { "field": "eventId", "type": "string", "required": true, "description": "Permanent immutable id." },
+        { "field": "eventType", "type": "enum:eventType", "required": true, "description": "Coarse category used by the resolver." },
+        { "field": "title", "type": "string", "required": true, "description": "Short English title, development only." },
+        { "field": "titleKo", "type": "string", "required": false, "description": "Short Korean title, development only." },
+        { "field": "baselineDate", "type": "date", "required": true, "description": "Date the event happened in real history." },
+        { "field": "dateConfidence", "type": "enum:dateConfidence", "required": true, "description": "day, month or year precision of baselineDate." },
+        { "field": "earliestDate", "type": "date", "required": false, "description": "Earliest date the resolver may fire this event in a diverged run." },
+        { "field": "latestDate", "type": "date", "required": false, "description": "Latest date before the resolver must cancel or substitute." },
+        { "field": "primaryCompanyId", "type": "string", "required": true, "description": "companyId of the actor." },
+        { "field": "participantCompanyIds", "type": "string[]", "required": true, "description": "companyId references, includes primaryCompanyId." },
+        { "field": "externalPartyNames", "type": "string[]", "required": false, "description": "Counterparties deliberately left out of the registry in V1. Free text, never used as an id." },
+        { "field": "industryIds", "type": "string[]", "required": true, "description": "References vocabularies.industries." },
+        { "field": "importance", "type": "int", "required": true, "description": "1..5. 5 changes the industry, 1 is flavour." },
+        { "field": "prerequisites", "type": "Prerequisite[]", "required": true, "description": "All must hold for the baseline outcome. Empty array means unconditional." },
+        { "field": "failurePolicy", "type": "enum:failurePolicy", "required": true, "description": "cancel, delay, substitute or transfer when prerequisites fail." },
+        { "field": "delayMaxDays", "type": "int", "required": true, "description": "Required greater than zero when failurePolicy is delay, otherwise 0." },
+        { "field": "substituteCompanyIds", "type": "string[]", "required": true, "description": "Ordered fallback actors, required non-empty when failurePolicy is substitute." },
+        { "field": "transferTargetRule", "type": "enum:transferRule", "required": true, "description": "Who inherits the outcome, required non-empty when failurePolicy is transfer." },
+        { "field": "effects", "type": "Effect[]", "required": true, "description": "What the world gains when the event resolves successfully." },
+        { "field": "newsKeyBaseline", "type": "string", "required": true, "description": "Localization key for the on-time news item." },
+        { "field": "newsKeyDiverged", "type": "string", "required": true, "description": "Localization key used when the event is cancelled, delayed, substituted or transferred." },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId. Enforced by the validator." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "True when sources conflict or precision is below day level." },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "Prerequisite",
+      "fields": [
+        { "field": "prerequisiteType", "type": "enum:prerequisiteType", "required": true, "description": "Which check the resolver runs." },
+        { "field": "companyId", "type": "string", "required": false, "description": "Subject company, empty when not applicable." },
+        { "field": "otherCompanyId", "type": "string", "required": false, "description": "Object company for ownership checks." },
+        { "field": "technologyId", "type": "string", "required": false, "description": "References vocabularies.technologies." },
+        { "field": "marketId", "type": "string", "required": false, "description": "References vocabularies.markets." },
+        { "field": "requiredEventId", "type": "string", "required": false, "description": "eventId that must already have resolved." },
+        { "field": "minCashKrw", "type": "long", "required": false, "description": "Minimum cash in integer KRW, 0 when unused." },
+        { "field": "note", "type": "string", "required": false, "description": "Why this prerequisite exists." }
+      ]
+    },
+    {
+      "entityName": "Effect",
+      "fields": [
+        { "field": "effectType", "type": "enum:effectType", "required": true, "description": "What changes in WorldState." },
+        { "field": "companyId", "type": "string", "required": false, "description": "Company that gains the effect." },
+        { "field": "targetCompanyId", "type": "string", "required": false, "description": "Company that is acquired, renamed or ended." },
+        { "field": "technologyId", "type": "string", "required": false, "description": "References vocabularies.technologies." },
+        { "field": "industryId", "type": "string", "required": false, "description": "References vocabularies.industries." },
+        { "field": "marketId", "type": "string", "required": false, "description": "References vocabularies.markets." },
+        { "field": "magnitude", "type": "int", "required": false, "description": "Relative strength 0..100. Not a historical financial figure." },
+        { "field": "note", "type": "string", "required": false, "description": "Designer note." }
+      ]
+    },
+    {
+      "entityName": "MacroAnchor",
+      "fields": [
+        { "field": "anchorId", "type": "string", "required": true, "description": "Permanent immutable id." },
+        { "field": "anchorType", "type": "enum:anchorType", "required": true, "description": "macro_shock or industry_transition." },
+        { "field": "title", "type": "string", "required": true, "description": "Short English title." },
+        { "field": "titleKo", "type": "string", "required": false, "description": "Short Korean title." },
+        { "field": "startDate", "type": "date", "required": true, "description": "Window start." },
+        { "field": "endDate", "type": "date", "required": false, "description": "Window end, empty when still open at 2026-12-31." },
+        { "field": "dateConfidence", "type": "enum:dateConfidence", "required": true, "description": "Precision of startDate." },
+        { "field": "severity", "type": "int", "required": true, "description": "1..5 world pressure. Which companies are hurt is decided by WorldState, not by this file." },
+        { "field": "industryIds", "type": "string[]", "required": true, "description": "Industries whose demand or technology conditions change." },
+        { "field": "relatedCompanyIds", "type": "string[]", "required": false, "description": "companyId references already present in the registry, may be empty." },
+        { "field": "expansionOrder", "type": "int", "required": true, "description": "Suggested order for turning this anchor into detailed events. Lower goes first." },
+        { "field": "detailStatus", "type": "enum:detailStatus", "required": true, "description": "anchor_only until a later pass expands it." },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "True when the window is approximate." },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "KoreaCompany",
+      "fields": [
+        { "field": "companyId", "type": "string", "required": true, "description": "Permanent immutable id. Never derived from a name." },
+        { "field": "countryCode", "type": "string", "required": true, "description": "ISO 3166-1 alpha-2." },
+        { "field": "industryIds", "type": "string[]", "required": true, "description": "References vocabularies.industries." },
+        { "field": "companySizeTier", "type": "enum:companySizeTier", "required": true, "description": "Rough size class used to decide whether a four-person firm could ever transact with it." },
+        { "field": "detailLevel", "type": "enum:detailLevel", "required": true, "description": "detailed_2000_2003 means this company has events in the Korean events file." },
+        { "field": "playerReachIn2000", "type": "enum:playerReach", "required": true, "description": "How close the family company could get to this company on the 2000-01-03 campaign start." },
+        { "field": "nameHistory", "type": "KoreaCompanyName[]", "required": true, "description": "Dated real names. Ranges must not overlap." },
+        { "field": "actualBrands", "type": "KoreaBrand[]", "required": true, "description": "Brands and services bound to the legal entity that actually operated them." },
+        { "field": "predecessorIds", "type": "string[]", "required": true, "description": "companyId references." },
+        { "field": "successorIds", "type": "string[]", "required": true, "description": "companyId references." },
+        { "field": "listingHistory", "type": "ListingRecord[]", "required": true, "description": "Dated listing state per market." },
+        { "field": "ownershipHistory", "type": "OwnershipRecord[]", "required": true, "description": "Dated control relations." },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "True on source conflict or unconfirmed core identity." },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." },
+        { "field": "notes", "type": "string", "required": false, "description": "Design note for Codex." }
+      ]
+    },
+    {
+      "entityName": "KoreaCompanyName",
+      "fields": [
+        { "field": "legalNameKo", "type": "string", "required": true, "description": "Korean legal entity name as used at the time." },
+        { "field": "legalNameEn", "type": "string", "required": false, "description": "English legal name as used at the time." },
+        { "field": "displayNameKo", "type": "string", "required": true, "description": "The real Korean name the game shows. Never a pseudonym." },
+        { "field": "fromDate", "type": "date", "required": true, "description": "First day this name applied." },
+        { "field": "toDate", "type": "date", "required": false, "description": "Last day this name applied, inclusive. Empty means current." },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "True when the change date is not confirmed to the day." },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "KoreaBrand",
+      "fields": [
+        { "field": "brandNameKo", "type": "string", "required": true, "description": "Brand or service name people often mistake for a company." },
+        { "field": "operatingCompanyId", "type": "string", "required": true, "description": "companyId of the legal entity that actually operated the brand in this window." },
+        { "field": "fromDate", "type": "date", "required": true, "description": "" },
+        { "field": "toDate", "type": "date", "required": false, "description": "Empty means still operating." },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "" },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "ListingRecord",
+      "fields": [
+        { "field": "market", "type": "enum:listingMarket", "required": true, "description": "" },
+        { "field": "ticker", "type": "string", "required": false, "description": "Empty when unknown." },
+        { "field": "status", "type": "enum:listingRecordStatus", "required": true, "description": "" },
+        { "field": "fromDate", "type": "date", "required": true, "description": "" },
+        { "field": "toDate", "type": "date", "required": false, "description": "" },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "" },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "OwnershipRecord",
+      "fields": [
+        { "field": "ownerCompanyId", "type": "string", "required": false, "description": "companyId when the owner is in the registry, empty when the owner is only a name." },
+        { "field": "ownerName", "type": "string", "required": true, "description": "Real name of the controlling party." },
+        { "field": "ownershipType", "type": "enum:ownershipType", "required": true, "description": "Direction matters. controls means this row's company controls ownerName, subsidiary_of means the opposite." },
+        { "field": "fromDate", "type": "date", "required": true, "description": "" },
+        { "field": "toDate", "type": "date", "required": false, "description": "" },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "" },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "EntryExitAnchor",
+      "fields": [
+        { "field": "anchorId", "type": "string", "required": true, "description": "" },
+        { "field": "companyId", "type": "string", "required": true, "description": "companyId in the Korean registry." },
+        { "field": "anchorKind", "type": "enum:entryExitKind", "required": true, "description": "What kind of arrival or departure this marks." },
+        { "field": "title", "type": "string", "required": true, "description": "" },
+        { "field": "eventDate", "type": "date", "required": true, "description": "" },
+        { "field": "dateConfidence", "type": "enum:dateConfidence", "required": true, "description": "" },
+        { "field": "industryIds", "type": "string[]", "required": true, "description": "" },
+        { "field": "expansionOrder", "type": "int", "required": true, "description": "Lower goes first when a later pass turns this into detailed events." },
+        { "field": "detailStatus", "type": "enum:detailStatus", "required": true, "description": "" },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "" },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "AcquisitionCandidate",
+      "fields": [
+        { "field": "candidateId", "type": "string", "required": true, "description": "" },
+        { "field": "companyId", "type": "string", "required": true, "description": "companyId of the distressed or selling company." },
+        { "field": "candidateScope", "type": "enum:candidateScope", "required": true, "description": "whole_company or an asset level slice a four-person firm could actually buy." },
+        { "field": "assetKind", "type": "enum:assetKind", "required": true, "description": "none for whole_company, otherwise what is on sale." },
+        { "field": "windowStart", "type": "date", "required": true, "description": "Earliest date the opportunity is open." },
+        { "field": "windowEnd", "type": "date", "required": false, "description": "" },
+        { "field": "distressStatus", "type": "enum:distressStatus", "required": true, "description": "Publicly reported financial state during the window." },
+        { "field": "evidenceNote", "type": "string", "required": true, "description": "What the sources actually establish, in plain language." },
+        { "field": "hasPublicValuation", "type": "bool", "required": true, "description": "True only when a dated, sourced monetary figure exists. This dataset stores no invented price." },
+        { "field": "publicValuationNote", "type": "string", "required": false, "description": "The sourced figure and its date, or empty." },
+        { "field": "evidenceMetrics", "type": "AcquisitionMetric[]", "required": false, "description": "Optional dated assets, liabilities, revenue, market capitalization or reported transaction value. Never inferred." },
+        { "field": "playerAffordabilityHint", "type": "enum:affordability", "required": true, "description": "Design hint only, never a historical claim." },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "" },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "AcquisitionMetric",
+      "fields": [
+        { "field": "metricType", "type": "enum:acquisitionMetricType", "required": true, "description": "Kind of sourced scale evidence." },
+        { "field": "asOfDate", "type": "date", "required": true, "description": "Date of the measurement or report." },
+        { "field": "amountKrw", "type": "long", "required": true, "description": "Integer KRW exactly as reported or converted from an explicitly KRW-denominated source." },
+        { "field": "sourceIds", "type": "string[]", "required": true, "description": "At least one sourceId." },
+        { "field": "needsReview", "type": "bool", "required": true, "description": "True when the transaction structure or date remains uncertain." },
+        { "field": "reviewNote", "type": "string", "required": false, "description": "Required when needsReview is true." }
+      ]
+    },
+    {
+      "entityName": "SourceRecord",
+      "fields": [
+        { "field": "sourceId", "type": "string", "required": true, "description": "Permanent immutable id." },
+        { "field": "title", "type": "string", "required": true, "description": "Document or page title." },
+        { "field": "url", "type": "string", "required": true, "description": "Canonical URL of the document." },
+        { "field": "publisher", "type": "string", "required": true, "description": "Issuing body." },
+        { "field": "sourceTier", "type": "enum:sourceTier", "required": true, "description": "primary_filing, primary_company, secondary_press or reference." },
+        { "field": "publishedDate", "type": "date", "required": false, "description": "Publication date when known." },
+        { "field": "checkedDate", "type": "date", "required": true, "description": "Date this record was verified." },
+        { "field": "verificationMethod", "type": "enum:verificationMethod", "required": true, "description": "How the content was read during this pass." },
+        { "field": "note", "type": "string", "required": false, "description": "What exactly this source establishes." }
+      ]
+    }
+  ],
+  "enums": [
+    { "enumName": "dateConfidence", "values": ["day", "month", "year"] },
+    { "enumName": "eventType", "values": ["founding", "rename", "ipo", "listing_change", "product_launch", "product_line_shift", "merger", "acquisition", "spinoff", "joint_venture", "bankruptcy", "market_exit", "leadership_change", "financial_result", "legal_regulatory", "industry_transition", "capital_event"] },
+    { "enumName": "failurePolicy", "values": ["cancel", "delay", "substitute", "transfer"] },
+    { "enumName": "transferRule", "values": ["", "acquirer_of_primary", "owner_of_technology", "named_substitute", "strongest_rival_in_industry"] },
+    { "enumName": "prerequisiteType", "values": ["company_exists", "company_independent", "company_solvent", "company_owns_technology", "company_controls_company", "technology_available", "market_condition", "event_completed", "minimum_cash"] },
+    { "enumName": "effectType", "values": ["unlock_product_line", "technology_gain", "market_share_shift", "ownership_transfer", "listing_change", "entity_rename", "entity_end", "capital_change", "industry_shift", "reputation_change", "contract_demand_change"] },
+    { "enumName": "anchorType", "values": ["macro_shock", "industry_transition"] },
+    { "enumName": "detailStatus", "values": ["anchor_only", "partially_detailed", "detailed"] },
+    { "enumName": "sourceTier", "values": ["primary_filing", "primary_company", "secondary_press", "reference"] },
+    { "enumName": "verificationMethod", "values": ["fetched_full_page", "search_index_of_document", "not_reached"] },
+    { "enumName": "companySizeTier", "values": ["startup", "small", "midsize", "large", "conglomerate"] },
+    { "enumName": "detailLevel", "values": ["detailed_2000_2003", "anchor_only"] },
+    { "enumName": "playerReach", "values": ["tier1_prime", "tier2_client", "tier3_peer", "not_yet_existing"] },
+    { "enumName": "listingMarket", "values": ["KOSPI", "KOSDAQ", "NASDAQ", "NYSE", "TSE", "LSE", "OTC"] },
+    { "enumName": "listingRecordStatus", "values": ["listed", "suspended", "delisted", "transferred"] },
+    { "enumName": "ownershipType", "values": ["controls", "subsidiary_of", "joint_venture", "minority", "controlling"] },
+    { "enumName": "entryExitKind", "values": ["incorporation", "rename", "listing", "delisting", "acquired", "merged_away", "bankruptcy", "rehabilitation", "liquidation", "market_pivot"] },
+    { "enumName": "candidateScope", "values": ["whole_company", "asset_only"] },
+    { "enumName": "assetKind", "values": ["none", "business_unit", "source_code", "patent", "domain", "equipment", "customer_contracts", "key_staff", "brand"] },
+    { "enumName": "distressStatus", "values": ["going_concern", "liquidity_stress", "trading_halt", "administration", "rehabilitation", "insolvent", "bankrupt", "liquidated", "delisted"] },
+    { "enumName": "affordability", "values": ["reachable_early", "reachable_after_growth", "out_of_reach", "unknown"] }
+    ,{ "enumName": "acquisitionMetricType", "values": ["assets", "liabilities", "revenue", "market_cap", "reported_transaction_value"] }
+  ],
+  "vocabularies": {
+    "industries": [
+      { "id": "ind_personal_computing", "label": "Personal computing hardware" },
+      { "id": "ind_software_os", "label": "Operating systems" },
+      { "id": "ind_software_enterprise", "label": "Enterprise and productivity software" },
+      { "id": "ind_internet_portal", "label": "Internet portals" },
+      { "id": "ind_internet_search", "label": "Web search" },
+      { "id": "ind_online_advertising", "label": "Online advertising" },
+      { "id": "ind_ecommerce", "label": "E-commerce and marketplaces" },
+      { "id": "ind_isp_access", "label": "Consumer internet access" },
+      { "id": "ind_media_content", "label": "Media and content" },
+      { "id": "ind_digital_music", "label": "Digital music distribution" },
+      { "id": "ind_consumer_electronics", "label": "Consumer electronics" },
+      { "id": "ind_home_appliance", "label": "Home appliances" },
+      { "id": "ind_mobile_handset", "label": "Mobile handsets" },
+      { "id": "ind_mobile_network", "label": "Mobile network operators" },
+      { "id": "ind_fixed_telecom", "label": "Fixed line and broadband carriers" },
+      { "id": "ind_network_equipment", "label": "Network equipment" },
+      { "id": "ind_semiconductor", "label": "Semiconductors" },
+      { "id": "ind_memory", "label": "Memory devices" },
+      { "id": "ind_display", "label": "Displays" },
+      { "id": "ind_video_game", "label": "Video games and consoles" },
+      { "id": "ind_it_services", "label": "IT services and subcontracting" },
+      { "id": "ind_cloud_platform", "label": "Cloud platforms" },
+      { "id": "ind_software_security", "label": "Security software and certification" },
+      { "id": "ind_payments", "label": "Payment gateways and settlement" }
+    ],
+    "technologies": [
+      { "id": "tech_gui_unix_os", "label": "Unix based consumer GUI operating system" },
+      { "id": "tech_portable_music_player", "label": "Hard disk portable music player" },
+      { "id": "tech_music_licensing", "label": "Major label download licensing" },
+      { "id": "tech_retail_operations", "label": "Own brand retail store operations" },
+      { "id": "tech_web_search_index", "label": "Large scale web crawl and index" },
+      { "id": "tech_ppc_auction", "label": "Pay per click keyword auction" },
+      { "id": "tech_contextual_ad_matching", "label": "Contextual page to ad matching" },
+      { "id": "tech_marketplace_platform", "label": "Third party seller marketplace" },
+      { "id": "tech_web_service_api", "label": "Public web service API" },
+      { "id": "tech_console_hardware", "label": "Home game console hardware" },
+      { "id": "tech_optical_disc_media", "label": "Optical disc media platform" },
+      { "id": "tech_wcdma_3g", "label": "W-CDMA 3G network" },
+      { "id": "tech_cdma2000_1x", "label": "CDMA2000 1x network" },
+      { "id": "tech_cdma2000_evdo", "label": "CDMA2000 1xEV-DO network" },
+      { "id": "tech_mobile_internet_platform", "label": "Carrier mobile internet platform" },
+      { "id": "tech_symbian_smartphone", "label": "Symbian smartphone platform" },
+      { "id": "tech_camera_phone", "label": "Integrated camera phone" },
+      { "id": "tech_nand_flash", "label": "NAND flash memory" },
+      { "id": "tech_tft_lcd", "label": "TFT LCD panel" },
+      { "id": "tech_cdma_handset", "label": "CDMA handset design" },
+      { "id": "tech_industrial_design_org", "label": "In-house industrial design organisation" },
+      { "id": "tech_broadband_access", "label": "Consumer broadband access network" },
+      { "id": "tech_voip", "label": "Voice over internet telephony" },
+      { "id": "tech_mobile_billing", "label": "Carrier billed mobile payment" },
+      { "id": "tech_antivirus_engine", "label": "Anti-virus and intrusion response engine" },
+      { "id": "tech_online_game_platform", "label": "Persistent online game service platform" },
+      { "id": "tech_portal_mail_platform", "label": "Large scale consumer mail and community platform" }
+    ],
+    "markets": [
+      { "id": "mkt_kr", "label": "Korea" },
+      { "id": "mkt_jp", "label": "Japan" },
+      { "id": "mkt_us", "label": "United States" },
+      { "id": "mkt_eu", "label": "Europe" },
+      { "id": "mkt_global", "label": "Global" }
+    ]
+  },
+  "invariants": [
+    "companyId, eventId, sourceId and anchorId are globally unique within their own file.",
+    "Every id referenced from any file must exist in the file that owns it.",
+    "Every HistoricalEvent and MacroAnchor carries at least one sourceId.",
+    "endDate is never earlier than startDate, and baselineEndDate is never earlier than baselineFoundedDate.",
+    "nameHistory ranges of the same companyId never overlap.",
+    "needsReview true requires a non-empty reviewNote. Uncertainty is reported, never guessed away.",
+    "needsReview is raised when sources conflict, or when a fact inside 2000-01-01..2003-12-31 is below day precision or has no source that was actually read. Precision of facts outside that range is carried by dateConfidence and baselineFoundedDateVerified instead, so that the needsReview list stays a short actionable queue.",
+    "company_events_korea_2000_2003.json only contains events inside 2000-01-01..2003-12-31.",
+    "At least 60 countryCode KR companies exist and at least 25 are detailed for 2000-2003.",
+    "fictionalAlias, fictionalName, aliases, releaseNameKey, releaseNameMap and debugDisplayName fields are forbidden.",
+    "This file is read-only baseline input. WorldState and DivergenceLog never write back into it."
+  ]
+}

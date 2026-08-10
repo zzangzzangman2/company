@@ -1,4 +1,5 @@
 using System;
+using FamilyCompany.Simulation.Company;
 
 namespace FamilyCompany.Simulation.Contracts
 {
@@ -15,7 +16,12 @@ namespace FamilyCompany.Simulation.Contracts
             int deadlineDays,
             long upfrontCostWon,
             long rewardWon,
-            int reputationRequired)
+            int reputationRequired,
+            long penaltyWon = 0,
+            int requiredDevelopment = 0,
+            int requiredSpeed = 0,
+            string requiredTechnologyId = "",
+            BusinessIndustry industry = BusinessIndustry.WebAndSoftware)
         {
             OfferId = RequireText(offerId, nameof(offerId));
             ClientCompanyId = RequireText(clientCompanyId, nameof(clientCompanyId));
@@ -32,6 +38,10 @@ namespace FamilyCompany.Simulation.Contracts
             if (deadlineDays <= 0) throw new ArgumentOutOfRangeException(nameof(deadlineDays));
             if (upfrontCostWon < 0) throw new ArgumentOutOfRangeException(nameof(upfrontCostWon));
             if (rewardWon <= upfrontCostWon) throw new ArgumentOutOfRangeException(nameof(rewardWon));
+            if (penaltyWon < 0) throw new ArgumentOutOfRangeException(nameof(penaltyWon));
+            if (requiredDevelopment < 0 || requiredDevelopment > 100) throw new ArgumentOutOfRangeException(nameof(requiredDevelopment));
+            if (requiredSpeed < 0 || requiredSpeed > 100) throw new ArgumentOutOfRangeException(nameof(requiredSpeed));
+            if (!Enum.IsDefined(typeof(BusinessIndustry), industry)) throw new ArgumentOutOfRangeException(nameof(industry));
             if (reputationRequired < 0 || reputationRequired > 100)
             {
                 throw new ArgumentOutOfRangeException(nameof(reputationRequired));
@@ -44,6 +54,11 @@ namespace FamilyCompany.Simulation.Contracts
             UpfrontCostWon = upfrontCostWon;
             RewardWon = rewardWon;
             ReputationRequired = reputationRequired;
+            PenaltyWon = penaltyWon;
+            RequiredDevelopment = requiredDevelopment;
+            RequiredSpeed = requiredSpeed;
+            RequiredTechnologyId = requiredTechnologyId ?? string.Empty;
+            Industry = industry;
         }
 
         public string OfferId { get; }
@@ -60,6 +75,11 @@ namespace FamilyCompany.Simulation.Contracts
         public long UpfrontCostWon { get; }
         public long RewardWon { get; }
         public int ReputationRequired { get; }
+        public long PenaltyWon { get; }
+        public int RequiredDevelopment { get; }
+        public int RequiredSpeed { get; }
+        public string RequiredTechnologyId { get; }
+        public BusinessIndustry Industry { get; }
 
         private static string RequireText(string value, string parameterName)
         {

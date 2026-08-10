@@ -12,7 +12,10 @@ namespace FamilyCompany.Simulation.Contracts
         UpfrontCashInsufficient = 5,
         ReputationInsufficient = 6,
         RewardOutsideBootstrapScope = 7,
-        DuplicateOffer = 8
+        DuplicateOffer = 8,
+        DevelopmentInsufficient = 9,
+        SpeedInsufficient = 10,
+        RequiredTechnologyMissing = 11
     }
 
     public sealed class ContractCapacityDecision
@@ -68,7 +71,6 @@ namespace FamilyCompany.Simulation.Contracts
             int committedPersonHours)
         {
             if (offer == null) throw new ArgumentNullException(nameof(offer));
-            if (companyCashWon < 0) throw new ArgumentOutOfRangeException(nameof(companyCashWon));
             if (companyReputation < 0 || companyReputation > 100) throw new ArgumentOutOfRangeException(nameof(companyReputation));
             if (activeContractCount < 0) throw new ArgumentOutOfRangeException(nameof(activeContractCount));
             if (committedPersonHours < 0) throw new ArgumentOutOfRangeException(nameof(committedPersonHours));

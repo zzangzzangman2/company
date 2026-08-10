@@ -2,9 +2,9 @@
   "name": "FamilyCompany.Infrastructure.Unity",
   "rootNamespace": "FamilyCompany.Infrastructure.Unity",
   "references": [
-    "FamilyCompany.Save"
+    "FamilyCompany.Save",
+    "FamilyCompany.Simulation"
   ],
   "autoReferenced": true,
   "allowUnsafeCode": false
 }
-

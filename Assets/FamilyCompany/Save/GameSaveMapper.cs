@@ -36,7 +36,27 @@ namespace FamilyCompany.Save
                     companyDuty = member.CompanyDuty,
                     energy = member.Energy,
                     trust = member.Trust,
-                    stress = member.Stress
+                    stress = member.Stress,
+                    development = member.Stats.Development,
+                    speed = member.Stats.Speed,
+                    stamina = member.Stats.Stamina,
+                    planning = member.Stats.Planning,
+                    art = member.Stats.Art,
+                    sales = member.Stats.Sales,
+                    mental = member.Stats.Mental,
+                    teamwork = member.Stats.Teamwork,
+                    loyalty = member.Stats.Loyalty,
+                    potential = member.Stats.Potential,
+                    careerMemories = member.CareerMemories.Select(memory => new CareerMemorySaveDto
+                    {
+                        memoryId = memory.MemoryId,
+                        industry = (int)memory.Industry,
+                        kind = (int)memory.Kind,
+                        summary = memory.Summary,
+                        occurredMinute = memory.OccurredMinute,
+                        bondDelta = memory.BondDelta,
+                        colleagueMemberIds = memory.ColleagueMemberIds.ToList()
+                    }).ToList()
                 }).ToList(),
                 events = state.Events.Snapshot().Select(item => new ScheduledEventSaveDto
                 {
@@ -71,6 +91,11 @@ namespace FamilyCompany.Save
                     upfrontCostWon = contract.Offer.UpfrontCostWon,
                     rewardWon = contract.Offer.RewardWon,
                     reputationRequired = contract.Offer.ReputationRequired,
+                    penaltyWon = contract.Offer.PenaltyWon,
+                    requiredDevelopment = contract.Offer.RequiredDevelopment,
+                    requiredSpeed = contract.Offer.RequiredSpeed,
+                    requiredTechnologyId = contract.Offer.RequiredTechnologyId,
+                    industry = (int)contract.Offer.Industry,
                     acceptedMinute = contract.AcceptedMinute,
                     status = (int)contract.Status,
                     completedPersonHours = contract.CompletedPersonHours,
@@ -80,14 +105,54 @@ namespace FamilyCompany.Save
                         memberId = item.MemberId,
                         personHours = item.PersonHours
                     }).ToList()
-                }).ToList()
+                }).ToList(),
+                growth = new CompanyGrowthSaveDto
+                {
+                    researchCenterUnlocked = state.Growth.ResearchCenterUnlocked,
+                    researchedTechnologyIds = state.Growth.ResearchedTechnologyIds.ToList(),
+                    marketReportSequence = state.Growth.MarketReportSequence,
+                    productSequence = state.Growth.ProductSequence,
+                    hasMarketReport = state.Growth.MarketReport != null,
+                    hasProductProject = state.Growth.ProductProject != null,
+                    marketReport = state.Growth.MarketReport == null ? null : new MarketReportSaveDto
+                    {
+                        genre = state.Growth.MarketReport.Genre,
+                        desiredFeature = state.Growth.MarketReport.DesiredFeature,
+                        demand = state.Growth.MarketReport.Demand,
+                        purchasedMinute = state.Growth.MarketReport.PurchasedMinute,
+                        industry = (int)state.Growth.MarketReport.Industry
+                    },
+                    productProject = state.Growth.ProductProject == null ? null : new ProductProjectSaveDto
+                    {
+                        sequence = state.Growth.ProductProject.Sequence,
+                        title = state.Growth.ProductProject.Title,
+                        targetGenre = state.Growth.ProductProject.TargetGenre,
+                        targetFeature = state.Growth.ProductProject.TargetFeature,
+                        budgetWon = state.Growth.ProductProject.BudgetWon,
+                        startedMinute = state.Growth.ProductProject.StartedMinute,
+                        dueMinute = state.Growth.ProductProject.DueMinute,
+                        resolved = state.Growth.ProductProject.Resolved,
+                        quality = state.Growth.ProductProject.Quality,
+                        revenueWon = state.Growth.ProductProject.RevenueWon,
+                        industry = (int)state.Growth.ProductProject.Industry
+                    },
+                    ownedBusinesses = state.Growth.OwnedBusinesses.Select(item => new OwnedBusinessSaveDto
+                    {
+                        industry = (int)item.Industry,
+                        businessName = item.BusinessName,
+                        foundedMinute = item.FoundedMinute,
+                        foundingInvestmentWon = item.FoundingInvestmentWon,
+                        totalRevenueWon = item.TotalRevenueWon,
+                        launchedProductCount = item.LaunchedProductCount
+                    }).ToList()
+                }
             };
         }
 
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion != 1 && save.schemaVersion != 2)
+            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -102,15 +167,45 @@ namespace FamilyCompany.Save
                 transaction.memo,
                 transaction.lines.Select(line => new LedgerLine(line.accountCode, line.debitWon, line.creditWon))));
             var company = new CompanyState(save.company.companyName, save.company.cashWon, save.company.reputation, ledger);
-            var family = new FamilyState(save.family.Select(member => new FamilyMemberState(
-                member.memberId,
-                member.displayName,
-                (FamilyRole)member.role,
-                new DateTime(member.birthYear, member.birthMonth, member.birthDay),
-                member.companyDuty,
-                member.energy,
-                member.trust,
-                member.stress)));
+            var family = new FamilyState(save.family.Select(member =>
+            {
+                var role = (FamilyRole)member.role;
+                var stats = save.schemaVersion >= 3
+                    ? new EmployeeStats(
+                        member.development,
+                        member.speed,
+                        member.stamina,
+                        member.planning,
+                        member.art,
+                        member.sales,
+                        member.mental,
+                        member.teamwork,
+                        member.loyalty,
+                        member.potential)
+                    : EmployeeStats.StarterFor(role);
+                var careerMemories = save.schemaVersion >= 4
+                    ? (member.careerMemories ?? throw new InvalidOperationException("Career memory data is incomplete."))
+                        .Select(memory => new CareerMemoryState(
+                            memory.memoryId,
+                            (BusinessIndustry)memory.industry,
+                            (CareerMemoryKind)memory.kind,
+                            memory.summary,
+                            memory.occurredMinute,
+                            memory.bondDelta,
+                            memory.colleagueMemberIds))
+                    : Enumerable.Empty<CareerMemoryState>();
+                return new FamilyMemberState(
+                    member.memberId,
+                    member.displayName,
+                    role,
+                    new DateTime(member.birthYear, member.birthMonth, member.birthDay),
+                    member.companyDuty,
+                    member.energy,
+                    member.trust,
+                    member.stress,
+                    stats,
+                    careerMemories);
+            }));
             var events = new DeterministicEventQueue(save.events.Select(item => new ScheduledEvent(
                 item.eventId,
                 item.dueMinute,
@@ -134,7 +229,12 @@ namespace FamilyCompany.Save
                     item.deadlineDays,
                     item.upfrontCostWon,
                     item.rewardWon,
-                    item.reputationRequired);
+                    item.reputationRequired,
+                    item.penaltyWon,
+                    item.requiredDevelopment,
+                    item.requiredSpeed,
+                    item.requiredTechnologyId,
+                    save.schemaVersion >= 4 ? (BusinessIndustry)item.industry : BusinessIndustry.WebAndSoftware);
                 return new SubcontractState(
                     offer,
                     item.acceptedMinute,
@@ -145,7 +245,66 @@ namespace FamilyCompany.Save
                         contribution.memberId,
                         contribution.personHours)));
             }));
-            return new GameState(save.worldSeed, new GameTime(save.elapsedMinutes), family, company, events, contracts);
+            CompanyGrowthState growth;
+            if (save.schemaVersion < 3)
+            {
+                growth = new CompanyGrowthState();
+            }
+            else
+            {
+                if (save.growth == null || save.growth.researchedTechnologyIds == null)
+                {
+                    throw new InvalidOperationException("Growth data is incomplete.");
+                }
+                var hasMarketReport = save.growth.marketReport != null
+                                      && (save.growth.hasMarketReport
+                                          || !string.IsNullOrWhiteSpace(save.growth.marketReport.genre)
+                                          || !string.IsNullOrWhiteSpace(save.growth.marketReport.desiredFeature));
+                var marketReport = !hasMarketReport ? null : new MarketReportState(
+                    save.growth.marketReport.genre,
+                    save.growth.marketReport.desiredFeature,
+                    save.growth.marketReport.demand,
+                    save.growth.marketReport.purchasedMinute,
+                    save.schemaVersion >= 4
+                        ? (BusinessIndustry)save.growth.marketReport.industry
+                        : BusinessIndustry.WebAndSoftware);
+                var hasProductProject = save.growth.productProject != null
+                                        && (save.growth.hasProductProject
+                                            || !string.IsNullOrWhiteSpace(save.growth.productProject.title));
+                var product = !hasProductProject ? null : new ProductProjectState(
+                    save.growth.productProject.sequence,
+                    save.growth.productProject.title,
+                    save.growth.productProject.targetGenre,
+                    save.growth.productProject.targetFeature,
+                    save.growth.productProject.budgetWon,
+                    save.growth.productProject.startedMinute,
+                    save.growth.productProject.dueMinute,
+                    save.growth.productProject.resolved,
+                    save.growth.productProject.quality,
+                    save.growth.productProject.revenueWon,
+                    save.schemaVersion >= 4
+                        ? (BusinessIndustry)save.growth.productProject.industry
+                        : BusinessIndustry.WebAndSoftware);
+                var ownedBusinesses = save.schemaVersion >= 4
+                    ? (save.growth.ownedBusinesses ?? throw new InvalidOperationException("Owned business data is incomplete."))
+                        .Select(item => new OwnedBusinessState(
+                            (BusinessIndustry)item.industry,
+                            item.businessName,
+                            item.foundedMinute,
+                            item.foundingInvestmentWon,
+                            item.totalRevenueWon,
+                            item.launchedProductCount))
+                    : Enumerable.Empty<OwnedBusinessState>();
+                growth = new CompanyGrowthState(
+                    save.growth.researchCenterUnlocked,
+                    save.growth.researchedTechnologyIds,
+                    marketReport,
+                    product,
+                    save.growth.marketReportSequence,
+                    save.growth.productSequence,
+                    ownedBusinesses);
+            }
+            return new GameState(save.worldSeed, new GameTime(save.elapsedMinutes), family, company, events, contracts, growth);
         }
     }
 }

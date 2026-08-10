@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FamilyCompany.Simulation.Company;
 
 namespace FamilyCompany.Simulation.Family
 {
@@ -34,6 +35,47 @@ namespace FamilyCompany.Simulation.Family
 
             return member;
         }
+
+        public void RecordSharedCareerMemory(
+            string memoryId,
+            BusinessIndustry industry,
+            CareerMemoryKind kind,
+            string summary,
+            long occurredMinute,
+            int bondDelta)
+        {
+            var memberIds = _members.Select(item => item.MemberId).ToArray();
+            foreach (var member in _members)
+            {
+                member.RecordCareerMemory(new CareerMemoryState(
+                    $"{memoryId}:{member.MemberId}",
+                    industry,
+                    kind,
+                    summary,
+                    occurredMinute,
+                    bondDelta,
+                    memberIds.Where(id => id != member.MemberId)));
+            }
+        }
+
+        public int RelationshipScore(string memberId, string otherMemberId)
+        {
+            if (memberId == otherMemberId) throw new ArgumentException("Relationship members must be different.");
+            var member = Get(memberId);
+            Get(otherMemberId);
+            return member.CareerMemories
+                .Where(memory => memory.ColleagueMemberIds.Contains(otherMemberId))
+                .Sum(memory => memory.BondDelta);
+        }
+
+        public string RelationshipLabel(string memberId, string otherMemberId)
+        {
+            var score = RelationshipScore(memberId, otherMemberId);
+            if (score >= 5) return "단짝";
+            if (score <= -3) return "앙숙";
+            if (score >= 2) return "좋은 동료";
+            if (score <= -1) return "서먹한 동료";
+            return "평범한 동료";
+        }
     }
 }
-

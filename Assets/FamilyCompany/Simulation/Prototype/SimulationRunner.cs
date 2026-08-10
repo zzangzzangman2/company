@@ -23,7 +23,12 @@ namespace FamilyCompany.Simulation.Prototype
 
             var oldDay = _state.Time.ElapsedMinutes / 1440;
             _state.Time.Advance(minutes);
-            _state.Contracts.FailOverdue(_state.Time.ElapsedMinutes, _state.Company);
+            _state.Contracts.FailOverdue(_state.Time.ElapsedMinutes, _state.Company, _state.Family);
+            _state.Growth.ResolveProductIfDue(
+                _state.WorldSeed,
+                _state.Time.ElapsedMinutes,
+                _state.Family,
+                _state.Company);
             var newDay = _state.Time.ElapsedMinutes / 1440;
             for (var day = oldDay; day < newDay; day++)
             {

@@ -15,7 +15,8 @@ namespace FamilyCompany.Simulation.Game
             FamilyState family,
             CompanyState company,
             DeterministicEventQueue events,
-            ContractPortfolio contracts = null)
+            ContractPortfolio contracts = null,
+            CompanyGrowthState growth = null)
         {
             WorldSeed = worldSeed;
             Time = time ?? throw new ArgumentNullException(nameof(time));
@@ -23,6 +24,7 @@ namespace FamilyCompany.Simulation.Game
             Company = company ?? throw new ArgumentNullException(nameof(company));
             Events = events ?? throw new ArgumentNullException(nameof(events));
             Contracts = contracts ?? new ContractPortfolio(Family.Members.Count);
+            Growth = growth ?? new CompanyGrowthState();
         }
 
         public int WorldSeed { get; }
@@ -31,5 +33,6 @@ namespace FamilyCompany.Simulation.Game
         public CompanyState Company { get; }
         public DeterministicEventQueue Events { get; }
         public ContractPortfolio Contracts { get; }
+        public CompanyGrowthState Growth { get; }
     }
 }

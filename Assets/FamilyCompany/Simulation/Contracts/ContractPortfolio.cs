@@ -69,6 +69,28 @@ namespace FamilyCompany.Simulation.Contracts
 
         public ContractAcceptanceResult Accept(SubcontractOffer offer, CompanyState company, long elapsedMinute)
         {
+            return AcceptInternal(offer, company, null, null, elapsedMinute);
+        }
+
+        public ContractAcceptanceResult Accept(
+            SubcontractOffer offer,
+            CompanyState company,
+            FamilyState family,
+            CompanyGrowthState growth,
+            long elapsedMinute)
+        {
+            if (family == null) throw new ArgumentNullException(nameof(family));
+            if (growth == null) throw new ArgumentNullException(nameof(growth));
+            return AcceptInternal(offer, company, family, growth, elapsedMinute);
+        }
+
+        private ContractAcceptanceResult AcceptInternal(
+            SubcontractOffer offer,
+            CompanyState company,
+            FamilyState family,
+            CompanyGrowthState growth,
+            long elapsedMinute)
+        {
             if (offer == null) throw new ArgumentNullException(nameof(offer));
             if (company == null) throw new ArgumentNullException(nameof(company));
             if (elapsedMinute < 0) throw new ArgumentOutOfRangeException(nameof(elapsedMinute));
@@ -92,6 +114,21 @@ namespace FamilyCompany.Simulation.Contracts
             if (!decision.CanAccept)
             {
                 return new ContractAcceptanceResult(decision, null);
+            }
+
+            if (family != null && family.Members.Max(member => member.Stats.Development) < offer.RequiredDevelopment)
+            {
+                return RejectedAcceptance(ContractRejectionReason.DevelopmentInsufficient);
+            }
+
+            if (family != null && family.Members.Max(member => member.Stats.Speed) < offer.RequiredSpeed)
+            {
+                return RejectedAcceptance(ContractRejectionReason.SpeedInsufficient);
+            }
+
+            if (growth != null && !growth.HasTechnology(offer.RequiredTechnologyId))
+            {
+                return RejectedAcceptance(ContractRejectionReason.RequiredTechnologyMissing);
             }
 
             if (offer.UpfrontCostWon > 0)
@@ -132,7 +169,7 @@ namespace FamilyCompany.Simulation.Contracts
 
             if (elapsedMinute > contract.DueMinute)
             {
-                Fail(contract, elapsedMinute, company);
+                Fail(contract, elapsedMinute, company, family);
                 return RejectedWork(ContractWorkRejectionReason.DeadlinePassed);
             }
 
@@ -159,6 +196,18 @@ namespace FamilyCompany.Simulation.Contracts
                 elapsedMinute,
                 contract.Offer.RewardWon);
             company.ChangeReputation(2);
+            var participantIds = contract.Contributions.Select(item => item.MemberId).ToArray();
+            foreach (var participantId in participantIds)
+            {
+                family.Get(participantId).RecordCareerMemory(new CareerMemoryState(
+                    $"contract:{contract.Offer.OfferId}:{participantId}",
+                    contract.Offer.Industry,
+                    CareerMemoryKind.ContractCompleted,
+                    $"{contract.Offer.Title} 하청을 함께 끝냈다.",
+                    elapsedMinute,
+                    participantIds.Length > 1 ? 1 : 0,
+                    participantIds.Where(id => id != participantId)));
+            }
             return new ContractWorkResult(
                 ContractWorkRejectionReason.None,
                 appliedHours,
@@ -166,7 +215,7 @@ namespace FamilyCompany.Simulation.Contracts
                 contract.Offer.RewardWon);
         }
 
-        public int FailOverdue(long elapsedMinute, CompanyState company)
+        public int FailOverdue(long elapsedMinute, CompanyState company, FamilyState family = null)
         {
             if (elapsedMinute < 0) throw new ArgumentOutOfRangeException(nameof(elapsedMinute));
             if (company == null) throw new ArgumentNullException(nameof(company));
@@ -175,7 +224,7 @@ namespace FamilyCompany.Simulation.Contracts
                 .ToList();
             foreach (var contract in overdue)
             {
-                Fail(contract, elapsedMinute, company);
+                Fail(contract, elapsedMinute, company, family);
             }
 
             return overdue.Count;
@@ -188,10 +237,38 @@ namespace FamilyCompany.Simulation.Contracts
             return contract;
         }
 
-        private static void Fail(SubcontractState contract, long elapsedMinute, CompanyState company)
+        private static void Fail(SubcontractState contract, long elapsedMinute, CompanyState company, FamilyState family)
         {
             contract.MarkFailed(elapsedMinute);
+            if (contract.Offer.PenaltyWon > 0)
+            {
+                company.RecordContractPenalty(
+                    $"contract:{contract.Offer.OfferId}:penalty",
+                    elapsedMinute,
+                    contract.Offer.PenaltyWon,
+                    $"{contract.Offer.ExactClientDisplayName} 계약 위약금");
+            }
+            if (family != null)
+            {
+                var participantIds = contract.Contributions.Select(item => item.MemberId).ToArray();
+                foreach (var participantId in participantIds)
+                {
+                    family.Get(participantId).RecordCareerMemory(new CareerMemoryState(
+                        $"contract:{contract.Offer.OfferId}:failed:{participantId}",
+                        contract.Offer.Industry,
+                        CareerMemoryKind.ContractFailed,
+                        $"{contract.Offer.Title} 하청 마감을 함께 놓쳤다.",
+                        elapsedMinute,
+                        participantIds.Length > 1 ? -2 : -1,
+                        participantIds.Where(id => id != participantId)));
+                }
+            }
             company.ChangeReputation(-2);
+        }
+
+        private static ContractAcceptanceResult RejectedAcceptance(ContractRejectionReason reason)
+        {
+            return new ContractAcceptanceResult(new ContractCapacityDecision(false, reason), null);
         }
 
         private static ContractWorkResult RejectedWork(ContractWorkRejectionReason reason)

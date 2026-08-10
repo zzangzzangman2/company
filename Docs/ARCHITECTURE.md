@@ -2,10 +2,10 @@
 
 ## 계층
 
-- FamilyCompany.Simulation: Unity 참조가 없는 시간, RNG, 이벤트, 가족, 회사, 회계, 게임 상태
+- FamilyCompany.Simulation: Unity 참조가 없는 시간, RNG, 이벤트, 가족, 회사, 회계, 역사 resolver, 시장 코어, 게임 상태
 - FamilyCompany.Simulation.Contracts: 실제 고객 회사 ID, 소형 하청 제안, 4인 팀 수락 용량 정책
 - FamilyCompany.Save: 저장 DTO와 저장소 인터페이스
-- FamilyCompany.Infrastructure.Unity: JsonUtility와 persistentDataPath를 사용하는 저장 어댑터
+- FamilyCompany.Infrastructure.Unity: JsonUtility 기반 Korea History V1 로더와 persistentDataPath 저장 어댑터
 - FamilyCompany.Presentation.Unity: 입력, 카메라, 화면 표시, 씬 오브젝트 연결
 - FamilyCompany.Editor: 프로토타입 씬 생성과 헤드리스 검증
 - FamilyCompany.Content.History: 실제 회사·사건·출처의 읽기 전용 JSON 데이터
@@ -19,6 +19,9 @@
 - 모든 회계 거래는 차변 합계와 대변 합계가 같다.
 - 저장 대상은 의미 상태다. Transform, 렌더러 캐시, UI 선택 상태는 저장하지 않는다.
 - 계약 저장은 제안 원본, 수락·납기·해결 시각, 상태, 완료 인시와 가족별 기여 인시를 보존한다. 스키마 v2는 스키마 v1을 빈 계약 목록으로 이관한다.
+- 주식시장 session·호가·체결 계산은 순수 C#이며 `companyId + date + minute + pulse`를 안정 키로 사용한다.
+- 호가 프레젠테이션은 내부 10단계를 유지하고 화면에 최우선 7매도+7매수를 표시한다.
+- 체결 replay는 batch identity 중복을 막는 FIFO이며 한 단계마다 Arriving과 Draining을 각각 한 렌더 프레임 이상 공개한다. pause 중 cursor는 변하지 않는다.
 
 ## 실제 역사와 회차 상태
 
@@ -27,6 +30,8 @@
 - DivergenceLog는 기준 역사에서 취소·지연·대체·이전된 사건과 원인을 기록한다.
 - 실제 회사명은 날짜별 데이터이고 영구 참조와 저장은 불변 companyId를 사용한다.
 - 역사 사건은 조건부 후보이며, 선행 조건이 깨지면 원래 결과를 강제로 발생시키지 않는다.
+- Korea History V1 JSON은 JsonUtility DTO로 읽은 뒤 불변 `HistoricalCompanyRegistry`로 투영한다.
+- `ListedSecuritiesAt(date)`는 실제 이름과 KOSPI/KOSDAQ listing 구간을 시장 종목으로 만들고, KOSDAQ은 SIMUL의 `도전시장` 호가 규칙에 대응한다.
 
 상세 규칙은 Docs/REAL_COMPANY_ALT_HISTORY.md, 시장 이식 경계는 Docs/SIMUL_MARKET_PORT.md를 따른다.
 

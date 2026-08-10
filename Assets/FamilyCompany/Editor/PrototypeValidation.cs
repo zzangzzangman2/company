@@ -6,6 +6,8 @@ using FamilyCompany.Save;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Events;
+using FamilyCompany.Simulation.History;
+using FamilyCompany.Simulation.Market;
 using FamilyCompany.Simulation.Prototype;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -24,6 +26,8 @@ namespace FamilyCompany.Editor
                 ValidateStableRandom();
                 ValidateEventOrdering();
                 ValidateTimeAndLedger();
+                ValidateSimulMarketRules();
+                ValidateKoreaHistoryV1();
                 ValidateFourPersonContractScope();
                 ValidateContractLifecycle();
                 ValidateSaveRoundTrip();
@@ -91,6 +95,321 @@ namespace FamilyCompany.Editor
             }
         }
 
+        private static void ValidateSimulMarketRules()
+        {
+            AssertEqual(
+                MarketSessionPhase.OpeningTransition,
+                MarketSessionClock.At(8 * 60).Phase,
+                "market 08:00 phase");
+            AssertEqual(false, MarketSessionClock.At(8 * 60 + 59).Tradable, "market 08:59 tradable");
+            AssertEqual(MarketSessionPhase.Regular, MarketSessionClock.At(9 * 60).Phase, "market 09:00 phase");
+            AssertEqual(true, MarketSessionClock.At(9 * 60).Tradable, "market 09:00 tradable");
+            AssertEqual(
+                MarketSessionPhase.ClosingAuction,
+                MarketSessionClock.At(14 * 60 + 50).Phase,
+                "market 14:50 phase");
+            AssertEqual(
+                MarketSessionPhase.CloseSettlement,
+                MarketSessionClock.At(15 * 60).Phase,
+                "market 15:00 phase");
+            AssertEqual(MarketSessionPhase.Closed, MarketSessionClock.At(20 * 60).Phase, "market 20:00 phase");
+            AssertEqual(0, MarketSessionClock.TickForMinute(8 * 60), "market opening tick");
+            AssertEqual(420, MarketSessionClock.TickForMinute(15 * 60), "market close tick");
+            AssertEqual(720, MarketSessionClock.TickForMinute(20 * 60), "market final tick");
+            AssertEqual(8 * 60 + 1, MarketSessionClock.MinuteForTick(1), "market minute for tick");
+
+            AssertEqual(false, MarketTradingCalendar.IsTradingDay(new DateTime(2000, 1, 1)), "market weekend");
+            AssertEqual(true, MarketTradingCalendar.IsTradingDay(new DateTime(2000, 1, 3)), "campaign first Monday");
+            AssertEqual(true, MarketTradingCalendar.IsTradingDay(new DateTime(2000, 1, 4)), "corpus first day");
+            AssertEqual(true, MarketTradingCalendar.IsTradingDay(new DateTime(2022, 9, 8)), "corpus trading date");
+            AssertEqual(false, MarketTradingCalendar.IsTradingDay(new DateTime(2022, 9, 9)), "corpus Chuseok");
+            AssertEqual(false, MarketTradingCalendar.IsTradingDay(new DateTime(2023, 1, 23)), "corpus lunar holiday");
+            AssertEqual(true, MarketTradingCalendar.IsTradingDay(new DateTime(2026, 7, 23)), "corpus final day");
+            AssertEqual(false, MarketTradingCalendar.IsTradingDay(new DateTime(2026, 8, 17)), "post corpus substitute holiday");
+            AssertEqual(false, MarketTradingCalendar.IsTradingDay(new DateTime(2026, 9, 24)), "post corpus Chuseok eve");
+            AssertEqual(false, MarketTradingCalendar.IsTradingDay(new DateTime(2026, 12, 31)), "campaign year end close");
+
+            var corpusTradingDays = 0;
+            for (var date = MarketTradingCalendar.CorpusFirstTradingDate;
+                 date <= MarketTradingCalendar.CorpusLastTradingDate;
+                 date = date.AddDays(1))
+            {
+                if (MarketTradingCalendar.IsTradingDay(date)) corpusTradingDays += 1;
+            }
+            AssertEqual(6545, corpusTradingDays, "market corpus trading day count");
+
+            AssertEqual(
+                new DateTime(2026, 6, 15),
+                MarketTradingCalendar.SettlementDateFor(new DateTime(2026, 6, 11)),
+                "market D+2 settlement");
+
+            AssertEqual(0.15m, MarketPricingRules.DailyPriceLimitRate(new DateTime(2010, 12, 31)), "legacy price limit");
+            AssertEqual(0.30m, MarketPricingRules.DailyPriceLimitRate(new DateTime(2015, 6, 15)), "modern price limit");
+            AssertEqual(1L, MarketPricingRules.TickSize(999m), "tick 999");
+            AssertEqual(5L, MarketPricingRules.TickSize(1000m), "tick 1000");
+            AssertEqual(50L, MarketPricingRules.TickSize(10000m), "tick 10000");
+            AssertEqual(100L, MarketPricingRules.TickSize(500000m, "도전시장"), "growth market tick");
+
+            var legacyRange = MarketPricingRules.DailyPriceRange(10000m, new DateTime(2008, 1, 2));
+            AssertEqual(8500L, legacyRange.Lower, "legacy lower price limit");
+            AssertEqual(11500L, legacyRange.Upper, "legacy upper price limit");
+            var lowPriceRange = MarketPricingRules.DailyPriceRange(330m, new DateTime(2008, 1, 2));
+            AssertEqual(281L, lowPriceRange.Lower, "low-price lower limit");
+            AssertEqual(379L, lowPriceRange.Upper, "low-price upper limit");
+            var ipoRange = MarketPricingRules.DailyPriceRange(
+                10000m,
+                new DateTime(2023, 6, 26),
+                isIpoFirstTradingDay: true);
+            AssertEqual(6000L, ipoRange.Lower, "IPO lower range");
+            AssertEqual(40000L, ipoRange.Upper, "IPO upper range");
+            AssertEqual(true, MarketPricingRules.IsValidOrderPrice(10050m), "valid quote unit");
+            AssertEqual(false, MarketPricingRules.IsValidOrderPrice(10025m), "invalid quote unit");
+
+            AssertEqual(
+                true,
+                MarketSessionClock.DynamicVolatilityInterruptionActive(10 * 60, 10000m, 10300m),
+                "three-percent VI");
+            AssertEqual(
+                false,
+                MarketSessionClock.DynamicVolatilityInterruptionActive(14 * 60 + 50, 10000m, 11000m),
+                "closing auction VI disabled");
+
+            AssertEqual(0.0050m, MarketTradingCosts.TradingFeeRate(new DateTime(2000, 1, 3)), "2000 fee rate");
+            AssertEqual(0.0030m, MarketTradingCosts.SecuritiesTransactionTaxRate(new DateTime(2000, 1, 3)), "2000 tax rate");
+            AssertEqual(5000L, MarketTradingCosts.TradingFee(new DateTime(2000, 1, 3), 1_000_000L), "2000 fee");
+            AssertEqual(3000L, MarketTradingCosts.SecuritiesTransactionTax(new DateTime(2000, 1, 3), 1_000_000L), "2000 tax");
+            AssertEqual(1_005_000L, MarketTradingCosts.BuyReservation(new DateTime(2000, 1, 3), 1_000_000L), "buy reservation");
+
+            var ordinaryTurnovers = new[] { 1d, 50d, 100d, 500d, 2000d, 5000d, 10000d, 15000d, 60000d };
+            var ordinaryPulses = ordinaryTurnovers
+                .Select(turnover => MarketOrderBookRules.PulsesPerMarketMinute(
+                    turnover,
+                    10000d,
+                    10000d,
+                    10000d))
+                .ToArray();
+            AssertEqual("1,1,1,1,2,2,3,4,4", string.Join(",", ordinaryPulses), "order book ordinary cadence");
+            AssertEqual(5, MarketOrderBookRules.PulsesPerMarketMinute(1d, 10150d, 10000d, 10000d), "order book fast cadence");
+            AssertEqual(7, MarketOrderBookRules.PulsesPerMarketMinute(1d, 10300d, 10000d, 10000d), "order book extreme cadence");
+            AssertEqual(1, MarketOrderBookRules.PulsesPerMarketMinute(100d, 10500d, 10500d, 10000d), "order book five-percent cadence");
+            AssertEqual(5, MarketOrderBookRules.PulsesPerMarketMinute(100d, 10610d, 10610d, 10000d), "order book six-percent cadence");
+            AssertEqual(0, MarketOrderBookRules.PulsesPerMarketMinute(
+                60000d,
+                10000d,
+                10000d,
+                10000d,
+                playbackActive: false), "order book pause freezes cadence");
+            AssertEqual(4928, MarketOrderBookRules.LiquidityPulseFrame(617, 0), "order book frame zero");
+            AssertEqual(4935, MarketOrderBookRules.LiquidityPulseFrame(617, 7), "order book frame seven");
+            AssertEqual(
+                "4931,4932,4933,4934,4935",
+                string.Join(",", MarketOrderBookRules.PendingPulseFrames(617, 4930, 7)),
+                "order book pending FIFO frames");
+            AssertEqual(
+                "0,250,501,751,1001",
+                string.Join(",", Enumerable.Range(0, 5).Select(slot =>
+                    MarketOrderBookRules.CumulativeSlotCapacity(1001, slot, 4))),
+                "order book four-slot capacity");
+            AssertEqual(
+                "0,143,286,429,572,715,858,1001",
+                string.Join(",", Enumerable.Range(0, 8).Select(slot =>
+                    MarketOrderBookRules.CumulativeSlotCapacity(1001, slot, 7))),
+                "order book seven-slot capacity");
+
+            var asks = new[]
+            {
+                new MarketOrderBookLevel(MarketOrderBookSide.Ask, 10050, 100),
+                new MarketOrderBookLevel(MarketOrderBookSide.Ask, 10100, 200),
+                new MarketOrderBookLevel(MarketOrderBookSide.Ask, 10150, 300),
+            };
+            var bids = new[]
+            {
+                new MarketOrderBookLevel(MarketOrderBookSide.Bid, 10000, 120),
+                new MarketOrderBookLevel(MarketOrderBookSide.Bid, 9950, 240),
+                new MarketOrderBookLevel(MarketOrderBookSide.Bid, 9900, 360),
+            };
+            var book = new MarketOrderBookSnapshot(asks, bids, 1000d, 1000d, 1000);
+            var buyPlan = MarketOrderBookRules.LimitFillPlan(book, true, 450d, 10150, maximumNotional: 2_000_000_000);
+            AssertEqual(450, buyPlan.FilledQuantity, "order book buy filled quantity");
+            AssertEqual(4_547_500L, buyPlan.Notional, "order book buy notional");
+            AssertApproximately(10105.555555555555d, buyPlan.AveragePrice, 0.000000001d, "order book buy average");
+            AssertEqual("100@10050,200@10100,150@10150", string.Join(",", buyPlan.Fills.Select(fill => $"{fill.Quantity}@{fill.Price}")), "order book buy ladder fills");
+            var sellPlan = MarketOrderBookRules.LimitFillPlan(book, false, 250d, 9950, maximumNotional: 2_000_000_000);
+            AssertEqual(2_493_500L, sellPlan.Notional, "order book sell notional");
+            AssertApproximately(9974d, sellPlan.AveragePrice, 0.000000001d, "order book sell average");
+            var skipped = MarketOrderBookRules.LimitFillPlan(
+                book,
+                true,
+                150d,
+                10100,
+                maximumNotional: 2_000_000_000,
+                alreadyConsumedByPrice: new System.Collections.Generic.Dictionary<long, double> { [10050] = 100d });
+            AssertEqual("150@10100", string.Join(",", skipped.Fills.Select(fill => $"{fill.Quantity}@{fill.Price}")), "order book consumed quote skip");
+
+            var rise = MarketOrderBookRules.PriceTransitionTowardTarget(book, 10000d, 10150d, 250, "main");
+            AssertEqual(10100L, rise.Price, "order book partial rise price");
+            AssertEqual(false, rise.TargetReached, "order book partial rise target");
+            AssertEqual("100@10050,150@10100", string.Join(",", rise.OrderedFills.Select(fill => $"{fill.Quantity}@{fill.Price}")), "order book partial rise fills");
+            var fall = MarketOrderBookRules.PriceTransitionTowardTarget(book, 10050d, 9950d, 360, "main");
+            AssertEqual(9950L, fall.Price, "order book falling price");
+            AssertEqual(true, fall.TargetReached, "order book falling target");
+
+            var fractional = MarketOrderBookRules.SnapshotAfterConsumption(
+                book,
+                new System.Collections.Generic.Dictionary<long, double> { [10050] = 0.5d },
+                consumedCapacityUnits: 1,
+                latestConsumedSide: MarketOrderBookSide.Ask,
+                latestConsumedPrice: 10050);
+            AssertEqual(100, fractional.Asks[0].Quantity, "order book fractional consumption ignored");
+            AssertApproximately(0.5d, fractional.AppliedAskConsumptionByPrice[10050], 0d, "order book fractional watermark");
+            AssertEqual(1, fractional.AppliedCapacityConsumptionUnits, "order book capacity watermark");
+            AssertEqual(null, fractional.SourceLastTradePrice, "order book fractional last price unchanged");
+
+            var cumulative40 = MarketOrderBookRules.SnapshotAfterConsumption(
+                book,
+                new System.Collections.Generic.Dictionary<long, double> { [10050] = 40d },
+                consumedCapacityUnits: 40,
+                latestConsumedSide: MarketOrderBookSide.Ask,
+                latestConsumedPrice: 10050);
+            AssertEqual(60, cumulative40.Asks[0].Quantity, "order book cumulative 40 quantity");
+            AssertEqual(100, cumulative40.Asks[0].QueueRecoveryTargetQuantity, "order book ordinary recovery target");
+            AssertEqual(560, cumulative40.TotalAskQuantity, "order book cumulative 40 total ask");
+            AssertApproximately(128.57142857142858d, cumulative40.TradeStrength, 0.000000001d, "order book cumulative 40 strength");
+            var repeated40 = MarketOrderBookRules.SnapshotAfterConsumption(
+                cumulative40,
+                new System.Collections.Generic.Dictionary<long, double> { [10050] = 40d },
+                consumedCapacityUnits: 40,
+                latestConsumedSide: MarketOrderBookSide.Ask,
+                latestConsumedPrice: 10050);
+            AssertEqual(60, repeated40.Asks[0].Quantity, "order book repeated cumulative watermark idempotent");
+            var cumulative70 = MarketOrderBookRules.SnapshotAfterConsumption(
+                repeated40,
+                new System.Collections.Generic.Dictionary<long, double> { [10050] = 70d },
+                consumedCapacityUnits: 70,
+                latestConsumedSide: MarketOrderBookSide.Ask,
+                latestConsumedPrice: 10050);
+            AssertEqual(30, cumulative70.Asks[0].Quantity, "order book cumulative watermark delta only");
+
+            var hiddenTinyRemainder = MarketOrderBookRules.SnapshotAfterConsumption(
+                book,
+                new System.Collections.Generic.Dictionary<long, double> { [10050] = 95d },
+                consumedCapacityUnits: 95,
+                latestConsumedSide: MarketOrderBookSide.Ask);
+            AssertEqual(2, hiddenTinyRemainder.Asks.Count, "order book tiny remainder row omitted");
+            AssertEqual(10100L, hiddenTinyRemainder.Asks[0].Price, "order book next ask after tiny remainder");
+            AssertEqual(500, hiddenTinyRemainder.TotalAskQuantity, "order book hidden remainder total ask");
+            AssertEqual(10050L, hiddenTinyRemainder.SourceLastTradePrice.Value, "order book exhausted touch last price");
+
+            var structuralBook = new MarketOrderBookSnapshot(
+                new[]
+                {
+                    new MarketOrderBookLevel(
+                        MarketOrderBookSide.Ask,
+                        10050,
+                        100,
+                        isWall: true,
+                        structuralStrength: 4d,
+                        isStructuralWall: true,
+                        queueRecoveryTargetQuantity: 100),
+                },
+                bids,
+                1000d,
+                1000d,
+                1000);
+            var structuralBreach = MarketOrderBookRules.SnapshotAfterConsumption(
+                structuralBook,
+                new System.Collections.Generic.Dictionary<long, double> { [10050] = 90d },
+                consumedCapacityUnits: 90,
+                latestConsumedSide: MarketOrderBookSide.Ask,
+                latestConsumedPrice: 10050);
+            AssertEqual(10, structuralBreach.Asks[0].Quantity, "order book structural breach remaining");
+            AssertEqual(false, structuralBreach.Asks[0].IsWall, "order book structural breach clears wall");
+            AssertEqual(false, structuralBreach.Asks[0].IsStructuralWall, "order book structural breach clears structural wall");
+            AssertEqual(true, structuralBreach.Asks[0].IsStructuralBreached, "order book structural breach flag");
+            AssertEqual(25, structuralBreach.Asks[0].QueueRecoveryTargetQuantity, "order book structural recovery ceiling");
+            AssertApproximately(240d, structuralBreach.TradeStrength, 0d, "order book structural breach strength cap");
+
+            AssertEqual(
+                "4,23,5,5,2,5,5,3,30,41",
+                string.Join(",", MarketOrderBookRules.SplitTradeQuantity("hanbit_telecom", 6015, 617, 4929, 123)),
+                "order book split prints 123");
+            AssertEqual(
+                "4,2515,5,5,2,5,5,3,3138,4318",
+                string.Join(",", MarketOrderBookRules.SplitTradeQuantity("hanbit_telecom", 6015, 617, 4929, 10000)),
+                "order book split prints 10000");
+
+            AssertEqual(7, MarketOrderBookReplayQueue.VisibleRowsPerSide, "order book visible 7+7 rows");
+            var replay = new MarketOrderBookReplayQueue("seed:2000-01-03");
+            replay.SetPlayback(true, 0);
+            var batchA = new MarketOrderBookReplayBatch(
+                "market:A",
+                "market",
+                new[]
+                {
+                    new MarketOrderBookSweepStep(617, 4930, 1, MarketOrderBookSide.Ask, 10100, 200, 0),
+                    new MarketOrderBookSweepStep(617, 4929, 0, MarketOrderBookSide.Ask, 10050, 100, 0),
+                });
+            var batchB = new MarketOrderBookReplayBatch(
+                "market:B",
+                "market",
+                new[]
+                {
+                    new MarketOrderBookSweepStep(618, 4993, 0, MarketOrderBookSide.Bid, 10000, 120, 0),
+                });
+            AssertEqual(true, replay.Enqueue(batchA), "order book enqueue first batch");
+            AssertEqual(true, replay.Enqueue(batchB), "order book enqueue second batch");
+            AssertEqual(false, replay.HasActiveBatch, "paused order book does not ingest FIFO");
+            AssertEqual(false, replay.TickMicroseconds(3_000_000), "paused order book timer frozen");
+            replay.SetPlayback(false, 10);
+            AssertEqual("market:A", replay.Cursor.Batch.Identity, "order book FIFO first identity");
+            AssertEqual(0, replay.Cursor.Step.Value.Sequence, "order book sorts sweep sequence");
+            AssertEqual(MarketOrderBookReplayPhase.Arriving, replay.Cursor.Phase, "order book arrival phase");
+            AssertEqual(56_000L, replay.CurrentPhaseDurationMicroseconds, "order book 10x arrival duration floor");
+            AssertEqual(false, replay.TickMicroseconds(55_000), "order book arrival does not skip");
+            AssertEqual(true, replay.TickMicroseconds(1_000), "order book arrival boundary");
+            AssertEqual(MarketOrderBookReplayPhase.Draining, replay.Cursor.Phase, "order book drain phase");
+            replay.SetPlayback(true, 0);
+            var frozenIdentity = replay.Cursor.Batch.Identity;
+            var frozenSequence = replay.Cursor.Step.Value.Sequence;
+            var frozenPhase = replay.Cursor.Phase;
+            AssertEqual(false, replay.TickMicroseconds(3_000_000), "order book paused active step frozen");
+            AssertEqual(frozenIdentity, replay.Cursor.Batch.Identity, "order book paused identity frozen");
+            AssertEqual(frozenSequence, replay.Cursor.Step.Value.Sequence, "order book paused sequence frozen");
+            AssertEqual(frozenPhase, replay.Cursor.Phase, "order book paused phase frozen");
+            replay.SetPlayback(false, 10);
+            AssertEqual(9_600L, replay.CurrentPhaseDurationMicroseconds, "order book 10x drain duration");
+            replay.TickMicroseconds(9_600);
+            AssertEqual(1, replay.Cursor.Step.Value.Sequence, "order book next step FIFO");
+            AssertEqual(MarketOrderBookReplayPhase.Arriving, replay.Cursor.Phase, "order book next arrival phase");
+            replay.TickMicroseconds(56_000);
+            replay.TickMicroseconds(9_600);
+            AssertEqual(MarketOrderBookReplayPhase.FinalHold, replay.Cursor.Phase, "order book final hold phase");
+            AssertEqual(11_200L, replay.CurrentPhaseDurationMicroseconds, "order book 10x final hold duration");
+            replay.TickMicroseconds(11_200);
+            AssertEqual("market:B", replay.Cursor.Batch.Identity, "order book FIFO second identity");
+            AssertEqual(false, replay.Enqueue(batchA), "completed order book batch cannot reappear");
+        }
+
+        private static void ValidateKoreaHistoryV1()
+        {
+            const string registryPath = "Assets/FamilyCompany/Content/History/company_registry_korea_2000_2026.json";
+            var registry = KoreaHistoryV1RegistryLoader.FromJson(File.ReadAllText(registryPath));
+            AssertEqual(1, registry.SchemaVersion, "Korea History schema version");
+            AssertEqual(83, registry.Companies.Count, "Korea History registry rows");
+            AssertEqual(82, registry.Companies.Count(company => company.CountryCode == "KR"), "Korea History domestic companies");
+            var startDate = new DateTime(2000, 1, 3);
+            AssertEqual("삼성전자", registry.Get("kr_samsung_electronics").DisplayNameAt(startDate), "Samsung historical display name");
+            AssertEqual("한국통신", registry.Get("kr_kt").DisplayNameAt(startDate), "KT historical display name");
+            var securities = registry.ListedSecuritiesAt(startDate);
+            AssertEqual(10, securities.Count, "Korea History listed securities at campaign start");
+            AssertEqual(true, securities.Any(item => item.CompanyId == "kr_samsung_electronics" && item.Ticker == "005930"), "Samsung market security");
+            AssertEqual(true, securities.Any(item => item.CompanyId == "kr_daum" && item.DisplayNameKo == "다음커뮤니케이션"), "Daum market security");
+            AssertEqual(
+                MarketPricingRules.GrowthMarketName,
+                securities.First(item => item.CompanyId == "kr_daum").PriceRuleMarket,
+                "KOSDAQ price rule market");
+        }
+
         private static void ValidateSaveRoundTrip()
         {
             var source = PrototypeStateFactory.Create(314159);
@@ -117,7 +436,7 @@ namespace FamilyCompany.Editor
             AssertEqual(source.Company.CashWon, restored.Company.CashWon, "save cash");
             AssertEqual(source.Family.Get("older_sister").Energy, restored.Family.Get("older_sister").Energy, "save sister energy");
             AssertEqual(source.Events.Count, restored.Events.Count, "save event count");
-            AssertEqual(2, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
+            AssertEqual(4, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
             AssertEqual(source.Contracts.Contracts.Count, restored.Contracts.Contracts.Count, "save contract count");
             var restoredContract = restored.Contracts.Get(offer.OfferId);
             AssertEqual(acceptance.Contract.Status, restoredContract.Status, "save contract status");
@@ -266,10 +585,17 @@ namespace FamilyCompany.Editor
                     state.Company.Reputation,
                     0,
                     0);
-                if (!decision.CanAccept)
+                if (offer.ReputationRequired == 0)
                 {
-                    throw new InvalidOperationException(
-                        $"Starter contract {offer.OfferId} was rejected: {decision.RejectionReason}");
+                    AssertEqual(true, decision.CanAccept, $"starter contract {offer.OfferId} acceptance");
+                }
+                else
+                {
+                    AssertEqual(false, decision.CanAccept, $"gated contract {offer.OfferId} acceptance");
+                    AssertEqual(
+                        ContractRejectionReason.ReputationInsufficient,
+                        decision.RejectionReason,
+                        $"gated contract {offer.OfferId} reason");
                 }
 
                 if (offer.RequiredWorkers > 4 || offer.EstimatedPersonHours > 80 || offer.RewardWon > 2_500_000)
@@ -344,6 +670,12 @@ namespace FamilyCompany.Editor
 
             var bootstrap = UnityEngine.Object.FindFirstObjectByType<Presentation.Unity.PrototypeBootstrap>();
             if (bootstrap == null) throw new InvalidOperationException("Prototype bootstrap is missing.");
+            var historyCatalog = UnityEngine.Object.FindFirstObjectByType<KoreaHistoryV1RuntimeCatalog>();
+            if (historyCatalog == null || !historyCatalog.IsConfigured)
+                throw new InvalidOperationException("Korea History V1 runtime catalog is missing from the prototype scene.");
+            historyCatalog.InitializeNow();
+            AssertEqual(83, historyCatalog.Registry.Companies.Count, "scene Korea History registry rows");
+            AssertEqual(10, historyCatalog.ListedSecuritiesAt(new DateTime(2000, 1, 3)).Count, "scene campaign-start securities");
             bootstrap.InitializeNow();
             AssertEqual(Presentation.Unity.PrototypeUiScreen.MainMenu, bootstrap.UiScreen, "initial frontend screen");
             bootstrap.StartNewGameNow(2, false);
@@ -465,6 +797,12 @@ namespace FamilyCompany.Editor
             {
                 throw new InvalidOperationException($"{label}: expected {expected}, got {actual}");
             }
+        }
+
+        private static void AssertApproximately(double expected, double actual, double tolerance, string label)
+        {
+            if (Math.Abs(expected - actual) > tolerance)
+                throw new InvalidOperationException($"{label}: expected {expected}, got {actual}");
         }
     }
 }
