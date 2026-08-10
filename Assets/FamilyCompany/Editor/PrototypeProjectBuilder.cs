@@ -6,6 +6,7 @@ using FamilyCompany.Infrastructure.Unity;
 using FamilyCompany.Presentation.Unity;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
+using FamilyCompany.Presentation.Unity.OfficeWorkActions;
 using FamilyCompany.Simulation.OfficeSeating;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -481,6 +482,7 @@ namespace FamilyCompany.Editor
 
         private static void ConfigureOfficeSeatingAnimations(GameObject player, GameObject characters)
         {
+            const string actionFrameSetRoot = "Assets/FamilyCompany/Content/OfficeWorkActions";
             var bindings = new Dictionary<string, DirectionalSpriteAnimator>(StringComparer.Ordinal)
             {
                 { "player", player.GetComponent<DirectionalSpriteAnimator>() }
@@ -498,6 +500,23 @@ namespace FamilyCompany.Editor
                     LoadOfficeSeatingFrames(memberId, OfficeSeatingAnimationClip.SitDown),
                     LoadOfficeSeatingFrames(memberId, OfficeSeatingAnimationClip.Work),
                     LoadOfficeSeatingFrames(memberId, OfficeSeatingAnimationClip.StandUp));
+
+                var frameSetPath = $"{actionFrameSetRoot}/{memberId}_office_work_actions.asset";
+                var frameSet = AssetDatabase.LoadAssetAtPath<OfficeWorkActionFrameSet>(frameSetPath);
+                if (frameSet == null)
+                {
+                    animator.ConfigureOfficeWorkAnimationHook(null);
+                    continue;
+                }
+
+                var bootstrap = Object.FindFirstObjectByType<PrototypeBootstrap>();
+                if (bootstrap == null)
+                    throw new InvalidOperationException("PrototypeBootstrap is required for office work micro-actions.");
+                var adapter = animator.GetComponent<OfficeSeatedWorkMicroActionAdapter>();
+                if (adapter == null)
+                    adapter = animator.gameObject.AddComponent<OfficeSeatedWorkMicroActionAdapter>();
+                adapter.Configure(bootstrap, memberId, frameSet);
+                animator.ConfigureOfficeWorkAnimationHook(adapter);
             }
 
             if (player.GetComponent<OfficePlayerSeatingPresenter>() == null)
