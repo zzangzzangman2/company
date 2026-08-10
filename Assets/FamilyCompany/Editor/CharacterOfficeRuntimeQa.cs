@@ -663,9 +663,14 @@ namespace FamilyCompany.Editor
             foreach (var agent in GetAgents())
             {
                 var animator = agent.GetComponent<DirectionalSpriteAnimator>();
+                var target = agent.TargetWaypoint;
                 parts.Add(
                     $"{agent.AgentId}@({agent.transform.position.x:F2},{agent.transform.position.z:F2})/" +
-                    $"{agent.CurrentActivity}/away={agent.IsPresentationAway}/dir={animator.CurrentDirection}/frame={animator.CurrentWalkFrame}");
+                    $"{agent.CurrentActivity}/away={agent.IsPresentationAway}/dir={animator.CurrentDirection}/frame={animator.CurrentWalkFrame}" +
+                    $"/seat={agent.SeatingPhase}/claim={agent.HasActiveSeatClaim}" +
+                    $"/clip={(animator.CurrentOfficeSeatingClip.HasValue ? animator.CurrentOfficeSeatingClip.Value.ToString() : "none")}" +
+                    $"/hook={animator.IsOfficeWorkHookActive}/safeStand={animator.IsOfficeWorkSafeToStand}" +
+                    $"/target={(target == null ? "none" : target.Activity.ToString())}");
             }
 
             Append($"PLAY_SNAPSHOT | t={elapsed:F1} | {string.Join(" | ", parts)}");

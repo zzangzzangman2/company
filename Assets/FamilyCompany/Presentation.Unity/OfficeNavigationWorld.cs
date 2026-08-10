@@ -187,6 +187,52 @@ namespace FamilyCompany.Presentation.Unity
             return true;
         }
 
+        public bool IsAgentMovementCollisionFree(
+            OfficeWorkerAgent self,
+            Vector3 start,
+            Vector3 end,
+            float agentRadius)
+        {
+            if (self == null) throw new ArgumentNullException(nameof(self));
+            // Edit-mode route validation advances one agent at a time while all
+            // other scene agents remain frozen. Dynamic occupancy is a runtime
+            // concern and must not make an otherwise valid semantic route fail.
+            if (!Application.isPlaying) return true;
+            var segment = end - start;
+            segment.y = 0f;
+            var segmentLengthSquared = segment.sqrMagnitude;
+            var selfRadius = Mathf.Max(0.05f, agentRadius);
+            foreach (var peer in _agents)
+            {
+                if (peer == null || peer == self || peer.IsPresentationAway || !peer.isActiveAndEnabled) continue;
+                var combinedRadius = selfRadius + peer.NavigationRadius + 0.02f;
+                var peerPosition = peer.transform.position;
+                var fromPeer = start - peerPosition;
+                var endFromPeer = end - peerPosition;
+                fromPeer.y = 0f;
+                endFromPeer.y = 0f;
+                var startDistanceSquared = fromPeer.sqrMagnitude;
+                var combinedRadiusSquared = combinedRadius * combinedRadius;
+
+                // Never trap agents that were already too close.  They may only
+                // move if the proposed step increases their separation.
+                if (startDistanceSquared < combinedRadiusSquared)
+                {
+                    if (endFromPeer.sqrMagnitude + 0.0001f < startDistanceSquared) return false;
+                    continue;
+                }
+
+                var t = segmentLengthSquared <= 0.000001f
+                    ? 0f
+                    : Mathf.Clamp01(Vector3.Dot(peerPosition - start, segment) / segmentLengthSquared);
+                var closest = start + segment * t - peerPosition;
+                closest.y = 0f;
+                if (closest.sqrMagnitude < combinedRadiusSquared) return false;
+            }
+
+            return true;
+        }
+
         public Vector3 ResolveTrafficVelocity(
             OfficeWorkerAgent self,
             Vector3 desiredVelocity,

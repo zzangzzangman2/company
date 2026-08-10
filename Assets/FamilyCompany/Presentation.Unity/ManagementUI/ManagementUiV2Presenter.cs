@@ -792,6 +792,10 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             asset.hideFlags = HideFlags.DontSave;
             asset.atlasPopulationMode = AtlasPopulationMode.Dynamic;
             asset.isMultiAtlasTexturesEnabled = true;
+            // CreateFontAsset leaves the fallback table null on runtime-created assets,
+            // and LoadFonts chains the Korean fallback into it right after this returns.
+            if (asset.fallbackFontAssetTable == null)
+                asset.fallbackFontAssetTable = new List<TMP_FontAsset>();
             return asset;
         }
 

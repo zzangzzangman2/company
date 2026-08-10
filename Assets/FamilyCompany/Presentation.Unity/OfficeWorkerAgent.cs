@@ -12,9 +12,14 @@ namespace FamilyCompany.Presentation.Unity
     [RequireComponent(typeof(CharacterController))]
     public sealed class OfficeWorkerAgent : MonoBehaviour
     {
+        private const float SemanticArrivalDistance = 0.16f;
+        private const float NavigationEscapeStepMeters = 0.06f;
+        private static readonly float[] NavigationSlideProbeDegrees =
+            { 0f, 30f, 55f, 80f, 105f, 130f, 155f, 180f };
+
         [SerializeField] private string agentId = "worker";
         [SerializeField] private float moveSpeed = 1.8f;
-        [SerializeField] private float arrivalDistance = 0.08f;
+        [SerializeField] private float arrivalDistance = SemanticArrivalDistance;
         [SerializeField] private float acceleration = 6.5f;
         [SerializeField] private float deceleration = 8.5f;
         [SerializeField, Range(0.25f, 1f)] private float sharpCornerSpeedScale = 0.46f;
@@ -110,10 +115,12 @@ namespace FamilyCompany.Presentation.Unity
         public OfficeWaypoint TargetWaypoint =>
             HasAssignedTask
                 ? _assignedWaypoint
-                : HasActiveSeatClaim && _seatNavigationWaypoint != null
+                : HasActiveSeatClaim && !_seatReleaseRequested && _seatNavigationWaypoint != null
                     ? _seatNavigationWaypoint
                 : HasAutonomousDestination
                     ? _autonomyWaypoint
+                    : HasActiveSeatClaim && _seatNavigationWaypoint != null
+                        ? _seatNavigationWaypoint
                     : route != null && route.Length > 0
                         ? route[Mathf.Clamp(_nextWaypointIndex, 0, route.Length - 1)]
                         : null;
@@ -146,6 +153,7 @@ namespace FamilyCompany.Presentation.Unity
             agentId = string.IsNullOrWhiteSpace(id) ? "worker" : id;
             route = newRoute ?? Array.Empty<OfficeWaypoint>();
             moveSpeed = Mathf.Max(0.1f, speed);
+            arrivalDistance = SemanticArrivalDistance;
             startingWaypointIndex = startIndex;
             spriteAnimator = animator;
             _initialized = false;
@@ -560,6 +568,44 @@ namespace FamilyCompany.Presentation.Unity
             CurrentActivity = OfficeActivity.Work;
         }
 
+        private bool IsNavigationStepAllowed(Vector3 start, Vector3 end) =>
+            _navigationWorld.IsMovementCollisionFree(start, end, NavigationRadius) &&
+            _navigationWorld.IsAgentMovementCollisionFree(this, start, end, NavigationRadius);
+
+        private bool TryResolveNavigationSlide(
+            Vector3 before,
+            Vector3 desiredDirection,
+            Vector3 blocked,
+            out Vector3 slide)
+        {
+            slide = Vector3.zero;
+            var planar = new Vector3(blocked.x, 0f, blocked.z);
+            var length = planar.magnitude;
+            // The blocked frame zeroes the velocity, so the next frame's displacement
+            // collapses to nothing.  Probe along the semantic heading instead, and never
+            // below the escape step, or the agent can never test a way out at all.
+            var forward = length > 0.0001f
+                ? planar / length
+                : new Vector3(desiredDirection.x, 0f, desiredDirection.z);
+            if (forward.sqrMagnitude <= 0.000001f) return false;
+            forward.Normalize();
+            var step = Mathf.Max(length, NavigationEscapeStepMeters);
+            for (var index = 0; index < NavigationSlideProbeDegrees.Length; index++)
+            {
+                var degrees = NavigationSlideProbeDegrees[index];
+                for (var sign = -1; sign <= 1; sign += 2)
+                {
+                    var candidate =
+                        Quaternion.AngleAxis(degrees * sign, Vector3.up) * forward * step;
+                    if (!IsNavigationStepAllowed(before, before + candidate)) continue;
+                    slide = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private bool TickPrecisionMoveToApproach(Vector3 approach, float deltaTime)
         {
             var displacement = approach - transform.position;
@@ -954,16 +1000,27 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             var horizontalEnd = before + new Vector3(movement.x, 0f, movement.z);
-            if (_navigationWorld != null &&
-                !_navigationWorld.IsMovementCollisionFree(before, horizontalEnd, NavigationRadius))
+            if (_navigationWorld != null && !IsNavigationStepAllowed(before, horizontalEnd))
             {
+                // Freezing here strands the agent forever: a replan from a position the
+                // pathfinder treats as unwalkable keeps producing the same blocked step.
+                // Sliding along the blocking edge keeps it moving until the next replan
+                // starts from somewhere routable again.
+                if (!TryResolveNavigationSlide(before, direction, movement, out movement))
+                {
+                    _currentVelocity = Vector3.zero;
+                    _desiredVelocity = Vector3.zero;
+                    _navigationRevision = -1;
+                    _replanRemaining = 0f;
+                    _stuckSeconds += deltaTime;
+                    spriteAnimator?.SetWorldVelocity(Vector3.zero);
+                    return false;
+                }
+
                 _currentVelocity = Vector3.zero;
-                _desiredVelocity = Vector3.zero;
                 _navigationRevision = -1;
                 _replanRemaining = 0f;
                 _stuckSeconds += deltaTime;
-                spriteAnimator?.SetWorldVelocity(Vector3.zero);
-                return false;
             }
 
             movement.y = !_controller.isGrounded ? -2f * deltaTime : -0.15f * deltaTime;
