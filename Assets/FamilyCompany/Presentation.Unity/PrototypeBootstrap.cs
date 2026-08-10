@@ -40,6 +40,7 @@ namespace FamilyCompany.Presentation.Unity
         private GUIStyle _panelStyle;
         private Texture2D _solidTexture;
         private Texture2D _titleHeroTexture;
+        private Texture2D _menuGradientTexture;
         private int _styleHeight;
         private int _activeSlot = UnityJsonSaveRepository.MinimumSlot;
         private int _pendingNewGameSlot;
@@ -99,6 +100,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (Application.isPlaying && Time.timeScale == 0f) Time.timeScale = 1f;
             if (_solidTexture != null) Destroy(_solidTexture);
+            if (_menuGradientTexture != null) Destroy(_menuGradientTexture);
         }
 
         public void InitializeNow()
@@ -432,9 +434,30 @@ namespace FamilyCompany.Presentation.Unity
             if (_titleHeroTexture != null) DrawTextureAspectFill(fullScreen, _titleHeroTexture);
             else DrawSolid(fullScreen, new Color(0.025f, 0.055f, 0.075f, 1f));
             DrawSolid(fullScreen, new Color(0.01f, 0.025f, 0.035f, 0.12f));
-            DrawSolid(new Rect(0f, 0f, Screen.width * 0.53f, Screen.height), new Color(0.01f, 0.025f, 0.035f, 0.48f));
+            DrawMenuGradient(new Rect(0f, 0f, Screen.width * 0.64f, Screen.height));
             DrawSolid(new Rect(0f, Screen.height - 14f, Screen.width, 14f), new Color(0.96f, 0.49f, 0.38f, 1f));
             GUI.Label(new Rect(Screen.width * 0.075f, 46f, Screen.width * 0.6f, 40f), eyebrow, _smallStyle);
+        }
+
+        private void DrawMenuGradient(Rect target)
+        {
+            if (_menuGradientTexture == null)
+            {
+                _menuGradientTexture = new Texture2D(64, 1, TextureFormat.RGBA32, false)
+                {
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+                for (var index = 0; index < _menuGradientTexture.width; index++)
+                {
+                    var progress = index / (float)(_menuGradientTexture.width - 1);
+                    var alpha = Mathf.Pow(1f - progress, 1.7f) * 0.62f;
+                    _menuGradientTexture.SetPixel(index, 0, new Color(0.01f, 0.025f, 0.035f, alpha));
+                }
+                _menuGradientTexture.Apply(false, true);
+            }
+
+            GUI.DrawTexture(target, _menuGradientTexture, ScaleMode.StretchToFill, true);
         }
 
         private static void DrawTextureAspectFill(Rect target, Texture texture)
