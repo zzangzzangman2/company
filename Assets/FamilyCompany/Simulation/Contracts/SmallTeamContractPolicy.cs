@@ -11,7 +11,8 @@ namespace FamilyCompany.Simulation.Contracts
         ScheduleCapacityExceeded = 4,
         UpfrontCashInsufficient = 5,
         ReputationInsufficient = 6,
-        RewardOutsideBootstrapScope = 7
+        RewardOutsideBootstrapScope = 7,
+        DuplicateOffer = 8
     }
 
     public sealed class ContractCapacityDecision

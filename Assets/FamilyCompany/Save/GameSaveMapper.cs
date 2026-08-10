@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using FamilyCompany.Simulation.Company;
+using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.Family;
@@ -56,6 +57,29 @@ namespace FamilyCompany.Save
                         debitWon = line.DebitWon,
                         creditWon = line.CreditWon
                     }).ToList()
+                }).ToList(),
+                contracts = state.Contracts.Contracts.Select(contract => new SubcontractSaveDto
+                {
+                    offerId = contract.Offer.OfferId,
+                    clientCompanyId = contract.Offer.ClientCompanyId,
+                    exactClientDisplayName = contract.Offer.ExactClientDisplayName,
+                    serviceType = (int)contract.Offer.ServiceType,
+                    title = contract.Offer.Title,
+                    requiredWorkers = contract.Offer.RequiredWorkers,
+                    estimatedPersonHours = contract.Offer.EstimatedPersonHours,
+                    deadlineDays = contract.Offer.DeadlineDays,
+                    upfrontCostWon = contract.Offer.UpfrontCostWon,
+                    rewardWon = contract.Offer.RewardWon,
+                    reputationRequired = contract.Offer.ReputationRequired,
+                    acceptedMinute = contract.AcceptedMinute,
+                    status = (int)contract.Status,
+                    completedPersonHours = contract.CompletedPersonHours,
+                    resolvedMinute = contract.ResolvedMinute,
+                    contributions = contract.Contributions.Select(item => new ContractWorkerContributionSaveDto
+                    {
+                        memberId = item.MemberId,
+                        personHours = item.PersonHours
+                    }).ToList()
                 }).ToList()
             };
         }
@@ -63,7 +87,10 @@ namespace FamilyCompany.Save
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion != 1) throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
+            if (save.schemaVersion != 1 && save.schemaVersion != 2)
+            {
+                throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
+            }
             if (save.company == null || save.family == null || save.events == null || save.ledger == null)
             {
                 throw new InvalidOperationException("Save data is incomplete.");
@@ -90,8 +117,35 @@ namespace FamilyCompany.Save
                 item.priority,
                 item.kind,
                 item.payload)));
-            return new GameState(save.worldSeed, new GameTime(save.elapsedMinutes), family, company, events);
+            var contractDtos = save.schemaVersion >= 2 && save.contracts != null
+                ? save.contracts
+                : new System.Collections.Generic.List<SubcontractSaveDto>();
+            var contracts = new ContractPortfolio(family.Members.Count, contractDtos.Select(item =>
+            {
+                if (item.contributions == null) throw new InvalidOperationException("Contract contribution data is incomplete.");
+                var offer = new SubcontractOffer(
+                    item.offerId,
+                    item.clientCompanyId,
+                    item.exactClientDisplayName,
+                    (ContractServiceType)item.serviceType,
+                    item.title,
+                    item.requiredWorkers,
+                    item.estimatedPersonHours,
+                    item.deadlineDays,
+                    item.upfrontCostWon,
+                    item.rewardWon,
+                    item.reputationRequired);
+                return new SubcontractState(
+                    offer,
+                    item.acceptedMinute,
+                    (SubcontractStatus)item.status,
+                    item.completedPersonHours,
+                    item.resolvedMinute,
+                    item.contributions.Select(contribution => new ContractWorkerContribution(
+                        contribution.memberId,
+                        contribution.personHours)));
+            }));
+            return new GameState(save.worldSeed, new GameTime(save.elapsedMinutes), family, company, events, contracts);
         }
     }
 }
-

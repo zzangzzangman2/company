@@ -6,13 +6,14 @@ namespace FamilyCompany.Save
     [Serializable]
     public sealed class GameSaveDto
     {
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
         public int worldSeed;
         public long elapsedMinutes;
         public CompanySaveDto company = new CompanySaveDto();
         public List<FamilyMemberSaveDto> family = new List<FamilyMemberSaveDto>();
         public List<ScheduledEventSaveDto> events = new List<ScheduledEventSaveDto>();
         public List<LedgerTransactionSaveDto> ledger = new List<LedgerTransactionSaveDto>();
+        public List<SubcontractSaveDto> contracts = new List<SubcontractSaveDto>();
     }
 
     [Serializable]
@@ -64,5 +65,32 @@ namespace FamilyCompany.Save
         public long debitWon;
         public long creditWon;
     }
-}
 
+    [Serializable]
+    public sealed class SubcontractSaveDto
+    {
+        public string offerId = string.Empty;
+        public string clientCompanyId = string.Empty;
+        public string exactClientDisplayName = string.Empty;
+        public int serviceType;
+        public string title = string.Empty;
+        public int requiredWorkers;
+        public int estimatedPersonHours;
+        public int deadlineDays;
+        public long upfrontCostWon;
+        public long rewardWon;
+        public int reputationRequired;
+        public long acceptedMinute;
+        public int status;
+        public int completedPersonHours;
+        public long resolvedMinute = -1;
+        public List<ContractWorkerContributionSaveDto> contributions = new List<ContractWorkerContributionSaveDto>();
+    }
+
+    [Serializable]
+    public sealed class ContractWorkerContributionSaveDto
+    {
+        public string memberId = string.Empty;
+        public int personHours;
+    }
+}

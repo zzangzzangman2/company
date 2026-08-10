@@ -22,6 +22,11 @@ namespace FamilyCompany.Simulation.Contracts
             ExactClientDisplayName = RequireText(exactClientDisplayName, nameof(exactClientDisplayName));
             Title = RequireText(title, nameof(title));
 
+            if (!Enum.IsDefined(typeof(ContractServiceType), serviceType))
+            {
+                throw new ArgumentOutOfRangeException(nameof(serviceType));
+            }
+
             if (requiredWorkers <= 0) throw new ArgumentOutOfRangeException(nameof(requiredWorkers));
             if (estimatedPersonHours <= 0) throw new ArgumentOutOfRangeException(nameof(estimatedPersonHours));
             if (deadlineDays <= 0) throw new ArgumentOutOfRangeException(nameof(deadlineDays));

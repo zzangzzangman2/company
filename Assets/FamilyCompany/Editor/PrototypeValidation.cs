@@ -23,6 +23,7 @@ namespace FamilyCompany.Editor
                 ValidateEventOrdering();
                 ValidateTimeAndLedger();
                 ValidateFourPersonContractScope();
+                ValidateContractLifecycle();
                 ValidateSaveRoundTrip();
                 ValidateAssetsAndScene();
                 Debug.Log("FAMILY_COMPANY_VALIDATION: PASS");
@@ -89,6 +90,21 @@ namespace FamilyCompany.Editor
         private static void ValidateSaveRoundTrip()
         {
             var source = PrototypeStateFactory.Create(314159);
+            var offer = BootstrapContractCatalog.CreateOffer(
+                source.WorldSeed,
+                "save-validation-client",
+                "저장 검증용 고객사",
+                7);
+            var acceptance = source.Contracts.Accept(offer, source.Company, source.Time.ElapsedMinutes);
+            AssertEqual(true, acceptance.Accepted, "save contract acceptance");
+            var work = source.Contracts.RecordWork(
+                offer.OfferId,
+                "older_sister",
+                Math.Min(3, offer.EstimatedPersonHours),
+                source.Time.ElapsedMinutes,
+                source.Family,
+                source.Company);
+            AssertEqual(true, work.Applied, "save contract partial work");
             new SimulationRunner(source).AdvanceMinutes(1500);
             var json = JsonUtility.ToJson(GameSaveMapper.ToDto(source));
             var restored = GameSaveMapper.FromDto(JsonUtility.FromJson<GameSaveDto>(json));
@@ -97,6 +113,82 @@ namespace FamilyCompany.Editor
             AssertEqual(source.Company.CashWon, restored.Company.CashWon, "save cash");
             AssertEqual(source.Family.Get("older_sister").Energy, restored.Family.Get("older_sister").Energy, "save sister energy");
             AssertEqual(source.Events.Count, restored.Events.Count, "save event count");
+            AssertEqual(2, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
+            AssertEqual(source.Contracts.Contracts.Count, restored.Contracts.Contracts.Count, "save contract count");
+            var restoredContract = restored.Contracts.Get(offer.OfferId);
+            AssertEqual(acceptance.Contract.Status, restoredContract.Status, "save contract status");
+            AssertEqual(acceptance.Contract.CompletedPersonHours, restoredContract.CompletedPersonHours, "save contract work");
+            AssertEqual(acceptance.Contract.Contributions.Count, restoredContract.Contributions.Count, "save contract contributions");
+        }
+
+        private static void ValidateContractLifecycle()
+        {
+            var state = PrototypeStateFactory.Create();
+            var offer = new SubcontractOffer(
+                "lifecycle-contract",
+                "lifecycle-validation-client",
+                "계약 생명주기 검증용 고객사",
+                ContractServiceType.DataEntryAndQualityAssurance,
+                "소형 상품 데이터 입력",
+                4,
+                20,
+                7,
+                100_000,
+                900_000,
+                0);
+            var acceptance = state.Contracts.Accept(offer, state.Company, state.Time.ElapsedMinutes);
+            AssertEqual(true, acceptance.Accepted, "contract accepted");
+            AssertEqual(4_900_000L, state.Company.CashWon, "contract upfront cash");
+            var memberIds = new[] { "player", "older_sister", "father", "mother" };
+            ContractWorkResult finalWork = null;
+            foreach (var memberId in memberIds)
+            {
+                finalWork = state.Contracts.RecordWork(
+                    offer.OfferId,
+                    memberId,
+                    5,
+                    state.Time.ElapsedMinutes,
+                    state.Family,
+                    state.Company);
+            }
+
+            AssertEqual(true, finalWork != null && finalWork.Completed, "contract completion");
+            AssertEqual(900_000L, finalWork.RewardWon, "contract settlement reward");
+            AssertEqual(5_800_000L, state.Company.CashWon, "contract settled cash");
+            AssertEqual(2, state.Company.Reputation, "contract completion reputation");
+            AssertEqual(SubcontractStatus.Completed, acceptance.Contract.Status, "contract completed status");
+            AssertEqual(20, acceptance.Contract.CompletedPersonHours, "contract completed hours");
+            AssertEqual(4, acceptance.Contract.Contributions.Count, "contract contributor count");
+
+            var duplicate = state.Contracts.Accept(offer, state.Company, state.Time.ElapsedMinutes);
+            AssertEqual(false, duplicate.Accepted, "duplicate contract acceptance");
+            AssertEqual(ContractRejectionReason.DuplicateOffer, duplicate.Decision.RejectionReason, "duplicate contract reason");
+            foreach (var transaction in state.Company.Ledger)
+            {
+                AssertEqual(transaction.TotalDebitWon, transaction.TotalCreditWon, "contract ledger balance");
+            }
+
+            var overdueState = PrototypeStateFactory.Create(20000104);
+            overdueState.Company.ChangeReputation(10);
+            var overdueOffer = new SubcontractOffer(
+                "overdue-contract",
+                "overdue-validation-client",
+                "기한초과 검증용 고객사",
+                ContractServiceType.WebsiteMaintenance,
+                "긴급 홈페이지 갱신",
+                2,
+                16,
+                1,
+                50_000,
+                500_000,
+                0);
+            AssertEqual(true, overdueState.Contracts.Accept(
+                overdueOffer,
+                overdueState.Company,
+                overdueState.Time.ElapsedMinutes).Accepted, "overdue contract accepted");
+            new SimulationRunner(overdueState).AdvanceMinutes(1441);
+            AssertEqual(SubcontractStatus.Failed, overdueState.Contracts.Get(overdueOffer.OfferId).Status, "overdue contract failed");
+            AssertEqual(8, overdueState.Company.Reputation, "overdue reputation penalty");
         }
 
         private static void ValidateFourPersonContractScope()
