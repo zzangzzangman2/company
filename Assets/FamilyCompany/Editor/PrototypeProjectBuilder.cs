@@ -56,8 +56,8 @@ namespace FamilyCompany.Editor
             EnsureFolder("Assets/FamilyCompany/Scenes");
             EnsureFolder("Assets/FamilyCompany/Generated");
             EnsureFolder(MaterialFolder);
-            HighMotionCharacterArtBuilder.ConfigureAll();
-            OfficeVisualV2AssetImporter.ConfigureExistingAssets();
+            HighMotionCharacterArtBuilder.Validate();
+            OfficePresentationAssetIntegration.EnsureFrameSets();
             ConfigureOfficeModuleAtlas();
             CreateMaterials();
 
@@ -66,6 +66,7 @@ namespace FamilyCompany.Editor
 
             var systems = new GameObject("Systems");
             var bootstrap = systems.AddComponent<PrototypeBootstrap>();
+            bootstrap.InitializeNow();
             var historyRegistry = AssetDatabase.LoadAssetAtPath<TextAsset>(KoreaHistoryRegistryAssetPath);
             if (historyRegistry == null)
                 throw new InvalidOperationException($"Missing Korea History V1 registry: {KoreaHistoryRegistryAssetPath}");

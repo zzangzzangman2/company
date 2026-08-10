@@ -172,7 +172,9 @@ namespace FamilyCompany.Editor
         private static Texture2D LoadTexture(byte[] bytes, string path)
         {
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
-            if (texture.LoadImage(bytes, true)) return texture;
+            // The validation reads pixels immediately after decoding.  Unity's
+            // markNonReadable flag therefore has to remain false here.
+            if (texture.LoadImage(bytes, false)) return texture;
             UnityEngine.Object.DestroyImmediate(texture);
             throw new InvalidOperationException($"{path}: PNG decode failed.");
         }

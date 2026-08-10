@@ -16,6 +16,7 @@ namespace FamilyCompany.Editor
         private const string ObservationStatusPath = "Assets/FamilyCompany/Presentation.Unity/ManagementUI/IOfficeObservationStatusSource.cs";
         private const string FontCatalogPath = "Assets/FamilyCompany/Presentation.Unity/Resources/ManagementUI/ManagementUiFontCatalog_v1.asset";
         private const string SkinCatalogPath = "Assets/FamilyCompany/Presentation.Unity/Resources/ManagementUI/ManagementUiSkin_v1.asset";
+        private const string TextMeshProSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
 
         [MenuItem("Family Company/Validate Management UI V2")]
         public static void Run()
@@ -128,6 +129,8 @@ namespace FamilyCompany.Editor
 
         private static void ValidateFonts()
         {
+            if (!File.Exists(Path.GetFullPath(TextMeshProSettingsPath)))
+                throw new InvalidOperationException("TMP Settings resource is missing; dynamic Korean fonts cannot initialize in PlayMode or player builds.");
             var catalog = AssetDatabase.LoadAssetAtPath<ManagementUiFontCatalog>(FontCatalogPath);
             if (catalog == null || !catalog.IsComplete)
                 throw new InvalidOperationException("Bundled Korean management font catalog is missing or incomplete.");

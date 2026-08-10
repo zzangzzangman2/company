@@ -6,7 +6,8 @@
     "FamilyCompany.Save",
     "FamilyCompany.Infrastructure.Unity",
     "FamilyCompany.Presentation.Unity",
-    "FamilyCompany.Qa.Core"
+    "FamilyCompany.Qa.Core",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [
     "Editor"
