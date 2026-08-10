@@ -7,10 +7,12 @@ namespace FamilyCompany.Presentation.Unity
     {
         [SerializeField] private float moveSpeed = 5f;
         private CharacterController _controller;
+        private DirectionalSpriteAnimator _spriteAnimator;
 
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
+            _spriteAnimator = GetComponent<DirectionalSpriteAnimator>();
         }
 
         private void Update()
@@ -27,6 +29,7 @@ namespace FamilyCompany.Presentation.Unity
             var movement = (cameraRight * x + cameraForward * z).normalized * moveSpeed;
             if (!_controller.isGrounded) movement.y = -2f;
             _controller.Move(movement * Time.deltaTime);
+            _spriteAnimator?.SetWorldVelocity(new Vector3(movement.x, 0f, movement.z));
             if (movement.sqrMagnitude > 0.01f)
             {
                 transform.forward = Vector3.Slerp(transform.forward, new Vector3(movement.x, 0f, movement.z), Time.deltaTime * 12f);

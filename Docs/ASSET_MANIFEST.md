@@ -6,6 +6,41 @@
 
 사용자는 아래 기존/파생 이미지가 GPT 생성 에셋이며 자신이 사용 권리를 보유한다고 명시했다.
 
+## 공식 화풍 앵커
+
+- 경로: Assets/Art/StyleTargets/References/simul_polished_soft_render_vn_style_anchor_v3.png
+- 상태: CANONICAL STYLE-ONLY REFERENCE
+- 용도: `SIMUL polished soft-render VN anime v3`의 선·명암·피부·홍채·머리·의상 재질 마감 기준
+- 금지: 앵커 속 한수아의 얼굴·머리·체형·교복·포즈를 다른 인물에게 복제하지 않는다.
+- SHA-256: 7C07FD2DCA957375B21DAC887CFBBF8865AA36AE6A07E1A09B6919FFCE64866A
+- 출처: 사용자 소유 `simul` 프로젝트의 승인 화풍 앵커를 복사해 프로젝트 안에 영구 보존
+
+## 플레이어
+
+### 런타임 도트 이동 정본
+
+- 경로: Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png
+- 상태: CANONICAL RUNTIME SHEET
+- 용도: 14살 플레이어의 직접 조작 4방향 2프레임 이동
+- 규격: 1536x1024 RGBA, 4열x2행, 알파 0/255, 네 모서리 투명
+- 방향: 정면, 왼쪽, 뒤, 오른쪽
+- 외형: 빨간 뉴스보이캡, 짧은 짙은 갈색 머리, 갈색 눈, 흰 후드 윈드브레이커, 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화
+- SHA-256: 0C23A5D9594FFED9E8263938A11F6268F133B09ECDFFC90BAD4E2545179BC4EB
+- 제작: OpenAI 내장 imagegen. SIMUL v3 공식 앵커는 화풍, 기존 `simul` 타이틀은 14살 디자인, 누나 4x2 시트는 배치·픽셀 밀도 참조로 분리 사용
+- 투명화: 마젠타 크로마를 픽셀용 하드 키로 제거해 빨간 모자와 피부색을 보존
+
+### 생성 원본
+
+- 경로: Assets/Art/Characters/Player/Pixel/Source/player_pixel_walk4x2_chroma_v1.png
+- 상태: SOURCE
+- SHA-256: 59EBC47052CA37D5C8EE930D6868ECA388664E4758D3F50F4C6DA9D6F1EBE728
+
+### Unity 생성 프레임
+
+- 경로: Assets/Art/Characters/Player/Pixel/Frames/
+- 상태: GENERATED RUNTIME ASSETS
+- 제작: 빌더가 정본 4x2 시트를 8개 단일 Sprite PNG로 분리한다.
+
 ## 누나
 
 ### 정본
@@ -76,6 +111,32 @@
 - 용도: 귀여운 2.5D 도트 사무실의 팔레트, 가구 밀도, 통로, 구역 구성 기준
 - SHA-256: 8BCFC0D6B32A03324697346390F839654EEF262A5EB126F887E09760F80DB901
 - 제작: 사용자가 제공한 두 사무실 화면은 공간 구성 참고로만 사용하고, OpenAI 내장 이미지 생성 도구로 독자적인 2000년대 초반 가족회사 사무실을 생성했다.
+
+## 사무실 도트 모듈
+
+### 정본 아틀라스
+
+- 경로: Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png
+- 상태: CANONICAL PROP ATLAS V1
+- 용도: 3D 충돌 모듈 위에 교체·배치할 2000년 한국풍 등각 사무실 소품
+- 규격: 2048x1024 RGBA, 4열x3행, 알파 0/255, 네 모서리 투명
+- 내용: CRT 업무책상, 민트 회전의자, 접수대, 4인 회의탁자, 서류장, 팩스·복사기, 정수기, 복숭아색 소파, 커피탁자, 화분, 유리 파티션, 4단 캐비닛
+- SHA-256: F03B7D7CFA6CB0BC51D7DCB4ADB2BFD5B455BC5FAD75D399FA1FF27EB6D62CB8
+- 제작: OpenAI 내장 imagegen. SIMUL v3 앵커는 렌더링 문법, 사무실 도트 타깃은 등각 시점·팔레트, 가족회사 타이틀은 2000년 소품 참조로 분리 사용
+- 투명화: 마젠타 크로마를 픽셀용 하드 키로 제거
+
+### 생성 원본
+
+- 경로: Assets/Art/Office/Pixel/Source/office_module_atlas_4x3_chroma_v1.png
+- 상태: SOURCE
+- SHA-256: 6EB68B29C967DA52C321DA942AF96FF4DB53B4912FFBCEE95C7CFD5A9153722B
+
+### 개별 Unity Sprite
+
+- 경로: Assets/Art/Office/Pixel/Modules/
+- 상태: GENERATED CANONICAL MODULES
+- 개수: 12
+- 제작: 빌더가 4x3 아틀라스를 셀별 PNG로 분리한다. 원본 높이 1024가 3으로 나누어지지 않으므로 행 경계를 비율 반올림해 모든 픽셀을 손실 없이 분배한다.
 
 ## 메인 타이틀
 

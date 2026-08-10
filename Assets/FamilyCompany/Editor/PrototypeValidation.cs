@@ -312,6 +312,10 @@ namespace FamilyCompany.Editor
         {
             var sisterFrames = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.SisterFrameFolder });
             AssertEqual(8, sisterFrames.Length, "sister directional frame count");
+            var playerFrames = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.PlayerFrameFolder });
+            AssertEqual(8, playerFrames.Length, "player directional frame count");
+            var officeModules = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.OfficeModuleFolder });
+            AssertEqual(12, officeModules.Length, "office pixel module count");
             var titleHero = AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeProjectBuilder.TitleHeroAssetPath);
             if (titleHero == null || titleHero.width < 1600 || titleHero.height < 900)
             {
@@ -330,6 +334,12 @@ namespace FamilyCompany.Editor
             if (camera.GetComponent<Presentation.Unity.PixelatedCameraEffect>() == null)
             {
                 throw new InvalidOperationException("Pixelated camera effect is missing.");
+            }
+
+            var playerController = UnityEngine.Object.FindFirstObjectByType<Presentation.Unity.PrototypePlayerController>();
+            if (playerController == null || playerController.GetComponent<Presentation.Unity.DirectionalSpriteAnimator>() == null)
+            {
+                throw new InvalidOperationException("Player pixel movement visual is missing.");
             }
 
             var bootstrap = UnityEngine.Object.FindFirstObjectByType<Presentation.Unity.PrototypeBootstrap>();

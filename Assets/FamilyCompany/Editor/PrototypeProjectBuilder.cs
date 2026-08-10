@@ -12,15 +12,30 @@ namespace FamilyCompany.Editor
     public static class PrototypeProjectBuilder
     {
         public const string ScenePath = "Assets/FamilyCompany/Scenes/Prototype01.unity";
+        public const string PlayerPixelSheetPath = "Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png";
+        public const string PlayerFrameFolder = "Assets/Art/Characters/Player/Pixel/Frames";
         public const string SisterPortraitAssetPath = "Assets/Art/Characters/OlderSister/older_sister_casual_neutral_v2.png";
         public const string SisterPixelSheetPath = "Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v2.png";
         public const string TitleHeroAssetPath = "Assets/Art/UI/Resources/Title/family_company_title_hero_v1.png";
         public const string SisterFrameFolder = "Assets/Art/Characters/OlderSister/Pixel/Frames";
+        public const string OfficeModuleAtlasPath = "Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png";
+        public const string OfficeModuleFolder = "Assets/Art/Office/Pixel/Modules";
         private const string MaterialFolder = "Assets/FamilyCompany/Generated/Materials";
+        private static readonly string[] PlayerFrameNames =
+        {
+            "player_south_a", "player_west_a", "player_north_a", "player_east_a",
+            "player_south_b", "player_west_b", "player_north_b", "player_east_b"
+        };
         private static readonly string[] SisterFrameNames =
         {
             "sister_south_a", "sister_west_a", "sister_north_a", "sister_east_a",
             "sister_south_b", "sister_west_b", "sister_north_b", "sister_east_b"
+        };
+        private static readonly string[] OfficeModuleNames =
+        {
+            "office_workstation", "office_swivel_chair", "office_reception_counter", "office_meeting_table",
+            "office_document_bookcase", "office_fax_copier", "office_water_dispenser", "office_sofa",
+            "office_coffee_table", "office_potted_plant", "office_partition", "office_filing_cabinet"
         };
 
         private static Material _wood;
@@ -39,7 +54,9 @@ namespace FamilyCompany.Editor
             EnsureFolder("Assets/FamilyCompany/Scenes");
             EnsureFolder("Assets/FamilyCompany/Generated");
             EnsureFolder(MaterialFolder);
+            ConfigurePlayerPixelSheet();
             ConfigureSisterPixelSheet();
+            ConfigureOfficeModuleAtlas();
             CreateMaterials();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -224,18 +241,28 @@ namespace FamilyCompany.Editor
 
         private static GameObject CreatePlayer(Transform parent)
         {
-            var playerMaterial = GetMaterial("Player", new Color(0.24f, 0.55f, 0.92f));
-            var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            player.name = "Player (14) - DIRECT CONTROL";
+            var frames = LoadPlayerFrames();
+            var player = new GameObject("Player (14) - PIXEL DIRECT CONTROL");
             player.transform.SetParent(parent);
-            player.transform.position = new Vector3(-10.5f, 1f, -1.5f);
-            player.GetComponent<Renderer>().sharedMaterial = playerMaterial;
-            Object.DestroyImmediate(player.GetComponent<CapsuleCollider>());
+            player.transform.position = new Vector3(-10.5f, 0.05f, -1.5f);
             var controller = player.AddComponent<CharacterController>();
-            controller.height = 1.8f;
-            controller.radius = 0.35f;
+            controller.height = 1.45f;
+            controller.radius = 0.3f;
+            controller.center = new Vector3(0f, 0.72f, 0f);
+            controller.skinWidth = 0.04f;
+
+            var visual = new GameObject("Pixel Visual");
+            visual.transform.SetParent(player.transform, false);
+            visual.transform.localPosition = new Vector3(0f, 1.05f, 0f);
+            var renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = frames[0];
+            renderer.sortingOrder = 22;
+            renderer.spriteSortPoint = SpriteSortPoint.Pivot;
+            visual.AddComponent<BillboardFacingCamera>();
+            var animator = player.AddComponent<DirectionalSpriteAnimator>();
+            animator.Configure(renderer, frames, 0.18f);
             player.AddComponent<PrototypePlayerController>();
-            CreateLabel("나 · 14살\n직접 이동", player.transform.position + new Vector3(0f, 1.65f, 0f), player.transform);
+            CreateLabel("나 · 14살\n직접 이동", player.transform.position + new Vector3(0f, 2.3f, 0f), player.transform);
             return player;
         }
 
@@ -384,14 +411,24 @@ namespace FamilyCompany.Editor
 
         private static Sprite[] LoadSisterFrames()
         {
-            var result = new Sprite[SisterFrameNames.Length];
-            for (var index = 0; index < SisterFrameNames.Length; index++)
+            return LoadFrames(SisterFrameFolder, SisterFrameNames, "sister");
+        }
+
+        private static Sprite[] LoadPlayerFrames()
+        {
+            return LoadFrames(PlayerFrameFolder, PlayerFrameNames, "player");
+        }
+
+        private static Sprite[] LoadFrames(string folder, string[] frameNames, string label)
+        {
+            var result = new Sprite[frameNames.Length];
+            for (var index = 0; index < frameNames.Length; index++)
             {
-                var path = $"{SisterFrameFolder}/{SisterFrameNames[index]}.png";
+                var path = $"{folder}/{frameNames[index]}.png";
                 result[index] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
                 if (result[index] == null)
                 {
-                    throw new InvalidDataException($"Missing sister pixel frame: {path}");
+                    throw new InvalidDataException($"Missing {label} pixel frame: {path}");
                 }
             }
 
@@ -400,12 +437,38 @@ namespace FamilyCompany.Editor
 
         private static void ConfigureSisterPixelSheet()
         {
-            EnsureFolder(SisterFrameFolder);
-            AssetDatabase.ImportAsset(SisterPixelSheetPath, ImportAssetOptions.ForceSynchronousImport);
-            var importer = AssetImporter.GetAtPath(SisterPixelSheetPath) as TextureImporter;
+            ConfigurePixelAtlas(SisterPixelSheetPath, SisterFrameFolder, SisterFrameNames, 4, 2, 180f);
+        }
+
+        private static void ConfigurePlayerPixelSheet()
+        {
+            ConfigurePixelAtlas(PlayerPixelSheetPath, PlayerFrameFolder, PlayerFrameNames, 4, 2, 180f);
+        }
+
+        private static void ConfigureOfficeModuleAtlas()
+        {
+            ConfigurePixelAtlas(OfficeModuleAtlasPath, OfficeModuleFolder, OfficeModuleNames, 4, 3, 180f);
+        }
+
+        private static void ConfigurePixelAtlas(
+            string sourcePath,
+            string outputFolder,
+            string[] frameNames,
+            int columns,
+            int rows,
+            float pixelsPerUnit)
+        {
+            if (frameNames.Length != columns * rows)
+            {
+                throw new ArgumentException("Frame name count must match the atlas grid.", nameof(frameNames));
+            }
+
+            EnsureFolder(outputFolder);
+            AssetDatabase.ImportAsset(sourcePath, ImportAssetOptions.ForceSynchronousImport);
+            var importer = AssetImporter.GetAtPath(sourcePath) as TextureImporter;
             if (importer == null)
             {
-                throw new FileNotFoundException("Sister pixel sheet not found.", SisterPixelSheetPath);
+                throw new FileNotFoundException("Pixel atlas not found.", sourcePath);
             }
 
             importer.textureType = TextureImporterType.Default;
@@ -417,35 +480,40 @@ namespace FamilyCompany.Editor
             importer.maxTextureSize = 2048;
             importer.SaveAndReimport();
 
-            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(SisterPixelSheetPath);
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(sourcePath);
             if (texture == null)
             {
-                throw new InvalidDataException("Sister pixel sheet could not be loaded.");
+                throw new InvalidDataException($"Pixel atlas could not be loaded: {sourcePath}");
             }
 
-            if (texture.width % 4 != 0 || texture.height % 2 != 0)
+            if (texture.width < columns || texture.height < rows)
             {
-                throw new InvalidDataException($"Sister sheet must be a 4x2 grid: {texture.width}x{texture.height}");
+                throw new InvalidDataException(
+                    $"Pixel atlas is too small for a {columns}x{rows} grid: {texture.width}x{texture.height}");
             }
 
-            var cellWidth = texture.width / 4;
-            var cellHeight = texture.height / 2;
-            for (var row = 0; row < 2; row++)
+            for (var row = 0; row < rows; row++)
             {
-                for (var column = 0; column < 4; column++)
+                for (var column = 0; column < columns; column++)
                 {
-                    var frameIndex = row * 4 + column;
-                    var frameName = SisterFrameNames[frameIndex];
+                    var frameIndex = row * columns + column;
+                    var frameName = frameNames[frameIndex];
+                    var left = Mathf.RoundToInt(column * texture.width / (float)columns);
+                    var right = Mathf.RoundToInt((column + 1) * texture.width / (float)columns);
+                    var top = Mathf.RoundToInt(row * texture.height / (float)rows);
+                    var bottom = Mathf.RoundToInt((row + 1) * texture.height / (float)rows);
+                    var cellWidth = right - left;
+                    var cellHeight = bottom - top;
                     var pixels = texture.GetPixels(
-                        column * cellWidth,
-                        texture.height - (row + 1) * cellHeight,
+                        left,
+                        texture.height - bottom,
                         cellWidth,
                         cellHeight);
                     var frameTexture = new Texture2D(cellWidth, cellHeight, TextureFormat.RGBA32, false);
                     frameTexture.name = frameName;
                     frameTexture.SetPixels(pixels);
                     frameTexture.Apply(false, false);
-                    var framePath = $"{SisterFrameFolder}/{frameName}.png";
+                    var framePath = $"{outputFolder}/{frameName}.png";
                     File.WriteAllBytes(Path.GetFullPath(framePath), frameTexture.EncodeToPNG());
                     Object.DestroyImmediate(frameTexture);
                     AssetDatabase.ImportAsset(framePath, ImportAssetOptions.ForceSynchronousImport);
@@ -453,7 +521,7 @@ namespace FamilyCompany.Editor
                     if (frameImporter == null) throw new InvalidDataException($"Frame import failed: {framePath}");
                     frameImporter.textureType = TextureImporterType.Sprite;
                     frameImporter.spriteImportMode = SpriteImportMode.Single;
-                    frameImporter.spritePixelsPerUnit = 180f;
+                    frameImporter.spritePixelsPerUnit = pixelsPerUnit;
                     frameImporter.alphaIsTransparency = true;
                     frameImporter.mipmapEnabled = false;
                     frameImporter.filterMode = FilterMode.Point;
@@ -463,7 +531,7 @@ namespace FamilyCompany.Editor
                 }
             }
 
-            importer = AssetImporter.GetAtPath(SisterPixelSheetPath) as TextureImporter;
+            importer = AssetImporter.GetAtPath(sourcePath) as TextureImporter;
             importer.isReadable = false;
             importer.SaveAndReimport();
         }

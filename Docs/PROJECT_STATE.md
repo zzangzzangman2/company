@@ -1,7 +1,7 @@
 # PROJECT STATE
 
 최종 갱신: 2026-08-10
-현재 단계: Frontend V0.4 / imagegen 가로 타이틀과 3개 저장 슬롯
+현재 단계: Art V0.5 / SIMUL v3 통일 화풍과 플레이어·사무실 도트
 Unity: 6000.3.21f1
 
 ## 현재 목표
@@ -17,6 +17,9 @@ Unity: 6000.3.21f1
 - 캠페인 시작: 2000-01-03 08:00
 - 정본 누나 에셋: Assets/Art/Characters/OlderSister/older_sister_casual_neutral_v2.png
 - 런타임 누나 도트: Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v2.png
+- 런타임 플레이어 도트: Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png
+- 사무실 도트 모듈: Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png 및 Modules 12종
+- 공식 화풍: SIMUL polished soft-render VN anime v3 / 런타임 도트 번역 v1
 
 ## 완료
 
@@ -51,6 +54,10 @@ Unity: 6000.3.21f1
 - F11 borderless fullscreen 전환, 1600×900 창 모드, 창 크기 조절, Web 1280×720 기본값 구현
 - OpenAI imagegen으로 2000년 가족 사무실과 20살 누나를 담은 16:9 타이틀 키아트 생성 및 Unity Resources 연결
 - Windows QA player가 메인 화면을 실제 캡처하는 Frontend V0.4 시각 검증 도구 구현
+- SIMUL 공식 v3 화풍 문서와 승인 앵커를 분석하고 프로젝트 내부에 영구 앵커 복사
+- 원화·키아트는 SIMUL polished soft-render VN anime v3, 런타임은 Family Company SIMUL-v3 isometric pixel translation v1로 통일
+- 14살 플레이어 4방향 2프레임 도트 생성, 투명화, 8개 Sprite 분리 및 파란 캡슐 placeholder 교체
+- 2000년 한국풍 사무실 도트 12종 아틀라스 생성, 투명화 및 개별 Sprite 자동 분리
 
 ## 진행 중
 
@@ -64,7 +71,8 @@ Unity: 6000.3.21f1
 4. 플레이어가 직접 계약 작업 지점에서 상호작용해 인시를 기여하도록 연결한다.
 5. 아침 가족회의에서 회사 일과 가족 부탁이 충돌하는 첫 선택 이벤트를 만든다.
 6. `simul` 시장 이식 S1인 거래 달력·세션·가격·비용 규칙을 골든 테스트로 구현한다.
-7. 플레이어 14살 외형 정본과 부모 최종 에셋은 사용자 제공·확정 시 교체한다.
+7. 부모 최종 에셋은 사용자 제공·확정 시 placeholder와 교체한다.
+8. 12개 사무실 도트 모듈을 현재 3D 충돌 가구의 렌더 비주얼에 단계적으로 연결한다.
 
 ## 검증 기록
 
@@ -83,6 +91,10 @@ Unity: 6000.3.21f1
 - 2026-08-10: 별도 Codex QA worktree에서 Office V0.3 씬 재생성 및 PrototypeValidation 통과. 누나·아빠·엄마 agent, 직원 A·B 부재, 일반 순환 이동, 누나의 계약 출력 지점 실제 이동, 체류 후 4인시 반영과 계약 완료를 확인함.
 - 2026-08-10: 별도 Codex QA worktree의 Unity 6000.3.21f1에서 Frontend V0.4 PrototypeValidation 통과. 3개 슬롯의 서로 다른 seed·시간 왕복, backup 생성, 기존 단일 저장 호환, 시작 화면·새 게임·일시정지·재개 상태 전환, 1920×1080·1280×720·전체화면 설정을 확인함.
 - 2026-08-10: imagegen 타이틀 키아트가 포함된 Windows Development QA player 빌드 통과. 1920×1080 실제 플레이어 캡처에서 왼쪽 제목·버튼 안전 영역, 오른쪽 20살 누나와 2000년 CRT·전화·팩스 사무실, 글자 잘림 부재를 눈으로 확인함.
+- 2026-08-10: 플레이어·사무실 imagegen 크로마 원본을 하드 키로 투명화. 두 정본 모두 RGBA, 알파 0/255, 네 모서리 투명이며 빨간 모자·피부·민트·복숭아 팔레트 보존을 눈으로 확인함.
+- 2026-08-10: Office V0.5 빌더 통과. 플레이어 8개 방향 프레임과 사무실 12개 개별 Sprite를 생성하고 플레이어 캡슐을 DirectionalSpriteAnimator 이동 도트로 교체함.
+- 2026-08-10: PrototypeValidation 통과. 플레이어 8프레임, 누나 8프레임, 사무실 12모듈, 플레이어 DirectionalSpriteAnimator와 기존 계약·저장·화면 검증을 함께 확인함.
+- 2026-08-10: GPU 사무실 개요 캡처 통과. 기존 3D 충돌 사무실과 누나 도트가 유지되고 씬 재생성 결함이 없음을 확인함.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ## 차단 요소
