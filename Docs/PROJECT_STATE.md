@@ -70,7 +70,7 @@ Unity: 6000.3.21f1
 - 2026-08-10: 장기 캠페인, 실제 회사 대체역사, Claude/Codex 전용 경로, `simul` 시장 이식 계획 문서 상호 참조 점검 완료.
 - 2026-08-10: 국내 회사 우선 Claude 지시문 작성. `simul` DATA_SOURCES와 시장 사건·코퍼스·기업행동 파일을 읽기 전용 선행 자료로 지정함.
 - 2026-08-10: Unity 6000.3.21f1에서 4인 회사 계약 코어 컴파일 및 PrototypeValidation 통과. 32개 결정론적 초기 제안이 4명·80 인시·250만원 상한 안에 있고, 12명·1000 인시 대형 계약은 TeamTooSmall로 거절됨을 확인함.
-- 2026-08-10: 계약 수락·진행·정산·실패와 저장 스키마 v2 자동 검증 추가. Claude 역사 데이터 작업과 격리한 별도 Codex QA worktree에서 Unity 검증 예정.
+- 2026-08-10: Claude 역사 데이터 작업과 격리한 별도 Codex QA worktree에서 Unity 6000.3.21f1 PrototypeValidation 통과. 계약 수락 착수비, 가족 4명 기여 20인시, 완료 매출·평판, 중복 차단, 기한초과 실패, 장부 균형, 저장 스키마 v2 왕복을 확인함.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ## 차단 요소
