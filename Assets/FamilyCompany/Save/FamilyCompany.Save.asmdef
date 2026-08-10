@@ -1,0 +1,11 @@
+{
+  "name": "FamilyCompany.Save",
+  "rootNamespace": "FamilyCompany.Save",
+  "references": [
+    "FamilyCompany.Simulation"
+  ],
+  "autoReferenced": true,
+  "allowUnsafeCode": false,
+  "noEngineReferences": true
+}
+

@@ -1,0 +1,10 @@
+{
+  "name": "FamilyCompany.Infrastructure.Unity",
+  "rootNamespace": "FamilyCompany.Infrastructure.Unity",
+  "references": [
+    "FamilyCompany.Save"
+  ],
+  "autoReferenced": true,
+  "allowUnsafeCode": false
+}
+

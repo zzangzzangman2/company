@@ -1,0 +1,9 @@
+{
+  "name": "FamilyCompany.Simulation",
+  "rootNamespace": "FamilyCompany.Simulation",
+  "references": [],
+  "autoReferenced": true,
+  "allowUnsafeCode": false,
+  "noEngineReferences": true
+}
+

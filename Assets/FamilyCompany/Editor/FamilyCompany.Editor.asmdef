@@ -1,0 +1,16 @@
+{
+  "name": "FamilyCompany.Editor",
+  "rootNamespace": "FamilyCompany.Editor",
+  "references": [
+    "FamilyCompany.Simulation",
+    "FamilyCompany.Save",
+    "FamilyCompany.Infrastructure.Unity",
+    "FamilyCompany.Presentation.Unity"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "allowUnsafeCode": false
+}
+

@@ -1,0 +1,27 @@
+using System;
+using FamilyCompany.Simulation.Company;
+using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.Events;
+using FamilyCompany.Simulation.Family;
+
+namespace FamilyCompany.Simulation.Game
+{
+    public sealed class GameState
+    {
+        public GameState(int worldSeed, GameTime time, FamilyState family, CompanyState company, DeterministicEventQueue events)
+        {
+            WorldSeed = worldSeed;
+            Time = time ?? throw new ArgumentNullException(nameof(time));
+            Family = family ?? throw new ArgumentNullException(nameof(family));
+            Company = company ?? throw new ArgumentNullException(nameof(company));
+            Events = events ?? throw new ArgumentNullException(nameof(events));
+        }
+
+        public int WorldSeed { get; }
+        public GameTime Time { get; }
+        public FamilyState Family { get; }
+        public CompanyState Company { get; }
+        public DeterministicEventQueue Events { get; }
+    }
+}
+

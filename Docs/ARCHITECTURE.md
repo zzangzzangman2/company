@@ -1,0 +1,23 @@
+# ARCHITECTURE
+
+## 계층
+
+- FamilyCompany.Simulation: Unity 참조가 없는 시간, RNG, 이벤트, 가족, 회사, 회계, 게임 상태
+- FamilyCompany.Save: 저장 DTO와 저장소 인터페이스
+- FamilyCompany.Infrastructure.Unity: JsonUtility와 persistentDataPath를 사용하는 저장 어댑터
+- FamilyCompany.Presentation.Unity: 입력, 카메라, 화면 표시, 씬 오브젝트 연결
+- FamilyCompany.Editor: 프로토타입 씬 생성과 헤드리스 검증
+
+## 핵심 불변식
+
+- 시간의 원천은 캠페인 시작 이후 흐른 정수 분 하나다.
+- 게임 플레이 RNG는 seed와 안정 키로부터 재현된다. UnityEngine.Random을 사용하지 않는다.
+- 같은 시각의 예약 이벤트는 dueMinute, priority, eventId 순서로 처리한다.
+- 돈은 long 원 단위다. 소수 부동소수점으로 돈을 보관하지 않는다.
+- 모든 회계 거래는 차변 합계와 대변 합계가 같다.
+- 저장 대상은 의미 상태다. Transform, 렌더러 캐시, UI 선택 상태는 저장하지 않는다.
+
+## 씬 경계
+
+Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 준다. 구역 이동은 현재 우선순위가 공간 감각 검증이므로 포털 없이 직접 걸어서 가능하게 시작한다. 향후 맵이 커지면 의미 위치 ID와 전환 시스템을 추가한다.
+

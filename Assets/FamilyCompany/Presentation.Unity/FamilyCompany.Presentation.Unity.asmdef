@@ -1,0 +1,12 @@
+{
+  "name": "FamilyCompany.Presentation.Unity",
+  "rootNamespace": "FamilyCompany.Presentation.Unity",
+  "references": [
+    "FamilyCompany.Simulation",
+    "FamilyCompany.Save",
+    "FamilyCompany.Infrastructure.Unity"
+  ],
+  "autoReferenced": true,
+  "allowUnsafeCode": false
+}
+
