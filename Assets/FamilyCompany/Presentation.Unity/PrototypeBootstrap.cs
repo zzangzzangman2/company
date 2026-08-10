@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.IO;
 using System.Linq;
 using FamilyCompany.Infrastructure.Unity;
 using FamilyCompany.Save;
@@ -56,6 +58,7 @@ namespace FamilyCompany.Presentation.Unity
             if (!Application.isPlaying) return;
             ConfigureDisplayDefaults();
             ShowMainMenuNow();
+            TryStartFrontendQaCapture();
         }
 
         private void Start()
@@ -287,6 +290,36 @@ namespace FamilyCompany.Presentation.Unity
                 var resolution = Screen.currentResolution;
                 Screen.SetResolution(resolution.width, resolution.height, FullScreenMode.FullScreenWindow);
             }
+        }
+
+        private void TryStartFrontendQaCapture()
+        {
+            const string argumentName = "-familyCompanyCaptureFrontend";
+            var arguments = Environment.GetCommandLineArgs();
+            var argumentIndex = Array.IndexOf(arguments, argumentName);
+            if (argumentIndex < 0 || argumentIndex + 1 >= arguments.Length) return;
+            var outputPath = Path.GetFullPath(arguments[argumentIndex + 1]);
+            var directory = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+            if (File.Exists(outputPath)) File.Delete(outputPath);
+            StartCoroutine(CaptureFrontendForQa(outputPath));
+        }
+
+        private IEnumerator CaptureFrontendForQa(string outputPath)
+        {
+            for (var frame = 0; frame < 10; frame++) yield return new WaitForEndOfFrame();
+            ScreenCapture.CaptureScreenshot(outputPath);
+            for (var frame = 0; frame < 300; frame++)
+            {
+                yield return null;
+                if (!File.Exists(outputPath) || new FileInfo(outputPath).Length < 1024) continue;
+                Debug.Log($"FAMILY_COMPANY_FRONTEND_CAPTURE: PASS ({outputPath})");
+                Application.Quit(0);
+                yield break;
+            }
+
+            Debug.LogError($"FAMILY_COMPANY_FRONTEND_CAPTURE: FAIL ({outputPath})");
+            Application.Quit(1);
         }
 
         private void SetSimulationPaused(bool paused)

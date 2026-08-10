@@ -1,70 +1,36 @@
+using System;
 using System.IO;
 using UnityEditor;
-using UnityEditor.SceneManagement;
+using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 namespace FamilyCompany.Editor
 {
-    [InitializeOnLoad]
     public static class PrototypeFrontendCapture
     {
-        public const string OutputPath = "Artifacts/FrontendV04/frontend-main-menu-1920x1080.png";
-        private const string PendingKey = "FamilyCompany.FrontendCapture.Pending";
-        private const string FrameKey = "FamilyCompany.FrontendCapture.Frame";
-        private const string BatchKey = "FamilyCompany.FrontendCapture.Batch";
+        public const string ArtifactFolder = "Artifacts/FrontendV04";
+        public const string PlayerPath = ArtifactFolder + "/Player/FamilyCompanyFrontendQa.exe";
+        public const string ScreenshotPath = ArtifactFolder + "/frontend-main-menu-1920x1080.png";
 
-        static PrototypeFrontendCapture()
+        [MenuItem("Family Company/Build Frontend V0.4 QA Player")]
+        public static void BuildQaPlayer()
         {
-            EditorApplication.update -= Tick;
-            EditorApplication.update += Tick;
-        }
-
-        [MenuItem("Family Company/Capture Frontend V0.4")]
-        public static void Capture()
-        {
-            var absolute = Path.GetFullPath(OutputPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(absolute));
-            if (File.Exists(absolute)) File.Delete(absolute);
-            SessionState.SetBool(PendingKey, true);
-            SessionState.SetInt(FrameKey, 0);
-            SessionState.SetBool(BatchKey, Application.isBatchMode);
-            EditorSceneManager.OpenScene(PrototypeProjectBuilder.ScenePath, OpenSceneMode.Single);
-            if (!EditorApplication.isPlaying) EditorApplication.EnterPlaymode();
-        }
-
-        private static void Tick()
-        {
-            if (!SessionState.GetBool(PendingKey, false) || !EditorApplication.isPlaying) return;
-            var frame = SessionState.GetInt(FrameKey, 0) + 1;
-            SessionState.SetInt(FrameKey, frame);
-            if (frame == 10)
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(PlayerPath)));
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
-                Screen.SetResolution(1920, 1080, FullScreenMode.Windowed);
+                scenes = new[] { PrototypeProjectBuilder.ScenePath },
+                locationPathName = PlayerPath,
+                target = BuildTarget.StandaloneWindows64,
+                options = BuildOptions.Development
+            });
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Frontend QA player build failed: {report.summary.result}, {report.summary.totalErrors} errors");
             }
 
-            if (frame == 45)
-            {
-                ScreenCapture.CaptureScreenshot(Path.GetFullPath(OutputPath));
-            }
-
-            if (frame >= 60 && File.Exists(Path.GetFullPath(OutputPath)))
-            {
-                SessionState.SetBool(PendingKey, false);
-                Debug.Log($"FAMILY_COMPANY_FRONTEND_CAPTURE: PASS ({Path.GetFullPath(OutputPath)})");
-                Finish(0);
-                return;
-            }
-
-            if (frame < 300) return;
-            SessionState.SetBool(PendingKey, false);
-            Debug.LogError("FAMILY_COMPANY_FRONTEND_CAPTURE: FAIL (screenshot timeout)");
-            Finish(1);
-        }
-
-        private static void Finish(int exitCode)
-        {
-            if (SessionState.GetBool(BatchKey, false)) EditorApplication.Exit(exitCode);
-            else EditorApplication.ExitPlaymode();
+            Debug.Log(
+                $"FAMILY_COMPANY_FRONTEND_BUILD: PASS ({Path.GetFullPath(PlayerPath)}, {report.summary.totalSize} bytes)");
         }
     }
 }
