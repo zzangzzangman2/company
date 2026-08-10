@@ -7,7 +7,7 @@
 3. Docs/DECISIONS.md
 4. Docs/ARCHITECTURE.md
 5. 시각/씬 작업이면 Docs/ART_STYLE.md와 Docs/OFFICE_V0_2.md
-6. 회사 역사·시장 작업이면 Docs/ULTIMATE_VISION.md, Docs/REAL_COMPANY_ALT_HISTORY.md, Docs/SIMUL_MARKET_PORT.md
+6. 회사 역사·시장·계약 작업이면 Docs/ULTIMATE_VISION.md, Docs/REAL_COMPANY_ALT_HISTORY.md, Docs/SIMUL_MARKET_PORT.md, Docs/CONTRACTS_V0_3.md
 7. 작업과 직접 관련된 추가 문서
 
 ## 필수 작업 규칙

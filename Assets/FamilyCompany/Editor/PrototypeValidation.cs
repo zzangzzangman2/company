@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using FamilyCompany.Save;
+using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.Prototype;
@@ -21,6 +22,7 @@ namespace FamilyCompany.Editor
                 ValidateStableRandom();
                 ValidateEventOrdering();
                 ValidateTimeAndLedger();
+                ValidateFourPersonContractScope();
                 ValidateSaveRoundTrip();
                 ValidateAssetsAndScene();
                 Debug.Log("FAMILY_COMPANY_VALIDATION: PASS");
@@ -95,6 +97,65 @@ namespace FamilyCompany.Editor
             AssertEqual(source.Company.CashWon, restored.Company.CashWon, "save cash");
             AssertEqual(source.Family.Get("older_sister").Energy, restored.Family.Get("older_sister").Energy, "save sister energy");
             AssertEqual(source.Events.Count, restored.Events.Count, "save event count");
+        }
+
+        private static void ValidateFourPersonContractScope()
+        {
+            var state = PrototypeStateFactory.Create();
+            var policy = new SmallTeamContractPolicy(state.Family.Members.Count);
+            for (var sequence = 0; sequence < 32; sequence++)
+            {
+                var offer = BootstrapContractCatalog.CreateOffer(
+                    state.WorldSeed,
+                    "validation-client",
+                    "계약 검증용 고객사",
+                    sequence);
+                var decision = policy.Evaluate(
+                    offer,
+                    state.Company.CashWon,
+                    state.Company.Reputation,
+                    0,
+                    0);
+                if (!decision.CanAccept)
+                {
+                    throw new InvalidOperationException(
+                        $"Starter contract {offer.OfferId} was rejected: {decision.RejectionReason}");
+                }
+
+                if (offer.RequiredWorkers > 4 || offer.EstimatedPersonHours > 80 || offer.RewardWon > 2_500_000)
+                {
+                    throw new InvalidOperationException("Starter contract exceeds the four-person bootstrap scope.");
+                }
+
+                var replay = BootstrapContractCatalog.CreateOffer(
+                    state.WorldSeed,
+                    "validation-client",
+                    "계약 검증용 고객사",
+                    sequence);
+                AssertEqual(offer.OfferId, replay.OfferId, "contract deterministic ID");
+                AssertEqual(offer.ServiceType, replay.ServiceType, "contract deterministic template");
+            }
+
+            var oversized = new SubcontractOffer(
+                "oversized",
+                "validation-client",
+                "계약 검증용 고객사",
+                ContractServiceType.SmallBusinessTool,
+                "대기업 전사 시스템 구축",
+                12,
+                1000,
+                30,
+                10_000_000,
+                100_000_000,
+                0);
+            var rejected = policy.Evaluate(
+                oversized,
+                state.Company.CashWon,
+                state.Company.Reputation,
+                0,
+                0);
+            AssertEqual(false, rejected.CanAccept, "oversized contract acceptance");
+            AssertEqual(ContractRejectionReason.TeamTooSmall, rejected.RejectionReason, "oversized contract reason");
         }
 
         private static void ValidateAssetsAndScene()

@@ -4,6 +4,8 @@
 
 `C:/Users/godho/Documents/Codex/simul`은 읽기 전용 설계 참고다. Unity 이식은 Codex 작업 흐름이 맡으며 Claude 역사 데이터 작업과 파일을 겹치지 않는다.
 
+Claude도 역사 조사 전에 `simul/DATA_SOURCES.md`, `simul/flutter_app/lib/game/market_era_events.dart`, `market_corpus_*`, `market_arc_scenarios.dart`, `corporate_disclosure.dart`, `game_engine_corporate_actions.dart`를 읽기 전용으로 검색할 수 있다. 기존 사건 문법, 출처 URL과 사용자가 제공했던 2000~2026 한국 주식시장 자료의 파생 데이터를 참고하되 실제 회사명·날짜의 최종 확정은 원 1차 출처로 교차 검증한다. `simul`은 수정하지 않는다.
+
 기존 Dart 파일을 줄 단위로 옮기지 않는다. 이미 검증된 규칙, 골든값, 저장 의미와 테스트 계약을 작은 순수 C# 구성요소로 다시 구현한다.
 
 ## 유지할 시장 계약

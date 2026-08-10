@@ -3,6 +3,7 @@
 ## 계층
 
 - FamilyCompany.Simulation: Unity 참조가 없는 시간, RNG, 이벤트, 가족, 회사, 회계, 게임 상태
+- FamilyCompany.Simulation.Contracts: 실제 고객 회사 ID, 소형 하청 제안, 4인 팀 수락 용량 정책
 - FamilyCompany.Save: 저장 DTO와 저장소 인터페이스
 - FamilyCompany.Infrastructure.Unity: JsonUtility와 persistentDataPath를 사용하는 저장 어댑터
 - FamilyCompany.Presentation.Unity: 입력, 카메라, 화면 표시, 씬 오브젝트 연결
