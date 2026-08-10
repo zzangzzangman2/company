@@ -292,8 +292,21 @@ namespace FamilyCompany.Presentation.Unity
             IReadOnlyList<OfficeSeating.Authoring.OfficeSeatDefinition> definitions)
         {
             var validIds = new HashSet<string>(definitions.Select(item => item.SeatId), StringComparer.Ordinal);
+            var candidates = new Dictionary<string, string>(_retainedSeatAssignments, StringComparer.Ordinal);
+            for (var index = 0; index < definitions.Count; index++)
+            {
+                var seatId = definitions[index].SeatId;
+                if (candidates.ContainsKey(seatId) ||
+                    !seatRegistry.TryGetAuthoring(seatId, out var authoring) ||
+                    string.IsNullOrEmpty(authoring.LongTermAssignedMemberId) ||
+                    candidates.Values.Contains(authoring.LongTermAssignedMemberId, StringComparer.Ordinal))
+                {
+                    continue;
+                }
+                candidates.Add(seatId, authoring.LongTermAssignedMemberId);
+            }
             var seenMembers = new HashSet<string>(StringComparer.Ordinal);
-            var assignments = _retainedSeatAssignments
+            var assignments = candidates
                 .Where(item => validIds.Contains(item.Key))
                 .OrderBy(item => item.Key, StringComparer.Ordinal)
                 .Where(item => seenMembers.Add(item.Value))

@@ -9,6 +9,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
     {
         [SerializeField] private string seatId = string.Empty;
         [SerializeField] private string seatDisplayName = string.Empty;
+        [SerializeField] private string longTermAssignedMemberId = string.Empty;
         [SerializeField] private Transform approachAnchor;
         [SerializeField] private Transform sitAnchor;
         [SerializeField] private Transform computerLookTarget;
@@ -31,6 +32,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
         public Transform SitAnchor => sitAnchor;
         public Transform ComputerLookTarget => computerLookTarget;
         public OfficeWaypoint SemanticDestination => semanticDestination;
+        public string LongTermAssignedMemberId => (longTermAssignedMemberId ?? string.Empty).Trim();
         public Collider ClickHotspot => clickHotspot;
         public OfficeSeatForegroundOcclusionMode ForegroundOcclusionMode => foregroundOcclusionMode;
         public bool ValidateExpectedFacing => validateExpectedFacing;
@@ -52,10 +54,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
             bool enforceExpectedFacing = false,
             OfficeSeatFacing8 newExpectedFacing = OfficeSeatFacing8.North,
             string newDisplayName = "",
-            OfficeWaypoint newSemanticDestination = null)
+            OfficeWaypoint newSemanticDestination = null,
+            string newLongTermAssignedMemberId = "")
         {
             seatId = newSeatId ?? string.Empty;
             seatDisplayName = newDisplayName ?? string.Empty;
+            longTermAssignedMemberId = newLongTermAssignedMemberId ?? string.Empty;
             approachAnchor = newApproachAnchor;
             sitAnchor = newSitAnchor;
             computerLookTarget = newComputerLookTarget;
