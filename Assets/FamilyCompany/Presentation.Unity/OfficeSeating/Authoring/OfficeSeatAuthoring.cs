@@ -1,12 +1,14 @@
 using System;
+using FamilyCompany.Presentation.Unity.OfficeSeating.UI;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
 {
     [DisallowMultipleComponent]
-    public sealed class OfficeSeatAuthoring : MonoBehaviour
+    public sealed class OfficeSeatAuthoring : MonoBehaviour, IOfficeSeatHotspotProvider
     {
         [SerializeField] private string seatId = string.Empty;
+        [SerializeField] private string seatDisplayName = string.Empty;
         [SerializeField] private Transform approachAnchor;
         [SerializeField] private Transform sitAnchor;
         [SerializeField] private Transform computerLookTarget;
@@ -16,6 +18,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
         [SerializeField] private OfficeSeatFacing8 expectedFacing = OfficeSeatFacing8.North;
 
         public string SeatId => (seatId ?? string.Empty).Trim();
+        public string SeatDisplayName
+        {
+            get
+            {
+                var normalized = (seatDisplayName ?? string.Empty).Trim();
+                return normalized.Length == 0 ? SeatId : normalized;
+            }
+        }
         public Transform ApproachAnchor => approachAnchor;
         public Transform SitAnchor => sitAnchor;
         public Transform ComputerLookTarget => computerLookTarget;
@@ -33,9 +43,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
             OfficeSeatForegroundOcclusionMode newOcclusionMode =
                 OfficeSeatForegroundOcclusionMode.Default,
             bool enforceExpectedFacing = false,
-            OfficeSeatFacing8 newExpectedFacing = OfficeSeatFacing8.North)
+            OfficeSeatFacing8 newExpectedFacing = OfficeSeatFacing8.North,
+            string newDisplayName = "")
         {
             seatId = newSeatId ?? string.Empty;
+            seatDisplayName = newDisplayName ?? string.Empty;
             approachAnchor = newApproachAnchor;
             sitAnchor = newSitAnchor;
             computerLookTarget = newComputerLookTarget;
@@ -43,6 +55,28 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
             foregroundOcclusionMode = newOcclusionMode;
             validateExpectedFacing = enforceExpectedFacing;
             expectedFacing = newExpectedFacing;
+        }
+
+        public bool OwnsSeatHotspot(Collider candidate)
+        {
+            return candidate != null && candidate == clickHotspot;
+        }
+
+        public bool TryResolveFacing(out OfficeSeatFacing8 facing)
+        {
+            facing = OfficeSeatFacing8.South;
+            if (sitAnchor == null || computerLookTarget == null ||
+                !IsFinite(sitAnchor.position) || !IsFinite(computerLookTarget.position))
+            {
+                return false;
+            }
+
+            return OfficeSeatGeometryRules.TryResolveLookDirection(
+                PositionOf(sitAnchor),
+                PositionOf(computerLookTarget),
+                out _,
+                out _,
+                out facing);
         }
 
         public OfficeSeatValidationReport ValidateAuthoring()

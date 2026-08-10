@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
+using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Simulation.Core;
 using UnityEngine;
 
@@ -37,6 +39,15 @@ namespace FamilyCompany.Presentation.Unity
         private bool _presentationAway;
         private float _footstepRemaining;
         private int _footstepSequence;
+        private bool _seatRuntimeEnabled;
+        private OfficeSeatRuntimeClaim _seatClaim;
+        private OfficeSeatAuthoring _seatAuthoring;
+        private OfficeWaypoint _seatNavigationWaypoint;
+        private string _seatIntentId = string.Empty;
+        private string _seatStatusLabel = string.Empty;
+        private bool _seatNavigationWaypointReached;
+        private bool _seatReleaseRequested;
+        private bool _seatedPhysics;
 
         public event Action<OfficeWorkerAgent, string> AssignedTaskCompleted;
 
@@ -45,6 +56,10 @@ namespace FamilyCompany.Presentation.Unity
         public OfficeActivity CurrentActivity { get; private set; } = OfficeActivity.Walking;
         public string CurrentActivityLabel => HasAssignedTask
             ? $"계약 · {ActivityLabel(CurrentActivity)}"
+            : HasActiveSeatClaim
+                ? CurrentActivity == OfficeActivity.Walking
+                    ? $"{_seatStatusLabel} 좌석으로 이동 중"
+                    : _seatStatusLabel
             : HasAutonomousDestination
                 ? CurrentActivity == OfficeActivity.Walking
                     ? $"{_autonomyStatusLabel} 가는 중"
@@ -56,9 +71,18 @@ namespace FamilyCompany.Presentation.Unity
         public bool HasAutonomousDestination => _autonomyWaypoint != null;
         public bool IsPresentationAway => _presentationAway;
         public string AssignedTaskId => _assignedTaskId;
+        public DirectionalSpriteAnimator SpriteAnimator => spriteAnimator;
+        public bool HasOfficeSeatingAnimation => spriteAnimator != null && spriteAnimator.HasOfficeSeatingFrames;
+        public bool IsOfficeSeatingRuntimeEnabled => _seatRuntimeEnabled;
+        public OfficeWorkerSeatingPhase SeatingPhase { get; private set; }
+        public bool HasActiveSeatClaim => _seatClaim != null && !_seatClaim.IsReleased;
+        public string ActiveSeatId => HasActiveSeatClaim ? _seatClaim.SeatId : string.Empty;
+        public string ActiveSeatIntentId => _seatIntentId;
         public OfficeWaypoint TargetWaypoint =>
             HasAssignedTask
                 ? _assignedWaypoint
+                : HasActiveSeatClaim && _seatNavigationWaypoint != null
+                    ? _seatNavigationWaypoint
                 : HasAutonomousDestination
                     ? _autonomyWaypoint
                 : route != null && route.Length > 0
@@ -68,6 +92,7 @@ namespace FamilyCompany.Presentation.Unity
         public Vector2 ResolveVisualArtPixel()
         {
             var basePixel = OfficeVisualV2Calibration.WorldToArtPixel(transform.position);
+            if (SeatingPhase != OfficeWorkerSeatingPhase.None) return basePixel;
             var anchor = _navigationPath != null && _navigationPathIndex < _navigationPath.Length
                 ? _navigationPath[_navigationPathIndex]
                 : _lastReachedWaypoint;
@@ -94,6 +119,13 @@ namespace FamilyCompany.Presentation.Unity
             _initialized = false;
         }
 
+        public void SetOfficeSeatingRuntimeEnabled(bool enabled)
+        {
+            if (_seatRuntimeEnabled == enabled) return;
+            _seatRuntimeEnabled = enabled;
+            if (!enabled) ClearSeatDestination();
+        }
+
         public void SetAgentId(string id)
         {
             agentId = string.IsNullOrWhiteSpace(id) ? throw new ArgumentException("Agent ID is required.", nameof(id)) : id;
@@ -114,7 +146,14 @@ namespace FamilyCompany.Presentation.Unity
             _assignedWaypointReached = false;
             if (_autonomyWaypoint != null) _autonomyWaypointReached = false;
             _waitRemaining = 0f;
-            BeginNavigation(waypoint);
+            if (HasActiveSeatClaim)
+            {
+                if (waypoint.Activity != OfficeActivity.Work) ClearSeatDestination();
+            }
+            else
+            {
+                BeginNavigation(waypoint);
+            }
             return true;
         }
 
@@ -124,7 +163,7 @@ namespace FamilyCompany.Presentation.Unity
             _assignedWaypoint = null;
             _assignedWorkRemaining = 0f;
             _assignedWaypointReached = false;
-            if (_autonomyWaypoint != null) BeginNavigation(_autonomyWaypoint);
+            if (!HasActiveSeatClaim && _autonomyWaypoint != null) BeginNavigation(_autonomyWaypoint);
         }
 
         public void SetAutonomousDestination(string intentId, OfficeWaypoint waypoint, string statusLabel)
@@ -138,7 +177,13 @@ namespace FamilyCompany.Presentation.Unity
             _autonomyIntentId = intentId;
             _autonomyWaypoint = waypoint;
             _autonomyWaypointReached = false;
-            if (!HasAssignedTask) BeginNavigation(waypoint);
+            if (!HasAssignedTask)
+            {
+                if (HasActiveSeatClaim && waypoint.Activity != OfficeActivity.Work)
+                    ClearSeatDestination();
+                else if (!HasActiveSeatClaim)
+                    BeginNavigation(waypoint);
+            }
         }
 
         public void ClearAutonomousDestination()
@@ -147,14 +192,77 @@ namespace FamilyCompany.Presentation.Unity
             _autonomyStatusLabel = string.Empty;
             _autonomyWaypoint = null;
             _autonomyWaypointReached = false;
+            ClearSeatDestination();
             _navigationPath = Array.Empty<OfficeWaypoint>();
             _navigationPathIndex = 0;
+        }
+
+        public bool SetSeatDestination(
+            string intentId,
+            OfficeSeatAuthoring seat,
+            OfficeWaypoint navigationWaypoint,
+            OfficeSeatRuntimeClaim claim,
+            string statusLabel)
+        {
+            if (string.IsNullOrWhiteSpace(intentId))
+                throw new ArgumentException("Seat intent ID is required.", nameof(intentId));
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            if (navigationWaypoint == null) throw new ArgumentNullException(nameof(navigationWaypoint));
+            if (claim == null) throw new ArgumentNullException(nameof(claim));
+            if (!string.Equals(claim.MemberId, agentId, StringComparison.Ordinal))
+                throw new ArgumentException("Seat claim member does not match this agent.", nameof(claim));
+            if (!string.Equals(claim.SeatId, seat.SeatId, StringComparison.Ordinal))
+                throw new ArgumentException("Seat claim does not match the authored seat.", nameof(claim));
+            if (!_seatRuntimeEnabled || !HasOfficeSeatingAnimation || HasActiveSeatClaim) return false;
+            if (!_initialized) InitializeNow();
+
+            SetAwayPresentation(false);
+            _seatClaim = claim;
+            _seatAuthoring = seat;
+            _seatNavigationWaypoint = navigationWaypoint;
+            _seatIntentId = intentId.Trim();
+            _seatStatusLabel = string.IsNullOrWhiteSpace(statusLabel) ? "좌석 업무" : statusLabel.Trim();
+            _seatNavigationWaypointReached = false;
+            _seatReleaseRequested = false;
+            SeatingPhase = OfficeWorkerSeatingPhase.MovingToApproach;
+            BeginNavigation(navigationWaypoint);
+            return true;
+        }
+
+        public bool UpdateActiveSeatIntent(string intentId, string statusLabel)
+        {
+            if (!HasActiveSeatClaim || string.IsNullOrWhiteSpace(intentId)) return false;
+            _seatIntentId = intentId.Trim();
+            _seatStatusLabel = string.IsNullOrWhiteSpace(statusLabel) ? "좌석 업무" : statusLabel.Trim();
+            return true;
+        }
+
+        public void ClearSeatDestination()
+        {
+            if (!HasActiveSeatClaim) return;
+            _seatReleaseRequested = true;
+            switch (SeatingPhase)
+            {
+                case OfficeWorkerSeatingPhase.MovingToApproach:
+                    ReleaseSeatImmediately();
+                    ResumeMovementAfterSeatRelease();
+                    break;
+                case OfficeWorkerSeatingPhase.Working:
+                    BeginStandingUp();
+                    break;
+            }
+        }
+
+        public void ResetOfficeSeatingRuntime()
+        {
+            ReleaseSeatImmediately();
         }
 
         public void InitializeNow()
         {
             _controller = GetComponent<CharacterController>();
             _presentationRenderers = GetComponentsInChildren<Renderer>(true);
+            ReleaseSeatImmediately();
             SetAwayPresentation(false);
             _completedAssignments = 0;
             ClearAutonomousDestination();
@@ -185,6 +293,11 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!_initialized) InitializeNow();
             if (deltaTime <= 0f) return;
+            if (HasActiveSeatClaim)
+            {
+                TickSeat(deltaTime);
+                return;
+            }
             if (HasAssignedTask)
             {
                 TickAssignedTask(deltaTime);
@@ -235,6 +348,11 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             CurrentActivity = _assignedWaypoint.Activity;
+            if (_seatRuntimeEnabled && _assignedWaypoint.Activity == OfficeActivity.Work)
+            {
+                spriteAnimator?.SetWorldVelocity(Vector3.zero);
+                return;
+            }
             _assignedWorkRemaining = Mathf.Max(0f, _assignedWorkRemaining - deltaTime);
             spriteAnimator?.SetWorldVelocity(Vector3.zero);
             if (_assignedWorkRemaining > 0f) return;
@@ -243,6 +361,134 @@ namespace FamilyCompany.Presentation.Unity
             CancelAssignedTask();
             _completedAssignments++;
             AssignedTaskCompleted?.Invoke(this, completedTaskId);
+        }
+
+        private void TickSeat(float deltaTime)
+        {
+            switch (SeatingPhase)
+            {
+                case OfficeWorkerSeatingPhase.MovingToApproach:
+                    TickMovingToSeat(deltaTime);
+                    break;
+                case OfficeWorkerSeatingPhase.SittingDown:
+                    spriteAnimator?.SetWorldVelocity(Vector3.zero);
+                    if (spriteAnimator != null && spriteAnimator.IsOfficeSeatingTransitionComplete)
+                    {
+                        spriteAnimator.BeginSeatedWork();
+                        SeatingPhase = OfficeWorkerSeatingPhase.Working;
+                        CurrentActivity = OfficeActivity.Work;
+                        if (_seatReleaseRequested) BeginStandingUp();
+                    }
+                    break;
+                case OfficeWorkerSeatingPhase.Working:
+                    CurrentActivity = OfficeActivity.Work;
+                    spriteAnimator?.SetWorldVelocity(Vector3.zero);
+                    TickSeatedAssignedWork(deltaTime);
+                    if (_seatReleaseRequested && SeatingPhase == OfficeWorkerSeatingPhase.Working)
+                        BeginStandingUp();
+                    break;
+                case OfficeWorkerSeatingPhase.StandingUp:
+                    spriteAnimator?.SetWorldVelocity(Vector3.zero);
+                    if (spriteAnimator == null || spriteAnimator.IsOfficeSeatingTransitionComplete)
+                    {
+                        var approach = _seatAuthoring == null ? transform.position : _seatAuthoring.ApproachAnchor.position;
+                        transform.position = new Vector3(approach.x, transform.position.y, approach.z);
+                        ReleaseSeatImmediately();
+                        ResumeMovementAfterSeatRelease();
+                    }
+                    break;
+                default:
+                    ReleaseSeatImmediately();
+                    ResumeMovementAfterSeatRelease();
+                    break;
+            }
+        }
+
+        private void TickMovingToSeat(float deltaTime)
+        {
+            if (!_seatNavigationWaypointReached)
+            {
+                if (!MoveAlongNavigation(_seatNavigationWaypoint, deltaTime)) return;
+                CompleteNavigation(_seatNavigationWaypoint);
+                _seatNavigationWaypointReached = true;
+            }
+
+            var approach = _seatAuthoring.ApproachAnchor.position;
+            approach.y = transform.position.y;
+            if (!MoveTowardPosition(approach, deltaTime)) return;
+            if (!_seatClaim.TryOccupy(out _))
+            {
+                ReleaseSeatImmediately();
+                ResumeMovementAfterSeatRelease();
+                return;
+            }
+
+            var sit = _seatAuthoring.SitAnchor.position;
+            transform.position = new Vector3(sit.x, transform.position.y, sit.z);
+            SetSeatedPhysics(true);
+            if (!_seatAuthoring.TryResolveFacing(out var facing) ||
+                !spriteAnimator.BeginSitDown((int)facing))
+            {
+                ReleaseSeatImmediately();
+                ResumeMovementAfterSeatRelease();
+                return;
+            }
+            SeatingPhase = OfficeWorkerSeatingPhase.SittingDown;
+            CurrentActivity = OfficeActivity.Work;
+        }
+
+        private void TickSeatedAssignedWork(float deltaTime)
+        {
+            if (!HasAssignedTask || _assignedWaypoint.Activity != OfficeActivity.Work) return;
+            _assignedWaypointReached = true;
+            _assignedWorkRemaining = Mathf.Max(0f, _assignedWorkRemaining - deltaTime);
+            if (_assignedWorkRemaining > 0f) return;
+
+            var completedTaskId = _assignedTaskId;
+            CancelAssignedTask();
+            _completedAssignments++;
+            AssignedTaskCompleted?.Invoke(this, completedTaskId);
+        }
+
+        private void BeginStandingUp()
+        {
+            if (!HasActiveSeatClaim || SeatingPhase == OfficeWorkerSeatingPhase.StandingUp) return;
+            if (spriteAnimator == null || !spriteAnimator.BeginStandUp())
+            {
+                ReleaseSeatImmediately();
+                ResumeMovementAfterSeatRelease();
+                return;
+            }
+            SeatingPhase = OfficeWorkerSeatingPhase.StandingUp;
+        }
+
+        private void ReleaseSeatImmediately()
+        {
+            _seatClaim?.TryRelease(out _);
+            _seatClaim = null;
+            _seatAuthoring = null;
+            _seatNavigationWaypoint = null;
+            _seatIntentId = string.Empty;
+            _seatStatusLabel = string.Empty;
+            _seatNavigationWaypointReached = false;
+            _seatReleaseRequested = false;
+            SeatingPhase = OfficeWorkerSeatingPhase.None;
+            SetSeatedPhysics(false);
+            spriteAnimator?.ResumeWalkingAfterSeating();
+            ResetNavigation();
+        }
+
+        private void ResumeMovementAfterSeatRelease()
+        {
+            if (HasAssignedTask)
+            {
+                BeginNavigation(_assignedWaypoint);
+                return;
+            }
+            if (HasAutonomousDestination)
+            {
+                BeginNavigation(_autonomyWaypoint);
+            }
         }
 
         private void TickAutonomousDestination(float deltaTime)
@@ -268,13 +514,24 @@ namespace FamilyCompany.Presentation.Unity
 
         private void SetAwayPresentation(bool away)
         {
-            if (_controller != null) _controller.enabled = !away;
             if (_presentationAway == away && _presentationRenderers.Length > 0) return;
             _presentationAway = away;
+            RefreshControllerEnabled();
             foreach (var item in _presentationRenderers)
             {
                 if (item != null) item.enabled = !away;
             }
+        }
+
+        private void SetSeatedPhysics(bool seated)
+        {
+            _seatedPhysics = seated;
+            RefreshControllerEnabled();
+        }
+
+        private void RefreshControllerEnabled()
+        {
+            if (_controller != null) _controller.enabled = !_presentationAway && !_seatedPhysics;
         }
 
         private void BeginNavigation(OfficeWaypoint destination)
@@ -386,6 +643,11 @@ namespace FamilyCompany.Presentation.Unity
         private bool MoveToward(OfficeWaypoint target, float deltaTime)
         {
             var targetPosition = ResolveTargetPosition(target);
+            return MoveTowardPosition(targetPosition, deltaTime);
+        }
+
+        private bool MoveTowardPosition(Vector3 targetPosition, float deltaTime)
+        {
             var displacement = targetPosition - transform.position;
             displacement.y = 0f;
             if (displacement.magnitude <= arrivalDistance)
@@ -463,6 +725,11 @@ namespace FamilyCompany.Presentation.Unity
         private void Update()
         {
             Tick(Time.deltaTime);
+        }
+
+        private void OnDestroy()
+        {
+            ReleaseSeatImmediately();
         }
 
         private float ResolveStaySeconds(OfficeWaypoint waypoint)

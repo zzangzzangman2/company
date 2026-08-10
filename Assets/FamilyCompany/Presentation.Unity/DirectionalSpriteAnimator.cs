@@ -1,4 +1,5 @@
 using System;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -13,10 +14,19 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private Sprite[] walkFrames = Array.Empty<Sprite>();
         [SerializeField] private float frameSeconds = 0.11f;
         [SerializeField, Range(0, WalkFrameCount - 1)] private int idleWalkFrame = 2;
+        [SerializeField] private Sprite[] sitDownFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] seatedWorkFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] standUpFrames = Array.Empty<Sprite>();
+        [SerializeField] private float seatingTransitionFrameSeconds = 0.11f;
+        [SerializeField] private float seatedWorkFrameSeconds = 0.14f;
         private Vector3 _worldVelocity;
         private float _frameClock;
         private int _walkFrame;
         private int _lastDirection;
+        private OfficeSeatingAnimationClip? _seatingClip;
+        private float _seatingFrameClock;
+        private int _seatingFrame;
+        private bool _seatingTransitionComplete;
 
         public int CurrentDirection => _lastDirection;
         public int CurrentWalkFrame => _walkFrame;
@@ -26,6 +36,21 @@ namespace FamilyCompany.Presentation.Unity
         public float EffectiveFrameSeconds => ResolveEffectiveFrameSeconds();
         public int IdleWalkFrame => Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
         public Sprite CurrentSprite => targetRenderer == null ? null : targetRenderer.sprite;
+        public bool HasOfficeSeatingFrames =>
+            HasCompleteFrames(sitDownFrames, OfficeSeatingAnimationFrames.SitDownSpriteCount) &&
+            HasCompleteFrames(seatedWorkFrames, OfficeSeatingAnimationFrames.WorkSpriteCount) &&
+            HasCompleteFrames(standUpFrames, OfficeSeatingAnimationFrames.StandUpSpriteCount);
+        public int ConfiguredOfficeSeatingFrameCount =>
+            (sitDownFrames?.Length ?? 0) +
+            (seatedWorkFrames?.Length ?? 0) +
+            (standUpFrames?.Length ?? 0);
+        public bool IsOfficeSeatingPoseActive => _seatingClip.HasValue;
+        public bool IsOfficeSeatingTransitionComplete =>
+            _seatingClip.HasValue &&
+            _seatingClip.Value != OfficeSeatingAnimationClip.Work &&
+            _seatingTransitionComplete;
+        public OfficeSeatingAnimationClip? CurrentOfficeSeatingClip => _seatingClip;
+        public int CurrentOfficeSeatingFrame => _seatingFrame;
 
         public void Configure(SpriteRenderer renderer, Sprite[] frames, float secondsPerFrame = 0.11f)
         {
@@ -34,6 +59,32 @@ namespace FamilyCompany.Presentation.Unity
             frameSeconds = Mathf.Max(0.05f, secondsPerFrame);
             _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
             ApplyFrame();
+        }
+
+        public void ConfigureOfficeSeating(
+            Sprite[] newSitDownFrames,
+            Sprite[] newSeatedWorkFrames,
+            Sprite[] newStandUpFrames,
+            float transitionSecondsPerFrame = 0.11f,
+            float workSecondsPerFrame = 0.14f)
+        {
+            RequireCompleteFrames(
+                newSitDownFrames,
+                OfficeSeatingAnimationFrames.SitDownSpriteCount,
+                nameof(newSitDownFrames));
+            RequireCompleteFrames(
+                newSeatedWorkFrames,
+                OfficeSeatingAnimationFrames.WorkSpriteCount,
+                nameof(newSeatedWorkFrames));
+            RequireCompleteFrames(
+                newStandUpFrames,
+                OfficeSeatingAnimationFrames.StandUpSpriteCount,
+                nameof(newStandUpFrames));
+            sitDownFrames = (Sprite[])newSitDownFrames.Clone();
+            seatedWorkFrames = (Sprite[])newSeatedWorkFrames.Clone();
+            standUpFrames = (Sprite[])newStandUpFrames.Clone();
+            seatingTransitionFrameSeconds = Mathf.Max(0.05f, transitionSecondsPerFrame);
+            seatedWorkFrameSeconds = Mathf.Max(0.05f, workSecondsPerFrame);
         }
 
         public void SetWorldVelocity(Vector3 velocity)
@@ -51,9 +102,58 @@ namespace FamilyCompany.Presentation.Unity
             return walkFrames[walkFrame * DirectionCount + direction];
         }
 
+        public Sprite GetOfficeSeatingFrame(
+            OfficeSeatingAnimationClip clip,
+            int direction,
+            int frame)
+        {
+            if (!HasOfficeSeatingFrames) return null;
+            var frames = FramesFor(clip);
+            return frames[OfficeSeatingAnimationFrames.FlattenedIndex(clip, direction, frame)];
+        }
+
+        public bool BeginSitDown(int direction)
+        {
+            if (!HasOfficeSeatingFrames) return false;
+            BeginOfficeSeatingClip(OfficeSeatingAnimationClip.SitDown, direction);
+            return true;
+        }
+
+        public bool BeginSeatedWork()
+        {
+            if (!HasOfficeSeatingFrames || !_seatingClip.HasValue) return false;
+            BeginOfficeSeatingClip(OfficeSeatingAnimationClip.Work, _lastDirection);
+            return true;
+        }
+
+        public bool BeginStandUp()
+        {
+            if (!HasOfficeSeatingFrames || !_seatingClip.HasValue) return false;
+            BeginOfficeSeatingClip(OfficeSeatingAnimationClip.StandUp, _lastDirection);
+            return true;
+        }
+
+        public void ResumeWalkingAfterSeating()
+        {
+            _seatingClip = null;
+            _seatingFrameClock = 0f;
+            _seatingFrame = 0;
+            _seatingTransitionComplete = false;
+            ApplyFrame();
+        }
+
         public void Tick(float deltaTime)
         {
-            if (targetRenderer == null || walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
+            if (targetRenderer == null) return;
+            if (_seatingClip.HasValue)
+            {
+                if (!HasOfficeSeatingFrames) return;
+                TickOfficeSeating(Mathf.Max(0f, deltaTime));
+                ApplyFrame();
+                return;
+            }
+            if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
+
             if (IsMoving)
             {
                 _lastDirection = ResolveDirection(_worldVelocity);
@@ -88,8 +188,90 @@ namespace FamilyCompany.Presentation.Unity
 
         private void ApplyFrame()
         {
-            if (targetRenderer == null || walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
+            if (targetRenderer == null) return;
+            if (_seatingClip.HasValue && HasOfficeSeatingFrames)
+            {
+                targetRenderer.sprite = GetOfficeSeatingFrame(
+                    _seatingClip.Value,
+                    _lastDirection,
+                    _seatingFrame);
+                return;
+            }
+            if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
             targetRenderer.sprite = walkFrames[_walkFrame * DirectionCount + _lastDirection];
+        }
+
+        private void BeginOfficeSeatingClip(OfficeSeatingAnimationClip clip, int direction)
+        {
+            if (direction < 0 || direction >= DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(direction));
+            _worldVelocity = Vector3.zero;
+            _lastDirection = direction;
+            _seatingClip = clip;
+            _seatingFrameClock = 0f;
+            _seatingFrame = 0;
+            _seatingTransitionComplete = false;
+            ApplyFrame();
+        }
+
+        private void TickOfficeSeating(float deltaTime)
+        {
+            if (!_seatingClip.HasValue || _seatingTransitionComplete) return;
+            var clip = _seatingClip.Value;
+            var secondsPerFrame = clip == OfficeSeatingAnimationClip.Work
+                ? Mathf.Max(0.05f, seatedWorkFrameSeconds)
+                : Mathf.Max(0.05f, seatingTransitionFrameSeconds);
+            _seatingFrameClock += deltaTime;
+            while (_seatingFrameClock >= secondsPerFrame)
+            {
+                _seatingFrameClock -= secondsPerFrame;
+                var nextFrame = _seatingFrame + 1;
+                if (nextFrame < OfficeSeatingAnimationFrames.FrameCount(clip))
+                {
+                    _seatingFrame = nextFrame;
+                    continue;
+                }
+
+                if (clip == OfficeSeatingAnimationClip.Work)
+                {
+                    _seatingFrame = 0;
+                    continue;
+                }
+
+                _seatingTransitionComplete = true;
+                break;
+            }
+        }
+
+        private Sprite[] FramesFor(OfficeSeatingAnimationClip clip)
+        {
+            return clip switch
+            {
+                OfficeSeatingAnimationClip.SitDown => sitDownFrames,
+                OfficeSeatingAnimationClip.Work => seatedWorkFrames,
+                OfficeSeatingAnimationClip.StandUp => standUpFrames,
+                _ => throw new ArgumentOutOfRangeException(nameof(clip))
+            };
+        }
+
+        private static bool HasCompleteFrames(Sprite[] frames, int expectedCount)
+        {
+            if (frames == null || frames.Length != expectedCount) return false;
+            for (var index = 0; index < frames.Length; index++)
+            {
+                if (frames[index] == null) return false;
+            }
+            return true;
+        }
+
+        private static void RequireCompleteFrames(Sprite[] frames, int expectedCount, string parameterName)
+        {
+            if (!HasCompleteFrames(frames, expectedCount))
+            {
+                throw new ArgumentException(
+                    $"Office seating frames require exactly {expectedCount} non-null sprites.",
+                    parameterName);
+            }
         }
 
         private static int ResolveDirection(Vector3 velocity)
