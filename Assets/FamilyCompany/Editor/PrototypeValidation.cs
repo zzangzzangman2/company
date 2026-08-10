@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Linq;
+using FamilyCompany.Infrastructure.Unity;
 using FamilyCompany.Save;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
@@ -25,6 +27,8 @@ namespace FamilyCompany.Editor
                 ValidateFourPersonContractScope();
                 ValidateContractLifecycle();
                 ValidateSaveRoundTrip();
+                ValidateSaveSlots();
+                ValidateWideFrontendSettings();
                 ValidateAssetsAndScene();
                 Debug.Log("FAMILY_COMPANY_VALIDATION: PASS");
             }
@@ -119,6 +123,60 @@ namespace FamilyCompany.Editor
             AssertEqual(acceptance.Contract.Status, restoredContract.Status, "save contract status");
             AssertEqual(acceptance.Contract.CompletedPersonHours, restoredContract.CompletedPersonHours, "save contract work");
             AssertEqual(acceptance.Contract.Contributions.Count, restoredContract.Contributions.Count, "save contract contributions");
+        }
+
+        private static void ValidateSaveSlots()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), $"family-company-save-slots-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(directory);
+            try
+            {
+                for (var slot = UnityJsonSaveRepository.MinimumSlot; slot <= UnityJsonSaveRepository.MaximumSlot; slot++)
+                {
+                    var repository = new UnityJsonSaveRepository(slot, directory);
+                    AssertEqual(false, repository.Exists, $"empty save slot {slot}");
+                    var state = PrototypeStateFactory.Create(20000103 + slot);
+                    new SimulationRunner(state).AdvanceMinutes(slot * 60);
+                    repository.Save(GameSaveMapper.ToDto(state));
+                    AssertEqual(true, repository.Exists, $"written save slot {slot}");
+                    AssertEqual(true, repository.TryLoad(out var restored), $"load save slot {slot}");
+                    AssertEqual(state.WorldSeed, restored.worldSeed, $"save slot {slot} seed");
+                    AssertEqual(state.Time.ElapsedMinutes, restored.elapsedMinutes, $"save slot {slot} time");
+                }
+
+                var firstSlot = new UnityJsonSaveRepository(1, directory);
+                firstSlot.Save(GameSaveMapper.ToDto(PrototypeStateFactory.Create(999)));
+                AssertEqual(true, File.Exists(firstSlot.Location + ".bak"), "save slot backup");
+
+                var legacyDirectory = Path.Combine(directory, "legacy");
+                Directory.CreateDirectory(legacyDirectory);
+                File.WriteAllText(
+                    Path.Combine(legacyDirectory, "family-company-prototype-save.json"),
+                    JsonUtility.ToJson(GameSaveMapper.ToDto(PrototypeStateFactory.Create(777)), true));
+                var legacySlot = new UnityJsonSaveRepository(1, legacyDirectory);
+                AssertEqual(true, legacySlot.Exists, "legacy save slot detection");
+                AssertEqual(true, legacySlot.TryLoad(out var legacy), "legacy save slot load");
+                AssertEqual(777, legacy.worldSeed, "legacy save slot seed");
+            }
+            finally
+            {
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+            }
+        }
+
+        private static void ValidateWideFrontendSettings()
+        {
+            var projectSettings = File.ReadAllText("ProjectSettings/ProjectSettings.asset");
+            if (!projectSettings.Contains("defaultScreenWidth: 1920") ||
+                !projectSettings.Contains("defaultScreenHeight: 1080") ||
+                !projectSettings.Contains("defaultScreenWidthWeb: 1280") ||
+                !projectSettings.Contains("defaultScreenHeightWeb: 720") ||
+                !projectSettings.Contains("resizableWindow: 1") ||
+                !projectSettings.Contains("allowFullscreenSwitch: 1") ||
+                !projectSettings.Contains("fullscreenMode: 1"))
+            {
+                throw new InvalidOperationException("Wide fullscreen player settings are incomplete.");
+            }
         }
 
         private static void ValidateContractLifecycle()
@@ -272,6 +330,15 @@ namespace FamilyCompany.Editor
             var bootstrap = UnityEngine.Object.FindFirstObjectByType<Presentation.Unity.PrototypeBootstrap>();
             if (bootstrap == null) throw new InvalidOperationException("Prototype bootstrap is missing.");
             bootstrap.InitializeNow();
+            AssertEqual(Presentation.Unity.PrototypeUiScreen.MainMenu, bootstrap.UiScreen, "initial frontend screen");
+            bootstrap.StartNewGameNow(2, false);
+            AssertEqual(true, bootstrap.HasSession, "new game session");
+            AssertEqual(2, bootstrap.ActiveSlot, "new game slot");
+            AssertEqual(Presentation.Unity.PrototypeUiScreen.Playing, bootstrap.UiScreen, "new game frontend screen");
+            bootstrap.ShowPauseMenuNow();
+            AssertEqual(Presentation.Unity.PrototypeUiScreen.PauseMenu, bootstrap.UiScreen, "pause frontend screen");
+            bootstrap.ResumeGameNow();
+            AssertEqual(Presentation.Unity.PrototypeUiScreen.Playing, bootstrap.UiScreen, "resume frontend screen");
             var coordinator = bootstrap.InitializeOfficeTaskBridgeNow();
             var agents = UnityEngine.Object.FindObjectsByType<Presentation.Unity.OfficeWorkerAgent>(FindObjectsSortMode.None);
             if (agents.Length < 3)
