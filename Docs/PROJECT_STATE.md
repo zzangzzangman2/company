@@ -92,6 +92,7 @@ Unity: 6000.3.21f1
 - 좌석 배치 순수 규칙, 의미 상태 전용 Save DTO/adapter, seat authoring/registry, 클릭 배치 UI와 ImageGen 패널·상태 마커 3종 완료. 좌석 런타임과 기존 자율행동의 통합은 별도다.
 - AutonomyNeeds 순수 모듈 완료. 1/3/10분 진행 동등성, 휴식·크런치·쓰러짐·결근, Save snapshot/transient 분리와 100회 결정론 검증을 통과했으며 기존 `ApplyPulse`와 이중 차감하지 않는다.
 - 회복·외부 활동 12종의 SIMUL-v3 ImageGen 16:9 장면과 메타·자산 등록 완료.
+- 좌석 애니메이터가 유일한 Sprite writer로 남는 pull-only `OfficeSeatedWorkMicroActionAdapter`와 결정적 프레임셋 주입 경계를 구현했다. 아트가 없거나 일부 동작만 있으면 기존 Work 6프레임으로 복귀하며, micro-action 시간 분할·Drink 하한/간격·기립 handoff·writer rollback 회귀를 고정했다.
 
 ## 진행 중
 
@@ -99,6 +100,7 @@ Unity: 6000.3.21f1
 - OfficeVisualV2는 scale 1.00 정적 교정에서 4명 고유 bbox, 가구 교차 0, 발점 오차 0, IoU 0과 왼쪽 블록 제거를 통과했다. 그러나 1280 정규화 최대 3px로 ≤1px 기준 FAIL이고 CharacterController 이동·30초 퇴실/복귀 미검증, 공유 `Prototype01`은 scale 1.35라 최종 PASS가 아니다.
 - 네 가족 좌석 애니메이션 4명×112=448프레임과 contact sheet 8장·GIF 4개는 검증 완료했다. 기존 Office autonomy·씬의 런타임 좌석 연결은 미완료다.
 - 회복·외부 활동 12장과 순수 규칙을 GameState·Save·실제 선택 UI에 연결하는 통합이 남았다.
+- 실제 `OfficeWorkActionFrameSet` 에셋은 아직 없으며, 좌석 micro-action의 실제 Sprite 연결·PlayMode 시각 검증은 Art 산출물 통합 뒤에 남았다.
 
 ## 다음 작업
 
@@ -111,6 +113,7 @@ Unity: 6000.3.21f1
 7. 시장가/지정가 실제 체결마다 투자자산·수수료·거래세·실현손익을 회사 총계정원장에 전기하고 재고/현금 보존을 검증한다.
 8. 시세 경로·뉴스·기술 수준·유동성 구간 S3와 기업행동 S4를 History V1 조건부 사건에 연결한다.
 9. 직원 후보 8인을 고용 뒤에만 48프레임 이동 NPC로 생성하고 실제 능력치·업무 배치에 연결한다.
+10. 가족별 `OfficeWorkActionFrameSet`을 정본 경로에 추가한 뒤 좌석 Work 6프레임 fallback, 8방향 micro-action, 안전 기립 handoff를 실제 PlayMode에서 검증한다.
 
 ## 검증 기록
 
@@ -173,6 +176,7 @@ Unity: 6000.3.21f1
 - 2026-08-10: 네 가족 OfficeSeatingV1 4명×112=448프레임 완료. sit_down 128·work 192·승인된 역순 stand_up 128, contact sheet 8장, GIF 4개, frame meta 448, source PNG/meta 32/32를 확인함. 256 RGBA hard alpha·빈 프레임/잘림 없음·발 y248·180 PPU bottom-center·Point/no mip/uncompressed·GUID 유일·work A/B 높이차 ≤0.5px·재현 해시와 육안 QA PASS. 런타임 좌석 연결은 미완료.
 - 2026-08-10: Stock 회사계좌·Save V5 optional 코어 완료. 신규 회사 현금 500만원·증권 미개설/0원, 양방향 균형분개, 장중 입출금과 예약금 보호, 잘못된 금액·중복 ID 차단, 현금/원장/예수금/포지션/평균원가/미체결/체결/일지/관심/FIFO/세션·개장 상태의 왕복 및 구형 safe restore를 검증함. 전체 C# 경고 0·오류 0, 회귀·Unity build·1280 runtime PASS.
 - 2026-08-10: Stock 회사계좌 canonical 통합 완료. 50,000원 fixture 제거, 실제 회사↔증권계좌 입출금·균형분개·예약금 보호, `GameState` flush/load·Save V5 optional, 날짜별 상장집합 변경 시 비거래 종목 승계와 미지 ID 거절, 0.4초 residual 및 FIFO 재개 결정성을 Unity `STOCK_MARKET_*_VALIDATION` 4종과 전체 `PrototypeValidation`에서 함께 통과함. 외부 생성 tape/orderbook 전체 영속화와 S3/S4는 미완료로 유지함.
+- 2026-08-10: seating 6개 선형 커밋과 micro-action 런타임을 전용 통합 브랜치에 결합하고 pull-only adapter를 추가함. 아트 없음·부분 아트 fallback, 8방향 첫/끝 프레임, 구성원 불일치, safe-stop/disable/destroy 멱등성, push Presenter 시작/프레임 소실 예외 rollback을 독립 하네스로 통과함. 30분 단일/1초 분할 타임라인 일치, 첫 Drink 300초 이후, 모든 `int` seed에 대해 구조적으로 30분 5회 이하인 간격과 범위 분산 4,096 seed·지정 가족 4명 표본, huge delta guard를 확인했으며 전체 5개 어셈블리 외부 컴파일은 경고·오류 0. Unity와 실제 아트는 실행하지 않음.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ### 2026-08-10 OfficeVisualV2 calibration handoff

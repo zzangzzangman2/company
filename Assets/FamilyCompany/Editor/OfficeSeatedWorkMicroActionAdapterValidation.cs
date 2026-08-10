@@ -51,6 +51,11 @@ namespace FamilyCompany.Editor
             ValidatePartialArtAndEightDirections();
             ValidateSafeStopAndIdempotentDisposal();
             ValidateDisableDestroyIdempotence();
+            ValidatePushPresenterWaitingLifecycle();
+            ValidatePushPresenterFrameLossRollback();
+#if OFFICE_WORK_ADAPTER_STANDALONE
+            ValidatePushPresenterStartupExceptionRollback();
+#endif
 #if !OFFICE_WORK_ADAPTER_STANDALONE
             ValidateDirectionalAnimatorOwnershipAndFallback();
 #endif
@@ -178,6 +183,123 @@ namespace FamilyCompany.Editor
             }
         }
 
+        private static void ValidatePushPresenterWaitingLifecycle()
+        {
+            using (var fixture = new ValidationFixture())
+            {
+                var presenter = fixture.CreatePushPresenter();
+                var renderer = fixture.CreateSpriteRenderer();
+                var writer = fixture.CreateWorkLoopWriter();
+                var frameSet = fixture.CreateTypingFrameSet(
+                    "player",
+                    fixture.CreateSprites(16, "push-lifecycle"));
+                presenter.Configure(renderer, writer, frameSet, OfficeSeatFacing8.North);
+
+                var readyEvents = 0;
+                var readyInsideEvent = false;
+                presenter.StandHandoffReady += () =>
+                {
+                    readyEvents++;
+                    readyInsideEvent = presenter.IsStandHandoffReady;
+                };
+                AssertTrue(
+                    presenter.NotifySeatedWorkStarted(ValidationSeed, "player", ValidationMinute),
+                    "push presenter begins");
+                AssertFalse(writer.enabled, "push presenter temporarily suspends fallback writer");
+                AssertEqual(
+                    OfficeWorkStandHandoffStatus.WaitingForCurrentAction,
+                    presenter.RequestStandHandoff(OfficeWorkExitReason.StandUp),
+                    "push presenter waits for active action");
+
+                InvokeLifecycle(presenter, "OnDisable");
+                AssertEqual(1, readyEvents, "disable publishes one readiness event");
+                AssertTrue(readyInsideEvent, "readiness is observable inside disable event");
+                AssertTrue(presenter.IsStandHandoffReady, "disable leaves explicit ready state");
+                AssertTrue(writer.enabled, "disable restores fallback writer");
+                AssertFalse(presenter.OwnsSpriteWriter, "disable releases sprite ownership");
+
+                InvokeLifecycle(presenter, "OnDisable");
+                InvokeLifecycle(presenter, "OnDestroy");
+                InvokeLifecycle(presenter, "OnDestroy");
+                AssertEqual(1, readyEvents, "disable/destroy notification is idempotent");
+                AssertTrue(presenter.IsStandHandoffReady, "destroy preserves published readiness");
+            }
+        }
+
+        private static void ValidatePushPresenterFrameLossRollback()
+        {
+            using (var fixture = new ValidationFixture())
+            {
+                var presenter = fixture.CreatePushPresenter();
+                var renderer = fixture.CreateSpriteRenderer();
+                var writer = fixture.CreateWorkLoopWriter();
+                var frameSet = fixture.CreateTypingFrameSet(
+                    "player",
+                    fixture.CreateSprites(16, "push-frame-loss"));
+                presenter.Configure(renderer, writer, frameSet, OfficeSeatFacing8.North);
+                AssertTrue(
+                    presenter.NotifySeatedWorkStarted(ValidationSeed, "player", ValidationMinute),
+                    "frame-loss session begins");
+                AssertFalse(writer.enabled, "frame-loss session owns writer before mutation");
+
+                frameSet.Configure("player", Array.Empty<OfficeWorkActionClip>());
+                presenter.TickMilliseconds(1L);
+                AssertTrue(presenter.IsUsingExistingWorkLoop, "frame loss falls back to Work6 writer");
+                AssertTrue(writer.enabled, "frame loss restores prior enabled writer state");
+                AssertFalse(presenter.OwnsSpriteWriter, "frame loss clears micro writer ownership");
+
+                var readyEvents = 0;
+                presenter.StandHandoffReady += () => readyEvents++;
+                AssertEqual(
+                    OfficeWorkStandHandoffStatus.ReadyToStand,
+                    presenter.RequestStandHandoff(OfficeWorkExitReason.Moving),
+                    "fallback session hands off immediately");
+                AssertEqual(1, readyEvents, "fallback handoff event count");
+            }
+
+            using (var fixture = new ValidationFixture())
+            {
+                var presenter = fixture.CreatePushPresenter();
+                var renderer = fixture.CreateSpriteRenderer();
+                var writer = fixture.CreateWorkLoopWriter();
+                writer.enabled = false;
+                var frameSet = fixture.CreateTypingFrameSet(
+                    "player",
+                    fixture.CreateSprites(16, "push-disabled-writer"));
+                presenter.Configure(renderer, writer, frameSet, OfficeSeatFacing8.North);
+                AssertTrue(
+                    presenter.NotifySeatedWorkStarted(ValidationSeed, "player", ValidationMinute),
+                    "disabled-writer session begins");
+                frameSet.Configure("player", Array.Empty<OfficeWorkActionClip>());
+                presenter.TickMilliseconds(1L);
+                AssertFalse(writer.enabled, "rollback preserves previously disabled writer state");
+            }
+        }
+
+#if OFFICE_WORK_ADAPTER_STANDALONE
+        private static void ValidatePushPresenterStartupExceptionRollback()
+        {
+            using (var fixture = new ValidationFixture())
+            {
+                var presenter = fixture.CreatePushPresenter();
+                var renderer = new ThrowingSpriteRenderer();
+                var writer = fixture.CreateWorkLoopWriter();
+                var frameSet = fixture.CreateTypingFrameSet(
+                    "player",
+                    fixture.CreateSprites(16, "push-throw"));
+                presenter.Configure(renderer, writer, frameSet, OfficeSeatFacing8.North);
+                renderer.ThrowOnSet = true;
+
+                AssertFalse(
+                    presenter.NotifySeatedWorkStarted(ValidationSeed, "player", ValidationMinute),
+                    "startup frame exception selects fallback");
+                AssertTrue(writer.enabled, "startup exception restores fallback writer");
+                AssertTrue(presenter.IsUsingExistingWorkLoop, "startup exception reports Work6 fallback");
+                AssertFalse(presenter.OwnsSpriteWriter, "startup exception releases ownership");
+            }
+        }
+#endif
+
 #if !OFFICE_WORK_ADAPTER_STANDALONE
         private static void ValidateDirectionalAnimatorOwnershipAndFallback()
         {
@@ -254,13 +376,13 @@ namespace FamilyCompany.Editor
             }
         }
 
-        private static void InvokeLifecycle(OfficeSeatedWorkMicroActionAdapter adapter, string methodName)
+        private static void InvokeLifecycle(object target, string methodName)
         {
-            var method = typeof(OfficeSeatedWorkMicroActionAdapter).GetMethod(
+            var method = target.GetType().GetMethod(
                 methodName,
                 BindingFlags.Instance | BindingFlags.NonPublic);
-            if (method == null) throw new MissingMethodException(typeof(OfficeSeatedWorkMicroActionAdapter).Name, methodName);
-            method.Invoke(adapter, null);
+            if (method == null) throw new MissingMethodException(target.GetType().Name, methodName);
+            method.Invoke(target, null);
         }
 
         private static void AssertTrue(bool value, string label)
@@ -319,6 +441,33 @@ namespace FamilyCompany.Editor
                 return new OfficeSeatedWorkMicroActionAdapter();
 #else
                 return CreateGameObject("Office Work Adapter").AddComponent<OfficeSeatedWorkMicroActionAdapter>();
+#endif
+            }
+
+            public OfficeWorkMicroActionPresenter CreatePushPresenter()
+            {
+#if OFFICE_WORK_ADAPTER_STANDALONE
+                return new OfficeWorkMicroActionPresenter();
+#else
+                return CreateGameObject("Office Work Push Presenter").AddComponent<OfficeWorkMicroActionPresenter>();
+#endif
+            }
+
+            public SpriteRenderer CreateSpriteRenderer()
+            {
+#if OFFICE_WORK_ADAPTER_STANDALONE
+                return new SpriteRenderer();
+#else
+                return CreateGameObject("Office Work Sprite Renderer").AddComponent<SpriteRenderer>();
+#endif
+            }
+
+            public Behaviour CreateWorkLoopWriter()
+            {
+#if OFFICE_WORK_ADAPTER_STANDALONE
+                return new TestWorkLoopWriter();
+#else
+                return CreateGameObject("Office Work Fallback Writer").AddComponent<BillboardFacingCamera>();
 #endif
             }
 
@@ -382,6 +531,27 @@ namespace FamilyCompany.Editor
 #endif
             }
         }
+
+#if OFFICE_WORK_ADAPTER_STANDALONE
+        private sealed class TestWorkLoopWriter : MonoBehaviour { }
+
+        private sealed class ThrowingSpriteRenderer : SpriteRenderer
+        {
+            private Sprite _sprite;
+
+            public bool ThrowOnSet { get; set; }
+
+            public override Sprite sprite
+            {
+                get => _sprite;
+                set
+                {
+                    if (ThrowOnSet) throw new InvalidOperationException("Injected sprite apply failure.");
+                    _sprite = value;
+                }
+            }
+        }
+#endif
     }
 }
 
@@ -424,7 +594,15 @@ namespace UnityEngine
     public class MonoBehaviour : Behaviour { }
     public class ScriptableObject : Object { }
     public class Renderer : Behaviour { }
-    public sealed class SpriteRenderer : Renderer { }
+    public class SpriteRenderer : Renderer
+    {
+        public virtual Sprite sprite { get; set; }
+    }
+
+    public static class Time
+    {
+        public static float deltaTime { get; set; }
+    }
 
     public sealed class Sprite : Object
     {

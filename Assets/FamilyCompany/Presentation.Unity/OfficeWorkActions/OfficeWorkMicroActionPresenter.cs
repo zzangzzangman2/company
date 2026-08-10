@@ -22,6 +22,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
         private bool _fallbackStandHandoffReady;
         private bool _readyEventRaised;
         private bool _sessionActive;
+        private bool _handoffRequested;
 
         public event Action StandHandoffReady;
 
@@ -66,7 +67,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             if (!OfficeSeatGeometryRules.IsValidFacing(configuredFacing))
                 throw new ArgumentOutOfRangeException(nameof(configuredFacing));
             facing = configuredFacing;
-            ApplyCurrentFrame();
+            if (!TrySynchronizeCurrentFrame()) FallBackToExistingWorkLoop();
         }
 
         public void NotifySitDownStarted()
@@ -105,15 +106,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
                 sessionStartedMinute,
                 availability);
             _usingExistingWorkLoop = false;
-            AcquireSpriteWriter();
-            ProcessTransitions(_machine.AdvanceTo(0L, _context));
-            ApplyCurrentFrame();
-            return true;
+            var started = false;
+            try
+            {
+                ProcessTransitions(_machine.AdvanceTo(0L, _context));
+                started = TrySynchronizeCurrentFrame();
+                return started;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            finally
+            {
+                if (!started) FallBackToExistingWorkLoop();
+            }
         }
 
         public OfficeWorkStandHandoffStatus RequestStandHandoff(OfficeWorkExitReason reason)
         {
             _context = ContextFor(reason);
+            _handoffRequested = true;
             if (_machine == null)
             {
                 _fallbackStandHandoffReady = true;
@@ -121,8 +134,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
                 return OfficeWorkStandHandoffStatus.ReadyToStand;
             }
 
-            ProcessTransitions(_machine.AdvanceTo(_machine.ProcessedMilliseconds, _context));
-            ApplyCurrentFrame();
+            try
+            {
+                ProcessTransitions(_machine.AdvanceTo(_machine.ProcessedMilliseconds, _context));
+                if (!TrySynchronizeCurrentFrame()) FallBackToExistingWorkLoop();
+            }
+            catch (Exception)
+            {
+                FallBackToExistingWorkLoop();
+            }
             return _machine == null || _machine.IsStandHandoffReady
                 ? OfficeWorkStandHandoffStatus.ReadyToStand
                 : OfficeWorkStandHandoffStatus.WaitingForCurrentAction;
@@ -136,9 +156,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
                     "Stand-up cannot start until the current office work micro-action completes.");
             }
 
-            ReleaseSpriteWriter();
-            ResetSession();
-            _context = OfficeWorkMicroActionContext.StandUp;
+            try
+            {
+                ReleaseSpriteWriter();
+            }
+            finally
+            {
+                ResetSession();
+                _context = OfficeWorkMicroActionContext.StandUp;
+            }
         }
 
         public void TickMilliseconds(long deltaMilliseconds)
@@ -147,9 +173,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
                 throw new ArgumentOutOfRangeException(nameof(deltaMilliseconds));
             if (_machine == null || deltaMilliseconds == 0) return;
 
-            var target = checked(_machine.ProcessedMilliseconds + deltaMilliseconds);
-            ProcessTransitions(_machine.AdvanceTo(target, _context));
-            ApplyCurrentFrame();
+            try
+            {
+                var target = checked(_machine.ProcessedMilliseconds + deltaMilliseconds);
+                ProcessTransitions(_machine.AdvanceTo(target, _context));
+                if (!TrySynchronizeCurrentFrame()) FallBackToExistingWorkLoop();
+            }
+            catch (Exception)
+            {
+                FallBackToExistingWorkLoop();
+                throw;
+            }
         }
 
         private void Update()
@@ -164,8 +198,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
 
         private void OnDisable()
         {
-            ReleaseSpriteWriter();
-            ResetSession();
+            CancelActiveSessionForLifecycle();
+        }
+
+        private void OnDestroy()
+        {
+            CancelActiveSessionForLifecycle();
         }
 
         private OfficeWorkMicroActionAvailability ResolveAvailabilityFor(string memberId)
@@ -178,17 +216,37 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             return frameSet.Availability;
         }
 
-        private void ApplyCurrentFrame()
+        private bool TrySynchronizeCurrentFrame()
         {
-            if (!_ownsSpriteWriter || targetRenderer == null || frameSet == null || _machine == null)
-                return;
+            if (_machine == null) return true;
             var action = _machine.CurrentAction;
-            if (action == OfficeWorkMicroAction.None) return;
-            if (!frameSet.TryGetUsableClip(action, out var clip))
-                throw new InvalidOperationException($"Selected office work action has no usable clip: {action}.");
-            targetRenderer.sprite = clip.ResolveFrame(
-                (int)facing,
-                _machine.CurrentActionElapsedMilliseconds);
+            if (action == OfficeWorkMicroAction.None)
+            {
+                ReleaseSpriteWriter();
+                _usingExistingWorkLoop = true;
+                return true;
+            }
+            if (targetRenderer == null || frameSet == null ||
+                !frameSet.TryGetUsableClip(action, out var clip))
+            {
+                return false;
+            }
+
+            try
+            {
+                var sprite = clip.ResolveFrame(
+                    (int)facing,
+                    _machine.CurrentActionElapsedMilliseconds);
+                if (sprite == null) return false;
+                AcquireSpriteWriter();
+                targetRenderer.sprite = sprite;
+                _usingExistingWorkLoop = false;
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private void AcquireSpriteWriter()
@@ -196,8 +254,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             if (_ownsSpriteWriter) return;
             if (existingWorkLoopFrameWriter != null)
             {
-                _existingWriterWasEnabled = existingWorkLoopFrameWriter.enabled;
-                existingWorkLoopFrameWriter.enabled = false;
+                var wasEnabled = existingWorkLoopFrameWriter.enabled;
+                try
+                {
+                    existingWorkLoopFrameWriter.enabled = false;
+                    _existingWriterWasEnabled = wasEnabled;
+                }
+                catch (Exception)
+                {
+                    existingWorkLoopFrameWriter.enabled = wasEnabled;
+                    throw;
+                }
             }
             _ownsSpriteWriter = true;
         }
@@ -205,10 +272,63 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
         private void ReleaseSpriteWriter()
         {
             if (!_ownsSpriteWriter) return;
-            if (existingWorkLoopFrameWriter != null)
-                existingWorkLoopFrameWriter.enabled = _existingWriterWasEnabled;
-            _ownsSpriteWriter = false;
-            _existingWriterWasEnabled = false;
+            try
+            {
+                if (existingWorkLoopFrameWriter != null)
+                    existingWorkLoopFrameWriter.enabled = _existingWriterWasEnabled;
+            }
+            finally
+            {
+                _ownsSpriteWriter = false;
+                _existingWriterWasEnabled = false;
+            }
+        }
+
+        private void FallBackToExistingWorkLoop()
+        {
+            try
+            {
+                ReleaseSpriteWriter();
+            }
+            finally
+            {
+                _machine = null;
+                _subMillisecondRemainder = 0d;
+                _usingExistingWorkLoop = true;
+                if (_handoffRequested)
+                {
+                    _fallbackStandHandoffReady = true;
+                    RaiseReadyEventOnce();
+                }
+            }
+        }
+
+        private void CancelActiveSessionForLifecycle()
+        {
+            if (!_sessionActive)
+            {
+                ReleaseSpriteWriter();
+                return;
+            }
+
+            var notifyReady = _handoffRequested;
+            try
+            {
+                ReleaseSpriteWriter();
+            }
+            finally
+            {
+                _machine = null;
+                _subMillisecondRemainder = 0d;
+                _usingExistingWorkLoop = true;
+                _sessionActive = false;
+                _handoffRequested = false;
+                if (notifyReady)
+                {
+                    _fallbackStandHandoffReady = true;
+                    RaiseReadyEventOnce();
+                }
+            }
         }
 
         private void ProcessTransitions(System.Collections.Generic.IReadOnlyList<OfficeWorkMicroActionTransition> transitions)
@@ -235,6 +355,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             _fallbackStandHandoffReady = false;
             _readyEventRaised = false;
             _sessionActive = false;
+            _handoffRequested = false;
         }
 
         private static OfficeWorkMicroActionContext ContextFor(OfficeWorkExitReason reason)

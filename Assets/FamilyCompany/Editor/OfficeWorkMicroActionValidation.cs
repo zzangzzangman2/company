@@ -56,9 +56,12 @@ namespace FamilyCompany.Editor
             ValidateThirtyMinuteCoverageAndWeights();
             ValidateDrinkCooldown();
             ValidateDeterminismAndChunking();
+            ValidatePartialAndDrinkOnlyChunking();
+            ValidateDrinkSchedulingForEverySeedByConstruction();
             ValidateSafeStandHandoffAndBlockedContexts();
             ValidateMissingFrameFallbackAndPartialAvailability();
             ValidateFourMemberIndependentSequences();
+            ValidateNoTransitionReuseAndHugeDeltaGuard();
             ValidatePresentationOnlyStateBoundary();
             ValidateInputGuards();
         }
@@ -132,6 +135,106 @@ namespace FamilyCompany.Editor
                         RunMachine(memberId, 2_003L).Fingerprint,
                         memberId + " repeated determinism " + repetition);
                 }
+            }
+        }
+
+        private static void ValidatePartialAndDrinkOnlyChunking()
+        {
+            var cases = new[]
+            {
+                new MachineCase(1, "player", 4_321L),
+                new MachineCase(ValidationSeed, "player", SessionStartedMinute),
+                new MachineCase(ValidationSeed, "older_sister", SessionStartedMinute),
+                new MachineCase(ValidationSeed, "father", SessionStartedMinute),
+                new MachineCase(ValidationSeed, "mother", SessionStartedMinute)
+            };
+            var availabilities = new[]
+            {
+                OfficeWorkMicroActionAvailability.Typing | OfficeWorkMicroActionAvailability.Drink,
+                OfficeWorkMicroActionAvailability.Drink
+            };
+
+            foreach (var item in cases)
+            {
+                foreach (var availability in availabilities)
+                {
+                    var direct = RunMachine(
+                        item.Seed,
+                        item.MemberId,
+                        item.SessionStartedMinute,
+                        availability,
+                        ThirtyMinutesMilliseconds);
+                    var chunked = RunMachine(
+                        item.Seed,
+                        item.MemberId,
+                        item.SessionStartedMinute,
+                        availability,
+                        1_000L);
+                    AssertEqual(
+                        direct.Fingerprint,
+                        chunked.Fingerprint,
+                        $"{item.Seed}/{item.MemberId}/{availability} direct/chunked timeline");
+                }
+            }
+        }
+
+        private static void ValidateDrinkSchedulingForEverySeedByConstruction()
+        {
+            AssertTrue(
+                OfficeWorkMicroActionStateMachine.DefaultFirstDrinkMinimumMilliseconds >= 300_000L,
+                "first drink structural minimum");
+            var earliestSixthStart = checked(
+                OfficeWorkMicroActionStateMachine.DefaultFirstDrinkMinimumMilliseconds +
+                5L * OfficeWorkMicroActionStateMachine.DefaultDrinkIntervalMinimumMilliseconds);
+            AssertTrue(
+                earliestSixthStart > ThirtyMinutesMilliseconds,
+                "structural drink interval proves at most five starts for every int seed");
+
+            var boundarySeeds = new[]
+            {
+                int.MinValue,
+                -1,
+                0,
+                1,
+                ValidationSeed,
+                int.MaxValue
+            };
+            foreach (var seed in boundarySeeds)
+                ValidateDrinkTimeline(seed, "player");
+            for (var sample = 0; sample < 4_096; sample++)
+            {
+                var seed = unchecked((int)((uint)sample * 2_654_435_761u));
+                ValidateDrinkTimeline(seed, "player");
+            }
+
+            foreach (var memberId in FamilyMemberIds)
+                ValidateDrinkTimeline(ValidationSeed, memberId);
+        }
+
+        private static void ValidateDrinkTimeline(int seed, string memberId)
+        {
+            var run = RunMachine(
+                seed,
+                memberId,
+                SessionStartedMinute,
+                OfficeWorkMicroActionAvailability.Drink,
+                ThirtyMinutesMilliseconds);
+            var starts = run.Transitions.Where(item =>
+                    item.Kind == OfficeWorkMicroActionTransitionKind.ActionStarted &&
+                    item.Action == OfficeWorkMicroAction.Drink)
+                .Select(item => item.AtMilliseconds)
+                .ToArray();
+            AssertTrue(starts.Length > 0, $"{seed}/{memberId} drink-only exposure");
+            AssertTrue(
+                starts[0] >= OfficeWorkMicroActionStateMachine.DefaultFirstDrinkMinimumMilliseconds,
+                $"{seed}/{memberId} first drink deadline");
+            AssertTrue(starts.Length <= 6, $"{seed}/{memberId} 30-minute drink maximum");
+            for (var index = 1; index < starts.Length; index++)
+            {
+                AssertTrue(
+                    starts[index] - starts[index - 1] >=
+                    OfficeWorkMicroActionStateMachine.DefaultDrinkIntervalMinimumMilliseconds,
+                    $"{seed}/{memberId} drink interval {index}");
             }
         }
 
@@ -301,6 +404,25 @@ namespace FamilyCompany.Editor
             }
         }
 
+        private static void ValidateNoTransitionReuseAndHugeDeltaGuard()
+        {
+            var machine = CreateMachine("player", OfficeWorkMicroActionAvailability.All);
+            machine.AdvanceTo(0L, OfficeWorkMicroActionContext.SeatedWork);
+            var firstEmpty = machine.AdvanceTo(1L, OfficeWorkMicroActionContext.SeatedWork);
+            var secondEmpty = machine.AdvanceTo(2L, OfficeWorkMicroActionContext.SeatedWork);
+            AssertTrue(firstEmpty.Count == 0 && secondEmpty.Count == 0, "normal frame has no transitions");
+            AssertTrue(
+                ReferenceEquals(firstEmpty, secondEmpty),
+                "normal frame reuses allocation-free empty transition result");
+
+            AssertThrows<ArgumentOutOfRangeException>(
+                () => machine.AdvanceTo(
+                    checked(machine.ProcessedMilliseconds +
+                            OfficeWorkMicroActionStateMachine.MaximumAdvanceDeltaMilliseconds + 1L),
+                    OfficeWorkMicroActionContext.SeatedWork),
+                "huge visual delta guard");
+        }
+
         private static void ValidateInputGuards()
         {
             AssertThrows<ArgumentException>(
@@ -339,8 +461,27 @@ namespace FamilyCompany.Editor
 
         private static RunOutcome RunMachine(string memberId, long stepMilliseconds)
         {
+            return RunMachine(
+                ValidationSeed,
+                memberId,
+                SessionStartedMinute,
+                OfficeWorkMicroActionAvailability.All,
+                stepMilliseconds);
+        }
+
+        private static RunOutcome RunMachine(
+            int seed,
+            string memberId,
+            long sessionStartedMinute,
+            OfficeWorkMicroActionAvailability availability,
+            long stepMilliseconds)
+        {
             if (stepMilliseconds <= 0) throw new ArgumentOutOfRangeException(nameof(stepMilliseconds));
-            var machine = CreateMachine(memberId, OfficeWorkMicroActionAvailability.All);
+            var machine = new OfficeWorkMicroActionStateMachine(
+                seed,
+                memberId,
+                sessionStartedMinute,
+                availability);
             var transitions = new List<OfficeWorkMicroActionTransition>();
             transitions.AddRange(machine.AdvanceTo(0L, OfficeWorkMicroActionContext.SeatedWork));
             var target = 0L;
@@ -350,6 +491,20 @@ namespace FamilyCompany.Editor
                 transitions.AddRange(machine.AdvanceTo(target, OfficeWorkMicroActionContext.SeatedWork));
             }
             return new RunOutcome(transitions);
+        }
+
+        private readonly struct MachineCase
+        {
+            public MachineCase(int seed, string memberId, long sessionStartedMinute)
+            {
+                Seed = seed;
+                MemberId = memberId;
+                SessionStartedMinute = sessionStartedMinute;
+            }
+
+            public int Seed { get; }
+            public string MemberId { get; }
+            public long SessionStartedMinute { get; }
         }
 
         private static string Fingerprint(IEnumerable<OfficeWorkMicroActionTransition> transitions)

@@ -134,6 +134,9 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
     public sealed class OfficeWorkMicroActionStateMachine
     {
         public const long DefaultDrinkCooldownMilliseconds = 240_000L;
+        public const long DefaultFirstDrinkMinimumMilliseconds = 300_000L;
+        public const long DefaultDrinkIntervalMinimumMilliseconds = 330_000L;
+        public const long MaximumAdvanceDeltaMilliseconds = 86_400_000L;
 
         private const int TypingWeight = 72;
         private const int MouseWeight = 18;
@@ -143,10 +146,10 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
         private const long FirstMouseMaximumMilliseconds = 90_000L;
         private const long MouseIntervalMinimumMilliseconds = 55_000L;
         private const long MouseIntervalMaximumMilliseconds = 110_000L;
-        private const long FirstDrinkMinimumMilliseconds = 300_000L;
         private const long FirstDrinkMaximumMilliseconds = 480_000L;
-        private const long DrinkIntervalMinimumMilliseconds = 330_000L;
         private const long DrinkIntervalMaximumMilliseconds = 540_000L;
+        private static readonly IReadOnlyList<OfficeWorkMicroActionTransition> NoTransitions =
+            Array.Empty<OfficeWorkMicroActionTransition>();
 
         private readonly int _worldSeed;
         private readonly string _memberId;
@@ -192,7 +195,7 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
             _drinkDeadlineMilliseconds = ResolveInterval(
                 "first-drink",
                 0,
-                FirstDrinkMinimumMilliseconds,
+                DefaultFirstDrinkMinimumMilliseconds,
                 FirstDrinkMaximumMilliseconds);
         }
 
@@ -219,12 +222,18 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
         {
             if (targetMilliseconds < _processedMilliseconds)
                 throw new InvalidOperationException("Office work micro-action time cannot move backwards.");
+            if (targetMilliseconds - _processedMilliseconds > MaximumAdvanceDeltaMilliseconds)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(targetMilliseconds),
+                    $"A single visual advance cannot exceed {MaximumAdvanceDeltaMilliseconds}ms.");
+            }
             if (!IsValidContext(context))
                 throw new ArgumentOutOfRangeException(nameof(context));
 
-            var transitions = new List<OfficeWorkMicroActionTransition>();
+            List<OfficeWorkMicroActionTransition> transitions = null;
             if (context != OfficeWorkMicroActionContext.SeatedWork)
-                RequestStop(context, transitions);
+                RequestStop(context, ref transitions);
 
             while (true)
             {
@@ -232,13 +241,20 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
                 {
                     if (_stopRequested || context != OfficeWorkMicroActionContext.SeatedWork)
                     {
-                        MarkStandHandoffReady(context, transitions);
+                        MarkStandHandoffReady(context, ref transitions);
                         _processedMilliseconds = targetMilliseconds;
                         break;
                     }
 
-                    if (!TryStartNextAction(_processedMilliseconds, context, transitions))
+                    if (!TryStartNextAction(_processedMilliseconds, context, ref transitions))
                     {
+                        var nextEligibility = ResolveNextEligibilityMilliseconds(_processedMilliseconds);
+                        if (nextEligibility > _processedMilliseconds &&
+                            nextEligibility <= targetMilliseconds)
+                        {
+                            _processedMilliseconds = nextEligibility;
+                            continue;
+                        }
                         _processedMilliseconds = targetMilliseconds;
                         break;
                     }
@@ -252,19 +268,21 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
 
                 var completedAt = _actionEndsMilliseconds;
                 _processedMilliseconds = completedAt;
-                CompleteCurrentAction(completedAt, context, transitions);
+                CompleteCurrentAction(completedAt, context, ref transitions);
             }
 
-            return new ReadOnlyCollection<OfficeWorkMicroActionTransition>(transitions);
+            return transitions == null
+                ? NoTransitions
+                : new ReadOnlyCollection<OfficeWorkMicroActionTransition>(transitions);
         }
 
         private void RequestStop(
             OfficeWorkMicroActionContext context,
-            ICollection<OfficeWorkMicroActionTransition> transitions)
+            ref List<OfficeWorkMicroActionTransition> transitions)
         {
             if (_stopRequested) return;
             _stopRequested = true;
-            transitions.Add(new OfficeWorkMicroActionTransition(
+            AddTransition(ref transitions, new OfficeWorkMicroActionTransition(
                 _processedMilliseconds,
                 OfficeWorkMicroActionTransitionKind.StopRequested,
                 _currentAction,
@@ -274,12 +292,12 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
 
         private void MarkStandHandoffReady(
             OfficeWorkMicroActionContext context,
-            ICollection<OfficeWorkMicroActionTransition> transitions)
+            ref List<OfficeWorkMicroActionTransition> transitions)
         {
             _standHandoffReady = true;
             if (_standHandoffReadyEmitted) return;
             _standHandoffReadyEmitted = true;
-            transitions.Add(new OfficeWorkMicroActionTransition(
+            AddTransition(ref transitions, new OfficeWorkMicroActionTransition(
                 _processedMilliseconds,
                 OfficeWorkMicroActionTransitionKind.StandHandoffReady,
                 OfficeWorkMicroAction.None,
@@ -290,7 +308,7 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
         private bool TryStartNextAction(
             long atMilliseconds,
             OfficeWorkMicroActionContext context,
-            ICollection<OfficeWorkMicroActionTransition> transitions)
+            ref List<OfficeWorkMicroActionTransition> transitions)
         {
             var action = ChooseNextAction(atMilliseconds);
             if (action == OfficeWorkMicroAction.None) return false;
@@ -301,7 +319,7 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
             _currentAction = action;
             _actionStartedMilliseconds = atMilliseconds;
             _actionEndsMilliseconds = checked(atMilliseconds + duration);
-            transitions.Add(new OfficeWorkMicroActionTransition(
+            AddTransition(ref transitions, new OfficeWorkMicroActionTransition(
                 atMilliseconds,
                 OfficeWorkMicroActionTransitionKind.ActionStarted,
                 action,
@@ -313,11 +331,11 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
         private void CompleteCurrentAction(
             long atMilliseconds,
             OfficeWorkMicroActionContext context,
-            ICollection<OfficeWorkMicroActionTransition> transitions)
+            ref List<OfficeWorkMicroActionTransition> transitions)
         {
             var completed = _currentAction;
             var completedSequence = _actionSequence - 1;
-            transitions.Add(new OfficeWorkMicroActionTransition(
+            AddTransition(ref transitions, new OfficeWorkMicroActionTransition(
                 atMilliseconds,
                 OfficeWorkMicroActionTransitionKind.ActionCompleted,
                 completed,
@@ -347,14 +365,14 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
                 _drinkDeadlineMilliseconds = checked(atMilliseconds + ResolveInterval(
                     "drink-deadline",
                     completedSequence,
-                    DrinkIntervalMinimumMilliseconds,
+                    DefaultDrinkIntervalMinimumMilliseconds,
                     DrinkIntervalMaximumMilliseconds));
             }
 
             _currentAction = OfficeWorkMicroAction.None;
             _actionStartedMilliseconds = atMilliseconds;
             _actionEndsMilliseconds = atMilliseconds;
-            if (_stopRequested) MarkStandHandoffReady(context, transitions);
+            if (_stopRequested) MarkStandHandoffReady(context, ref transitions);
         }
 
         private OfficeWorkMicroAction ChooseNextAction(long atMilliseconds)
@@ -399,8 +417,35 @@ namespace FamilyCompany.Simulation.OfficeWorkActions
             long atMilliseconds)
         {
             if (!Includes(action)) return;
-            if (action == OfficeWorkMicroAction.Drink && atMilliseconds < _drinkCooldownUntilMilliseconds) return;
+            if (action == OfficeWorkMicroAction.Drink &&
+                (atMilliseconds < _drinkDeadlineMilliseconds ||
+                 atMilliseconds < _drinkCooldownUntilMilliseconds))
+            {
+                return;
+            }
             candidates.Add(new WeightedAction(action, weight));
+        }
+
+        private long ResolveNextEligibilityMilliseconds(long atMilliseconds)
+        {
+            if (Includes(OfficeWorkMicroAction.Typing) ||
+                Includes(OfficeWorkMicroAction.Mouse) ||
+                Includes(OfficeWorkMicroAction.BriefIdle))
+            {
+                return atMilliseconds;
+            }
+
+            if (Includes(OfficeWorkMicroAction.Drink))
+                return Math.Max(_drinkDeadlineMilliseconds, _drinkCooldownUntilMilliseconds);
+            return long.MaxValue;
+        }
+
+        private static void AddTransition(
+            ref List<OfficeWorkMicroActionTransition> transitions,
+            OfficeWorkMicroActionTransition transition)
+        {
+            if (transitions == null) transitions = new List<OfficeWorkMicroActionTransition>();
+            transitions.Add(transition);
         }
 
         private bool Includes(OfficeWorkMicroAction action)
