@@ -7,7 +7,8 @@
 3. Docs/DECISIONS.md
 4. Docs/ARCHITECTURE.md
 5. 시각/씬 작업이면 Docs/ART_STYLE.md와 Docs/OFFICE_V0_2.md
-6. 작업과 직접 관련된 추가 문서
+6. 회사 역사·시장 작업이면 Docs/ULTIMATE_VISION.md, Docs/REAL_COMPANY_ALT_HISTORY.md, Docs/SIMUL_MARKET_PORT.md
+7. 작업과 직접 관련된 추가 문서
 
 ## 필수 작업 규칙
 
@@ -22,6 +23,13 @@
 - 생성 에셋은 사용자가 권리를 보유한다고 명시했다. 출처와 생성/편집 이력은 Docs/ASSET_MANIFEST.md에 남긴다.
 - Library, Temp, Logs, UserSettings는 Git에 넣지 않는다. Assets의 .meta는 반드시 추적한다.
 - 다른 작업자의 변경을 삭제하거나 되돌리지 않는다.
+
+## Codex와 Claude의 동시 작업
+
+- Claude 역사 데이터 작업은 Docs/CLAUDE_HANDOFF_HISTORY_DATA.md의 전용 경로만 사용한다.
+- 동시 작업 중 Claude는 Docs/CLAUDE_HISTORY_PROGRESS.md만 갱신하며, PROJECT_STATE와 DECISIONS 반영은 Codex가 검토 후 맡는다.
+- Codex는 Claude 작업 중 Assets/FamilyCompany/Content/History, HistoryTools, Docs/CLAUDE_HISTORY_PROGRESS.md를 수정하지 않는다.
+- 같은 Git 작업 폴더에서 브랜치를 전환하지 않는다. 별도 브랜치가 필요하면 별도 worktree를 사용한다.
 
 ## 완료 조건
 

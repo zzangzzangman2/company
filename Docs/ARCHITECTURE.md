@@ -7,6 +7,7 @@
 - FamilyCompany.Infrastructure.Unity: JsonUtility와 persistentDataPath를 사용하는 저장 어댑터
 - FamilyCompany.Presentation.Unity: 입력, 카메라, 화면 표시, 씬 오브젝트 연결
 - FamilyCompany.Editor: 프로토타입 씬 생성과 헤드리스 검증
+- FamilyCompany.Content.History: 실제 회사·사건·출처의 읽기 전용 JSON 데이터
 
 ## 핵심 불변식
 
@@ -16,6 +17,16 @@
 - 돈은 long 원 단위다. 소수 부동소수점으로 돈을 보관하지 않는다.
 - 모든 회계 거래는 차변 합계와 대변 합계가 같다.
 - 저장 대상은 의미 상태다. Transform, 렌더러 캐시, UI 선택 상태는 저장하지 않는다.
+
+## 실제 역사와 회차 상태
+
+- HistoricalBaseline은 검증된 읽기 전용 입력이며 저장 게임이 수정하지 않는다.
+- WorldState는 현재 회차의 회사, 소유관계, 제품, 기술, 재무, 주식과 지급능력 상태를 가진다.
+- DivergenceLog는 기준 역사에서 취소·지연·대체·이전된 사건과 원인을 기록한다.
+- 실제 회사명은 날짜별 데이터이고 영구 참조와 저장은 불변 companyId를 사용한다.
+- 역사 사건은 조건부 후보이며, 선행 조건이 깨지면 원래 결과를 강제로 발생시키지 않는다.
+
+상세 규칙은 Docs/REAL_COMPANY_ALT_HISTORY.md, 시장 이식 경계는 Docs/SIMUL_MARKET_PORT.md를 따른다.
 
 ## 씬 경계
 
