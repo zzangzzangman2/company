@@ -295,6 +295,12 @@ namespace FamilyCompany.Presentation.Unity
         public void Tick(float deltaTime)
         {
             if (!_initialized) InitializeNow();
+            if (HasActiveSeatClaim && !HasValidSeatBinding())
+            {
+                ReleaseSeatImmediately();
+                ResumeMovementAfterSeatRelease();
+                return;
+            }
             if (deltaTime <= 0f) return;
             if (HasActiveSeatClaim)
             {
@@ -351,11 +357,6 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             CurrentActivity = _assignedWaypoint.Activity;
-            if (_seatRuntimeEnabled && _assignedWaypoint.Activity == OfficeActivity.Work)
-            {
-                spriteAnimator?.SetWorldVelocity(Vector3.zero);
-                return;
-            }
             _assignedWorkRemaining = Mathf.Max(0f, _assignedWorkRemaining - deltaTime);
             spriteAnimator?.SetWorldVelocity(Vector3.zero);
             if (_assignedWorkRemaining > 0f) return;
@@ -439,7 +440,7 @@ namespace FamilyCompany.Presentation.Unity
 
             var approach = _seatAuthoring.ApproachAnchor.position;
             approach.y = transform.position.y;
-            if (!MoveTowardPosition(approach, deltaTime)) return;
+            if (!TickPrecisionMoveToApproach(approach, deltaTime)) return;
             if (!_seatAuthoring.TryResolveFacing(out var facing) ||
                 spriteAnimator == null ||
                 !spriteAnimator.PrepareOfficeSeatingFacing(
@@ -456,6 +457,22 @@ namespace FamilyCompany.Presentation.Unity
             spriteAnimator.SetWorldVelocity(Vector3.zero);
             SeatingPhase = OfficeWorkerSeatingPhase.MovingToSit;
             CurrentActivity = OfficeActivity.Work;
+        }
+
+        private bool TickPrecisionMoveToApproach(Vector3 approach, float deltaTime)
+        {
+            var displacement = approach - transform.position;
+            displacement.y = 0f;
+            var step = OfficeSeatPrecisionMotion.Advance(
+                transform.position.x,
+                transform.position.z,
+                approach.x,
+                approach.z,
+                OfficeSeatPrecisionMotion.ApproachSpeedMetersPerSecond,
+                deltaTime);
+            transform.position = new Vector3((float)step.X, transform.position.y, (float)step.Z);
+            spriteAnimator?.SetWorldVelocity(step.Arrived ? Vector3.zero : displacement.normalized);
+            return step.Arrived;
         }
 
         private void TickPrecisionMoveToSit(float deltaTime)
@@ -530,24 +547,36 @@ namespace FamilyCompany.Presentation.Unity
 
         private bool HasValidSeatBinding()
         {
-            return HasActiveSeatClaim && _seatAuthoring != null && _seatAuthoring.IsRuntimeValid;
+            return HasActiveSeatClaim &&
+                   _seatAuthoring != null &&
+                   _seatAuthoring.IsRuntimeValid &&
+                   spriteAnimator != null &&
+                   spriteAnimator.isActiveAndEnabled &&
+                   spriteAnimator.HasOfficeSeatingFrames;
         }
 
         private void ReleaseSeatImmediately()
         {
-            _seatClaim?.TryRelease(out _);
+            var claim = _seatClaim;
             _seatClaim = null;
-            _seatAuthoring = null;
-            _seatNavigationWaypoint = null;
-            _seatIntentId = string.Empty;
-            _seatStatusLabel = string.Empty;
-            _seatNavigationWaypointReached = false;
-            _seatReleaseRequested = false;
-            _seatFacing = 0;
-            SeatingPhase = OfficeWorkerSeatingPhase.None;
-            SetSeatedPhysics(false);
-            spriteAnimator?.ResumeWalkingAfterSeating();
-            ResetNavigation();
+            try
+            {
+                claim?.TryRelease(out _);
+            }
+            finally
+            {
+                _seatAuthoring = null;
+                _seatNavigationWaypoint = null;
+                _seatIntentId = string.Empty;
+                _seatStatusLabel = string.Empty;
+                _seatNavigationWaypointReached = false;
+                _seatReleaseRequested = false;
+                _seatFacing = 0;
+                SeatingPhase = OfficeWorkerSeatingPhase.None;
+                SetSeatedPhysics(false);
+                if (spriteAnimator != null) spriteAnimator.ResumeWalkingAfterSeating();
+                ResetNavigation();
+            }
         }
 
         private void ResumeMovementAfterSeatRelease()

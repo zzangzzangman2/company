@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.OfficeSeating;
 using UnityEditor;
 using UnityEngine;
@@ -33,6 +35,11 @@ namespace FamilyCompany.Editor
             ValidateIdempotentRelease();
             ValidatePersistentSnapshotImportExport();
             ValidateNearestSeatDeterminism();
+            ValidatePartialTopologyMemberGate();
+            ValidateSharedRuntimeClaimOwnership();
+            ValidateSessionIdentityBoundary();
+            ValidatePrecisionApproachSettlement();
+            ValidateIntegrationSourceContracts();
             ValidateInputBoundaries();
             ValidateOneHundredRepeatedRuns();
         }
@@ -179,6 +186,156 @@ namespace FamilyCompany.Editor
             AssertEqual(selected.SeatId, reorderedSelection.SeatId, "definition input order does not affect nearest seat");
         }
 
+        private static void ValidatePartialTopologyMemberGate()
+        {
+            var state = new OfficeSeatingState(new[]
+            {
+                Seat("desk-a", -1, 0),
+                Seat("desk-b", 1, 0),
+                Seat("desk-c", -1, 2),
+                Seat("desk-d", 1, 2)
+            });
+            AssertTrue(state.TryAssign("desk-a", "older_sister", out _), "partial gate sister assignment");
+            AssertTrue(state.TryAssign("desk-b", "mother", out _), "partial gate mother assignment");
+            AssertTrue(state.TryAssign("desk-c", "father", out _), "partial gate father assignment");
+            AssertTrue(state.TryAssign("desk-d", "player", out _), "partial gate player assignment");
+
+            bool HasPartialAuthoring(string seatId) => seatId == "desk-a" || seatId == "desk-b";
+            AssertTrue(
+                OfficeSeatRuntimeEligibility.HasClaimableSeat(state, "older_sister", HasPartialAuthoring),
+                "partial gate keeps sister seating");
+            AssertTrue(
+                OfficeSeatRuntimeEligibility.HasClaimableSeat(state, "mother", HasPartialAuthoring),
+                "partial gate keeps mother seating");
+            AssertFalse(
+                OfficeSeatRuntimeEligibility.HasClaimableSeat(state, "father", HasPartialAuthoring),
+                "missing Desk C disables father seating gate");
+            AssertFalse(
+                OfficeSeatRuntimeEligibility.HasClaimableSeat(state, "player", HasPartialAuthoring),
+                "missing Desk D disables player seating gate");
+        }
+
+        private static void ValidateSharedRuntimeClaimOwnership()
+        {
+            var state = CreateState();
+            AssertTrue(
+                OfficeSeatRuntimeClaim.TryReserve(
+                    state,
+                    "desk-a",
+                    "father",
+                    "shared-token",
+                    out var first,
+                    out _),
+                "first runtime wrapper reserve");
+            AssertTrue(
+                OfficeSeatRuntimeClaim.TryReserve(
+                    state,
+                    "desk-a",
+                    "father",
+                    "shared-token",
+                    out var repeated,
+                    out _),
+                "repeated runtime wrapper reserve");
+            AssertTrue(ReferenceEquals(first, repeated), "repeated reserve returns the single owning wrapper");
+            AssertTrue(repeated.TryOccupy(out _), "shared wrapper occupies");
+            AssertTrue(first.IsOccupied, "shared wrapper occupation is visible to all callers");
+            AssertTrue(
+                OfficeSeatRuntimeClaim.TryReserve(
+                    state,
+                    "desk-a",
+                    "father",
+                    "shared-token",
+                    out var occupiedRetry,
+                    out _),
+                "occupied runtime wrapper retry");
+            AssertTrue(ReferenceEquals(first, occupiedRetry), "occupied retry preserves the single owning wrapper");
+            repeated.Dispose();
+            AssertTrue(first.IsReleased, "shared wrapper release is visible to all callers");
+            AssertSeat(state, "desk-a", OfficeSeatMeaningState.Unassigned, string.Empty, string.Empty);
+        }
+
+        private static void ValidateSessionIdentityBoundary()
+        {
+            var first = new object();
+            var second = new object();
+            AssertFalse(
+                OfficeSeatRuntimeEligibility.SessionIdentityChanged(first, first),
+                "same GameState identity preserves binding");
+            AssertTrue(
+                OfficeSeatRuntimeEligibility.SessionIdentityChanged(first, second),
+                "new/load GameState identity forces rebind");
+            AssertTrue(
+                OfficeSeatRuntimeEligibility.SessionIdentityChanged(null, first),
+                "initial GameState identity forces bind");
+        }
+
+        private static void ValidatePrecisionApproachSettlement()
+        {
+            const double targetX = 14.375d;
+            const double targetZ = -1.125d;
+            var x = targetX - 0.079d;
+            var z = targetZ + 0.061d;
+            var arrived = false;
+            for (var frame = 0; frame < 120 && !arrived; frame++)
+            {
+                var step = OfficeSeatPrecisionMotion.Advance(
+                    x,
+                    z,
+                    targetX,
+                    targetZ,
+                    OfficeSeatPrecisionMotion.ApproachSpeedMetersPerSecond,
+                    1d / 60d);
+                x = step.X;
+                z = step.Z;
+                arrived = step.Arrived;
+            }
+
+            AssertTrue(arrived, "precision approach arrives");
+            AssertEqual(targetX, x, "precision approach exact X");
+            AssertEqual(targetZ, z, "precision approach exact Z");
+        }
+
+        private static void ValidateIntegrationSourceContracts()
+        {
+            var root = Directory.GetCurrentDirectory();
+            var coordinator = ReadSource(root, "Assets/FamilyCompany/Presentation.Unity/OfficeAutonomyCoordinator.cs");
+            var worker = ReadSource(root, "Assets/FamilyCompany/Presentation.Unity/OfficeWorkerAgent.cs");
+            var player = ReadSource(root, "Assets/FamilyCompany/Presentation.Unity/OfficeSeating/OfficePlayerSeatingPresenter.cs");
+            var animator = ReadSource(root, "Assets/FamilyCompany/Presentation.Unity/DirectionalSpriteAnimator.cs");
+            var claim = ReadSource(root, "Assets/FamilyCompany/Presentation.Unity/OfficeSeating/OfficeSeatRuntimeClaim.cs");
+
+            RequireContains(coordinator, "OfficeSeatRuntimeEligibility.HasClaimableSeat(", "member claimable gate");
+            RequireContains(coordinator, "_boundGameState", "GameState identity binding");
+            RequireContains(coordinator, "SessionIdentityChanged(", "session identity rebind");
+            RequireContains(coordinator, "_seatingState = CreateSeatingState(definitions);", "fresh transient state on rebind");
+            AssertFalse(
+                worker.Contains("_seatRuntimeEnabled && _assignedWaypoint.Activity == OfficeActivity.Work"),
+                "partial seating cannot pause fallback contract productivity");
+            RequireContains(worker, "spriteAnimator.isActiveAndEnabled", "NPC animator lifecycle validity");
+            RequireContains(worker, "spriteAnimator.HasOfficeSeatingFrames", "NPC frame-loss validity");
+            RequireContains(worker, "TickPrecisionMoveToApproach(approach, deltaTime)", "NPC precision approach path");
+            AssertFalse(worker.Contains("MoveTowardPosition(approach, deltaTime)"), "arrivalDistance snap removed from approach");
+            RequireContains(player, "_animator.isActiveAndEnabled", "player animator lifecycle validity");
+            RequireContains(player, "RestorePlayerMovement();", "player movement writer rollback");
+            RequireContains(animator, "private void OnDisable()", "animator disable abort");
+            RequireContains(animator, "private void OnDestroy()", "animator destroy abort");
+            RequireContains(animator, "AbortOfficeSeatingPresentation();", "animator transition abort");
+            RequireContains(claim, "ConditionalWeakTable<OfficeSeatingState, ClaimRegistry>", "single wrapper registry");
+            RequireContains(claim, "claim = existing;", "duplicate reserve shares owner");
+        }
+
+        private static string ReadSource(string root, string relativePath)
+        {
+            var path = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path)) throw new FileNotFoundException("Seating integration source is missing.", path);
+            return File.ReadAllText(path);
+        }
+
+        private static void RequireContains(string source, string fragment, string label)
+        {
+            AssertTrue(source.Contains(fragment), label);
+        }
+
         private static void ValidateInputBoundaries()
         {
             AssertThrows<ArgumentException>(
@@ -293,3 +450,34 @@ namespace FamilyCompany.Editor
         }
     }
 }
+
+#if OFFICE_SEATING_RUNTIME_STANDALONE
+namespace UnityEditor
+{
+    [System.AttributeUsage(System.AttributeTargets.Method)]
+    public sealed class MenuItemAttribute : System.Attribute
+    {
+        public MenuItemAttribute(string path) { }
+    }
+
+    public static class EditorApplication
+    {
+        public static void Exit(int code) { }
+    }
+}
+
+namespace UnityEngine
+{
+    public static class Application
+    {
+        public static bool isBatchMode => false;
+    }
+
+    public static class Debug
+    {
+        public static void Log(object value) { }
+        public static void LogError(object value) { }
+        public static void LogException(System.Exception exception) { }
+    }
+}
+#endif

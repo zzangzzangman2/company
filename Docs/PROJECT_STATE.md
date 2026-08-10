@@ -93,6 +93,7 @@ Unity: 6000.3.21f1
 - AutonomyNeeds 순수 모듈 완료. 1/3/10분 진행 동등성, 휴식·크런치·쓰러짐·결근, Save snapshot/transient 분리와 100회 결정론 검증을 통과했으며 기존 `ApplyPulse`와 이중 차감하지 않는다.
 - 회복·외부 활동 12종의 SIMUL-v3 ImageGen 16:9 장면과 메타·자산 등록 완료.
 - 좌석 애니메이터가 유일한 Sprite writer로 남는 pull-only `OfficeSeatedWorkMicroActionAdapter`와 결정적 프레임셋 주입 경계를 구현했다. 아트가 없거나 일부 동작만 있으면 기존 Work 6프레임으로 복귀하며, micro-action 시간 분할·Drink 하한/간격·기립 handoff·writer rollback 회귀를 고정했다.
+- partial 좌석 topology에서 구성원별 실제 claim 가능 여부만 seating gate를 켜고, transition 중 Animator disable/destroy/frame 소실과 GameState session 교체 시 claim·movement writer를 복원하도록 보강했다. 동일 token은 단일 공유 wrapper를 반환하고 NPC approach는 오차 없는 precision path로 도착한다.
 
 ## 진행 중
 
@@ -177,6 +178,7 @@ Unity: 6000.3.21f1
 - 2026-08-10: Stock 회사계좌·Save V5 optional 코어 완료. 신규 회사 현금 500만원·증권 미개설/0원, 양방향 균형분개, 장중 입출금과 예약금 보호, 잘못된 금액·중복 ID 차단, 현금/원장/예수금/포지션/평균원가/미체결/체결/일지/관심/FIFO/세션·개장 상태의 왕복 및 구형 safe restore를 검증함. 전체 C# 경고 0·오류 0, 회귀·Unity build·1280 runtime PASS.
 - 2026-08-10: Stock 회사계좌 canonical 통합 완료. 50,000원 fixture 제거, 실제 회사↔증권계좌 입출금·균형분개·예약금 보호, `GameState` flush/load·Save V5 optional, 날짜별 상장집합 변경 시 비거래 종목 승계와 미지 ID 거절, 0.4초 residual 및 FIFO 재개 결정성을 Unity `STOCK_MARKET_*_VALIDATION` 4종과 전체 `PrototypeValidation`에서 함께 통과함. 외부 생성 tape/orderbook 전체 영속화와 S3/S4는 미완료로 유지함.
 - 2026-08-10: seating 6개 선형 커밋과 micro-action 런타임을 전용 통합 브랜치에 결합하고 pull-only adapter를 추가함. 아트 없음·부분 아트 fallback, 8방향 첫/끝 프레임, 구성원 불일치, safe-stop/disable/destroy 멱등성, push Presenter 시작/프레임 소실 예외 rollback을 독립 하네스로 통과함. 30분 단일/1초 분할 타임라인 일치, 첫 Drink 300초 이후, 모든 `int` seed에 대해 구조적으로 30분 5회 이하인 간격과 범위 분산 4,096 seed·지정 가족 4명 표본, huge delta guard를 확인했으며 전체 5개 어셈블리 외부 컴파일은 경고·오류 0. Unity와 실제 아트는 실행하지 않음.
+- 2026-08-10: seating 독립 리뷰 MAJOR 5 회귀를 보강함. Desk C/D 누락 시 father/player gate 해제와 기존 생산성 진행, transition 중 Animator lifecycle/frame-loss 취소, 동일 topology의 새 게임/불러오기 GameState identity rebind, 동일 seat/member/token 단일 wrapper 공유, NPC approach precision exact settle을 standalone 하네스와 통합 source guard로 확인함. 전체 5개 어셈블리 외부 컴파일은 `58/6/3/40/36` 소스, 경고·오류 0이며 Unity/PlayMode는 실행하지 않음.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ### 2026-08-10 OfficeVisualV2 calibration handoff

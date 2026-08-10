@@ -320,7 +320,15 @@ namespace FamilyCompany.Simulation.OfficeSeating
             }
 
             if (target.RuntimeState == OfficeSeatMeaningState.Occupied)
+            {
+                if (string.Equals(target.RuntimeMemberId, normalizedMemberId, StringComparison.Ordinal) &&
+                    string.Equals(target.Token, normalizedToken, StringComparison.Ordinal))
+                {
+                    result = Success(false, target, normalizedMemberId, string.Empty);
+                    return true;
+                }
                 return Failed(OfficeSeatOperationFailure.SeatAlreadyOccupied, target, normalizedMemberId, out result);
+            }
             if (target.RuntimeState == OfficeSeatMeaningState.Reserved)
             {
                 if (!string.Equals(target.RuntimeMemberId, normalizedMemberId, StringComparison.Ordinal))

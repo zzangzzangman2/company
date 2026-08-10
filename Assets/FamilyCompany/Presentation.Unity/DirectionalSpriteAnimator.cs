@@ -237,6 +237,16 @@ namespace FamilyCompany.Presentation.Unity
             Tick(Time.deltaTime);
         }
 
+        private void OnDisable()
+        {
+            AbortOfficeSeatingPresentation();
+        }
+
+        private void OnDestroy()
+        {
+            AbortOfficeSeatingPresentation();
+        }
+
         private void ApplyFrame()
         {
             if (targetRenderer == null) return;
@@ -337,6 +347,17 @@ namespace FamilyCompany.Presentation.Unity
         {
             _officeWorkSession?.Dispose();
             _officeWorkSession = null;
+        }
+
+        private void AbortOfficeSeatingPresentation()
+        {
+            EndOfficeWorkSession();
+            _seatingClip = null;
+            _seatingFrameClock = 0f;
+            _seatingFrame = 0;
+            _seatingTransitionComplete = false;
+            RestorePreSeatingSortingOrder();
+            ApplyFrame();
         }
 
         private static bool HasCompleteFrames(Sprite[] frames, int expectedCount)

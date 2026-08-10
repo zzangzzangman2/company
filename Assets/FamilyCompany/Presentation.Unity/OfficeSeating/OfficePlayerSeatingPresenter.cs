@@ -283,16 +283,29 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
 
         private void ReleaseImmediately()
         {
-            _claim?.TryRelease(out _);
+            var claim = _claim;
             _claim = null;
-            _seat = null;
-            _releaseRequested = false;
-            _phase = OfficeWorkerSeatingPhase.None;
-            _seatFacing = 0;
-            _animator?.ResumeWalkingAfterSeating();
-            _workInteractor?.SetSeatedWorkReady(false);
-            _workInteractor?.SetSeatingTransitionBlocked(false);
-            RestorePlayerMovement();
+            try
+            {
+                claim?.TryRelease(out _);
+            }
+            finally
+            {
+                _seat = null;
+                _releaseRequested = false;
+                _phase = OfficeWorkerSeatingPhase.None;
+                _seatFacing = 0;
+                try
+                {
+                    if (_animator != null) _animator.ResumeWalkingAfterSeating();
+                }
+                finally
+                {
+                    _workInteractor?.SetSeatedWorkReady(false);
+                    _workInteractor?.SetSeatingTransitionBlocked(false);
+                    RestorePlayerMovement();
+                }
+            }
         }
 
         private double ApproachDistanceSquared(string seatId)
@@ -310,19 +323,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
                    _bootstrap.State != null &&
                    _registry != null &&
                    _registry.isActiveAndEnabled &&
-                   _registry.SeatCount > 0 &&
                    _state != null &&
                    StateMatchesRegistry() &&
                    _workInteractor != null &&
                    _animator != null &&
-                   _animator.HasOfficeSeatingFrames;
+                   _animator.isActiveAndEnabled &&
+                   _animator.HasOfficeSeatingFrames &&
+                   OfficeSeatRuntimeEligibility.HasClaimableSeat(
+                       _state,
+                       PlayerId,
+                       seatId => _registry.TryGetAuthoring(seatId, out var authoring) &&
+                                 authoring != null && authoring.IsRuntimeValid);
         }
 
         private bool HasActiveClaim => _claim != null && !_claim.IsReleased;
 
         private bool HasValidSeatBinding()
         {
-            if (!HasActiveClaim || _registry == null || _seat == null || !_seat.IsRuntimeValid)
+            if (!HasActiveClaim || _registry == null || _seat == null || !_seat.IsRuntimeValid ||
+                _animator == null || !_animator.isActiveAndEnabled || !_animator.HasOfficeSeatingFrames)
                 return false;
             return _registry.TryGetAuthoring(_claim.SeatId, out var registered) && registered == _seat;
         }

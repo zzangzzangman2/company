@@ -6,6 +6,7 @@ using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeSeating.UI;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.OfficeSeating;
 using UnityEngine;
 
@@ -27,6 +28,7 @@ namespace FamilyCompany.Presentation.Unity
         private readonly Dictionary<string, string> _retainedSeatAssignments =
             new Dictionary<string, string>(StringComparer.Ordinal);
         private int _seatingRegistryRevision = -1;
+        private GameState _boundGameState;
 
         public OfficeSeatingState SeatingState => _seatingState;
         public bool IsSeatingRuntimeReady =>
@@ -43,6 +45,7 @@ namespace FamilyCompany.Presentation.Unity
             bootstrap = newBootstrap;
             agents = newAgents ?? Array.Empty<OfficeWorkerAgent>();
             waypoints = newWaypoints ?? Array.Empty<OfficeWaypoint>();
+            _boundGameState = null;
             _initialized = false;
         }
 
@@ -59,6 +62,7 @@ namespace FamilyCompany.Presentation.Unity
             _retainedSeatAssignments.Clear();
             CapturePersistentAssignments(_seatingState);
             _seatingRegistryRevision = -1;
+            _boundGameState = null;
             if (placementPanel != null) seatPlacementPanel = placementPanel;
             _seatingInitialized = false;
         }
@@ -93,14 +97,24 @@ namespace FamilyCompany.Presentation.Unity
                          .Where(item => item != null && item.isActiveAndEnabled)
                          .OrderBy(item => item.AgentId, StringComparer.Ordinal))
             {
-                agent.SetOfficeSeatingRuntimeEnabled(IsSeatingRuntimeReady && agent.HasOfficeSeatingAnimation);
                 var member = bootstrap.State.Family.Members.FirstOrDefault(item => item.MemberId == agent.AgentId);
                 if (member == null)
                 {
+                    agent.SetOfficeSeatingRuntimeEnabled(false);
                     agent.ClearAutonomousDestination();
                     agent.ClearSeatDestination();
                     continue;
                 }
+
+                var memberCanUseSeating =
+                    IsSeatingRuntimeReady &&
+                    agent.HasOfficeSeatingAnimation &&
+                    OfficeSeatRuntimeEligibility.HasClaimableSeat(
+                        _seatingState,
+                        member.MemberId,
+                        seatId => seatRegistry.TryGetAuthoring(seatId, out var authoring) &&
+                                  authoring != null && authoring.IsRuntimeValid);
+                agent.SetOfficeSeatingRuntimeEnabled(memberCanUseSeating);
 
                 var candidates = ResolveCandidates(member.Autonomy.TargetLocation);
                 OfficeWaypoint autonomyWaypoint = null;
@@ -205,13 +219,26 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
 
+            var sessionChanged = OfficeSeatRuntimeEligibility.SessionIdentityChanged(
+                _boundGameState,
+                bootstrap == null ? null : bootstrap.State);
             var stateMatches = StateMatchesDefinitions(_seatingState, definitions);
-            if (!stateMatches)
+            if (sessionChanged)
             {
                 CapturePersistentAssignments(_seatingState);
                 ResetSeatingRuntimeBindings();
                 _seatingState = CreateSeatingState(definitions);
                 RestorePersistentAssignments(_seatingState, definitions);
+                _boundGameState = bootstrap.State;
+                stateMatches = true;
+            }
+            else if (!stateMatches)
+            {
+                CapturePersistentAssignments(_seatingState);
+                ResetSeatingRuntimeBindings();
+                _seatingState = CreateSeatingState(definitions);
+                RestorePersistentAssignments(_seatingState, definitions);
+                _boundGameState = bootstrap.State;
                 stateMatches = true;
             }
             else if (_seatingInitialized && revision != _seatingRegistryRevision)
