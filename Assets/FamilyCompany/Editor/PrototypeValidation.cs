@@ -5,6 +5,7 @@ using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.Prototype;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace FamilyCompany.Editor
@@ -98,10 +99,62 @@ namespace FamilyCompany.Editor
 
         private static void ValidateAssetsAndScene()
         {
-            var sister = AssetDatabase.LoadAssetAtPath<Sprite>(PrototypeProjectBuilder.SisterAssetPath);
-            if (sister == null) throw new InvalidOperationException("Canonical sister sprite is missing or not imported as a Sprite.");
+            var sisterFrames = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.SisterFrameFolder });
+            AssertEqual(8, sisterFrames.Length, "sister directional frame count");
             var scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(PrototypeProjectBuilder.ScenePath);
             if (scene == null) throw new InvalidOperationException("Prototype scene is missing.");
+
+            EditorSceneManager.OpenScene(PrototypeProjectBuilder.ScenePath);
+            var camera = Camera.main;
+            if (camera == null || !camera.orthographic)
+            {
+                throw new InvalidOperationException("Orthographic main camera is missing.");
+            }
+
+            if (camera.GetComponent<Presentation.Unity.PixelatedCameraEffect>() == null)
+            {
+                throw new InvalidOperationException("Pixelated camera effect is missing.");
+            }
+
+            var agents = UnityEngine.Object.FindObjectsByType<Presentation.Unity.OfficeWorkerAgent>(FindObjectsSortMode.None);
+            if (agents.Length < 3)
+            {
+                throw new InvalidOperationException($"Expected at least three moving office agents, got {agents.Length}.");
+            }
+
+            foreach (var agent in agents)
+            {
+                if (agent.RouteCount < 4)
+                {
+                    throw new InvalidOperationException($"Agent {agent.AgentId} has an incomplete route.");
+                }
+            }
+
+            if (agents.All(agent => agent.AgentId != "older_sister"))
+            {
+                throw new InvalidOperationException("Moving older sister agent is missing.");
+            }
+
+            foreach (var movingAgent in agents)
+            {
+                foreach (var candidate in agents)
+                {
+                    candidate.GetComponent<CharacterController>().enabled = candidate == movingAgent;
+                }
+
+                movingAgent.InitializeNow();
+                var start = movingAgent.transform.position;
+                for (var index = 0; index < 600; index++)
+                {
+                    movingAgent.Tick(0.05f);
+                }
+
+                if (Vector3.Distance(start, movingAgent.transform.position) < 0.5f || movingAgent.CompletedStops < 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Agent {movingAgent.AgentId} did not physically traverse the office route.");
+                }
+            }
         }
 
         private static void AssertEqual<T>(T expected, T actual, string label)
@@ -113,4 +166,3 @@ namespace FamilyCompany.Editor
         }
     }
 }
-

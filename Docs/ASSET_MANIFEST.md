@@ -38,3 +38,41 @@
 - Assets/Art/Characters/OlderSister/References/teller_window_bet_accept_age20_v1.png
 - Assets/Art/Characters/OlderSister/References/teller_window_ticket_handover_age20_v1.png
 
+### 런타임 도트 이동 정본
+
+- 경로: Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v2.png
+- 상태: CANONICAL RUNTIME SHEET
+- 용도: 20살 누나의 4방향 2프레임 실제 이동
+- 규격: 1536x1024 RGBA, 4열x2행
+- 방향: 정면, 왼쪽, 뒤, 오른쪽
+- 복장·정체성: 긴 검은 양갈래, 검은 리본, 청록색 눈, 나시티, 돌핀팬츠, 맨발
+- SHA-256: FFC6B721043C51A069DCDD4BC7137DC402B6239C244ABD56A1512FBE4F3C5F7C
+- 제작: OpenAI 내장 이미지 생성/편집 도구로 전신 정본의 정체성을 보존해 도트화
+- 투명화: 설치된 chroma-key 제거 도구를 사용해 v2에서 어두운 녹색 잔상을 제거
+
+### 도트 생성 원본
+
+- 경로: Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_chroma_v1.png
+- 상태: SOURCE
+- SHA-256: 49CE3AB3194A0646BEF3ABFDBC3765F7DF6DD9F657249025ED05A69A6D526E3B
+
+### 도트 비정본
+
+- 경로: Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v1.png
+- 상태: DEPRECATED, 런타임 사용 금지
+- 이유: 생성 크로마의 어두운 녹색 잔상이 남아 v2로 교체했다.
+
+### Unity 생성 프레임
+
+- 경로: Assets/Art/Characters/OlderSister/Pixel/Frames/
+- 상태: GENERATED RUNTIME ASSETS
+- 제작: Office V0.2 빌더가 정본 4x2 시트를 8개 단일 Sprite PNG로 기계적으로 분리한다.
+- 규칙: 직접 수정하지 않고 정본 시트나 빌더를 수정한 뒤 재생성한다.
+
+## 사무실 비주얼 타깃
+
+- 경로: Assets/Art/StyleTargets/office_isometric_pixel_target_v1.png
+- 상태: STYLE TARGET, 런타임 배경 사용 금지
+- 용도: 귀여운 2.5D 도트 사무실의 팔레트, 가구 밀도, 통로, 구역 구성 기준
+- SHA-256: 8BCFC0D6B32A03324697346390F839654EEF262A5EB126F887E09760F80DB901
+- 제작: 사용자가 제공한 두 사무실 화면은 공간 구성 참고로만 사용하고, OpenAI 내장 이미지 생성 도구로 독자적인 2000년대 초반 가족회사 사무실을 생성했다.

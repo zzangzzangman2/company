@@ -6,7 +6,8 @@
 2. Docs/CANON.md
 3. Docs/DECISIONS.md
 4. Docs/ARCHITECTURE.md
-5. 작업과 직접 관련된 추가 문서
+5. 시각/씬 작업이면 Docs/ART_STYLE.md와 Docs/OFFICE_V0_2.md
+6. 작업과 직접 관련된 추가 문서
 
 ## 필수 작업 규칙
 
@@ -25,4 +26,3 @@
 ## 완료 조건
 
 코드 컴파일, 헤드리스 검증, 씬 생성/열기 중 작업 범위에 맞는 검증을 실행하고 결과를 PROJECT_STATE에 기록한다. 검증하지 못했다면 이유와 정확한 다음 명령을 적는다.
-

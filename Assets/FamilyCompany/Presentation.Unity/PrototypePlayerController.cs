@@ -17,7 +17,14 @@ namespace FamilyCompany.Presentation.Unity
         {
             var x = Input.GetAxisRaw("Horizontal");
             var z = Input.GetAxisRaw("Vertical");
-            var movement = new Vector3(x, 0f, z).normalized * moveSpeed;
+            var targetCamera = Camera.main;
+            var cameraRight = targetCamera == null ? Vector3.right : targetCamera.transform.right;
+            var cameraForward = targetCamera == null ? Vector3.forward : targetCamera.transform.forward;
+            cameraRight.y = 0f;
+            cameraForward.y = 0f;
+            cameraRight.Normalize();
+            cameraForward.Normalize();
+            var movement = (cameraRight * x + cameraForward * z).normalized * moveSpeed;
             if (!_controller.isGrounded) movement.y = -2f;
             _controller.Move(movement * Time.deltaTime);
             if (movement.sqrMagnitude > 0.01f)
@@ -27,4 +34,3 @@ namespace FamilyCompany.Presentation.Unity
         }
     }
 }
-

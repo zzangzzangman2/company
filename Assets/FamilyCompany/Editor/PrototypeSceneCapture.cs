@@ -7,7 +7,7 @@ namespace FamilyCompany.Editor
 {
     public static class PrototypeSceneCapture
     {
-        private const string OutputPath = "Artifacts/Prototype01/prototype01-overview.png";
+        private const string OutputPath = "Artifacts/OfficeV02/office-v0-2.png";
 
         [MenuItem("Family Company/Capture Prototype Overview")]
         public static void Capture()
@@ -16,9 +16,12 @@ namespace FamilyCompany.Editor
             var camera = Camera.main;
             if (camera == null) throw new InvalidDataException("Main Camera is missing.");
 
-            camera.transform.position = new Vector3(0f, 24f, -24f);
-            camera.transform.LookAt(new Vector3(0f, 0.5f, 0f));
-            camera.fieldOfView = 52f;
+            var follow = camera.GetComponent<Presentation.Unity.IsometricCameraFollow>();
+            if (follow != null) follow.enabled = false;
+            camera.orthographic = true;
+            camera.orthographicSize = 8.5f;
+            camera.transform.position = new Vector3(2f, 17f, -12f);
+            camera.transform.LookAt(new Vector3(14f, 0.5f, 0f));
             FaceBillboards(camera);
 
             const int width = 1600;
@@ -62,4 +65,3 @@ namespace FamilyCompany.Editor
         }
     }
 }
-

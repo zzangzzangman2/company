@@ -21,3 +21,18 @@
 
 Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 준다. 구역 이동은 현재 우선순위가 공간 감각 검증이므로 포털 없이 직접 걸어서 가능하게 시작한다. 향후 맵이 커지면 의미 위치 ID와 전환 시스템을 추가한다.
 
+## 2.5D 도트 프레젠테이션
+
+- 사무실과 가구는 실제 Collider를 가진 3D 모듈이다.
+- Main Camera는 직교 투영으로 플레이어를 추적한다.
+- PixelatedCameraEffect가 월드 렌더를 낮은 내부 해상도로 축소하고 Point 필터로 확대한다.
+- 누나는 카메라 기준 이동 방향에 맞춰 4방향 2프레임 Sprite를 선택한다.
+- 도트 시트의 개별 프레임은 Editor 빌더가 생성하며 런타임 코드가 원본 PNG를 자르지 않는다.
+
+## 실제 회사 이동
+
+- 플레이어는 PrototypePlayerController와 CharacterController로 직접 이동한다.
+- NPC는 OfficeWorkerAgent와 CharacterController로 웨이포인트 사이를 실제 이동한다.
+- OfficeWaypoint는 위치, 업무 종류, 최소·최대 체류 시간을 가진다.
+- 체류 시간은 agentId, 정거장 횟수, waypointId에 StableRandom 키를 적용해 재현된다.
+- 현재 경로는 사전 정의된 안전 통로다. 사무실 배치를 플레이어가 자유 편집하게 되면 경로 탐색 계층을 추가한다.
