@@ -5,7 +5,8 @@
     "FamilyCompany.Simulation",
     "FamilyCompany.Save",
     "FamilyCompany.Infrastructure.Unity",
-    "FamilyCompany.Presentation.Unity"
+    "FamilyCompany.Presentation.Unity",
+    "FamilyCompany.Qa.Core"
   ],
   "includePlatforms": [
     "Editor"

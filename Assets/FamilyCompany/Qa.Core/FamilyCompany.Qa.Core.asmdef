@@ -1,0 +1,8 @@
+{
+  "name": "FamilyCompany.Qa.Core",
+  "rootNamespace": "FamilyCompany.Qa",
+  "references": [],
+  "autoReferenced": false,
+  "allowUnsafeCode": false,
+  "noEngineReferences": true
+}
