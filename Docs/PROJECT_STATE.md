@@ -75,6 +75,7 @@ Unity: 6000.3.21f1
 - 누적 소비 snapshot 구현: 소수 단위 floor, 동일 watermark 멱등성, 누적 delta만 차감, 1~9주 잔량 행 숨김, 구조적 벽 90% 돌파와 회복 상한
 - 플레이어 대기주문 순수 C# 코어 구현: 매수 고가·매도 저가 우선, 동일 가격 날짜/분/sequence/ID FIFO, 취소·부분체결 queue-ahead 해제, 외부 호가 대기수량 선소진, 수수료 포함 매수 예약금과 매도 잔량 예약
 - 7매도+7매수와 batch FIFO `도착→소진→다음 단계`, 10배속 최소 이동 시간, pause 완전 고정, 완료 identity 중복 차단 상태기 구현
+- Stock 실제 회사계좌 런타임 통합 완료: 50,000원 격리 fixture를 제거하고 회사 현금↔증권 예수금 UI, 균형분개, 매수 예약금 보호, `GameState` 자동 flush/load와 Save V5 optional 왕복을 연결했다. 날짜 전환 시 현재 비거래 종목의 보유·체결·일지·관심 상태를 승계하고 미체결만 결정적으로 취소하며, 미지 자산 ID는 거절한다. 실시간 잔여초와 FIFO 연속성도 닫기/저장/재개 전후 동일하다.
 - 가족 자율 AI 확장: 학교·영업·가사·수면 일정이면 NPC가 출구까지 실제 이동해 퇴실하고, 복귀 시간에는 다시 사무실로 걸어 들어옴
 - 플레이어 직접 작업 구현: 계약 단계에 따라 회의실·책상·프린터 가까이에서 E를 유지해야 1인시가 반영되며 학교·체력·마감 규칙을 동일하게 적용
 - SIMUL 오디오 50종 이관: BGM 11종·SFX 39종 원본 해시 일치, 타이틀/사무실 BGM 전환과 계약·작업·수익·오류·저장·NPC 발걸음 사건 연결
@@ -94,7 +95,7 @@ Unity: 6000.3.21f1
 
 ## 진행 중
 
-- Stock 회사계좌·Save 코어는 완료했지만 UI 입출금 버튼과 GameState 자동 flush/load, 체결별 전체 원장 전기, 외부 tape/orderbook state가 남았다. UI의 5만원 계좌는 QA fixture일 뿐 실제 회사계좌가 아니다.
+- Stock 실제 회사/증권계좌 UI와 Save 연결은 완료했다. 남은 범위는 체결별 회사 총계정원장 전기, 외부 생성 tape/orderbook 전체 상태 영속화, 시세·뉴스·유동성 S3와 기업행동 S4의 역사 연결이다.
 - OfficeVisualV2는 scale 1.00 정적 교정에서 4명 고유 bbox, 가구 교차 0, 발점 오차 0, IoU 0과 왼쪽 블록 제거를 통과했다. 그러나 1280 정규화 최대 3px로 ≤1px 기준 FAIL이고 CharacterController 이동·30초 퇴실/복귀 미검증, 공유 `Prototype01`은 scale 1.35라 최종 PASS가 아니다.
 - 네 가족 좌석 애니메이션 4명×112=448프레임과 contact sheet 8장·GIF 4개는 검증 완료했다. 기존 Office autonomy·씬의 런타임 좌석 연결은 미완료다.
 - 회복·외부 활동 12장과 순수 규칙을 GameState·Save·실제 선택 UI에 연결하는 통합이 남았다.
@@ -103,11 +104,11 @@ Unity: 6000.3.21f1
 
 1. 좌석 캐릭터 착석/업무/기립 프레임과 AutonomyNeeds를 기존 자율행동에 한 번만 연결하고 중복 좌석·이중 에너지/스트레스 차감을 막는다.
 2. OfficeVisualV2의 1280 정규화 오차를 ≤1px로 낮추고 CharacterController 실제 이동·30초 퇴실/복귀를 검증한 뒤 공유 씬을 scale 1.00으로 재생성한다.
-3. Stock 회사계좌에 UI 입출금과 GameState 자동 flush/load를 연결하고 체결별 전체 원장, 외부 tape/orderbook state, 역사 코퍼스/골든 패리티·다음 거래일 이벤트를 추가한다.
+3. Stock 외부 생성 tape/orderbook 전체 상태를 Save 경계에 영속화하고 역사 코퍼스/골든 패리티·다음 거래일 이벤트를 추가한다.
 4. 완성된 회복 활동 12장·순수 규칙을 GameState·Save·16:9 선택 UI에 연결한다.
 5. 완성된 회복 활동 12장·순수 규칙을 GameState·Save·16:9 선택 UI에 연결한다.
 6. 생성 호가 snapshot과 구조적 벽 실제 회복·취소를 Dart golden으로 고정하고 Unity에 이식한다.
-7. 구현된 지정가 잔량·FIFO 코어를 GameState·저장·시장가/지정가 실제 체결 원장과 연결하고 재고/현금 보존을 검증한다.
+7. 시장가/지정가 실제 체결마다 투자자산·수수료·거래세·실현손익을 회사 총계정원장에 전기하고 재고/현금 보존을 검증한다.
 8. 시세 경로·뉴스·기술 수준·유동성 구간 S3와 기업행동 S4를 History V1 조건부 사건에 연결한다.
 9. 직원 후보 8인을 고용 뒤에만 48프레임 이동 NPC로 생성하고 실제 능력치·업무 배치에 연결한다.
 
@@ -171,6 +172,7 @@ Unity: 6000.3.21f1
 - 2026-08-10: Stock 12.016초 실측에서 5분 모드 +55분(허용 프레임 1회 오차), 15분 +180분, 50분 +600분과 잔여 0.4초 보존을 확인함. 08:59:59 주문접수 무체결, 09:00 단일 개장 1회·2체결·21,100원, 09:00:01 중복 0, 09:01 정규장 및 5/15/50 경계 동일 시초가를 확인함.
 - 2026-08-10: 네 가족 OfficeSeatingV1 4명×112=448프레임 완료. sit_down 128·work 192·승인된 역순 stand_up 128, contact sheet 8장, GIF 4개, frame meta 448, source PNG/meta 32/32를 확인함. 256 RGBA hard alpha·빈 프레임/잘림 없음·발 y248·180 PPU bottom-center·Point/no mip/uncompressed·GUID 유일·work A/B 높이차 ≤0.5px·재현 해시와 육안 QA PASS. 런타임 좌석 연결은 미완료.
 - 2026-08-10: Stock 회사계좌·Save V5 optional 코어 완료. 신규 회사 현금 500만원·증권 미개설/0원, 양방향 균형분개, 장중 입출금과 예약금 보호, 잘못된 금액·중복 ID 차단, 현금/원장/예수금/포지션/평균원가/미체결/체결/일지/관심/FIFO/세션·개장 상태의 왕복 및 구형 safe restore를 검증함. 전체 C# 경고 0·오류 0, 회귀·Unity build·1280 runtime PASS.
+- 2026-08-10: Stock 회사계좌 canonical 통합 완료. 50,000원 fixture 제거, 실제 회사↔증권계좌 입출금·균형분개·예약금 보호, `GameState` flush/load·Save V5 optional, 날짜별 상장집합 변경 시 비거래 종목 승계와 미지 ID 거절, 0.4초 residual 및 FIFO 재개 결정성을 Unity `STOCK_MARKET_*_VALIDATION` 4종과 전체 `PrototypeValidation`에서 함께 통과함. 외부 생성 tape/orderbook 전체 영속화와 S3/S4는 미완료로 유지함.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ### 2026-08-10 OfficeVisualV2 calibration handoff
