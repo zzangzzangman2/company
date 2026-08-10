@@ -27,6 +27,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
         private bool _previousPlayerControllerEnabled;
         private bool _previousCharacterControllerEnabled;
         private bool _movementSuspended;
+        private int _seatFacing;
 
         public OfficeWorkerSeatingPhase SeatingPhase => _phase;
         public string ActiveSeatId => _claim == null || _claim.IsReleased ? string.Empty : _claim.SeatId;
@@ -90,6 +91,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             }
             switch (_phase)
             {
+                case OfficeWorkerSeatingPhase.MovingToApproach:
+                    if (_releaseRequested) ReleaseImmediately();
+                    else TickPrecisionMoveToApproach();
+                    break;
+                case OfficeWorkerSeatingPhase.MovingToSit:
+                    if (_releaseRequested) ReleaseImmediately();
+                    else TickPrecisionMoveToSit();
+                    break;
                 case OfficeWorkerSeatingPhase.SittingDown:
                     if (!_animator.IsOfficeSeatingTransitionComplete) return;
                     if (_releaseRequested)
@@ -109,6 +118,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
                 case OfficeWorkerSeatingPhase.Working:
                     if (_releaseRequested) BeginStandingUp();
                     else _workInteractor.SetSeatedWorkReady(true);
+                    break;
+                case OfficeWorkerSeatingPhase.FinishingWork:
+                    TickFinishingSeatedWork();
                     break;
                 case OfficeWorkerSeatingPhase.StandingUp:
                     if (!_animator.IsOfficeSeatingTransitionComplete) return;
@@ -170,7 +182,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             {
                 return false;
             }
-            if (!authoring.TryResolveFacing(out var facing) || !claim.TryOccupy(out _))
+            if (!authoring.TryResolveFacing(out var facing))
             {
                 claim.Dispose();
                 return false;
@@ -178,27 +190,84 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
 
             _claim = claim;
             _seat = authoring;
+            _seatFacing = (int)facing;
             _releaseRequested = false;
             _workInteractor.SetSeatedWorkReady(false);
             _workInteractor.SetSeatingTransitionBlocked(true);
             SuspendPlayerMovement();
-            var sit = authoring.SitAnchor.position;
-            transform.position = new Vector3(sit.x, transform.position.y, sit.z);
-            if (!_animator.BeginSitDown((int)facing))
+            _phase = OfficeWorkerSeatingPhase.MovingToApproach;
+            return true;
+        }
+
+        private void TickPrecisionMoveToApproach()
+        {
+            var approach = _seat.ApproachAnchor.position;
+            var displacement = approach - transform.position;
+            displacement.y = 0f;
+            var step = OfficeSeatPrecisionMotion.Advance(
+                transform.position.x,
+                transform.position.z,
+                approach.x,
+                approach.z,
+                OfficeSeatPrecisionMotion.ApproachSpeedMetersPerSecond,
+                Time.deltaTime);
+            transform.position = new Vector3((float)step.X, transform.position.y, (float)step.Z);
+            _animator.SetWorldVelocity(step.Arrived ? Vector3.zero : displacement.normalized);
+            if (!step.Arrived) return;
+
+            if (!_animator.PrepareOfficeSeatingFacing(
+                    _seatFacing,
+                    _seat.ForegroundOcclusionMode))
             {
                 ReleaseImmediately();
-                return false;
+                return;
             }
+            _phase = OfficeWorkerSeatingPhase.MovingToSit;
+        }
 
+        private void TickPrecisionMoveToSit()
+        {
+            var sit = _seat.SitAnchor.position;
+            var step = OfficeSeatPrecisionMotion.Advance(
+                transform.position.x,
+                transform.position.z,
+                sit.x,
+                sit.z,
+                OfficeSeatPrecisionMotion.SitSpeedMetersPerSecond,
+                Time.deltaTime);
+            transform.position = new Vector3((float)step.X, transform.position.y, (float)step.Z);
+            _animator.SetWorldVelocity(Vector3.zero);
+            if (!step.Arrived) return;
+
+            if (!_claim.TryOccupy(out _) || !_animator.BeginSitDown(_seatFacing))
+            {
+                ReleaseImmediately();
+                return;
+            }
             _phase = OfficeWorkerSeatingPhase.SittingDown;
-            return true;
         }
 
         private void BeginStandingUp()
         {
-            if (_phase == OfficeWorkerSeatingPhase.StandingUp) return;
+            if (_phase == OfficeWorkerSeatingPhase.FinishingWork ||
+                _phase == OfficeWorkerSeatingPhase.StandingUp)
+            {
+                return;
+            }
             _workInteractor?.SetSeatedWorkReady(false);
             _workInteractor?.SetSeatingTransitionBlocked(true);
+            if (_animator == null)
+            {
+                ReleaseImmediately();
+                return;
+            }
+            _animator.RequestOfficeWorkSafeStop();
+            _phase = OfficeWorkerSeatingPhase.FinishingWork;
+        }
+
+        private void TickFinishingSeatedWork()
+        {
+            if (_animator == null || !_animator.IsOfficeWorkSafeToStand) return;
             if (!_animator.BeginStandUp())
             {
                 ReleaseImmediately();
@@ -209,11 +278,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
 
         private void FinishStandingUp()
         {
-            if (_seat != null && _seat.IsRuntimeValid)
-            {
-                var approach = _seat.ApproachAnchor.position;
-                transform.position = new Vector3(approach.x, transform.position.y, approach.z);
-            }
             ReleaseImmediately();
         }
 
@@ -224,6 +288,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             _seat = null;
             _releaseRequested = false;
             _phase = OfficeWorkerSeatingPhase.None;
+            _seatFacing = 0;
             _animator?.ResumeWalkingAfterSeating();
             _workInteractor?.SetSeatedWorkReady(false);
             _workInteractor?.SetSeatingTransitionBlocked(false);

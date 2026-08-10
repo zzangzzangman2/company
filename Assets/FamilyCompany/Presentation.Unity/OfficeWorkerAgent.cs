@@ -48,6 +48,7 @@ namespace FamilyCompany.Presentation.Unity
         private bool _seatNavigationWaypointReached;
         private bool _seatReleaseRequested;
         private bool _seatedPhysics;
+        private int _seatFacing;
 
         public event Action<OfficeWorkerAgent, string> AssignedTaskCompleted;
 
@@ -245,6 +246,7 @@ namespace FamilyCompany.Presentation.Unity
             switch (SeatingPhase)
             {
                 case OfficeWorkerSeatingPhase.MovingToApproach:
+                case OfficeWorkerSeatingPhase.MovingToSit:
                     ReleaseSeatImmediately();
                     ResumeMovementAfterSeatRelease();
                     break;
@@ -378,14 +380,27 @@ namespace FamilyCompany.Presentation.Unity
                 case OfficeWorkerSeatingPhase.MovingToApproach:
                     TickMovingToSeat(deltaTime);
                     break;
+                case OfficeWorkerSeatingPhase.MovingToSit:
+                    TickPrecisionMoveToSit(deltaTime);
+                    break;
                 case OfficeWorkerSeatingPhase.SittingDown:
                     spriteAnimator?.SetWorldVelocity(Vector3.zero);
                     if (spriteAnimator != null && spriteAnimator.IsOfficeSeatingTransitionComplete)
                     {
-                        spriteAnimator.BeginSeatedWork();
-                        SeatingPhase = OfficeWorkerSeatingPhase.Working;
-                        CurrentActivity = OfficeActivity.Work;
-                        if (_seatReleaseRequested) BeginStandingUp();
+                        if (_seatReleaseRequested)
+                        {
+                            BeginStandingUp();
+                        }
+                        else if (spriteAnimator.BeginSeatedWork())
+                        {
+                            SeatingPhase = OfficeWorkerSeatingPhase.Working;
+                            CurrentActivity = OfficeActivity.Work;
+                        }
+                        else
+                        {
+                            ReleaseSeatImmediately();
+                            ResumeMovementAfterSeatRelease();
+                        }
                     }
                     break;
                 case OfficeWorkerSeatingPhase.Working:
@@ -395,12 +410,13 @@ namespace FamilyCompany.Presentation.Unity
                     if (_seatReleaseRequested && SeatingPhase == OfficeWorkerSeatingPhase.Working)
                         BeginStandingUp();
                     break;
+                case OfficeWorkerSeatingPhase.FinishingWork:
+                    TickFinishingSeatedWork();
+                    break;
                 case OfficeWorkerSeatingPhase.StandingUp:
                     spriteAnimator?.SetWorldVelocity(Vector3.zero);
                     if (spriteAnimator == null || spriteAnimator.IsOfficeSeatingTransitionComplete)
                     {
-                        var approach = _seatAuthoring.ApproachAnchor.position;
-                        transform.position = new Vector3(approach.x, transform.position.y, approach.z);
                         ReleaseSeatImmediately();
                         ResumeMovementAfterSeatRelease();
                     }
@@ -424,18 +440,41 @@ namespace FamilyCompany.Presentation.Unity
             var approach = _seatAuthoring.ApproachAnchor.position;
             approach.y = transform.position.y;
             if (!MoveTowardPosition(approach, deltaTime)) return;
-            if (!_seatClaim.TryOccupy(out _))
+            if (!_seatAuthoring.TryResolveFacing(out var facing) ||
+                spriteAnimator == null ||
+                !spriteAnimator.PrepareOfficeSeatingFacing(
+                    (int)facing,
+                    _seatAuthoring.ForegroundOcclusionMode))
             {
                 ReleaseSeatImmediately();
                 ResumeMovementAfterSeatRelease();
                 return;
             }
 
-            var sit = _seatAuthoring.SitAnchor.position;
-            transform.position = new Vector3(sit.x, transform.position.y, sit.z);
+            _seatFacing = (int)facing;
             SetSeatedPhysics(true);
-            if (!_seatAuthoring.TryResolveFacing(out var facing) ||
-                !spriteAnimator.BeginSitDown((int)facing))
+            spriteAnimator.SetWorldVelocity(Vector3.zero);
+            SeatingPhase = OfficeWorkerSeatingPhase.MovingToSit;
+            CurrentActivity = OfficeActivity.Work;
+        }
+
+        private void TickPrecisionMoveToSit(float deltaTime)
+        {
+            var sit = _seatAuthoring.SitAnchor.position;
+            var step = OfficeSeatPrecisionMotion.Advance(
+                transform.position.x,
+                transform.position.z,
+                sit.x,
+                sit.z,
+                OfficeSeatPrecisionMotion.SitSpeedMetersPerSecond,
+                deltaTime);
+            transform.position = new Vector3((float)step.X, transform.position.y, (float)step.Z);
+            spriteAnimator?.SetWorldVelocity(Vector3.zero);
+            if (!step.Arrived) return;
+
+            if (!_seatClaim.TryOccupy(out _) ||
+                spriteAnimator == null ||
+                !spriteAnimator.BeginSitDown(_seatFacing))
             {
                 ReleaseSeatImmediately();
                 ResumeMovementAfterSeatRelease();
@@ -460,8 +499,27 @@ namespace FamilyCompany.Presentation.Unity
 
         private void BeginStandingUp()
         {
-            if (!HasActiveSeatClaim || SeatingPhase == OfficeWorkerSeatingPhase.StandingUp) return;
-            if (spriteAnimator == null || !spriteAnimator.BeginStandUp())
+            if (!HasActiveSeatClaim ||
+                SeatingPhase == OfficeWorkerSeatingPhase.FinishingWork ||
+                SeatingPhase == OfficeWorkerSeatingPhase.StandingUp)
+            {
+                return;
+            }
+            if (spriteAnimator == null)
+            {
+                ReleaseSeatImmediately();
+                ResumeMovementAfterSeatRelease();
+                return;
+            }
+            spriteAnimator.RequestOfficeWorkSafeStop();
+            SeatingPhase = OfficeWorkerSeatingPhase.FinishingWork;
+        }
+
+        private void TickFinishingSeatedWork()
+        {
+            spriteAnimator?.SetWorldVelocity(Vector3.zero);
+            if (spriteAnimator == null || !spriteAnimator.IsOfficeWorkSafeToStand) return;
+            if (!spriteAnimator.BeginStandUp())
             {
                 ReleaseSeatImmediately();
                 ResumeMovementAfterSeatRelease();
@@ -485,6 +543,7 @@ namespace FamilyCompany.Presentation.Unity
             _seatStatusLabel = string.Empty;
             _seatNavigationWaypointReached = false;
             _seatReleaseRequested = false;
+            _seatFacing = 0;
             SeatingPhase = OfficeWorkerSeatingPhase.None;
             SetSeatedPhysics(false);
             spriteAnimator?.ResumeWalkingAfterSeating();

@@ -14,9 +14,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
     {
         None = 0,
         MovingToApproach = 1,
-        SittingDown = 2,
-        Working = 3,
-        StandingUp = 4
+        MovingToSit = 2,
+        SittingDown = 3,
+        Working = 4,
+        FinishingWork = 5,
+        StandingUp = 6
     }
 
     public static class OfficeSeatingAnimationFrames

@@ -360,7 +360,14 @@ namespace FamilyCompany.Presentation.Unity
                 }
 
                 if (!seatRegistry.TryGetAuthoring(candidate.SeatId, out var authoring) ||
-                    !agent.SetSeatDestination(intentId, authoring, navigationWaypoint, claim, status))
+                    !agent.SetSeatDestination(
+                        intentId,
+                        authoring,
+                        authoring.SemanticDestination == null
+                            ? navigationWaypoint
+                            : authoring.SemanticDestination,
+                        claim,
+                        status))
                 {
                     claim.Dispose();
                     continue;

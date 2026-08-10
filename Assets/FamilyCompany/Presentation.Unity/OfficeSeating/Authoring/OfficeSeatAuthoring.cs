@@ -12,6 +12,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
         [SerializeField] private Transform approachAnchor;
         [SerializeField] private Transform sitAnchor;
         [SerializeField] private Transform computerLookTarget;
+        [SerializeField] private OfficeWaypoint semanticDestination;
         [SerializeField] private Collider clickHotspot;
         [SerializeField] private OfficeSeatForegroundOcclusionMode foregroundOcclusionMode;
         [SerializeField] private bool validateExpectedFacing;
@@ -29,6 +30,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
         public Transform ApproachAnchor => approachAnchor;
         public Transform SitAnchor => sitAnchor;
         public Transform ComputerLookTarget => computerLookTarget;
+        public OfficeWaypoint SemanticDestination => semanticDestination;
         public Collider ClickHotspot => clickHotspot;
         public OfficeSeatForegroundOcclusionMode ForegroundOcclusionMode => foregroundOcclusionMode;
         public bool ValidateExpectedFacing => validateExpectedFacing;
@@ -49,13 +51,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating.Authoring
                 OfficeSeatForegroundOcclusionMode.Default,
             bool enforceExpectedFacing = false,
             OfficeSeatFacing8 newExpectedFacing = OfficeSeatFacing8.North,
-            string newDisplayName = "")
+            string newDisplayName = "",
+            OfficeWaypoint newSemanticDestination = null)
         {
             seatId = newSeatId ?? string.Empty;
             seatDisplayName = newDisplayName ?? string.Empty;
             approachAnchor = newApproachAnchor;
             sitAnchor = newSitAnchor;
             computerLookTarget = newComputerLookTarget;
+            semanticDestination = newSemanticDestination;
             clickHotspot = newClickHotspot;
             foregroundOcclusionMode = newOcclusionMode;
             validateExpectedFacing = enforceExpectedFacing;

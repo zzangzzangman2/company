@@ -1,5 +1,6 @@
 using System;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
+using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -27,6 +28,10 @@ namespace FamilyCompany.Presentation.Unity
         private float _seatingFrameClock;
         private int _seatingFrame;
         private bool _seatingTransitionComplete;
+        private IOfficeSeatedWorkAnimationHook _officeWorkHook;
+        private IOfficeSeatedWorkAnimationSession _officeWorkSession;
+        private int _preSeatingSortingOrder;
+        private bool _seatingSortingOrderActive;
 
         public int CurrentDirection => _lastDirection;
         public int CurrentWalkFrame => _walkFrame;
@@ -51,6 +56,12 @@ namespace FamilyCompany.Presentation.Unity
             _seatingTransitionComplete;
         public OfficeSeatingAnimationClip? CurrentOfficeSeatingClip => _seatingClip;
         public int CurrentOfficeSeatingFrame => _seatingFrame;
+        public bool SupportsOfficeWorkAnimationHook => true;
+        public bool HasOfficeWorkFallback =>
+            HasCompleteFrames(seatedWorkFrames, OfficeSeatingAnimationFrames.WorkSpriteCount);
+        public bool IsOfficeWorkHookActive => _officeWorkSession != null;
+        public bool IsOfficeWorkSafeToStand =>
+            _officeWorkSession == null || _officeWorkSession.IsSafeToStand;
 
         public void Configure(SpriteRenderer renderer, Sprite[] frames, float secondsPerFrame = 0.11f)
         {
@@ -92,6 +103,30 @@ namespace FamilyCompany.Presentation.Unity
             _worldVelocity = new Vector3(velocity.x, 0f, velocity.z);
         }
 
+        public void ConfigureOfficeWorkAnimationHook(IOfficeSeatedWorkAnimationHook hook)
+        {
+            EndOfficeWorkSession();
+            _officeWorkHook = hook;
+        }
+
+        public bool PrepareOfficeSeatingFacing(
+            int direction,
+            OfficeSeatForegroundOcclusionMode occlusionMode)
+        {
+            if (!HasOfficeSeatingFrames || direction < 0 || direction >= DirectionCount) return false;
+            EndOfficeWorkSession();
+            _worldVelocity = Vector3.zero;
+            _lastDirection = direction;
+            _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
+            _seatingClip = null;
+            _seatingFrameClock = 0f;
+            _seatingFrame = 0;
+            _seatingTransitionComplete = false;
+            ApplyOfficeSeatOcclusion(occlusionMode);
+            ApplyFrame();
+            return true;
+        }
+
         public Sprite GetFrame(int direction, int walkFrame)
         {
             if (direction < 0 || direction >= DirectionCount)
@@ -122,23 +157,39 @@ namespace FamilyCompany.Presentation.Unity
         public bool BeginSeatedWork()
         {
             if (!HasOfficeSeatingFrames || !_seatingClip.HasValue) return false;
+            EndOfficeWorkSession();
+            if (_officeWorkHook != null &&
+                _officeWorkHook.TryBegin(_lastDirection, out var session) &&
+                session != null)
+            {
+                _officeWorkSession = session;
+            }
             BeginOfficeSeatingClip(OfficeSeatingAnimationClip.Work, _lastDirection);
             return true;
         }
 
+        public void RequestOfficeWorkSafeStop()
+        {
+            _officeWorkSession?.RequestSafeStop();
+        }
+
         public bool BeginStandUp()
         {
-            if (!HasOfficeSeatingFrames || !_seatingClip.HasValue) return false;
+            if (!HasOfficeSeatingFrames || !_seatingClip.HasValue || !IsOfficeWorkSafeToStand)
+                return false;
+            EndOfficeWorkSession();
             BeginOfficeSeatingClip(OfficeSeatingAnimationClip.StandUp, _lastDirection);
             return true;
         }
 
         public void ResumeWalkingAfterSeating()
         {
+            EndOfficeWorkSession();
             _seatingClip = null;
             _seatingFrameClock = 0f;
             _seatingFrame = 0;
             _seatingTransitionComplete = false;
+            RestorePreSeatingSortingOrder();
             ApplyFrame();
         }
 
@@ -191,10 +242,12 @@ namespace FamilyCompany.Presentation.Unity
             if (targetRenderer == null) return;
             if (_seatingClip.HasValue && HasOfficeSeatingFrames)
             {
-                targetRenderer.sprite = GetOfficeSeatingFrame(
-                    _seatingClip.Value,
-                    _lastDirection,
-                    _seatingFrame);
+                var hookSprite = _seatingClip.Value == OfficeSeatingAnimationClip.Work
+                    ? _officeWorkSession?.CurrentSprite
+                    : null;
+                targetRenderer.sprite = hookSprite != null
+                    ? hookSprite
+                    : GetOfficeSeatingFrame(_seatingClip.Value, _lastDirection, _seatingFrame);
                 return;
             }
             if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
@@ -218,6 +271,11 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!_seatingClip.HasValue || _seatingTransitionComplete) return;
             var clip = _seatingClip.Value;
+            if (clip == OfficeSeatingAnimationClip.Work && _officeWorkSession != null)
+            {
+                _officeWorkSession.Tick(deltaTime);
+                return;
+            }
             var secondsPerFrame = clip == OfficeSeatingAnimationClip.Work
                 ? Mathf.Max(0.05f, seatedWorkFrameSeconds)
                 : Mathf.Max(0.05f, seatingTransitionFrameSeconds);
@@ -252,6 +310,33 @@ namespace FamilyCompany.Presentation.Unity
                 OfficeSeatingAnimationClip.StandUp => standUpFrames,
                 _ => throw new ArgumentOutOfRangeException(nameof(clip))
             };
+        }
+
+        private void ApplyOfficeSeatOcclusion(OfficeSeatForegroundOcclusionMode mode)
+        {
+            if (targetRenderer == null) return;
+            if (!_seatingSortingOrderActive)
+            {
+                _preSeatingSortingOrder = targetRenderer.sortingOrder;
+                _seatingSortingOrderActive = true;
+            }
+            const int officeForegroundSortingOrder = 100;
+            targetRenderer.sortingOrder = mode == OfficeSeatForegroundOcclusionMode.InFrontOfForeground
+                ? Mathf.Max(_preSeatingSortingOrder, officeForegroundSortingOrder + 1)
+                : Mathf.Min(_preSeatingSortingOrder, officeForegroundSortingOrder - 1);
+        }
+
+        private void RestorePreSeatingSortingOrder()
+        {
+            if (!_seatingSortingOrderActive) return;
+            if (targetRenderer != null) targetRenderer.sortingOrder = _preSeatingSortingOrder;
+            _seatingSortingOrderActive = false;
+        }
+
+        private void EndOfficeWorkSession()
+        {
+            _officeWorkSession?.Dispose();
+            _officeWorkSession = null;
         }
 
         private static bool HasCompleteFrames(Sprite[] frames, int expectedCount)
