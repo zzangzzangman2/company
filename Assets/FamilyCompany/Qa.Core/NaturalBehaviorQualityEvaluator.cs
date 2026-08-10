@@ -61,6 +61,7 @@ namespace FamilyCompany.Qa.NaturalBehavior
         {
             if (run == null) throw new ArgumentNullException(nameof(run));
             var bar = qualityBar ?? new NaturalBehaviorQualityBar();
+            ValidateQualityBar(bar);
             var gates = new[]
             {
                 EvaluateSpatialSafety(run, bar),
@@ -81,49 +82,94 @@ namespace FamilyCompany.Qa.NaturalBehavior
             var metrics = new List<NaturalBehaviorQaMetric>();
             RequireCapability(run, NaturalBehaviorQaCapability.SpatialSafety, issues);
 
-            var footprintCoverageFailures = 0;
-            var missingMemberCoverage = 0;
-            foreach (var layout in DistinctLayouts(run))
+            long footprintCoverageFailures = 0;
+            long missingMemberCoverage = 0;
+            var expectedLayouts = ExpectedLayouts(run, bar).ToArray();
+            foreach (var identity in expectedLayouts)
             {
-                var footprints = FootprintsFor(run, layout.ScenarioId, layout.LayoutSeed).ToArray();
+                var layouts = LayoutsFor(run, identity).ToArray();
+                if (layouts.Length != 1)
+                {
+                    footprintCoverageFailures++;
+                    AddIssue(issues, $"Expected exactly one layout record for {identity}; found {layouts.Length}.");
+                    continue;
+                }
+
+                var layout = layouts[0];
+                var footprints = FootprintsFor(run, identity).ToArray();
                 var footprintCount = footprints.Select(item => item.FurnitureId).Distinct(StringComparer.Ordinal).Count();
-                if (footprintCount != layout.FurnitureCount)
+                var placeableCount = footprints.Where(item => item.IsPlaceable)
+                    .Select(item => item.FurnitureId).Distinct(StringComparer.Ordinal).Count();
+                if (footprintCount != footprints.Length || placeableCount != layout.FurnitureCount)
                 {
                     footprintCoverageFailures++;
                     AddIssue(issues,
-                        $"{layout.ScenarioId}/{layout.LayoutSeed} declares {layout.FurnitureCount} furniture footprints but recorded {footprintCount}.");
+                        $"{identity} declares {layout.FurnitureCount} placeable furniture footprints but recorded " +
+                        $"placeable={placeableCount}, unique={footprintCount}, total={footprints.Length}.");
                 }
 
                 foreach (var memberId in run.Plan.ExpectedMemberIds)
                 {
-                    if (run.Footpoints.Any(item => SameLayout(item.ScenarioId, item.LayoutSeed, layout) &&
-                                                   string.Equals(item.MemberId, memberId, StringComparison.Ordinal))) continue;
-                    missingMemberCoverage++;
-                    AddIssue(issues, $"No footpoint coverage for {memberId} in {layout.ScenarioId}/{layout.LayoutSeed}.");
+                    var memberSamples = run.Footpoints.Where(item => SameLayout(item, identity) &&
+                            string.Equals(item.MemberId, memberId, StringComparison.Ordinal))
+                        .OrderBy(item => item.TimeSeconds)
+                        .ToArray();
+                    if (memberSamples.Length < 3 || memberSamples.Any(item => !item.Visible))
+                    {
+                        missingMemberCoverage++;
+                        AddIssue(issues, $"No complete visible footpoint coverage for {memberId} in {identity}.");
+                    }
+                    for (var index = 1; index < memberSamples.Length; index++)
+                        if (memberSamples[index].TimeSeconds <= memberSamples[index - 1].TimeSeconds)
+                            AddIssue(issues, $"Footpoint trace for {memberId} in {identity} has non-increasing timestamps.");
                 }
             }
 
-            var overlapCount = 0;
+            foreach (var item in run.FurnitureFootprints)
+                if (!expectedLayouts.Any(identity => SameLayout(item, identity)))
+                    AddIssue(issues, $"Unexpected furniture footprint identity {item.ScenarioId}/{item.LayoutSeed}/r{item.RepeatIndex}.");
+            foreach (var item in run.Footpoints)
+                if (!expectedLayouts.Any(identity => SameLayout(item, identity)))
+                    AddIssue(issues, $"Unexpected footpoint identity {item.ScenarioId}/{item.LayoutSeed}/r{item.RepeatIndex}.");
+            foreach (var layoutGroup in expectedLayouts.GroupBy(
+                         item => $"{item.ScenarioId}|{item.LayoutSeed}", StringComparer.Ordinal))
+            {
+                var signatures = layoutGroup
+                    .Select(identity => FootprintSignature(FootprintsFor(run, identity)))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+                if (signatures.Length != 1)
+                    AddIssue(issues, $"Furniture footprint geometry differs across repeats for {layoutGroup.Key}.");
+            }
+
+            long overlapCount = 0;
             foreach (var sample in run.Footpoints.Where(item => item.Visible))
             {
-                foreach (var furniture in FootprintsFor(run, sample.ScenarioId, sample.LayoutSeed))
+                var identity = new LayoutIdentity(sample.ScenarioId, sample.LayoutSeed, sample.RepeatIndex);
+                foreach (var furniture in FootprintsFor(run, identity).Where(item => item.BlocksMovement))
                 {
                     if (!CircleOverlapsPolygon(sample.Position, sample.RadiusMeters, furniture.Footprint, bar.NumericTolerance))
                         continue;
                     overlapCount++;
                     AddIssue(issues,
                         $"Footpoint overlap: {sample.MemberId} with {furniture.FurnitureId} at {sample.TimeSeconds:F3}s " +
-                        $"({sample.ScenarioId}/{sample.LayoutSeed}).");
+                        $"({identity}).");
                 }
             }
 
-            var wallCrossingCount = 0;
+            long wallCrossingCount = 0;
             foreach (var group in MotionGroups(run))
             {
                 var samples = group.OrderBy(item => item.TimeSeconds).ToArray();
-                var walls = FootprintsFor(run, group.Key.ScenarioId, group.Key.LayoutSeed)
+                var identity = new LayoutIdentity(group.Key.ScenarioId, group.Key.LayoutSeed, group.Key.RepeatIndex);
+                var walls = FootprintsFor(run, identity)
                     .Where(item => item.BlocksMovement)
                     .ToArray();
+                var radius = run.Footpoints
+                    .Where(item => SameLayout(item, identity) && string.Equals(item.MemberId, group.Key.MemberId, StringComparison.Ordinal))
+                    .Select(item => item.RadiusMeters)
+                    .DefaultIfEmpty(0d)
+                    .Max();
                 for (var index = 1; index < samples.Length; index++)
                 {
                     var previous = samples[index - 1];
@@ -131,12 +177,12 @@ namespace FamilyCompany.Qa.NaturalBehavior
                     if (!previous.Visible || !current.Visible) continue;
                     foreach (var wall in walls)
                     {
-                        if (!SegmentCrossesPolygonInterior(previous.Position, current.Position, wall.Footprint, bar.NumericTolerance))
+                        if (!SweptCircleOverlapsPolygon(previous.Position, current.Position, radius, wall.Footprint, bar.NumericTolerance))
                             continue;
                         wallCrossingCount++;
                         AddIssue(issues,
                             $"Movement crossed {wall.FurnitureId}: {current.MemberId} at {current.TimeSeconds:F3}s " +
-                            $"({current.ScenarioId}/{current.LayoutSeed}).");
+                            $"({identity}).");
                     }
                 }
             }
@@ -158,12 +204,21 @@ namespace FamilyCompany.Qa.NaturalBehavior
             RequireCapability(run, NaturalBehaviorQaCapability.PathQuality, issues);
 
             RequireRoundTrips(run, NaturalBehaviorQaScenarioIds.SemanticRoundTrip, 0, bar, issues);
-            var expectedSeeds = run.Plan.RandomLayoutSeeds.Take(bar.RequiredRandomLayoutSeeds).ToArray();
+            var expectedSeeds = run.Plan.RandomLayoutSeeds.ToArray();
+            if (expectedSeeds.Length != bar.RequiredRandomLayoutSeeds)
+                AddIssue(issues, $"Plan declares {expectedSeeds.Length} random seeds; expected exactly {bar.RequiredRandomLayoutSeeds}.");
+            ValidateLayoutRepeats(run, NaturalBehaviorQaScenarioIds.SemanticRoundTrip, 0, null, bar, issues);
+            var expectedLayoutIdentities = new HashSet<LayoutIdentity>(ExpectedLayouts(run, bar));
+            foreach (var layout in run.Layouts)
+                if (!expectedLayoutIdentities.Contains(new LayoutIdentity(layout.ScenarioId, layout.LayoutSeed, layout.RepeatIndex)))
+                    AddIssue(issues, $"Unexpected layout identity {layout.ScenarioId}/{layout.LayoutSeed}/r{layout.RepeatIndex}.");
             var randomLayouts = run.Layouts
                 .Where(item => string.Equals(item.ScenarioId, NaturalBehaviorQaScenarioIds.RandomFurniture,
                     StringComparison.Ordinal))
                 .ToArray();
             var presentSeeds = new HashSet<int>(randomLayouts.Select(item => item.LayoutSeed));
+            foreach (var unexpectedSeed in presentSeeds.Except(expectedSeeds).OrderBy(item => item))
+                AddIssue(issues, $"Unexpected random furniture seed {unexpectedSeed}.");
             foreach (var seed in expectedSeeds)
             {
                 if (!presentSeeds.Contains(seed))
@@ -172,25 +227,25 @@ namespace FamilyCompany.Qa.NaturalBehavior
                     continue;
                 }
 
-                var layouts = randomLayouts.Where(item => item.LayoutSeed == seed).ToArray();
-                if (layouts.Length < bar.RequiredDeterminismRepeats)
-                    AddIssue(issues, $"Random layout {seed} has {layouts.Length} repeats; expected {bar.RequiredDeterminismRepeats}.");
-                if (layouts.Any(item => !item.Succeeded || item.FurnitureCount < bar.RequiredFurniturePerRandomLayout))
-                    AddIssue(issues, $"Random layout {seed} failed placement or recorded fewer than {bar.RequiredFurniturePerRandomLayout} furniture items.");
-                if (layouts.Select(item => item.StableHash).Distinct(StringComparer.Ordinal).Count() != 1)
-                    AddIssue(issues, $"Random layout {seed} produced a non-deterministic layout hash.");
+                ValidateLayoutRepeats(run, NaturalBehaviorQaScenarioIds.RandomFurniture, seed,
+                    bar.RequiredFurniturePerRandomLayout, bar, issues);
                 RequireRoundTrips(run, NaturalBehaviorQaScenarioIds.RandomFurniture, seed, bar, issues);
             }
 
             var allPaths = run.Paths.ToArray();
+            var expectedPathLayouts = new HashSet<LayoutIdentity>(ExpectedLayouts(run, bar));
             foreach (var path in allPaths)
             {
+                if (!expectedPathLayouts.Contains(new LayoutIdentity(path.ScenarioId, path.LayoutSeed, path.RepeatIndex)))
+                    AddIssue(issues, $"Unexpected path identity: {PathKey(path)}.");
                 if (!path.Succeeded) AddIssue(issues, $"Path failed: {PathKey(path)}.");
-                if (path.DirectDistanceMeters <= bar.NumericTolerance || path.TravelledDistanceMeters < 0d)
+                if (!IsFinite(path.DirectDistanceMeters) || !IsFinite(path.TravelledDistanceMeters) ||
+                    path.DirectDistanceMeters <= bar.NumericTolerance || path.TravelledDistanceMeters < 0d)
                     AddIssue(issues, $"Path has invalid distance values: {PathKey(path)}.");
                 if (path.ReplanCount < 0 || path.ReplanCount > bar.MaximumReplansPerRoute)
                     AddIssue(issues, $"Path replanned {path.ReplanCount} times: {PathKey(path)}.");
-                if (path.DeadlockSeconds > bar.MaximumDeadlockSeconds + bar.NumericTolerance)
+                if (!IsFinite(path.DeadlockSeconds) || path.DeadlockSeconds < 0d ||
+                    path.DeadlockSeconds > bar.MaximumDeadlockSeconds + bar.NumericTolerance)
                     AddIssue(issues, $"Path deadlocked for {path.DeadlockSeconds:F3}s: {PathKey(path)}.");
                 if (path.UnsafeTraversalCount != 0)
                     AddIssue(issues, $"Path recorded {path.UnsafeTraversalCount} unsafe traversals: {PathKey(path)}.");
@@ -200,22 +255,25 @@ namespace FamilyCompany.Qa.NaturalBehavior
                          $"{item.ScenarioId}|{item.LayoutSeed}|{item.MemberId}|{item.FromDestinationId}|{item.ToDestinationId}",
                          StringComparer.Ordinal))
             {
-                if (group.Count() < bar.RequiredDeterminismRepeats)
-                    AddIssue(issues, $"Path {group.Key} lacks deterministic repeats.");
+                var repeats = group.Select(item => item.RepeatIndex).OrderBy(item => item).ToArray();
+                if (group.Count() != bar.RequiredDeterminismRepeats ||
+                    !repeats.SequenceEqual(Enumerable.Range(0, bar.RequiredDeterminismRepeats)))
+                    AddIssue(issues, $"Path {group.Key} must contain exactly repeats 0..{bar.RequiredDeterminismRepeats - 1}.");
                 if (group.Select(item => item.StablePathHash).Distinct(StringComparer.Ordinal).Count() != 1)
                     AddIssue(issues, $"Path {group.Key} produced different stable hashes.");
             }
 
             var stretches = allPaths
-                .Where(item => item.Succeeded && item.DirectDistanceMeters > bar.NumericTolerance)
+                .Where(item => item.Succeeded && IsFinite(item.DirectDistanceMeters) &&
+                               IsFinite(item.TravelledDistanceMeters) && item.DirectDistanceMeters > bar.NumericTolerance)
                 .Select(item => item.TravelledDistanceMeters / item.DirectDistanceMeters)
                 .OrderBy(item => item)
                 .ToArray();
             var p95 = Percentile(stretches, 0.95d);
             var maximum = stretches.Length == 0 ? double.PositiveInfinity : stretches[stretches.Length - 1];
-            if (p95 > bar.MaximumPathStretchP95 + bar.NumericTolerance)
+            if (!IsFinite(p95) || p95 > bar.MaximumPathStretchP95 + bar.NumericTolerance)
                 AddIssue(issues, $"Path stretch p95 {p95:F3} exceeds {bar.MaximumPathStretchP95:F3}.");
-            if (maximum > bar.MaximumPathStretch + bar.NumericTolerance)
+            if (!IsFinite(maximum) || maximum > bar.MaximumPathStretch + bar.NumericTolerance)
                 AddIssue(issues, $"Maximum path stretch {maximum:F3} exceeds {bar.MaximumPathStretch:F3}.");
 
             metrics.Add(Metric("randomLayoutSeeds", presentSeeds.Count));
@@ -240,34 +298,60 @@ namespace FamilyCompany.Qa.NaturalBehavior
             var maximumDelta = 0d;
             var maximumSpeed = 0d;
             var maximumAcceleration = 0d;
-            var directionFlips = 0;
-            var cornerJitters = 0;
-            foreach (var group in MotionGroups(run))
+            long directionFlips = 0;
+            long cornerJitters = 0;
+            var expectedKeys = ExpectedLayouts(run, bar)
+                .SelectMany(identity => run.Plan.ExpectedMemberIds.Select(memberId =>
+                    new MotionGroupKey(identity.ScenarioId, identity.LayoutSeed, identity.RepeatIndex, memberId)))
+                .ToArray();
+            foreach (var key in expectedKeys)
             {
-                var samples = group.OrderBy(item => item.TimeSeconds).ToArray();
+                var samples = run.MotionSamples.Where(item =>
+                        string.Equals(item.ScenarioId, key.ScenarioId, StringComparison.Ordinal) &&
+                        item.LayoutSeed == key.LayoutSeed && item.RepeatIndex == key.RepeatIndex &&
+                        string.Equals(item.MemberId, key.MemberId, StringComparison.Ordinal))
+                    .OrderBy(item => item.TimeSeconds)
+                    .ToArray();
                 if (samples.Length < 3)
                 {
                     AddIssue(issues,
-                        $"Motion trace {group.Key.ScenarioId}/{group.Key.LayoutSeed}/{group.Key.MemberId} has fewer than three samples.");
+                        $"Motion trace {key} has fewer than three samples.");
                     continue;
                 }
+                if (samples.Any(item => !item.Visible))
+                    AddIssue(issues, $"Motion trace {key} contains invisible/partial samples.");
 
-                var previousSpeed = double.NaN;
+                var hasPreviousVelocity = false;
+                var previousVelocityX = 0d;
+                var previousVelocityY = 0d;
+                var previousDeltaTime = 0d;
                 var directionChanges = new List<DirectionChange>();
                 for (var index = 1; index < samples.Length; index++)
                 {
                     var previous = samples[index - 1];
                     var current = samples[index];
-                    if (!previous.Visible || !current.Visible) continue;
+                    if (!previous.Visible || !current.Visible)
+                    {
+                        hasPreviousVelocity = false;
+                        continue;
+                    }
                     var deltaTime = current.TimeSeconds - previous.TimeSeconds;
-                    if (deltaTime <= 0d)
+                    if (!IsFinite(deltaTime) || deltaTime <= 0d)
                     {
                         AddIssue(issues, $"Non-increasing motion timestamp for {current.MemberId}.");
                         continue;
                     }
 
-                    var delta = previous.Position.DistanceTo(current.Position);
-                    var speed = delta / deltaTime;
+                    var velocityX = (current.Position.X - previous.Position.X) / deltaTime;
+                    var velocityY = (current.Position.Y - previous.Position.Y) / deltaTime;
+                    var speed = Magnitude(velocityX, velocityY);
+                    var delta = speed * deltaTime;
+                    if (!IsFinite(delta) || !IsFinite(speed))
+                    {
+                        AddIssue(issues, $"Non-finite motion math for {current.MemberId}.");
+                        hasPreviousVelocity = false;
+                        continue;
+                    }
                     maximumGap = Math.Max(maximumGap, deltaTime);
                     maximumDelta = Math.Max(maximumDelta, delta);
                     maximumSpeed = Math.Max(maximumSpeed, speed);
@@ -278,14 +362,20 @@ namespace FamilyCompany.Qa.NaturalBehavior
                     if (speed > bar.MaximumSpeedMetersPerSecond + bar.NumericTolerance)
                         AddIssue(issues, $"Speed {speed:F3}m/s exceeds the cap for {current.MemberId}.");
 
-                    if (!double.IsNaN(previousSpeed))
+                    if (hasPreviousVelocity)
                     {
-                        var acceleration = Math.Abs(speed - previousSpeed) / deltaTime;
+                        var velocityDeltaX = velocityX - previousVelocityX;
+                        var velocityDeltaY = velocityY - previousVelocityY;
+                        var velocitySampleGap = (previousDeltaTime + deltaTime) * 0.5d;
+                        var acceleration = Magnitude(velocityDeltaX, velocityDeltaY) / velocitySampleGap;
                         maximumAcceleration = Math.Max(maximumAcceleration, acceleration);
-                        if (acceleration > bar.MaximumAccelerationMetersPerSecondSquared + bar.NumericTolerance)
+                        if (!IsFinite(acceleration) || acceleration > bar.MaximumAccelerationMetersPerSecondSquared + bar.NumericTolerance)
                             AddIssue(issues, $"Acceleration {acceleration:F3}m/s^2 exceeds the cap for {current.MemberId}.");
                     }
-                    previousSpeed = speed;
+                    previousVelocityX = velocityX;
+                    previousVelocityY = velocityY;
+                    previousDeltaTime = deltaTime;
+                    hasPreviousVelocity = true;
 
                     var directionDistance = CircularDirectionDistance(previous.DirectionIndex, current.DirectionIndex);
                     if (directionDistance == 4 && deltaTime <= bar.DirectionFlipWindowSeconds + bar.NumericTolerance &&
@@ -309,6 +399,11 @@ namespace FamilyCompany.Qa.NaturalBehavior
                 }
             }
 
+            var expectedKeySet = new HashSet<MotionGroupKey>(expectedKeys);
+            foreach (var group in MotionGroups(run))
+                if (!expectedKeySet.Contains(group.Key))
+                    AddIssue(issues, $"Unexpected motion trace {group.Key}.");
+
             metrics.Add(Metric("motionSamples", run.MotionSamples.Count));
             metrics.Add(Metric("maximumSampleGapSeconds", maximumGap));
             metrics.Add(Metric("maximumFrameDeltaMeters", maximumDelta));
@@ -329,8 +424,8 @@ namespace FamilyCompany.Qa.NaturalBehavior
 
             var completeMembers = new HashSet<string>(StringComparer.Ordinal);
             var maximumFootError = 0d;
-            var clippingPixels = 0;
-            var occlusionFailures = 0;
+            long clippingPixels = 0;
+            long occlusionFailures = 0;
             foreach (var group in run.SeatingFrames.GroupBy(item => item.SessionId, StringComparer.Ordinal))
             {
                 var samples = group.OrderBy(item => item.SessionTimeSeconds).ToArray();
@@ -341,6 +436,9 @@ namespace FamilyCompany.Qa.NaturalBehavior
                     AddIssue(issues, $"Seating session {group.Key} contains multiple members.");
                     continue;
                 }
+                for (var index = 1; index < samples.Length; index++)
+                    if (samples[index].SessionTimeSeconds <= samples[index - 1].SessionTimeSeconds)
+                        AddIssue(issues, $"Seating session {group.Key} has non-increasing capture timestamps.");
 
                 var approach = samples.LastOrDefault(item => item.Phase == QaSeatingPhase.Approach);
                 var firstSit = samples.FirstOrDefault(item => item.Phase == QaSeatingPhase.SitDown);
@@ -356,22 +454,59 @@ namespace FamilyCompany.Qa.NaturalBehavior
                         AddIssue(issues, $"Seat footpoint error {error:F3}px exceeds 1920p tolerance in {group.Key}.");
                 }
 
-                foreach (var sample in samples.Where(item => item.Phase == QaSeatingPhase.SitDown ||
-                                                               item.Phase == QaSeatingPhase.Work ||
-                                                               item.Phase == QaSeatingPhase.StandUp))
+                foreach (var sample in samples)
                 {
-                    clippingPixels += Math.Max(0, sample.ChairBodyClipPixelCount) +
-                                      Math.Max(0, sample.DeskBodyClipPixelCount);
-                    if (!sample.HasOcclusionMeasurement || !sample.ChairForegroundOrderCorrect ||
-                        !sample.DeskForegroundOrderCorrect)
+                    var evidence = sample.CaptureEvidence;
+                    var matchingArtifacts = run.CaptureArtifacts
+                        .Where(item => string.Equals(item.Label, evidence.CaptureLabel, StringComparison.Ordinal) &&
+                                       string.Equals(item.Sha256, evidence.CaptureSha256, StringComparison.Ordinal))
+                        .ToArray();
+                    if (matchingArtifacts.Length != 1 || matchingArtifacts[0].Width != evidence.Width ||
+                        matchingArtifacts[0].Height != evidence.Height)
                     {
                         occlusionFailures++;
-                        AddIssue(issues, $"Missing/incorrect chair-desk foreground occlusion in {group.Key} at {sample.SessionTimeSeconds:F3}s.");
-                    }
-                    if (sample.ChairBodyClipPixelCount != 0 || sample.DeskBodyClipPixelCount != 0)
                         AddIssue(issues,
-                            $"Body clipping measured chair={sample.ChairBodyClipPixelCount}px, " +
-                            $"desk={sample.DeskBodyClipPixelCount}px in {group.Key}.");
+                            $"Seating capture {evidence.CaptureSha256} is not backed by exactly one harness-recorded capture artifact.");
+                    }
+                    if (evidence.Width != 1920 || evidence.Height != 1080)
+                    {
+                        occlusionFailures++;
+                        AddIssue(issues, $"Seating capture {evidence.CaptureSha256} is {evidence.Width}x{evidence.Height}; 1920x1080 is required.");
+                    }
+
+                    foreach (QaSeatingPixelExpectation expectation in Enum.GetValues(typeof(QaSeatingPixelExpectation)))
+                    {
+                        var observed = evidence.PixelObservations.Where(item => item.Expectation == expectation).ToArray();
+                        if (observed.Length == 0)
+                        {
+                            if (expectation == QaSeatingPixelExpectation.ChairForeground ||
+                                expectation == QaSeatingPixelExpectation.DeskForeground) occlusionFailures++;
+                            else clippingPixels++;
+                            AddIssue(issues, $"Capture {evidence.CaptureSha256} lacks {expectation} pixel evidence.");
+                            continue;
+                        }
+
+                        var expectedRole = ExpectedObservedRole(expectation);
+                        var failures = observed.Count(item => item.ObservedRole != expectedRole);
+                        if (failures == 0) continue;
+                        if (expectation == QaSeatingPixelExpectation.ChairForeground ||
+                            expectation == QaSeatingPixelExpectation.DeskForeground) occlusionFailures += failures;
+                        else clippingPixels += failures;
+                        AddIssue(issues,
+                            $"Capture {evidence.CaptureSha256} has {failures} {expectation} pixel classification failures.");
+                    }
+
+                    var footSamples = evidence.PixelObservations
+                        .Where(item => item.Expectation == QaSeatingPixelExpectation.FootAnchor &&
+                                       item.ObservedRole == QaSeatingPixelObservedRole.CharacterBody)
+                        .ToArray();
+                    if (!footSamples.Any(item =>
+                            Math.Abs(item.X - sample.FootPixel1920.X) <= bar.NumericTolerance &&
+                            Math.Abs(item.Y - sample.FootPixel1920.Y) <= bar.NumericTolerance))
+                    {
+                        clippingPixels++;
+                        AddIssue(issues, $"Foot anchor in {group.Key} is not backed by a matching capture pixel.");
+                    }
                 }
 
                 if (ValidateSeatingSequence(samples, bar, issues, group.Key)) completeMembers.Add(memberId);
@@ -398,7 +533,8 @@ namespace FamilyCompany.Qa.NaturalBehavior
             var issues = new List<string>();
             var metrics = new List<NaturalBehaviorQaMetric>();
             RequireCapability(run, NaturalBehaviorQaCapability.WorkActions, issues);
-            if (run.ObservationGameSeconds + bar.NumericTolerance < bar.RequiredObservationGameSeconds)
+            if (!IsFinite(run.ObservationGameSeconds) ||
+                run.ObservationGameSeconds + bar.NumericTolerance < bar.RequiredObservationGameSeconds)
                 AddIssue(issues,
                     $"Observed {run.ObservationGameSeconds:F1} game seconds; expected at least {bar.RequiredObservationGameSeconds:F1}.");
 
@@ -413,7 +549,9 @@ namespace FamilyCompany.Qa.NaturalBehavior
                     continue;
                 }
                 var workWindow = workWindows[0];
-                if (workWindow.ObservationGameSeconds + bar.NumericTolerance < bar.RequiredObservationGameSeconds ||
+                if (!IsFinite(workWindow.ObservationGameSeconds) || !IsFinite(workWindow.AccumulatedWorkSeconds) ||
+                    Math.Abs(workWindow.ObservationGameSeconds - run.ObservationGameSeconds) > bar.NumericTolerance ||
+                    workWindow.ObservationGameSeconds + bar.NumericTolerance < bar.RequiredObservationGameSeconds ||
                     workWindow.AccumulatedWorkSeconds + bar.NumericTolerance < bar.RequiredObservationGameSeconds)
                 {
                     AddIssue(issues,
@@ -437,10 +575,16 @@ namespace FamilyCompany.Qa.NaturalBehavior
                     for (var index = 0; index < events.Length; index++)
                     {
                         var item = events[index];
+                        if (!IsFinite(item.TimeSeconds) || item.TimeSeconds < 0d ||
+                            item.TimeSeconds > run.ObservationGameSeconds + bar.NumericTolerance ||
+                            (index > 0 && item.TimeSeconds <= events[index - 1].TimeSeconds))
+                            AddIssue(issues, $"{memberId}/{contract.Action} has an invalid or non-increasing event timestamp.");
                         if (item.Phase != QaMotionPhase.Work || !item.VisualVisible)
                             AddIssue(issues, $"{memberId} displayed {contract.Action} outside visible Work phase.");
                         var elapsed = item.AccumulatedWorkSeconds - previousAccumulatedWork;
-                        if (item.AccumulatedWorkSeconds <= previousAccumulatedWork)
+                        if (!IsFinite(item.AccumulatedWorkSeconds) || !IsFinite(item.WorkSecondsSincePreviousSameAction) ||
+                            item.AccumulatedWorkSeconds <= previousAccumulatedWork ||
+                            item.AccumulatedWorkSeconds > workWindow.AccumulatedWorkSeconds + bar.NumericTolerance)
                             AddIssue(issues, $"{memberId}/{contract.Action} has non-increasing accumulated Work time.");
                         if (Math.Abs(elapsed - item.WorkSecondsSincePreviousSameAction) > bar.NumericTolerance)
                             AddIssue(issues,
@@ -448,7 +592,7 @@ namespace FamilyCompany.Qa.NaturalBehavior
                                 $"but accumulated Work delta is {elapsed:F3}s.");
                         if (elapsed <= 0d || elapsed > contract.MaximumWorkSeconds + bar.NumericTolerance)
                             AddIssue(issues, $"{memberId}/{contract.Action} exceeded its maximum cooldown ({elapsed:F3}s).");
-                        if (index > 0 && elapsed + bar.NumericTolerance < contract.MinimumWorkSeconds)
+                        if (elapsed + bar.NumericTolerance < contract.MinimumWorkSeconds)
                             AddIssue(issues, $"{memberId}/{contract.Action} violated its minimum cooldown ({elapsed:F3}s).");
                         previousAccumulatedWork = item.AccumulatedWorkSeconds;
                     }
@@ -467,6 +611,9 @@ namespace FamilyCompany.Qa.NaturalBehavior
 
             foreach (var sample in run.Productivity)
             {
+                if (!IsFinite(sample.TimeSeconds) || sample.TimeSeconds < 0d ||
+                    sample.TimeSeconds > run.ObservationGameSeconds + bar.NumericTolerance)
+                    AddIssue(issues, $"Productivity sample for {sample.MemberId} has an invalid observation timestamp.");
                 if (sample.Phase == QaMotionPhase.Work || Math.Abs(sample.ProductivityDelta) <= bar.NumericTolerance) continue;
                 AddIssue(issues,
                     $"Productivity delta {sample.ProductivityDelta:F6} occurred during {sample.Phase} for {sample.MemberId}.");
@@ -493,31 +640,45 @@ namespace FamilyCompany.Qa.NaturalBehavior
             var metrics = new List<NaturalBehaviorQaMetric>();
             RequireCapability(run, NaturalBehaviorQaCapability.NavigationRebuild, issues);
 
-            var expectedSeeds = run.Plan.RandomLayoutSeeds.Take(bar.RequiredRandomLayoutSeeds).ToArray();
+            var expectedSeeds = run.Plan.RandomLayoutSeeds.ToArray();
+            if (expectedSeeds.Length != bar.RequiredRandomLayoutSeeds)
+                AddIssue(issues, $"Plan declares {expectedSeeds.Length} rebuild seeds; expected exactly {bar.RequiredRandomLayoutSeeds}.");
+            foreach (var unexpected in run.NavigationRebuilds.Where(item =>
+                         !string.Equals(item.ScenarioId, NaturalBehaviorQaScenarioIds.RandomFurniture, StringComparison.Ordinal) ||
+                         !expectedSeeds.Contains(item.LayoutSeed)))
+                AddIssue(issues, $"Unexpected navigation rebuild identity {unexpected.ScenarioId}/{unexpected.LayoutSeed}/r{unexpected.RepeatIndex}.");
             foreach (var seed in expectedSeeds)
             {
                 var observations = run.NavigationRebuilds
                     .Where(item => string.Equals(item.ScenarioId, NaturalBehaviorQaScenarioIds.RandomFurniture,
                                        StringComparison.Ordinal) && item.LayoutSeed == seed)
                     .ToArray();
-                if (observations.Length == 0)
+                var repeats = observations.Select(item => item.RepeatIndex).OrderBy(item => item).ToArray();
+                if (observations.Length != bar.RequiredDeterminismRepeats ||
+                    !repeats.SequenceEqual(Enumerable.Range(0, bar.RequiredDeterminismRepeats)))
                 {
-                    AddIssue(issues, $"No navigation rebuild observation for random layout seed {seed}.");
+                    AddIssue(issues,
+                        $"Navigation rebuild seed {seed} must contain exactly repeats 0..{bar.RequiredDeterminismRepeats - 1}.");
                     continue;
                 }
 
                 foreach (var observation in observations)
                 {
                     var duration = observation.CompletedTimeSeconds - observation.RequestedTimeSeconds;
-                    if (duration < 0d || duration > bar.MaximumNavigationRebuildSeconds + bar.NumericTolerance)
+                    if (!IsFinite(duration) || duration < 0d ||
+                        duration > bar.MaximumNavigationRebuildSeconds + bar.NumericTolerance)
                         AddIssue(issues, $"Navigation rebuild for seed {seed} took {duration:F3}s.");
-                    if (observation.ActivePathCount <= 0)
-                        AddIssue(issues, $"Navigation rebuild for seed {seed} did not exercise an in-progress path.");
-                    if (observation.SafelyReplannedPathCount != observation.ActivePathCount)
+                    if (observation.ActivePathCount != run.Plan.ExpectedMemberIds.Count)
                         AddIssue(issues,
-                            $"Navigation rebuild for seed {seed} safely replanned {observation.SafelyReplannedPathCount}/" +
-                            $"{observation.ActivePathCount} active paths.");
+                            $"Navigation rebuild for seed {seed}/r{observation.RepeatIndex} exercised " +
+                            $"{observation.ActivePathCount} active paths; expected {run.Plan.ExpectedMemberIds.Count}.");
+                    var activePaths = new HashSet<string>(observation.ActivePathIds, StringComparer.Ordinal);
+                    var safelyReplannedPaths = new HashSet<string>(observation.SafelyReplannedPathIds, StringComparer.Ordinal);
+                    if (!activePaths.SetEquals(safelyReplannedPaths))
+                        AddIssue(issues,
+                            $"Navigation rebuild for seed {seed}/r{observation.RepeatIndex} did not safely replan every active path ID.");
                     if (observation.UnsafeTraversalCount != 0 ||
+                        !IsFinite(observation.ProgressWhileUnsafeSeconds) ||
                         observation.ProgressWhileUnsafeSeconds > bar.NumericTolerance)
                         AddIssue(issues, $"Unsafe progress occurred while rebuilding navigation for seed {seed}.");
                 }
@@ -528,9 +689,9 @@ namespace FamilyCompany.Qa.NaturalBehavior
                 .ToArray();
             metrics.Add(Metric("navigationRebuilds", run.NavigationRebuilds.Count));
             metrics.Add(Metric("maximumRebuildSeconds", durations.Length == 0 ? double.PositiveInfinity : durations.Max()));
-            metrics.Add(Metric("unsafeTraversals", run.NavigationRebuilds.Sum(item => item.UnsafeTraversalCount)));
-            metrics.Add(Metric("activePaths", run.NavigationRebuilds.Sum(item => item.ActivePathCount)));
-            metrics.Add(Metric("safelyReplannedPaths", run.NavigationRebuilds.Sum(item => item.SafelyReplannedPathCount)));
+            metrics.Add(Metric("unsafeTraversals", run.NavigationRebuilds.Sum(item => (long)item.UnsafeTraversalCount)));
+            metrics.Add(Metric("activePaths", run.NavigationRebuilds.Sum(item => (long)item.ActivePathCount)));
+            metrics.Add(Metric("safelyReplannedPaths", run.NavigationRebuilds.Sum(item => (long)item.SafelyReplannedPathCount)));
             return Gate("06_REBUILD", "navigation rebuild latency and safe in-progress replanning", issues, metrics);
         }
 
@@ -659,34 +820,101 @@ namespace FamilyCompany.Qa.NaturalBehavior
                     string.Equals(item.FromDestinationId, from, StringComparison.Ordinal) &&
                     string.Equals(item.ToDestinationId, to, StringComparison.Ordinal))
                 .ToArray();
-            if (legs.Length < bar.RequiredDeterminismRepeats)
-                AddIssue(issues, $"Missing repeated route {scenarioId}/{layoutSeed}/{memberId}/{from}->{to}.");
+            var repeats = legs.Select(item => item.RepeatIndex).OrderBy(item => item).ToArray();
+            if (legs.Length != bar.RequiredDeterminismRepeats ||
+                !repeats.SequenceEqual(Enumerable.Range(0, bar.RequiredDeterminismRepeats)))
+                AddIssue(issues,
+                    $"Route {scenarioId}/{layoutSeed}/{memberId}/{from}->{to} must contain exactly repeats " +
+                    $"0..{bar.RequiredDeterminismRepeats - 1}.");
         }
 
-        private static IEnumerable<LayoutObservation> DistinctLayouts(NaturalBehaviorQaRun run)
+        private static void ValidateLayoutRepeats(
+            NaturalBehaviorQaRun run,
+            string scenarioId,
+            int layoutSeed,
+            int? requiredFurnitureCount,
+            NaturalBehaviorQualityBar bar,
+            ICollection<string> issues)
         {
-            return run.Layouts
-                .GroupBy(item => $"{item.ScenarioId}|{item.LayoutSeed}", StringComparer.Ordinal)
-                .Select(item => item.OrderBy(value => value.RepeatIndex).First());
+            var layouts = run.Layouts.Where(item =>
+                    string.Equals(item.ScenarioId, scenarioId, StringComparison.Ordinal) && item.LayoutSeed == layoutSeed)
+                .ToArray();
+            var repeats = layouts.Select(item => item.RepeatIndex).OrderBy(item => item).ToArray();
+            if (layouts.Length != bar.RequiredDeterminismRepeats ||
+                !repeats.SequenceEqual(Enumerable.Range(0, bar.RequiredDeterminismRepeats)))
+                AddIssue(issues,
+                    $"Layout {scenarioId}/{layoutSeed} must contain exactly repeats 0..{bar.RequiredDeterminismRepeats - 1}.");
+            if (layouts.Any(item => !item.Succeeded))
+                AddIssue(issues, $"Layout {scenarioId}/{layoutSeed} contains a failed placement repeat.");
+            if (requiredFurnitureCount.HasValue &&
+                layouts.Any(item => item.FurnitureCount != requiredFurnitureCount.Value))
+                AddIssue(issues,
+                    $"Layout {scenarioId}/{layoutSeed} must record exactly {requiredFurnitureCount.Value} placeable furniture items per repeat.");
+            if (layouts.Length > 0 && layouts.Select(item => item.StableHash).Distinct(StringComparer.Ordinal).Count() != 1)
+                AddIssue(issues, $"Layout {scenarioId}/{layoutSeed} produced a non-deterministic layout hash.");
+        }
+
+        private static IEnumerable<LayoutIdentity> ExpectedLayouts(NaturalBehaviorQaRun run, NaturalBehaviorQualityBar bar)
+        {
+            for (var repeat = 0; repeat < bar.RequiredDeterminismRepeats; repeat++)
+                yield return new LayoutIdentity(NaturalBehaviorQaScenarioIds.SemanticRoundTrip, 0, repeat);
+            foreach (var seed in run.Plan.RandomLayoutSeeds)
+                for (var repeat = 0; repeat < bar.RequiredDeterminismRepeats; repeat++)
+                    yield return new LayoutIdentity(NaturalBehaviorQaScenarioIds.RandomFurniture, seed, repeat);
+        }
+
+        private static IEnumerable<LayoutObservation> LayoutsFor(NaturalBehaviorQaRun run, LayoutIdentity identity)
+        {
+            return run.Layouts.Where(item => SameLayout(item, identity));
+        }
+
+        private static string FootprintSignature(IEnumerable<FurnitureFootprintObservation> footprints)
+        {
+            var rows = footprints.Select(item =>
+                    item.FurnitureId + "|" + (item.BlocksMovement ? "1" : "0") + "|" +
+                    (item.IsPlaceable ? "1" : "0") + "|" +
+                    string.Join(";", item.Footprint.Vertices.Select(vertex =>
+                        Quantized(vertex.X) + "," + Quantized(vertex.Y))))
+                .OrderBy(item => item, StringComparer.Ordinal);
+            return NaturalBehaviorQaHash.Sha256Hex(string.Join("\n", rows));
+        }
+
+        private static string Quantized(double value)
+        {
+            var quantized = Math.Round(value, 6, MidpointRounding.AwayFromZero);
+            if (quantized == 0d) quantized = 0d;
+            return quantized.ToString("0.000000", CultureInfo.InvariantCulture);
         }
 
         private static IEnumerable<FurnitureFootprintObservation> FootprintsFor(
             NaturalBehaviorQaRun run,
-            string scenarioId,
-            int layoutSeed)
+            LayoutIdentity identity)
         {
-            return run.FurnitureFootprints.Where(item =>
-                string.Equals(item.ScenarioId, scenarioId, StringComparison.Ordinal) && item.LayoutSeed == layoutSeed);
+            return run.FurnitureFootprints.Where(item => SameLayout(item, identity));
         }
 
-        private static bool SameLayout(string scenarioId, int layoutSeed, LayoutObservation layout)
+        private static bool SameLayout(LayoutObservation item, LayoutIdentity identity)
         {
-            return layoutSeed == layout.LayoutSeed && string.Equals(scenarioId, layout.ScenarioId, StringComparison.Ordinal);
+            return item.LayoutSeed == identity.LayoutSeed && item.RepeatIndex == identity.RepeatIndex &&
+                   string.Equals(item.ScenarioId, identity.ScenarioId, StringComparison.Ordinal);
+        }
+
+        private static bool SameLayout(FurnitureFootprintObservation item, LayoutIdentity identity)
+        {
+            return item.LayoutSeed == identity.LayoutSeed && item.RepeatIndex == identity.RepeatIndex &&
+                   string.Equals(item.ScenarioId, identity.ScenarioId, StringComparison.Ordinal);
+        }
+
+        private static bool SameLayout(FootpointSample item, LayoutIdentity identity)
+        {
+            return item.LayoutSeed == identity.LayoutSeed && item.RepeatIndex == identity.RepeatIndex &&
+                   string.Equals(item.ScenarioId, identity.ScenarioId, StringComparison.Ordinal);
         }
 
         private static IEnumerable<IGrouping<MotionGroupKey, MotionSample>> MotionGroups(NaturalBehaviorQaRun run)
         {
-            return run.MotionSamples.GroupBy(item => new MotionGroupKey(item.ScenarioId, item.LayoutSeed, item.MemberId));
+            return run.MotionSamples.GroupBy(item =>
+                new MotionGroupKey(item.ScenarioId, item.LayoutSeed, item.RepeatIndex, item.MemberId));
         }
 
         private static bool CircleOverlapsPolygon(
@@ -703,6 +931,25 @@ namespace FamilyCompany.Qa.NaturalBehavior
             {
                 var next = (index + 1) % vertices.Count;
                 if (DistancePointToSegment(center, vertices[index], vertices[next]) < threshold) return true;
+            }
+            return false;
+        }
+
+        private static bool SweptCircleOverlapsPolygon(
+            QaPoint2 start,
+            QaPoint2 end,
+            double radius,
+            QaPolygon2 polygon,
+            double tolerance)
+        {
+            if (SegmentCrossesPolygonInterior(start, end, polygon, tolerance)) return true;
+            var clearance = radius - tolerance;
+            if (clearance <= 0d) return false;
+            var vertices = polygon.Vertices;
+            for (var index = 0; index < vertices.Count; index++)
+            {
+                var next = (index + 1) % vertices.Count;
+                if (DistanceSegmentToSegment(start, end, vertices[index], vertices[next]) < clearance) return true;
             }
             return false;
         }
@@ -753,6 +1000,29 @@ namespace FamilyCompany.Qa.NaturalBehavior
             return point.DistanceTo(new QaPoint2(start.X + t * x, start.Y + t * y));
         }
 
+        private static double DistanceSegmentToSegment(QaPoint2 a, QaPoint2 b, QaPoint2 c, QaPoint2 d)
+        {
+            if (SegmentCrossesPolygonEdge(a, b, c, d)) return 0d;
+            return Math.Min(
+                Math.Min(DistancePointToSegment(a, c, d), DistancePointToSegment(b, c, d)),
+                Math.Min(DistancePointToSegment(c, a, b), DistancePointToSegment(d, a, b)));
+        }
+
+        private static bool SegmentCrossesPolygonEdge(QaPoint2 a, QaPoint2 b, QaPoint2 c, QaPoint2 d)
+        {
+            const double epsilon = 0.000000000001d;
+            var abC = Cross(a, b, c);
+            var abD = Cross(a, b, d);
+            var cdA = Cross(c, d, a);
+            var cdB = Cross(c, d, b);
+            return Math.Max(Math.Min(abC, abD), Math.Min(cdA, cdB)) <= epsilon &&
+                   Math.Min(Math.Max(abC, abD), Math.Max(cdA, cdB)) >= -epsilon &&
+                   Math.Max(Math.Min(a.X, b.X), Math.Min(c.X, d.X)) <=
+                   Math.Min(Math.Max(a.X, b.X), Math.Max(c.X, d.X)) + epsilon &&
+                   Math.Max(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y)) <=
+                   Math.Min(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y)) + epsilon;
+        }
+
         private static bool SegmentsIntersect(QaPoint2 a, QaPoint2 b, QaPoint2 c, QaPoint2 d, double tolerance)
         {
             var abC = Cross(a, b, c);
@@ -779,6 +1049,60 @@ namespace FamilyCompany.Qa.NaturalBehavior
             var delta = (right - left + 8) % 8;
             if (delta > 4) delta -= 8;
             return delta;
+        }
+
+        private static QaSeatingPixelObservedRole ExpectedObservedRole(QaSeatingPixelExpectation expectation)
+        {
+            switch (expectation)
+            {
+                case QaSeatingPixelExpectation.FootAnchor:
+                case QaSeatingPixelExpectation.CharacterBody:
+                    return QaSeatingPixelObservedRole.CharacterBody;
+                case QaSeatingPixelExpectation.ChairForeground:
+                    return QaSeatingPixelObservedRole.ChairForeground;
+                case QaSeatingPixelExpectation.DeskForeground:
+                    return QaSeatingPixelObservedRole.DeskForeground;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(expectation));
+            }
+        }
+
+        private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+
+        private static double Magnitude(double x, double y)
+        {
+            x = Math.Abs(x);
+            y = Math.Abs(y);
+            var maximum = Math.Max(x, y);
+            if (maximum == 0d) return 0d;
+            if (!IsFinite(maximum)) return double.PositiveInfinity;
+            var normalizedX = x / maximum;
+            var normalizedY = y / maximum;
+            return maximum * Math.Sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
+        }
+
+        private static void ValidateQualityBar(NaturalBehaviorQualityBar bar)
+        {
+            if (bar.RequiredRandomLayoutSeeds <= 0 || bar.RequiredFurniturePerRandomLayout <= 0 ||
+                bar.RequiredDeterminismRepeats <= 0 || bar.MaximumReplansPerRoute < 0 ||
+                bar.SitDownFrameCount <= 0 || bar.WorkFrameCount <= 0 || bar.StandUpFrameCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(bar), "Quality-bar integer limits are invalid.");
+            var values = new[]
+            {
+                bar.MaximumPathStretchP95, bar.MaximumPathStretch, bar.MaximumDeadlockSeconds,
+                bar.MaximumMotionSampleGapSeconds, bar.MaximumFrameDeltaMeters,
+                bar.MaximumSpeedMetersPerSecond, bar.MaximumAccelerationMetersPerSecondSquared,
+                bar.DirectionFlipWindowSeconds, bar.MinimumDirectionFlipSpeed,
+                bar.CornerJitterWindowSeconds, bar.CornerJitterRadiusMeters,
+                bar.MaximumSeatFootErrorPixels1920, bar.RequiredObservationGameSeconds,
+                bar.MaximumNavigationRebuildSeconds, bar.NumericTolerance
+            };
+            if (values.Any(item => !IsFinite(item) || item < 0d) || bar.NumericTolerance <= 0d)
+                throw new ArgumentOutOfRangeException(nameof(bar), "Quality-bar numeric limits must be finite and non-negative.");
+            if (bar.WorkActionCooldowns == null ||
+                bar.WorkActionCooldowns.Count != Enum.GetValues(typeof(QaWorkVisualAction)).Length ||
+                bar.WorkActionCooldowns.Select(item => item.Action).Distinct().Count() != bar.WorkActionCooldowns.Count)
+                throw new ArgumentException("Exactly one cooldown contract per work action is required.", nameof(bar));
         }
 
         private static bool IsCornerJitter(IReadOnlyList<DirectionChange> changes, NaturalBehaviorQualityBar bar)
@@ -813,7 +1137,8 @@ namespace FamilyCompany.Qa.NaturalBehavior
 
         private static string PathKey(PathObservation path)
         {
-            return $"{path.ScenarioId}/{path.LayoutSeed}/{path.MemberId}/{path.FromDestinationId}->{path.ToDestinationId}";
+            return $"{path.ScenarioId}/{path.LayoutSeed}/r{path.RepeatIndex}/{path.MemberId}/" +
+                   $"{path.FromDestinationId}->{path.ToDestinationId}";
         }
 
         private static void RequireCapability(
@@ -850,22 +1175,54 @@ namespace FamilyCompany.Qa.NaturalBehavior
             if (issues.Count < maximumReportedIssues) issues.Add(issue);
         }
 
-        private readonly struct MotionGroupKey : IEquatable<MotionGroupKey>
+        private readonly struct LayoutIdentity : IEquatable<LayoutIdentity>
         {
-            public MotionGroupKey(string scenarioId, int layoutSeed, string memberId)
+            public LayoutIdentity(string scenarioId, int layoutSeed, int repeatIndex)
             {
                 ScenarioId = scenarioId;
                 LayoutSeed = layoutSeed;
+                RepeatIndex = repeatIndex;
+            }
+
+            public string ScenarioId { get; }
+            public int LayoutSeed { get; }
+            public int RepeatIndex { get; }
+
+            public bool Equals(LayoutIdentity other) =>
+                LayoutSeed == other.LayoutSeed && RepeatIndex == other.RepeatIndex &&
+                string.Equals(ScenarioId, other.ScenarioId, StringComparison.Ordinal);
+            public override bool Equals(object obj) => obj is LayoutIdentity other && Equals(other);
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = StringComparer.Ordinal.GetHashCode(ScenarioId ?? string.Empty);
+                    hash = hash * 397 ^ LayoutSeed;
+                    hash = hash * 397 ^ RepeatIndex;
+                    return hash;
+                }
+            }
+            public override string ToString() => $"{ScenarioId}/{LayoutSeed}/r{RepeatIndex}";
+        }
+
+        private readonly struct MotionGroupKey : IEquatable<MotionGroupKey>
+        {
+            public MotionGroupKey(string scenarioId, int layoutSeed, int repeatIndex, string memberId)
+            {
+                ScenarioId = scenarioId;
+                LayoutSeed = layoutSeed;
+                RepeatIndex = repeatIndex;
                 MemberId = memberId;
             }
 
             public string ScenarioId { get; }
             public int LayoutSeed { get; }
+            public int RepeatIndex { get; }
             public string MemberId { get; }
 
             public bool Equals(MotionGroupKey other)
             {
-                return LayoutSeed == other.LayoutSeed &&
+                return LayoutSeed == other.LayoutSeed && RepeatIndex == other.RepeatIndex &&
                        string.Equals(ScenarioId, other.ScenarioId, StringComparison.Ordinal) &&
                        string.Equals(MemberId, other.MemberId, StringComparison.Ordinal);
             }
@@ -877,10 +1234,12 @@ namespace FamilyCompany.Qa.NaturalBehavior
                 {
                     var hash = StringComparer.Ordinal.GetHashCode(ScenarioId ?? string.Empty);
                     hash = hash * 397 ^ LayoutSeed;
+                    hash = hash * 397 ^ RepeatIndex;
                     hash = hash * 397 ^ StringComparer.Ordinal.GetHashCode(MemberId ?? string.Empty);
                     return hash;
                 }
             }
+            public override string ToString() => $"{ScenarioId}/{LayoutSeed}/r{RepeatIndex}/{MemberId}";
         }
 
         private readonly struct DirectionChange
@@ -903,82 +1262,94 @@ namespace FamilyCompany.Qa.NaturalBehavior
         public static string Compute(NaturalBehaviorQaRun run)
         {
             if (run == null) throw new ArgumentNullException(nameof(run));
-            var builder = new StringBuilder();
-            builder.Append("cap=").Append((int)run.Capabilities).Append('|');
-            builder.Append("seconds=").Append(F(run.ObservationGameSeconds)).AppendLine();
-            foreach (var item in run.Layouts.OrderBy(LayoutKey, StringComparer.Ordinal))
-                builder.Append("L|").Append(LayoutKey(item)).Append('|').Append(item.Succeeded ? 1 : 0).Append('|').Append(item.StableHash).AppendLine();
-            foreach (var item in run.FurnitureFootprints.OrderBy(FurnitureKey, StringComparer.Ordinal))
+            var rows = new List<string>
             {
-                builder.Append("F|").Append(FurnitureKey(item)).Append('|').Append(item.BlocksMovement ? 1 : 0)
-                    .Append('|').Append(item.IsPlaceable ? 1 : 0);
-                foreach (var vertex in item.Footprint.Vertices) builder.Append('|').Append(F(vertex.X)).Append(',').Append(F(vertex.Y));
-                builder.AppendLine();
-            }
-            foreach (var item in run.Footpoints.OrderBy(FootpointKey, StringComparer.Ordinal))
-                builder.Append("P|").Append(FootpointKey(item)).Append('|').Append(F(item.Position.X)).Append(',')
-                    .Append(F(item.Position.Y)).Append('|').Append(F(item.RadiusMeters)).Append('|').Append(item.Visible ? 1 : 0).AppendLine();
-            foreach (var item in run.MotionSamples.OrderBy(MotionKey, StringComparer.Ordinal))
-                builder.Append("M|").Append(MotionKey(item)).Append('|').Append(F(item.Position.X)).Append(',')
-                    .Append(F(item.Position.Y)).Append('|').Append(item.DirectionIndex).Append('|').Append((int)item.Phase)
-                    .Append('|').Append(item.Visible ? 1 : 0).AppendLine();
-            foreach (var item in run.Paths.OrderBy(PathKey, StringComparer.Ordinal))
-                builder.Append("R|").Append(PathKey(item)).Append('|').Append(item.Succeeded ? 1 : 0).Append('|')
-                    .Append(F(item.DirectDistanceMeters)).Append('|').Append(F(item.TravelledDistanceMeters)).Append('|')
-                    .Append(item.ReplanCount).Append('|').Append(F(item.DeadlockSeconds)).Append('|')
-                    .Append(item.StablePathHash).Append('|').Append(item.UnsafeTraversalCount).AppendLine();
-            foreach (var item in run.SeatingFrames.OrderBy(SeatKey, StringComparer.Ordinal))
-                builder.Append("S|").Append(SeatKey(item)).Append('|').Append((int)item.Phase).Append('|')
-                    .Append(item.FrameIndex).Append('|').Append(F(item.FootPixel1920.X)).Append(',')
-                    .Append(F(item.FootPixel1920.Y)).Append('|').Append(item.HasOcclusionMeasurement ? 1 : 0)
-                    .Append('|').Append(item.ChairForegroundOrderCorrect ? 1 : 0)
-                    .Append('|').Append(item.DeskForegroundOrderCorrect ? 1 : 0)
-                    .Append('|').Append(item.ChairBodyClipPixelCount)
-                    .Append('|').Append(item.DeskBodyClipPixelCount).AppendLine();
-            foreach (var item in run.WorkWindows.OrderBy(WorkWindowKey, StringComparer.Ordinal))
-                builder.Append("O|").Append(WorkWindowKey(item)).Append('|').Append(F(item.ObservationGameSeconds))
-                    .Append('|').Append(F(item.AccumulatedWorkSeconds)).AppendLine();
-            foreach (var item in run.WorkActions.OrderBy(ActionKey, StringComparer.Ordinal))
-                builder.Append("A|").Append(ActionKey(item)).Append('|').Append((int)item.Action).Append('|')
-                    .Append(F(item.AccumulatedWorkSeconds)).Append('|')
-                    .Append(F(item.WorkSecondsSincePreviousSameAction)).Append('|').Append((int)item.Phase)
-                    .Append('|').Append(item.VisualVisible ? 1 : 0).AppendLine();
-            foreach (var item in run.Productivity.OrderBy(ProductivityKey, StringComparer.Ordinal))
-                builder.Append("W|").Append(ProductivityKey(item)).Append('|').Append((int)item.Phase).Append('|')
-                    .Append(F(item.ProductivityDelta)).AppendLine();
-            foreach (var item in run.NavigationRebuilds.OrderBy(RebuildKey, StringComparer.Ordinal))
-                builder.Append("N|").Append(RebuildKey(item)).Append('|').Append(F(item.RequestedTimeSeconds)).Append('|')
-                    .Append(F(item.CompletedTimeSeconds)).Append('|').Append(item.ActivePathCount).Append('|')
-                    .Append(item.SafelyReplannedPathCount).Append('|').Append(item.UnsafeTraversalCount).Append('|')
-                    .Append(F(item.ProgressWhileUnsafeSeconds)).AppendLine();
+                Row("HEADER", (int)run.Capabilities, run.ObservationGameSeconds,
+                    run.Plan.ObservationGameSeconds, run.Plan.MaximumWallClockSeconds, run.Plan.SemanticOriginId),
+                Row("MEMBERS", run.Plan.ExpectedMemberIds.OrderBy(item => item, StringComparer.Ordinal).ToArray()),
+                Row("DESTINATIONS", run.Plan.SemanticDestinationIds.OrderBy(item => item, StringComparer.Ordinal).ToArray()),
+                Row("SEEDS", run.Plan.RandomLayoutSeeds.OrderBy(item => item).Cast<object>().ToArray())
+            };
 
+            rows.AddRange(run.Layouts.Select(item => Row("L", item.ScenarioId, item.LayoutSeed, item.RepeatIndex,
+                item.FurnitureCount, item.Succeeded, item.StableHash)));
+            rows.AddRange(run.FurnitureFootprints.Select(item => Row("F", item.ScenarioId, item.LayoutSeed,
+                item.RepeatIndex, item.FurnitureId, item.BlocksMovement, item.IsPlaceable,
+                string.Join(";", item.Footprint.Vertices.Select(vertex => F(vertex.X) + "," + F(vertex.Y))))));
+            rows.AddRange(run.Footpoints.Select(item => Row("P", item.ScenarioId, item.LayoutSeed, item.RepeatIndex,
+                item.MemberId, item.TimeSeconds, item.Position.X, item.Position.Y, item.RadiusMeters, item.Visible)));
+            rows.AddRange(run.MotionSamples.Select(item => Row("M", item.ScenarioId, item.LayoutSeed, item.RepeatIndex,
+                item.MemberId, item.TimeSeconds, item.Position.X, item.Position.Y, item.DirectionIndex,
+                (int)item.Phase, item.Visible)));
+            rows.AddRange(run.Paths.Select(item => Row("R", item.ScenarioId, item.LayoutSeed, item.RepeatIndex,
+                item.MemberId, item.FromDestinationId, item.ToDestinationId, item.Succeeded,
+                item.DirectDistanceMeters, item.TravelledDistanceMeters, item.ReplanCount,
+                item.DeadlockSeconds, item.StablePathHash, item.UnsafeTraversalCount)));
+            rows.AddRange(run.CaptureArtifacts.Select(item =>
+                Row("C", item.Label, item.Sha256, item.Width, item.Height)));
+            rows.AddRange(run.SeatingFrames.Select(item => Row("S", item.SessionId, item.MemberId,
+                item.SessionTimeSeconds, (int)item.Phase, item.FrameIndex, item.FootPixel1920.X,
+                item.FootPixel1920.Y, item.CaptureEvidence.CaptureLabel,
+                item.CaptureEvidence.CaptureSha256, item.CaptureEvidence.Width,
+                item.CaptureEvidence.Height,
+                string.Join(";", item.CaptureEvidence.PixelObservations
+                    .Select(pixel => Row("PX", pixel.X, pixel.Y, (int)pixel.Expectation, (int)pixel.ObservedRole))
+                    .OrderBy(value => value, StringComparer.Ordinal)))));
+            rows.AddRange(run.WorkWindows.Select(item => Row("O", item.MemberId,
+                item.ObservationGameSeconds, item.AccumulatedWorkSeconds)));
+            rows.AddRange(run.WorkActions.Select(item => Row("A", item.MemberId, (int)item.Action,
+                item.TimeSeconds, item.AccumulatedWorkSeconds, item.WorkSecondsSincePreviousSameAction,
+                (int)item.Phase, item.VisualVisible)));
+            rows.AddRange(run.Productivity.Select(item => Row("W", item.MemberId, item.TimeSeconds,
+                (int)item.Phase, item.ProductivityDelta)));
+            rows.AddRange(run.NavigationRebuilds.Select(item => Row("N", item.ScenarioId, item.LayoutSeed,
+                item.RepeatIndex, item.RequestedTimeSeconds, item.CompletedTimeSeconds,
+                string.Join(";", item.ActivePathIds.OrderBy(value => value, StringComparer.Ordinal)),
+                string.Join(";", item.SafelyReplannedPathIds.OrderBy(value => value, StringComparer.Ordinal)),
+                string.Join(";", item.UnsafeTraversalPathIds.OrderBy(value => value, StringComparer.Ordinal)),
+                item.ProgressWhileUnsafeSeconds)));
+
+            return Sha256Hex(string.Join("\n", rows.OrderBy(item => item, StringComparer.Ordinal)));
+        }
+
+        public static string Sha256Hex(string stableText)
+        {
+            if (stableText == null) throw new ArgumentNullException(nameof(stableText));
+            return Sha256Hex(Encoding.UTF8.GetBytes(stableText));
+        }
+
+        public static string Sha256Hex(byte[] bytes)
+        {
+            if (bytes == null) throw new ArgumentNullException(nameof(bytes));
             using var sha = SHA256.Create();
-            var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(builder.ToString()));
+            var hash = sha.ComputeHash(bytes);
             var result = new StringBuilder(hash.Length * 2);
             foreach (var value in hash) result.Append(value.ToString("x2", CultureInfo.InvariantCulture));
             return result.ToString();
         }
 
-        private static string LayoutKey(LayoutObservation item) =>
-            $"{item.ScenarioId}|{item.LayoutSeed:D10}|{item.RepeatIndex:D4}|{item.FurnitureCount:D6}";
-        private static string FurnitureKey(FurnitureFootprintObservation item) =>
-            $"{item.ScenarioId}|{item.LayoutSeed:D10}|{item.FurnitureId}";
-        private static string FootpointKey(FootpointSample item) =>
-            $"{item.ScenarioId}|{item.LayoutSeed:D10}|{item.MemberId}|{F(item.TimeSeconds)}";
-        private static string MotionKey(MotionSample item) =>
-            $"{item.ScenarioId}|{item.LayoutSeed:D10}|{item.MemberId}|{F(item.TimeSeconds)}";
-        private static string PathKey(PathObservation item) =>
-            $"{item.ScenarioId}|{item.LayoutSeed:D10}|{item.MemberId}|{item.FromDestinationId}|{item.ToDestinationId}|{item.RepeatIndex:D4}";
-        private static string SeatKey(SeatingFrameObservation item) =>
-            $"{item.SessionId}|{item.MemberId}|{F(item.SessionTimeSeconds)}";
-        private static string ActionKey(WorkActionObservation item) =>
-            $"{item.MemberId}|{F(item.TimeSeconds)}|{(int)item.Action:D2}";
-        private static string WorkWindowKey(WorkWindowObservation item) => item.MemberId;
-        private static string ProductivityKey(ProductivityObservation item) =>
-            $"{item.MemberId}|{F(item.TimeSeconds)}|{(int)item.Phase:D2}";
-        private static string RebuildKey(NavigationRebuildObservation item) =>
-            $"{item.ScenarioId}|{item.LayoutSeed:D10}|{F(item.RequestedTimeSeconds)}";
-        private static string F(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+        private static string Row(string prefix, params object[] values)
+        {
+            var builder = new StringBuilder(prefix ?? string.Empty);
+            foreach (var value in values ?? Array.Empty<object>())
+            {
+                string text;
+                if (value is double number) text = F(number);
+                else if (value is bool flag) text = flag ? "1" : "0";
+                else text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+                builder.Append('|').Append(text.Length).Append(':').Append(text);
+            }
+            return builder.ToString();
+        }
+
+        private static string F(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+                throw new ArgumentOutOfRangeException(nameof(value), "Run hashes require finite numeric observations.");
+            var quantized = Math.Round(value, 6, MidpointRounding.AwayFromZero);
+            if (quantized == 0d) quantized = 0d;
+            return quantized.ToString("0.000000", CultureInfo.InvariantCulture);
+        }
     }
 
     public static class NaturalBehaviorQaReportFormatter

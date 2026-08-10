@@ -72,8 +72,24 @@ namespace FamilyCompany.Editor
 
         private static void Start(bool batch)
         {
+            var ownsAttempt = false;
             try
             {
+                NaturalBehaviorQaLifecycleGuard.RequireCanStart(
+                    SessionState.GetBool(ActiveKey, false),
+                    EditorApplication.isPlayingOrWillChangePlaymode);
+                if (_hook != null || _recorder != null || _plan != null)
+                {
+                    try
+                    {
+                        EndHook();
+                    }
+                    finally
+                    {
+                        ResetRuntimeFields();
+                    }
+                }
+                ownsAttempt = true;
                 var metricMarker = NaturalBehaviorQaSelfTest.Run();
                 Directory.CreateDirectory(ArtifactFolder);
                 File.WriteAllText(TextReportPath,
@@ -94,7 +110,20 @@ namespace FamilyCompany.Editor
             }
             catch (Exception exception)
             {
-                WriteFailure("PREPARATION", exception);
+                if (ownsAttempt)
+                {
+                    try
+                    {
+                        EndHook();
+                    }
+                    catch (Exception endException)
+                    {
+                        Debug.LogException(endException);
+                    }
+                    WriteFailure("PREPARATION", exception);
+                    ClearSessionState();
+                    ResetRuntimeFields();
+                }
                 Debug.LogException(exception);
                 if (batch) EditorApplication.Exit(1);
                 else throw;
@@ -107,6 +136,9 @@ namespace FamilyCompany.Editor
             try
             {
                 var stage = SessionState.GetInt(StageKey, 0);
+                if (NaturalBehaviorQaLifecycleGuard.IsAbandonedPreparation(
+                        true, stage, EditorApplication.isPlaying, EditorApplication.isPlayingOrWillChangePlaymode))
+                    throw new InvalidOperationException("Natural behavior QA preparation was abandoned before Play Mode started.");
                 if (stage == 1 && EditorApplication.isPlaying)
                 {
                     BeginRuntimeHook();
@@ -124,14 +156,16 @@ namespace FamilyCompany.Editor
                 {
                     var failed = SessionState.GetBool(FailedKey, true);
                     var marker = SessionState.GetString(FinalMarkerKey, AggregateFailMarker);
+                    var batch = SessionState.GetBool(BatchKey, false);
                     Debug.Log(marker);
-                    SessionState.EraseBool(ActiveKey);
-                    _hook = null;
-                    _recorder = null;
-                    _plan = null;
-                    _hookEnded = false;
-                    if (SessionState.GetBool(BatchKey, false)) EditorApplication.Exit(failed ? 1 : 0);
+                    ClearSessionState();
+                    ResetRuntimeFields();
+                    if (batch) EditorApplication.Exit(failed ? 1 : 0);
+                    return;
                 }
+
+                if (stage < 1 || stage > 3)
+                    throw new InvalidOperationException($"Natural behavior QA has invalid lifecycle stage {stage}.");
             }
             catch (Exception exception)
             {
@@ -188,7 +222,15 @@ namespace FamilyCompany.Editor
             {
                 if (++captureCount > 16)
                     throw new InvalidOperationException("QA hook emitted more than 16 capture requests in one tick.");
-                OfficeVisualV2IntegrationQa.CaptureResolutionPair("natural-" + SafeLabel(label));
+                var captureLabel = "natural-" + SafeLabel(label);
+                var capturePath = OfficeVisualV2IntegrationQa.CaptureResolutionPair(captureLabel);
+                var artifact = new NaturalBehaviorQaCaptureArtifact(
+                    captureLabel,
+                    NaturalBehaviorQaHash.Sha256Hex(File.ReadAllBytes(capturePath)),
+                    1920,
+                    1080);
+                _recorder.RecordCaptureArtifact(artifact);
+                _hook.OnCaptureCompleted(artifact);
             }
 
             if (now - _startTime > _plan.MaximumWallClockSeconds)
@@ -245,8 +287,27 @@ namespace FamilyCompany.Editor
         private static void EndHook()
         {
             if (_hook == null || _hookEnded) return;
-            _hook.End();
             _hookEnded = true;
+            _hook.End();
+        }
+
+        private static void ClearSessionState()
+        {
+            SessionState.EraseBool(ActiveKey);
+            SessionState.EraseInt(StageKey);
+            SessionState.EraseBool(BatchKey);
+            SessionState.EraseBool(FailedKey);
+            SessionState.EraseString(FinalMarkerKey);
+        }
+
+        private static void ResetRuntimeFields()
+        {
+            _hook = null;
+            _recorder = null;
+            _plan = null;
+            _startTime = 0d;
+            _lastTickTime = 0d;
+            _hookEnded = false;
         }
 
         private static void Append(string line)

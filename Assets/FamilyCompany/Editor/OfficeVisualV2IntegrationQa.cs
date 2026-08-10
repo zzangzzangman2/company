@@ -101,13 +101,13 @@ namespace FamilyCompany.Editor
                 $"colliders={colliders.Length} | occupancy={occupancy:P1}");
         }
 
-        public static void CaptureResolutionPair(string label)
+        public static string CaptureResolutionPair(string label)
         {
             var camera = Camera.main;
             Require(camera != null, "Office Visual V2 capture requires the main camera.");
             ValidateRuntimeFallbackOrVisual();
             Capture(camera, 1280, 720, label);
-            Capture(camera, 1920, 1080, label);
+            return Capture(camera, 1920, 1080, label);
         }
 
         private static void ValidateRuntimeFallbackOrVisual()
@@ -165,7 +165,7 @@ namespace FamilyCompany.Editor
                 $"Office {label} importer is not Sprite/Single/Point/no-mip/uncompressed/NPOT-none: {path}");
         }
 
-        private static void Capture(Camera camera, int width, int height, string label)
+        private static string Capture(Camera camera, int width, int height, string label)
         {
             Directory.CreateDirectory(ArtifactFolder);
             var safeLabel = string.IsNullOrWhiteSpace(label) ? "capture" : label;
@@ -194,6 +194,7 @@ namespace FamilyCompany.Editor
             }
 
             Debug.Log($"OFFICE_VISUAL_V2_CAPTURE_PASS | {width}x{height} | {path} | bytes={new FileInfo(path).Length}");
+            return path;
         }
 
         private static void ValidateOfficeCoverage(Texture2D texture, Color clearColor, int width, int height)
