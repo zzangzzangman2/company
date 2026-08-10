@@ -15,6 +15,7 @@ namespace FamilyCompany.Save
         public List<LedgerTransactionSaveDto> ledger = new List<LedgerTransactionSaveDto>();
         public List<SubcontractSaveDto> contracts = new List<SubcontractSaveDto>();
         public CompanyGrowthSaveDto growth = new CompanyGrowthSaveDto();
+        public StockMarketSessionSaveDto stockMarket = new StockMarketSessionSaveDto();
     }
 
     [Serializable]
@@ -189,5 +190,80 @@ namespace FamilyCompany.Save
         public long foundingInvestmentWon;
         public long totalRevenueWon;
         public int launchedProductCount;
+    }
+
+    [Serializable]
+    public sealed class StockMarketSessionSaveDto
+    {
+        public int schemaVersion = 1;
+        public bool initialized;
+        public long dateTicks;
+        public int marketMinute;
+        public double realtimeResidualSeconds;
+        public int playbackIndex = 1;
+        public bool openingAuctionProcessed;
+        public int openingAuctionProcessCount;
+        public int canonicalMinuteUpdateCount;
+        public int liquidityPulse;
+        public long brokerageCashWon;
+        public int orderSequence;
+        public int journalSequence;
+        public List<BrokeragePositionSaveDto> positions = new List<BrokeragePositionSaveDto>();
+        public List<BrokeragePendingOrderSaveDto> pendingOrders = new List<BrokeragePendingOrderSaveDto>();
+        public List<BrokerageTradeSaveDto> playerTrades = new List<BrokerageTradeSaveDto>();
+        public List<BrokerageOrderJournalSaveDto> orderJournal = new List<BrokerageOrderJournalSaveDto>();
+        public List<string> favoriteAssetIds = new List<string>();
+    }
+
+    [Serializable]
+    public sealed class BrokeragePositionSaveDto
+    {
+        public string assetId = string.Empty;
+        public int units;
+        public double averageCostWon;
+    }
+
+    [Serializable]
+    public sealed class BrokeragePendingOrderSaveDto
+    {
+        public string id = string.Empty;
+        public int side;
+        public string assetId = string.Empty;
+        public long limitPrice;
+        public double originalQuantity;
+        public double remainingQuantity;
+        public long placedDateTicks;
+        public int placedMinute;
+        public int placedSequence;
+        public double queueAheadQuantity;
+        public bool hasMaximumPositionUnits;
+        public int maximumPositionUnits;
+        public bool isIpoFirstTradingDay;
+    }
+
+    [Serializable]
+    public sealed class BrokerageTradeSaveDto
+    {
+        public string assetId = string.Empty;
+        public int marketMinute;
+        public int liquidityPulse;
+        public long price;
+        public int quantity;
+        public bool isBuy;
+    }
+
+    [Serializable]
+    public sealed class BrokerageOrderJournalSaveDto
+    {
+        public int sequence;
+        public string assetId = string.Empty;
+        public int marketMinute;
+        public bool isBuy;
+        public bool isMarket;
+        public long limitPrice;
+        public int requestedQuantity;
+        public int filledQuantity;
+        public int remainingQuantity;
+        public double averagePrice;
     }
 }

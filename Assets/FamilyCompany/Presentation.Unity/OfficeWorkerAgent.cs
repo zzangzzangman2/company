@@ -31,6 +31,8 @@ namespace FamilyCompany.Presentation.Unity
         private bool _autonomyWaypointReached;
         private OfficeWaypoint[] _navigationPath = Array.Empty<OfficeWaypoint>();
         private int _navigationPathIndex;
+        private OfficeWaypoint _navigationDestination;
+        private OfficeWaypoint _lastReachedWaypoint;
         private Renderer[] _presentationRenderers = Array.Empty<Renderer>();
         private bool _presentationAway;
         private float _footstepRemaining;
@@ -62,6 +64,20 @@ namespace FamilyCompany.Presentation.Unity
                 : route != null && route.Length > 0
                     ? route[Mathf.Clamp(_nextWaypointIndex, 0, route.Length - 1)]
                     : null;
+
+        public Vector2 ResolveVisualArtPixel()
+        {
+            var basePixel = OfficeVisualV2Calibration.WorldToArtPixel(transform.position);
+            var anchor = _navigationPath != null && _navigationPathIndex < _navigationPath.Length
+                ? _navigationPath[_navigationPathIndex]
+                : _lastReachedWaypoint;
+            if (anchor == null || !anchor.HasArtAnchor) return basePixel;
+            var delta = anchor.transform.position - transform.position;
+            delta.y = 0f;
+            var blend = 1f - Mathf.Clamp01(delta.magnitude / 0.75f);
+            blend = blend * blend * (3f - 2f * blend);
+            return Vector2.Lerp(basePixel, anchor.ArtAnchorPixel, blend);
+        }
 
         public void Configure(
             string id,
@@ -152,6 +168,8 @@ namespace FamilyCompany.Presentation.Unity
 
             var currentIndex = PositiveModulo(startingWaypointIndex, route.Length);
             transform.position = route[currentIndex].transform.position;
+            _lastReachedWaypoint = route[currentIndex];
+            ResetNavigation();
             _nextWaypointIndex = (currentIndex + 1) % route.Length;
             CurrentActivity = route[currentIndex].Activity;
             _waitRemaining = ResolveStaySeconds(route[currentIndex]);
@@ -188,8 +206,9 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             var target = route[_nextWaypointIndex];
-            if (MoveToward(target, deltaTime))
+            if (MoveAlongNavigation(target, deltaTime))
             {
+                CompleteNavigation(target);
                 CurrentActivity = target.Activity;
                 _completedStops++;
                 _waitRemaining = ResolveStaySeconds(target);
@@ -206,6 +225,7 @@ namespace FamilyCompany.Presentation.Unity
             {
                 if (MoveAlongNavigation(_assignedWaypoint, deltaTime))
                 {
+                    CompleteNavigation(_assignedWaypoint);
                     _assignedWaypointReached = true;
                     CurrentActivity = _assignedWaypoint.Activity;
                     spriteAnimator?.SetWorldVelocity(Vector3.zero);
@@ -231,6 +251,7 @@ namespace FamilyCompany.Presentation.Unity
             {
                 if (MoveAlongNavigation(_autonomyWaypoint, deltaTime))
                 {
+                    CompleteNavigation(_autonomyWaypoint);
                     _autonomyWaypointReached = true;
                     CurrentActivity = _autonomyWaypoint.Activity;
                     if (CurrentActivity == OfficeActivity.Outside) SetAwayPresentation(true);
@@ -260,11 +281,12 @@ namespace FamilyCompany.Presentation.Unity
         {
             _navigationPath = BuildNavigationPath(destination);
             _navigationPathIndex = 0;
+            _navigationDestination = destination;
         }
 
         private bool MoveAlongNavigation(OfficeWaypoint destination, float deltaTime)
         {
-            if (_navigationPath == null || _navigationPath.Length == 0)
+            if (_navigationDestination != destination || _navigationPath == null || _navigationPath.Length == 0)
             {
                 BeginNavigation(destination);
             }
@@ -275,6 +297,19 @@ namespace FamilyCompany.Presentation.Unity
             return _navigationPathIndex >= _navigationPath.Length;
         }
 
+        private void CompleteNavigation(OfficeWaypoint destination)
+        {
+            _lastReachedWaypoint = destination;
+            ResetNavigation();
+        }
+
+        private void ResetNavigation()
+        {
+            _navigationPath = Array.Empty<OfficeWaypoint>();
+            _navigationPathIndex = 0;
+            _navigationDestination = null;
+        }
+
         private OfficeWaypoint[] BuildNavigationPath(OfficeWaypoint destination)
         {
             if (destination == null) return Array.Empty<OfficeWaypoint>();
@@ -282,28 +317,55 @@ namespace FamilyCompany.Presentation.Unity
             flatDistance.y = 0f;
             if (flatDistance.magnitude <= arrivalDistance * 2f) return new[] { destination };
 
-            var corridors = (route ?? Array.Empty<OfficeWaypoint>())
-                .Where(item => item != null && item.Activity == OfficeActivity.Walking)
+            var path = new List<OfficeWaypoint>();
+            if (_lastReachedWaypoint != null &&
+                _lastReachedWaypoint.ApproachPath.Length > 0 &&
+                FlatDistance(transform.position, _lastReachedWaypoint.transform.position) <= 0.35f)
+            {
+                for (var index = _lastReachedWaypoint.ApproachPath.Length - 1; index >= 0; index--)
+                    AppendDistinct(path, _lastReachedWaypoint.ApproachPath[index]);
+            }
+
+            var corridors = FindObjectsByType<OfficeWaypoint>(FindObjectsSortMode.None)
+                .Where(item => item != null && item.IsMainCorridor)
                 .Distinct()
                 .OrderBy(item => item.transform.position.x)
                 .ToArray();
             if (corridors.Length == 0 || destination.Activity == OfficeActivity.Walking)
             {
-                return new[] { destination };
+                AppendDistinct(path, destination);
+                return path.ToArray();
             }
 
-            var startIndex = ClosestWaypointIndex(corridors, transform.position);
-            var endIndex = ClosestWaypointIndex(corridors, destination.transform.position);
-            var path = new List<OfficeWaypoint>();
+            var startPosition = path.Count > 0 ? path[path.Count - 1].transform.position : transform.position;
+            var destinationEntry = destination.ApproachPath.Length > 0
+                ? destination.ApproachPath[0].transform.position
+                : destination.transform.position;
+            var startIndex = ClosestWaypointIndex(corridors, startPosition);
+            var endIndex = ClosestWaypointIndex(corridors, destinationEntry);
             var direction = startIndex <= endIndex ? 1 : -1;
             for (var index = startIndex;; index += direction)
             {
-                path.Add(corridors[index]);
+                AppendDistinct(path, corridors[index]);
                 if (index == endIndex) break;
             }
 
-            if (path.Count == 0 || path[path.Count - 1] != destination) path.Add(destination);
+            foreach (var approach in destination.ApproachPath) AppendDistinct(path, approach);
+            AppendDistinct(path, destination);
             return path.ToArray();
+        }
+
+        private static float FlatDistance(Vector3 left, Vector3 right)
+        {
+            left.y = 0f;
+            right.y = 0f;
+            return Vector3.Distance(left, right);
+        }
+
+        private static void AppendDistinct(List<OfficeWaypoint> path, OfficeWaypoint waypoint)
+        {
+            if (waypoint == null || (path.Count > 0 && path[path.Count - 1] == waypoint)) return;
+            path.Add(waypoint);
         }
 
         private static int ClosestWaypointIndex(OfficeWaypoint[] candidates, Vector3 position)
@@ -357,7 +419,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             var position = target.transform.position;
             var familySlot = ResolveFamilySlot();
-            if (target.Activity == OfficeActivity.Walking || target.Activity == OfficeActivity.Outside)
+            if (target.Activity == OfficeActivity.Outside || target.IsMainCorridor)
             {
                 // The office's safe east-west corridor is clear on its south side. Keeping the
                 // three family NPCs in deterministic parallel lanes prevents head-on controller
@@ -366,11 +428,18 @@ namespace FamilyCompany.Presentation.Unity
                 return position;
             }
 
-            // Every authored station waypoint is already on a collision-free side of its furniture.
-            // Expand only toward +X so the printer's base point (x=8.6) never shifts back into the
-            // cabinet AABB (x=6.9..8.1). The same one-sided slots stay in front of the authored
-            // desks, reception counter, meeting table and lounge furniture.
-            position.x += familySlot * 0.65f;
+            // Desks, printer and reception are exclusive stations and must preserve their exact
+            // calibrated art foot point. The two genuinely shared destinations fan out only on
+            // their measured safe side so concurrent family members cannot controller-deadlock.
+            if (target.Activity == OfficeActivity.Meeting)
+            {
+                position.x += familySlot * 0.65f;
+            }
+            else if (target.Activity == OfficeActivity.Break)
+            {
+                position.x -= familySlot * 0.65f;
+            }
+
             return position;
         }
 

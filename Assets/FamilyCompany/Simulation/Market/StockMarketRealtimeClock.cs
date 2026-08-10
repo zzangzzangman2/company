@@ -40,5 +40,13 @@ namespace FamilyCompany.Simulation.Market
         {
             _accumulatedSeconds = 0d;
         }
+
+        public void Restore(double accumulatedSeconds)
+        {
+            if (double.IsNaN(accumulatedSeconds) || double.IsInfinity(accumulatedSeconds) ||
+                accumulatedSeconds < 0d || accumulatedSeconds >= SecondsPerTick)
+                throw new ArgumentOutOfRangeException(nameof(accumulatedSeconds));
+            _accumulatedSeconds = accumulatedSeconds;
+        }
     }
 }

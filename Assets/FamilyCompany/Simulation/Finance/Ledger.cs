@@ -10,6 +10,7 @@ namespace FamilyCompany.Simulation.Finance
         public const string OwnerCapital = "owner_capital";
         public const string SalesRevenue = "sales_revenue";
         public const string OperatingExpense = "operating_expense";
+        public const string BrokerageAccount = "brokerage_account";
     }
 
     public sealed class LedgerLine
@@ -70,4 +71,3 @@ namespace FamilyCompany.Simulation.Finance
         public long TotalCreditWon => _lines.Sum(line => line.CreditWon);
     }
 }
-

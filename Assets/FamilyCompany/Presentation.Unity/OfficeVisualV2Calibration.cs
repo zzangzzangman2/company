@@ -36,7 +36,7 @@ namespace FamilyCompany.Presentation.Unity
         public static readonly Vector2 DeskAApproachArt = new Vector2(814f, 500f);
         public static readonly Vector2 DeskBApproachArt = new Vector2(1103f, 500f);
         public static readonly Vector2 DeskCApproachArt = new Vector2(650f, 820f);
-        public static readonly Vector2 DeskDApproachArt = new Vector2(1105f, 850f);
+        public static readonly Vector2 DeskDApproachArt = new Vector2(1105f, 890f);
         public static readonly Vector2 DeskASitArt = new Vector2(814f, 416f);
         public static readonly Vector2 DeskBSitArt = new Vector2(1103f, 417f);
         public static readonly Vector2 DeskCSitArt = new Vector2(800f, 770f);

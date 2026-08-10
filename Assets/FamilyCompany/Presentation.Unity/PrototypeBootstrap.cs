@@ -524,6 +524,8 @@ namespace FamilyCompany.Presentation.Unity
         private void DrawGameHud()
         {
             if (_state == null) return;
+            var officeVisual = FindFirstObjectByType<OfficeVisualV2Presenter>();
+            if (officeVisual != null && officeVisual.IsEnhancedPresentationActive) return;
             if (_managementDashboardTexture == null)
             {
                 _managementDashboardTexture = Resources.Load<Texture2D>(ManagementDashboardResourcePath);

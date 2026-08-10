@@ -405,6 +405,68 @@ namespace FamilyCompany.Simulation.Market
                 _journalSequence);
         }
 
+        public StockMarketSessionStateDto ExportSessionState(
+            double realtimeResidualSeconds = 0d,
+            int playbackIndex = 1)
+        {
+            return new StockMarketSessionStateDto(
+                true,
+                Date,
+                MarketMinute,
+                realtimeResidualSeconds,
+                playbackIndex,
+                _openingAuctionProcessed,
+                _openingAuctionProcessCount,
+                _canonicalMinuteUpdateCount,
+                _liquidityPulse,
+                ExportBrokerageState());
+        }
+
+        public bool TryApplySessionState(StockMarketSessionStateDto source, out string error)
+        {
+            error = string.Empty;
+            try
+            {
+                if (source == null) throw new ArgumentNullException(nameof(source));
+                if (!source.Initialized) throw new InvalidOperationException("Stock market session is not initialized.");
+                if (source.SchemaVersion != StockMarketSessionStateDto.CurrentSchemaVersion)
+                    throw new InvalidOperationException($"Unsupported stock session schema: {source.SchemaVersion}");
+                if (source.Date.Date != Date)
+                    throw new InvalidOperationException("Stock session trading date does not match.");
+                if (source.MarketMinute < MarketSessionClock.DayStartMinute ||
+                    source.MarketMinute > MarketSessionClock.DayEndMinute)
+                    throw new InvalidOperationException("Stock session minute is outside the market day.");
+                if (source.PlaybackIndex < 0 || source.PlaybackIndex > 3 ||
+                    source.OpeningAuctionProcessCount < 0 || source.CanonicalMinuteUpdateCount < 0)
+                    throw new InvalidOperationException("Stock session counters are invalid.");
+                if (source.MarketMinute < MarketSessionClock.OpenMinute && source.OpeningAuctionProcessed)
+                    throw new InvalidOperationException("Pre-open session cannot have a processed opening auction.");
+                if (source.MarketMinute >= MarketSessionClock.OpenMinute && !source.OpeningAuctionProcessed)
+                    throw new InvalidOperationException("Post-open session must preserve opening-auction idempotency.");
+
+                if (!TryApplyBrokerageState(source.Brokerage, out error)) return false;
+                MarketMinute = source.MarketMinute;
+                _liquidityPulse = source.LiquidityPulse;
+                _openingAuctionProcessed = source.OpeningAuctionProcessed;
+                _openingAuctionProcessCount = source.OpeningAuctionProcessCount;
+                _canonicalMinuteUpdateCount = source.CanonicalMinuteUpdateCount;
+                foreach (var state in _assets.Values) RebuildAsset(state, recordTape: false);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                error = exception.Message;
+                return false;
+            }
+        }
+
+        internal void AdjustBrokerageCashForCompanyTransfer(long deltaWon)
+        {
+            var next = checked(BrokerageCash + deltaWon);
+            if (next < 0) throw new InvalidOperationException("증권 예수금이 부족합니다.");
+            BrokerageCash = next;
+        }
+
         /// <summary>
         /// Validates every DTO member into temporary collections before any live
         /// account field is changed. A false result guarantees no partial apply.

@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Presentation.Unity;
+using FamilyCompany.Save;
 using FamilyCompany.Simulation.History;
 using FamilyCompany.Simulation.Market;
+using FamilyCompany.Simulation.Prototype;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -81,8 +83,112 @@ namespace FamilyCompany.Editor
             AssertEqual(100L, central?.Price ?? 0L, "consumed ask carries outline to same-price bid");
 
             ValidateLiveRuntimeSession();
+            ValidateCompanyBrokerageSaveRoundTrip();
 
             Console.WriteLine("STOCK_MARKET_LANDSCAPE_VALIDATION: PASS");
+        }
+
+        private static void ValidateCompanyBrokerageSaveRoundTrip()
+        {
+            var state = PrototypeStateFactory.Create(99173);
+            var security = new MarketSecurityDefinition(
+                "brokerage-save-company",
+                "증권저장검증회사",
+                "KOSPI",
+                "000003",
+                new DateTime(1990, 1, 1),
+                null,
+                false);
+            var date = new DateTime(2000, 1, 4);
+            var session = new StockMarketRuntimeSession(
+                state.WorldSeed,
+                date,
+                0,
+                new[] { security },
+                MarketSessionClock.OpenMinute - 1);
+            var transfers = new CompanyBrokerageTransferService(state.Company, session);
+            var companyCashBefore = state.Company.CashWon;
+            var deposit = transfers.Deposit("brokerage-deposit-1", state.Time.ElapsedMinutes, 200_000);
+            if (!deposit.Accepted || state.Company.CashWon != companyCashBefore - 200_000 ||
+                session.BrokerageCash != 200_000)
+                throw new InvalidOperationException("Company-to-brokerage deposit did not conserve cash.");
+            var depositLedger = state.Company.Ledger.Last();
+            AssertEqual(depositLedger.TotalDebitWon, depositLedger.TotalCreditWon, "brokerage deposit balanced ledger");
+            if (depositLedger.Lines.All(line => line.AccountCode != Simulation.Finance.AccountCode.BrokerageAccount))
+                throw new InvalidOperationException("Brokerage deposit did not use the brokerage account ledger code.");
+
+            if (transfers.Deposit("brokerage-deposit-negative", 0, -1).Accepted ||
+                transfers.Deposit("brokerage-deposit-1", 0, 1).Accepted ||
+                transfers.Deposit("brokerage-deposit-excess", 0, state.Company.CashWon + 1).Accepted)
+                throw new InvalidOperationException("Invalid brokerage deposit was accepted.");
+
+            session.AdvanceMinutes(1, 1);
+            var openingProcessCount = session.OpeningAuctionProcessCount;
+            var view = session.ViewFor(security.CompanyId);
+            var buy = session.PlaceOrder(
+                security.CompanyId,
+                true,
+                true,
+                view.LastTradePrice,
+                1);
+            if (!buy.Accepted || buy.FilledQuantity != 1 ||
+                session.AverageCost(security.CompanyId) <= buy.AveragePrice)
+                throw new InvalidOperationException("Fee-inclusive brokerage position setup failed.");
+            var range = MarketPricingRules.DailyPriceRange(
+                view.PreviousClose,
+                date,
+                security.PriceRuleMarket);
+            var pending = session.PlaceOrder(
+                security.CompanyId,
+                true,
+                false,
+                range.Lower,
+                1);
+            if (!pending.Accepted || pending.RemainingQuantity != 1)
+                throw new InvalidOperationException("Pending brokerage order setup failed.");
+
+            var unavailableWithdrawal = checked(session.AvailableBrokerageCash + 1);
+            if (transfers.Withdraw("brokerage-withdraw-reserved", 0, unavailableWithdrawal).Accepted)
+                throw new InvalidOperationException("Reserved buy cash was withdrawable.");
+            var withdrawal = transfers.Withdraw("brokerage-withdraw-1", 0, 10_000);
+            if (!withdrawal.Accepted || state.Company.CashWon != companyCashBefore - 190_000)
+                throw new InvalidOperationException("Brokerage-to-company withdrawal did not conserve cash.");
+            AssertEqual(
+                state.Company.Ledger.Last().TotalDebitWon,
+                state.Company.Ledger.Last().TotalCreditWon,
+                "brokerage withdrawal balanced ledger");
+
+            var sourceStock = session.ExportSessionState(0.4d, 2);
+            state.ReplaceStockMarketState(sourceStock);
+            var restoredState = GameSaveMapper.FromDto(GameSaveMapper.ToDto(state));
+            AssertEqual(state.Company.CashWon, restoredState.Company.CashWon, "company cash save round trip");
+            AssertEqual(state.Company.Ledger.Count, restoredState.Company.Ledger.Count, "brokerage ledger save round trip");
+            AssertEqual(sourceStock.Brokerage.CashWon, restoredState.StockMarket.Brokerage.CashWon, "brokerage cash save round trip");
+            AssertEqual(sourceStock.Brokerage.Positions.Count, restoredState.StockMarket.Brokerage.Positions.Count, "brokerage positions save round trip");
+            AssertEqual(sourceStock.Brokerage.PendingOrders.Count, restoredState.StockMarket.Brokerage.PendingOrders.Count, "brokerage pending save round trip");
+            AssertEqual(sourceStock.Brokerage.PlayerTrades.Count, restoredState.StockMarket.Brokerage.PlayerTrades.Count, "brokerage trades save round trip");
+            AssertEqual(sourceStock.MarketMinute, restoredState.StockMarket.MarketMinute, "stock clock save round trip");
+            AssertEqual(sourceStock.OpeningAuctionProcessCount, restoredState.StockMarket.OpeningAuctionProcessCount, "opening idempotency counter save round trip");
+
+            var restoredSession = new StockMarketRuntimeSession(
+                restoredState.WorldSeed,
+                date,
+                0,
+                new[] { security },
+                restoredState.StockMarket.MarketMinute);
+            if (!restoredSession.TryApplySessionState(restoredState.StockMarket, out var restoreError))
+                throw new InvalidOperationException($"Stock session save apply failed: {restoreError}");
+            restoredSession.SetMarketMinute(MarketSessionClock.OpenMinute);
+            AssertEqual(openingProcessCount, restoredSession.OpeningAuctionProcessCount, "opening auction remained idempotent after load");
+            AssertEqual(session.BrokerageCash, restoredSession.BrokerageCash, "live brokerage cash after load");
+            AssertEqual(session.PositionUnits(security.CompanyId), restoredSession.PositionUnits(security.CompanyId), "live brokerage position after load");
+            AssertEqual(session.PendingOrders.Count, restoredSession.PendingOrders.Count, "live brokerage pending after load");
+            AssertEqual(session.PlayerTradeHistory().Count, restoredSession.PlayerTradeHistory().Count, "live brokerage trades after load");
+            var restoredClock = new StockMarketRealtimeClock();
+            restoredClock.Restore(restoredState.StockMarket.RealtimeResidualSeconds);
+            if (Math.Abs(restoredClock.AccumulatedSeconds - 0.4d) > 0.000001d)
+                throw new InvalidOperationException("Realtime stock clock residual was not restored.");
+            Console.WriteLine("STOCK_MARKET_COMPANY_ACCOUNT_SAVE_VALIDATION: PASS");
         }
 
         private static void ValidateRealtimeClock()

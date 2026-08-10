@@ -15,6 +15,8 @@
 
 2026-08-10 통합 브랜치는 `agent/contract-lifecycle-v0-3`이다. 집 PC에서는 저장소가 clean인지 확인한 뒤 `git fetch origin`, `git switch agent/contract-lifecycle-v0-3`, `git pull --ff-only` 순서로 재개한다. dirty worktree에서 브랜치를 전환하거나 `Library`, `Temp`, `Logs`, `work` 산출물을 커밋하지 않는다.
 
+현재 통합 상태: 가족 좌석 애니메이션 448프레임과 Stock 회사계좌·Save 코어는 검증 완료했다. OfficeVisualV2는 정적 교정에서 가구 교차·발점·IoU 0을 달성했지만 공유 `Prototype01` 미반영, 정규화 최대 3px, 실제 이동·30초 회귀 미검증으로 최종 PASS가 아니다.
+
 ## 자동화
 
 - Tools/BuildPrototype.ps1: Office V0.2가 포함된 Prototype01 씬 재생성

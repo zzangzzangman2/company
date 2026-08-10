@@ -241,6 +241,30 @@
   - 오지우 A `9C9A5AFAE75F1358B9B9B0A46B2DBDA6E194F75839F5CD3ED87010CF4A6BF6C4`, B `A9B5D8C1B8BBD2CCEB3FEC94B86D67815AF5A31DD76ACCF823BAF4E7843076F6`
   - 윤채아 A `06B35F154FEE2A9C3B857E3DD34BA9BC02BE564856FC10A320163CE88D0B12D8`, B `8C59A4826BEB25E9B8260EEA073E05F388B9648F9916CCEF177248B24A10DCE3`
 
+## 가족 4인 사무실 착석 애니메이션 OfficeSeating V1
+
+- 상태: **448/448 GENERATED · SOURCE/FRAME/META/VISUAL QA PASS · 런타임 미연결**
+- 대상: 플레이어·누나·아빠·엄마, 총 4인
+- 정본 루트:
+  - `Assets/Art/Characters/Player/Pixel/OfficeSeatingV1/`
+  - `Assets/Art/Characters/Family/OlderSister/Pixel/OfficeSeatingV1/`
+  - `Assets/Art/Characters/Family/Father/Pixel/OfficeSeatingV1/`
+  - `Assets/Art/Characters/Family/Mother/Pixel/OfficeSeatingV1/`
+- ImageGen source: 인물별 `Source/`의 transition A/B·work A/B 4장, 총 16장. OpenAI 내장 ImageGen으로 생성했으며 SIMUL-v3 앵커는 렌더링 문법만, 각 가족 정본과 기존 HighMotion은 정체성·카메라·픽셀 밀도·방향 전용 참조로 사용했다.
+- 시트 계약: transition A/B는 각각 4열×4행, work A/B는 각각 6열×4행이다. A 행은 `남·남서·서·북서`, B 행은 `북·북동·동·남동` 순서다.
+- 엄마 source 교정: 기존 `mother_office_seating_work_a_v1.png`가 3열×2행·실루엣 6개인 결함이라 억지 분할하지 않았다. 같은 엄마 정체성·의상·착석 작업 자세를 유지한 S/SW/W/NW 4행×6열·24실루엣 시트를 내장 ImageGen으로 한 장만 재생성하고 공식 chroma-key 제거 도구로 하드 알파화했다.
+  - 최종 투명 시트 SHA-256: `64E1144E287107A6A839891F5C7E0DF545F3D4534DAD8B4EF1E156205D0ECD80`
+  - 크로마 원본 SHA-256: `3B86E9C2C6DC899B8CD0A056C73D051AF30FD46B1C258A839E1B99509786DAD0`
+  - 교정 프롬프트 핵심: 1536×1024, 셀 256×256, 정확히 4행×6열, 행 S/SW/W/NW, 열 sit_work 0~5, 의자·책상·소품·문자 없음, 균일 `#ff00ff` 배경, 엄마 외형·복장 불변.
+- 개별 프레임: 인물별 8방향×`sit_down` 4 + `sit_work` 6 + `stand_up` 4 = 112장, 총 448장. `stand_up`은 승인된 `sit_down`의 정확한 역순이다.
+- 출력 규격: 각 256×256 RGBA, 알파 0/255, 피사체 비어 있음·잘림 없음, 발 기준선 y=248. Unity 메타는 Sprite/Single, Point, mipmap 없음, 무압축, 180 PPU, 하단 중앙 커스텀 피벗 `(0.5, 0)`이다.
+- 밀도 정규화: HighMotion 48프레임의 인물별 중앙 높이를 기준으로 한 가지 캐릭터 축척만 적용했다. work A/B 생성 시트의 밀도 차이는 큰 파트만 고정 비율로 축소해 맞췄으며 프레임별 임의 축척은 없다. 최종 캐릭터 축척은 플레이어 `1.041`, 누나 `1.038`, 아빠 `1.021`, 엄마 `1.029`; work A/B 보정은 각각 플레이어 `0.965/1.000`, 누나 `0.984/1.000`, 아빠 `0.995/1.000`, 엄마 `0.903/1.000`이다.
+- 기계 분할·검증 도구: `Tools/split_office_seating_sheets.py`. 실제 실루엣을 행/열로 검출하고 상체 중앙·발 기준선을 정렬하며, `--verify-only`에서 source로부터 448장을 바이트 단위 재현한다.
+- QA 산출물: 인물별 transition 8방향 접촉 시트와 work 8방향 접촉 시트 각 1장(총 8장), work 6프레임 GIF 각 1개(총 4개). 각 정본 루트의 `QA/`에 저장한다.
+- 자동 QA: source 16장 크기·하드 알파·16/24 실루엣 계약, 프레임 448장·메타 448개, 비어 있음 0, 부분 알파 0, 잘림 0, 기본 동작 프레임 고유 해시 320개, 승인 역순 중복 128개, 전체 렌더 해시 320개, 프레임 GUID 448개 고유, Assets 전체 GUID 중복 0. GIF 루프 경계/일반 인접 RMS 최대 비율은 `1.442`다.
+- 육안 QA: 8개 접촉 시트에서 남→남서→서→북서→북→북동→동→남동 방향, standing→seated→standing 순서, 손의 키보드·마우스 변화, 무모자 플레이어와 가족 정체성, 의자 없음, 머리·손·발 미절단을 확인했다.
+- 통합 경계: 이번 작업은 아트·메타만 완성했다. 기존 HighMotion, Scene, 자율행동, Market, Save, Leisure, OfficeVisual 코드는 수정하지 않았으며 실제 좌석 상태기 연결은 후속 작업이다.
+
 ## SIMUL 오디오 무변형 이관
 
 - 경로: `Assets/Audio/Resources/Audio/BGM/`, `Assets/Audio/Resources/Audio/SFX/`

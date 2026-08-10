@@ -4,6 +4,7 @@ using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.Market;
 
 namespace FamilyCompany.Simulation.Game
 {
@@ -16,7 +17,8 @@ namespace FamilyCompany.Simulation.Game
             CompanyState company,
             DeterministicEventQueue events,
             ContractPortfolio contracts = null,
-            CompanyGrowthState growth = null)
+            CompanyGrowthState growth = null,
+            StockMarketSessionStateDto stockMarket = null)
         {
             WorldSeed = worldSeed;
             Time = time ?? throw new ArgumentNullException(nameof(time));
@@ -25,6 +27,7 @@ namespace FamilyCompany.Simulation.Game
             Events = events ?? throw new ArgumentNullException(nameof(events));
             Contracts = contracts ?? new ContractPortfolio(Family.Members.Count);
             Growth = growth ?? new CompanyGrowthState();
+            StockMarket = stockMarket ?? StockMarketSessionStateDto.Uninitialized();
         }
 
         public int WorldSeed { get; }
@@ -34,5 +37,11 @@ namespace FamilyCompany.Simulation.Game
         public DeterministicEventQueue Events { get; }
         public ContractPortfolio Contracts { get; }
         public CompanyGrowthState Growth { get; }
+        public StockMarketSessionStateDto StockMarket { get; private set; }
+
+        public void ReplaceStockMarketState(StockMarketSessionStateDto state)
+        {
+            StockMarket = state ?? throw new ArgumentNullException(nameof(state));
+        }
     }
 }

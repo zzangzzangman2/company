@@ -4,6 +4,8 @@
 
 2026-08-10 통합 작업은 `agent/contract-lifecycle-v0-3` 브랜치에 있다. 집 PC의 clean clone에서 `git fetch origin`, `git switch agent/contract-lifecycle-v0-3`, `git pull --ff-only` 순서로 받은 뒤 이 문서의 전용 경계를 다시 확인한다. dirty worktree에서는 pull·브랜치 전환·merge·rebase를 하지 않는다. Unity는 `6000.3.21f1`로만 열며, `Library`, `Temp`, `Logs`, `work` 산출물은 Git에 넣지 않는다.
 
+두 번째 통합은 좌석 에셋·Stock 회사계좌/Save·Office 정적 교정의 Codex 전용 경로만 갱신한다. Claude History 전용 데이터의 완료 판정과 소유권은 바뀌지 않으며, 런타임 완료·미완료는 `Docs/PROJECT_STATE.md`를 정본으로 본다.
+
 ## 작업 분리
 
 Claude는 **국내 실제 회사 역사 조사·정규화·출처·데이터 검증**만 맡는다. Codex는 **Unity 런타임, 소형 하청 계약, 경쟁/M&A 시뮬레이션, `simul` 시장 이식, 씬과 자동 테스트**를 맡는다.

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -8,11 +9,19 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private OfficeActivity activity = OfficeActivity.Work;
         [SerializeField] private float minimumStaySeconds = 1.5f;
         [SerializeField] private float maximumStaySeconds = 3.5f;
+        [SerializeField] private OfficeWaypoint[] approachPath = Array.Empty<OfficeWaypoint>();
+        [SerializeField] private bool hasArtAnchor;
+        [SerializeField] private Vector2 artAnchorPixel;
 
         public string WaypointId => waypointId;
         public OfficeActivity Activity => activity;
         public float MinimumStaySeconds => minimumStaySeconds;
         public float MaximumStaySeconds => maximumStaySeconds;
+        public OfficeWaypoint[] ApproachPath => approachPath ?? Array.Empty<OfficeWaypoint>();
+        public bool IsMainCorridor => activity == OfficeActivity.Walking &&
+                                      waypointId.StartsWith("corridor_", StringComparison.Ordinal);
+        public bool HasArtAnchor => hasArtAnchor;
+        public Vector2 ArtAnchorPixel => artAnchorPixel;
 
         public void Configure(string id, OfficeActivity newActivity, float minimumStay, float maximumStay)
         {
@@ -20,6 +29,17 @@ namespace FamilyCompany.Presentation.Unity
             activity = newActivity;
             minimumStaySeconds = Mathf.Max(0f, minimumStay);
             maximumStaySeconds = Mathf.Max(minimumStaySeconds, maximumStay);
+        }
+
+        public void ConfigureApproach(params OfficeWaypoint[] path)
+        {
+            approachPath = path ?? Array.Empty<OfficeWaypoint>();
+        }
+
+        public void ConfigureArtAnchor(Vector2 artPixel)
+        {
+            hasArtAnchor = true;
+            artAnchorPixel = artPixel;
         }
 
         private void OnDrawGizmos()

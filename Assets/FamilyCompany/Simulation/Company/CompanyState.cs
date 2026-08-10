@@ -76,6 +76,35 @@ namespace FamilyCompany.Simulation.Company
             Reputation = Math.Max(0, Math.Min(100, Reputation + delta));
         }
 
+        internal void PostBrokerageTransfer(
+            string transactionId,
+            long elapsedMinute,
+            long amountWon,
+            bool companyToBrokerage)
+        {
+            RequirePositive(amountWon);
+            if (companyToBrokerage && amountWon > CashWon)
+            {
+                throw new InvalidOperationException("회사 현금이 부족합니다.");
+            }
+
+            Post(new LedgerTransaction(
+                transactionId,
+                elapsedMinute,
+                companyToBrokerage ? "증권 예수금 입금" : "증권 예수금 출금",
+                companyToBrokerage
+                    ? new[]
+                    {
+                        new LedgerLine(AccountCode.BrokerageAccount, amountWon, 0),
+                        new LedgerLine(AccountCode.Cash, 0, amountWon)
+                    }
+                    : new[]
+                    {
+                        new LedgerLine(AccountCode.Cash, amountWon, 0),
+                        new LedgerLine(AccountCode.BrokerageAccount, 0, amountWon)
+                    }));
+        }
+
         private void Post(LedgerTransaction transaction)
         {
             if (_ledger.Any(item => item.TransactionId == transaction.TransactionId))

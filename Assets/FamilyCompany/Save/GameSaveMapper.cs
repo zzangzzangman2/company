@@ -7,6 +7,7 @@ using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Finance;
 using FamilyCompany.Simulation.Game;
+using FamilyCompany.Simulation.Market;
 
 namespace FamilyCompany.Save
 {
@@ -159,14 +160,15 @@ namespace FamilyCompany.Save
                         totalRevenueWon = item.TotalRevenueWon,
                         launchedProductCount = item.LaunchedProductCount
                     }).ToList()
-                }
+                },
+                stockMarket = ToStockMarketSaveDto(state.StockMarket)
             };
         }
 
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5)
+            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5 && save.schemaVersion != 6)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -335,7 +337,141 @@ namespace FamilyCompany.Save
                     save.growth.productSequence,
                     ownedBusinesses);
             }
-            return new GameState(save.worldSeed, new GameTime(save.elapsedMinutes), family, company, events, contracts, growth);
+            var stockMarket = save.stockMarket != null && save.stockMarket.initialized
+                ? FromStockMarketSaveDto(save.stockMarket)
+                : StockMarketSessionStateDto.Uninitialized();
+            return new GameState(save.worldSeed, new GameTime(save.elapsedMinutes), family, company, events, contracts, growth, stockMarket);
+        }
+
+        private static StockMarketSessionSaveDto ToStockMarketSaveDto(StockMarketSessionStateDto state)
+        {
+            if (state == null) throw new InvalidOperationException("Stock market state is missing.");
+            var brokerage = state.Brokerage;
+            return new StockMarketSessionSaveDto
+            {
+                schemaVersion = state.SchemaVersion,
+                initialized = state.Initialized,
+                dateTicks = state.Date.Ticks,
+                marketMinute = state.MarketMinute,
+                realtimeResidualSeconds = state.RealtimeResidualSeconds,
+                playbackIndex = state.PlaybackIndex,
+                openingAuctionProcessed = state.OpeningAuctionProcessed,
+                openingAuctionProcessCount = state.OpeningAuctionProcessCount,
+                canonicalMinuteUpdateCount = state.CanonicalMinuteUpdateCount,
+                liquidityPulse = state.LiquidityPulse,
+                brokerageCashWon = brokerage.CashWon,
+                orderSequence = brokerage.OrderSequence,
+                journalSequence = brokerage.JournalSequence,
+                positions = brokerage.Positions.Select(item => new BrokeragePositionSaveDto
+                {
+                    assetId = item.AssetId,
+                    units = item.Units,
+                    averageCostWon = item.AverageCostWon
+                }).ToList(),
+                pendingOrders = brokerage.PendingOrders.Select(item => new BrokeragePendingOrderSaveDto
+                {
+                    id = item.Id,
+                    side = (int)item.Side,
+                    assetId = item.AssetId,
+                    limitPrice = item.LimitPrice,
+                    originalQuantity = item.OriginalQuantity,
+                    remainingQuantity = item.RemainingQuantity,
+                    placedDateTicks = item.PlacedDate.Ticks,
+                    placedMinute = item.PlacedMinute,
+                    placedSequence = item.PlacedSequence,
+                    queueAheadQuantity = item.QueueAheadQuantity,
+                    hasMaximumPositionUnits = item.MaximumPositionUnits.HasValue,
+                    maximumPositionUnits = item.MaximumPositionUnits.GetValueOrDefault(),
+                    isIpoFirstTradingDay = item.IsIpoFirstTradingDay
+                }).ToList(),
+                playerTrades = brokerage.PlayerTrades.Select(item => new BrokerageTradeSaveDto
+                {
+                    assetId = item.AssetId,
+                    marketMinute = item.MarketMinute,
+                    liquidityPulse = item.LiquidityPulse,
+                    price = item.Price,
+                    quantity = item.Quantity,
+                    isBuy = item.IsBuy
+                }).ToList(),
+                orderJournal = brokerage.OrderJournal.Select(item => new BrokerageOrderJournalSaveDto
+                {
+                    sequence = item.Sequence,
+                    assetId = item.AssetId,
+                    marketMinute = item.MarketMinute,
+                    isBuy = item.IsBuy,
+                    isMarket = item.IsMarket,
+                    limitPrice = item.LimitPrice,
+                    requestedQuantity = item.RequestedQuantity,
+                    filledQuantity = item.FilledQuantity,
+                    remainingQuantity = item.RemainingQuantity,
+                    averagePrice = item.AveragePrice
+                }).ToList(),
+                favoriteAssetIds = brokerage.FavoriteAssetIds.ToList()
+            };
+        }
+
+        private static StockMarketSessionStateDto FromStockMarketSaveDto(StockMarketSessionSaveDto dto)
+        {
+            if (dto != null && !dto.initialized) return StockMarketSessionStateDto.Uninitialized();
+            if (dto == null || dto.positions == null || dto.pendingOrders == null ||
+                dto.playerTrades == null || dto.orderJournal == null || dto.favoriteAssetIds == null)
+                throw new InvalidOperationException("Stock market save data is incomplete.");
+            if (dto.schemaVersion != StockMarketSessionStateDto.CurrentSchemaVersion)
+                throw new InvalidOperationException($"Unsupported stock market save schema: {dto.schemaVersion}");
+
+            var brokerage = new BrokerageAccountStateDto(
+                dto.brokerageCashWon,
+                dto.positions.Select(item => new BrokeragePositionStateDto(
+                    item.assetId,
+                    item.units,
+                    item.averageCostWon)),
+                dto.pendingOrders.Select(item => new BrokeragePendingOrderStateDto(new MarketPendingOrder(
+                    item.id,
+                    (MarketPendingOrderSide)item.side,
+                    item.assetId,
+                    item.limitPrice,
+                    item.originalQuantity,
+                    item.remainingQuantity,
+                    new DateTime(item.placedDateTicks, DateTimeKind.Unspecified),
+                    item.placedMinute,
+                    item.placedSequence,
+                    item.queueAheadQuantity,
+                    item.hasMaximumPositionUnits ? item.maximumPositionUnits : (int?)null,
+                    item.isIpoFirstTradingDay))),
+                dto.playerTrades.Select(item => new BrokerageTradeStateDto(new StockMarketTradePrint(
+                    item.assetId,
+                    item.marketMinute,
+                    item.liquidityPulse,
+                    item.price,
+                    item.quantity,
+                    item.isBuy,
+                    true))),
+                dto.orderJournal.Select(item => new BrokerageOrderJournalStateDto(new StockMarketOrderJournalEntry(
+                    item.sequence,
+                    item.assetId,
+                    item.marketMinute,
+                    item.isBuy,
+                    item.isMarket,
+                    item.limitPrice,
+                    item.requestedQuantity,
+                    item.filledQuantity,
+                    item.remainingQuantity,
+                    item.averagePrice))),
+                dto.favoriteAssetIds,
+                dto.orderSequence,
+                dto.journalSequence);
+            return new StockMarketSessionStateDto(
+                dto.initialized,
+                new DateTime(dto.dateTicks, DateTimeKind.Unspecified),
+                dto.marketMinute,
+                dto.realtimeResidualSeconds,
+                dto.playbackIndex,
+                dto.openingAuctionProcessed,
+                dto.openingAuctionProcessCount,
+                dto.canonicalMinuteUpdateCount,
+                dto.liquidityPulse,
+                brokerage,
+                dto.schemaVersion);
         }
     }
 }

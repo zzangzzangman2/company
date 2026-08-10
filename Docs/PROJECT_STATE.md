@@ -94,17 +94,17 @@ Unity: 6000.3.21f1
 
 ## 진행 중
 
-- Stock 화면·실시간 세션 자체는 검증 완료했으나 현재 별도 5만원 실습계좌다. 회사 현금↔증권 이체, 복식부기 원장, 공용 Save, 실제 역사 코퍼스/골든 패리티와 다음 거래일 이벤트 통합이 남았다.
-- OfficeVisualV2는 4개 책상 호모그래피, crop `(254,79,1666,937)`, physics root 유지, visual/label 투영, scale 1.00 교정 코드와 분리 컴파일만 완료했다. 실제 화면은 계속 FAIL이며 waypoint·우회경로·새 캡처·30초 회귀·공유 씬 반영이 남았다.
-- 네 가족 좌석 전환 A/B·작업 A/B ImageGen source 16장은 완료했다. 4명×112=448 프레임 기계 분할, 배경 제거, 발 앵커, `stand_up` 역순 구성, GIF 최종 QA와 기존 Office autonomy·씬 통합은 미완료다.
+- Stock 회사계좌·Save 코어는 완료했지만 UI 입출금 버튼과 GameState 자동 flush/load, 체결별 전체 원장 전기, 외부 tape/orderbook state가 남았다. UI의 5만원 계좌는 QA fixture일 뿐 실제 회사계좌가 아니다.
+- OfficeVisualV2는 scale 1.00 정적 교정에서 4명 고유 bbox, 가구 교차 0, 발점 오차 0, IoU 0과 왼쪽 블록 제거를 통과했다. 그러나 1280 정규화 최대 3px로 ≤1px 기준 FAIL이고 CharacterController 이동·30초 퇴실/복귀 미검증, 공유 `Prototype01`은 scale 1.35라 최종 PASS가 아니다.
+- 네 가족 좌석 애니메이션 4명×112=448프레임과 contact sheet 8장·GIF 4개는 검증 완료했다. 기존 Office autonomy·씬의 런타임 좌석 연결은 미완료다.
 - 회복·외부 활동 12장과 순수 규칙을 GameState·Save·실제 선택 UI에 연결하는 통합이 남았다.
 
 ## 다음 작업
 
-1. 좌석 ImageGen source 16장을 4명×112=448 프레임으로 기계 분할하고 배경 제거·발 앵커·`stand_up` 역순·GIF 최종 QA를 완료한다.
-2. OfficeVisualV2의 waypoint·우회경로를 교정하고 0.95/1.00/1.05 contact sheet, 1280/1920 캡처·bbox·0px 가구 교차, 30초 퇴실/복귀를 검증한 뒤 공유 씬을 재생성한다.
-3. 검증된 Stock 실습계좌를 회사 현금↔증권 이체·복식부기 원장·공용 Save에 연결하고 실제 역사 코퍼스/골든 패리티·다음 거래일 이벤트를 추가한다.
-4. 좌석 캐릭터 착석/업무/기립 상태기와 AutonomyNeeds를 기존 자율행동에 한 번만 연결하고 중복 좌석·이중 에너지/스트레스 차감을 막는다.
+1. 좌석 캐릭터 착석/업무/기립 프레임과 AutonomyNeeds를 기존 자율행동에 한 번만 연결하고 중복 좌석·이중 에너지/스트레스 차감을 막는다.
+2. OfficeVisualV2의 1280 정규화 오차를 ≤1px로 낮추고 CharacterController 실제 이동·30초 퇴실/복귀를 검증한 뒤 공유 씬을 scale 1.00으로 재생성한다.
+3. Stock 회사계좌에 UI 입출금과 GameState 자동 flush/load를 연결하고 체결별 전체 원장, 외부 tape/orderbook state, 역사 코퍼스/골든 패리티·다음 거래일 이벤트를 추가한다.
+4. 완성된 회복 활동 12장·순수 규칙을 GameState·Save·16:9 선택 UI에 연결한다.
 5. 완성된 회복 활동 12장·순수 규칙을 GameState·Save·16:9 선택 UI에 연결한다.
 6. 생성 호가 snapshot과 구조적 벽 실제 회복·취소를 Dart golden으로 고정하고 Unity에 이식한다.
 7. 구현된 지정가 잔량·FIFO 코어를 GameState·저장·시장가/지정가 실제 체결 원장과 연결하고 재고/현금 보존을 검증한다.
@@ -169,8 +169,19 @@ Unity: 6000.3.21f1
 - 2026-08-10: MoneyRain 전용 검증과 시각 QA PASS.
 - 2026-08-10: Stock 가로 화면 diff check, C# 경고 0·오류 0, 순수 회귀와 Unity QA build PASS. Maplestory Light/Bold 실제 로드, Pretendard 폴백, ImageGen skin, 한글 11,172 glyph, 실제 종목·버튼·호가·체결 clipping 0을 확인했고 1280×720·1920×1080·3440×1080과 최소 568×843 안내 캡처를 통과함.
 - 2026-08-10: Stock 12.016초 실측에서 5분 모드 +55분(허용 프레임 1회 오차), 15분 +180분, 50분 +600분과 잔여 0.4초 보존을 확인함. 08:59:59 주문접수 무체결, 09:00 단일 개장 1회·2체결·21,100원, 09:00:01 중복 0, 09:01 정규장 및 5/15/50 경계 동일 시초가를 확인함.
-- 2026-08-10: 네 가족 OfficeSeatingV1 전환 A/B·작업 A/B ImageGen source 16장 생성 완료. 448 프레임 분할·배경 제거·발 앵커·`stand_up` 역순·GIF QA는 수행 전이므로 캐릭터 좌석 애니메이션 PASS가 아님.
+- 2026-08-10: 네 가족 OfficeSeatingV1 4명×112=448프레임 완료. sit_down 128·work 192·승인된 역순 stand_up 128, contact sheet 8장, GIF 4개, frame meta 448, source PNG/meta 32/32를 확인함. 256 RGBA hard alpha·빈 프레임/잘림 없음·발 y248·180 PPU bottom-center·Point/no mip/uncompressed·GUID 유일·work A/B 높이차 ≤0.5px·재현 해시와 육안 QA PASS. 런타임 좌석 연결은 미완료.
+- 2026-08-10: Stock 회사계좌·Save V5 optional 코어 완료. 신규 회사 현금 500만원·증권 미개설/0원, 양방향 균형분개, 장중 입출금과 예약금 보호, 잘못된 금액·중복 ID 차단, 현금/원장/예수금/포지션/평균원가/미체결/체결/일지/관심/FIFO/세션·개장 상태의 왕복 및 구형 safe restore를 검증함. 전체 C# 경고 0·오류 0, 회귀·Unity build·1280 runtime PASS.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
+
+### 2026-08-10 OfficeVisualV2 calibration handoff
+
+- Isolated Unity captured 1280x720 and 1920x1080 at character scales 0.95/1.00/1.05. Scale 1.00 is the selected candidate.
+- Calibrated art feet are Desk A `(814,500)`, Desk B `(1103,500)`, Desk C `(650,820)`, and revised safe Desk D `(1105,890)`; the capture log reports zero transform-anchor error at both resolutions.
+- The OfficeVisualV2 camera now renders only the base/foreground and character visual children on presentation layer 31. Physics roots and colliders remain on their original layer. This removes the left Street block without changing Collider20 navigation.
+- Legacy management HUD drawing is suppressed while enhanced OfficeVisualV2 presentation is active. Blockout renderers remain available as a fallback when the art is unavailable or the camera leaves the office.
+- Desk C/D use staged side approaches, and shared Meeting/Lounge slots fan out only along their measured safe axis. Printer, reception, and exclusive desks preserve their exact calibrated foot point.
+- Final isolated artifacts: `work/office-visual-v2-isolated/Artifacts/OfficeVisualV2Qa/` and `work/office-visual-v2-isolated/Artifacts/OfficeVisualV2CalibrationQa/calibration-qa.txt`.
+- Independent visual QA approval and the 30-second simultaneous departure/return regression are still pending. `Prototype01.unity` has intentionally not been regenerated or copied to the shared scene.
 
 ## 차단 요소
 

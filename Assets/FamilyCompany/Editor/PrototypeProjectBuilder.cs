@@ -90,7 +90,7 @@ namespace FamilyCompany.Editor
             officeLayout.Root.gameObject.AddComponent<OfficeVisualV2Presenter>().Configure(
                 player.transform,
                 characters.transform,
-                officeLayout.Root,
+                environment.transform,
                 new Vector3(14f, 0f, 0f),
                 new Vector2(16f, 14f));
             CreateLighting();
@@ -173,22 +173,34 @@ namespace FamilyCompany.Editor
             var layout = new OfficeLayout
             {
                 Root = office.transform,
-                Reception = CreateWaypoint("reception", new Vector3(8.5f, 0.05f, -3.35f), OfficeActivity.Reception, 2.5f, 4.5f, waypointRoot.transform),
-                CorridorWest = CreateWaypoint("corridor_west", new Vector3(9.5f, 0.05f, 0f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
-                CorridorCenter = CreateWaypoint("corridor_center", new Vector3(14.2f, 0.05f, 0f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
-                CorridorEast = CreateWaypoint("corridor_east", new Vector3(18.3f, 0.05f, 0f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
-                DeskA = CreateWaypoint("desk_a", new Vector3(11.4f, 0.05f, 3.35f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
-                DeskB = CreateWaypoint("desk_b", new Vector3(14.6f, 0.05f, 3.35f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
-                // Lower-row desks must be approached from the north, where the authored main
-                // corridor sits. The former z=-3.35 points were behind the desk colliders and
-                // forced CharacterController paths straight through Desk C/D.
-                DeskC = CreateWaypoint("desk_c", new Vector3(11.4f, 0.05f, -1.25f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
-                DeskD = CreateWaypoint("desk_d", new Vector3(14.6f, 0.05f, -1.25f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
-                Printer = CreateWaypoint("printer", new Vector3(8.6f, 0.05f, 3.75f), OfficeActivity.Printing, 1.5f, 3f, waypointRoot.transform),
-                Meeting = CreateWaypoint("meeting", new Vector3(18.6f, 0.05f, 3.05f), OfficeActivity.Meeting, 3f, 5f, waypointRoot.transform),
-                Lounge = CreateWaypoint("lounge", new Vector3(18.8f, 0.05f, -3.6f), OfficeActivity.Break, 2.5f, 5f, waypointRoot.transform),
-                Exit = CreateWaypoint("office_exit", new Vector3(6.45f, 0.05f, 0f), OfficeActivity.Outside, 0f, 0f, waypointRoot.transform)
+                Reception = CreateCalibratedWaypoint("reception", OfficeVisualV2Calibration.ReceptionArt, OfficeActivity.Reception, 2.5f, 4.5f, waypointRoot.transform),
+                CorridorWest = CreateCalibratedWaypoint("corridor_west", OfficeVisualV2Calibration.CorridorWestArt, OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
+                CorridorCenter = CreateCalibratedWaypoint("corridor_center", OfficeVisualV2Calibration.CorridorCenterArt, OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
+                CorridorEast = CreateCalibratedWaypoint("corridor_east", OfficeVisualV2Calibration.CorridorEastArt, OfficeActivity.Walking, 0f, 0f, waypointRoot.transform),
+                DeskA = CreateCalibratedWaypoint("desk_a", OfficeVisualV2Calibration.DeskAApproachArt, OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
+                DeskB = CreateCalibratedWaypoint("desk_b", OfficeVisualV2Calibration.DeskBApproachArt, OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
+                // Desk C's exact inverse art point overlaps the legacy reception collider.
+                // Keep its controller in the narrow verified aisle and project only the visual
+                // foot to the independently measured (650,820) anchor.
+                DeskC = CreateWaypoint("desk_c", new Vector3(9.9f, 0.05f, -3.7f), OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
+                DeskD = CreateCalibratedWaypoint("desk_d", OfficeVisualV2Calibration.DeskDApproachArt, OfficeActivity.Work, 3f, 6f, waypointRoot.transform),
+                Printer = CreateCalibratedWaypoint("printer", OfficeVisualV2Calibration.PrinterArt, OfficeActivity.Printing, 1.5f, 3f, waypointRoot.transform),
+                Meeting = CreateCalibratedWaypoint("meeting", OfficeVisualV2Calibration.MeetingArt, OfficeActivity.Meeting, 3f, 5f, waypointRoot.transform),
+                Lounge = CreateCalibratedWaypoint("lounge", OfficeVisualV2Calibration.LoungeSafeArt, OfficeActivity.Break, 2.5f, 5f, waypointRoot.transform),
+                Exit = CreateCalibratedWaypoint("office_exit", OfficeVisualV2Calibration.ExitArt, OfficeActivity.Outside, 0f, 0f, waypointRoot.transform)
             };
+            layout.DeskC.ConfigureArtAnchor(OfficeVisualV2Calibration.DeskCApproachArt);
+            layout.DeskCStaging = CreateWaypoint("desk_c_staging", new Vector3(9.7f, 0.05f, -1.25f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform);
+            layout.DeskCSide = CreateWaypoint("desk_c_side", new Vector3(9.7f, 0.05f, -3.5f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform);
+            layout.DeskDStaging = CreateWaypoint("desk_d_staging", new Vector3(16.3f, 0.05f, -1.25f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform);
+            layout.DeskDSide = CreateWaypoint("desk_d_side", new Vector3(16.3f, 0.05f, -4.35f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform);
+            layout.ReceptionSide = CreateWaypoint("reception_side", new Vector3(16.3f, 0.05f, -6.15f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform);
+            layout.ExitApproach = CreateWaypoint("exit_approach", new Vector3(6.2f, 0.05f, 1.9f), OfficeActivity.Walking, 0f, 0f, waypointRoot.transform);
+            layout.DeskC.ConfigureApproach(layout.DeskCStaging, layout.DeskCSide);
+            layout.DeskD.ConfigureApproach(layout.DeskDStaging, layout.DeskDSide);
+            layout.Reception.ConfigureApproach(layout.DeskDStaging, layout.DeskDSide, layout.ReceptionSide);
+            layout.Lounge.ConfigureApproach(layout.DeskDStaging, layout.DeskDSide);
+            layout.Exit.ConfigureApproach(layout.ExitApproach);
             return layout;
         }
 
@@ -418,6 +430,25 @@ namespace FamilyCompany.Editor
             return waypoint;
         }
 
+        private static OfficeWaypoint CreateCalibratedWaypoint(
+            string id,
+            Vector2 artPixel,
+            OfficeActivity activity,
+            float minimumStay,
+            float maximumStay,
+            Transform parent)
+        {
+            var waypoint = CreateWaypoint(
+                id,
+                OfficeVisualV2Calibration.ArtPixelToWorld(artPixel),
+                activity,
+                minimumStay,
+                maximumStay,
+                parent);
+            waypoint.ConfigureArtAnchor(artPixel);
+            return waypoint;
+        }
+
         private static Sprite[] LoadSisterFrames()
         {
             return LoadFrames(SisterFrameFolder, SisterFrameNames, "sister");
@@ -622,11 +653,18 @@ namespace FamilyCompany.Editor
             public OfficeWaypoint Meeting;
             public OfficeWaypoint Lounge;
             public OfficeWaypoint Exit;
+            public OfficeWaypoint DeskCStaging;
+            public OfficeWaypoint DeskCSide;
+            public OfficeWaypoint DeskDStaging;
+            public OfficeWaypoint DeskDSide;
+            public OfficeWaypoint ReceptionSide;
+            public OfficeWaypoint ExitApproach;
 
             public OfficeWaypoint[] AllWaypoints => new[]
             {
                 Reception, CorridorWest, CorridorCenter, CorridorEast,
-                DeskA, DeskB, DeskC, DeskD, Printer, Meeting, Lounge, Exit
+                DeskA, DeskB, DeskC, DeskD, Printer, Meeting, Lounge, Exit,
+                DeskCStaging, DeskCSide, DeskDStaging, DeskDSide, ReceptionSide, ExitApproach
             };
         }
     }

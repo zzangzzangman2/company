@@ -4,6 +4,8 @@
 
 현재 회사 PC의 저장소 예시는 `C:\Users\godho\Documents\Codex\family_company_unity`이다. 집 PC의 사용자명, 드라이브, 저장 위치는 달라도 된다. 아래 명령은 저장소 루트에서 실행하는 것을 기본으로 한다.
 
+2026-08-10 두 번째 통합 기준으로 가족 4인의 좌석 애니메이션 448프레임과 Stock 회사계좌·Save 코어는 검증 완료했다. 좌석 런타임 연결과 Stock UI 자동 flush/load는 남아 있으며, OfficeVisualV2는 정적 교정만 성공하고 공유 씬·실제 이동 최종 PASS는 아니다. 재개 순서는 [PROJECT_STATE.md](./PROJECT_STATE.md)를 따른다.
+
 ## 1. 먼저 한쪽 PC의 작업을 멈추고 상태를 기록한다
 
 집 PC로 옮기기 전에 회사 PC의 Unity를 완전히 종료하고, 파일을 수정 중인 Codex 작업도 모두 멈추거나 결과를 회수한다. 두 PC에서 같은 파일을 동시에 편집하지 않는다. OneDrive 같은 동기화 폴더에서 두 Unity가 같은 프로젝트를 동시에 열게 해서도 안 된다. 특히 씬, `.meta`, `Packages`, `ProjectSettings`, `Library`가 서로 다른 시점으로 섞이면 복구가 어렵다.

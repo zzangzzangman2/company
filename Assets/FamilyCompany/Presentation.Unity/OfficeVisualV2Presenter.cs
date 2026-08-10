@@ -8,6 +8,7 @@ namespace FamilyCompany.Presentation.Unity
     [DefaultExecutionOrder(200)]
     public sealed class OfficeVisualV2Presenter : MonoBehaviour
     {
+        private const int PresentationLayer = 31;
         public const string ResourceRoot = "OfficeVisualV2";
         public const string BaseResourceName = "office_base";
         public const string ForegroundResourceName = "office_foreground";
@@ -48,6 +49,7 @@ namespace FamilyCompany.Presentation.Unity
         private Sprite _runtimeBaseSprite;
         private Sprite _runtimeForegroundSprite;
         private Camera _camera;
+        private int _cameraCullingMask = -1;
         private CharacterVisualBinding[] _characterBindings = Array.Empty<CharacterVisualBinding>();
 
         public bool HasBaseVisual => _baseRenderer != null && _baseRenderer.sprite != null;
@@ -138,7 +140,6 @@ namespace FamilyCompany.Presentation.Unity
             _blockoutRenderers = blockoutRoot
                 .GetComponentsInChildren<Renderer>(true)
                 .Where(item => item != null &&
-                               item.GetComponentInParent<OfficeVisualV2Presenter>() == this &&
                                (visualRoot == null || !item.transform.IsChildOf(visualRoot)))
                 .ToArray();
             _blockoutInitialStates = _blockoutRenderers.Select(item => item.enabled).ToArray();
@@ -153,6 +154,7 @@ namespace FamilyCompany.Presentation.Unity
                 var renderer = binding.Renderer;
                 if (renderer == null) continue;
                 renderer.transform.localScale = Vector3.one * characterVisualScale;
+                renderer.gameObject.layer = PresentationLayer;
                 renderer.sortingOrder = Mathf.Max(renderer.sortingOrder, characterSortingOrder);
                 renderer.spriteSortPoint = SpriteSortPoint.Pivot;
             }
@@ -160,7 +162,11 @@ namespace FamilyCompany.Presentation.Unity
             foreach (var label in characterRoot.GetComponentsInChildren<TextMesh>(true))
             {
                 var renderer = label.GetComponent<Renderer>();
-                if (renderer != null) renderer.sortingOrder = labelSortingOrder;
+                if (renderer != null)
+                {
+                    renderer.gameObject.layer = PresentationLayer;
+                    renderer.sortingOrder = labelSortingOrder;
+                }
             }
         }
 
@@ -222,7 +228,10 @@ namespace FamilyCompany.Presentation.Unity
                 var originalFootViewport = viewCamera.WorldToViewportPoint(originalFootWorld);
                 if (originalFootViewport.z <= 0f) continue;
 
-                var artPixel = OfficeVisualV2Calibration.WorldToArtPixel(root.position);
+                var agent = root.GetComponent<OfficeWorkerAgent>();
+                var artPixel = agent == null
+                    ? OfficeVisualV2Calibration.WorldToArtPixel(root.position)
+                    : agent.ResolveVisualArtPixel();
                 var targetViewport = OfficeVisualV2Calibration.ArtPixelToViewport(artPixel, viewCamera.aspect);
                 targetViewport.y = Mathf.Clamp(targetViewport.y, -0.25f, 1.25f);
                 var projectedFoot = viewCamera.ViewportToWorldPoint(new Vector3(
@@ -283,6 +292,7 @@ namespace FamilyCompany.Presentation.Unity
         private static SpriteRenderer CreateLayer(string name, Transform parent, Sprite sprite, int sortingOrder)
         {
             var layer = new GameObject(name);
+            layer.layer = PresentationLayer;
             layer.transform.SetParent(parent, false);
             var renderer = layer.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
@@ -379,7 +389,25 @@ namespace FamilyCompany.Presentation.Unity
             if (IsEnhancedPresentationActive == enabled &&
                 (_baseRenderer == null || _baseRenderer.enabled == enabled)) return;
 
+            // Bootstrap can create the home/street presentation after this component's Awake.
+            // Re-scan once when the office art first takes over so no late blockout renderer can
+            // occlude the calibrated full-screen base. Colliders and behaviours remain untouched.
+            if (enabled && !IsEnhancedPresentationActive) CacheBlockoutRenderers();
+
             IsEnhancedPresentationActive = enabled;
+            if (_camera != null)
+            {
+                if (enabled)
+                {
+                    if (_cameraCullingMask < 0) _cameraCullingMask = _camera.cullingMask;
+                    _camera.cullingMask = 1 << PresentationLayer;
+                }
+                else if (_cameraCullingMask >= 0)
+                {
+                    _camera.cullingMask = _cameraCullingMask;
+                    _cameraCullingMask = -1;
+                }
+            }
             for (var index = 0; index < _blockoutRenderers.Length; index++)
             {
                 var renderer = _blockoutRenderers[index];

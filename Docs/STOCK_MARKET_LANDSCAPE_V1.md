@@ -63,26 +63,14 @@
 - 창이 열린 동안 플레이어 이동, 직접업무 상호작용, 카메라 추적/휠 줌 컴포넌트의 기존 `enabled` 값을 저장하고 끈다. F3 닫기, 닫기 버튼, 일시정지/메뉴 전환, 컴포넌트 비활성화·파괴 시 정확히 복원한다.
 - 패널 실행 순서는 `-2000`이며 모든 마우스·키·스크롤 이벤트를 주식 컨트롤 처리 후 소비해 뒤쪽 IMGUI HUD 클릭 관통을 막는다.
 
-## 회사 자금과 분리된 상태
+## 회사 회계·저장 연결 코어
 
-- 현재 증권 세션은 SIMUL 시작 의미를 확인하기 위한 별도 50,000원 실습 계좌다.
-- `CompanyState.CashWon`을 복사하거나 차감하지 않는다. 따라서 회사 현금과 증권 계좌를 함께 쓸 수 있는 이중계상은 없다.
-- 이 상태는 회사 자금 연동 완료가 아니다. 회사↔증권 이체, 회사 장부, 저장/불러오기는 명시적으로 차단된 다음 통합 단계다.
-- `BrokerageAccountStateDto`는 예수금·전 종목 포지션·미체결·내 체결·주문일지·관심종목·FIFO 시퀀스를 순수 값으로 export/import한다. `TryApplyBrokerageState`는 전체를 임시 검증한 뒤 원자적으로 적용하며 공용 Save에는 아직 연결하지 않는다.
-- 역사 가격 코퍼스가 아직 없으므로 임시 결정적 시작가는 50,000원으로 상한가 1주를 살 수 있는 범위에서 생성한다. 실제 날짜별 역사 가격 연결 시 교체한다.
-
-## 공용 통합 변경 제안
-
-중앙 승인 뒤 다음 파일을 한 묶음으로 변경해야 한다.
-
-1. `Assets/FamilyCompany/Simulation/Market/BrokerageAccountState.cs` 신규: 증권 예수금, 보유 종목, 평균단가, 미체결 FIFO, 체결/실현손익 체크포인트를 게임 상태용 직렬화 가능 값으로 정의한다.
-2. `Assets/FamilyCompany/Simulation/Game/GameState.cs`: `BrokerageAccountState Brokerage`를 생성자와 공개 상태에 추가한다.
-3. `Assets/FamilyCompany/Simulation/Finance/Ledger.cs`: `BrokerageCash`, `InvestmentSecurities`, `RealizedInvestmentGain`, `RealizedInvestmentLoss`, `TradingFeeExpense`, `SecuritiesTaxExpense` 계정과목을 추가한다.
-4. `Assets/FamilyCompany/Simulation/Company/CompanyState.cs`: 회사 현금↔증권 예수금 이체를 균형 분개로만 수행하는 입금/출금 API를 추가하고 중복 거래 ID·잔액 부족을 검사한다.
-5. `Assets/FamilyCompany/Simulation/Market/StockMarketRuntimeSession.cs`: 임시 50,000원 생성 대신 `GameState.Brokerage`를 입력받아 주문·체결 결과를 상태와 장부에 원자적으로 반영한다.
-6. `Assets/FamilyCompany/Save/GameSaveDto.cs`: 스키마 6과 증권 계좌/포지션/미체결 DTO를 추가한다.
-7. `Assets/FamilyCompany/Save/GameSaveMapper.cs`: 스키마 1~5 저장은 빈 증권 계좌로 올리고, 스키마 6은 모든 증권 상태를 왕복 매핑한다.
-8. `Assets/FamilyCompany/Simulation/Prototype/PrototypeStateFactory.cs`: 신규 게임의 증권 계좌 초기 정책을 한 곳에서 결정한다. 회사 창업자금과 중복 생성하지 않도록 자본금 또는 명시적 회사→증권 이체 중 하나만 사용한다.
+- 신규 `GameState.StockMarket`은 초기 미개설·예수금 0원이다. 창업자금 500만원을 자동 복사하지 않으므로 이중계상이 없다.
+- `CompanyBrokerageTransferService`가 회사 현금→증권 예수금 입금과 증권 예수금→회사 현금 출금을 담당한다. 입금은 `차변 brokerage_account / 대변 cash`, 출금은 반대로 기존 `CompanyState` 원장에 균형 분개한다.
+- 0원·음수, 회사 현금 초과, 중복 거래 ID를 거절한다. 장중 입출금은 허용하지만 매수 미체결 예약금은 `AvailableBrokerageCash`에서 제외되어 출금할 수 없다.
+- `StockMarketSessionStateDto`는 예수금·전 종목 포지션과 수수료 포함 평균원가·미체결·내 체결·주문일지·관심종목·FIFO 시퀀스에 더해 거래일, 시장 분, 실시간 잔여초, 배속, 09:00 개장 처리 여부/횟수와 canonical 갱신 횟수를 보존한다.
+- 공용 Save V5에 선택적 `stockMarket` 필드를 추가했다. 구형 V1~V5 저장에 이 필드가 없으면 미개설·0원 상태로 올리고, 새 저장은 위 상태를 왕복한다. 기존 V5 번호를 유지해 다른 진행 중 저장 작업과의 스키마 충돌을 피했다.
+- 50,000원 계좌는 Windows 주식 캡처 QA에서 실제 1주 체결을 만드는 전용 fixture로만 남아 있다. 현재 `StockMarketFullscreenPanel`의 사용자 입출금 버튼과 `GameState.StockMarket` 자동 flush/load 바인딩은 다음 통합 단계이므로 일반 플레이 연결 완료로 표현하지 않는다.
 
 ## QA
 
@@ -91,11 +79,13 @@
 - 각 실제 캡처는 열기 → 이동/직접업무/카메라 비활성 → 닫기 복원 → 메뉴 전환 복원 → 다시 열기 → 뒤 HUD `+1시간` 좌표 실제 클릭 소비 → 마우스 휠 뒤 카메라 줌 불변 → 실습 계좌 시장가 1주 체결 → 스크린샷 순으로 실행한다.
 - 네 실제 캡처 모두 `MaplestoryLight/MaplestoryBold + PretendardVariable fallback`, ImageGen 스킨, 글리프/텍스트 rect 검사, 클릭·휠 모달 차단, 09:00 표 검증을 통과했다. 1280×720과 1920×1080에서 `거래대금/상승/하락/이름`, `실제 역사 상장 종목`, `핸디소프트`, 코드, 7+7 호가와 최근 체결의 클리핑은 0이다.
 - 현실 시간 실측: 정지 12.015초에 +0분, 5분 모드 12.016초에 +55분(프레임 1회 허용오차 -5분), 15분 모드 12.016초에 +180분(`timeScale=0.25`), 50분 모드 12.016초에 +600분이다. 2.4초 프레임 catch-up은 +10분과 잔여 0.4초, 다음 0.6초는 +5분으로 잔여시간 보존을 통과했다.
+- 회사 회계·저장 순수 회귀는 500만원에서 20만원 입금, 음수·초과·중복 차단, 예약금 초과 출금 차단, 수수료 포함 평균원가, 1만원 출금, 입출금 균형 분개, 현금·포지션·미체결·내 체결·시장 분·개장 횟수·실시간 잔여 0.4초 왕복을 통과했다.
 - 3440×1440 창은 현재 QA 장비의 1080 높이 작업영역 제한 때문에 실제 창 생성은 불가했으며, 해당 해상도는 순수 레이아웃 검증으로 통과했다.
 
 ## 미연결/TODO
 
 - `game/order_book.dart`의 일별 스냅샷 생성, 구조적 벽 회복, 외부 취소 생성까지 포함하는 완전한 Dart 골든 픽스처 패리티.
 - 실제 2000~2026 날짜별 수정주가/분할·합병·상장폐지 가격 코퍼스.
-- 회사↔증권 이체·복식부기·Save 스키마 6 통합.
+- `StockMarketFullscreenPanel`에 회사 입출금 UI와 `GameState.StockMarket` flush/load를 연결하고 QA fixture 5만원을 일반 플레이 경로에서 완전히 격리.
+- 실제 매수·매도 체결마다 투자자산·수수료·거래세·실현손익을 회사 총계정원장에 전기하는 체결 원장 어댑터. 현재 입출금 통제계정과 증권 세부 원장은 분리되어 있다.
 - 장 마감 후 다음 거래일로 넘어가는 장기 보유 세션과 역사 이벤트의 가격 충격 연결.
