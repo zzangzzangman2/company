@@ -56,6 +56,17 @@ git status --short --branch
 git pull --ff-only origin main
 ```
 
+## 회사 PC 검증 규칙
+
+사용자가 회사에서 일하는 동안에는 Unity 창이나 플레이테스트 EXE를 앞에 띄우지 않는다.
+
+- 컴파일·순수 로직·Editor 검증: Unity `-batchmode -nographics -quit`
+- 실제 렌더·PlayMode 캡처: Unity `-batchmode` 사용, `Camera.Render`가 필요하면 `-nographics` 금지
+- 장시간 검증: 백그라운드 프로세스로 실행하고 로그의 명시적 PASS/FAIL과 종료 코드를 함께 확인
+- 사용자 입력이 필요한 EXE 육안 검증은 자동 실행하지 않고 먼저 알림
+
+현재 참고 실행본은 `C:/Users/godho/Downloads/FamilyCompany_Playtest/FamilyCompany.exe`다. 정확한 빌드 출처와 해시는 [PLAYTEST_BUILD.md](Docs/PLAYTEST_BUILD.md)를 따른다.
+
 ## 기본 자동화
 
 - `Tools/BuildPrototype.ps1`: `Prototype01` 재생성

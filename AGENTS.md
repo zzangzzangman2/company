@@ -16,6 +16,8 @@
 - 한 채팅에서 한 작업씩 순차 진행한다. 사용자가 다시 명시적으로 허용하지 않는 한 하위 에이전트·다른 채팅·새 작업에 위임하지 않는다.
 - 회사 PC·집 PC·다른 AI나 도구에서 작업해도 먼저 이 문서와 README의 문서 표를 읽고, clean `main`에서만 `git pull --ff-only origin main`으로 시작한다.
 - 예상하지 못한 tracked·untracked 변경이 있으면 삭제·복원·일괄 stage하지 않고 소유권과 생성 시각을 먼저 확인한다.
+- 회사 PC에서는 사용자의 업무 화면을 방해하지 않도록 Unity Editor와 플레이테스트 EXE를 전면 실행하지 않는다. 컴파일·로직 검증은 `-batchmode -nographics -quit`, 렌더·PlayMode 캡처는 `-batchmode`를 사용해 백그라운드로 실행하고 로그의 PASS/FAIL까지 확인한다.
+- 시각 검증에서 `Camera.Render`가 필요하면 `-nographics`를 사용하지 않으며, 자동 종료가 검증 coroutine을 끊는 경우 `-quit`도 사용하지 않는다. GUI나 EXE의 직접 조작이 꼭 필요하면 먼저 사용자에게 알린다.
 - Unity 버전은 6000.3.21f1로 고정한다.
 - 매 작업 종료 전에 Docs/PROJECT_STATE.md의 현재 상태, 완료 항목, 다음 작업, 검증 결과를 갱신한다.
 - 설정·구조·콘텐츠 방향을 바꾸면 Docs/DECISIONS.md에 날짜와 이유를 남긴다.

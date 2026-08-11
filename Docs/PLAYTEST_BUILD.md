@@ -4,7 +4,7 @@ Unity 없이 바로 실행되는 Windows 플레이테스트 빌드를 만드는 
 
 ## 산출물을 Git에 넣지 않는 이유
 
-`FamilyCompany_Playtest`는 147개 파일 201.8MB이며 그중 `sharedassets0.assets.resS` 48.5MB, `resources.assets.resS` 39.9MB, `UnityPlayer.dll` 35.0MB가 대부분이다. 이 용량을 Git 히스토리에 넣으면 되돌릴 수 없고 이후 모든 clone이 계속 내려받는다. 반면 아래 절차는 같은 커밋에서 같은 EXE를 다시 만들어 내므로, 바이너리를 보관하지 않아도 참조 목적이 충족된다.
+현재 `FamilyCompany_Playtest`는 151개 파일, 총 588,535,534 bytes이며 그중 `sharedassets0.assets.resS` 336,068,608 bytes, `resources.assets.resS` 127,765,088 bytes, `UnityPlayer.dll` 36,734,888 bytes가 대부분이다. 이 용량을 Git 히스토리에 넣으면 되돌릴 수 없고 이후 모든 clone이 계속 내려받는다. 빌드 절차와 출처 지문을 문서로 보존하고 실행본은 Downloads에 두는 방식을 유지한다.
 
 ## 필요한 것
 
@@ -48,8 +48,22 @@ powershell -ExecutionPolicy Bypass -File C:\Users\godho\Documents\Codex\family_c
 
 `C:\Users\godho\Downloads\FamilyCompany_Playtest`에 있는 빌드는 다음 기준이다.
 
-- 커밋 `d07638ad7ac06f0c940a436be3ace8f41b5fe152`, 브랜치 `agent/contract-lifecycle-v0-3`
-- 지문 `872070D3F59A1F9C91318F22062F4A67529CD21F90EA7AFA2A5103BE90983469`
-- 빌드 시각 2026-08-10T11:46:08Z, `state: Succeeded`
+- 실행 파일: `C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`
+- 빌드 시각: 2026-08-11 09:58:39 KST
+- Unity: `6000.3.21f1 (c02631ffc030)`
+- 기록된 HEAD: `a18d3fc2b060dd4b686b7a2008076e6f8f102de6`, 브랜치 `main`
+- 빌드 상태: `Succeeded`, 파일 151개, 총 588,535,534 bytes
+- 빌드 지문: `4D92E3966EF2408F3F03CDC3564F1ABCFEA624F9532E9F261CDB5B618A138451`
+- EXE SHA-256: `48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556`
 
-주의: 이 빌드는 2026-08-11 좌석·가구 회피 이동·관리 UI v2·행동/UI 아트 통합 **이전** 커밋에서 만들어졌다. 따라서 오늘 고친 폰트 폴백 테이블 결함과 이동 교착 수정, 새 관리 UI와 행동 아트는 이 EXE에 들어 있지 않다. 오늘 작업을 실제로 확인하려면 통합 커밋을 정본 폴더에 합친 뒤 위 명령으로 다시 빌드한다.
+이 빌드는 상태 기록상 `dirty=True`인 정본 작업 폴더에서 생성됐다. `a18d3fc`의 좌석·가구 회피 이동·관리 UI v2·폰트/이동 결함 수정뿐 아니라, 당시 작업 폴더에 있던 Claude의 LiveContent 계층 A 미커밋 변경도 포함한다. 따라서 해당 변경을 검토·커밋하기 전에는 HEAD만으로 이 EXE를 완전히 재현할 수 있다고 간주하지 않는다. `build-stamp.json`은 아직 없다.
+
+## 회사 PC에서 백그라운드 검증
+
+사용자가 회사에서 일하는 동안에는 Unity Editor 창이나 `FamilyCompany.exe`를 전면에 띄우지 않는다.
+
+- 컴파일·로직 검증은 Unity `-batchmode -nographics -quit`로 실행한다.
+- 실제 렌더·PlayMode 캡처는 `-batchmode`를 사용하되 `Camera.Render`가 필요하면 `-nographics`를 쓰지 않는다.
+- 검증 coroutine이 끝나기 전에 종료될 수 있는 작업은 `-quit`를 쓰지 않고, 완료 로그를 감시한 뒤 Unity가 스스로 종료하게 한다.
+- 명령 반환만 보고 성공 처리하지 않는다. 자동화 로그와 Unity 로그에서 명시적 PASS/FAIL, 컴파일 오류, 예외와 최종 종료 코드를 확인한다.
+- 사용자 조작이 필요한 EXE 육안 검증은 자동 실행하지 않고 먼저 사용자에게 알린다.
