@@ -1,6 +1,6 @@
 # 집 PC에서 가족회사 개발 이어가기
 
-이 문서는 집 PC에 개발 환경을 설치하고, 회사 PC의 작업물을 안전하게 이관하고, Codex 작업을 겹치지 않게 분업하는 절차만 다룬다. 기능별 완료·진행·미완료 현황은 이 문서에 복사하지 않는다. 작업을 시작할 때마다 [PROJECT_STATE.md](./PROJECT_STATE.md)와 [CLAUDE_HANDOFF_HISTORY_DATA.md](./CLAUDE_HANDOFF_HISTORY_DATA.md)를 정본으로 다시 읽는다.
+이 문서는 집 PC에 개발 환경을 설치하고, 회사 PC의 작업물을 안전하게 이관하며, `main` 한 곳에서 한 작업씩 순차 진행하는 절차만 다룬다. 기능별 완료·진행·미완료 현황은 이 문서에 복사하지 않는다. 작업을 시작할 때마다 [PROJECT_STATE.md](./PROJECT_STATE.md)와 [CLAUDE_HANDOFF_HISTORY_DATA.md](./CLAUDE_HANDOFF_HISTORY_DATA.md)를 정본으로 다시 읽는다.
 
 현재 회사 PC의 저장소 예시는 `C:\Users\godho\Documents\Codex\family_company_unity`이다. 집 PC의 사용자명, 드라이브, 저장 위치는 달라도 된다. 아래 명령은 저장소 루트에서 실행하는 것을 기본으로 한다.
 
@@ -21,7 +21,7 @@ git diff --stat
 git diff --cached --stat
 ```
 
-출력이 예상과 다르거나 다른 담당자의 변경이 섞여 있으면 커밋, 브랜치 변경, 복사를 서두르지 말고 커맨더가 먼저 담당별 소유 경로를 확인한다. dirty 상태인 동일 작업 폴더에서 브랜치를 바꾸지 않는다. 비밀번호, 접근 토큰, 개인키는 저장소·패치·전송 폴더에 넣지 말고 Git 자격 증명 관리자를 사용한다.
+출력이 예상과 다르거나 현재 작업 범위 밖의 변경이 섞여 있으면 커밋, pull, 복사를 서두르지 말고 현재 채팅에서 파일별 생성 시각과 소유 범위를 먼저 확인한다. dirty 상태인 동일 작업 폴더에서 브랜치를 바꾸지 않는다. 비밀번호, 접근 토큰, 개인키는 저장소·패치·전송 폴더에 넣지 말고 Git 자격 증명 관리자를 사용한다.
 
 ## 2. Unity Hub와 필수 도구를 설치한다
 
@@ -59,13 +59,13 @@ video, vr, wind, xr
 
 ## 3. 회사 PC 작업물을 안전하게 가져온다
 
-### 권장: 담당별 변경을 확인해 Git으로 이동
+### 권장: 의도한 변경만 확인해 Git으로 이동
 
-커맨더가 담당자별 변경을 검토한 다음, **자기가 소유한 경로만** 선택해서 커밋하고 원격에 올리는 방법이 가장 안전하다. `git add .`와 `git commit -a`처럼 다른 작업자의 파일까지 한꺼번에 포함하는 명령은 사용하지 않는다.
+현재 작업에서 직접 수정한 파일을 검토한 다음, **의도한 경로만** 선택해서 커밋하고 원격에 올리는 방법이 가장 안전하다. `git add .`와 `git commit -a`처럼 범위 밖 파일까지 한꺼번에 포함하는 명령은 사용하지 않는다.
 
 ```powershell
-git diff -- "담당/경로"
-git add -- "담당/경로"
+git diff -- "수정/경로"
+git add -- "수정/경로"
 git diff --cached
 git commit -m "작업 내용을 설명하는 메시지"
 $branch = git branch --show-current
@@ -90,7 +90,7 @@ git rev-parse HEAD
 
 ### 미커밋 변경도 보존해야 할 때: 새 폴더에 스냅샷
 
-현재처럼 여러 담당자의 미커밋·미추적 파일이 많아 안전한 커밋을 만들 수 없다면, Unity와 작성 작업을 모두 닫은 뒤 **기존 clone 위가 아닌 새 빈 폴더**에 스냅샷을 만든다. 아래 예시는 원본을 삭제하거나 이동하지 않으며 `/MIR`, `/PURGE`, `/MOVE`를 사용하지 않는다.
+미커밋·미추적 파일이 많아 안전한 커밋을 만들 수 없다면, Unity와 작성 작업을 모두 닫은 뒤 **기존 clone 위가 아닌 새 빈 폴더**에 스냅샷을 만든다. 아래 예시는 원본을 삭제하거나 이동하지 않으며 `/MIR`, `/PURGE`, `/MOVE`를 사용하지 않는다.
 
 ```powershell
 $sourceRepo = (Resolve-Path '.').Path
@@ -131,7 +131,7 @@ Test-Path -LiteralPath 'Assets\FamilyCompany\Scenes\Prototype01.unity'
 Get-Content -LiteralPath 'ProjectSettings\ProjectVersion.txt' -Encoding UTF8
 ```
 
-회사 PC에서 기록한 브랜치·커밋과 비교하고, 예상한 dirty 변경과 미추적 에셋이 모두 있는지 확인한다. 누락이나 뜻밖의 변경이 있으면 Unity로 열지 말고 원본 스냅샷을 보존한 채 다시 비교한다. 어느 PC를 현재 작성 원본으로 쓸지 한 곳만 정하고, 다른 PC는 동기화 완료 전까지 읽기 전용으로 둔다.
+회사 PC에서 기록한 `main` 커밋과 비교하고, 예상한 dirty 변경과 미추적 에셋이 모두 있는지 확인한다. 누락이나 뜻밖의 변경이 있으면 Unity로 열지 말고 원본 스냅샷을 보존한 채 다시 비교한다. 어느 PC를 현재 작성 원본으로 쓸지 한 곳만 정하고, 다른 PC는 동기화 완료 전까지 읽기 전용으로 둔다.
 
 ## 5. Codex 데스크톱 앱에서 저장소를 연다
 
@@ -143,7 +143,7 @@ Codex 데스크톱 앱에 로그인한 뒤 `폴더 열기/Open folder` 또는 �
 2. `Docs/PROJECT_STATE.md`, `Docs/CANON.md`, `Docs/DECISIONS.md`, `Docs/ARCHITECTURE.md`를 읽는다.
 3. `Docs/CLAUDE_HANDOFF_HISTORY_DATA.md`에서 History 전용 소유권을 확인한다.
 4. `git status --short --branch`로 실제 변경을 확인한다.
-5. 기존 진행 채팅의 담당 경로·마지막 결과를 표로 정리한 뒤에만 수정 작업을 맡긴다.
+5. 현재 목표·마지막 검증·이번에 수정할 정확한 파일 범위를 정리한 뒤에만 작업을 시작한다.
 
 Codex 앱의 권한 요청이 뜨면 명령과 대상 경로를 읽고 승인한다. 저장소 밖 삭제, 원본 Unity 프로세스 종료, lockfile 삭제, 다른 담당 경로 덮어쓰기는 승인하지 않는다.
 
@@ -155,49 +155,42 @@ Import가 끝나면 다음 순서로 확인한다.
 
 1. `Window > General > Console`을 열고 C# 컴파일 오류와 Import 오류가 0인지 확인한다. 경고도 새로 생겼다면 원인을 기록한다.
 2. Project 창에서 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 더블클릭해 연다.
-3. 씬이 완전히 로드된 뒤 저장하지 않은 자동 변경 표시가 생겼는지 확인한다. 예상하지 못한 업그레이드·재직렬화가 보이면 저장하지 말고 커맨더에게 보고한다.
+3. 씬이 완전히 로드된 뒤 저장하지 않은 자동 변경 표시가 생겼는지 확인한다. 예상하지 못한 업그레이드·재직렬화가 보이면 저장하지 말고 현재 채팅에 기록한다.
 4. Game 뷰를 16:9로 두고 Play한다. 플레이어 입력, 가족 3 NPC의 이동·상태 표시, 사무실 화면, 기본 UI가 보이고 Console에 예외가 없는지 짧게 확인한다.
 5. Play를 종료한 뒤 `git status --short`를 다시 실행해 예상하지 못한 프로젝트 파일 변경이 생기지 않았는지 확인한다.
 
 실패하면 Console의 첫 오류부터 파일·라인·재현 순서와 함께 기록한다. 오류가 난 상태에서 씬이나 ProjectSettings를 무심코 저장해 다른 변경과 섞지 않는다.
 
-## 7. 한 채팅을 커맨더로 운영하고 경로를 분리한다
+## 7. 한 채팅에서 한 작업씩 순차 진행한다
 
-사용자는 기존 채팅 하나를 **커맨더**로 지정한다. 커맨더는 직접 코딩 비중을 낮추고 다음을 담당한다.
+현재 운영 원칙은 **한 채팅·`main` 한 브랜치·한 작업**이다. 작업을 빠르게 하려고 다른 채팅, 하위 에이전트, 새 branch나 worktree를 만들지 않는다. 사용자가 나중에 운영 방식을 명시적으로 바꾼 경우에만 먼저 AGENTS.md와 README.md를 갱신하고 새 방식을 적용한다.
 
-- 기존 채팅을 분야별 담당으로 배치하고 알아보기 쉽게 이름을 바꾼다.
-- 시작 전에 각 담당의 허용 경로와 금지 경로를 명시한다.
-- 완료 보고, 변경 파일, 검증 로그를 수집해 `PROJECT_STATE` 정본과 대조한다.
-- 구현 담당과 다른 읽기 전용 QA 담당에게 교차 검증을 맡긴다.
-- 사용자가 명시적으로 새 채팅 생성을 요청한 경우에만 새 채팅을 만든다. 그 외에는 기존 유휴 채팅을 재사용한다.
+각 작업은 아래 순서로 끝까지 닫는다.
 
-다음은 권장 분업 예시다. 실제 할당에서는 넓은 폴더보다 **구체 파일 목록**을 우선하며, 한 시점에 한 파일의 소유자는 한 담당뿐이어야 한다.
+1. `PROJECT_STATE`에서 현재 1순위와 마지막 PASS를 읽는다.
+2. `git status --short --branch`로 `main`과 예상하지 못한 변경을 확인한다.
+3. 이번 작업의 정확한 파일 범위와 금지 경로를 정한다.
+4. 구현한 뒤 범위에 맞는 순수 C#·Unity batchmode·PlayMode·시각 QA를 실행한다.
+5. 결과와 남은 문제를 `PROJECT_STATE`에 기록한다.
+6. 의도한 파일만 stage·commit하고 `main`에 push한다.
+7. 다음 작업을 시작하기 전에 worktree가 깨끗한지 다시 확인한다.
 
-| 담당 | 기본 허용 경로 | 항상 금지하거나 별도 통합자만 수정 |
-|---|---|---|
-| 도트·자율 NPC | `Assets/Art/Characters/**`, `Assets/FamilyCompany/Simulation/Family/**`, 명시된 `Assets/FamilyCompany/Presentation.Unity/OfficeWorkerAgent.cs`, `Assets/FamilyCompany/Presentation.Unity/OfficeAutonomyCoordinator.cs`, `Assets/FamilyCompany/Presentation.Unity/OfficeActivity.cs`, `Assets/FamilyCompany/Presentation.Unity/OfficeWaypoint.cs`, `Assets/FamilyCompany/Presentation.Unity/DirectionalSpriteAnimator.cs` | `Prototype01.unity`, Save, Market, History는 별도 소유자 없이는 금지 |
-| 주식·Market | `Assets/FamilyCompany/Simulation/Market/**`, 명시된 `Assets/FamilyCompany/Presentation.Unity/StockMarket*.cs`, `Assets/FamilyCompany/Editor/StockMarket*.cs` | History, Save, 공용 씬 직접 수정 금지 |
-| ImageGen UI·배경 | `Assets/Art/UI/**`, `Assets/Art/Office/**`, `Assets/Art/Leisure/**`; 연결 담당에게만 `Assets/FamilyCompany/Presentation.Unity/OfficeVisualV2Presenter.cs`, `Assets/FamilyCompany/Editor/OfficeVisualV2*.cs` | 씬·공용 문서·게임 규칙은 통합자 없이는 금지 |
-| Save·GameState | `Assets/FamilyCompany/Save/**`, `Assets/FamilyCompany/Simulation/Game/**`, 명시된 `Assets/FamilyCompany/Simulation/Prototype/**` 파일 | Presentation, Art, Scene, History 금지 |
-| 독립 QA | 저장소 전체 읽기 전용, 결과는 `Artifacts/<qa-name>/**` 또는 `work/qa-<name>/**` | 원본 코드·씬·에셋 수정 금지. 검증 코드도 별도 허가 시에만 작성 |
-| 문서·정본 | 명시된 `Docs/CANON.md`, `Docs/DECISIONS.md`, `Docs/PROJECT_STATE.md`, `Docs/ASSET_MANIFEST.md` | 구현 코드·씬 금지. 다른 담당 결과 확인 전 완료로 기록 금지 |
+`Prototype01.unity`, `ProjectSettings/**`, `Packages/**`, 공용 asmdef와 정본 문서는 한 작업 안에서도 변경 범위를 특히 좁게 잡는다. History 전용 경로인 `Assets/FamilyCompany/Content/History/**`, `HistoryTools/**`, `Docs/CLAUDE_HISTORY_PROGRESS.md`는 역사 데이터 작업이 명시된 순서에서만 수정한다.
 
-`Prototype01.unity`, `ProjectSettings/**`, `Packages/**`, 공용 asmdef, 공용 정본 문서는 충돌이 큰 경로이므로 커맨더가 한 명의 통합자에게만 잠시 할당한다. Claude History 담당의 전용 경로인 `Assets/FamilyCompany/Content/History/**`, `HistoryTools/**`, `Docs/CLAUDE_HISTORY_PROGRESS.md`는 해당 담당 외 수정 금지다. Market 담당도 History 데이터는 읽기 전용으로 사용한다.
+## 8. 집 PC의 단일 작업 채팅을 시작한다
 
-## 8. 집 PC 커맨더를 시작한다
-
-아래 짧은 프롬프트를 집 PC의 커맨더 채팅에 그대로 붙여 넣는다.
+아래 짧은 프롬프트를 집 PC에서 사용할 한 채팅에 그대로 붙여 넣는다.
 
 ```text
 실제 저장소 루트에서 AGENTS.md, Docs/HOME_PC_CONTINUATION_GUIDE.md,
 Docs/CLAUDE_HANDOFF_HISTORY_DATA.md를 UTF-8로 전부 읽어라.
 Docs/PROJECT_STATE.md, Docs/CANON.md, Docs/DECISIONS.md,
 Docs/ARCHITECTURE.md도 정본으로 확인하라.
-현재 git status --short --branch와 기존 진행 채팅의 담당·마지막 결과를 확인하라.
-먼저 완료/진행/미완료 표와 파일 소유권 표를 작성하고, 내가 확인하기 전에는 코딩하지 마라.
-이후 커맨더는 직접 코딩 비중을 낮추고 기존 채팅에 비중복 작업을 할당하며,
-각 작업에 허용 경로를 명시하고 지정 경로 밖 수정은 금지하라.
-새 채팅은 내가 명시적으로 요청할 때만 만들고, 완료 결과는 독립 QA와 교차 확인하라.
+현재 git status --short --branch, HEAD 커밋과 마지막 검증 결과를 확인하라.
+정본 브랜치는 main 하나다. 새 브랜치·worktree·다른 채팅·하위 에이전트를 만들지 마라.
+PROJECT_STATE의 다음 작업을 한 번에 하나씩 순차 구현하고, 매번 정확한 수정 범위를 먼저 정하라.
+구현 뒤 검증·PROJECT_STATE 갱신·의도한 파일만 커밋·main push까지 끝낸 다음 다음 작업으로 넘어가라.
+예상하지 못한 tracked·untracked 파일은 삭제하거나 포함하지 말고 먼저 보고하라.
 ```
 
-매 작업일 종료 때는 Unity를 닫고, 커맨더가 `git status`, 담당별 변경 파일, 검증 결과, 아직 회수하지 못한 채팅을 확인한다. 세부 기능 현황은 이 문서에 덧붙이지 않고 [PROJECT_STATE.md](./PROJECT_STATE.md)와 [CLAUDE_HANDOFF_HISTORY_DATA.md](./CLAUDE_HANDOFF_HISTORY_DATA.md)에 각 정본 소유권에 맞춰 반영한다.
+매 작업일 종료 때는 Unity를 닫고 `git status`, 변경 파일, 검증 결과와 `main` push 여부를 확인한다. 세부 기능 현황은 이 문서에 덧붙이지 않고 [PROJECT_STATE.md](./PROJECT_STATE.md)와 [CLAUDE_HANDOFF_HISTORY_DATA.md](./CLAUDE_HANDOFF_HISTORY_DATA.md)에 각 정본 소유권에 맞춰 반영한다.

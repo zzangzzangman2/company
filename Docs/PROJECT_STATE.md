@@ -99,7 +99,7 @@ Unity: 6000.3.21f1
 - 관리 UI v2 런타임 폰트 생성 결함을 수정했다. `TMP_FontAsset.CreateFontAsset`가 `fallbackFontAssetTable`을 null로 남기는데 그 위에 `Add`를 호출해 `PrototypeBootstrap.Awake`가 매 프레임 중단되고 있었다(30초 실행에서 NullReference 4,001회). 이 예외가 `ConfigureDisplayDefaults`·`ShowMainMenuNow`·`TryStartFrontendQaCapture`를 통째로 건너뛰게 만들었고, 수정 후 같은 실행에서 0회다.
 - 이동이 막힌 프레임에서 속도를 0으로 만들고 영구 정지하던 결함을 수정했다. 막힌 걸음은 의미 목적지 방향을 기준으로 0~180° 미끄러짐 탐색(최소 탈출 보폭 0.06m)으로 강등된다. 정지 프레임이 속도를 0으로 만들면 다음 프레임 변위도 0이 되어 탐색 자체가 불가능해지므로 최소 보폭이 필수다. 이 결함 때문에 엄마·누나가 책상 이탈 직후 좌표에 고정되어 퇴실 시나리오가 실패하고 있었다.
 - `CharacterOfficeRuntimeQa`의 PLAY_SNAPSHOT이 좌석 단계·claim·seating clip·work hook·safe-stand·목표 활동을 함께 기록하도록 보강했다. 정지 원인이 좌석 생명주기인지 이동 차단인지 로그만으로 판별된다.
-- 기존 `agent/contract-lifecycle-v0-3`의 전체 작업을 `main`에 fast-forward 통합하고 로컬 보조 브랜치를 제거했다. 이후 정본 개발 브랜치는 `main` 하나만 사용한다.
+- 기존 `agent/contract-lifecycle-v0-3`의 전체 작업을 `main`에 fast-forward 통합하고 로컬·GitHub 원격 보조 브랜치를 모두 제거했다. 이후 정본 개발 브랜치는 `main` 하나만 사용하며 새 branch나 worktree를 만들지 않는다.
 
 ## 진행 중
 

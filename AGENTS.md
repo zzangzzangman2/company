@@ -12,6 +12,10 @@
 
 ## 필수 작업 규칙
 
+- 정본 개발 브랜치는 `main` 하나다. `agent/*`, 기능·임시 브랜치, 새 branch와 별도 worktree를 만들거나 전환하지 않는다.
+- 한 채팅에서 한 작업씩 순차 진행한다. 사용자가 다시 명시적으로 허용하지 않는 한 하위 에이전트·다른 채팅·새 작업에 위임하지 않는다.
+- 회사 PC·집 PC·다른 AI나 도구에서 작업해도 먼저 이 문서와 README의 문서 표를 읽고, clean `main`에서만 `git pull --ff-only origin main`으로 시작한다.
+- 예상하지 못한 tracked·untracked 변경이 있으면 삭제·복원·일괄 stage하지 않고 소유권과 생성 시각을 먼저 확인한다.
 - Unity 버전은 6000.3.21f1로 고정한다.
 - 매 작업 종료 전에 Docs/PROJECT_STATE.md의 현재 상태, 완료 항목, 다음 작업, 검증 결과를 갱신한다.
 - 설정·구조·콘텐츠 방향을 바꾸면 Docs/DECISIONS.md에 날짜와 이유를 남긴다.
@@ -24,12 +28,12 @@
 - Library, Temp, Logs, UserSettings는 Git에 넣지 않는다. Assets의 .meta는 반드시 추적한다.
 - 다른 작업자의 변경을 삭제하거나 되돌리지 않는다.
 
-## Codex와 Claude의 동시 작업
+## History 데이터 소유권
 
-- Claude 역사 데이터 작업은 Docs/CLAUDE_HANDOFF_HISTORY_DATA.md의 전용 경로만 사용한다.
-- 동시 작업 중 Claude는 Docs/CLAUDE_HISTORY_PROGRESS.md만 갱신하며, PROJECT_STATE와 DECISIONS 반영은 Codex가 검토 후 맡는다.
-- Codex는 Claude 작업 중 Assets/FamilyCompany/Content/History, HistoryTools, Docs/CLAUDE_HISTORY_PROGRESS.md를 수정하지 않는다.
-- 같은 Git 작업 폴더에서 브랜치를 전환하지 않는다. 별도 브랜치가 필요하면 별도 worktree를 사용한다.
+- 사용자가 실제 회사 역사 데이터 작업을 명시적으로 지시한 경우에만 Docs/CLAUDE_HANDOFF_HISTORY_DATA.md의 전용 경로를 사용한다.
+- History 담당은 Docs/CLAUDE_HISTORY_PROGRESS.md만 진행 기록으로 갱신하며, PROJECT_STATE와 DECISIONS 반영은 검토 후 별도 순서에서 수행한다.
+- History 작업 중 Assets/FamilyCompany/Content/History, HistoryTools, Docs/CLAUDE_HISTORY_PROGRESS.md 밖을 수정하지 않는다.
+- History를 포함한 모든 작업은 현재 `main` 한 곳에서 순차적으로 수행하며, 병렬 작업을 위해 branch나 worktree를 만들지 않는다.
 
 ## 완료 조건
 
