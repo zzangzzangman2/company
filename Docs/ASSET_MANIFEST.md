@@ -334,3 +334,17 @@
 - 좌석 미세행동 프레임셋: `Assets/FamilyCompany/Content/OfficeWorkActions/`의 `player`·`father`·`mother`·`older_sister` 4종. 에셋은 존재하지만 런타임 훅은 아직 연결되지 않았다(`hook=fallback`).
 - Unity 공식 TMP Essential Resources: `Assets/TextMesh Pro/` 37개 파일. 이 중 `Fonts/LiberationSans.ttf`는 Unity가 배포하는 서드파티 폰트이며 SIL Open Font License를 따른다. 사용자 생성 에셋이 아니므로 원본을 편집하지 않고 무변형으로 보존한다.
 - 사용자가 권리를 보유하는 생성 에셋과 Unity 배포 리소스를 구분해 기록한다. 위 항목 중 TMP Essential Resources만 서드파티 배포물이다.
+
+## 2026-08-11 Office Tile Migration T2 우드 바닥
+
+- 상태: **IMAGEGEN SOURCE + 3/3 UNITY TILE ASSETS · T2/T3 QA PASS**
+- 루트: `Assets/Art/Office/Tiles/`
+- 제작: OpenAI 내장 ImageGen. Image 1은 `office_isometric_pixel_target_v1.png`의 팔레트·픽셀 밀도·등각 카메라, Image 2는 OfficeVisualV2의 우드 재질, Image 3은 SIMUL-v3의 렌더 마감만 참조했다. 인물·문자·가구·벽·UI는 생성하지 않았다.
+- 크로마 원본: `Source/office_floor_tiles_wood_chroma_v1.png`, SHA-256 `36E892D3478A4EB72765033B025ABF7F55730358D7DDF7321422BACC1C517A14`.
+- 투명 원본: 공식 `remove_chroma_key.py`로 `#ff00ff`를 제거한 `Source/office_floor_tiles_wood_alpha_v1.png`, SHA-256 `044385A31955A2D70681B845EB6C85B8674BEBBDE0E4601B40838E5EFB936A4F`.
+- 런타임 Tile PNG:
+  - `Floor/office_floor_wood_a_v1.png` — `B2F3E265363D0EEB73059BF1F95CE85FD21F36B35944160906E7A8B51758FC39`
+  - `Floor/office_floor_wood_b_v1.png` — `16051F325C6A4D9AE0D75A3C68C8E4C9C91C5EF7E908F9152C623D93C5ABDECE`
+  - `Floor/office_floor_wood_c_v1.png` — `4CB57791B61E5B32EAC1234B6FE340C57B1B220D729353D4E0340A3E1A63CFF5`
+- 규격: 320×160 2:1 RGBA, 알파 0/255, 남은 마젠타 프린지 0, Sprite Single, 180 PPU, Point, mipmap 없음, 무압축. 같은 이름의 `.asset` 3개가 실제 Unity `Tile` 정본이다.
+- 프롬프트 핵심: 밝고 캐주얼한 2000년대 한국 소형 사무실의 허니 오크 장판, 정확히 3개 동일 외곽 등각 다이아몬드, 미세한 판재 변형, 어둡거나 금색 위주의 고급 팔레트 금지, 텍스트·로고·워터마크 없음.

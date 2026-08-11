@@ -8,6 +8,8 @@ using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Finance;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.Market;
+using FamilyCompany.Save.OfficeGrid;
+using FamilyCompany.Simulation.OfficeLayout;
 
 namespace FamilyCompany.Save
 {
@@ -161,7 +163,8 @@ namespace FamilyCompany.Save
                         launchedProductCount = item.LaunchedProductCount
                     }).ToList()
                 },
-                stockMarket = ToStockMarketSaveDto(state.StockMarket)
+                stockMarket = ToStockMarketSaveDto(state.StockMarket),
+                officeGrid = OfficeGridSaveAdapter.ToDto(state.OfficeGrid)
             };
         }
 
@@ -340,7 +343,21 @@ namespace FamilyCompany.Save
             var stockMarket = save.stockMarket != null && save.stockMarket.initialized
                 ? FromStockMarketSaveDto(save.stockMarket)
                 : StockMarketSessionStateDto.Uninitialized();
-            return new GameState(save.worldSeed, new GameTime(save.elapsedMinutes), family, company, events, contracts, growth, stockMarket);
+            var officeGrid = save.schemaVersion >= 6
+                ? save.officeGrid == null
+                    ? throw new InvalidOperationException("Office grid data is incomplete.")
+                    : OfficeGridSaveAdapter.Restore(save.officeGrid)
+                : OfficeGridLayouts.CreateMigrationPreview();
+            return new GameState(
+                save.worldSeed,
+                new GameTime(save.elapsedMinutes),
+                family,
+                company,
+                events,
+                contracts,
+                growth,
+                stockMarket,
+                officeGrid);
         }
 
         private static StockMarketSessionSaveDto ToStockMarketSaveDto(StockMarketSessionStateDto state)

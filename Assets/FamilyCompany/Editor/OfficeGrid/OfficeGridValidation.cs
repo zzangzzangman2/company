@@ -1,0 +1,175 @@
+using System;
+using System.Collections.Generic;
+using FamilyCompany.Save;
+using FamilyCompany.Save.OfficeGrid;
+using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Simulation.Prototype;
+using UnityEditor;
+using UnityEngine;
+using OfficeGridState = FamilyCompany.Simulation.OfficeLayout.OfficeGrid;
+
+namespace FamilyCompany.Editor.OfficeGridQa
+{
+    public static class OfficeGridValidation
+    {
+        [MenuItem("Family Company/Validate Office Grid T1")]
+        public static void Run()
+        {
+            ValidatePreviewIntegrity();
+            ValidateLayoutSaveRoundTrip();
+            ValidateFurnitureAndSeatRoundTrip();
+            ValidateInvalidPayloadsAreRejected();
+            ValidateV5Migration();
+            Debug.Log("FAMILY_COMPANY_OFFICE_GRID_T1_VALIDATION: PASS");
+        }
+
+        public static void RunBatch()
+        {
+            try
+            {
+                Run();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        private static void ValidatePreviewIntegrity()
+        {
+            var grid = OfficeGridLayouts.CreateMigrationPreview();
+            AssertEqual(13, grid.Width, "preview width");
+            AssertEqual(13, grid.Height, "preview height");
+            AssertEqual(169, grid.CellCount, "preview cell count");
+            for (var y = 0; y < grid.Height; y++)
+            for (var x = 0; x < grid.Width; x++)
+            {
+                var cell = new OfficeGridCoordinate(x, y);
+                if (grid.FloorAt(cell) == OfficeFloorTileKind.Void)
+                    throw new InvalidOperationException($"Preview floor unexpectedly contains void at {cell}.");
+                var boundary = x == 0 || y == 0 || x == grid.Width - 1 || y == grid.Height - 1;
+                if (boundary && grid.IsWalkable(cell))
+                    throw new InvalidOperationException($"Boundary cell is unexpectedly walkable at {cell}.");
+            }
+
+            AssertEqual(false, grid.IsWalkable(new OfficeGridCoordinate(6, 6)), "blocked service cell");
+            AssertEqual(false, grid.IsWalkable(new OfficeGridCoordinate(6, 7)), "blocked service cell 2");
+            AssertEqual(true, grid.IsWalkable(new OfficeGridCoordinate(5, 6)), "walkable service neighbor");
+        }
+
+        private static void ValidateLayoutSaveRoundTrip()
+        {
+            var source = OfficeGridLayouts.CreateMigrationPreview();
+            var json = JsonUtility.ToJson(OfficeGridSaveAdapter.ToDto(source));
+            RequireContains(json, "\"schemaVersion\":1", "office grid schema");
+            RequireContains(json, "\"floorTiles\"", "floor payload");
+            RequireContains(json, "\"walkable\"", "walkable payload");
+            RequireNotContains(json, "transform", "semantic save excludes Transform");
+            RequireNotContains(json, "worldPosition", "semantic save excludes world position");
+            var restored = OfficeGridSaveAdapter.Restore(JsonUtility.FromJson<OfficeGridSaveDto>(json));
+            AssertEqual(source.ComputeLayoutHash(), restored.ComputeLayoutHash(), "layout hash roundtrip");
+        }
+
+        private static void ValidateFurnitureAndSeatRoundTrip()
+        {
+            var floor = new OfficeFloorTileKind[16];
+            var walkable = new bool[16];
+            for (var index = 0; index < floor.Length; index++)
+            {
+                floor[index] = OfficeFloorTileKind.WarmWoodA;
+                walkable[index] = true;
+            }
+
+            walkable[1 + 1 * 4] = false;
+            var source = new OfficeGridState(
+                4,
+                4,
+                floor,
+                walkable,
+                new[]
+                {
+                    new PlacedOfficeFurniture(
+                        "desk_a",
+                        "office_workstation",
+                        new OfficeGridCoordinate(1, 1),
+                        1,
+                        1,
+                        OfficeFurnitureFacing.SouthEast)
+                },
+                new[]
+                {
+                    new OfficeSeatSlot(
+                        "desk_a_seat",
+                        "desk_a",
+                        new OfficeGridCoordinate(1, 2),
+                        OfficeFurnitureFacing.NorthWest)
+                });
+            var restored = OfficeGridSaveAdapter.Restore(OfficeGridSaveAdapter.ToDto(source));
+            AssertEqual(source.ComputeLayoutHash(), restored.ComputeLayoutHash(), "furniture and seat hash roundtrip");
+            AssertEqual(1, restored.Furniture.Count, "furniture count");
+            AssertEqual(1, restored.SeatSlots.Count, "seat count");
+        }
+
+        private static void ValidateInvalidPayloadsAreRejected()
+        {
+            var shortFloor = OfficeGridSaveAdapter.ToDto(OfficeGridLayouts.CreateMigrationPreview());
+            shortFloor.floorTiles.RemoveAt(shortFloor.floorTiles.Count - 1);
+            ExpectFailure(() => OfficeGridSaveAdapter.Restore(shortFloor), "short floor payload");
+
+            var voidWalkable = OfficeGridSaveAdapter.ToDto(OfficeGridLayouts.CreateMigrationPreview());
+            var index = 5 + 5 * voidWalkable.width;
+            voidWalkable.floorTiles[index] = (int)OfficeFloorTileKind.Void;
+            voidWalkable.walkable[index] = true;
+            ExpectFailure(() => OfficeGridSaveAdapter.Restore(voidWalkable), "walkable void cell");
+        }
+
+        private static void ValidateV5Migration()
+        {
+            var dto = GameSaveMapper.ToDto(PrototypeStateFactory.Create(5505));
+            dto.schemaVersion = 5;
+            dto.officeGrid = null;
+            var restored = GameSaveMapper.FromDto(dto);
+            AssertEqual(
+                OfficeGridLayouts.CreateMigrationPreview().ComputeLayoutHash(),
+                restored.OfficeGrid.ComputeLayoutHash(),
+                "v5 office grid migration");
+        }
+
+        private static void ExpectFailure(Action action, string scenario)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception) when (
+                exception is ArgumentException ||
+                exception is InvalidOperationException ||
+                exception is OverflowException)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(scenario + ": expected validation failure.");
+        }
+
+        private static void RequireContains(string value, string expected, string scenario)
+        {
+            if (value == null || value.IndexOf(expected, StringComparison.Ordinal) < 0)
+                throw new InvalidOperationException(scenario + ": missing " + expected + ".");
+        }
+
+        private static void RequireNotContains(string value, string forbidden, string scenario)
+        {
+            if (value != null && value.IndexOf(forbidden, StringComparison.OrdinalIgnoreCase) >= 0)
+                throw new InvalidOperationException(scenario + ": found " + forbidden + ".");
+        }
+
+        private static void AssertEqual<T>(T expected, T actual, string scenario)
+        {
+            if (!EqualityComparer<T>.Default.Equals(expected, actual))
+                throw new InvalidOperationException($"{scenario}: expected {expected}, actual {actual}.");
+        }
+    }
+}

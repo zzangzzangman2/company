@@ -53,6 +53,15 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - 플레이어·누나·부모는 카메라 기준 이동 벡터를 45도 옥턴트로 양자화해 8방향 Sprite를 선택하고, 방향별 6프레임 보행을 0.11초 간격으로 순환한다.
 - 고동작 시트의 24개 실제 실루엣은 오프라인 분리기가 상체 중심·발 기준선으로 정렬해 256×256 단일 PNG 48개로 만든다. Editor 빌더는 이를 Point·180 PPU·하단 피벗 Sprite로 임포트하며 런타임 코드가 원본 PNG를 자르지 않는다.
 
+## OfficeGrid 타일 이행 경계
+
+- `FamilyCompany.Simulation.OfficeLayout.OfficeGrid`가 폭·높이·행 우선 바닥 종류·통행 가능 배열·배치 가구·좌석 슬롯을 불변 의미 상태로 소유한다. Unity Transform과 화면 픽셀은 들어가지 않는다.
+- 저장 스키마 v6은 `officeGrid` 서브 페이로드를 보존한다. v1~v5 저장은 결정론적인 13×13 초기 격자로 이관하고, 저장·복원 뒤 `ComputeLayoutHash()`가 같아야 한다.
+- `OfficeGridTilemapPresenter`는 Unity 내장 Isometric Grid/Tilemap에 320×160, 180 PPU 바닥 Tile을 투영할 뿐 격자 상태를 소유하지 않는다.
+- 캐릭터 프레젠테이션은 그리드 셀 중심을 발 기준점으로 사용하고, 화면 Y(격자의 x+y에 대응)에 따라 매 프레임 정렬한다. 누적 스케일은 균등이어야 하고 16:9 기본 카메라에서 실제 실루엣 높이는 화면의 14~18%다.
+- T1~T3은 `OfficeTileMigrationPreview` 격리 씬에서 검증한다. 현재 `Prototype01`의 OfficeVisualV2·3D Collider·웨이포인트·좌석·계약은 T4/T5 이관 전까지 런타임 폴백이며 삭제하지 않는다.
+- 16:9가 아닌 화면에서는 타일이나 캐릭터를 비균등하게 늘리지 않는다. `OfficeGridCameraFitter`가 균등 직교 크기만 늘려 네 격자 모서리를 보존한다.
+
 ## 실제 회사 이동
 
 - 플레이어는 PrototypePlayerController와 CharacterController로 직접 이동한다.

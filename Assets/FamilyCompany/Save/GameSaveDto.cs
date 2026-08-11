@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
+using FamilyCompany.Save.OfficeGrid;
 
 namespace FamilyCompany.Save
 {
     [Serializable]
     public sealed class GameSaveDto
     {
-        public int schemaVersion = 5;
+        public int schemaVersion = 6;
         public int worldSeed;
         public long elapsedMinutes;
         public CompanySaveDto company = new CompanySaveDto();
@@ -16,6 +17,7 @@ namespace FamilyCompany.Save
         public List<SubcontractSaveDto> contracts = new List<SubcontractSaveDto>();
         public CompanyGrowthSaveDto growth = new CompanyGrowthSaveDto();
         public StockMarketSessionSaveDto stockMarket = new StockMarketSessionSaveDto();
+        public OfficeGridSaveDto officeGrid;
     }
 
     [Serializable]
