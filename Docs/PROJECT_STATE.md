@@ -192,6 +192,7 @@ Unity: 6000.3.21f1
 - 2026-08-11: Unity 없이 실행되는 Windows 플레이테스트 빌드 절차를 `Docs/PLAYTEST_BUILD.md`로 문서화했다. 빌드 산출물 201.8MB는 되돌릴 수 없는 히스토리 비대화를 피하려고 Git에 넣지 않는다. 현재 `Downloads/FamilyCompany_Playtest`의 EXE는 커밋 `d07638a` 기준이라 오늘 통합과 두 결함 수정이 들어 있지 않으므로, 오늘 작업을 실제 EXE로 확인하려면 정본 폴더에서 재빌드가 필요하다.
 - 2026-08-11: 미해결 관찰. PASS한 PlayMode 로그에도 `MANAGEMENT_UI_MISSING_GLYPH: 우리 가족회사`가 1회 남는다. 별도로 `UnityEditor.Search.SearchDatabase.GetDefaultSearchDatabase`의 `ArgumentOutOfRangeException`이 1회 나오지만 이는 에디터 검색 인덱서 내부 문제로 프로젝트 코드와 무관하다.
 - 2026-08-11: 정본 작업 폴더에서 원격 최신 `d74f29e`를 받은 뒤 `main`과 `origin/main`을 같은 커밋으로 맞췄다. Korea History V1 validator를 다시 실행해 국내 회사 82개·등록부 83행·2000~2003 상세 25개·사건 42개·진입/퇴출 앵커 42개·인수 후보 20개·출처 100개와 오류 0을 확인했다.
+- 2026-08-11: `main` 정본 작업 폴더에서 Unity 6000.3.21f1 `PrototypeValidation.Run`을 재실행해 `OFFICE_VISUAL_V2_ASSET_READY_PASS`(colliders=24, occupancy=90.4%), `SCENE_LINKAGE_PASS`(family=4, npcAgents=3, framesPerFamily=48), `OFFICE_SEATING_BUILDER_VALIDATION: PASS`(components=4, seats=4, frames=448, `hook=fallback`), `FAMILY_COMPANY_VALIDATION: PASS`와 종료 코드 0을 확인했다.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ### 2026-08-10 OfficeVisualV2 calibration handoff
