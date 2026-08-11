@@ -13,9 +13,9 @@
 
 프로젝트를 만지는 사람이나 에이전트는 먼저 루트의 AGENTS.md 또는 CLAUDE.md를 읽고 정본 문서를 확인한다.
 
-2026-08-10 통합 브랜치는 `agent/contract-lifecycle-v0-3`이다. 집 PC에서는 저장소가 clean인지 확인한 뒤 `git fetch origin`, `git switch agent/contract-lifecycle-v0-3`, `git pull --ff-only` 순서로 재개한다. dirty worktree에서 브랜치를 전환하거나 `Library`, `Temp`, `Logs`, `work` 산출물을 커밋하지 않는다.
+정본 개발 브랜치는 `main` 하나다. 집 PC에서는 저장소가 clean인지 확인한 뒤 `git fetch origin`, `git switch main`, `git pull --ff-only origin main` 순서로 재개한다. dirty worktree에서 브랜치를 전환하거나 `Library`, `Temp`, `Logs`, `work` 산출물을 커밋하지 않는다.
 
-현재 통합 상태: 가족 좌석 애니메이션 448프레임과 Stock 회사계좌·Save 코어는 검증 완료했다. OfficeVisualV2는 정적 교정에서 가구 교차·발점·IoU 0을 달성했지만 공유 `Prototype01` 미반영, 정규화 최대 3px, 실제 이동·30초 회귀 미검증으로 최종 PASS가 아니다.
+현재 통합 상태: 가족 좌석 애니메이션 448프레임, 실제 좌석 런타임, 가구 회피 이동, 관리 UI v2, Stock 회사계좌·Save 연결을 공유 `Prototype01`에 통합했고 30초 PlayMode를 통과했다. 남은 핵심은 가족 4인 미세 작업 프레임셋의 실제 런타임 연결, Windows player 한글 확인, OfficeVisualV2 scale 1.00 재생성과 1280 정규화 오차 개선이다.
 
 ## 자동화
 

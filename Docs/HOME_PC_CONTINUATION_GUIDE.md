@@ -4,7 +4,7 @@
 
 현재 회사 PC의 저장소 예시는 `C:\Users\godho\Documents\Codex\family_company_unity`이다. 집 PC의 사용자명, 드라이브, 저장 위치는 달라도 된다. 아래 명령은 저장소 루트에서 실행하는 것을 기본으로 한다.
 
-2026-08-10 두 번째 통합 기준으로 가족 4인의 좌석 애니메이션 448프레임과 Stock 회사계좌·Save 코어는 검증 완료했다. 좌석 런타임 연결과 Stock UI 자동 flush/load는 남아 있으며, OfficeVisualV2는 정적 교정만 성공하고 공유 씬·실제 이동 최종 PASS는 아니다. 재개 순서는 [PROJECT_STATE.md](./PROJECT_STATE.md)를 따른다.
+2026-08-11 기준으로 가족 4인의 좌석 애니메이션 448프레임, 좌석 런타임, 가구 회피 이동, 관리 UI v2, Stock 회사계좌·Save 자동 연결은 공유 `Prototype01`에 통합되어 30초 PlayMode를 통과했다. 세부 미완료와 재개 순서는 [PROJECT_STATE.md](./PROJECT_STATE.md)를 따른다.
 
 ## 1. 먼저 한쪽 PC의 작업을 멈추고 상태를 기록한다
 
@@ -72,7 +72,7 @@ $branch = git branch --show-current
 git push -u origin $branch
 ```
 
-집 PC에는 새 빈 위치에 원격 저장소를 clone한다. 원격 주소에 토큰을 직접 적지 않는다. 2026-08-10 통합 작업의 재개 브랜치는 `agent/contract-lifecycle-v0-3`이며, `main`으로 임의 전환·merge·rebase하지 않는다.
+집 PC에는 새 빈 위치에 원격 저장소를 clone한다. 원격 주소에 토큰을 직접 적지 않는다. 정본 개발 브랜치는 `main` 하나이며 기능별 보조 브랜치를 다시 만들지 않는다.
 
 ```powershell
 $remote = 'https://github.com/zzangzzangman2/company.git'
@@ -80,13 +80,13 @@ $homeRepo = Join-Path $HOME 'Documents\Codex\family_company_unity'
 git clone $remote $homeRepo
 Set-Location $homeRepo
 git fetch origin
-git switch agent/contract-lifecycle-v0-3
-git pull --ff-only
+git switch main
+git pull --ff-only origin main
 git status --short --branch
 git rev-parse HEAD
 ```
 
-집 PC에 이미 clone이 있다면 dirty 상태에서 바로 pull하지 않는다. 먼저 그 폴더의 `git status`와 백업을 확인하고, 양쪽 변경을 커맨더가 비교한다. 작업 폴더가 clean일 때 `git fetch origin`, `git switch agent/contract-lifecycle-v0-3`, `git pull --ff-only` 순서로 재개한다.
+집 PC에 이미 clone이 있다면 dirty 상태에서 바로 pull하지 않는다. 먼저 그 폴더의 `git status`와 백업을 확인하고, 양쪽 변경을 커맨더가 비교한다. 작업 폴더가 clean일 때 `git fetch origin`, `git switch main`, `git pull --ff-only origin main` 순서로 재개한다.
 
 ### 미커밋 변경도 보존해야 할 때: 새 폴더에 스냅샷
 

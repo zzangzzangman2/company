@@ -99,6 +99,7 @@ Unity: 6000.3.21f1
 - 관리 UI v2 런타임 폰트 생성 결함을 수정했다. `TMP_FontAsset.CreateFontAsset`가 `fallbackFontAssetTable`을 null로 남기는데 그 위에 `Add`를 호출해 `PrototypeBootstrap.Awake`가 매 프레임 중단되고 있었다(30초 실행에서 NullReference 4,001회). 이 예외가 `ConfigureDisplayDefaults`·`ShowMainMenuNow`·`TryStartFrontendQaCapture`를 통째로 건너뛰게 만들었고, 수정 후 같은 실행에서 0회다.
 - 이동이 막힌 프레임에서 속도를 0으로 만들고 영구 정지하던 결함을 수정했다. 막힌 걸음은 의미 목적지 방향을 기준으로 0~180° 미끄러짐 탐색(최소 탈출 보폭 0.06m)으로 강등된다. 정지 프레임이 속도를 0으로 만들면 다음 프레임 변위도 0이 되어 탐색 자체가 불가능해지므로 최소 보폭이 필수다. 이 결함 때문에 엄마·누나가 책상 이탈 직후 좌표에 고정되어 퇴실 시나리오가 실패하고 있었다.
 - `CharacterOfficeRuntimeQa`의 PLAY_SNAPSHOT이 좌석 단계·claim·seating clip·work hook·safe-stand·목표 활동을 함께 기록하도록 보강했다. 정지 원인이 좌석 생명주기인지 이동 차단인지 로그만으로 판별된다.
+- 기존 `agent/contract-lifecycle-v0-3`의 전체 작업을 `main`에 fast-forward 통합하고 로컬 보조 브랜치를 제거했다. 이후 정본 개발 브랜치는 `main` 하나만 사용한다.
 
 ## 진행 중
 
@@ -190,6 +191,7 @@ Unity: 6000.3.21f1
 - 2026-08-11: 재현 명령. 검증 3종은 `Unity.exe -batchmode -nographics -quit -projectPath <worktree> -executeMethod <Method> -logFile Logs\<name>.log`. PlayMode QA는 캡처 때문에 `-nographics`와 `-quit` 없이 `Unity.exe -batchmode -projectPath <worktree> -executeMethod FamilyCompany.Editor.CharacterOfficeRuntimeQa.StartThirtySecondPlayModeBatch -logFile Logs\character-office-playmode.log`로 실행한다.
 - 2026-08-11: Unity 없이 실행되는 Windows 플레이테스트 빌드 절차를 `Docs/PLAYTEST_BUILD.md`로 문서화했다. 빌드 산출물 201.8MB는 되돌릴 수 없는 히스토리 비대화를 피하려고 Git에 넣지 않는다. 현재 `Downloads/FamilyCompany_Playtest`의 EXE는 커밋 `d07638a` 기준이라 오늘 통합과 두 결함 수정이 들어 있지 않으므로, 오늘 작업을 실제 EXE로 확인하려면 정본 폴더에서 재빌드가 필요하다.
 - 2026-08-11: 미해결 관찰. PASS한 PlayMode 로그에도 `MANAGEMENT_UI_MISSING_GLYPH: 우리 가족회사`가 1회 남는다. 별도로 `UnityEditor.Search.SearchDatabase.GetDefaultSearchDatabase`의 `ArgumentOutOfRangeException`이 1회 나오지만 이는 에디터 검색 인덱서 내부 문제로 프로젝트 코드와 무관하다.
+- 2026-08-11: 정본 작업 폴더에서 원격 최신 `d74f29e`를 받은 뒤 `main`과 `origin/main`을 같은 커밋으로 맞췄다. Korea History V1 validator를 다시 실행해 국내 회사 82개·등록부 83행·2000~2003 상세 25개·사건 42개·진입/퇴출 앵커 42개·인수 후보 20개·출처 100개와 오류 0을 확인했다.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ### 2026-08-10 OfficeVisualV2 calibration handoff
