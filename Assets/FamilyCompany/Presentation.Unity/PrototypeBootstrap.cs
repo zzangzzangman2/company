@@ -309,6 +309,7 @@ namespace FamilyCompany.Presentation.Unity
             _officeObservationCamera = true;
             ApplyOfficeObservationCamera(true);
             SetSimulationPaused(false);
+            ScenePreviewJump.ShowStarterOffice();
             _notice = $"창업 자본 {PrototypeStateFactory.StartingCapitalWon:N0}원 · 네 식구의 오피스텔 회사를 시작합니다.";
             if (createInitialSave) SaveSlotNow(slot);
         }
@@ -372,6 +373,7 @@ namespace FamilyCompany.Presentation.Unity
                 _officeObservationCamera = true;
                 ApplyOfficeObservationCamera(true);
                 SetSimulationPaused(false);
+                ScenePreviewJump.ShowStarterOffice();
                 _notice = $"슬롯 {slot} 불러오기 완료";
                 if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Confirm);
                 return true;

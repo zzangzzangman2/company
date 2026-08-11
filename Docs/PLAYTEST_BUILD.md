@@ -4,7 +4,7 @@ Unity 없이 바로 실행되는 Windows 플레이테스트 빌드를 만드는 
 
 ## 산출물을 Git에 넣지 않는 이유
 
-현재 `FamilyCompany_Playtest`는 154개 파일, 총 606,325,827 bytes다. 이 용량을 Git 히스토리에 넣으면 되돌릴 수 없고 이후 모든 clone이 계속 내려받는다. 빌드 절차와 출처 지문을 문서로 보존하고 실행본은 Downloads에 두는 방식을 유지한다.
+현재 `FamilyCompany_Playtest`는 154개 파일, 총 583,512,835 bytes다. 이 용량을 Git 히스토리에 넣으면 되돌릴 수 없고 이후 모든 clone이 계속 내려받는다. 빌드 절차와 출처 지문을 문서로 보존하고 실행본은 Downloads에 두는 방식을 유지한다.
 
 ## 필요한 것
 
@@ -31,7 +31,7 @@ powershell -ExecutionPolicy Bypass -File C:\Users\godho\Documents\Codex\family_c
 
 실행 결과는 `C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`다. Unity를 열지 않고 이 파일만 실행하면 된다.
 
-현재 플레이테스트 빌드는 정식 첫 씬 `Prototype01`과 타일 전환 검증용 `OfficeTileMigrationPreview`를 함께 포함한다. 실행 중 `F9`를 누르면 두 씬을 오갈 수 있다. 이는 Office Grid를 기존 게임 루프에 완전히 통합하기 전까지 사용하는 개발용 확인 경로이며, `F5`는 LiveContent 재로딩 키라서 타일 사무실 전환에는 사용하지 않는다.
+현재 플레이테스트 빌드는 정식 첫 씬 `Prototype01`과 기본 사무실 렌더인 `OfficeTileMigrationPreview`를 함께 포함한다. `처음하기`와 `불러오기`는 StarterOfficeV1 타일 사무실을 자동으로 올린다. `F9`는 구형 사무실로 토글하지 않고 타일 표시가 누락됐을 때 복구하는 단방향 키다. `F5`는 LiveContent 재로딩 키라서 타일 사무실 전환에는 사용하지 않는다.
 
 ## 구성 요소
 
@@ -51,11 +51,11 @@ powershell -ExecutionPolicy Bypass -File C:\Users\godho\Documents\Codex\family_c
 `C:\Users\godho\Downloads\FamilyCompany_Playtest`에 있는 빌드는 다음 기준이다.
 
 - 실행 파일: `C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`
-- 빌드 시각: 2026-08-11 16:40:03 KST
+- 빌드 시각: 2026-08-11 16:52:03 KST
 - Unity: `6000.3.21f1 (c02631ffc030)`
-- 기록된 HEAD: `3bc012a1bb04373756077fc23f4f4c34d359e369`, 브랜치 `main`
-- 빌드 상태: `Succeeded`, 파일 154개, 총 606,325,827 bytes
-- 빌드 지문: `E4AA725EF090F9B3D9FDB48F7F096D8CE4D3E7615D2F496FBC2177565B44ACC3`
+- 기록된 HEAD: `b875ceb3a7b8122ea3c96cd2f0d7bf2e7dd839a8`, 브랜치 `main`
+- 빌드 상태: `Succeeded`, 파일 154개, 총 583,512,835 bytes
+- 빌드 지문: `FE1C32CD77D0E8C55A52D6EBC7538A358419C93C8F59C831C5E2F037DED58022`
 - EXE SHA-256: `48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556`
 
 이 빌드는 상태 기록상 `dirty=True`인 정본 작업 폴더에서 생성됐다. Office Alignment V2 커밋 외에도 작업 폴더의 LiveContent 계층 A 미커밋 변경을 포함하므로, 해당 변경을 검토·커밋하기 전에는 HEAD만으로 이 EXE를 완전히 재현할 수 있다고 간주하지 않는다. `build-stamp.json`은 아직 없다.

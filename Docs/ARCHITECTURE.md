@@ -71,6 +71,7 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - `OfficeTycoonAlignmentCalibrationWindow`는 가구 100/200/400% 픽셀 보기, 네 점 footprint·socket 드래그, character clip/frame·onion skin, workstation 합성과 실시간 오차를 제공한다. 합성 승인을 하지 않으면 catalog에 저장할 수 없다. PNG 빌더는 calibration v2 에셋을 재생성하거나 상수로 덮어쓰지 않는다.
 - `OfficeGridCollisionMonitor`는 실제 Transform을 매 프레임 가장 가까운 셀로 투영해 막힌 셀 침범을 계측하는 QA 전용 경계다. 결과는 저장하지 않는다.
 - `OfficeTycoonAlignmentV2Qa`는 Preview와 Starter를 분리 실행하고 1920×1080 캡처, 실제 네 점 footprint, chair↔desk socket, pelvis↔seat, hand↔work, 프레임 안정성, 얼굴/하체 overlay, 60초 Transform 0 변화, 충돌·중복 claim·저장 왕복을 검사한다. 기존 `Prototype01`의 OfficeVisualV2·Collider·계약·자율 AI는 T6 통합 전까지 폴백으로 유지한다.
+- 2026-08-11 사용자 폐기 결정으로 OfficeVisualV2 base/foreground/guide PNG는 저장소와 빌드에서 제거했다. `Prototype01`의 계약·자율 AI·Collider는 시뮬레이션 호환용으로 유지하되 Renderer/Camera는 세션 시작 때 차단하고, `OfficeTileMigrationPreview`를 additive로 올린 StarterOfficeV1만 월드로 렌더한다. `F9`는 구형 화면 복귀가 아니라 이 타일 표시를 복구하는 단방향 키다.
 
 ## 실제 회사 이동
 

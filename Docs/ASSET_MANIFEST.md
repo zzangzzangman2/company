@@ -339,7 +339,7 @@
 
 - 상태: **IMAGEGEN SOURCE + 3/3 UNITY TILE ASSETS · T2/T3 QA PASS**
 - 루트: `Assets/Art/Office/Tiles/`
-- 제작: OpenAI 내장 ImageGen. Image 1은 `office_isometric_pixel_target_v1.png`의 팔레트·픽셀 밀도·등각 카메라, Image 2는 OfficeVisualV2의 우드 재질, Image 3은 SIMUL-v3의 렌더 마감만 참조했다. 인물·문자·가구·벽·UI는 생성하지 않았다.
+- 제작: OpenAI 내장 ImageGen. `office_isometric_pixel_target_v1.png`의 팔레트·픽셀 밀도·등각 카메라와 SIMUL-v3의 렌더 마감만 참조했다. 인물·문자·가구·벽·UI는 생성하지 않았다. 폐기된 OfficeVisualV2 통짜 PNG는 더 이상 참조 에셋이나 빌드 리소스로 사용하지 않는다.
 - 크로마 원본: `Source/office_floor_tiles_wood_chroma_v1.png`, SHA-256 `36E892D3478A4EB72765033B025ABF7F55730358D7DDF7321422BACC1C517A14`.
 - 투명 원본: 공식 `remove_chroma_key.py`로 `#ff00ff`를 제거한 `Source/office_floor_tiles_wood_alpha_v1.png`, SHA-256 `044385A31955A2D70681B845EB6C85B8674BEBBDE0E4601B40838E5EFB936A4F`.
 - 런타임 Tile PNG:
