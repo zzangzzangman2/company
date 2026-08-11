@@ -219,10 +219,10 @@ Unity: 6000.3.21f1
 
 ## 2026-08-11 Office Tile Migration T4~T5
 
-- T4 완료: OpenAI 내장 ImageGen으로 한 이미지에 한 소품만 담은 2000년대 등각 도트 가구 12종을 새로 만들었다. 투명 원본 12/12는 잘림·이웃 물체·불투명 마젠타 테두리 0이며, Unity 런타임은 640×512 하드 알파·180 PPU·Point·mipmap 없음·무압축·바닥 접점 피벗이다.
+- T4 완료: OpenAI 내장 ImageGen으로 한 이미지에 한 소품만 담은 2000년대 등각 도트 가구 12종을 새로 만들었다. 투명 원본 12/12는 잘림·이웃 물체·불투명 마젠타 테두리 0이며, Unity 런타임은 640×512 하드 알파·180 PPU·Point·mipmap 없음·무압축이다. 12종 모두 visible bounds에 X/Y 동일 배율만 적용하며 종류별 실제 ground anchor를 pivot으로 사용한다.
 - 13×13 프리뷰에 가구 18개·12종을 배치했다. 책상+CRT 4개는 2×1 막힘, 회전의자 4개는 1×1 통행 가능 좌석이며 접수대·회의 탁자·문서 책장·팩스/복사기·정수기·소파·커피 테이블·화분·파티션·서류 캐비닛을 함께 배치했다.
-- 가구와 가족은 동일한 x+y 동적 정렬을 사용한다. 회전의자는 본체와 등받이 전경을 분리해 착석 인물의 몸 전체를 덮지 않으면서 좌석 방향별 앞뒤 가림을 유지한다.
-- T5 완료: 플레이어는 30초 동안 안전 경로를 실제 이동한 뒤, 누나·아빠·엄마와 함께 서로 다른 네 의자로 접근한다. 기존 정밀 좌석 모션과 가족별 112프레임 착석 세트를 사용해 좌석 중심 오차 0.0000, 방향 `NorthWest`, 상태 `Working`, 고유 좌석 4/4를 통과했다.
-- QA: Unity 6000.3.21f1 `OfficeGridValidation.RunBatch`, `OfficeTileMigrationQa.StartT4T5Batch`, `OfficeTileMigrationQa.StartT3Batch`, `PrototypeValidation.Run` 모두 종료 코드 0. 최종 T4/T5 실행은 막힌 셀 침범 0, 충돌 샘플 838,276, 플레이어 이동 52.529, 레이아웃 저장 해시 `FC669B22DD3C2D0A`다. Unity SearchDatabase의 기존 `ArgumentOutOfRangeException` 1회는 프로젝트 코드와 무관한 에디터 인덱서 문제로 유지된다.
-- 캡처: `Artifacts/OfficeTileMigrationQa/office-tile-t4-furniture-1920x1080.png`, `office-tile-t4-occlusion-1920x1080.png`, `office-tile-t5-seated-1920x1080.png`.
+- Office Tycoon Alignment V1 완료: `OfficeFurnitureVisualCatalog`가 12종의 ground/sort와 의자 seat·책상 work-surface 앵커를 소유한다. 가구 의미 root는 footprint 중심·scale 1에 고정되고 `BaseVisual`/`FrontOverlay`만 균등 scale로 렌더한다. v3 의자와 v4 책상의 앞면은 고정 Y 절단 대신 명시적 픽셀 마스크 Sprite다.
+- T5 완료: `OfficeSeatSlot` 저장 서브스키마 v2에 chair/work-surface/seat/approach/facing 관계를 명시하고 v1 이관을 유지한다. 캐릭터는 approach cell까지 이동한 뒤 좌석 셀로 정밀 이동하며, 의미 root는 셀 중심·scale 1에 고정한다. 자식 `VisualRoot`만 가족·방향별 pelvis↔seat 앵커로 보정하고 일어서면 0으로 복원한다. 기존 `OfficeSeatRuntimeClaim`으로 예약·점유·해제를 수행한다.
+- QA: Unity 6000.3.21f1 `OfficeGridValidation.RunBatch`와 그래픽 `OfficeTileMigrationQa.StartT4T5Batch` 종료 코드 0. 45초에 네 가족 전원 일어서기→approach 이탈→claim 해제→재착석을 수행하고, 60초에 가구 18개의 position/rotation/scale/parent 정확히 0 변화, 12종 ground error 0.000px, 네 가족 pelvis↔seat 0.000px, desk-chair centerline 0.000px, VisualRoot 원복 0.000000, 막힌 칸 침범·좌석 중복 0을 확인했다. Unity SearchDatabase의 기존 `ArgumentOutOfRangeException` 1회는 프로젝트 코드와 무관한 에디터 인덱서 문제로 유지된다.
+- 캡처: 기존 T4/T5 3장과 함께 `Artifacts/OfficeTileMigrationQa/after-office-tile-tycoon-overview-1920x1080.png`, `after-office-tile-tycoon-seated-1920x1080.png`, `after-office-tile-tycoon-anchors-1920x1080.png`, `after-office-tile-tycoon-occlusion-1920x1080.png`, 수치 보고서 `office-tile-tycoon-alignment-report.txt`를 남겼다.
 - 현재 경계: T4~T5는 `OfficeTileMigrationPreview` 격리 씬에만 있다. 현재 플레이테스트 EXE와 `Prototype01`은 여전히 OfficeVisualV2 폴백을 사용한다. 다음 작업은 사용자 캡처 확인 후 T6에서 이 레이어를 메인 사무실에 연결하고 계약·자율 AI 회귀를 다시 실행하는 것이다. A*와 자유 배치 UI는 이번 범위가 아니다.

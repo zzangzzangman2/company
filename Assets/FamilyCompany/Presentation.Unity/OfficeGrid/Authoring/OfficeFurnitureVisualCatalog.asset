@@ -1,0 +1,159 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c97eff97c1317643a3688681d7764bb, type: 3}
+  m_Name: OfficeFurnitureVisualCatalog
+  m_EditorClassIdentifier: FamilyCompany.Presentation.Unity::FamilyCompany.Presentation.Unity.OfficeGridView.Authoring.OfficeFurnitureVisualCatalog
+  definitions:
+  - kindId: desk_with_pc
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: 1e9adfc1e2006a24c8490005da9e3b2e, type: 3}
+    frontOverlaySprite: {fileID: 21300000, guid: a769835a1e55e36478c08c86b59b82f2, type: 3}
+    groundAnchorPx: {x: 316.62888, y: 61.113403}
+    sortAnchorPx: {x: 291.1134, y: 26.319588}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 271.62888, y: 91.73196}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 1
+    frontOverlayWhenOccupied: 1
+  - kindId: swivel_chair
+    facing: 2
+    baseSprite: {fileID: 21300000, guid: 5d642bde97f1a844f9aefcc7c4c95a08, type: 3}
+    frontOverlaySprite: {fileID: 21300000, guid: 765e8e592ac1dbe46a89bf68ff564944, type: 3}
+    groundAnchorPx: {x: 319.19083, y: 45.333923}
+    sortAnchorPx: {x: 319.19083, y: 25.23675}
+    seatAnchorPx: {x: 294.45584, y: 164.37103}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 1
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 1
+  - kindId: reception_counter
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: 087c2dc2ef3118e4497bcd967e9ff5e4, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320.16507, y: 33.902912}
+    sortAnchorPx: {x: 320.16507, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: meeting_table
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: bb782372df6fa0a4b89d53d35aff0514, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 319.4623, y: 39.07538}
+    sortAnchorPx: {x: 319.4623, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: document_bookcase
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: b1a508b6cd28a3a4d83a2e1a1659c5da, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320, y: 30.637169}
+    sortAnchorPx: {x: 320, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: fax_copier
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: df6e51ad693ad1244977eb7e370aa3ad, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320, y: 32.93617}
+    sortAnchorPx: {x: 320, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: water_dispenser
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: 03e420c5588d9534bbc2bdde807bab14, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 319.45874, y: 32.335747}
+    sortAnchorPx: {x: 319.45874, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: sofa
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: 095531faea700304ca53a5f93a3afbf3, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320.277, y: 37.42723}
+    sortAnchorPx: {x: 320.277, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: coffee_table
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: 35b23e1f0cde4e64bbd85bcd54e196a7, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 319.08255, y: 36.110092}
+    sortAnchorPx: {x: 319.08255, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: potted_plant
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: f5ab53ba9138b184fb6237d7174ea263, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320.22504, y: 34.35225}
+    sortAnchorPx: {x: 320.22504, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: partition
+    facing: 2
+    baseSprite: {fileID: 21300000, guid: ca22e956b4ea3284c9394364712a521c, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320.41858, y: 32.7214}
+    sortAnchorPx: {x: 320.41858, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: filing_cabinet
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: 6fe77706bc9b2794db67256454ba5846, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320.01407, y: 33.38028}
+    sortAnchorPx: {x: 320.01407, y: 24}
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    frontOverlayWhenOccupied: 0

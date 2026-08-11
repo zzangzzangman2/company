@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Simulation.OfficeSeating;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -22,9 +25,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         [SerializeField] private bool includeFurniture;
         [SerializeField] private bool seatCharacters;
         [SerializeField] private TileBase[] floorTiles = Array.Empty<TileBase>();
-        [SerializeField] private string[] furnitureKindIds = Array.Empty<string>();
-        [SerializeField] private Sprite[] furnitureSprites = Array.Empty<Sprite>();
-        [SerializeField] private Sprite chairBackrestSprite;
+        [SerializeField] private OfficeFurnitureVisualCatalog furnitureVisualCatalog;
+        [SerializeField] private OfficeCharacterSeatPoseCatalog characterSeatPoseCatalog;
         [SerializeField] private Sprite[] playerFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] sisterFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] fatherFrames = Array.Empty<Sprite>();
@@ -35,14 +37,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private OfficeGridTilemapPresenter _presenter;
         private OfficeGridFurniturePresenter _furniturePresenter;
         private OfficeGridCollisionMonitor _collisionMonitor;
+        private OfficeGridAlignmentDebugOverlay _alignmentDebugOverlay;
+        private OfficeSeatingState _seatingState;
         private readonly List<OfficeGridCharacterMover> _movers = new List<OfficeGridCharacterMover>();
         private readonly List<OfficeGridSeatedWorker> _seatedWorkers = new List<OfficeGridSeatedWorker>();
 
         public OfficeGridTilemapPresenter Presenter => _presenter;
         public OfficeGridFurniturePresenter FurniturePresenter => _furniturePresenter;
         public OfficeGridCollisionMonitor CollisionMonitor => _collisionMonitor;
+        public OfficeGridAlignmentDebugOverlay AlignmentDebugOverlay => _alignmentDebugOverlay;
         public IReadOnlyList<OfficeGridCharacterMover> Movers => _movers;
         public IReadOnlyList<OfficeGridSeatedWorker> SeatedWorkers => _seatedWorkers;
+        public OfficeSeatingState SeatingState => _seatingState;
 
         public Bounds CombinedRenderBounds
         {
@@ -72,21 +78,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         }
 
         public void ConfigureFurnitureAndSeatingForEditor(
-            string[] newFurnitureKindIds,
-            Sprite[] newFurnitureSprites,
-            Sprite newChairBackrestSprite,
+            OfficeFurnitureVisualCatalog newFurnitureVisualCatalog,
+            OfficeCharacterSeatPoseCatalog newCharacterSeatPoseCatalog,
             OfficeGridSeatingFrameSet[] newSeatingFrameSets)
         {
-            if (newFurnitureKindIds == null || newFurnitureSprites == null ||
-                newFurnitureKindIds.Length != newFurnitureSprites.Length || newFurnitureKindIds.Length != 12)
-            {
-                throw new ArgumentException("Office furniture preview requires 12 kind/sprite bindings.");
-            }
-            furnitureKindIds = (string[])newFurnitureKindIds.Clone();
-            furnitureSprites = CloneRequired(newFurnitureSprites, 12, nameof(newFurnitureSprites));
-            chairBackrestSprite = newChairBackrestSprite != null
-                ? newChairBackrestSprite
-                : throw new ArgumentNullException(nameof(newChairBackrestSprite));
+            furnitureVisualCatalog = newFurnitureVisualCatalog != null
+                ? newFurnitureVisualCatalog
+                : throw new ArgumentNullException(nameof(newFurnitureVisualCatalog));
+            characterSeatPoseCatalog = newCharacterSeatPoseCatalog != null
+                ? newCharacterSeatPoseCatalog
+                : throw new ArgumentNullException(nameof(newCharacterSeatPoseCatalog));
+            furnitureVisualCatalog.Validate();
+            characterSeatPoseCatalog.Validate();
             if (newSeatingFrameSets == null || newSeatingFrameSets.Length != 4)
                 throw new ArgumentException("Office seating preview requires four family frame sets.");
             seatingFrameSets = newSeatingFrameSets;
@@ -107,6 +110,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _seatedWorkers.Clear();
             _furniturePresenter = null;
             _collisionMonitor = null;
+            _alignmentDebugOverlay = null;
+            _seatingState = null;
             var semanticGrid = OfficeGridLayouts.CreateMigrationPreview();
             var generated = new GameObject("GeneratedOfficeTilePreview");
             generated.transform.SetParent(transform, false);
@@ -120,14 +125,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 _furniturePresenter.Configure(
                     semanticGrid,
                     _presenter,
-                    furnitureKindIds,
-                    furnitureSprites,
-                    chairBackrestSprite);
+                    furnitureVisualCatalog);
             }
             if (!includeCharacters) return;
 
             if (seatCharacters)
             {
+                _seatingState = new OfficeSeatingState(semanticGrid.SeatSlots.Select(seat =>
+                    new FamilyCompany.Simulation.OfficeSeating.OfficeSeatDefinition(
+                        seat.SeatId,
+                        new FamilyCompany.Simulation.OfficeSeating.OfficeSeatPosition(seat.Cell.X, seat.Cell.Y))));
                 CreateSeatedCharacter("player", playerFrames, "seat_player", new[]
                 {
                     Cell(2, 9), Cell(1, 9), Cell(1, 5), Cell(1, 2), Cell(9, 2),
@@ -168,6 +175,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
             _collisionMonitor = generated.AddComponent<OfficeGridCollisionMonitor>();
             _collisionMonitor.Configure(semanticGrid, _presenter, _movers);
+            _alignmentDebugOverlay = generated.AddComponent<OfficeGridAlignmentDebugOverlay>();
+            _alignmentDebugOverlay.Configure(this);
         }
 
         private void Awake()
@@ -205,6 +214,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 _presenter,
                 _furniturePresenter,
                 mover,
+                characterSeatPoseCatalog,
+                _seatingState,
                 frameSet.sitDownFrames,
                 frameSet.workFrames,
                 frameSet.standUpFrames,

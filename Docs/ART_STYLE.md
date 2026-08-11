@@ -93,8 +93,10 @@
 - `Assets/Art/Office/Tiles/Furniture/Source/`의 12종은 OpenAI 내장 ImageGen으로 각각 독립 생성한 단일 소품 원본이다. 구형 `office_module_atlas_4x3_v1.png`에서 잘라낸 조각은 런타임 정본으로 사용하지 않는다.
 - 대상은 책상+CRT·회전의자·접수대·회의 탁자·문서 책장·팩스/복사기·정수기·소파·커피 테이블·화분·파티션·서류 캐비닛이다.
 - 생성 규칙은 한 이미지에 한 물체, 2:1 등각 카메라, 좌상단 조명, 2000년대 한국 소형 사무실, 크림·우드·민트·복숭아 팔레트, 외곽 12~18% 안전 여백, 글자·로고·사람·바닥·이웃 소품 없음이다.
-- 생성 원본의 `#ff00ff` 배경은 공식 크로마 제거 도구로 투명화한다. 런타임은 `Runtime/`의 640×512 RGBA 하드 알파, 180 PPU, Point, mipmap 없음, 무압축, 바닥 접점 피벗 Sprite를 사용한다.
-- 회전의자는 착석 인물과 자연스럽게 겹치도록 본체와 `office_swivel_chair_backrest_v2.png` 전경 Sprite를 함께 사용한다. 전경은 등받이 부분만 포함하고 얼굴·상체 전체를 가리지 않아야 한다.
+- 생성 원본의 `#ff00ff` 배경은 공식 크로마 제거 도구로 투명화한다. 런타임은 `Runtime/`의 640×512 RGBA 하드 알파, 180 PPU, Point, mipmap 없음, 무압축 Sprite를 사용한다. 원본 visible bounds에는 X/Y가 같은 최근접 이웃 배율만 적용하며, 종류별 실제 ground anchor를 Sprite pivot으로 사용한다.
+- 회전의자 정본은 `office_swivel_chair_v3.png`다. 네 좌석이 향하는 `NorthWest` 기준으로 좌석의 열린 앞쪽은 CRT가 있는 좌상단, 등받이는 인물 뒤쪽인 우하단에 있어야 한다. 의자 본체는 캐릭터 뒤, 명시적 `office_swivel_chair_front_v3.png`만 필요한 앞쪽에 둔다. 고정 Y cutoff나 의자 숨김은 금지한다.
+- CRT 업무책상 정본은 `office_workstation_v4.png`다. 바닥까지 내려오는 넓은 막음판을 쓰지 않고, 분리된 네 다리와 서랍장 아래의 바닥 틈이 보여야 한다. 실제 바닥선에는 작은 발만 닿아야 하며 책상이 바닥에 박혀 보이는 실루엣은 실패다.
+- 착석 중에는 `office_workstation_front_v4.png`가 하체 앞의 책상 모서리·앞판만 담당한다. 모니터·얼굴·머리를 덮거나 책상 전체를 항상 앞/뒤로 두면 실패다.
 
 ## 플레이어 도트 정본
 

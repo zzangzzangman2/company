@@ -32,8 +32,11 @@ namespace FamilyCompany.Save.OfficeGrid
                 {
                     seatId = item.SeatId,
                     furnitureId = item.FurnitureId,
+                    workSurfaceFurnitureId = item.WorkSurfaceFurnitureId,
                     x = item.Cell.X,
                     y = item.Cell.Y,
+                    approachX = item.ApproachCell.X,
+                    approachY = item.ApproachCell.Y,
                     facing = (int)item.Facing
                 }).ToList()
             };
@@ -42,7 +45,7 @@ namespace FamilyCompany.Save.OfficeGrid
         public static OfficeGridState Restore(OfficeGridSaveDto dto)
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));
-            if (dto.schemaVersion != OfficeGridSaveDto.CurrentSchemaVersion)
+            if (dto.schemaVersion != 1 && dto.schemaVersion != OfficeGridSaveDto.CurrentSchemaVersion)
                 throw new InvalidOperationException($"Unsupported office grid schema: {dto.schemaVersion}.");
             if (dto.floorTiles == null || dto.walkable == null || dto.furniture == null || dto.seatSlots == null)
                 throw new InvalidOperationException("Office grid save data is incomplete.");
@@ -78,11 +81,25 @@ namespace FamilyCompany.Save.OfficeGrid
                 if (item == null) throw new InvalidOperationException("Office grid seat slots contain null.");
                 if (!Enum.IsDefined(typeof(OfficeFurnitureFacing), item.facing))
                     throw new InvalidOperationException($"Unknown office seat facing: {item.facing}.");
-                seats.Add(new OfficeSeatSlot(
-                    item.seatId,
-                    item.furnitureId,
-                    new OfficeGridCoordinate(item.x, item.y),
-                    (OfficeFurnitureFacing)item.facing));
+                var seatCell = new OfficeGridCoordinate(item.x, item.y);
+                if (dto.schemaVersion == 1 || string.IsNullOrWhiteSpace(item.workSurfaceFurnitureId))
+                {
+                    seats.Add(new OfficeSeatSlot(
+                        item.seatId,
+                        item.furnitureId,
+                        seatCell,
+                        (OfficeFurnitureFacing)item.facing));
+                }
+                else
+                {
+                    seats.Add(new OfficeSeatSlot(
+                        item.seatId,
+                        item.furnitureId,
+                        item.workSurfaceFurnitureId,
+                        seatCell,
+                        new OfficeGridCoordinate(item.approachX, item.approachY),
+                        (OfficeFurnitureFacing)item.facing));
+                }
             }
 
             return new OfficeGridState(dto.width, dto.height, floor, dto.walkable, furniture, seats);

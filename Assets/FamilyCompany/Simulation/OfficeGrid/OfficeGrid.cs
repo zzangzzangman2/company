@@ -84,17 +84,40 @@ namespace FamilyCompany.Simulation.OfficeLayout
             string furnitureId,
             OfficeGridCoordinate cell,
             OfficeFurnitureFacing facing)
+            : this(
+                seatId,
+                furnitureId,
+                string.Empty,
+                cell,
+                cell,
+                facing)
+        {
+        }
+
+        public OfficeSeatSlot(
+            string seatId,
+            string chairFurnitureId,
+            string workSurfaceFurnitureId,
+            OfficeGridCoordinate cell,
+            OfficeGridCoordinate approachCell,
+            OfficeFurnitureFacing facing)
         {
             SeatId = RequiredId(seatId, nameof(seatId));
-            FurnitureId = RequiredId(furnitureId, nameof(furnitureId));
+            FurnitureId = RequiredId(chairFurnitureId, nameof(chairFurnitureId));
+            WorkSurfaceFurnitureId = OptionalId(workSurfaceFurnitureId);
             Cell = cell;
+            ApproachCell = approachCell;
             Facing = facing;
         }
 
         public string SeatId { get; }
+        public string ChairFurnitureId => FurnitureId;
         public string FurnitureId { get; }
+        public string WorkSurfaceFurnitureId { get; }
         public OfficeGridCoordinate Cell { get; }
+        public OfficeGridCoordinate ApproachCell { get; }
         public OfficeFurnitureFacing Facing { get; }
+        public bool HasWorkstationBinding => WorkSurfaceFurnitureId.Length > 0;
 
         private static string RequiredId(string value, string parameterName)
         {
@@ -102,6 +125,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
             if (canonical.Length == 0) throw new ArgumentException("ID cannot be empty.", parameterName);
             return canonical;
         }
+
+        private static string OptionalId(string value) => (value ?? string.Empty).Trim();
     }
 
     /// <summary>
@@ -205,8 +230,11 @@ namespace FamilyCompany.Simulation.OfficeLayout
             {
                 AddString(ref hash, item.SeatId);
                 AddString(ref hash, item.FurnitureId);
+                AddString(ref hash, item.WorkSurfaceFurnitureId);
                 AddInt(ref hash, item.Cell.X);
                 AddInt(ref hash, item.Cell.Y);
+                AddInt(ref hash, item.ApproachCell.X);
+                AddInt(ref hash, item.ApproachCell.Y);
                 AddInt(ref hash, (int)item.Facing);
             }
 
@@ -268,7 +296,55 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     throw new ArgumentException($"Seat facing does not match its chair: {seat.SeatId}.", nameof(seats));
                 if (!seatedFurnitureIds.Add(seat.FurnitureId))
                     throw new ArgumentException($"Chair has more than one seat slot: {seat.FurnitureId}.", nameof(seats));
+                if (!seat.HasWorkstationBinding) continue;
+                if (!furnitureById.TryGetValue(seat.WorkSurfaceFurnitureId, out var workSurface))
+                    throw new ArgumentException($"Seat references unknown work surface: {seat.WorkSurfaceFurnitureId}.", nameof(seats));
+                if (!workSurface.BlocksMovement)
+                    throw new ArgumentException($"Seat work surface must block movement: {seat.WorkSurfaceFurnitureId}.", nameof(seats));
+                if (!Contains(seat.ApproachCell) || !IsWalkable(seat.ApproachCell))
+                    throw new ArgumentException($"Seat approach cell is not walkable: {seat.SeatId}.", nameof(seats));
+                if (CardinalDistance(seat.Cell, seat.ApproachCell) != 1)
+                    throw new ArgumentException($"Seat approach cell is not cardinally adjacent: {seat.SeatId}.", nameof(seats));
+                var nearestWorkCell = NearestFootprintCell(workSurface, seat.Cell, out var workDistance);
+                if (workDistance != 1)
+                    throw new ArgumentException($"Seat is not cardinally adjacent to its work surface: {seat.SeatId}.", nameof(seats));
+                var expectedFacing = FacingFromDelta(
+                    nearestWorkCell.X - seat.Cell.X,
+                    nearestWorkCell.Y - seat.Cell.Y);
+                if (expectedFacing != seat.Facing)
+                    throw new ArgumentException($"Seat does not face its work surface: {seat.SeatId}.", nameof(seats));
             }
+        }
+
+        private static OfficeGridCoordinate NearestFootprintCell(
+            PlacedOfficeFurniture furniture,
+            OfficeGridCoordinate origin,
+            out int distance)
+        {
+            var best = furniture.Origin;
+            distance = int.MaxValue;
+            for (var y = furniture.Origin.Y; y < furniture.Origin.Y + furniture.Height; y++)
+            for (var x = furniture.Origin.X; x < furniture.Origin.X + furniture.Width; x++)
+            {
+                var candidate = new OfficeGridCoordinate(x, y);
+                var candidateDistance = CardinalDistance(origin, candidate);
+                if (candidateDistance >= distance) continue;
+                best = candidate;
+                distance = candidateDistance;
+            }
+            return best;
+        }
+
+        private static int CardinalDistance(OfficeGridCoordinate left, OfficeGridCoordinate right) =>
+            Math.Abs(left.X - right.X) + Math.Abs(left.Y - right.Y);
+
+        private static OfficeFurnitureFacing FacingFromDelta(int deltaX, int deltaY)
+        {
+            if (deltaX == 1 && deltaY == 0) return OfficeFurnitureFacing.NorthEast;
+            if (deltaX == -1 && deltaY == 0) return OfficeFurnitureFacing.SouthWest;
+            if (deltaX == 0 && deltaY == 1) return OfficeFurnitureFacing.NorthWest;
+            if (deltaX == 0 && deltaY == -1) return OfficeFurnitureFacing.SouthEast;
+            throw new ArgumentException($"Seat-to-work-surface delta is not cardinal: ({deltaX},{deltaY}).");
         }
 
         private static void AddInt(ref ulong hash, int value)

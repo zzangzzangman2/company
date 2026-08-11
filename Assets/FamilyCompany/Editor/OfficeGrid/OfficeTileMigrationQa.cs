@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using FamilyCompany.Presentation.Unity;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
+using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Save.OfficeGrid;
@@ -26,6 +27,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
         public const string OcclusionCapturePath = ArtifactFolder + "/office-tile-t4-occlusion-1920x1080.png";
         public const string SeatedCapturePath = ArtifactFolder + "/office-tile-t5-seated-1920x1080.png";
         public const string ReportPath = ArtifactFolder + "/office-tile-migration-qa.txt";
+        public const string TycoonOverviewCapturePath = ArtifactFolder + "/after-office-tile-tycoon-overview-1920x1080.png";
+        public const string TycoonSeatedCapturePath = ArtifactFolder + "/after-office-tile-tycoon-seated-1920x1080.png";
+        public const string TycoonAnchorsCapturePath = ArtifactFolder + "/after-office-tile-tycoon-anchors-1920x1080.png";
+        public const string TycoonOcclusionCapturePath = ArtifactFolder + "/after-office-tile-tycoon-occlusion-1920x1080.png";
+        public const string TycoonReportPath = ArtifactFolder + "/office-tile-tycoon-alignment-report.txt";
 
         private const string ActiveKey = "FamilyCompany.OfficeTileMigrationQa.Active";
         private const string StageKey = "FamilyCompany.OfficeTileMigrationQa.Stage";
@@ -37,7 +43,19 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private const float CaptureAfterSeconds = 4f;
         private const float FurnitureCaptureAfterSeconds = 0.05f;
         private const float OcclusionCaptureAfterSeconds = 0.15f;
-        private const float T45ValidationAfterSeconds = 45f;
+        private const float InitialSeatedValidationAfterSeconds = 45f;
+        private const float T45ValidationAfterSeconds = 60f;
+
+        private sealed class FurnitureTransformSnapshot
+        {
+            public Vector3 Position;
+            public Quaternion Rotation;
+            public Vector3 LocalScale;
+            public Transform Parent;
+        }
+
+        private static readonly Dictionary<string, FurnitureTransformSnapshot> FurnitureSnapshots =
+            new Dictionary<string, FurnitureTransformSnapshot>(StringComparer.Ordinal);
 
         private static readonly string[] CharacterIds =
         {
@@ -106,13 +124,15 @@ namespace FamilyCompany.Editor.OfficeGridQa
             {
                 Directory.CreateDirectory(ArtifactFolder);
                 File.WriteAllText(ReportPath, "Office Tile Migration QA\n", System.Text.Encoding.UTF8);
+                File.WriteAllText(TycoonReportPath, "Office Tycoon Alignment V1 QA\n", System.Text.Encoding.UTF8);
+                FurnitureSnapshots.Clear();
                 BuildPreviewScene(true);
                 SessionState.SetBool(ActiveKey, true);
                 SessionState.SetInt(StageKey, 1);
                 SessionState.SetFloat(StartKey, 0f);
                 SessionState.SetString(FailureKey, string.Empty);
                 SessionState.SetString(ModeKey, ModeT45);
-                Append("PLAYMODE_REQUEST | stage=T4-T5 | resolution=1920x1080 | collisionWindow=30s | finalAfter=45s");
+                Append("PLAYMODE_REQUEST | stage=T4-T5 | resolution=1920x1080 | transformWindow=60s | initialSeated=45s | finalAfter=60s");
                 EditorSceneManager.OpenScene(PreviewScenePath, OpenSceneMode.Single);
                 EditorApplication.EnterPlaymode();
             }
@@ -155,9 +175,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
             if (includeT45)
             {
                 bootstrap.ConfigureFurnitureAndSeatingForEditor(
-                    OfficeFurnitureAssetBuilder.KindIds.ToArray(),
-                    OfficeFurnitureAssetBuilder.LoadFurnitureSprites(),
-                    OfficeFurnitureAssetBuilder.LoadChairBackrestSprite(),
+                    OfficeFurnitureAssetBuilder.LoadFurnitureVisualCatalog(),
+                    OfficeFurnitureAssetBuilder.LoadCharacterSeatPoseCatalog(),
                     CharacterIds.Select(LoadSeatingFrameSet).ToArray());
             }
             bootstrap.BuildPreview();
@@ -279,7 +298,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private static void OnT45EditorUpdate()
         {
             var stage = SessionState.GetInt(StageKey, 0);
-            if (stage >= 1 && stage <= 3)
+            if (stage >= 1 && stage <= 4)
             {
                 if (!EditorApplication.isPlaying) return;
                 var start = SessionState.GetFloat(StartKey, 0f);
@@ -294,7 +313,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     if (stage == 1 && elapsed >= FurnitureCaptureAfterSeconds)
                     {
                         CaptureT45(FurnitureOverviewCapturePath);
-                        Append("T4_OVERVIEW_CAPTURE | path=" + FurnitureOverviewCapturePath);
+                        CaptureT45(TycoonOverviewCapturePath);
+                        SnapshotFurnitureTransforms();
+                        Append("T4_OVERVIEW_CAPTURE | path=" + FurnitureOverviewCapturePath + " | tycoonPath=" + TycoonOverviewCapturePath);
                         SessionState.SetInt(StageKey, 2);
                     }
                     else if (stage == 2 && elapsed >= OcclusionCaptureAfterSeconds)
@@ -302,11 +323,16 @@ namespace FamilyCompany.Editor.OfficeGridQa
                         ValidateAndCaptureOcclusion();
                         SessionState.SetInt(StageKey, 3);
                     }
-                    else if (stage == 3 && elapsed >= T45ValidationAfterSeconds)
+                    else if (stage == 3 && elapsed >= InitialSeatedValidationAfterSeconds)
+                    {
+                        ValidateInitialTycoonAlignmentAndRequestReseat();
+                        SessionState.SetInt(StageKey, 4);
+                    }
+                    else if (stage == 4 && elapsed >= T45ValidationAfterSeconds)
                     {
                         ValidateAndCaptureT45();
                         SessionState.SetString(FailureKey, string.Empty);
-                        SessionState.SetInt(StageKey, 4);
+                        SessionState.SetInt(StageKey, 5);
                         EditorApplication.ExitPlaymode();
                     }
                 }
@@ -315,13 +341,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     SessionState.SetString(FailureKey, exception.ToString());
                     Append("T4_T5_FAIL | " + exception);
                     Debug.LogException(exception);
-                    SessionState.SetInt(StageKey, 4);
+                    SessionState.SetInt(StageKey, 5);
                     EditorApplication.ExitPlaymode();
                 }
                 return;
             }
 
-            if (stage != 4 || EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode) return;
+            if (stage != 5 || EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode) return;
             var failure = SessionState.GetString(FailureKey, string.Empty);
             SessionState.SetBool(ActiveKey, false);
             SessionState.EraseInt(StageKey);
@@ -357,12 +383,15 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 var boundsRatio = mover.RenderedBoundsHeightRatio(camera);
                 Require(boundsRatio >= 0.14f && boundsRatio <= 0.18f,
                     $"{mover.name} rendered bounds ratio is {boundsRatio:F4}.");
-                var visibleRatio = ResolveVisibleAlphaHeightRatio(mover.TargetRenderer.sprite, mover.transform.lossyScale.y, camera);
+                var visibleRatio = ResolveVisibleAlphaHeightRatio(mover.TargetRenderer.sprite, mover.VisualRoot.lossyScale.y, camera);
                 Require(visibleRatio >= 0.14f && visibleRatio <= 0.18f,
                     $"{mover.name} visible alpha ratio is {visibleRatio:F4}.");
-                var scale = mover.transform.lossyScale;
+                var semanticScale = mover.transform.lossyScale;
+                var scale = mover.VisualRoot.lossyScale;
+                Require(Vector3.Distance(semanticScale, Vector3.one) < 0.0001f,
+                    $"{mover.name} semantic root scale is not one: {semanticScale}.");
                 Require(Mathf.Abs(scale.x - scale.y) < 0.0001f && Mathf.Abs(scale.y - scale.z) < 0.0001f,
-                    $"{mover.name} accumulated scale is non-uniform: {scale}.");
+                    $"{mover.name} VisualRoot accumulated scale is non-uniform: {scale}.");
                 Require(mover.Animator.IsMoving, $"{mover.name} animator is not moving.");
                 Append($"CHARACTER_PASS | id={mover.name} | distance={mover.DistanceTravelled:F3} | boundsRatio={boundsRatio:F4} | visibleRatio={visibleRatio:F4} | scale={scale.x:F3}");
             }
@@ -389,6 +418,28 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Require(bootstrap.FurniturePresenter != null &&
                     bootstrap.FurniturePresenter.Renderers.Count == grid.Furniture.Count,
                 "T4 furniture renderers do not match semantic furniture.");
+            Require(bootstrap.FurniturePresenter.VisualCatalog != null &&
+                    bootstrap.FurniturePresenter.VisualCatalog.Definitions.Count == 12,
+                "T4 visual catalog must contain 12 definitions.");
+            bootstrap.FurniturePresenter.VisualCatalog.Validate();
+            foreach (var item in grid.Furniture)
+            {
+                Require(bootstrap.FurniturePresenter.TryGetDefinition(item.FurnitureId, out var definition),
+                    "Missing visual definition for " + item.FurnitureId);
+                Require(definition.Facing == item.Facing && definition.UniformScale > 0f,
+                    "Furniture visual facing/scale is invalid: " + item.FurnitureId);
+                Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(item.FurnitureId, out var root),
+                    "Furniture semantic root is missing: " + item.FurnitureId);
+                Require(root.localScale == Vector3.one, "Furniture semantic root scale is not one: " + item.FurnitureId);
+                Require(root.GetComponent<Rigidbody>() == null && root.GetComponent<CharacterController>() == null,
+                    "Furniture semantic root has a forbidden movement component: " + item.FurnitureId);
+                Require(bootstrap.FurniturePresenter.TryGetRenderer(item.FurnitureId, out var renderer),
+                    "Furniture base renderer is missing: " + item.FurnitureId);
+                var visualScale = renderer.transform.localScale;
+                Require(Mathf.Abs(visualScale.x - visualScale.y) <= 0.001f &&
+                        Mathf.Abs(visualScale.y - visualScale.z) <= 0.001f,
+                    "Furniture VisualRoot scale is non-uniform: " + item.FurnitureId);
+            }
             Require(grid.SeatSlots.Count == 4, "T5 preview requires four seats.");
 
             var deskSeatCounts = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -402,8 +453,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Require(chair.Origin.Equals(seat.Cell), $"Chair {chair.FurnitureId} does not share seat cell.");
                 Require(grid.IsWalkable(seat.Cell), $"Seat {seat.SeatId} is not walkable.");
 
-                var memberId = seat.SeatId.Substring("seat_".Length);
-                var deskId = "desk_" + memberId;
+                Require(seat.HasWorkstationBinding, $"Seat {seat.SeatId} has no explicit workstation binding.");
+                Require(grid.IsWalkable(seat.ApproachCell), $"Seat {seat.SeatId} approach is not walkable.");
+                Require(Math.Abs(seat.ApproachCell.X - seat.Cell.X) + Math.Abs(seat.ApproachCell.Y - seat.Cell.Y) == 1,
+                    $"Seat {seat.SeatId} approach is not cardinally adjacent.");
+                var deskId = seat.WorkSurfaceFurnitureId;
                 var desk = FindFurniture(grid, deskId);
                 Require(desk.KindId == OfficeGridLayouts.DeskWithPcKind && desk.BlocksMovement,
                     $"Seat {seat.SeatId} has no blocking workstation.");
@@ -441,6 +495,142 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Append($"T4_OCCLUSION_PASS | character={player.TargetRenderer.sortingOrder} | desk={deskRenderer.sortingOrder} | overlap=true | path={OcclusionCapturePath}");
         }
 
+        private static void SnapshotFurnitureTransforms()
+        {
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<OfficeTileMigrationPreviewBootstrap>();
+            Require(bootstrap != null && bootstrap.FurniturePresenter != null, "Furniture snapshot preview is missing.");
+            FurnitureSnapshots.Clear();
+            foreach (var item in bootstrap.Presenter.SemanticGrid.Furniture)
+            {
+                Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(item.FurnitureId, out var root),
+                    "Furniture semantic root is missing: " + item.FurnitureId);
+                FurnitureSnapshots.Add(item.FurnitureId, new FurnitureTransformSnapshot
+                {
+                    Position = root.position,
+                    Rotation = root.rotation,
+                    LocalScale = root.localScale,
+                    Parent = root.parent
+                });
+            }
+            AppendTycoon($"TRANSFORM_SNAPSHOT | count={FurnitureSnapshots.Count} | time=0s");
+        }
+
+        private static void ValidateInitialTycoonAlignmentAndRequestReseat()
+        {
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<OfficeTileMigrationPreviewBootstrap>();
+            var camera = Camera.main;
+            Require(bootstrap != null && camera != null, "Initial tycoon alignment preview is missing.");
+            Require(bootstrap.SeatedWorkers.Count == 4 && bootstrap.SeatedWorkers.All(item => item.IsWorking),
+                "Initial tycoon alignment requires four working family members.");
+            ValidateTycoonAlignmentMetrics(bootstrap, camera, "INITIAL_45S");
+            CaptureT45(SeatedCapturePath);
+            CaptureT45(TycoonSeatedCapturePath);
+            CaptureT45(TycoonOcclusionCapturePath);
+            Require(bootstrap.AlignmentDebugOverlay != null, "Alignment debug overlay is missing.");
+            bootstrap.AlignmentDebugOverlay.SetOverlayEnabled(true);
+            bootstrap.AlignmentDebugOverlay.RefreshImmediate();
+            CaptureT45(TycoonAnchorsCapturePath);
+            bootstrap.AlignmentDebugOverlay.SetOverlayEnabled(false);
+            foreach (var worker in bootstrap.SeatedWorkers) worker.RequestStandAndReseat();
+            AppendTycoon(
+                $"CAPTURE_PASS | seated={TycoonSeatedCapturePath} | anchors={TycoonAnchorsCapturePath} | occlusion={TycoonOcclusionCapturePath}");
+            Append("TYCOON_ALIGNMENT_INITIAL_PASS | time=45s | standAndReseat=4");
+        }
+
+        private static void ValidateTycoonAlignmentMetrics(
+            OfficeTileMigrationPreviewBootstrap bootstrap,
+            Camera camera,
+            string phase)
+        {
+            var previousTarget = camera.targetTexture;
+            var metricsTarget = new RenderTexture(1920, 1080, 0, RenderTextureFormat.ARGB32);
+            try
+            {
+                camera.targetTexture = metricsTarget;
+                var grid = bootstrap.Presenter.SemanticGrid;
+                foreach (var item in grid.Furniture)
+                {
+                    Require(bootstrap.FurniturePresenter.TryGetRenderer(item.FurnitureId, out var renderer),
+                        "Furniture renderer is missing: " + item.FurnitureId);
+                    Require(bootstrap.FurniturePresenter.TryGetDefinition(item.FurnitureId, out var definition),
+                        "Furniture definition is missing: " + item.FurnitureId);
+                    Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(item.FurnitureId, out var root),
+                        "Furniture semantic root is missing: " + item.FurnitureId);
+                    float groundError = OfficeGridAlignmentMetrics.GroundAnchorScreenErrorPx(
+                        camera, renderer, definition, root.position);
+                    Require(groundError <= 1f,
+                        $"{item.FurnitureId} ground anchor error is {groundError:F3}px.");
+                    AppendTycoon($"GROUND | phase={phase} | furniture={item.FurnitureId} | errorPx={groundError:F3}");
+                }
+
+                foreach (var worker in bootstrap.SeatedWorkers)
+                {
+                    var seat = FindSeat(grid, worker.SeatId);
+                    var mover = worker.GetComponent<OfficeGridCharacterMover>();
+                    Require(bootstrap.FurniturePresenter.TryGetRenderer(seat.ChairFurnitureId, out var chairRenderer),
+                        "Chair renderer is missing: " + seat.ChairFurnitureId);
+                    Require(bootstrap.FurniturePresenter.TryGetDefinition(seat.ChairFurnitureId, out var chairDefinition),
+                        "Chair definition is missing: " + seat.ChairFurnitureId);
+                    Require(bootstrap.FurniturePresenter.TryGetRenderer(seat.WorkSurfaceFurnitureId, out var deskRenderer),
+                        "Desk renderer is missing: " + seat.WorkSurfaceFurnitureId);
+                    Require(bootstrap.FurniturePresenter.TryGetDefinition(seat.WorkSurfaceFurnitureId, out var deskDefinition),
+                        "Desk definition is missing: " + seat.WorkSurfaceFurnitureId);
+                    Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(seat.ChairFurnitureId, out var chairRoot),
+                        "Chair semantic root is missing: " + seat.ChairFurnitureId);
+                    Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(seat.WorkSurfaceFurnitureId, out var deskRoot),
+                        "Desk semantic root is missing: " + seat.WorkSurfaceFurnitureId);
+
+                    float pelvisError = worker.PelvisSeatScreenError(camera);
+                    float centerlineError = OfficeGridAlignmentMetrics.DeskChairCenterlineErrorPx(
+                        camera,
+                        deskRenderer,
+                        deskDefinition,
+                        deskRoot.position,
+                        chairRenderer,
+                        chairDefinition,
+                        chairRoot.position);
+                    float interactionError = OfficeGridAlignmentMetrics.DeskInteractionDepthErrorPx(
+                        camera,
+                        mover.TargetRenderer,
+                        worker.PoseProfile,
+                        deskRenderer,
+                        deskDefinition);
+                    Require(pelvisError <= 2f,
+                        $"{worker.MemberId} pelvis-to-seat error is {pelvisError:F3}px.");
+                    Require(centerlineError <= 2f,
+                        $"{worker.MemberId} desk-chair centerline error is {centerlineError:F3}px.");
+                    Require(worker.FootError() <= 0.001f,
+                        $"{worker.MemberId} semantic root-to-seat error is {worker.FootError():F6} world units.");
+                    AppendTycoon(
+                        $"SEAT | phase={phase} | member={worker.MemberId} | pelvisSeatPx={pelvisError:F3} | centerlinePx={centerlineError:F3} | interactionPx={interactionError:F3} | rootWorld={worker.FootError():F6}");
+                }
+            }
+            finally
+            {
+                camera.targetTexture = previousTarget;
+                UnityEngine.Object.DestroyImmediate(metricsTarget);
+            }
+        }
+
+        private static void ValidateFurnitureTransformsUnchanged()
+        {
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<OfficeTileMigrationPreviewBootstrap>();
+            Require(bootstrap != null && FurnitureSnapshots.Count == bootstrap.Presenter.SemanticGrid.Furniture.Count,
+                "Furniture transform snapshot count changed.");
+            foreach (var item in bootstrap.Presenter.SemanticGrid.Furniture)
+            {
+                Require(FurnitureSnapshots.TryGetValue(item.FurnitureId, out var snapshot),
+                    "Furniture snapshot is missing: " + item.FurnitureId);
+                Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(item.FurnitureId, out var root),
+                    "Furniture semantic root is missing: " + item.FurnitureId);
+                Require(root.position == snapshot.Position, item.FurnitureId + " position changed during 60 seconds.");
+                Require(root.rotation == snapshot.Rotation, item.FurnitureId + " rotation changed during 60 seconds.");
+                Require(root.localScale == snapshot.LocalScale, item.FurnitureId + " scale changed during 60 seconds.");
+                Require(ReferenceEquals(root.parent, snapshot.Parent), item.FurnitureId + " parent changed during 60 seconds.");
+            }
+            AppendTycoon("TRANSFORM_PASS | window=60s | position=exact | rotation=exact | scale=exact | parent=exact");
+        }
+
         private static void ValidateAndCaptureT45()
         {
             var bootstrap = UnityEngine.Object.FindFirstObjectByType<OfficeTileMigrationPreviewBootstrap>();
@@ -448,6 +638,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Require(bootstrap != null && bootstrap.Presenter != null, "T4-T5 preview bootstrap is missing.");
             Require(camera != null, "T4-T5 camera is missing.");
             ValidateT4Static(bootstrap);
+            ValidateFurnitureTransformsUnchanged();
             Require(bootstrap.CollisionMonitor != null && bootstrap.CollisionMonitor.SampleCount >= 120,
                 "T4 collision monitor did not collect enough per-frame samples.");
             Require(bootstrap.CollisionMonitor.BlockedCellViolationCount == 0,
@@ -459,23 +650,28 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
             Require(bootstrap.SeatedWorkers.All(item => item.IsWorking),
                 "T5 not every family member reached seated work.");
+            Require(bootstrap.SeatedWorkers.All(item => item.HasActiveClaim && item.IsSeatOccupied),
+                "T5 not every working family member owns an occupied runtime seat claim.");
             Require(bootstrap.SeatedWorkers.Select(item => item.SeatId).Distinct(StringComparer.Ordinal).Count() == 4,
                 "T5 family seat assignment contains duplicates.");
 
             foreach (var worker in bootstrap.SeatedWorkers)
             {
-                Require(worker.FootError() <= 0.05f,
+                Require(worker.FootError() <= 0.001f,
                     $"{worker.MemberId} seated foot error is {worker.FootError():F4}.");
+                Require(worker.VisualResetError <= 0.001f,
+                    $"{worker.MemberId} VisualRoot reset error is {worker.VisualResetError:F6}.");
                 Require(worker.DirectionIndex == DirectionIndex(worker.Facing),
                     $"{worker.MemberId} seated facing is incorrect.");
                 var mover = worker.GetComponent<OfficeGridCharacterMover>();
-                Require(bootstrap.FurniturePresenter.ChairOcclusionMatches(
-                        FindSeat(bootstrap.Presenter.SemanticGrid, worker.SeatId).FurnitureId,
-                        mover.TargetRenderer.sortingOrder,
-                        worker.Facing),
+                Require(bootstrap.FurniturePresenter.SeatOcclusionMatches(
+                        FindSeat(bootstrap.Presenter.SemanticGrid, worker.SeatId),
+                        mover.TargetRenderer.sortingOrder),
                     $"{worker.MemberId} chair occlusion order is incorrect.");
                 Append($"SEATED_PASS | id={worker.MemberId} | seat={worker.SeatId} | error={worker.FootError():F4} | facing={worker.Facing} | phase=Working");
             }
+
+            ValidateTycoonAlignmentMetrics(bootstrap, camera, "FINAL_60S");
 
             var grid = bootstrap.Presenter.SemanticGrid;
             foreach (var desk in grid.Furniture.Where(item => item.KindId == OfficeGridLayouts.DeskWithPcKind))
@@ -498,6 +694,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Require(playerMover.DistanceTravelled > 35f,
                 $"T4 30-second player movement distance is too short: {playerMover.DistanceTravelled:F3}.");
             CaptureT45(SeatedCapturePath);
+            CaptureT45(TycoonSeatedCapturePath);
+            AppendTycoon(
+                $"RUNTIME_PASS | window=60s | familyWorking=4 | occupiedClaims=4 | collisions=0 | unsupportedFallbacks=0 | visualResetMax={bootstrap.SeatedWorkers.Max(item => item.VisualResetError):F6}");
             Append($"T4_T5_PASS | collisionSamples={bootstrap.CollisionMonitor.SampleCount} | violations=0 | playerDistance={playerMover.DistanceTravelled:F3} | familySeated=4 | uniqueSeats=4 | saveHash={grid.ComputeLayoutHash()} | capture={SeatedCapturePath}");
         }
 
@@ -665,6 +864,15 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Directory.CreateDirectory(ArtifactFolder);
             File.AppendAllText(
                 ReportPath,
+                DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture) + " | " + line + Environment.NewLine,
+                System.Text.Encoding.UTF8);
+        }
+
+        private static void AppendTycoon(string line)
+        {
+            Directory.CreateDirectory(ArtifactFolder);
+            File.AppendAllText(
+                TycoonReportPath,
                 DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture) + " | " + line + Environment.NewLine,
                 System.Text.Encoding.UTF8);
         }

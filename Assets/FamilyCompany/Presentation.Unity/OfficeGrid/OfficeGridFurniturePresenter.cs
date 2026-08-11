@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 
@@ -8,80 +9,106 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
     [DisallowMultipleComponent]
     public sealed class OfficeGridFurniturePresenter : MonoBehaviour
     {
+        private sealed class FurnitureVisual
+        {
+            public PlacedOfficeFurniture Furniture;
+            public OfficeFurnitureVisualDefinition Definition;
+            public Transform SemanticRoot;
+            public SpriteRenderer BaseRenderer;
+            public SpriteRenderer FrontRenderer;
+        }
+
+        private readonly Dictionary<string, FurnitureVisual> _visuals =
+            new Dictionary<string, FurnitureVisual>(StringComparer.Ordinal);
         private readonly Dictionary<string, SpriteRenderer> _renderers =
             new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
         private readonly Dictionary<string, PlacedOfficeFurniture> _furniture =
             new Dictionary<string, PlacedOfficeFurniture>(StringComparer.Ordinal);
-        private readonly Dictionary<string, SpriteRenderer> _chairBackrests =
+        private readonly Dictionary<string, SpriteRenderer> _frontOverlays =
             new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
 
         private OfficeGrid _semanticGrid;
         private OfficeGridTilemapPresenter _gridPresenter;
+        private OfficeFurnitureVisualCatalog _visualCatalog;
         private Bounds _renderBounds;
 
         public IReadOnlyDictionary<string, SpriteRenderer> Renderers => _renderers;
-        public IReadOnlyDictionary<string, SpriteRenderer> ChairBackrestRenderers => _chairBackrests;
+        public IReadOnlyDictionary<string, SpriteRenderer> FrontOverlayRenderers => _frontOverlays;
         public Bounds RenderBounds => _renderBounds;
+        public OfficeFurnitureVisualCatalog VisualCatalog => _visualCatalog;
 
         public void Configure(
             OfficeGrid semanticGrid,
             OfficeGridTilemapPresenter gridPresenter,
-            IReadOnlyList<string> kindIds,
-            IReadOnlyList<Sprite> sprites,
-            Sprite chairBackrestSprite)
+            OfficeFurnitureVisualCatalog visualCatalog)
         {
-            if (semanticGrid == null) throw new ArgumentNullException(nameof(semanticGrid));
-            if (gridPresenter == null) throw new ArgumentNullException(nameof(gridPresenter));
-            if (kindIds == null || sprites == null || kindIds.Count != sprites.Count)
-                throw new ArgumentException("Furniture kind and sprite counts must match.");
-            if (chairBackrestSprite == null) throw new ArgumentNullException(nameof(chairBackrestSprite));
+            _semanticGrid = semanticGrid ?? throw new ArgumentNullException(nameof(semanticGrid));
+            _gridPresenter = gridPresenter ?? throw new ArgumentNullException(nameof(gridPresenter));
+            _visualCatalog = visualCatalog ?? throw new ArgumentNullException(nameof(visualCatalog));
+            visualCatalog.Validate();
 
-            var spriteByKind = new Dictionary<string, Sprite>(StringComparer.Ordinal);
-            for (var index = 0; index < kindIds.Count; index++)
-            {
-                var kindId = (kindIds[index] ?? string.Empty).Trim();
-                if (kindId.Length == 0 || sprites[index] == null || !spriteByKind.TryAdd(kindId, sprites[index]))
-                    throw new ArgumentException($"Furniture sprite binding {index} is invalid.");
-            }
-
-            _semanticGrid = semanticGrid;
-            _gridPresenter = gridPresenter;
             ClearGenerated();
-            var hasBounds = false;
-            foreach (var item in semanticGrid.Furniture)
+            bool hasBounds = false;
+            foreach (PlacedOfficeFurniture item in semanticGrid.Furniture)
             {
-                if (!spriteByKind.TryGetValue(item.KindId, out var sprite))
-                    throw new InvalidOperationException("Missing furniture sprite for kind: " + item.KindId);
+                OfficeFurnitureVisualDefinition definition = visualCatalog.Resolve(item.KindId, item.Facing);
                 var root = new GameObject("Furniture_" + item.FurnitureId);
                 root.transform.SetParent(transform, false);
                 root.transform.position = ResolveFootprintCenter(item);
-                var renderer = root.AddComponent<SpriteRenderer>();
-                renderer.sprite = sprite;
-                renderer.sortingLayerName = "Default";
-                renderer.sortingOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(root.transform.position);
-                _renderers.Add(item.FurnitureId, renderer);
-                _furniture.Add(item.FurnitureId, item);
-                if (item.KindId == OfficeGridLayouts.SwivelChairKind)
+                root.transform.rotation = Quaternion.identity;
+                root.transform.localScale = Vector3.one;
+
+                var baseRoot = new GameObject("BaseVisual");
+                baseRoot.transform.SetParent(root.transform, false);
+                baseRoot.transform.localPosition = Vector3.zero;
+                baseRoot.transform.localRotation = Quaternion.identity;
+                baseRoot.transform.localScale = Vector3.one * definition.UniformScale;
+                var baseRenderer = baseRoot.AddComponent<SpriteRenderer>();
+                baseRenderer.sprite = definition.BaseSprite;
+                baseRenderer.sortingLayerName = "Default";
+                Vector3 sortAnchorWorld = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    baseRenderer,
+                    definition.SortAnchorPx);
+                baseRenderer.sortingOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(sortAnchorWorld);
+
+                SpriteRenderer frontRenderer = null;
+                if (definition.FrontOverlaySprite != null)
                 {
-                    var backrestRoot = new GameObject("BackrestOverlay");
-                    backrestRoot.transform.SetParent(root.transform, false);
-                    var backrest = backrestRoot.AddComponent<SpriteRenderer>();
-                    backrest.sprite = chairBackrestSprite;
-                    backrest.sortingLayerName = "Default";
-                    backrest.sortingOrder = renderer.sortingOrder + 1;
-                    backrest.enabled = false;
-                    _chairBackrests.Add(item.FurnitureId, backrest);
+                    var frontRoot = new GameObject("FrontOverlay");
+                    frontRoot.transform.SetParent(root.transform, false);
+                    frontRoot.transform.localPosition = Vector3.zero;
+                    frontRoot.transform.localRotation = Quaternion.identity;
+                    frontRoot.transform.localScale = Vector3.one * definition.UniformScale;
+                    frontRenderer = frontRoot.AddComponent<SpriteRenderer>();
+                    frontRenderer.sprite = definition.FrontOverlaySprite;
+                    frontRenderer.sortingLayerName = "Default";
+                    frontRenderer.sortingOrder = baseRenderer.sortingOrder + 1;
+                    frontRenderer.enabled = false;
+                    _frontOverlays.Add(item.FurnitureId, frontRenderer);
                 }
+
+                var visual = new FurnitureVisual
+                {
+                    Furniture = item,
+                    Definition = definition,
+                    SemanticRoot = root.transform,
+                    BaseRenderer = baseRenderer,
+                    FrontRenderer = frontRenderer
+                };
+                _visuals.Add(item.FurnitureId, visual);
+                _renderers.Add(item.FurnitureId, baseRenderer);
+                _furniture.Add(item.FurnitureId, item);
                 if (!hasBounds)
                 {
-                    _renderBounds = renderer.bounds;
+                    _renderBounds = baseRenderer.bounds;
                     hasBounds = true;
                 }
                 else
                 {
-                    _renderBounds.Encapsulate(renderer.bounds);
+                    _renderBounds.Encapsulate(baseRenderer.bounds);
                 }
             }
+
             if (!hasBounds) _renderBounds = new Bounds(transform.position, Vector3.zero);
         }
 
@@ -91,43 +118,126 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public bool TryGetFurniture(string furnitureId, out PlacedOfficeFurniture furniture) =>
             _furniture.TryGetValue(furnitureId ?? string.Empty, out furniture);
 
-        public void ApplyChairOcclusion(
-            string chairFurnitureId,
-            int characterSortingOrder,
-            OfficeFurnitureFacing facing)
+        public bool TryGetDefinition(string furnitureId, out OfficeFurnitureVisualDefinition definition)
         {
-            if (!TryGetRenderer(chairFurnitureId, out var renderer))
-                throw new ArgumentException("Unknown chair renderer: " + chairFurnitureId, nameof(chairFurnitureId));
-            if (!_chairBackrests.TryGetValue(chairFurnitureId, out var backrest))
-                throw new ArgumentException("Unknown chair backrest: " + chairFurnitureId, nameof(chairFurnitureId));
-            var chairInFront = facing == OfficeFurnitureFacing.NorthWest ||
-                               facing == OfficeFurnitureFacing.NorthEast;
-            renderer.sortingOrder = characterSortingOrder - 1;
-            backrest.enabled = chairInFront;
-            backrest.sortingOrder = characterSortingOrder + 1;
+            if (_visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual))
+            {
+                definition = visual.Definition;
+                return true;
+            }
+            definition = null;
+            return false;
         }
 
-        public bool ChairOcclusionMatches(
-            string chairFurnitureId,
-            int characterSortingOrder,
-            OfficeFurnitureFacing facing)
+        public bool TryGetSemanticRoot(string furnitureId, out Transform semanticRoot)
         {
-            if (!TryGetRenderer(chairFurnitureId, out var renderer)) return false;
-            if (!_chairBackrests.TryGetValue(chairFurnitureId, out var backrest)) return false;
-            var chairInFront = facing == OfficeFurnitureFacing.NorthWest ||
-                               facing == OfficeFurnitureFacing.NorthEast;
-            if (renderer.sortingOrder >= characterSortingOrder) return false;
-            return chairInFront
-                ? backrest.enabled && backrest.sortingOrder > characterSortingOrder
-                : !backrest.enabled;
+            if (_visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual))
+            {
+                semanticRoot = visual.SemanticRoot;
+                return true;
+            }
+            semanticRoot = null;
+            return false;
+        }
+
+        public Vector3 GroundAnchorWorld(string furnitureId) =>
+            ResolveAnchorWorld(furnitureId, visual => visual.Definition.GroundAnchorPx);
+
+        public Vector3 SortAnchorWorld(string furnitureId) =>
+            ResolveAnchorWorld(furnitureId, visual => visual.Definition.SortAnchorPx);
+
+        public Vector3 SeatAnchorWorld(string furnitureId)
+        {
+            FurnitureVisual visual = RequiredVisual(furnitureId);
+            if (!visual.Definition.HasSeatAnchor)
+                throw new InvalidOperationException("Furniture has no seat anchor: " + furnitureId);
+            return OfficeGridAlignmentMetrics.SpriteAnchorWorld(visual.BaseRenderer, visual.Definition.SeatAnchorPx);
+        }
+
+        public Vector3 WorkSurfaceAnchorWorld(string furnitureId)
+        {
+            FurnitureVisual visual = RequiredVisual(furnitureId);
+            if (!visual.Definition.HasWorkSurfaceAnchor)
+                throw new InvalidOperationException("Furniture has no work-surface anchor: " + furnitureId);
+            return OfficeGridAlignmentMetrics.SpriteAnchorWorld(visual.BaseRenderer, visual.Definition.WorkSurfaceAnchorPx);
+        }
+
+        public void ApplySeatOcclusion(OfficeSeatSlot seat, int characterSortingOrder)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
+            chair.BaseRenderer.sortingOrder = characterSortingOrder - 1;
+            if (chair.FrontRenderer != null)
+            {
+                chair.FrontRenderer.enabled = chair.Definition.FrontOverlayWhenOccupied;
+                chair.FrontRenderer.sortingOrder = characterSortingOrder + 2;
+            }
+
+            if (!seat.HasWorkstationBinding) return;
+            FurnitureVisual desk = RequiredVisual(seat.WorkSurfaceFurnitureId);
+            desk.BaseRenderer.sortingOrder = characterSortingOrder - 2;
+            if (desk.FrontRenderer != null)
+            {
+                desk.FrontRenderer.enabled = desk.Definition.FrontOverlayWhenOccupied;
+                desk.FrontRenderer.sortingOrder = characterSortingOrder + 1;
+            }
+        }
+
+        public void ClearSeatOcclusion(OfficeSeatSlot seat)
+        {
+            if (seat == null) return;
+            RestoreVisualSorting(RequiredVisual(seat.ChairFurnitureId));
+            if (seat.HasWorkstationBinding) RestoreVisualSorting(RequiredVisual(seat.WorkSurfaceFurnitureId));
+        }
+
+        public bool SeatOcclusionMatches(OfficeSeatSlot seat, int characterSortingOrder)
+        {
+            if (seat == null) return false;
+            FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
+            if (chair.BaseRenderer.sortingOrder != characterSortingOrder - 1) return false;
+            if (chair.FrontRenderer != null &&
+                (chair.FrontRenderer.enabled != chair.Definition.FrontOverlayWhenOccupied ||
+                 chair.FrontRenderer.sortingOrder != characterSortingOrder + 2)) return false;
+            if (!seat.HasWorkstationBinding) return true;
+            FurnitureVisual desk = RequiredVisual(seat.WorkSurfaceFurnitureId);
+            if (desk.BaseRenderer.sortingOrder != characterSortingOrder - 2) return false;
+            return desk.FrontRenderer == null ||
+                   (desk.FrontRenderer.enabled == desk.Definition.FrontOverlayWhenOccupied &&
+                    desk.FrontRenderer.sortingOrder == characterSortingOrder + 1);
+        }
+
+        private Vector3 ResolveAnchorWorld(string furnitureId, Func<FurnitureVisual, Vector2> anchor)
+        {
+            FurnitureVisual visual = RequiredVisual(furnitureId);
+            return OfficeGridAlignmentMetrics.SpriteAnchorWorld(visual.BaseRenderer, anchor(visual));
+        }
+
+        private FurnitureVisual RequiredVisual(string furnitureId)
+        {
+            if (!_visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual))
+                throw new ArgumentException("Unknown furniture visual: " + furnitureId, nameof(furnitureId));
+            return visual;
+        }
+
+        private void RestoreVisualSorting(FurnitureVisual visual)
+        {
+            Vector3 sortAnchorWorld = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                visual.BaseRenderer,
+                visual.Definition.SortAnchorPx);
+            visual.BaseRenderer.sortingOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(sortAnchorWorld);
+            if (visual.FrontRenderer != null)
+            {
+                visual.FrontRenderer.enabled = false;
+                visual.FrontRenderer.sortingOrder = visual.BaseRenderer.sortingOrder + 1;
+            }
         }
 
         private Vector3 ResolveFootprintCenter(PlacedOfficeFurniture item)
         {
-            var sum = Vector3.zero;
-            var count = 0;
-            for (var y = item.Origin.Y; y < item.Origin.Y + item.Height; y++)
-            for (var x = item.Origin.X; x < item.Origin.X + item.Width; x++)
+            Vector3 sum = Vector3.zero;
+            int count = 0;
+            for (int y = item.Origin.Y; y < item.Origin.Y + item.Height; y++)
+            for (int x = item.Origin.X; x < item.Origin.X + item.Width; x++)
             {
                 sum += _gridPresenter.CellCenterWorld(new OfficeGridCoordinate(x, y));
                 count++;
@@ -137,12 +247,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
         private void ClearGenerated()
         {
+            _visuals.Clear();
             _renderers.Clear();
             _furniture.Clear();
-            _chairBackrests.Clear();
-            for (var index = transform.childCount - 1; index >= 0; index--)
+            _frontOverlays.Clear();
+            for (int index = transform.childCount - 1; index >= 0; index--)
             {
-                var child = transform.GetChild(index).gameObject;
+                GameObject child = transform.GetChild(index).gameObject;
                 if (Application.isPlaying) Destroy(child);
                 else DestroyImmediate(child);
             }

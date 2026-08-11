@@ -95,7 +95,9 @@ namespace FamilyCompany.Simulation.OfficeLayout
             seats.Add(new OfficeSeatSlot(
                 seatId,
                 chairId,
+                deskId,
                 new OfficeGridCoordinate(chairX, chairY),
+                new OfficeGridCoordinate(chairX, chairY - 1),
                 OfficeFurnitureFacing.NorthWest));
         }
 

@@ -366,20 +366,44 @@
   - `office_swivel_chair_alpha_v2.png` — `C233124DD83CAB7020DC305E2F185738A9B57841CC8278BD6128A18028276A18`
   - `office_water_dispenser_alpha_v2.png` — `1B0502317D3D9216ED725024F8F29B4D5D46F7FAAC9EF6F157D662B0323C0C29`
   - `office_workstation_alpha_v2.png` — `DE00FC8168130F596341D9DB240F0B399CEEDE7F7234177919E0B660278C4D66`
-- 런타임 루트: `Assets/Art/Office/Tiles/Furniture/Runtime/`. `OfficeFurnitureAssetBuilder`가 640×512 하드 알파·180 PPU·Point·mipmap 없음·무압축·바닥 접점 피벗으로 재현한다. 12개 본체 외에 착석 가림용 `office_swivel_chair_backrest_v2.png`를 파생한다.
+- 런타임 루트: `Assets/Art/Office/Tiles/Furniture/Runtime/`. `OfficeFurnitureAssetBuilder`가 visible bounds에 `min(maxWidth/sourceWidth, maxHeight/sourceHeight)` 단일 배율을 적용해 640×512 하드 알파·180 PPU·Point·mipmap 없음·무압축으로 재현한다. 종류별 실제 ground anchor가 pivot이며 반복 빌드 SHA가 같아야 한다. 착석 가림은 고정 Y 절단이 아니라 원본 좌표의 명시적 폴리곤 마스크 front Sprite다.
 - 런타임 SHA-256:
-  - `office_coffee_table_v2.png` — `568FB01F7E2CA0A60ED5FE2B5FF31028944B968871F5B06A79D0B65B62FF2B7E`
-  - `office_document_bookcase_v2.png` — `D25257CA4069869B94CEFFB987BB29EAB68290ABA9C54F4D11036D192BF52CD6`
-  - `office_fax_copier_v2.png` — `F4FA82A64F3174AEAC7618CD67C43C6FC7FC459001C98189D0424765E92B9E1B`
-  - `office_filing_cabinet_v2.png` — `7468C475BB94A5C7CD76BF2D9A3BA431D5FCBF6F1E64641C67F0679770F2770D`
-  - `office_meeting_table_v2.png` — `50021075E7DEFF173A49E17911CAB74BDB4D4D78BB17FE1456F66AC270AE835C`
-  - `office_partition_v2.png` — `C55F184DB37AC4D346D37D2900BF1B91FBD6FB07E5D68C45C6A8299BC57C9839`
-  - `office_potted_plant_v2.png` — `606AD2077C09E34DD058476C78435171380A4452107C0130C523ECBBA5BF9E95`
-  - `office_reception_counter_v2.png` — `300ABCFEA7D15FC7958AE807222C4FB6443A4127FD82E081715E032743120ECE`
-  - `office_sofa_v2.png` — `D2BE5B8A251B222A672CBF6642B887A426B197E4F070CD7FEE2D0FE946CEC39A`
-  - `office_swivel_chair_v2.png` — `E56F8EA3D5FD3D9F4FD9AD7493AB76DF3569AF5FEA3BE2403C60E305B41EFBBE`
-  - `office_swivel_chair_backrest_v2.png` — `A78764E2429459CFE44061EFD3FDB912BA50A193C30626297B34E895556D74E5`
-  - `office_water_dispenser_v2.png` — `14EF8FB97FB0659DE1FA4698AF8D13A43DEEEF6BE99BF282F5E3B4D07C730710`
-  - `office_workstation_v2.png` — `D5CAC9DA32917313185DF409CDB99B51BF0321FFFDBD60A03958E4795A7AE8CE`
+  - `office_coffee_table_v2.png` — `B5948088A9E5BDABDD45F1AF1E745C8BC8CB2CDFF5EF00BC298DAD5561F2582C`
+  - `office_document_bookcase_v2.png` — `665668993FEB321F7B508C65B9D4CAA538390BD5853E464895A150C2EB5ACD1C`
+  - `office_fax_copier_v2.png` — `9388CD3D958386357192BA1677D4D720D640364A32A006E9D9421E2084032D73`
+  - `office_filing_cabinet_v2.png` — `940CFE88C5AD0A1BCAB2ED4E7784ABF2604A14F386AA1DD94EACB3E75A7CBD1F`
+  - `office_meeting_table_v2.png` — `C9AD8E6B383D9D846D0F311128E7DB818D63E2824A67C0B91F61CB0EB8E624F1`
+  - `office_partition_v2.png` — `EC24F396BA2C50EB4011B5D09AF6D97860CEDFCAB9050BB6BC737EF30B3845DB`
+  - `office_potted_plant_v2.png` — `DEB01641AB43CF50962C9664C8B04F88779935359B821D13371E077679624581`
+  - `office_reception_counter_v2.png` — `668E5BB0F19E91D111E08B6624FBC0882718262B09FF161DE39F57E8EF477031`
+  - `office_sofa_v2.png` — `09AD2A48A78A92E69C51461C0BCBEC4C49CDBE1DEEBB23B81E217EBC58DD0E9B`
+  - `office_swivel_chair_v3.png` — `78E36D15B9940A808DD24C5D31D16A3F3D10037E6597391609D3350EA8A57BA4`
+  - `office_water_dispenser_v2.png` — `283B6D26B1E0EE254FCFE3D8CBB7AB32A233924D3DB36BD5FEC3F0FDCAE705B1`
+  - `office_workstation_v4.png` — `AAD471C666F84AED60008A5EADD9E6F8E86857A6E0C67B1ABF95070F9B2C1626`
+  - `office_swivel_chair_front_v3.png` — `22D60EF8FD3A7A33CF8B3226B8B3ACF46AAA15A519ACE6E8B20BDFCF3D939E73`
+  - `office_workstation_front_v4.png` — `762B63AF9A583EDF1F9243D7F182BFDA7155C362E5A25067F07F405708006B36`
+
+### T4 사용자 캡처 교정 자산
+
+- 생성 모드: OpenAI 내장 ImageGen. 기존 SIMUL-v3 팔레트와 2000년대 민트·우드 CRT 사무실 문법을 유지한 정밀 단일 소품 편집이다.
+- 의자 프롬프트 핵심: 착석 인물이 좌상단 CRT를 보는 `NorthWest` 방향, 열린 좌석 앞은 좌상단, 등받이는 인물 뒤 우하단, 사람·책상·바닥·그림자·문자 없음, 균일 `#ff00ff` 배경.
+- 책상 프롬프트 핵심: CRT·키보드·마우스·전화기·카메라·팔레트는 유지하고 바닥까지 닿는 넓은 옆판/앞판은 모두 제거, 서로 분리된 네 다리와 작은 발, 서랍장 아래 넓은 바닥 틈, 균일 `#ff00ff` 배경.
+- 공식 후처리: `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 18 --opaque-threshold 210 --despill --edge-contract 1`.
+- 최종 원본 및 SHA-256:
+  - `office_swivel_chair_northwest_chroma_v3.png` — `83CD917A61A943F6D1EAFFE2C35643DDE2CA4AF824AD3CE4820894477F7A950F`
+  - `office_swivel_chair_northwest_alpha_v3.png` — `869B32F4A522099A2B52A4F0A9391C667565BB5E0E4D5F228C535FAA4C96FCC3`
+  - `office_workstation_chroma_v4.png` — `84EFD59E4BCAD817064F8901E00153E8747FEB1F75F943DBBFD557576FA8BD46`
+  - `office_workstation_alpha_v4.png` — `D913C6160C9AD32FA30618F796A7BB40C4A3EABC1AE02E337F8BFBC40D1ADD43`
+- 최종 런타임 및 SHA-256:
+  - `office_swivel_chair_v3.png`과 `office_workstation_v4.png`는 위 균일 스케일 SHA가 정본이다.
+  - `office_swivel_chair_front_v3.png`과 `office_workstation_front_v4.png`는 base와 canvas·PPU·pivot이 같은 명시적 전경 마스크다.
+  - 고정 Y cutoff로 만들었던 `office_swivel_chair_backrest_v3.png`는 폐기·제거했다.
+- Visual authoring 정본: `OfficeFurnitureVisualCatalog.asset`(12종 ground/sort, chair seat, workstation work-surface)과 `OfficeCharacterSeatPoseCatalog.asset`(가족 4명 `NorthWest` pelvis/interaction)이다.
+- 최종 Office Tycoon QA SHA-256:
+  - `after-office-tile-tycoon-overview-1920x1080.png` — `7F2BEABA46E3F17772BE7320006001F1F98A62D4671831A5FDC089BC3B9056B8`
+  - `after-office-tile-tycoon-seated-1920x1080.png` — `CBBDEF833119A8A0F16363020E539C2EDACAA013056B30FA8665AF1F5CF9079C`
+  - `after-office-tile-tycoon-anchors-1920x1080.png` — `0417AC0C10C7F89112C1498108EF5762FF5DA4D0F8AFFC7A91C63790433362D4`
+  - `after-office-tile-tycoon-occlusion-1920x1080.png` — `9BD71AE9E7B71A794F76FA034AC1382595D17BFF88AC71FB04E9650BF6B7D750`
+  - `office-tile-tycoon-alignment-report.txt` — `3C08FB502057D89CAE59FF0B6AA8C68C49641C396E44F9C73272DA4F8797C069`
 - 규격: 320×160 2:1 RGBA, 알파 0/255, 남은 마젠타 프린지 0, Sprite Single, 180 PPU, Point, mipmap 없음, 무압축. 같은 이름의 `.asset` 3개가 실제 Unity `Tile` 정본이다.
 - 프롬프트 핵심: 밝고 캐주얼한 2000년대 한국 소형 사무실의 허니 오크 장판, 정확히 3개 동일 외곽 등각 다이아몬드, 미세한 판재 변형, 어둡거나 금색 위주의 고급 팔레트 금지, 텍스트·로고·워터마크 없음.

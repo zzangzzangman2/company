@@ -16,6 +16,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private OfficeGrid _semanticGrid;
         private OfficeGridTilemapPresenter _gridPresenter;
         private OfficeGridCoordinate[] _route = Array.Empty<OfficeGridCoordinate>();
+        private Transform _visualRoot;
         private SpriteRenderer _renderer;
         private DirectionalSpriteAnimator _animator;
         private int _targetIndex;
@@ -24,6 +25,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private bool _routeMovementEnabled = true;
 
         public SpriteRenderer TargetRenderer => _renderer;
+        public Transform VisualRoot => _visualRoot;
+        public Vector3 VisualLocalOffset => _visualRoot == null ? Vector3.zero : _visualRoot.localPosition;
         public DirectionalSpriteAnimator Animator => _animator;
         public int TargetIndex => _targetIndex;
         public OfficeGridCoordinate TargetCell => _route.Length == 0 ? default : _route[_targetIndex];
@@ -61,10 +64,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _distanceTravelled = 0f;
             _routeMovementEnabled = true;
             _targetIndex = 1;
-            _renderer = GetComponent<SpriteRenderer>();
-            if (_renderer == null) _renderer = gameObject.AddComponent<SpriteRenderer>();
+            transform.localScale = Vector3.one;
+            _visualRoot = transform.Find("VisualRoot");
+            if (_visualRoot == null)
+            {
+                var visualObject = new GameObject("VisualRoot");
+                _visualRoot = visualObject.transform;
+                _visualRoot.SetParent(transform, false);
+            }
+            _visualRoot.localPosition = Vector3.zero;
+            _visualRoot.localRotation = Quaternion.identity;
+            _visualRoot.localScale = Vector3.one * UniformVisualScale;
+            _renderer = _visualRoot.GetComponent<SpriteRenderer>();
+            if (_renderer == null) _renderer = _visualRoot.gameObject.AddComponent<SpriteRenderer>();
             _renderer.sortingLayerName = "Default";
-            transform.localScale = Vector3.one * UniformVisualScale;
             transform.position = _gridPresenter.CellCenterWorld(_route[0]);
             _animator = GetComponent<DirectionalSpriteAnimator>();
             if (_animator == null) _animator = gameObject.AddComponent<DirectionalSpriteAnimator>();
@@ -111,6 +124,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             if (_renderer == null) return;
             _renderer.sortingOrder = ResolveDynamicSortingOrder(transform.position) + offset;
+        }
+
+        public void SetVisualLocalOffset(Vector3 offset)
+        {
+            if (_visualRoot == null) throw new InvalidOperationException("Character VisualRoot is not configured.");
+            _visualRoot.localPosition = offset;
+        }
+
+        public void ResetVisualLocalOffset()
+        {
+            SetVisualLocalOffset(Vector3.zero);
+        }
+
+        public Vector3 SpriteAnchorWorld(Vector2 spriteRectAnchorPx)
+        {
+            return OfficeGridAlignmentMetrics.SpriteAnchorWorld(_renderer, spriteRectAnchorPx);
         }
 
         public static int ResolveDynamicSortingOrder(Vector3 groundPosition) =>

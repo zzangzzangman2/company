@@ -18,6 +18,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             ValidatePreviewIntegrity();
             ValidateLayoutSaveRoundTrip();
             ValidateFurnitureAndSeatRoundTrip();
+            ValidateSchemaOneSeatMigration();
             ValidateInvalidPayloadsAreRejected();
             ValidateV5Migration();
             Debug.Log("FAMILY_COMPANY_OFFICE_GRID_T1_VALIDATION: PASS");
@@ -74,6 +75,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 AssertEqual(false, chair.BlocksMovement, seat.SeatId + " chair blocking");
                 AssertEqual(seat.Cell, chair.Origin, seat.SeatId + " chair origin");
                 AssertEqual(seat.Facing, chair.Facing, seat.SeatId + " chair facing");
+                AssertEqual(true, seat.HasWorkstationBinding, seat.SeatId + " workstation binding");
+                AssertEqual(true, grid.IsWalkable(seat.ApproachCell), seat.SeatId + " approach walkable");
             }
         }
 
@@ -81,13 +84,28 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             var source = OfficeGridLayouts.CreateMigrationPreview();
             var json = JsonUtility.ToJson(OfficeGridSaveAdapter.ToDto(source));
-            RequireContains(json, "\"schemaVersion\":1", "office grid schema");
+            RequireContains(json, "\"schemaVersion\":2", "office grid schema");
+            RequireContains(json, "\"workSurfaceFurnitureId\"", "workstation binding payload");
+            RequireContains(json, "\"approachX\"", "seat approach payload");
             RequireContains(json, "\"floorTiles\"", "floor payload");
             RequireContains(json, "\"walkable\"", "walkable payload");
             RequireNotContains(json, "transform", "semantic save excludes Transform");
             RequireNotContains(json, "worldPosition", "semantic save excludes world position");
             var restored = OfficeGridSaveAdapter.Restore(JsonUtility.FromJson<OfficeGridSaveDto>(json));
             AssertEqual(source.ComputeLayoutHash(), restored.ComputeLayoutHash(), "layout hash roundtrip");
+        }
+
+        private static void ValidateSchemaOneSeatMigration()
+        {
+            var dto = OfficeGridSaveAdapter.ToDto(OfficeGridLayouts.CreateMigrationPreview());
+            dto.schemaVersion = 1;
+            var restored = OfficeGridSaveAdapter.Restore(dto);
+            AssertEqual(4, restored.SeatSlots.Count, "schema 1 migrated seat count");
+            foreach (var seat in restored.SeatSlots)
+            {
+                AssertEqual(false, seat.HasWorkstationBinding, seat.SeatId + " schema 1 optional workstation");
+                AssertEqual(seat.Cell, seat.ApproachCell, seat.SeatId + " schema 1 approach fallback");
+            }
         }
 
         private static void ValidateFurnitureAndSeatRoundTrip()
