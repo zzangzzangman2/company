@@ -407,3 +407,14 @@
   - `office-tile-tycoon-alignment-report.txt` — `3C08FB502057D89CAE59FF0B6AA8C68C49641C396E44F9C73272DA4F8797C069`
 - 규격: 320×160 2:1 RGBA, 알파 0/255, 남은 마젠타 프린지 0, Sprite Single, 180 PPU, Point, mipmap 없음, 무압축. 같은 이름의 `.asset` 3개가 실제 Unity `Tile` 정본이다.
 - 프롬프트 핵심: 밝고 캐주얼한 2000년대 한국 소형 사무실의 허니 오크 장판, 정확히 3개 동일 외곽 등각 다이아몬드, 미세한 판재 변형, 어둡거나 금색 위주의 고급 팔레트 금지, 텍스트·로고·워터마크 없음.
+
+## 2026-08-11 Office Tycoon Alignment V2 calibration
+
+- 정본 에셋: `Assets/FamilyCompany/Presentation.Unity/OfficeGrid/Authoring/OfficeFurnitureVisualCatalog.asset`, `OfficeCharacterSeatPoseCatalog.asset`.
+- 버전: 두 catalog 모두 `calibrationVersion: 2`. 가구 12개 정의, 캐릭터 pose 56개(`4명 × (SitDown 4 + Work 6 + StandUp 4)`)다.
+- 가구 데이터: 각 정의는 독립 네 점 ground footprint, 의미 footprint 폭/높이, ground/sort를 가진다. desk는 operator seat `(390.445, 49.329)`와 work socket, chair는 seat `(313.007, 153.549)`를 가진다.
+- mask 판정: `office_workstation_front_v4.png`는 책상 앞 모서리·다리·서랍의 제한 전경으로 사용한다. `office_swivel_chair_front_v3.png` 파일은 이전 빌드 재현 자료로 남지만 NorthWest 승인 catalog에서는 참조하지 않으며 런타임에 그리지 않는다.
+- 편집기: `OfficeTycoonAlignmentCalibrationWindow.cs`가 100/200/400% 픽셀 보기, 네 점·socket, clip/frame onion skin, workstation 합성을 제공한다. 합성 승인 전에는 값을 저장할 수 없다.
+- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하되 이미 v2인 calibration asset은 덮어쓰지 않는다.
+- QA 산출물 루트: `Artifacts/OfficeTycoonAlignmentV2/`. 정본 검증기는 `OfficeTycoonAlignmentV2Qa.StartBatch`이며 Preview 45초와 Starter 60초를 분리 실행한다.
+- 승인 상태: version 2는 편집·저장 구조의 정본이지만 현재 좌표값은 실패 진단 candidate다. 2026-08-11 전체 QA에서 hand↔work가 8.032~13.322px로 실패했으므로 pose 56개와 가구 네 점을 Calibration Window에서 프레임별로 다시 보고 승인하기 전에는 최종 시각 정본으로 부르지 않는다.

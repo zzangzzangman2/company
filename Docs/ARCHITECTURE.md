@@ -61,13 +61,16 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - 캐릭터 프레젠테이션은 그리드 셀 중심을 발 기준점으로 사용하고, 화면 Y(격자의 x+y에 대응)에 따라 매 프레임 정렬한다. 누적 스케일은 균등이어야 하고 16:9 기본 카메라에서 실제 실루엣 높이는 화면의 14~18%다.
 - T1~T3은 `OfficeTileMigrationPreview` 격리 씬에서 검증한다. 현재 `Prototype01`의 OfficeVisualV2·3D Collider·웨이포인트·좌석·계약은 T4/T5 이관 전까지 런타임 폴백이며 삭제하지 않는다.
 - 16:9가 아닌 화면에서는 타일이나 캐릭터를 비균등하게 늘리지 않는다. `OfficeGridCameraFitter`가 균등 직교 크기만 늘려 네 격자 모서리를 보존한다.
-- `OfficeGridLayouts.CreateMigrationPreview()`는 T4 기준 18개 가구·12종 kind·4개 좌석을 의미 좌표로 만든다. 책상과 수납·설비는 통행을 막고, 네 의자는 좌석 셀과 원점이 같으며 통행 가능해야 한다.
-- `OfficeFurnitureVisualCatalog`는 12종·현재 방향별 base/front Sprite, `ground/sort/seat/work-surface` 픽셀 앵커와 양의 균등 scale을 명시한다. `OfficeGridFurniturePresenter`는 의미 root를 정확한 footprint 중심·scale 1에 고정하고, 자식 `BaseVisual`/`FrontOverlay`만 카탈로그 데이터로 투영한다. 정렬은 의미 root가 아니라 `sortAnchorWorld`를 사용한다.
-- `OfficeGridCharacterMover`의 의미 root는 항상 scale 1·셀 중심이며 SpriteRenderer는 균등 scale 1.69의 자식 `VisualRoot`에 있다. `OfficeGridSeatedWorker`는 `ApproachCell`까지 일반 경로 이동한 뒤 좌석 셀로 결정론적 정밀 이동하고, 가족·방향별 `pelvisAnchorPx`와 의자 `seatAnchorPx`의 차이만 `VisualRoot.localPosition`에 적용한다. 일어서면 이를 0으로 원복한다.
-- 좌석은 저장 서브스키마 v2에서 chair/work-surface/seat/approach/facing을 명시하며 v1은 기존 좌석 생성자로 안전 복원한다. 이동 시작부터 approach cell로 빠져나올 때까지 기존 `OfficeSeatRuntimeClaim`으로 예약·점유하며, 다른 NPC 경로는 타인의 claimed seat cell을 임시 차단한다.
-- 착석 중 상대 정렬은 책상 base/rear < 의자 base < 캐릭터 < 책상 front < 필요한 의자 front 순이다. front는 고정 Y 절단이 아니라 원본 좌표의 명시적 픽셀 폴리곤 마스크로 생성한다.
+- `OfficeGridLayouts.CreateMigrationPreview()`는 18개 가구·12종 kind·파티션을 가진 T1~T5 회귀 fixture다. 실제 새 게임과 v1~v5 저장 이관은 같은 13×13 구조에서 불필요한 파티션을 뺀 `CreateStarterOfficeV1()` 17개 가구·11종을 사용한다. Preview fixture를 게임 기본값으로 다시 연결하지 않는다.
+- 각 `OfficeSeatSlot`에서 파생한 `OfficeWorkstationSlot`은 desk/chair/seat ID, seat/approach cell, facing, 반 셀 정밀도의 `OperatorAnchor`를 한 의미 단위로 묶는다. 저장 서브스키마 v3은 `operatorX2/operatorY2`를 보존하고 v1은 레거시 좌석, v2는 연결된 work-surface 방향의 반 셀 operator anchor로 안전 이관한다.
+- `OfficeFurnitureVisualCatalog` calibration v2는 12종·방향별 base/front Sprite, ground/sort, 네 점 ground footprint, 의미 footprint 크기, chair seat, desk operator seat/work socket, 양의 균등 scale을 명시한다. 네 점은 타일맵이 독립 계산한 footprint 투영과 각 점 2px 이내여야 한다.
+- `OfficeGridFurniturePresenter`는 의미 root를 footprint 중심·scale 1에 고정하고, 자식 `VisualRoot`에만 균등 scale과 승인된 socket 정렬을 적용한다. desk를 먼저 배치하고 desk operator seat socket에 chair seat를 맞춘다. chair·desk의 의미 root와 footprint는 이 시각 보정으로 이동하지 않는다.
+- `OfficeGridCharacterMover`의 의미 root는 항상 scale 1·좌석 셀 중심이며 SpriteRenderer는 균등 scale 1.69의 자식 `VisualRoot`에 있다. `OfficeGridSeatedWorker`는 desk operator seat socket에 clip/frame별 실제 pelvis anchor를 맞추고 실제 hand anchor와 desk work socket을 별도로 계측한다. 일어서면 위치와 scale을 함께 정본 상태로 복원한다.
+- `OfficeCharacterSeatPoseCatalog` calibration v2의 키는 member/direction/clip/frame이다. 지원하지 않는 방향이나 누락 프레임을 다른 pose로 fallback하지 않는다. Work 전 프레임은 pelvis 2px·hand 4px, 프레임 간 보정 jump 1px 허용치를 만족해야 한다.
+- 착석 중 상대 정렬은 책상 base < 의자 base < 캐릭터 < 책상 front다. NorthWest 의자 등받이는 캐릭터 뒤 base에 속하므로 chair front overlay를 만들지 않는다. 책상 front는 고정 Y 절단이 아니라 앞 모서리·다리·서랍만 포함하는 원본 좌표 픽셀 마스크다.
+- `OfficeTycoonAlignmentCalibrationWindow`는 가구 100/200/400% 픽셀 보기, 네 점 footprint·socket 드래그, character clip/frame·onion skin, workstation 합성과 실시간 오차를 제공한다. 합성 승인을 하지 않으면 catalog에 저장할 수 없다. PNG 빌더는 calibration v2 에셋을 재생성하거나 상수로 덮어쓰지 않는다.
 - `OfficeGridCollisionMonitor`는 실제 Transform을 매 프레임 가장 가까운 셀로 투영해 막힌 셀 침범을 계측하는 QA 전용 경계다. 결과는 저장하지 않는다.
-- T4~T5도 `OfficeTileMigrationPreview`에 격리한다. 기존 `Prototype01`의 OfficeVisualV2·Collider·계약·자율 AI는 T6 통합 전까지 폴백으로 유지한다.
+- `OfficeTycoonAlignmentV2Qa`는 Preview와 Starter를 분리 실행하고 1920×1080 캡처, 실제 네 점 footprint, chair↔desk socket, pelvis↔seat, hand↔work, 프레임 안정성, 얼굴/하체 overlay, 60초 Transform 0 변화, 충돌·중복 claim·저장 왕복을 검사한다. 기존 `Prototype01`의 OfficeVisualV2·Collider·계약·자율 AI는 T6 통합 전까지 폴백으로 유지한다.
 
 ## 실제 회사 이동
 

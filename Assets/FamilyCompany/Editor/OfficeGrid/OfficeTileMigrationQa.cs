@@ -144,7 +144,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        private static void BuildPreviewScene(bool includeT45)
+        internal static void BuildPreviewScene(
+            bool includeT45,
+            OfficeTilePreviewLayout layout = OfficeTilePreviewLayout.MigrationPreview)
         {
             OfficeGridValidation.Run();
             OfficeTileAssetBuilder.Build();
@@ -165,6 +167,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
             var bootstrapObject = new GameObject("OfficeTileMigrationPreviewBootstrap");
             var bootstrap = bootstrapObject.AddComponent<OfficeTileMigrationPreviewBootstrap>();
+            bootstrap.ConfigureLayoutForEditor(layout);
             bootstrap.ConfigureForEditor(
                 OfficeTileAssetBuilder.LoadFloorTiles(),
                 LoadCharacterFrames("player"),
@@ -409,12 +412,16 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private static void ValidateT4Static(OfficeTileMigrationPreviewBootstrap bootstrap)
         {
             var grid = bootstrap.Presenter.SemanticGrid;
+            bool starter = bootstrap.Layout == OfficeTilePreviewLayout.StarterOfficeV1;
+            int expectedFurnitureCount = starter ? 17 : 18;
+            int expectedKindCount = starter ? 11 : 12;
             Require(grid.Furniture.Count >= 8, "T4 furniture count is below eight.");
             Require(grid.Furniture.Select(item => item.KindId).Distinct(StringComparer.Ordinal).Count() >= 4,
                 "T4 furniture kind count is below four.");
-            Require(grid.Furniture.Count == 18, $"T4 expected 18 placed furniture objects, found {grid.Furniture.Count}.");
-            Require(grid.Furniture.Select(item => item.KindId).Distinct(StringComparer.Ordinal).Count() == 12,
-                "T4 must use all 12 independent furniture kinds.");
+            Require(grid.Furniture.Count == expectedFurnitureCount,
+                $"T4 expected {expectedFurnitureCount} placed furniture objects for {bootstrap.Layout}, found {grid.Furniture.Count}.");
+            Require(grid.Furniture.Select(item => item.KindId).Distinct(StringComparer.Ordinal).Count() == expectedKindCount,
+                $"T4 expected {expectedKindCount} furniture kinds for {bootstrap.Layout}.");
             Require(bootstrap.FurniturePresenter != null &&
                     bootstrap.FurniturePresenter.Renderers.Count == grid.Furniture.Count,
                 "T4 furniture renderers do not match semantic furniture.");
@@ -476,7 +483,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "Every family desk must have at least one seat.");
             Require(chairSeatCounts.Count == 4 && chairSeatCounts.Values.All(count => count == 1),
                 "Every seat must have exactly one chair.");
-            Append("T4_STATIC_PASS | furniture=18 | kinds=12 | desks=4 | chairs=4 | seats=4 | seatInvariants=pass");
+            Append($"T4_STATIC_PASS | layout={bootstrap.Layout} | furniture={expectedFurnitureCount} | kinds={expectedKindCount} | desks=4 | chairs=4 | seats=4 | seatInvariants=pass");
         }
 
         private static void ValidateAndCaptureOcclusion()
@@ -554,55 +561,54 @@ namespace FamilyCompany.Editor.OfficeGridQa
                         "Furniture renderer is missing: " + item.FurnitureId);
                     Require(bootstrap.FurniturePresenter.TryGetDefinition(item.FurnitureId, out var definition),
                         "Furniture definition is missing: " + item.FurnitureId);
-                    Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(item.FurnitureId, out var root),
-                        "Furniture semantic root is missing: " + item.FurnitureId);
-                    float groundError = OfficeGridAlignmentMetrics.GroundAnchorScreenErrorPx(
-                        camera, renderer, definition, root.position);
-                    Require(groundError <= 1f,
-                        $"{item.FurnitureId} ground anchor error is {groundError:F3}px.");
-                    AppendTycoon($"GROUND | phase={phase} | furniture={item.FurnitureId} | errorPx={groundError:F3}");
+                    float footprintError = OfficeGridAlignmentMetrics.Maximum(
+                        OfficeGridAlignmentMetrics.FootprintCornerErrorsPx(
+                            camera,
+                            renderer,
+                            definition,
+                            bootstrap.Presenter.FootprintCornersWorld(item)));
+                    Require(footprintError <= 2f,
+                        $"{item.FurnitureId} footprint corner error is {footprintError:F3}px.");
+                    AppendTycoon($"FOOTPRINT | phase={phase} | furniture={item.FurnitureId} | maxErrorPx={footprintError:F3}");
                 }
 
                 foreach (var worker in bootstrap.SeatedWorkers)
                 {
                     var seat = FindSeat(grid, worker.SeatId);
-                    var mover = worker.GetComponent<OfficeGridCharacterMover>();
-                    Require(bootstrap.FurniturePresenter.TryGetRenderer(seat.ChairFurnitureId, out var chairRenderer),
-                        "Chair renderer is missing: " + seat.ChairFurnitureId);
-                    Require(bootstrap.FurniturePresenter.TryGetDefinition(seat.ChairFurnitureId, out var chairDefinition),
-                        "Chair definition is missing: " + seat.ChairFurnitureId);
-                    Require(bootstrap.FurniturePresenter.TryGetRenderer(seat.WorkSurfaceFurnitureId, out var deskRenderer),
-                        "Desk renderer is missing: " + seat.WorkSurfaceFurnitureId);
                     Require(bootstrap.FurniturePresenter.TryGetDefinition(seat.WorkSurfaceFurnitureId, out var deskDefinition),
                         "Desk definition is missing: " + seat.WorkSurfaceFurnitureId);
-                    Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(seat.ChairFurnitureId, out var chairRoot),
-                        "Chair semantic root is missing: " + seat.ChairFurnitureId);
-                    Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(seat.WorkSurfaceFurnitureId, out var deskRoot),
-                        "Desk semantic root is missing: " + seat.WorkSurfaceFurnitureId);
 
                     float pelvisError = worker.PelvisSeatScreenError(camera);
-                    float centerlineError = OfficeGridAlignmentMetrics.DeskChairCenterlineErrorPx(
+                    float chairDeskError = worker.ChairDeskSeatScreenError(camera);
+                    float interactionError = worker.HandWorkScreenError(camera);
+                    float operatorSemanticError = OfficeGridAlignmentMetrics.ScreenDistance(
                         camera,
-                        deskRenderer,
-                        deskDefinition,
-                        deskRoot.position,
-                        chairRenderer,
-                        chairDefinition,
-                        chairRoot.position);
-                    float interactionError = OfficeGridAlignmentMetrics.DeskInteractionDepthErrorPx(
-                        camera,
-                        mover.TargetRenderer,
-                        worker.PoseProfile,
-                        deskRenderer,
-                        deskDefinition);
+                        bootstrap.FurniturePresenter.OperatorSeatSocketWorld(seat.WorkSurfaceFurnitureId),
+                        bootstrap.Presenter.SubcellAnchorWorld(seat.OperatorAnchor));
+                    Vector2 characterVector =
+                        (worker.PoseProfile.HandAnchorPx - worker.PoseProfile.PelvisAnchorPx) *
+                        (OfficeGridCharacterMover.UniformVisualScale * worker.PoseProfile.UniformScale);
+                    Vector2 deskVector =
+                        (deskDefinition.OperatorWorkSocketPx - deskDefinition.OperatorSeatSocketPx) *
+                        deskDefinition.UniformScale;
+                    float vectorAngle = OfficeGridAlignmentMetrics.VectorAngleDifferenceDegrees(characterVector, deskVector);
+                    float vectorLength = OfficeGridAlignmentMetrics.VectorLengthRelativeError(characterVector, deskVector);
                     Require(pelvisError <= 2f,
                         $"{worker.MemberId} pelvis-to-seat error is {pelvisError:F3}px.");
-                    Require(centerlineError <= 2f,
-                        $"{worker.MemberId} desk-chair centerline error is {centerlineError:F3}px.");
+                    Require(chairDeskError <= 2f,
+                        $"{worker.MemberId} chair-to-desk seat error is {chairDeskError:F3}px.");
+                    Require(interactionError <= 4f,
+                        $"{worker.MemberId} hand-to-work-surface error is {interactionError:F3}px.");
+                    Require(vectorAngle <= 2f,
+                        $"{worker.MemberId} pelvis-to-hand vector direction differs by {vectorAngle:F3} degrees.");
+                    Require(vectorLength <= 0.04f,
+                        $"{worker.MemberId} pelvis-to-hand vector length differs by {vectorLength * 100f:F3}%.");
                     Require(worker.FootError() <= 0.001f,
                         $"{worker.MemberId} semantic root-to-seat error is {worker.FootError():F6} world units.");
                     AppendTycoon(
-                        $"SEAT | phase={phase} | member={worker.MemberId} | pelvisSeatPx={pelvisError:F3} | centerlinePx={centerlineError:F3} | interactionPx={interactionError:F3} | rootWorld={worker.FootError():F6}");
+                        $"SEAT | phase={phase} | member={worker.MemberId} | pelvisSeatPx={pelvisError:F3} | chairDeskPx={chairDeskError:F3} | " +
+                        $"operatorSemanticPx={operatorSemanticError:F3} | interactionPx={interactionError:F3} | " +
+                        $"vectorDegrees={vectorAngle:F3} | vectorLengthPercent={vectorLength * 100f:F3} | rootWorld={worker.FootError():F6}");
                 }
             }
             finally
@@ -787,7 +793,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        private static void Capture(Camera camera, string path, int width, int height)
+        internal static void Capture(Camera camera, string path, int width, int height)
         {
             var absolute = Path.GetFullPath(path);
             Directory.CreateDirectory(Path.GetDirectoryName(absolute));

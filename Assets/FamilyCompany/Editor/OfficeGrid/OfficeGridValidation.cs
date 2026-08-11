@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FamilyCompany.Save;
 using FamilyCompany.Save.OfficeGrid;
 using FamilyCompany.Simulation.OfficeLayout;
@@ -16,9 +17,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
         public static void Run()
         {
             ValidatePreviewIntegrity();
+            ValidateStarterOfficeIntegrity();
             ValidateLayoutSaveRoundTrip();
             ValidateFurnitureAndSeatRoundTrip();
             ValidateSchemaOneSeatMigration();
+            ValidateSchemaTwoOperatorAnchorMigration();
             ValidateInvalidPayloadsAreRejected();
             ValidateV5Migration();
             Debug.Log("FAMILY_COMPANY_OFFICE_GRID_T1_VALIDATION: PASS");
@@ -60,6 +63,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             AssertEqual(true, grid.IsWalkable(new OfficeGridCoordinate(5, 6)), "walkable service neighbor");
             AssertEqual(18, grid.Furniture.Count, "preview furniture count");
             AssertEqual(4, grid.SeatSlots.Count, "preview seat count");
+            AssertEqual(4, grid.Workstations.Count, "preview workstation count");
             var kindIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var item in grid.Furniture) kindIds.Add(item.KindId);
             AssertEqual(12, kindIds.Count, "preview furniture kind count");
@@ -77,6 +81,30 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 AssertEqual(seat.Facing, chair.Facing, seat.SeatId + " chair facing");
                 AssertEqual(true, seat.HasWorkstationBinding, seat.SeatId + " workstation binding");
                 AssertEqual(true, grid.IsWalkable(seat.ApproachCell), seat.SeatId + " approach walkable");
+                AssertEqual(
+                    new OfficeGridSubcellAnchor(seat.Cell.X * 2 + 1, seat.Cell.Y * 2 + 1),
+                    seat.OperatorAnchor,
+                    seat.SeatId + " diagonal half-cell operator anchor");
+            }
+        }
+
+        private static void ValidateStarterOfficeIntegrity()
+        {
+            var grid = OfficeGridLayouts.CreateStarterOfficeV1();
+            AssertEqual(13, grid.Width, "starter width");
+            AssertEqual(13, grid.Height, "starter height");
+            AssertEqual(17, grid.Furniture.Count, "starter furniture count");
+            AssertEqual(4, grid.SeatSlots.Count, "starter seat count");
+            AssertEqual(4, grid.Workstations.Count, "starter workstation count");
+            foreach (var item in grid.Furniture)
+            {
+                if (string.Equals(item.KindId, OfficeGridLayouts.PartitionKind, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Starter office must not contain the migration occlusion partition.");
+            }
+            foreach (var workstation in grid.Workstations)
+            {
+                AssertEqual(true, grid.IsWalkable(workstation.SeatCell), workstation.SeatId + " starter seat walkable");
+                AssertEqual(true, grid.IsWalkable(workstation.ApproachCell), workstation.SeatId + " starter approach walkable");
             }
         }
 
@@ -84,9 +112,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             var source = OfficeGridLayouts.CreateMigrationPreview();
             var json = JsonUtility.ToJson(OfficeGridSaveAdapter.ToDto(source));
-            RequireContains(json, "\"schemaVersion\":2", "office grid schema");
+            RequireContains(json, "\"schemaVersion\":3", "office grid schema");
             RequireContains(json, "\"workSurfaceFurnitureId\"", "workstation binding payload");
             RequireContains(json, "\"approachX\"", "seat approach payload");
+            RequireContains(json, "\"operatorX2\"", "subcell operator payload");
             RequireContains(json, "\"floorTiles\"", "floor payload");
             RequireContains(json, "\"walkable\"", "walkable payload");
             RequireNotContains(json, "transform", "semantic save excludes Transform");
@@ -105,6 +134,28 @@ namespace FamilyCompany.Editor.OfficeGridQa
             {
                 AssertEqual(false, seat.HasWorkstationBinding, seat.SeatId + " schema 1 optional workstation");
                 AssertEqual(seat.Cell, seat.ApproachCell, seat.SeatId + " schema 1 approach fallback");
+            }
+        }
+
+        private static void ValidateSchemaTwoOperatorAnchorMigration()
+        {
+            var source = OfficeGridLayouts.CreateMigrationPreview();
+            var dto = OfficeGridSaveAdapter.ToDto(source);
+            dto.schemaVersion = 2;
+            foreach (var seat in dto.seatSlots)
+            {
+                seat.operatorX2 = 0;
+                seat.operatorY2 = 0;
+            }
+            var restored = OfficeGridSaveAdapter.Restore(dto);
+            AssertEqual(4, restored.Workstations.Count, "schema 2 workstation count");
+            foreach (var seat in restored.SeatSlots)
+            {
+                var original = source.SeatSlots.Single(item => item.SeatId == seat.SeatId);
+                AssertEqual(
+                    original.OperatorAnchor,
+                    seat.OperatorAnchor,
+                    seat.SeatId + " schema 2 inferred operator midpoint");
             }
         }
 
@@ -167,6 +218,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
             voidWalkable.floorTiles[index] = (int)OfficeFloorTileKind.Void;
             voidWalkable.walkable[index] = true;
             ExpectFailure(() => OfficeGridSaveAdapter.Restore(voidWalkable), "walkable void cell");
+
+            var invalidOperator = OfficeGridSaveAdapter.ToDto(OfficeGridLayouts.CreateMigrationPreview());
+            invalidOperator.seatSlots[0].operatorX2 += 4;
+            ExpectFailure(() => OfficeGridSaveAdapter.Restore(invalidOperator), "distant operator anchor");
         }
 
         private static void ValidateV5Migration()
@@ -176,7 +231,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             dto.officeGrid = null;
             var restored = GameSaveMapper.FromDto(dto);
             AssertEqual(
-                OfficeGridLayouts.CreateMigrationPreview().ComputeLayoutHash(),
+                OfficeGridLayouts.CreateStarterOfficeV1().ComputeLayoutHash(),
                 restored.OfficeGrid.ComputeLayoutHash(),
                 "v5 office grid migration");
         }

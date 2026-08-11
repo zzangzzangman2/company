@@ -37,6 +37,8 @@ namespace FamilyCompany.Save.OfficeGrid
                     y = item.Cell.Y,
                     approachX = item.ApproachCell.X,
                     approachY = item.ApproachCell.Y,
+                    operatorX2 = item.OperatorAnchor.X2,
+                    operatorY2 = item.OperatorAnchor.Y2,
                     facing = (int)item.Facing
                 }).ToList()
             };
@@ -45,7 +47,8 @@ namespace FamilyCompany.Save.OfficeGrid
         public static OfficeGridState Restore(OfficeGridSaveDto dto)
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));
-            if (dto.schemaVersion != 1 && dto.schemaVersion != OfficeGridSaveDto.CurrentSchemaVersion)
+            if (dto.schemaVersion != 1 && dto.schemaVersion != 2 &&
+                dto.schemaVersion != OfficeGridSaveDto.CurrentSchemaVersion)
                 throw new InvalidOperationException($"Unsupported office grid schema: {dto.schemaVersion}.");
             if (dto.floorTiles == null || dto.walkable == null || dto.furniture == null || dto.seatSlots == null)
                 throw new InvalidOperationException("Office grid save data is incomplete.");
@@ -92,17 +95,49 @@ namespace FamilyCompany.Save.OfficeGrid
                 }
                 else
                 {
+                    OfficeGridSubcellAnchor operatorAnchor = dto.schemaVersion >= 3
+                        ? new OfficeGridSubcellAnchor(item.operatorX2, item.operatorY2)
+                        : InferOperatorAnchor(seatCell, item.workSurfaceFurnitureId, furniture);
                     seats.Add(new OfficeSeatSlot(
                         item.seatId,
                         item.furnitureId,
                         item.workSurfaceFurnitureId,
                         seatCell,
                         new OfficeGridCoordinate(item.approachX, item.approachY),
+                        operatorAnchor,
                         (OfficeFurnitureFacing)item.facing));
                 }
             }
 
             return new OfficeGridState(dto.width, dto.height, floor, dto.walkable, furniture, seats);
+        }
+
+        private static OfficeGridSubcellAnchor InferOperatorAnchor(
+            OfficeGridCoordinate seatCell,
+            string workSurfaceFurnitureId,
+            IReadOnlyList<PlacedOfficeFurniture> furniture)
+        {
+            PlacedOfficeFurniture workSurface = furniture.SingleOrDefault(
+                item => string.Equals(item.FurnitureId, workSurfaceFurnitureId, StringComparison.Ordinal));
+            if (workSurface == null)
+                throw new InvalidOperationException("Legacy seat references an unknown work surface: " + workSurfaceFurnitureId);
+
+            int nearestDistance = int.MaxValue;
+            for (int y = workSurface.Origin.Y; y < workSurface.Origin.Y + workSurface.Height; y++)
+            for (int x = workSurface.Origin.X; x < workSurface.Origin.X + workSurface.Width; x++)
+            {
+                int distance = Math.Abs(x - seatCell.X) + Math.Abs(y - seatCell.Y);
+                nearestDistance = Math.Min(nearestDistance, distance);
+            }
+
+            if (nearestDistance != 1)
+                throw new InvalidOperationException("Legacy seat is not adjacent to its work surface: " + workSurfaceFurnitureId);
+
+            double workCenterX = workSurface.Origin.X + (workSurface.Width - 1) * 0.5d;
+            double workCenterY = workSurface.Origin.Y + (workSurface.Height - 1) * 0.5d;
+            return new OfficeGridSubcellAnchor(
+                checked((int)Math.Round(seatCell.X + workCenterX, MidpointRounding.AwayFromZero)),
+                checked((int)Math.Round(seatCell.Y + workCenterY, MidpointRounding.AwayFromZero)));
         }
     }
 }

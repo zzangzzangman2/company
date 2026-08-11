@@ -7,6 +7,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
     {
         public const int MigrationPreviewWidth = 13;
         public const int MigrationPreviewHeight = 13;
+        public const int StarterOfficeWidth = 13;
+        public const int StarterOfficeHeight = 13;
 
         public const string DeskWithPcKind = "desk_with_pc";
         public const string SwivelChairKind = "swivel_chair";
@@ -23,8 +25,18 @@ namespace FamilyCompany.Simulation.OfficeLayout
 
         public static OfficeGrid CreateMigrationPreview()
         {
-            var width = MigrationPreviewWidth;
-            var height = MigrationPreviewHeight;
+            return CreateOfficeLayout(includeMigrationPartition: true);
+        }
+
+        public static OfficeGrid CreateStarterOfficeV1()
+        {
+            return CreateOfficeLayout(includeMigrationPartition: false);
+        }
+
+        private static OfficeGrid CreateOfficeLayout(bool includeMigrationPartition)
+        {
+            var width = StarterOfficeWidth;
+            var height = StarterOfficeHeight;
             var floor = new OfficeFloorTileKind[width * height];
             var walkable = new bool[floor.Length];
             for (var y = 0; y < height; y++)
@@ -50,7 +62,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
             AddBlocking(furniture, "sofa", SofaKind, 9, 10, 2, 1, OfficeFurnitureFacing.SouthEast);
             AddBlocking(furniture, "coffee", CoffeeTableKind, 9, 8, 2, 1, OfficeFurnitureFacing.SouthEast);
             AddBlocking(furniture, "plant", PottedPlantKind, 11, 10, 1, 1, OfficeFurnitureFacing.SouthEast);
-            AddBlocking(furniture, "partition", PartitionKind, 6, 6, 1, 2, OfficeFurnitureFacing.NorthWest);
+            if (includeMigrationPartition)
+                AddBlocking(furniture, "partition", PartitionKind, 6, 6, 1, 2, OfficeFurnitureFacing.NorthWest);
             AddBlocking(furniture, "filing", FilingCabinetKind, 11, 8, 1, 1, OfficeFurnitureFacing.SouthEast);
 
             foreach (var item in furniture)
@@ -98,6 +111,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 deskId,
                 new OfficeGridCoordinate(chairX, chairY),
                 new OfficeGridCoordinate(chairX, chairY - 1),
+                new OfficeGridSubcellAnchor(checked(chairX * 2 + 1), checked(chairY * 2 + 1)),
                 OfficeFurnitureFacing.NorthWest));
         }
 

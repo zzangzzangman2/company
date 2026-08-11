@@ -74,3 +74,11 @@
 ## 에셋 권리
 
 사용자는 프로젝트의 기존 생성 에셋이 모두 GPT로 생성되었고 본인이 사용 권리를 보유한다고 명시했다. 외부 에셋을 새로 추가할 때는 별도 라이선스를 ASSET_MANIFEST에 기록한다.
+
+## 초기 타일 사무실 정본
+
+- 실제 새 게임과 v1~v5 저장 이관은 `OfficeGridLayouts.CreateStarterOfficeV1()`을 사용한다. 13×13, 가구 17개·11종, 가족 workstation 4개이며 QA용 중앙 파티션은 없다.
+- `CreateMigrationPreview()`의 가구 18개·12종·파티션 구성은 T1~T5 회귀 fixture 전용이다. 실제 게임 기본 사무실로 사용하지 않는다.
+- workstation은 desk/chair/seat binding, seat/approach cell, NorthWest facing, 반 셀 operator anchor를 가진다. 네 가족의 의미 root는 좌석 셀 중심·scale 1이다.
+- 시각 calibration의 유일한 저장 위치는 version 2의 `OfficeFurnitureVisualCatalog.asset`과 `OfficeCharacterSeatPoseCatalog.asset`이다. 현재 좌표는 V2 실패 진단 candidate이며, 의자 좌판 중심·책상 operator socket·가구 네 점 footprint·clip/frame별 실제 pelvis/hand를 수동 교정하고 전체 QA를 통과한 값만 최종 승인 데이터가 된다.
+- NorthWest 회전의자의 등받이는 인물 뒤 base로만 그린다. chair front overlay로 등받이나 좌판을 몸 위에 다시 그리지 않는다. 책상 front overlay는 하체 앞의 다리·서랍·앞 모서리만 담당한다.

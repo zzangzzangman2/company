@@ -41,6 +41,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private OfficeGridSeatingPhase _phase;
         private bool _standAndReseatRequested;
         private float _visualResetError;
+        private OfficeSeatingAnimationClip? _alignedClip;
+        private int _alignedFrame = -1;
+        private Vector3 _previousAlignedVisualPosition;
+        private bool _hasPreviousAlignedVisualPosition;
+        private float _maxFrameCorrectionJumpWorld;
+        private float _maxWorkPelvisErrorPx;
+        private float _maxWorkHandErrorPx;
 
         public string MemberId { get; private set; }
         public string SeatId => _seat?.SeatId ?? string.Empty;
@@ -52,6 +59,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public int DirectionIndex => _direction;
         public float VisualResetError => _visualResetError;
         public OfficeCharacterSeatPoseProfile PoseProfile => _poseProfile;
+        public float MaxFrameCorrectionJumpWorld => _maxFrameCorrectionJumpWorld;
+        public float MaxWorkPelvisErrorPx => _maxWorkPelvisErrorPx;
+        public float MaxWorkHandErrorPx => _maxWorkHandErrorPx;
 
         public void Configure(
             string memberId,
@@ -79,11 +89,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _seat = FindSeat(grid, seatId);
             _direction = FacingDirection(_seat.Facing);
             MemberId = memberId.Trim();
-            _poseProfile = poseCatalog.Resolve(MemberId, _direction);
+            _poseProfile = poseCatalog.Resolve(
+                MemberId,
+                _direction,
+                OfficeSeatingAnimationClip.Work,
+                0);
             _navigationDelaySeconds = Mathf.Max(0f, navigationDelaySeconds);
             _configuredAt = Time.time;
             _phase = OfficeGridSeatingPhase.WaitingForNavigation;
             _visualResetError = 0f;
+            _alignedClip = null;
+            _alignedFrame = -1;
+            _hasPreviousAlignedVisualPosition = false;
+            _maxFrameCorrectionJumpWorld = 0f;
+            _maxWorkPelvisErrorPx = 0f;
+            _maxWorkHandErrorPx = 0f;
             _animator.ConfigureOfficeSeating(sitDownFrames, workFrames, standUpFrames);
         }
 
@@ -100,7 +120,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return OfficeGridAlignmentMetrics.ScreenDistance(
                 camera,
                 _mover.SpriteAnchorWorld(_poseProfile.PelvisAnchorPx),
-                _furniturePresenter.SeatAnchorWorld(_seat.ChairFurnitureId));
+                _furniturePresenter.OperatorSeatSocketWorld(_seat.WorkSurfaceFurnitureId));
+        }
+
+        public float ChairDeskSeatScreenError(Camera camera)
+        {
+            if (_seat == null || _furniturePresenter == null) return float.PositiveInfinity;
+            return OfficeGridAlignmentMetrics.ScreenDistance(
+                camera,
+                _furniturePresenter.SeatAnchorWorld(_seat.ChairFurnitureId),
+                _furniturePresenter.OperatorSeatSocketWorld(_seat.WorkSurfaceFurnitureId));
+        }
+
+        public float HandWorkScreenError(Camera camera)
+        {
+            if (_poseProfile == null || _mover == null || _furniturePresenter == null)
+                return float.PositiveInfinity;
+            return OfficeGridAlignmentMetrics.ScreenDistance(
+                camera,
+                _mover.SpriteAnchorWorld(_poseProfile.HandAnchorPx),
+                _furniturePresenter.OperatorWorkSocketWorld(_seat.WorkSurfaceFurnitureId));
         }
 
         public void RequestStandAndReseat()
@@ -114,6 +153,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private void Update()
         {
             if (_seat == null) return;
+            RefreshPoseAlignmentForCurrentFrame();
             switch (_phase)
             {
                 case OfficeGridSeatingPhase.WaitingForNavigation:
@@ -130,20 +170,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                     if (!_animator.IsOfficeSeatingTransitionComplete) return;
                     if (!_animator.BeginSeatedWork())
                         throw new InvalidOperationException(MemberId + " could not begin seated work animation.");
-                    ApplyPoseAlignment();
+                    RefreshPoseAlignmentForCurrentFrame(force: true);
                     _mover.RefreshSortingOrder();
                     _furniturePresenter.ApplySeatOcclusion(_seat, _mover.TargetRenderer.sortingOrder);
                     _phase = OfficeGridSeatingPhase.Working;
                     break;
                 case OfficeGridSeatingPhase.Working:
+                    TrackWorkMetrics();
                     if (!_standAndReseatRequested || !_animator.IsOfficeWorkSafeToStand) return;
                     if (!_animator.BeginStandUp())
                         throw new InvalidOperationException(MemberId + " could not begin stand-up animation.");
+                    RefreshPoseAlignmentForCurrentFrame(force: true);
                     _phase = OfficeGridSeatingPhase.StandingUp;
                     break;
                 case OfficeGridSeatingPhase.StandingUp:
                     if (!_animator.IsOfficeSeatingTransitionComplete) return;
-                    _mover.ResetVisualLocalOffset();
+                    _mover.ResetVisualPose();
                     _visualResetError = _mover.VisualLocalOffset.magnitude;
                     _furniturePresenter.ClearSeatOcclusion(_seat);
                     _animator.ResumeWalkingAfterSeating();
@@ -229,19 +271,48 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 throw new InvalidOperationException(MemberId + " could not prepare seat facing.");
             if (!_animator.BeginSitDown(_direction))
                 throw new InvalidOperationException(MemberId + " could not begin sit-down animation.");
-            ApplyPoseAlignment();
+            RefreshPoseAlignmentForCurrentFrame(force: true);
             _mover.RefreshSortingOrder();
             _furniturePresenter.ApplySeatOcclusion(_seat, _mover.TargetRenderer.sortingOrder);
             _phase = OfficeGridSeatingPhase.SittingDown;
         }
 
-        private void ApplyPoseAlignment()
+        private void RefreshPoseAlignmentForCurrentFrame(bool force = false)
         {
-            _mover.ResetVisualLocalOffset();
-            Vector3 pelvisWorld = _mover.SpriteAnchorWorld(_poseProfile.PelvisAnchorPx);
-            Vector3 seatWorld = _furniturePresenter.SeatAnchorWorld(_seat.ChairFurnitureId);
+            if (!_animator.CurrentOfficeSeatingClip.HasValue) return;
+            OfficeSeatingAnimationClip clip = _animator.CurrentOfficeSeatingClip.Value;
+            int frame = _animator.CurrentOfficeSeatingFrame;
+            if (!force && _alignedClip == clip && _alignedFrame == frame) return;
+            _poseProfile = _poseCatalog.Resolve(MemberId, _direction, clip, frame);
+            ApplyPoseAlignment(_poseProfile);
+            _alignedClip = clip;
+            _alignedFrame = frame;
+        }
+
+        private void ApplyPoseAlignment(OfficeCharacterSeatPoseProfile profile)
+        {
+            _mover.ResetVisualPose();
+            _mover.SetSeatedVisualPose(Vector3.zero, profile.UniformScale);
+            Vector3 pelvisWorld = _mover.SpriteAnchorWorld(profile.PelvisAnchorPx);
+            Vector3 seatWorld = _furniturePresenter.OperatorSeatSocketWorld(_seat.WorkSurfaceFurnitureId);
             Vector3 localDelta = transform.InverseTransformVector(seatWorld - pelvisWorld);
-            _mover.SetVisualLocalOffset(localDelta);
+            _mover.SetSeatedVisualPose(localDelta, profile.UniformScale);
+
+            Vector3 currentVisualPosition = _mover.VisualRoot.position;
+            if (_hasPreviousAlignedVisualPosition)
+                _maxFrameCorrectionJumpWorld = Mathf.Max(
+                    _maxFrameCorrectionJumpWorld,
+                    Vector3.Distance(_previousAlignedVisualPosition, currentVisualPosition));
+            _previousAlignedVisualPosition = currentVisualPosition;
+            _hasPreviousAlignedVisualPosition = true;
+        }
+
+        private void TrackWorkMetrics()
+        {
+            Camera camera = Camera.main;
+            if (camera == null) return;
+            _maxWorkPelvisErrorPx = Mathf.Max(_maxWorkPelvisErrorPx, PelvisSeatScreenError(camera));
+            _maxWorkHandErrorPx = Mathf.Max(_maxWorkHandErrorPx, HandWorkScreenError(camera));
         }
 
         private void FinishLeavingSeat()

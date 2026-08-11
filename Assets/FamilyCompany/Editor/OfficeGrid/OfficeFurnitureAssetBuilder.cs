@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEditor;
@@ -38,7 +40,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 string sourceStem = null,
                 Vector2? sourceSeatAnchorPx = null,
                 Vector2? sourceWorkSurfaceAnchorPx = null,
-                Vector2[] sourceForegroundPolygon = null)
+                Vector2[] sourceForegroundPolygon = null,
+                Vector2? sourceOperatorSeatSocketPx = null,
+                int semanticFootprintWidth = 1,
+                int semanticFootprintHeight = 1)
             {
                 KindId = kindId;
                 Stem = stem;
@@ -52,6 +57,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 SourceSeatAnchorPx = sourceSeatAnchorPx;
                 SourceWorkSurfaceAnchorPx = sourceWorkSurfaceAnchorPx;
                 SourceForegroundPolygon = sourceForegroundPolygon ?? Array.Empty<Vector2>();
+                SourceOperatorSeatSocketPx = sourceOperatorSeatSocketPx;
+                SemanticFootprintWidth = semanticFootprintWidth;
+                SemanticFootprintHeight = semanticFootprintHeight;
             }
 
             public string KindId { get; }
@@ -66,6 +74,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
             public Vector2? SourceSeatAnchorPx { get; }
             public Vector2? SourceWorkSurfaceAnchorPx { get; }
             public Vector2[] SourceForegroundPolygon { get; }
+            public Vector2? SourceOperatorSeatSocketPx { get; }
+            public int SemanticFootprintWidth { get; }
+            public int SemanticFootprintHeight { get; }
             public string SourcePath => $"{SourceFolder}/{SourceStem}_alpha_{Version}.png";
             public string RuntimePath => $"{RuntimeFolder}/{Stem}_{Version}.png";
             public string FrontPath => $"{RuntimeFolder}/{Stem}_front_{Version}.png";
@@ -74,6 +85,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
             public Vector2 RuntimeSortAnchorPx { get; set; }
             public Vector2 RuntimeSeatAnchorPx { get; set; }
             public Vector2 RuntimeWorkSurfaceAnchorPx { get; set; }
+            public Vector2 RuntimeOperatorSeatSocketPx { get; set; }
+            public Vector2[] RuntimeGroundFootprintPolygonPx { get; set; } = Array.Empty<Vector2>();
             public float BakedUniformScale { get; set; }
             public float SourceAspect { get; set; }
             public float RuntimeAspect { get; set; }
@@ -91,6 +104,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 new Vector2(705f, 125f),
                 "v4",
                 sourceWorkSurfaceAnchorPx: new Vector2(663f, 266f),
+                sourceOperatorSeatSocketPx: new Vector2(919.115f, 174.598f),
+                semanticFootprintWidth: 2,
                 sourceForegroundPolygon: new[]
                 {
                     new Vector2(320f, 100f), new Vector2(1225f, 100f),
@@ -107,16 +122,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 new Vector2(620f, 235f),
                 "v3",
                 "office_swivel_chair_northwest",
-                new Vector2(540f, 685f),
-                sourceForegroundPolygon: new[]
-                {
-                    new Vector2(610f, 470f), new Vector2(930f, 470f),
-                    new Vector2(930f, 950f), new Vector2(610f, 950f)
-                }),
+                new Vector2(600f, 650f)),
             new FurnitureSpec(OfficeGridLayouts.ReceptionCounterKind, "office_reception_counter", 500, 340,
-                OfficeFurnitureFacing.SouthEast, new Vector2(834f, 180f), new Vector2(834f, 162f)),
+                OfficeFurnitureFacing.SouthEast, new Vector2(834f, 180f), new Vector2(834f, 162f),
+                semanticFootprintWidth: 2),
             new FurnitureSpec(OfficeGridLayouts.MeetingTableKind, "office_meeting_table", 460, 300,
-                OfficeFurnitureFacing.SouthEast, new Vector2(887f, 175f), new Vector2(887f, 145f)),
+                OfficeFurnitureFacing.SouthEast, new Vector2(887f, 175f), new Vector2(887f, 145f),
+                semanticFootprintWidth: 2),
             new FurnitureSpec(OfficeGridLayouts.DocumentBookcaseKind, "office_document_bookcase", 300, 360,
                 OfficeFurnitureFacing.SouthEast, new Vector2(818f, 108f), new Vector2(818f, 93f)),
             new FurnitureSpec(OfficeGridLayouts.FaxCopierKind, "office_fax_copier", 280, 370,
@@ -124,20 +136,23 @@ namespace FamilyCompany.Editor.OfficeGridQa
             new FurnitureSpec(OfficeGridLayouts.WaterDispenserKind, "office_water_dispenser", 190, 360,
                 OfficeFurnitureFacing.SouthEast, new Vector2(887f, 122f), new Vector2(887f, 106f)),
             new FurnitureSpec(OfficeGridLayouts.SofaKind, "office_sofa", 450, 330,
-                OfficeFurnitureFacing.SouthEast, new Vector2(895f, 150f), new Vector2(895f, 124f)),
+                OfficeFurnitureFacing.SouthEast, new Vector2(895f, 150f), new Vector2(895f, 124f),
+                semanticFootprintWidth: 2),
             new FurnitureSpec(OfficeGridLayouts.CoffeeTableKind, "office_coffee_table", 380, 220,
-                OfficeFurnitureFacing.SouthEast, new Vector2(868f, 180f), new Vector2(868f, 150f)),
+                OfficeFurnitureFacing.SouthEast, new Vector2(868f, 180f), new Vector2(868f, 150f),
+                semanticFootprintWidth: 2),
             new FurnitureSpec(OfficeGridLayouts.PottedPlantKind, "office_potted_plant", 230, 330,
                 OfficeFurnitureFacing.SouthEast, new Vector2(834f, 165f), new Vector2(834f, 142f)),
             new FurnitureSpec(OfficeGridLayouts.PartitionKind, "office_partition", 430, 360,
-                OfficeFurnitureFacing.NorthWest, new Vector2(834f, 126f), new Vector2(834f, 108f)),
+                OfficeFurnitureFacing.NorthWest, new Vector2(834f, 126f), new Vector2(834f, 108f),
+                semanticFootprintHeight: 2),
             new FurnitureSpec(OfficeGridLayouts.FilingCabinetKind, "office_filing_cabinet", 200, 370,
                 OfficeFurnitureFacing.SouthEast, new Vector2(884f, 100f), new Vector2(884f, 82f))
         };
 
         public static IReadOnlyList<string> KindIds => Specs.Select(item => item.KindId).ToArray();
 
-        [MenuItem("Family Company/Art/Build Office Furniture Tycoon Alignment V1")]
+        [MenuItem("Family Company/Art/Build Office Furniture Tycoon Alignment V2")]
         public static void Build()
         {
             Directory.CreateDirectory(RuntimeFolder);
@@ -158,11 +173,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     ConfigureImporter(spec.FrontPath, spec.RuntimeGroundAnchorPx);
             }
 
-            BuildFurnitureCatalog();
-            BuildPoseCatalog();
+            CreateOrUpgradeFurnitureCatalog();
+            CreateOrUpgradePoseCatalog();
             AssetDatabase.SaveAssets();
             Validate();
-            Debug.Log("FAMILY_COMPANY_OFFICE_FURNITURE_TYCOON_ALIGNMENT_V1_BUILD: PASS");
+            Debug.Log("FAMILY_COMPANY_OFFICE_FURNITURE_TYCOON_ALIGNMENT_V2_BUILD: PASS");
         }
 
         public static OfficeFurnitureVisualCatalog LoadFurnitureVisualCatalog()
@@ -231,6 +246,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     ValidateSourceAnchor(spec.SourceSeatAnchorPx.Value, bounds, spec, "seat");
                 if (spec.SourceWorkSurfaceAnchorPx.HasValue)
                     ValidateSourceAnchor(spec.SourceWorkSurfaceAnchorPx.Value, bounds, spec, "work surface");
+                if (spec.SourceOperatorSeatSocketPx.HasValue)
+                    ValidateSourceCanvasAnchor(spec.SourceOperatorSeatSocketPx.Value, source, spec, "operator seat socket");
 
                 float scale = Mathf.Min(
                     spec.MaximumWidth / (float)bounds.width,
@@ -268,6 +285,12 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     spec.RuntimeSeatAnchorPx = TransformAnchor(spec.SourceSeatAnchorPx.Value, bounds, scale, destinationX, destinationY);
                 if (spec.SourceWorkSurfaceAnchorPx.HasValue)
                     spec.RuntimeWorkSurfaceAnchorPx = TransformAnchor(spec.SourceWorkSurfaceAnchorPx.Value, bounds, scale, destinationX, destinationY);
+                if (spec.SourceOperatorSeatSocketPx.HasValue)
+                    spec.RuntimeOperatorSeatSocketPx = TransformAnchor(spec.SourceOperatorSeatSocketPx.Value, bounds, scale, destinationX, destinationY);
+                spec.RuntimeGroundFootprintPolygonPx = CanonicalFootprintPolygon(
+                    spec.RuntimeGroundAnchorPx,
+                    spec.SemanticFootprintWidth,
+                    spec.SemanticFootprintHeight);
 
                 WritePng(spec.RuntimePath, output);
                 if (spec.SourceForegroundPolygon.Length > 0) WritePng(spec.FrontPath, front);
@@ -278,7 +301,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        private static void BuildFurnitureCatalog()
+        private static void CreateOrUpgradeFurnitureCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<OfficeFurnitureVisualCatalog>(FurnitureCatalogPath);
             if (catalog == null)
@@ -286,6 +309,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 catalog = ScriptableObject.CreateInstance<OfficeFurnitureVisualCatalog>();
                 AssetDatabase.CreateAsset(catalog, FurnitureCatalogPath);
             }
+
+            if (catalog.CalibrationVersion == OfficeFurnitureVisualCatalog.CurrentCalibrationVersion &&
+                catalog.Definitions.Count == Specs.Length)
+                return;
 
             OfficeFurnitureVisualDefinition[] definitions = Specs.Select(spec =>
                 OfficeFurnitureVisualDefinition.Create(
@@ -300,12 +327,17 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     1f,
                     spec.SourceSeatAnchorPx.HasValue,
                     spec.SourceWorkSurfaceAnchorPx.HasValue,
-                    spec.SourceForegroundPolygon.Length > 0)).ToArray();
-            catalog.ReplaceDefinitions(definitions);
+                    spec.SourceForegroundPolygon.Length > 0,
+                    spec.RuntimeGroundFootprintPolygonPx,
+                    spec.SemanticFootprintWidth,
+                    spec.SemanticFootprintHeight,
+                    spec.RuntimeOperatorSeatSocketPx,
+                    spec.SourceOperatorSeatSocketPx.HasValue)).ToArray();
+            catalog.ReplaceDefinitions(definitions, OfficeFurnitureVisualCatalog.CurrentCalibrationVersion);
             EditorUtility.SetDirty(catalog);
         }
 
-        private static void BuildPoseCatalog()
+        private static void CreateOrUpgradePoseCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<OfficeCharacterSeatPoseCatalog>(PoseCatalogPath);
             if (catalog == null)
@@ -314,15 +346,44 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 AssetDatabase.CreateAsset(catalog, PoseCatalogPath);
             }
 
+            if (catalog.CalibrationVersion == OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion &&
+                catalog.Profiles.Count == 56)
+                return;
+
             int northWest = (int)OfficeSeatFacing8.Northwest;
-            catalog.ReplaceProfiles(new[]
-            {
-                OfficeCharacterSeatPoseProfile.Create("player", northWest, new Vector2(151f, 65f), new Vector2(91f, 86f)),
-                OfficeCharacterSeatPoseProfile.Create("older_sister", northWest, new Vector2(142f, 96f), new Vector2(86f, 113f)),
-                OfficeCharacterSeatPoseProfile.Create("father", northWest, new Vector2(157f, 86f), new Vector2(103f, 116f)),
-                OfficeCharacterSeatPoseProfile.Create("mother", northWest, new Vector2(150f, 89f), new Vector2(83f, 96f))
-            });
+            var profiles = new List<OfficeCharacterSeatPoseProfile>(56);
+            AddPoseProfiles(profiles, "player", northWest, new Vector2(151f, 65f), new Vector2(91f, 86f));
+            AddPoseProfiles(profiles, "older_sister", northWest, new Vector2(142f, 96f), new Vector2(86f, 113f));
+            AddPoseProfiles(profiles, "father", northWest, new Vector2(157f, 86f), new Vector2(103f, 116f));
+            AddPoseProfiles(profiles, "mother", northWest, new Vector2(150f, 89f), new Vector2(83f, 96f));
+            catalog.ReplaceProfiles(profiles.ToArray(), OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion);
             EditorUtility.SetDirty(catalog);
+        }
+
+        private static void AddPoseProfiles(
+            ICollection<OfficeCharacterSeatPoseProfile> profiles,
+            string memberId,
+            int direction,
+            Vector2 pelvisAnchorPx,
+            Vector2 handAnchorPx)
+        {
+            var clips = new[]
+            {
+                OfficeSeatingAnimationClip.SitDown,
+                OfficeSeatingAnimationClip.Work,
+                OfficeSeatingAnimationClip.StandUp
+            };
+            foreach (OfficeSeatingAnimationClip clip in clips)
+            for (int frame = 0; frame < OfficeSeatingAnimationFrames.FrameCount(clip); frame++)
+            {
+                profiles.Add(OfficeCharacterSeatPoseProfile.Create(
+                    memberId,
+                    direction,
+                    clip,
+                    frame,
+                    pelvisAnchorPx,
+                    handAnchorPx));
+            }
         }
 
         private static Sprite RequiredSprite(string path)
@@ -395,6 +456,33 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             if (anchor.x < bounds.xMin || anchor.x > bounds.xMax || anchor.y < bounds.yMin || anchor.y > bounds.yMax)
                 throw new InvalidOperationException($"Furniture {name} anchor {anchor} is outside source visible bounds {bounds}: {spec.SourcePath}.");
+        }
+
+        private static void ValidateSourceCanvasAnchor(
+            Vector2 anchor,
+            Texture2D source,
+            FurnitureSpec spec,
+            string name)
+        {
+            if (anchor.x < 0f || anchor.y < 0f || anchor.x > source.width || anchor.y > source.height)
+                throw new InvalidOperationException($"Furniture {name} {anchor} is outside source canvas {source.width}x{source.height}: {spec.SourcePath}.");
+        }
+
+        private static Vector2[] CanonicalFootprintPolygon(Vector2 center, int width, int height)
+        {
+            Vector2 basisX = new Vector2(OfficeGridTilemapPresenter.TilePixelWidth * 0.5f,
+                OfficeGridTilemapPresenter.TilePixelHeight * 0.5f);
+            Vector2 basisY = new Vector2(-OfficeGridTilemapPresenter.TilePixelWidth * 0.5f,
+                OfficeGridTilemapPresenter.TilePixelHeight * 0.5f);
+            Vector2 extentX = basisX * (width * 0.5f);
+            Vector2 extentY = basisY * (height * 0.5f);
+            return new[]
+            {
+                center - extentX - extentY,
+                center + extentX - extentY,
+                center + extentX + extentY,
+                center - extentX + extentY
+            };
         }
 
         private static bool PointInPolygon(Vector2 point, IReadOnlyList<Vector2> polygon)

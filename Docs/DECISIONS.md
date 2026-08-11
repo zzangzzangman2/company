@@ -187,3 +187,11 @@
 이유: 손상된 아틀라스 조각을 배치하면 어떤 좌표를 잡아도 인접 물체가 붙거나 잘리고, 의자를 막힌 셀로 만들면 실제로 걸어 들어가 앉을 수 없다. 의미 상태와 렌더 깊이를 분리한 뒤 30초 충돌 감시와 네 가족의 정확한 좌석·방향을 먼저 검증하면 기존 게임 회귀를 최소화하면서 T6 통합의 기준 화면을 고정할 수 있다.
 
 교정 근거: 최초 v2 의자는 좌석 방향과 등받이 방향이 맞지 않았고 전경 조각이 인물 몸을 덮었다. 최초 v2/v3 책상은 넓은 옆판이 바닥선까지 내려와 바닥에 박힌 것처럼 보였다. 임시 방향 대칭 root 오프셋도 의미 좌표와 화면 좌표를 섞으므로 폐기했다. 캐릭터 의미 root/VisualRoot 분리와 pelvis↔seat 앵커 정렬, 네 다리 책상, 명시적 workstation binding을 적용해 60초 동안 가구 Transform 정확히 0 변화, 네 가족 ground/pelvis/centerline 오차 0.000px, 좌석 중복·막힌 칸 침범 0을 통과했다.
+
+## 2026-08-11 / Office Alignment V2는 실제 사무실·QA fixture·시각 캘리브레이션을 분리
+
+결정: `CreateMigrationPreview()`는 T1~T5 회귀 fixture로만 유지하고 새 게임과 구형 저장 이관은 파티션이 없는 `CreateStarterOfficeV1()`을 사용한다. 책상·의자·좌석은 `OfficeWorkstationSlot`으로 명시적으로 묶고 반 셀 `OperatorAnchor`, 책상 operator seat/work socket, 의자 seat anchor를 각각 보존한다. 가구는 의미 root와 균등 scale `VisualRoot`를 분리하며, 실제 타일 footprint는 단일 ground 점이 아니라 독립 저장된 네 꼭짓점으로 검사한다. 가족 착석 pose는 구성원·방향뿐 아니라 SitDown/Work/StandUp의 clip/frame까지 키로 사용한다.
+
+결정: `OfficeFurnitureVisualCatalog.asset`과 `OfficeCharacterSeatPoseCatalog.asset`은 calibration version 2의 유일한 승인 저장 위치다. PNG 재빌드는 이 값을 덮어쓰지 않는다. 현재 값은 실패 진단 candidate이며 수정은 합성 미리보기와 허용 오차를 함께 보여 주는 `OfficeTycoonAlignmentCalibrationWindow`에서 승인한 뒤 저장한다. 의자 NorthWest 정본의 등받이와 좌판은 인물 뒤 base에 두며, 기존의 넓은 chair front overlay는 사용하지 않는다. 책상 전면의 다리·서랍·앞 모서리만 제한된 front overlay로 인물 하체 앞에 둔다.
+
+이유: V1은 배치에 사용한 ground/pelvis 수치를 같은 식으로 다시 계산해 화면이 어긋나도 통과할 수 있었고, 2×1 책상의 실제 작업자 위치와 프레임별 신체 변화도 표현하지 못했다. 의미 좌표, 실제 아트 캘리브레이션, 합성 QA를 서로 다른 입력으로 만들면 의자 방향·좌판 중심·책상 접지·손 위치의 오류를 수치와 화면 양쪽에서 드러낼 수 있다.

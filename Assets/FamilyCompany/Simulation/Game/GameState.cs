@@ -30,7 +30,7 @@ namespace FamilyCompany.Simulation.Game
             Contracts = contracts ?? new ContractPortfolio(Family.Members.Count);
             Growth = growth ?? new CompanyGrowthState();
             StockMarket = stockMarket ?? StockMarketSessionStateDto.Uninitialized();
-            OfficeGrid = officeGrid ?? OfficeGridLayouts.CreateMigrationPreview();
+            OfficeGrid = officeGrid ?? OfficeGridLayouts.CreateStarterOfficeV1();
         }
 
         public int WorldSeed { get; }

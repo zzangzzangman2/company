@@ -66,6 +66,50 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return _unityGrid.GetCellCenterWorld(new Vector3Int(cell.X, cell.Y, 0));
         }
 
+        public Vector3 SubcellAnchorWorld(OfficeGridSubcellAnchor anchor)
+        {
+            if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");
+            if (!_semanticGrid.Contains(anchor)) throw new ArgumentOutOfRangeException(nameof(anchor));
+            Vector3 origin = CellCenterWorld(new OfficeGridCoordinate(0, 0));
+            Vector3 basisX = _semanticGrid.Width > 1
+                ? CellCenterWorld(new OfficeGridCoordinate(1, 0)) - origin
+                : new Vector3(TileWorldWidth * 0.5f, TileWorldHeight * 0.5f, 0f);
+            Vector3 basisY = _semanticGrid.Height > 1
+                ? CellCenterWorld(new OfficeGridCoordinate(0, 1)) - origin
+                : new Vector3(-TileWorldWidth * 0.5f, TileWorldHeight * 0.5f, 0f);
+            return origin + basisX * (anchor.X2 * 0.5f) + basisY * (anchor.Y2 * 0.5f);
+        }
+
+        public Vector3[] FootprintCornersWorld(PlacedOfficeFurniture furniture)
+        {
+            if (furniture == null) throw new ArgumentNullException(nameof(furniture));
+            Vector3 first = CellCenterWorld(furniture.Origin);
+            Vector3 basisX = _semanticGrid.Width > 1
+                ? CellCenterWorld(new OfficeGridCoordinate(
+                    Math.Min(furniture.Origin.X + 1, _semanticGrid.Width - 1),
+                    furniture.Origin.Y)) - first
+                : new Vector3(TileWorldWidth * 0.5f, TileWorldHeight * 0.5f, 0f);
+            if (basisX.sqrMagnitude < 0.0001f)
+                basisX = first - CellCenterWorld(new OfficeGridCoordinate(furniture.Origin.X - 1, furniture.Origin.Y));
+            Vector3 basisY = _semanticGrid.Height > 1
+                ? CellCenterWorld(new OfficeGridCoordinate(furniture.Origin.X, Math.Min(furniture.Origin.Y + 1, _semanticGrid.Height - 1))) - first
+                : new Vector3(-TileWorldWidth * 0.5f, TileWorldHeight * 0.5f, 0f);
+            if (basisY.sqrMagnitude < 0.0001f)
+                basisY = first - CellCenterWorld(new OfficeGridCoordinate(furniture.Origin.X, furniture.Origin.Y - 1));
+
+            Vector3 center = first + basisX * ((furniture.Width - 1) * 0.5f) +
+                             basisY * ((furniture.Height - 1) * 0.5f);
+            Vector3 extentX = basisX * (furniture.Width * 0.5f);
+            Vector3 extentY = basisY * (furniture.Height * 0.5f);
+            return new[]
+            {
+                center - extentX - extentY,
+                center + extentX - extentY,
+                center + extentX + extentY,
+                center - extentX + extentY
+            };
+        }
+
         public OfficeGridCoordinate NearestCell(Vector3 worldPosition)
         {
             if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");

@@ -57,16 +57,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 {
                     AddCross(_bootstrap.FurniturePresenter.GroundAnchorWorld(furniture.FurnitureId), Color.green, 0.08f);
                     AddCross(_bootstrap.FurniturePresenter.SortAnchorWorld(furniture.FurnitureId), Color.cyan, 0.065f);
+                    AddPolygon(
+                        _bootstrap.Presenter.FootprintCornersWorld(furniture),
+                        new Color(1f, 1f, 1f, 0.85f));
+                    AddPolygon(
+                        _bootstrap.FurniturePresenter.GroundFootprintWorld(furniture.FurnitureId),
+                        new Color(0.1f, 1f, 0.25f, 1f));
                 }
 
                 foreach (OfficeSeatSlot seat in grid.SeatSlots)
                 {
                     AddCross(_bootstrap.FurniturePresenter.SeatAnchorWorld(seat.ChairFurnitureId), Color.yellow, 0.09f);
+                    Vector3 operatorSeat = _bootstrap.FurniturePresenter.OperatorSeatSocketWorld(seat.WorkSurfaceFurnitureId);
+                    Vector3 operatorWork = _bootstrap.FurniturePresenter.OperatorWorkSocketWorld(seat.WorkSurfaceFurnitureId);
+                    AddCross(operatorSeat, new Color(1f, 0.45f, 0f, 1f), 0.11f);
+                    AddCross(operatorWork, new Color(0.2f, 0.55f, 1f, 1f), 0.11f);
+                    AddCross(_bootstrap.Presenter.SubcellAnchorWorld(seat.OperatorAnchor), new Color(0.8f, 0.3f, 1f, 1f), 0.075f);
                     AddCellDiamond(seat.ApproachCell, new Color(0.1f, 0.35f, 1f, 1f));
                     AddSegment(
-                        _bootstrap.FurniturePresenter.GroundAnchorWorld(seat.ChairFurnitureId),
-                        _bootstrap.FurniturePresenter.GroundAnchorWorld(seat.WorkSurfaceFurnitureId),
-                        new Color(0.75f, 0.75f, 0.75f, 0.8f));
+                        _bootstrap.FurniturePresenter.SeatAnchorWorld(seat.ChairFurnitureId),
+                        operatorSeat,
+                        Color.yellow);
                 }
             }
 
@@ -85,12 +96,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 if (worker.PoseProfile == null) continue;
                 var mover = worker.GetComponent<OfficeGridCharacterMover>();
                 Vector3 pelvis = mover.SpriteAnchorWorld(worker.PoseProfile.PelvisAnchorPx);
+                Vector3 hand = mover.SpriteAnchorWorld(worker.PoseProfile.HandAnchorPx);
                 AddCross(pelvis, Color.magenta, 0.1f);
+                AddCross(hand, new Color(0.2f, 0.55f, 1f, 1f), 0.1f);
                 TextMesh label = EnsureLabel(worker.MemberId);
                 label.transform.position = pelvis + new Vector3(0.14f, 0.25f, -0.5f);
                 float error = Camera.main == null ? float.PositiveInfinity : worker.PelvisSeatScreenError(Camera.main);
-                label.text = $"{worker.MemberId}  seat {error:F2}px";
-                label.color = error <= 2f ? new Color(0.15f, 1f, 0.25f, 1f) : Color.red;
+                float handError = Camera.main == null ? float.PositiveInfinity : worker.HandWorkScreenError(Camera.main);
+                float chairError = Camera.main == null ? float.PositiveInfinity : worker.ChairDeskSeatScreenError(Camera.main);
+                label.text = $"{worker.MemberId}  chair {chairError:F2}px  pelvis {error:F2}px  hand {handError:F2}px  frame {mover.Animator.CurrentOfficeSeatingFrame}";
+                label.color = error <= 2f && chairError <= 2f && handError <= 4f
+                    ? new Color(0.15f, 1f, 0.25f, 1f)
+                    : Color.red;
                 label.gameObject.SetActive(true);
             }
 
@@ -167,6 +184,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             AddSegment(center + new Vector3(-radius, 0f), center + new Vector3(radius, 0f), color);
             AddSegment(center + new Vector3(0f, -radius), center + new Vector3(0f, radius), color);
+        }
+
+        private void AddPolygon(IReadOnlyList<Vector3> points, Color color)
+        {
+            if (points == null || points.Count < 2) return;
+            for (int index = 0; index < points.Count; index++)
+                AddSegment(points[index], points[(index + 1) % points.Count], color);
         }
 
         private void AddSegment(Vector3 first, Vector3 second, Color color)

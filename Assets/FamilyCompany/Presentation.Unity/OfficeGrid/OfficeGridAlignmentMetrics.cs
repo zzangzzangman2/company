@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using UnityEngine;
 
@@ -20,15 +21,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return renderer.transform.TransformPoint(local);
         }
 
-        public static float GroundAnchorScreenErrorPx(
-            Camera camera,
-            SpriteRenderer furnitureRenderer,
-            OfficeFurnitureVisualDefinition definition,
-            Vector3 semanticFootprintWorld)
-        {
-            return ScreenDistance(camera, SpriteAnchorWorld(furnitureRenderer, definition.GroundAnchorPx), semanticFootprintWorld);
-        }
-
         public static float SeatAnchorScreenErrorPx(
             Camera camera,
             SpriteRenderer characterRenderer,
@@ -42,25 +34,49 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 SpriteAnchorWorld(chairRenderer, chairDefinition.SeatAnchorPx));
         }
 
-        public static float DeskChairCenterlineErrorPx(
+        public static float[] FootprintCornerErrorsPx(
             Camera camera,
-            SpriteRenderer deskRenderer,
-            OfficeFurnitureVisualDefinition deskDefinition,
-            Vector3 expectedDeskWorld,
-            SpriteRenderer chairRenderer,
-            OfficeFurnitureVisualDefinition chairDefinition,
-            Vector3 expectedChairWorld)
+            SpriteRenderer furnitureRenderer,
+            OfficeFurnitureVisualDefinition definition,
+            IReadOnlyList<Vector3> expectedFootprintWorld)
         {
-            Vector2 desk = ScreenPoint(camera, SpriteAnchorWorld(deskRenderer, deskDefinition.GroundAnchorPx));
-            Vector2 chair = ScreenPoint(camera, SpriteAnchorWorld(chairRenderer, chairDefinition.GroundAnchorPx));
-            Vector2 expectedDesk = ScreenPoint(camera, expectedDeskWorld);
-            Vector2 expectedChair = ScreenPoint(camera, expectedChairWorld);
-            return Mathf.Max(
-                PointLineDistance(desk, expectedChair, expectedDesk),
-                PointLineDistance(chair, expectedChair, expectedDesk));
+            if (definition == null) throw new ArgumentNullException(nameof(definition));
+            if (expectedFootprintWorld == null) throw new ArgumentNullException(nameof(expectedFootprintWorld));
+            if (definition.GroundFootprintPolygonPx.Count != expectedFootprintWorld.Count)
+                throw new ArgumentException("Actual and expected footprint point counts differ.", nameof(expectedFootprintWorld));
+            var errors = new float[expectedFootprintWorld.Count];
+            for (int index = 0; index < errors.Length; index++)
+            {
+                errors[index] = ScreenDistance(
+                    camera,
+                    SpriteAnchorWorld(furnitureRenderer, definition.GroundFootprintPolygonPx[index]),
+                    expectedFootprintWorld[index]);
+            }
+            return errors;
         }
 
-        public static float DeskInteractionDepthErrorPx(
+        public static float Maximum(IReadOnlyList<float> values)
+        {
+            if (values == null || values.Count == 0) return float.PositiveInfinity;
+            float maximum = values[0];
+            for (int index = 1; index < values.Count; index++) maximum = Mathf.Max(maximum, values[index]);
+            return maximum;
+        }
+
+        public static float ChairToDeskSeatSocketErrorPx(
+            Camera camera,
+            SpriteRenderer chairRenderer,
+            OfficeFurnitureVisualDefinition chairDefinition,
+            SpriteRenderer deskRenderer,
+            OfficeFurnitureVisualDefinition deskDefinition)
+        {
+            return ScreenDistance(
+                camera,
+                SpriteAnchorWorld(chairRenderer, chairDefinition.SeatAnchorPx),
+                SpriteAnchorWorld(deskRenderer, deskDefinition.OperatorSeatSocketPx));
+        }
+
+        public static float PelvisToOperatorSocketErrorPx(
             Camera camera,
             SpriteRenderer characterRenderer,
             OfficeCharacterSeatPoseProfile pose,
@@ -69,8 +85,41 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             return ScreenDistance(
                 camera,
-                SpriteAnchorWorld(characterRenderer, pose.DeskInteractionAnchorPx),
-                SpriteAnchorWorld(deskRenderer, deskDefinition.WorkSurfaceAnchorPx));
+                SpriteAnchorWorld(characterRenderer, pose.PelvisAnchorPx),
+                SpriteAnchorWorld(deskRenderer, deskDefinition.OperatorSeatSocketPx));
+        }
+
+        public static float HandToWorkSocketErrorPx(
+            Camera camera,
+            SpriteRenderer characterRenderer,
+            OfficeCharacterSeatPoseProfile pose,
+            SpriteRenderer deskRenderer,
+            OfficeFurnitureVisualDefinition deskDefinition)
+        {
+            return ScreenDistance(
+                camera,
+                SpriteAnchorWorld(characterRenderer, pose.HandAnchorPx),
+                SpriteAnchorWorld(deskRenderer, deskDefinition.OperatorWorkSocketPx));
+        }
+
+        public static float WorldDisplacementScreenPx(Camera camera, Vector3 origin, Vector3 displacement)
+        {
+            return ScreenDistance(camera, origin, origin + displacement);
+        }
+
+        public static float VectorAngleDifferenceDegrees(Vector2 first, Vector2 second)
+        {
+            if (first.sqrMagnitude <= 0.000001f || second.sqrMagnitude <= 0.000001f)
+                return float.PositiveInfinity;
+            float cosine = Mathf.Clamp(Vector2.Dot(first.normalized, second.normalized), -1f, 1f);
+            return Mathf.Acos(cosine) * Mathf.Rad2Deg;
+        }
+
+        public static float VectorLengthRelativeError(Vector2 actual, Vector2 expected)
+        {
+            float expectedLength = expected.magnitude;
+            if (expectedLength <= 0.000001f) return float.PositiveInfinity;
+            return Mathf.Abs(actual.magnitude - expectedLength) / expectedLength;
         }
 
         public static float ScreenDistance(Camera camera, Vector3 firstWorld, Vector3 secondWorld)
@@ -81,18 +130,5 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return Vector2.Distance(new Vector2(first.x, first.y), new Vector2(second.x, second.y));
         }
 
-        private static Vector2 ScreenPoint(Camera camera, Vector3 world)
-        {
-            Vector3 screen = camera.WorldToScreenPoint(world);
-            return new Vector2(screen.x, screen.y);
-        }
-
-        private static float PointLineDistance(Vector2 point, Vector2 lineStart, Vector2 lineEnd)
-        {
-            Vector2 line = lineEnd - lineStart;
-            if (line.sqrMagnitude <= 0.000001f) return Vector2.Distance(point, lineStart);
-            float t = Mathf.Clamp01(Vector2.Dot(point - lineStart, line) / line.sqrMagnitude);
-            return Vector2.Distance(point, lineStart + line * t);
-        }
     }
 }

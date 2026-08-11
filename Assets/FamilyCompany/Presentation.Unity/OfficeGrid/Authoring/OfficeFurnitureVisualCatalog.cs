@@ -14,11 +14,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         [SerializeField] private Sprite frontOverlaySprite;
         [SerializeField] private Vector2 groundAnchorPx;
         [SerializeField] private Vector2 sortAnchorPx;
+        [SerializeField] private Vector2[] groundFootprintPolygonPx = Array.Empty<Vector2>();
+        [SerializeField] private int semanticFootprintWidth = 1;
+        [SerializeField] private int semanticFootprintHeight = 1;
         [SerializeField] private Vector2 seatAnchorPx;
         [SerializeField] private Vector2 workSurfaceAnchorPx;
+        [SerializeField] private Vector2 operatorSeatSocketPx;
         [SerializeField] private float uniformScale = 1f;
         [SerializeField] private bool hasSeatAnchor;
         [SerializeField] private bool hasWorkSurfaceAnchor;
+        [SerializeField] private bool hasOperatorSeatSocket;
         [SerializeField] private bool frontOverlayWhenOccupied;
 
         public string KindId => kindId;
@@ -27,11 +32,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         public Sprite FrontOverlaySprite => frontOverlaySprite;
         public Vector2 GroundAnchorPx => groundAnchorPx;
         public Vector2 SortAnchorPx => sortAnchorPx;
+        public IReadOnlyList<Vector2> GroundFootprintPolygonPx => groundFootprintPolygonPx;
+        public int SemanticFootprintWidth => semanticFootprintWidth;
+        public int SemanticFootprintHeight => semanticFootprintHeight;
         public Vector2 SeatAnchorPx => seatAnchorPx;
         public Vector2 WorkSurfaceAnchorPx => workSurfaceAnchorPx;
+        public Vector2 OperatorWorkSocketPx => workSurfaceAnchorPx;
+        public Vector2 OperatorSeatSocketPx => operatorSeatSocketPx;
         public float UniformScale => uniformScale;
         public bool HasSeatAnchor => hasSeatAnchor;
         public bool HasWorkSurfaceAnchor => hasWorkSurfaceAnchor;
+        public bool HasOperatorWorkSocket => hasWorkSurfaceAnchor;
+        public bool HasOperatorSeatSocket => hasOperatorSeatSocket;
         public bool FrontOverlayWhenOccupied => frontOverlayWhenOccupied;
 
         public static OfficeFurnitureVisualDefinition Create(
@@ -46,7 +58,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             float uniformScale,
             bool hasSeatAnchor,
             bool hasWorkSurfaceAnchor,
-            bool frontOverlayWhenOccupied)
+            bool frontOverlayWhenOccupied,
+            Vector2[] groundFootprintPolygonPx,
+            int semanticFootprintWidth,
+            int semanticFootprintHeight,
+            Vector2 operatorSeatSocketPx,
+            bool hasOperatorSeatSocket)
         {
             return new OfficeFurnitureVisualDefinition
             {
@@ -56,13 +73,41 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
                 frontOverlaySprite = frontOverlaySprite,
                 groundAnchorPx = groundAnchorPx,
                 sortAnchorPx = sortAnchorPx,
+                groundFootprintPolygonPx = groundFootprintPolygonPx == null
+                    ? Array.Empty<Vector2>()
+                    : (Vector2[])groundFootprintPolygonPx.Clone(),
+                semanticFootprintWidth = semanticFootprintWidth,
+                semanticFootprintHeight = semanticFootprintHeight,
                 seatAnchorPx = seatAnchorPx,
                 workSurfaceAnchorPx = workSurfaceAnchorPx,
+                operatorSeatSocketPx = operatorSeatSocketPx,
                 uniformScale = uniformScale,
                 hasSeatAnchor = hasSeatAnchor,
                 hasWorkSurfaceAnchor = hasWorkSurfaceAnchor,
+                hasOperatorSeatSocket = hasOperatorSeatSocket,
                 frontOverlayWhenOccupied = frontOverlayWhenOccupied
             };
+        }
+
+        public void ApplyCalibration(
+            Vector2 newGroundAnchorPx,
+            Vector2 newSortAnchorPx,
+            Vector2[] newGroundFootprintPolygonPx,
+            Vector2 newSeatAnchorPx,
+            Vector2 newOperatorSeatSocketPx,
+            Vector2 newOperatorWorkSocketPx,
+            float newUniformScale)
+        {
+            groundAnchorPx = newGroundAnchorPx;
+            sortAnchorPx = newSortAnchorPx;
+            groundFootprintPolygonPx = newGroundFootprintPolygonPx == null
+                ? Array.Empty<Vector2>()
+                : (Vector2[])newGroundFootprintPolygonPx.Clone();
+            if (hasSeatAnchor) seatAnchorPx = newSeatAnchorPx;
+            if (hasOperatorSeatSocket) operatorSeatSocketPx = newOperatorSeatSocketPx;
+            if (hasWorkSurfaceAnchor) workSurfaceAnchorPx = newOperatorWorkSocketPx;
+            uniformScale = newUniformScale;
+            Validate();
         }
 
         public void Validate()
@@ -84,6 +129,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
 
             ValidateAnchor(groundAnchorPx, nameof(groundAnchorPx));
             ValidateAnchor(sortAnchorPx, nameof(sortAnchorPx));
+            if (semanticFootprintWidth <= 0 || semanticFootprintHeight <= 0)
+                throw new InvalidOperationException($"Furniture visual '{kindId}/{facing}' has an invalid semantic footprint.");
+            if (groundFootprintPolygonPx == null || groundFootprintPolygonPx.Length != 4)
+                throw new InvalidOperationException($"Furniture visual '{kindId}/{facing}' requires four ground footprint points.");
+            float signedAreaTwice = 0f;
+            for (int index = 0; index < groundFootprintPolygonPx.Length; index++)
+            {
+                Vector2 point = groundFootprintPolygonPx[index];
+                Vector2 next = groundFootprintPolygonPx[(index + 1) % groundFootprintPolygonPx.Length];
+                ValidateFinite(point, "ground footprint");
+                signedAreaTwice += point.x * next.y - next.x * point.y;
+            }
+            if (Mathf.Abs(signedAreaTwice) < 0.01f)
+                throw new InvalidOperationException($"Furniture visual '{kindId}/{facing}' ground footprint winding is degenerate.");
             if (hasSeatAnchor)
             {
                 ValidateAnchor(seatAnchorPx, nameof(seatAnchorPx));
@@ -92,6 +151,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             if (hasWorkSurfaceAnchor)
             {
                 ValidateAnchor(workSurfaceAnchorPx, nameof(workSurfaceAnchorPx));
+            }
+
+            if (hasOperatorSeatSocket)
+            {
+                ValidateAnchor(operatorSeatSocketPx, nameof(operatorSeatSocketPx));
             }
 
             if (frontOverlaySprite != null)
@@ -108,6 +172,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
 
         private void ValidateAnchor(Vector2 anchor, string anchorName)
         {
+            ValidateFinite(anchor, anchorName);
             Rect rect = baseSprite.rect;
             if (anchor.x < 0f || anchor.y < 0f || anchor.x > rect.width || anchor.y > rect.height)
             {
@@ -115,13 +180,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
                     $"Furniture visual '{kindId}/{facing}' {anchorName} {anchor} is outside {rect.size}.");
             }
         }
+
+        private void ValidateFinite(Vector2 point, string pointName)
+        {
+            if (float.IsNaN(point.x) || float.IsNaN(point.y) ||
+                float.IsInfinity(point.x) || float.IsInfinity(point.y))
+                throw new InvalidOperationException($"Furniture visual '{kindId}/{facing}' {pointName} is not finite.");
+        }
     }
 
     [CreateAssetMenu(menuName = "Family Company/Office/Furniture Visual Catalog")]
     public sealed class OfficeFurnitureVisualCatalog : ScriptableObject
     {
+        public const int CurrentCalibrationVersion = 2;
+
+        [SerializeField] private int calibrationVersion;
         [SerializeField] private OfficeFurnitureVisualDefinition[] definitions = Array.Empty<OfficeFurnitureVisualDefinition>();
 
+        public int CalibrationVersion => calibrationVersion;
         public IReadOnlyList<OfficeFurnitureVisualDefinition> Definitions => definitions;
 
         public OfficeFurnitureVisualDefinition Resolve(string kindId, OfficeFurnitureFacing facing)
@@ -139,14 +215,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             throw new KeyNotFoundException($"Furniture visual '{kindId}/{facing}' is not registered.");
         }
 
-        public void ReplaceDefinitions(OfficeFurnitureVisualDefinition[] values)
+        public void ReplaceDefinitions(OfficeFurnitureVisualDefinition[] values, int newCalibrationVersion)
         {
             definitions = values ?? Array.Empty<OfficeFurnitureVisualDefinition>();
+            calibrationVersion = newCalibrationVersion;
             Validate();
         }
 
         public void Validate()
         {
+            if (calibrationVersion != CurrentCalibrationVersion)
+                throw new InvalidOperationException($"Furniture visual calibration version {calibrationVersion} is not supported.");
             var keys = new HashSet<string>(StringComparer.Ordinal);
             foreach (OfficeFurnitureVisualDefinition definition in definitions)
             {

@@ -347,7 +347,7 @@ namespace FamilyCompany.Save
                 ? save.officeGrid == null
                     ? throw new InvalidOperationException("Office grid data is incomplete.")
                     : OfficeGridSaveAdapter.Restore(save.officeGrid)
-                : OfficeGridLayouts.CreateMigrationPreview();
+                : OfficeGridLayouts.CreateStarterOfficeV1();
             return new GameState(
                 save.worldSeed,
                 new GameTime(save.elapsedMinutes),

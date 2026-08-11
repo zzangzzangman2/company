@@ -39,6 +39,30 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public override string ToString() => $"({X},{Y})";
     }
 
+    /// <summary>
+    /// A semantic floor anchor with half-cell precision. Integer cell centers are even values;
+    /// odd values represent the midpoint between two neighboring cell centers.
+    /// </summary>
+    public readonly struct OfficeGridSubcellAnchor : IEquatable<OfficeGridSubcellAnchor>
+    {
+        public OfficeGridSubcellAnchor(int x2, int y2)
+        {
+            X2 = x2;
+            Y2 = y2;
+        }
+
+        public int X2 { get; }
+        public int Y2 { get; }
+
+        public static OfficeGridSubcellAnchor FromCellCenter(OfficeGridCoordinate cell) =>
+            new OfficeGridSubcellAnchor(checked(cell.X * 2), checked(cell.Y * 2));
+
+        public bool Equals(OfficeGridSubcellAnchor other) => X2 == other.X2 && Y2 == other.Y2;
+        public override bool Equals(object obj) => obj is OfficeGridSubcellAnchor other && Equals(other);
+        public override int GetHashCode() => unchecked((X2 * 397) ^ Y2);
+        public override string ToString() => $"({X2}/2,{Y2}/2)";
+    }
+
     public sealed class PlacedOfficeFurniture
     {
         public PlacedOfficeFurniture(
@@ -90,6 +114,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 string.Empty,
                 cell,
                 cell,
+                OfficeGridSubcellAnchor.FromCellCenter(cell),
                 facing)
         {
         }
@@ -101,12 +126,32 @@ namespace FamilyCompany.Simulation.OfficeLayout
             OfficeGridCoordinate cell,
             OfficeGridCoordinate approachCell,
             OfficeFurnitureFacing facing)
+            : this(
+                seatId,
+                chairFurnitureId,
+                workSurfaceFurnitureId,
+                cell,
+                approachCell,
+                OfficeGridSubcellAnchor.FromCellCenter(cell),
+                facing)
+        {
+        }
+
+        public OfficeSeatSlot(
+            string seatId,
+            string chairFurnitureId,
+            string workSurfaceFurnitureId,
+            OfficeGridCoordinate cell,
+            OfficeGridCoordinate approachCell,
+            OfficeGridSubcellAnchor operatorAnchor,
+            OfficeFurnitureFacing facing)
         {
             SeatId = RequiredId(seatId, nameof(seatId));
             FurnitureId = RequiredId(chairFurnitureId, nameof(chairFurnitureId));
             WorkSurfaceFurnitureId = OptionalId(workSurfaceFurnitureId);
             Cell = cell;
             ApproachCell = approachCell;
+            OperatorAnchor = operatorAnchor;
             Facing = facing;
         }
 
@@ -116,6 +161,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public string WorkSurfaceFurnitureId { get; }
         public OfficeGridCoordinate Cell { get; }
         public OfficeGridCoordinate ApproachCell { get; }
+        public OfficeGridSubcellAnchor OperatorAnchor { get; }
         public OfficeFurnitureFacing Facing { get; }
         public bool HasWorkstationBinding => WorkSurfaceFurnitureId.Length > 0;
 
@@ -130,6 +176,37 @@ namespace FamilyCompany.Simulation.OfficeLayout
     }
 
     /// <summary>
+    /// Explicit desk/chair/seat binding used by presentation and QA. It is derived from the
+    /// persisted seat slot so there is one semantic source of truth.
+    /// </summary>
+    public sealed class OfficeWorkstationSlot
+    {
+        internal OfficeWorkstationSlot(OfficeSeatSlot seat)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            if (!seat.HasWorkstationBinding)
+                throw new ArgumentException("A workstation requires an explicit desk binding.", nameof(seat));
+            WorkstationId = "workstation_" + seat.SeatId;
+            SeatId = seat.SeatId;
+            DeskFurnitureId = seat.WorkSurfaceFurnitureId;
+            ChairFurnitureId = seat.ChairFurnitureId;
+            SeatCell = seat.Cell;
+            ApproachCell = seat.ApproachCell;
+            OperatorAnchor = seat.OperatorAnchor;
+            Facing = seat.Facing;
+        }
+
+        public string WorkstationId { get; }
+        public string SeatId { get; }
+        public string DeskFurnitureId { get; }
+        public string ChairFurnitureId { get; }
+        public OfficeGridCoordinate SeatCell { get; }
+        public OfficeGridCoordinate ApproachCell { get; }
+        public OfficeGridSubcellAnchor OperatorAnchor { get; }
+        public OfficeFurnitureFacing Facing { get; }
+    }
+
+    /// <summary>
     /// Immutable semantic office layout. Coordinates, not scene Transforms, are persisted.
     /// </summary>
     public sealed class OfficeGrid
@@ -140,6 +217,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
         private readonly bool[] _walkable;
         private readonly ReadOnlyCollection<PlacedOfficeFurniture> _furniture;
         private readonly ReadOnlyCollection<OfficeSeatSlot> _seatSlots;
+        private readonly ReadOnlyCollection<OfficeWorkstationSlot> _workstations;
 
         public OfficeGrid(
             int width,
@@ -185,6 +263,12 @@ namespace FamilyCompany.Simulation.OfficeLayout
             ValidateSeats(furnitureList, seatList);
             _furniture = furnitureList.AsReadOnly();
             _seatSlots = seatList.AsReadOnly();
+            var workstationList = new List<OfficeWorkstationSlot>();
+            foreach (var seat in seatList)
+            {
+                if (seat.HasWorkstationBinding) workstationList.Add(new OfficeWorkstationSlot(seat));
+            }
+            _workstations = workstationList.AsReadOnly();
         }
 
         public int Width { get; }
@@ -192,9 +276,14 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public int CellCount => _floorTiles.Length;
         public IReadOnlyList<PlacedOfficeFurniture> Furniture => _furniture;
         public IReadOnlyList<OfficeSeatSlot> SeatSlots => _seatSlots;
+        public IReadOnlyList<OfficeWorkstationSlot> Workstations => _workstations;
 
         public bool Contains(OfficeGridCoordinate cell) =>
             cell.X >= 0 && cell.X < Width && cell.Y >= 0 && cell.Y < Height;
+
+        public bool Contains(OfficeGridSubcellAnchor anchor) =>
+            anchor.X2 >= 0 && anchor.X2 <= checked((Width - 1) * 2) &&
+            anchor.Y2 >= 0 && anchor.Y2 <= checked((Height - 1) * 2);
 
         public OfficeFloorTileKind FloorAt(OfficeGridCoordinate cell) => _floorTiles[IndexOf(cell)];
         public bool IsWalkable(OfficeGridCoordinate cell) => _walkable[IndexOf(cell)];
@@ -235,6 +324,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 AddInt(ref hash, item.Cell.Y);
                 AddInt(ref hash, item.ApproachCell.X);
                 AddInt(ref hash, item.ApproachCell.Y);
+                AddInt(ref hash, item.OperatorAnchor.X2);
+                AddInt(ref hash, item.OperatorAnchor.Y2);
                 AddInt(ref hash, (int)item.Facing);
             }
 
@@ -286,6 +377,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     throw new ArgumentException($"Seat references unknown furniture: {seat.FurnitureId}.", nameof(seats));
                 if (!Contains(seat.Cell))
                     throw new ArgumentException($"Seat is outside the grid: {seat.SeatId}.", nameof(seats));
+                if (!Contains(seat.OperatorAnchor))
+                    throw new ArgumentException($"Seat operator anchor is outside the grid: {seat.SeatId}.", nameof(seats));
                 if (!IsWalkable(seat.Cell))
                     throw new ArgumentException($"Seat cell is not walkable: {seat.SeatId}.", nameof(seats));
                 if (seatFurniture.BlocksMovement)
@@ -305,6 +398,11 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     throw new ArgumentException($"Seat approach cell is not walkable: {seat.SeatId}.", nameof(seats));
                 if (CardinalDistance(seat.Cell, seat.ApproachCell) != 1)
                     throw new ArgumentException($"Seat approach cell is not cardinally adjacent: {seat.SeatId}.", nameof(seats));
+                var seatCenterAnchor = OfficeGridSubcellAnchor.FromCellCenter(seat.Cell);
+                var operatorDeltaX2 = Math.Abs(seat.OperatorAnchor.X2 - seatCenterAnchor.X2);
+                var operatorDeltaY2 = Math.Abs(seat.OperatorAnchor.Y2 - seatCenterAnchor.Y2);
+                if (operatorDeltaX2 > 1 || operatorDeltaY2 > 1)
+                    throw new ArgumentException($"Seat operator anchor must remain within the surrounding half-cell square: {seat.SeatId}.", nameof(seats));
                 var nearestWorkCell = NearestFootprintCell(workSurface, seat.Cell, out var workDistance);
                 if (workDistance != 1)
                     throw new ArgumentException($"Seat is not cardinally adjacent to its work surface: {seat.SeatId}.", nameof(seats));

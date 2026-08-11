@@ -9,6 +9,12 @@ using UnityEngine.Tilemaps;
 
 namespace FamilyCompany.Presentation.Unity.OfficeGridView
 {
+    public enum OfficeTilePreviewLayout
+    {
+        MigrationPreview = 0,
+        StarterOfficeV1 = 1
+    }
+
     [Serializable]
     public sealed class OfficeGridSeatingFrameSet
     {
@@ -24,6 +30,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         [SerializeField] private bool includeCharacters = true;
         [SerializeField] private bool includeFurniture;
         [SerializeField] private bool seatCharacters;
+        [SerializeField] private OfficeTilePreviewLayout layout = OfficeTilePreviewLayout.MigrationPreview;
         [SerializeField] private TileBase[] floorTiles = Array.Empty<TileBase>();
         [SerializeField] private OfficeFurnitureVisualCatalog furnitureVisualCatalog;
         [SerializeField] private OfficeCharacterSeatPoseCatalog characterSeatPoseCatalog;
@@ -49,6 +56,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public IReadOnlyList<OfficeGridCharacterMover> Movers => _movers;
         public IReadOnlyList<OfficeGridSeatedWorker> SeatedWorkers => _seatedWorkers;
         public OfficeSeatingState SeatingState => _seatingState;
+        public OfficeTilePreviewLayout Layout => layout;
 
         public Bounds CombinedRenderBounds
         {
@@ -97,6 +105,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             seatCharacters = true;
         }
 
+        public void ConfigureLayoutForEditor(OfficeTilePreviewLayout newLayout)
+        {
+            layout = newLayout;
+        }
+
         public void BuildPreview()
         {
             var existing = transform.Find("GeneratedOfficeTilePreview");
@@ -112,7 +125,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _collisionMonitor = null;
             _alignmentDebugOverlay = null;
             _seatingState = null;
-            var semanticGrid = OfficeGridLayouts.CreateMigrationPreview();
+            var semanticGrid = layout == OfficeTilePreviewLayout.StarterOfficeV1
+                ? OfficeGridLayouts.CreateStarterOfficeV1()
+                : OfficeGridLayouts.CreateMigrationPreview();
             var generated = new GameObject("GeneratedOfficeTilePreview");
             generated.transform.SetParent(transform, false);
             _presenter = generated.AddComponent<OfficeGridTilemapPresenter>();

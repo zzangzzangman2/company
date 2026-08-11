@@ -14,6 +14,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             public PlacedOfficeFurniture Furniture;
             public OfficeFurnitureVisualDefinition Definition;
             public Transform SemanticRoot;
+            public Transform VisualRoot;
             public SpriteRenderer BaseRenderer;
             public SpriteRenderer FrontRenderer;
         }
@@ -58,11 +59,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 root.transform.rotation = Quaternion.identity;
                 root.transform.localScale = Vector3.one;
 
+                var visualRootObject = new GameObject("VisualRoot");
+                visualRootObject.transform.SetParent(root.transform, false);
+                visualRootObject.transform.localPosition = Vector3.zero;
+                visualRootObject.transform.localRotation = Quaternion.identity;
+                visualRootObject.transform.localScale = Vector3.one * definition.UniformScale;
+
                 var baseRoot = new GameObject("BaseVisual");
-                baseRoot.transform.SetParent(root.transform, false);
+                baseRoot.transform.SetParent(visualRootObject.transform, false);
                 baseRoot.transform.localPosition = Vector3.zero;
                 baseRoot.transform.localRotation = Quaternion.identity;
-                baseRoot.transform.localScale = Vector3.one * definition.UniformScale;
+                baseRoot.transform.localScale = Vector3.one;
                 var baseRenderer = baseRoot.AddComponent<SpriteRenderer>();
                 baseRenderer.sprite = definition.BaseSprite;
                 baseRenderer.sortingLayerName = "Default";
@@ -75,10 +82,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 if (definition.FrontOverlaySprite != null)
                 {
                     var frontRoot = new GameObject("FrontOverlay");
-                    frontRoot.transform.SetParent(root.transform, false);
+                    frontRoot.transform.SetParent(visualRootObject.transform, false);
                     frontRoot.transform.localPosition = Vector3.zero;
                     frontRoot.transform.localRotation = Quaternion.identity;
-                    frontRoot.transform.localScale = Vector3.one * definition.UniformScale;
+                    frontRoot.transform.localScale = Vector3.one;
                     frontRenderer = frontRoot.AddComponent<SpriteRenderer>();
                     frontRenderer.sprite = definition.FrontOverlaySprite;
                     frontRenderer.sortingLayerName = "Default";
@@ -92,6 +99,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                     Furniture = item,
                     Definition = definition,
                     SemanticRoot = root.transform,
+                    VisualRoot = visualRootObject.transform,
                     BaseRenderer = baseRenderer,
                     FrontRenderer = frontRenderer
                 };
@@ -108,6 +116,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                     _renderBounds.Encapsulate(baseRenderer.bounds);
                 }
             }
+
+            AlignWorkstationsToDeskSockets();
+            RecalculateRenderBounds();
 
             if (!hasBounds) _renderBounds = new Bounds(transform.position, Vector3.zero);
         }
@@ -140,6 +151,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return false;
         }
 
+        public bool TryGetVisualRoot(string furnitureId, out Transform visualRoot)
+        {
+            if (_visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual))
+            {
+                visualRoot = visual.VisualRoot;
+                return true;
+            }
+            visualRoot = null;
+            return false;
+        }
+
         public Vector3 GroundAnchorWorld(string furnitureId) =>
             ResolveAnchorWorld(furnitureId, visual => visual.Definition.GroundAnchorPx);
 
@@ -156,10 +178,38 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
         public Vector3 WorkSurfaceAnchorWorld(string furnitureId)
         {
+            return OperatorWorkSocketWorld(furnitureId);
+        }
+
+        public Vector3 OperatorSeatSocketWorld(string furnitureId)
+        {
             FurnitureVisual visual = RequiredVisual(furnitureId);
-            if (!visual.Definition.HasWorkSurfaceAnchor)
-                throw new InvalidOperationException("Furniture has no work-surface anchor: " + furnitureId);
-            return OfficeGridAlignmentMetrics.SpriteAnchorWorld(visual.BaseRenderer, visual.Definition.WorkSurfaceAnchorPx);
+            if (!visual.Definition.HasOperatorSeatSocket)
+                throw new InvalidOperationException("Furniture has no operator-seat socket: " + furnitureId);
+            return OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                visual.BaseRenderer,
+                visual.Definition.OperatorSeatSocketPx);
+        }
+
+        public Vector3 OperatorWorkSocketWorld(string furnitureId)
+        {
+            FurnitureVisual visual = RequiredVisual(furnitureId);
+            if (!visual.Definition.HasOperatorWorkSocket)
+                throw new InvalidOperationException("Furniture has no operator-work socket: " + furnitureId);
+            return OfficeGridAlignmentMetrics.SpriteAnchorWorld(visual.BaseRenderer, visual.Definition.OperatorWorkSocketPx);
+        }
+
+        public Vector3[] GroundFootprintWorld(string furnitureId)
+        {
+            FurnitureVisual visual = RequiredVisual(furnitureId);
+            var points = new Vector3[visual.Definition.GroundFootprintPolygonPx.Count];
+            for (int index = 0; index < points.Length; index++)
+            {
+                points[index] = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    visual.BaseRenderer,
+                    visual.Definition.GroundFootprintPolygonPx[index]);
+            }
+            return points;
         }
 
         public void ApplySeatOcclusion(OfficeSeatSlot seat, int characterSortingOrder)
@@ -230,6 +280,47 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 visual.FrontRenderer.enabled = false;
                 visual.FrontRenderer.sortingOrder = visual.BaseRenderer.sortingOrder + 1;
             }
+        }
+
+        private void AlignWorkstationsToDeskSockets()
+        {
+            foreach (OfficeWorkstationSlot workstation in _semanticGrid.Workstations)
+            {
+                FurnitureVisual desk = RequiredVisual(workstation.DeskFurnitureId);
+                FurnitureVisual chair = RequiredVisual(workstation.ChairFurnitureId);
+                if (!desk.Definition.HasOperatorSeatSocket)
+                    throw new InvalidOperationException("Desk has no operator-seat socket: " + workstation.DeskFurnitureId);
+                if (!chair.Definition.HasSeatAnchor)
+                    throw new InvalidOperationException("Chair has no seat anchor: " + workstation.ChairFurnitureId);
+
+                Vector3 target = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    desk.BaseRenderer,
+                    desk.Definition.OperatorSeatSocketPx);
+                Vector3 current = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    chair.BaseRenderer,
+                    chair.Definition.SeatAnchorPx);
+                Vector3 localDelta = chair.SemanticRoot.InverseTransformVector(target - current);
+                chair.VisualRoot.localPosition += localDelta;
+                RestoreVisualSorting(chair);
+            }
+        }
+
+        private void RecalculateRenderBounds()
+        {
+            bool hasBounds = false;
+            foreach (FurnitureVisual visual in _visuals.Values)
+            {
+                if (!hasBounds)
+                {
+                    _renderBounds = visual.BaseRenderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    _renderBounds.Encapsulate(visual.BaseRenderer.bounds);
+                }
+            }
+            if (!hasBounds) _renderBounds = new Bounds(transform.position, Vector3.zero);
         }
 
         private Vector3 ResolveFootprintCenter(PlacedOfficeFurniture item)

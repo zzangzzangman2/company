@@ -27,6 +27,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public SpriteRenderer TargetRenderer => _renderer;
         public Transform VisualRoot => _visualRoot;
         public Vector3 VisualLocalOffset => _visualRoot == null ? Vector3.zero : _visualRoot.localPosition;
+        public float SeatedVisualScaleMultiplier => _visualRoot == null
+            ? 1f
+            : _visualRoot.localScale.x / UniformVisualScale;
         public DirectionalSpriteAnimator Animator => _animator;
         public int TargetIndex => _targetIndex;
         public OfficeGridCoordinate TargetCell => _route.Length == 0 ? default : _route[_targetIndex];
@@ -132,9 +135,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _visualRoot.localPosition = offset;
         }
 
+        public void SetSeatedVisualPose(Vector3 offset, float uniformScaleMultiplier)
+        {
+            if (_visualRoot == null) throw new InvalidOperationException("Character VisualRoot is not configured.");
+            if (uniformScaleMultiplier <= 0f || float.IsNaN(uniformScaleMultiplier) || float.IsInfinity(uniformScaleMultiplier))
+                throw new ArgumentOutOfRangeException(nameof(uniformScaleMultiplier));
+            _visualRoot.localScale = Vector3.one * (UniformVisualScale * uniformScaleMultiplier);
+            _visualRoot.localPosition = offset;
+        }
+
         public void ResetVisualLocalOffset()
         {
             SetVisualLocalOffset(Vector3.zero);
+        }
+
+        public void ResetVisualPose()
+        {
+            if (_visualRoot == null) throw new InvalidOperationException("Character VisualRoot is not configured.");
+            _visualRoot.localPosition = Vector3.zero;
+            _visualRoot.localScale = Vector3.one * UniformVisualScale;
         }
 
         public Vector3 SpriteAnchorWorld(Vector2 spriteRectAnchorPx)
