@@ -57,6 +57,24 @@ namespace FamilyCompany.Editor.OfficeGridQa
             AssertEqual(false, grid.IsWalkable(new OfficeGridCoordinate(6, 6)), "blocked service cell");
             AssertEqual(false, grid.IsWalkable(new OfficeGridCoordinate(6, 7)), "blocked service cell 2");
             AssertEqual(true, grid.IsWalkable(new OfficeGridCoordinate(5, 6)), "walkable service neighbor");
+            AssertEqual(18, grid.Furniture.Count, "preview furniture count");
+            AssertEqual(4, grid.SeatSlots.Count, "preview seat count");
+            var kindIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var item in grid.Furniture) kindIds.Add(item.KindId);
+            AssertEqual(12, kindIds.Count, "preview furniture kind count");
+            foreach (var seat in grid.SeatSlots)
+            {
+                AssertEqual(true, grid.IsWalkable(seat.Cell), seat.SeatId + " walkable");
+                PlacedOfficeFurniture chair = null;
+                foreach (var item in grid.Furniture)
+                {
+                    if (item.FurnitureId == seat.FurnitureId) chair = item;
+                }
+                if (chair == null) throw new InvalidOperationException("Seat chair is missing: " + seat.SeatId);
+                AssertEqual(false, chair.BlocksMovement, seat.SeatId + " chair blocking");
+                AssertEqual(seat.Cell, chair.Origin, seat.SeatId + " chair origin");
+                AssertEqual(seat.Facing, chair.Facing, seat.SeatId + " chair facing");
+            }
         }
 
         private static void ValidateLayoutSaveRoundTrip()
@@ -92,23 +110,31 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 {
                     new PlacedOfficeFurniture(
                         "desk_a",
-                        "office_workstation",
+                        OfficeGridLayouts.DeskWithPcKind,
                         new OfficeGridCoordinate(1, 1),
                         1,
                         1,
-                        OfficeFurnitureFacing.SouthEast)
+                        OfficeFurnitureFacing.SouthEast),
+                    new PlacedOfficeFurniture(
+                        "chair_a",
+                        OfficeGridLayouts.SwivelChairKind,
+                        new OfficeGridCoordinate(1, 2),
+                        1,
+                        1,
+                        OfficeFurnitureFacing.NorthWest,
+                        false)
                 },
                 new[]
                 {
                     new OfficeSeatSlot(
                         "desk_a_seat",
-                        "desk_a",
+                        "chair_a",
                         new OfficeGridCoordinate(1, 2),
                         OfficeFurnitureFacing.NorthWest)
                 });
             var restored = OfficeGridSaveAdapter.Restore(OfficeGridSaveAdapter.ToDto(source));
             AssertEqual(source.ComputeLayoutHash(), restored.ComputeLayoutHash(), "furniture and seat hash roundtrip");
-            AssertEqual(1, restored.Furniture.Count, "furniture count");
+            AssertEqual(2, restored.Furniture.Count, "furniture count");
             AssertEqual(1, restored.SeatSlots.Count, "seat count");
         }
 

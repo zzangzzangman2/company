@@ -5,6 +5,9 @@ using System.IO;
 using System.Linq;
 using FamilyCompany.Presentation.Unity;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
+using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
+using FamilyCompany.Save.OfficeGrid;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -19,13 +22,22 @@ namespace FamilyCompany.Editor.OfficeGridQa
         public const string PreviewScenePath = "Assets/FamilyCompany/Scenes/OfficeTileMigrationPreview.unity";
         public const string ArtifactFolder = "Artifacts/OfficeTileMigrationQa";
         public const string CapturePath = ArtifactFolder + "/office-tile-t3-1920x1080.png";
+        public const string FurnitureOverviewCapturePath = ArtifactFolder + "/office-tile-t4-furniture-1920x1080.png";
+        public const string OcclusionCapturePath = ArtifactFolder + "/office-tile-t4-occlusion-1920x1080.png";
+        public const string SeatedCapturePath = ArtifactFolder + "/office-tile-t5-seated-1920x1080.png";
         public const string ReportPath = ArtifactFolder + "/office-tile-migration-qa.txt";
 
         private const string ActiveKey = "FamilyCompany.OfficeTileMigrationQa.Active";
         private const string StageKey = "FamilyCompany.OfficeTileMigrationQa.Stage";
         private const string StartKey = "FamilyCompany.OfficeTileMigrationQa.Start";
         private const string FailureKey = "FamilyCompany.OfficeTileMigrationQa.Failure";
+        private const string ModeKey = "FamilyCompany.OfficeTileMigrationQa.Mode";
+        private const string ModeT3 = "T3";
+        private const string ModeT45 = "T45";
         private const float CaptureAfterSeconds = 4f;
+        private const float FurnitureCaptureAfterSeconds = 0.05f;
+        private const float OcclusionCaptureAfterSeconds = 0.15f;
+        private const float T45ValidationAfterSeconds = 45f;
 
         private static readonly string[] CharacterIds =
         {
@@ -41,7 +53,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         [MenuItem("Family Company/QA/Build And Validate Office Tile T2")]
         public static void BuildAndValidateT2()
         {
-            BuildPreviewScene();
+            BuildPreviewScene(false);
             Debug.Log("FAMILY_COMPANY_OFFICE_TILE_T2_VALIDATION: PASS");
         }
 
@@ -69,11 +81,12 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     ReportPath,
                     "Office Tile Migration QA\n",
                     System.Text.Encoding.UTF8);
-                BuildPreviewScene();
+                BuildPreviewScene(false);
                 SessionState.SetBool(ActiveKey, true);
                 SessionState.SetInt(StageKey, 1);
                 SessionState.SetFloat(StartKey, 0f);
                 SessionState.SetString(FailureKey, string.Empty);
+                SessionState.SetString(ModeKey, ModeT3);
                 Append("PLAYMODE_REQUEST | stage=T3 | resolution=1920x1080 | captureAfter=4s");
                 EditorSceneManager.OpenScene(PreviewScenePath, OpenSceneMode.Single);
                 EditorApplication.EnterPlaymode();
@@ -86,11 +99,37 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        private static void BuildPreviewScene()
+        [MenuItem("Family Company/QA/Capture Office Tile T4-T5 PlayMode")]
+        public static void StartT4T5Batch()
+        {
+            try
+            {
+                Directory.CreateDirectory(ArtifactFolder);
+                File.WriteAllText(ReportPath, "Office Tile Migration QA\n", System.Text.Encoding.UTF8);
+                BuildPreviewScene(true);
+                SessionState.SetBool(ActiveKey, true);
+                SessionState.SetInt(StageKey, 1);
+                SessionState.SetFloat(StartKey, 0f);
+                SessionState.SetString(FailureKey, string.Empty);
+                SessionState.SetString(ModeKey, ModeT45);
+                Append("PLAYMODE_REQUEST | stage=T4-T5 | resolution=1920x1080 | collisionWindow=30s | finalAfter=45s");
+                EditorSceneManager.OpenScene(PreviewScenePath, OpenSceneMode.Single);
+                EditorApplication.EnterPlaymode();
+            }
+            catch (Exception exception)
+            {
+                Append("PREP_FAIL | " + exception);
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        private static void BuildPreviewScene(bool includeT45)
         {
             OfficeGridValidation.Run();
             OfficeTileAssetBuilder.Build();
             HighMotionCharacterArtBuilder.Validate();
+            if (includeT45) OfficeFurnitureAssetBuilder.Build();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var cameraObject = new GameObject("Main Camera");
@@ -113,9 +152,18 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 LoadCharacterFrames("father"),
                 LoadCharacterFrames("mother"),
                 true);
+            if (includeT45)
+            {
+                bootstrap.ConfigureFurnitureAndSeatingForEditor(
+                    OfficeFurnitureAssetBuilder.KindIds.ToArray(),
+                    OfficeFurnitureAssetBuilder.LoadFurnitureSprites(),
+                    OfficeFurnitureAssetBuilder.LoadChairBackrestSprite(),
+                    CharacterIds.Select(LoadSeatingFrameSet).ToArray());
+            }
             bootstrap.BuildPreview();
             ValidateT2(bootstrap, camera);
-            OfficeGridCameraFitter.Fit(camera, bootstrap.Presenter.FloorRenderer.bounds, 16f / 9f);
+            if (includeT45) ValidateT4Static(bootstrap);
+            OfficeGridCameraFitter.Fit(camera, bootstrap.CombinedRenderBounds, 16f / 9f);
 
             var generated = bootstrap.transform.Find("GeneratedOfficeTilePreview");
             if (generated != null) UnityEngine.Object.DestroyImmediate(generated.gameObject);
@@ -174,6 +222,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private static void OnEditorUpdate()
         {
             if (!SessionState.GetBool(ActiveKey, false)) return;
+            var mode = SessionState.GetString(ModeKey, ModeT3);
+            if (string.Equals(mode, ModeT45, StringComparison.Ordinal))
+            {
+                OnT45EditorUpdate();
+                return;
+            }
+
             var stage = SessionState.GetInt(StageKey, 0);
             if (stage == 1)
             {
@@ -208,9 +263,73 @@ namespace FamilyCompany.Editor.OfficeGridQa
             SessionState.SetBool(ActiveKey, false);
             SessionState.EraseInt(StageKey);
             SessionState.EraseFloat(StartKey);
+            SessionState.EraseString(ModeKey);
             if (failure.Length == 0)
             {
                 Debug.Log("FAMILY_COMPANY_OFFICE_TILE_T3_VALIDATION: PASS");
+                if (Application.isBatchMode) EditorApplication.Exit(0);
+            }
+            else
+            {
+                Debug.LogError(failure);
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+            }
+        }
+
+        private static void OnT45EditorUpdate()
+        {
+            var stage = SessionState.GetInt(StageKey, 0);
+            if (stage >= 1 && stage <= 3)
+            {
+                if (!EditorApplication.isPlaying) return;
+                var start = SessionState.GetFloat(StartKey, 0f);
+                if (start <= 0f)
+                {
+                    SessionState.SetFloat(StartKey, (float)EditorApplication.timeSinceStartup);
+                    return;
+                }
+                var elapsed = EditorApplication.timeSinceStartup - start;
+                try
+                {
+                    if (stage == 1 && elapsed >= FurnitureCaptureAfterSeconds)
+                    {
+                        CaptureT45(FurnitureOverviewCapturePath);
+                        Append("T4_OVERVIEW_CAPTURE | path=" + FurnitureOverviewCapturePath);
+                        SessionState.SetInt(StageKey, 2);
+                    }
+                    else if (stage == 2 && elapsed >= OcclusionCaptureAfterSeconds)
+                    {
+                        ValidateAndCaptureOcclusion();
+                        SessionState.SetInt(StageKey, 3);
+                    }
+                    else if (stage == 3 && elapsed >= T45ValidationAfterSeconds)
+                    {
+                        ValidateAndCaptureT45();
+                        SessionState.SetString(FailureKey, string.Empty);
+                        SessionState.SetInt(StageKey, 4);
+                        EditorApplication.ExitPlaymode();
+                    }
+                }
+                catch (Exception exception)
+                {
+                    SessionState.SetString(FailureKey, exception.ToString());
+                    Append("T4_T5_FAIL | " + exception);
+                    Debug.LogException(exception);
+                    SessionState.SetInt(StageKey, 4);
+                    EditorApplication.ExitPlaymode();
+                }
+                return;
+            }
+
+            if (stage != 4 || EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode) return;
+            var failure = SessionState.GetString(FailureKey, string.Empty);
+            SessionState.SetBool(ActiveKey, false);
+            SessionState.EraseInt(StageKey);
+            SessionState.EraseFloat(StartKey);
+            SessionState.EraseString(ModeKey);
+            if (failure.Length == 0)
+            {
+                Debug.Log("FAMILY_COMPANY_OFFICE_TILE_T4_T5_VALIDATION: PASS");
                 if (Application.isBatchMode) EditorApplication.Exit(0);
             }
             else
@@ -256,6 +375,188 @@ namespace FamilyCompany.Editor.OfficeGridQa
             OfficeGridCameraFitter.Fit(camera, bootstrap.Presenter.FloorRenderer.bounds, 16f / 9f);
             Capture(camera, CapturePath, 1920, 1080);
             Append("T3_PASS | family=4 | movement=realUpdate | blockedCell=reject | sorting=x+y | capture=" + CapturePath);
+        }
+
+        private static void ValidateT4Static(OfficeTileMigrationPreviewBootstrap bootstrap)
+        {
+            var grid = bootstrap.Presenter.SemanticGrid;
+            Require(grid.Furniture.Count >= 8, "T4 furniture count is below eight.");
+            Require(grid.Furniture.Select(item => item.KindId).Distinct(StringComparer.Ordinal).Count() >= 4,
+                "T4 furniture kind count is below four.");
+            Require(grid.Furniture.Count == 18, $"T4 expected 18 placed furniture objects, found {grid.Furniture.Count}.");
+            Require(grid.Furniture.Select(item => item.KindId).Distinct(StringComparer.Ordinal).Count() == 12,
+                "T4 must use all 12 independent furniture kinds.");
+            Require(bootstrap.FurniturePresenter != null &&
+                    bootstrap.FurniturePresenter.Renderers.Count == grid.Furniture.Count,
+                "T4 furniture renderers do not match semantic furniture.");
+            Require(grid.SeatSlots.Count == 4, "T5 preview requires four seats.");
+
+            var deskSeatCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            var chairSeatCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var seat in grid.SeatSlots)
+            {
+                var chair = FindFurniture(grid, seat.FurnitureId);
+                Require(chair.KindId == OfficeGridLayouts.SwivelChairKind,
+                    $"Seat {seat.SeatId} does not reference a swivel chair.");
+                Require(!chair.BlocksMovement, $"Chair {chair.FurnitureId} blocks movement.");
+                Require(chair.Origin.Equals(seat.Cell), $"Chair {chair.FurnitureId} does not share seat cell.");
+                Require(grid.IsWalkable(seat.Cell), $"Seat {seat.SeatId} is not walkable.");
+
+                var memberId = seat.SeatId.Substring("seat_".Length);
+                var deskId = "desk_" + memberId;
+                var desk = FindFurniture(grid, deskId);
+                Require(desk.KindId == OfficeGridLayouts.DeskWithPcKind && desk.BlocksMovement,
+                    $"Seat {seat.SeatId} has no blocking workstation.");
+                var deskCell = NearestFootprintCell(desk, seat.Cell, out var distance);
+                Require(distance == 1, $"Seat {seat.SeatId} is not cardinally adjacent to its desk.");
+                var expectedFacing = FacingFromDelta(deskCell.X - seat.Cell.X, deskCell.Y - seat.Cell.Y);
+                Require(seat.Facing == expectedFacing,
+                    $"Seat {seat.SeatId} faces {seat.Facing}, expected {expectedFacing} toward desk.");
+                Require(chair.Facing == seat.Facing,
+                    $"Chair {chair.FurnitureId} facing does not match seat facing.");
+                deskSeatCounts[deskId] = deskSeatCounts.TryGetValue(deskId, out var deskCount) ? deskCount + 1 : 1;
+                chairSeatCounts[chair.FurnitureId] =
+                    chairSeatCounts.TryGetValue(chair.FurnitureId, out var chairCount) ? chairCount + 1 : 1;
+            }
+            Require(deskSeatCounts.Count == 4 && deskSeatCounts.Values.All(count => count >= 1),
+                "Every family desk must have at least one seat.");
+            Require(chairSeatCounts.Count == 4 && chairSeatCounts.Values.All(count => count == 1),
+                "Every seat must have exactly one chair.");
+            Append("T4_STATIC_PASS | furniture=18 | kinds=12 | desks=4 | chairs=4 | seats=4 | seatInvariants=pass");
+        }
+
+        private static void ValidateAndCaptureOcclusion()
+        {
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<OfficeTileMigrationPreviewBootstrap>();
+            var camera = Camera.main;
+            Require(bootstrap != null && camera != null, "T4 occlusion preview is missing.");
+            var player = bootstrap.Movers.Single(item => item.name.EndsWith("player", StringComparison.Ordinal));
+            Require(bootstrap.FurniturePresenter.TryGetRenderer("desk_father", out var deskRenderer),
+                "T4 father desk renderer is missing.");
+            Require(player.TargetRenderer.sortingOrder < deskRenderer.sortingOrder,
+                $"Character behind desk is not sorted behind it: character={player.TargetRenderer.sortingOrder}, desk={deskRenderer.sortingOrder}.");
+            Require(player.TargetRenderer.bounds.Intersects(deskRenderer.bounds),
+                "Character-behind-desk capture does not contain a visual overlap.");
+            CaptureT45(OcclusionCapturePath);
+            Append($"T4_OCCLUSION_PASS | character={player.TargetRenderer.sortingOrder} | desk={deskRenderer.sortingOrder} | overlap=true | path={OcclusionCapturePath}");
+        }
+
+        private static void ValidateAndCaptureT45()
+        {
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<OfficeTileMigrationPreviewBootstrap>();
+            var camera = Camera.main;
+            Require(bootstrap != null && bootstrap.Presenter != null, "T4-T5 preview bootstrap is missing.");
+            Require(camera != null, "T4-T5 camera is missing.");
+            ValidateT4Static(bootstrap);
+            Require(bootstrap.CollisionMonitor != null && bootstrap.CollisionMonitor.SampleCount >= 120,
+                "T4 collision monitor did not collect enough per-frame samples.");
+            Require(bootstrap.CollisionMonitor.BlockedCellViolationCount == 0,
+                "T4 character entered blocked furniture cell: " + bootstrap.CollisionMonitor.FirstViolation);
+            Require(bootstrap.SeatedWorkers.Count == 4, "T5 expected four seated workers.");
+            foreach (var worker in bootstrap.SeatedWorkers)
+            {
+                Append($"SEATING_SNAPSHOT | id={worker.MemberId} | seat={worker.SeatId} | phase={worker.Phase} | error={worker.FootError():F4}");
+            }
+            Require(bootstrap.SeatedWorkers.All(item => item.IsWorking),
+                "T5 not every family member reached seated work.");
+            Require(bootstrap.SeatedWorkers.Select(item => item.SeatId).Distinct(StringComparer.Ordinal).Count() == 4,
+                "T5 family seat assignment contains duplicates.");
+
+            foreach (var worker in bootstrap.SeatedWorkers)
+            {
+                Require(worker.FootError() <= 0.05f,
+                    $"{worker.MemberId} seated foot error is {worker.FootError():F4}.");
+                Require(worker.DirectionIndex == DirectionIndex(worker.Facing),
+                    $"{worker.MemberId} seated facing is incorrect.");
+                var mover = worker.GetComponent<OfficeGridCharacterMover>();
+                Require(bootstrap.FurniturePresenter.ChairOcclusionMatches(
+                        FindSeat(bootstrap.Presenter.SemanticGrid, worker.SeatId).FurnitureId,
+                        mover.TargetRenderer.sortingOrder,
+                        worker.Facing),
+                    $"{worker.MemberId} chair occlusion order is incorrect.");
+                Append($"SEATED_PASS | id={worker.MemberId} | seat={worker.SeatId} | error={worker.FootError():F4} | facing={worker.Facing} | phase=Working");
+            }
+
+            var grid = bootstrap.Presenter.SemanticGrid;
+            foreach (var desk in grid.Furniture.Where(item => item.KindId == OfficeGridLayouts.DeskWithPcKind))
+            {
+                foreach (var mover in bootstrap.Movers)
+                    Require(!mover.CanEnter(desk.Origin), $"{mover.name} can enter desk footprint {desk.Origin}.");
+                Require(bootstrap.FurniturePresenter.TryGetRenderer(desk.FurnitureId, out var deskRenderer),
+                    "Desk renderer is missing: " + desk.FurnitureId);
+                var behindCell = new OfficeGridCoordinate(desk.Origin.X, Math.Min(grid.Height - 1, desk.Origin.Y + 1));
+                var behindOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(
+                    bootstrap.Presenter.CellCenterWorld(behindCell));
+                Require(behindOrder < deskRenderer.sortingOrder,
+                    $"Grid x+y sorting does not place upper row behind {desk.FurnitureId}.");
+            }
+
+            var restored = OfficeGridSaveAdapter.Restore(OfficeGridSaveAdapter.ToDto(grid));
+            Require(grid.ComputeLayoutHash() == restored.ComputeLayoutHash(),
+                "T4-T5 furniture/seat save roundtrip hash changed.");
+            var playerMover = bootstrap.Movers.Single(item => item.name.EndsWith("player", StringComparison.Ordinal));
+            Require(playerMover.DistanceTravelled > 35f,
+                $"T4 30-second player movement distance is too short: {playerMover.DistanceTravelled:F3}.");
+            CaptureT45(SeatedCapturePath);
+            Append($"T4_T5_PASS | collisionSamples={bootstrap.CollisionMonitor.SampleCount} | violations=0 | playerDistance={playerMover.DistanceTravelled:F3} | familySeated=4 | uniqueSeats=4 | saveHash={grid.ComputeLayoutHash()} | capture={SeatedCapturePath}");
+        }
+
+        private static void CaptureT45(string path)
+        {
+            var bootstrap = UnityEngine.Object.FindFirstObjectByType<OfficeTileMigrationPreviewBootstrap>();
+            var camera = Camera.main;
+            Require(bootstrap != null && camera != null, "T4-T5 capture target is missing.");
+            OfficeGridCameraFitter.Fit(camera, bootstrap.CombinedRenderBounds, 16f / 9f);
+            Capture(camera, path, 1920, 1080);
+        }
+
+        private static PlacedOfficeFurniture FindFurniture(OfficeGrid grid, string furnitureId)
+        {
+            return grid.Furniture.Single(item => string.Equals(item.FurnitureId, furnitureId, StringComparison.Ordinal));
+        }
+
+        private static OfficeSeatSlot FindSeat(OfficeGrid grid, string seatId)
+        {
+            return grid.SeatSlots.Single(item => string.Equals(item.SeatId, seatId, StringComparison.Ordinal));
+        }
+
+        private static OfficeGridCoordinate NearestFootprintCell(
+            PlacedOfficeFurniture furniture,
+            OfficeGridCoordinate origin,
+            out int distance)
+        {
+            var best = furniture.Origin;
+            distance = int.MaxValue;
+            for (var y = furniture.Origin.Y; y < furniture.Origin.Y + furniture.Height; y++)
+            for (var x = furniture.Origin.X; x < furniture.Origin.X + furniture.Width; x++)
+            {
+                var candidateDistance = Math.Abs(x - origin.X) + Math.Abs(y - origin.Y);
+                if (candidateDistance >= distance) continue;
+                distance = candidateDistance;
+                best = new OfficeGridCoordinate(x, y);
+            }
+            return best;
+        }
+
+        private static OfficeFurnitureFacing FacingFromDelta(int deltaX, int deltaY)
+        {
+            if (deltaX == 1 && deltaY == 0) return OfficeFurnitureFacing.NorthEast;
+            if (deltaX == -1 && deltaY == 0) return OfficeFurnitureFacing.SouthWest;
+            if (deltaX == 0 && deltaY == 1) return OfficeFurnitureFacing.NorthWest;
+            if (deltaX == 0 && deltaY == -1) return OfficeFurnitureFacing.SouthEast;
+            throw new InvalidOperationException($"Seat-to-desk delta is not cardinal: ({deltaX},{deltaY}).");
+        }
+
+        private static int DirectionIndex(OfficeFurnitureFacing facing)
+        {
+            return facing switch
+            {
+                OfficeFurnitureFacing.SouthEast => (int)OfficeSeatFacing8.Southeast,
+                OfficeFurnitureFacing.SouthWest => (int)OfficeSeatFacing8.Southwest,
+                OfficeFurnitureFacing.NorthWest => (int)OfficeSeatFacing8.Northwest,
+                OfficeFurnitureFacing.NorthEast => (int)OfficeSeatFacing8.Northeast,
+                _ => throw new ArgumentOutOfRangeException(nameof(facing))
+            };
         }
 
         private static float ResolveVisibleAlphaHeightRatio(Sprite sprite, float scale, Camera camera)
@@ -328,6 +629,35 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     return sprite;
                 })
                 .ToArray();
+        }
+
+        private static OfficeGridSeatingFrameSet LoadSeatingFrameSet(string memberId)
+        {
+            return new OfficeGridSeatingFrameSet
+            {
+                memberId = memberId,
+                sitDownFrames = LoadSeatingClip(memberId, OfficeSeatingAnimationClip.SitDown),
+                workFrames = LoadSeatingClip(memberId, OfficeSeatingAnimationClip.Work),
+                standUpFrames = LoadSeatingClip(memberId, OfficeSeatingAnimationClip.StandUp)
+            };
+        }
+
+        private static Sprite[] LoadSeatingClip(string memberId, OfficeSeatingAnimationClip clip)
+        {
+            var frames = new List<Sprite>();
+            for (var frame = 0; frame < OfficeSeatingAnimationFrames.FrameCount(clip); frame++)
+            for (var direction = 0; direction < OfficeSeatingAnimationFrames.DirectionCount; direction++)
+            {
+                var path = OfficeSeatingAnimationFrames.AssetPath(
+                    memberId,
+                    (OfficeSeatFacing8)direction,
+                    clip,
+                    frame);
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (sprite == null) throw new FileNotFoundException("Office seating frame is missing.", path);
+                frames.Add(sprite);
+            }
+            return frames.ToArray();
         }
 
         private static void Append(string line)

@@ -66,6 +66,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return _unityGrid.GetCellCenterWorld(new Vector3Int(cell.X, cell.Y, 0));
         }
 
+        public OfficeGridCoordinate NearestCell(Vector3 worldPosition)
+        {
+            if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");
+            var best = new OfficeGridCoordinate(0, 0);
+            var bestDistance = float.PositiveInfinity;
+            for (var y = 0; y < _semanticGrid.Height; y++)
+            for (var x = 0; x < _semanticGrid.Width; x++)
+            {
+                var cell = new OfficeGridCoordinate(x, y);
+                var distance = (CellCenterWorld(cell) - worldPosition).sqrMagnitude;
+                if (distance >= bestDistance) continue;
+                bestDistance = distance;
+                best = cell;
+            }
+            return best;
+        }
+
         private void EnsureTilemap()
         {
             var child = transform.Find("FloorTilemap");

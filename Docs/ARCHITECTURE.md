@@ -61,6 +61,11 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - 캐릭터 프레젠테이션은 그리드 셀 중심을 발 기준점으로 사용하고, 화면 Y(격자의 x+y에 대응)에 따라 매 프레임 정렬한다. 누적 스케일은 균등이어야 하고 16:9 기본 카메라에서 실제 실루엣 높이는 화면의 14~18%다.
 - T1~T3은 `OfficeTileMigrationPreview` 격리 씬에서 검증한다. 현재 `Prototype01`의 OfficeVisualV2·3D Collider·웨이포인트·좌석·계약은 T4/T5 이관 전까지 런타임 폴백이며 삭제하지 않는다.
 - 16:9가 아닌 화면에서는 타일이나 캐릭터를 비균등하게 늘리지 않는다. `OfficeGridCameraFitter`가 균등 직교 크기만 늘려 네 격자 모서리를 보존한다.
+- `OfficeGridLayouts.CreateMigrationPreview()`는 T4 기준 18개 가구·12종 kind·4개 좌석을 의미 좌표로 만든다. 책상과 수납·설비는 통행을 막고, 네 의자는 좌석 셀과 원점이 같으며 통행 가능해야 한다.
+- `OfficeGridFurniturePresenter`는 가구 Sprite와 캐릭터에 동일한 x+y 정렬 축을 적용한다. 착석용 회전의자는 본체와 등받이 전경을 분리하고 좌석 방향에 따라 등받이만 캐릭터보다 앞에 둔다.
+- `OfficeGridSeatedWorker`는 결정론적 walkable 셀 경로, 기존 `OfficeSeatPrecisionMotion`, 기존 112프레임 가족 착석 세트를 조합해 접근→정확한 셀 중심 스냅→좌석 방향 고정→작업 반복을 수행한다. 이는 T5 프리뷰 어댑터이며 계약·자율 AI·A* 소유권을 가져가지 않는다.
+- `OfficeGridCollisionMonitor`는 실제 Transform을 매 프레임 가장 가까운 셀로 투영해 막힌 셀 침범을 계측하는 QA 전용 경계다. 결과는 저장하지 않는다.
+- T4~T5도 `OfficeTileMigrationPreview`에 격리한다. 기존 `Prototype01`의 OfficeVisualV2·Collider·계약·자율 AI는 T6 통합 전까지 폴백으로 유지한다.
 
 ## 실제 회사 이동
 

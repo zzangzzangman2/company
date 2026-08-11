@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace FamilyCompany.Simulation.OfficeLayout
 {
@@ -6,6 +7,19 @@ namespace FamilyCompany.Simulation.OfficeLayout
     {
         public const int MigrationPreviewWidth = 13;
         public const int MigrationPreviewHeight = 13;
+
+        public const string DeskWithPcKind = "desk_with_pc";
+        public const string SwivelChairKind = "swivel_chair";
+        public const string ReceptionCounterKind = "reception_counter";
+        public const string MeetingTableKind = "meeting_table";
+        public const string DocumentBookcaseKind = "document_bookcase";
+        public const string FaxCopierKind = "fax_copier";
+        public const string WaterDispenserKind = "water_dispenser";
+        public const string SofaKind = "sofa";
+        public const string CoffeeTableKind = "coffee_table";
+        public const string PottedPlantKind = "potted_plant";
+        public const string PartitionKind = "partition";
+        public const string FilingCabinetKind = "filing_cabinet";
 
         public static OfficeGrid CreateMigrationPreview()
         {
@@ -21,11 +35,88 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 walkable[index] = x > 0 && x < width - 1 && y > 0 && y < height - 1;
             }
 
-            // A small service-core footprint proves that presentation movement cannot enter
-            // a semantic blocked cell before furniture is migrated in T4.
-            SetWalkable(walkable, width, 6, 6, false);
-            SetWalkable(walkable, width, 6, 7, false);
-            return new OfficeGrid(width, height, floor, walkable);
+            var furniture = new List<PlacedOfficeFurniture>();
+            var seats = new List<OfficeSeatSlot>();
+            AddWorkstation(furniture, seats, "player", 2, 4, 2, 3);
+            AddWorkstation(furniture, seats, "older_sister", 7, 4, 7, 3);
+            AddWorkstation(furniture, seats, "father", 2, 8, 2, 7);
+            AddWorkstation(furniture, seats, "mother", 7, 8, 7, 7);
+
+            AddBlocking(furniture, "reception", ReceptionCounterKind, 4, 1, 2, 1, OfficeFurnitureFacing.SouthEast);
+            AddBlocking(furniture, "meeting", MeetingTableKind, 4, 10, 2, 1, OfficeFurnitureFacing.SouthEast);
+            AddBlocking(furniture, "bookcase", DocumentBookcaseKind, 1, 10, 1, 1, OfficeFurnitureFacing.SouthEast);
+            AddBlocking(furniture, "copier", FaxCopierKind, 10, 2, 1, 1, OfficeFurnitureFacing.SouthEast);
+            AddBlocking(furniture, "water", WaterDispenserKind, 11, 5, 1, 1, OfficeFurnitureFacing.SouthEast);
+            AddBlocking(furniture, "sofa", SofaKind, 9, 10, 2, 1, OfficeFurnitureFacing.SouthEast);
+            AddBlocking(furniture, "coffee", CoffeeTableKind, 9, 8, 2, 1, OfficeFurnitureFacing.SouthEast);
+            AddBlocking(furniture, "plant", PottedPlantKind, 11, 10, 1, 1, OfficeFurnitureFacing.SouthEast);
+            AddBlocking(furniture, "partition", PartitionKind, 6, 6, 1, 2, OfficeFurnitureFacing.NorthWest);
+            AddBlocking(furniture, "filing", FilingCabinetKind, 11, 8, 1, 1, OfficeFurnitureFacing.SouthEast);
+
+            foreach (var item in furniture)
+            {
+                if (!item.BlocksMovement) continue;
+                for (var itemY = item.Origin.Y; itemY < item.Origin.Y + item.Height; itemY++)
+                for (var itemX = item.Origin.X; itemX < item.Origin.X + item.Width; itemX++)
+                    SetWalkable(walkable, width, itemX, itemY, false);
+            }
+
+            return new OfficeGrid(width, height, floor, walkable, furniture, seats);
+        }
+
+        private static void AddWorkstation(
+            ICollection<PlacedOfficeFurniture> furniture,
+            ICollection<OfficeSeatSlot> seats,
+            string memberId,
+            int deskX,
+            int deskY,
+            int chairX,
+            int chairY)
+        {
+            var deskId = "desk_" + memberId;
+            var chairId = "chair_" + memberId;
+            var seatId = "seat_" + memberId;
+            furniture.Add(new PlacedOfficeFurniture(
+                deskId,
+                DeskWithPcKind,
+                new OfficeGridCoordinate(deskX, deskY),
+                2,
+                1,
+                OfficeFurnitureFacing.SouthEast,
+                true));
+            furniture.Add(new PlacedOfficeFurniture(
+                chairId,
+                SwivelChairKind,
+                new OfficeGridCoordinate(chairX, chairY),
+                1,
+                1,
+                OfficeFurnitureFacing.NorthWest,
+                false));
+            seats.Add(new OfficeSeatSlot(
+                seatId,
+                chairId,
+                new OfficeGridCoordinate(chairX, chairY),
+                OfficeFurnitureFacing.NorthWest));
+        }
+
+        private static void AddBlocking(
+            ICollection<PlacedOfficeFurniture> furniture,
+            string furnitureId,
+            string kindId,
+            int x,
+            int y,
+            int width,
+            int height,
+            OfficeFurnitureFacing facing)
+        {
+            furniture.Add(new PlacedOfficeFurniture(
+                furnitureId,
+                kindId,
+                new OfficeGridCoordinate(x, y),
+                width,
+                height,
+                facing,
+                true));
         }
 
         private static void SetWalkable(bool[] walkable, int width, int x, int y, bool value)

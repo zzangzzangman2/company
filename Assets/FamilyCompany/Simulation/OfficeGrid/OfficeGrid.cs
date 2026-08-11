@@ -245,18 +245,29 @@ namespace FamilyCompany.Simulation.OfficeLayout
             IReadOnlyList<PlacedOfficeFurniture> furniture,
             IReadOnlyList<OfficeSeatSlot> seats)
         {
-            var furnitureIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var item in furniture) furnitureIds.Add(item.FurnitureId);
+            var furnitureById = new Dictionary<string, PlacedOfficeFurniture>(StringComparer.Ordinal);
+            foreach (var item in furniture) furnitureById.Add(item.FurnitureId, item);
             var seatIds = new HashSet<string>(StringComparer.Ordinal);
+            var seatedFurnitureIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var seat in seats)
             {
                 if (seat == null) throw new ArgumentException("Seat slots cannot contain null.", nameof(seats));
                 if (!seatIds.Add(seat.SeatId))
                     throw new ArgumentException($"Duplicate seat ID: {seat.SeatId}.", nameof(seats));
-                if (!furnitureIds.Contains(seat.FurnitureId))
+                if (!furnitureById.TryGetValue(seat.FurnitureId, out var seatFurniture))
                     throw new ArgumentException($"Seat references unknown furniture: {seat.FurnitureId}.", nameof(seats));
                 if (!Contains(seat.Cell))
                     throw new ArgumentException($"Seat is outside the grid: {seat.SeatId}.", nameof(seats));
+                if (!IsWalkable(seat.Cell))
+                    throw new ArgumentException($"Seat cell is not walkable: {seat.SeatId}.", nameof(seats));
+                if (seatFurniture.BlocksMovement)
+                    throw new ArgumentException($"Seat furniture blocks movement: {seat.FurnitureId}.", nameof(seats));
+                if (!seatFurniture.Origin.Equals(seat.Cell))
+                    throw new ArgumentException($"Seat cell does not match its chair origin: {seat.SeatId}.", nameof(seats));
+                if (seatFurniture.Facing != seat.Facing)
+                    throw new ArgumentException($"Seat facing does not match its chair: {seat.SeatId}.", nameof(seats));
+                if (!seatedFurnitureIds.Add(seat.FurnitureId))
+                    throw new ArgumentException($"Chair has more than one seat slot: {seat.FurnitureId}.", nameof(seats));
             }
         }
 

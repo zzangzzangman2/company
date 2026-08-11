@@ -88,6 +88,14 @@
 - 용도: 배치 밀도, 팔레트, 가구 형태, 통로 폭의 기준
 - 상태: STYLE TARGET. 런타임 배경으로 직접 사용하지 않는다.
 
+## 타일 사무실 가구 T4
+
+- `Assets/Art/Office/Tiles/Furniture/Source/`의 12종은 OpenAI 내장 ImageGen으로 각각 독립 생성한 단일 소품 원본이다. 구형 `office_module_atlas_4x3_v1.png`에서 잘라낸 조각은 런타임 정본으로 사용하지 않는다.
+- 대상은 책상+CRT·회전의자·접수대·회의 탁자·문서 책장·팩스/복사기·정수기·소파·커피 테이블·화분·파티션·서류 캐비닛이다.
+- 생성 규칙은 한 이미지에 한 물체, 2:1 등각 카메라, 좌상단 조명, 2000년대 한국 소형 사무실, 크림·우드·민트·복숭아 팔레트, 외곽 12~18% 안전 여백, 글자·로고·사람·바닥·이웃 소품 없음이다.
+- 생성 원본의 `#ff00ff` 배경은 공식 크로마 제거 도구로 투명화한다. 런타임은 `Runtime/`의 640×512 RGBA 하드 알파, 180 PPU, Point, mipmap 없음, 무압축, 바닥 접점 피벗 Sprite를 사용한다.
+- 회전의자는 착석 인물과 자연스럽게 겹치도록 본체와 `office_swivel_chair_backrest_v2.png` 전경 Sprite를 함께 사용한다. 전경은 등받이 부분만 포함하고 얼굴·상체 전체를 가리지 않아야 한다.
+
 ## 플레이어 도트 정본
 
 - `Assets/Art/Characters/Player/Pixel/HighMotion/player_pixel_walk8dir6_{a,b}_v1.png`

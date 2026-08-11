@@ -346,5 +346,40 @@
   - `Floor/office_floor_wood_a_v1.png` — `B2F3E265363D0EEB73059BF1F95CE85FD21F36B35944160906E7A8B51758FC39`
   - `Floor/office_floor_wood_b_v1.png` — `16051F325C6A4D9AE0D75A3C68C8E4C9C91C5EF7E908F9152C623D93C5ABDECE`
   - `Floor/office_floor_wood_c_v1.png` — `4CB57791B61E5B32EAC1234B6FE340C57B1B220D729353D4E0340A3E1A63CFF5`
+
+## 2026-08-11 Office Tile Migration T4 가구 12종
+
+- 생성 모드: OpenAI 내장 ImageGen. 사용자 보유 생성 에셋 권리 선언이 적용된다.
+- 스타일 참조: `Assets/Art/StyleTargets/office_isometric_pixel_target_v1.png`, `Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png`, 새 workstation 시안을 화풍·카메라 참고로만 사용했다. 구형 아틀라스의 잘린 개별 조각은 사용하지 않았다.
+- 공통 프롬프트 요약: “Family Company SIMUL-v3의 선명한 등각 픽셀 아트로 2000년대 한국 소형 사무실 소품 하나만 생성. 같은 2:1 카메라·좌상단 조명·크림/우드/민트/복숭아 팔레트, 평면 `#ff00ff` 배경, 12~18% 여백, 잘림·이웃 물체·바닥·그림자·사람·문자·로고 없음.” 각 생성에서는 소품명과 시대 세부 형태만 바꿨다.
+- 원본 루트: `Assets/Art/Office/Tiles/Furniture/Source/`. 각 소품은 ImageGen 회수본 `_chroma_v2.png`와 공식 `remove_chroma_key.py --auto-key border --soft-matte --despill --edge-contract 1` 결과 `_alpha_v2.png`를 함께 보존한다.
+- 투명 원본 SHA-256:
+  - `office_coffee_table_alpha_v2.png` — `4B315502627C5AE40EDADB08E54629261A7A876E3612FF3133EDEABA8C19B2B0`
+  - `office_document_bookcase_alpha_v2.png` — `50AA802510D4F2C002753AFFECDFF3574C8F5DF11B78FD83E06B264B3CDEC9F7`
+  - `office_fax_copier_alpha_v2.png` — `69B6AAA9EC946DC29C896CABA367000ED4B03F4A2917DD0C10A58321A7A39860`
+  - `office_filing_cabinet_alpha_v2.png` — `7C64C2870C5C7B58FE4C7F11FA43933541857C1860656E91C0DB0AA8151DCE08`
+  - `office_meeting_table_alpha_v2.png` — `549C8A5D214205A4D26FFD5114D6CD75ED4D1931B51E5D0D8576414AC3F18D9A`
+  - `office_partition_alpha_v2.png` — `934FD11E10AED46FC6932F2595ECD5857EE4E71C7530F4C3153AAF7C66A311E1`
+  - `office_potted_plant_alpha_v2.png` — `51C950AE1135DAA75A612EA9C511A4CCD91BF725496DCB9E9D15539810128229`
+  - `office_reception_counter_alpha_v2.png` — `A3E1171343CFE44B2A9C9886907A84905EA47EFCEBE00E839E80F09395456328`
+  - `office_sofa_alpha_v2.png` — `4952CAAC215BA225B642D435B6FD5599A3F8FCD59BA64F6BD569C0070C650473`
+  - `office_swivel_chair_alpha_v2.png` — `C233124DD83CAB7020DC305E2F185738A9B57841CC8278BD6128A18028276A18`
+  - `office_water_dispenser_alpha_v2.png` — `1B0502317D3D9216ED725024F8F29B4D5D46F7FAAC9EF6F157D662B0323C0C29`
+  - `office_workstation_alpha_v2.png` — `DE00FC8168130F596341D9DB240F0B399CEEDE7F7234177919E0B660278C4D66`
+- 런타임 루트: `Assets/Art/Office/Tiles/Furniture/Runtime/`. `OfficeFurnitureAssetBuilder`가 640×512 하드 알파·180 PPU·Point·mipmap 없음·무압축·바닥 접점 피벗으로 재현한다. 12개 본체 외에 착석 가림용 `office_swivel_chair_backrest_v2.png`를 파생한다.
+- 런타임 SHA-256:
+  - `office_coffee_table_v2.png` — `568FB01F7E2CA0A60ED5FE2B5FF31028944B968871F5B06A79D0B65B62FF2B7E`
+  - `office_document_bookcase_v2.png` — `D25257CA4069869B94CEFFB987BB29EAB68290ABA9C54F4D11036D192BF52CD6`
+  - `office_fax_copier_v2.png` — `F4FA82A64F3174AEAC7618CD67C43C6FC7FC459001C98189D0424765E92B9E1B`
+  - `office_filing_cabinet_v2.png` — `7468C475BB94A5C7CD76BF2D9A3BA431D5FCBF6F1E64641C67F0679770F2770D`
+  - `office_meeting_table_v2.png` — `50021075E7DEFF173A49E17911CAB74BDB4D4D78BB17FE1456F66AC270AE835C`
+  - `office_partition_v2.png` — `C55F184DB37AC4D346D37D2900BF1B91FBD6FB07E5D68C45C6A8299BC57C9839`
+  - `office_potted_plant_v2.png` — `606AD2077C09E34DD058476C78435171380A4452107C0130C523ECBBA5BF9E95`
+  - `office_reception_counter_v2.png` — `300ABCFEA7D15FC7958AE807222C4FB6443A4127FD82E081715E032743120ECE`
+  - `office_sofa_v2.png` — `D2BE5B8A251B222A672CBF6642B887A426B197E4F070CD7FEE2D0FE946CEC39A`
+  - `office_swivel_chair_v2.png` — `E56F8EA3D5FD3D9F4FD9AD7493AB76DF3569AF5FEA3BE2403C60E305B41EFBBE`
+  - `office_swivel_chair_backrest_v2.png` — `A78764E2429459CFE44061EFD3FDB912BA50A193C30626297B34E895556D74E5`
+  - `office_water_dispenser_v2.png` — `14EF8FB97FB0659DE1FA4698AF8D13A43DEEEF6BE99BF282F5E3B4D07C730710`
+  - `office_workstation_v2.png` — `D5CAC9DA32917313185DF409CDB99B51BF0321FFFDBD60A03958E4795A7AE8CE`
 - 규격: 320×160 2:1 RGBA, 알파 0/255, 남은 마젠타 프린지 0, Sprite Single, 180 PPU, Point, mipmap 없음, 무압축. 같은 이름의 `.asset` 3개가 실제 Unity `Tile` 정본이다.
 - 프롬프트 핵심: 밝고 캐주얼한 2000년대 한국 소형 사무실의 허니 오크 장판, 정확히 3개 동일 외곽 등각 다이아몬드, 미세한 판재 변형, 어둡거나 금색 위주의 고급 팔레트 금지, 텍스트·로고·워터마크 없음.

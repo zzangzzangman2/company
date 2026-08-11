@@ -208,3 +208,21 @@ Unity: 6000.3.21f1
 ## 차단 요소
 
 - 누나 이름은 미정이며 내부 ID older_sister를 사용한다.
+
+## 2026-08-11 Office Tile Migration T1~T3
+
+- T1 완료: 순수 C# `OfficeGrid`에 13×13 바닥·통행 배열, 배치 가구·좌석 의미 스키마, 결정론적 레이아웃 해시를 추가했다. GameState/Save를 v6으로 올리고 v1~v5는 초기 13×13 격자로 복원한다. Unity `OfficeGridValidation`에서 169셀 무결성, void/walkable 모순 거절, 가구·좌석 왕복, v5 이관, 저장 전후 해시 일치를 통과했다.
+- T2 완료: OpenAI 내장 ImageGen으로 밝은 2000년대 우드 바닥 3종 원본을 만들고 320×160 RGBA 하드 알파·180 PPU·Point·mipmap 없음·무압축 Tile 자산으로 정제했다. Unity 내장 Isometric Grid/Tilemap이 13×13 169셀을 렌더하며 16:9와 4:3에서 네 모서리를 보존함을 통과했다.
+- T3 완료: 격리 `OfficeTileMigrationPreview` 씬에서 플레이어·누나·아빠·엄마가 서로 다른 walkable 경로를 실제 PlayMode Update로 4초간 각 6.965 units 이동했다. `(6,6)` 막힌 칸 거절, 8방향×6프레임 애니메이션, x+y 동적 정렬, 누적 균등 스케일 1.690을 확인했다. 렌더 bounds 비율은 전원 0.1775, 실제 알파 실루엣 비율은 플레이어 0.1477·누나 0.1511·아빠 0.1581·엄마 0.1726이다.
+- 캡처: `Artifacts/OfficeTileMigrationQa/office-tile-t3-1920x1080.png`, SHA-256 `906A5A830198F647F8EFED2376309711664A68DFB33F5E959B9C8A8D083C39B8`.
+- 회귀: Unity 6000.3.21f1 `PrototypeValidation.Run` 종료 코드 0, `FAMILY_COMPANY_VALIDATION: PASS`. 기존 OfficeVisualV2·3D Collider·좌석·계약은 수정·제거하지 않고 폴백으로 유지한다. 다음은 사용자 캡처 승인 뒤 T4 가구 12종 이관이며, 승인 전에는 진행하지 않는다.
+
+## 2026-08-11 Office Tile Migration T4~T5
+
+- T4 완료: OpenAI 내장 ImageGen으로 한 이미지에 한 소품만 담은 2000년대 등각 도트 가구 12종을 새로 만들었다. 투명 원본 12/12는 잘림·이웃 물체·불투명 마젠타 테두리 0이며, Unity 런타임은 640×512 하드 알파·180 PPU·Point·mipmap 없음·무압축·바닥 접점 피벗이다.
+- 13×13 프리뷰에 가구 18개·12종을 배치했다. 책상+CRT 4개는 2×1 막힘, 회전의자 4개는 1×1 통행 가능 좌석이며 접수대·회의 탁자·문서 책장·팩스/복사기·정수기·소파·커피 테이블·화분·파티션·서류 캐비닛을 함께 배치했다.
+- 가구와 가족은 동일한 x+y 동적 정렬을 사용한다. 회전의자는 본체와 등받이 전경을 분리해 착석 인물의 몸 전체를 덮지 않으면서 좌석 방향별 앞뒤 가림을 유지한다.
+- T5 완료: 플레이어는 30초 동안 안전 경로를 실제 이동한 뒤, 누나·아빠·엄마와 함께 서로 다른 네 의자로 접근한다. 기존 정밀 좌석 모션과 가족별 112프레임 착석 세트를 사용해 좌석 중심 오차 0.0000, 방향 `NorthWest`, 상태 `Working`, 고유 좌석 4/4를 통과했다.
+- QA: Unity 6000.3.21f1 `OfficeGridValidation.RunBatch`, `OfficeTileMigrationQa.StartT4T5Batch`, `OfficeTileMigrationQa.StartT3Batch`, `PrototypeValidation.Run` 모두 종료 코드 0. 최종 T4/T5 실행은 막힌 셀 침범 0, 충돌 샘플 838,276, 플레이어 이동 52.529, 레이아웃 저장 해시 `FC669B22DD3C2D0A`다. Unity SearchDatabase의 기존 `ArgumentOutOfRangeException` 1회는 프로젝트 코드와 무관한 에디터 인덱서 문제로 유지된다.
+- 캡처: `Artifacts/OfficeTileMigrationQa/office-tile-t4-furniture-1920x1080.png`, `office-tile-t4-occlusion-1920x1080.png`, `office-tile-t5-seated-1920x1080.png`.
+- 현재 경계: T4~T5는 `OfficeTileMigrationPreview` 격리 씬에만 있다. 현재 플레이테스트 EXE와 `Prototype01`은 여전히 OfficeVisualV2 폴백을 사용한다. 다음 작업은 사용자 캡처 확인 후 T6에서 이 레이어를 메인 사무실에 연결하고 계약·자율 AI 회귀를 다시 실행하는 것이다. A*와 자유 배치 UI는 이번 범위가 아니다.

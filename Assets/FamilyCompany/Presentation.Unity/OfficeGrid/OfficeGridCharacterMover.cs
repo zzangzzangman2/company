@@ -21,6 +21,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private int _targetIndex;
         private float _moveSpeed;
         private float _distanceTravelled;
+        private bool _routeMovementEnabled = true;
 
         public SpriteRenderer TargetRenderer => _renderer;
         public DirectionalSpriteAnimator Animator => _animator;
@@ -28,6 +29,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public OfficeGridCoordinate TargetCell => _route.Length == 0 ? default : _route[_targetIndex];
         public float MoveSpeed => _moveSpeed;
         public float DistanceTravelled => _distanceTravelled;
+        public bool RouteMovementEnabled => _routeMovementEnabled;
 
         public void Configure(
             OfficeGrid semanticGrid,
@@ -57,6 +59,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _route = (OfficeGridCoordinate[])route.Clone();
             _moveSpeed = moveSpeed;
             _distanceTravelled = 0f;
+            _routeMovementEnabled = true;
             _targetIndex = 1;
             _renderer = GetComponent<SpriteRenderer>();
             if (_renderer == null) _renderer = gameObject.AddComponent<SpriteRenderer>();
@@ -74,7 +77,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
         public void TickMovement(float deltaTime)
         {
-            if (_route.Length < 2 || _gridPresenter == null || deltaTime <= 0f) return;
+            if (!_routeMovementEnabled || _route.Length < 2 || _gridPresenter == null || deltaTime <= 0f) return;
             var target = _gridPresenter.CellCenterWorld(_route[_targetIndex]);
             var delta = target - transform.position;
             var maximumStep = _moveSpeed * deltaTime;
@@ -98,6 +101,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             UpdateSortingOrder();
         }
 
+        public void SetRouteMovementEnabled(bool enabled)
+        {
+            _routeMovementEnabled = enabled;
+            if (!enabled && _animator != null) _animator.SetWorldVelocity(Vector3.zero);
+        }
+
+        public void RefreshSortingOrder(int offset = 0)
+        {
+            if (_renderer == null) return;
+            _renderer.sortingOrder = ResolveDynamicSortingOrder(transform.position) + offset;
+        }
+
+        public static int ResolveDynamicSortingOrder(Vector3 groundPosition) =>
+            DynamicSortingBase - Mathf.RoundToInt(groundPosition.y * 100f);
+
         public float RenderedBoundsHeightRatio(Camera camera)
         {
             if (camera == null) throw new ArgumentNullException(nameof(camera));
@@ -112,8 +130,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
         private void UpdateSortingOrder()
         {
-            if (_renderer == null) return;
-            _renderer.sortingOrder = DynamicSortingBase - Mathf.RoundToInt(transform.position.y * 100f);
+            RefreshSortingOrder();
         }
 
         private static bool IsGridSegmentWalkable(
