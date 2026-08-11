@@ -292,11 +292,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private void ApplyPoseAlignment(OfficeCharacterSeatPoseProfile profile)
         {
             _mover.ResetVisualPose();
-            _mover.SetSeatedVisualPose(Vector3.zero, profile.UniformScale);
+            _mover.SetSeatedVisualPose(
+                Vector3.zero,
+                profile.UniformScale,
+                profile.RotationDegrees);
             Vector3 pelvisWorld = _mover.SpriteAnchorWorld(profile.PelvisAnchorPx);
             Vector3 seatWorld = _furniturePresenter.OperatorSeatSocketWorld(_seat.WorkSurfaceFurnitureId);
             Vector3 localDelta = transform.InverseTransformVector(seatWorld - pelvisWorld);
-            _mover.SetSeatedVisualPose(localDelta, profile.UniformScale);
+            _mover.SetSeatedVisualPose(
+                localDelta,
+                profile.UniformScale,
+                profile.RotationDegrees);
 
             Vector3 currentVisualPosition = _mover.VisualRoot.position;
             if (_hasPreviousAlignedVisualPosition)

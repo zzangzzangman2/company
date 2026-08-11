@@ -585,9 +585,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                         camera,
                         bootstrap.FurniturePresenter.OperatorSeatSocketWorld(seat.WorkSurfaceFurnitureId),
                         bootstrap.Presenter.SubcellAnchorWorld(seat.OperatorAnchor));
-                    Vector2 characterVector =
-                        (worker.PoseProfile.HandAnchorPx - worker.PoseProfile.PelvisAnchorPx) *
-                        (OfficeGridCharacterMover.UniformVisualScale * worker.PoseProfile.UniformScale);
+                    Vector2 characterVector = worker.PoseProfile.RenderedHandFromPelvisPx(
+                        OfficeGridCharacterMover.UniformVisualScale);
                     Vector2 deskVector =
                         (deskDefinition.OperatorWorkSocketPx - deskDefinition.OperatorSeatSocketPx) *
                         deskDefinition.UniformScale;

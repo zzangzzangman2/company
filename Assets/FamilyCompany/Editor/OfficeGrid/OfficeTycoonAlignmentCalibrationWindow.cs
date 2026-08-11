@@ -55,6 +55,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private Vector2 _pelvis;
         private Vector2 _hand;
         private float _poseScale = 1f;
+        private float _poseRotation;
         private string _loadedFurnitureKey = string.Empty;
         private string _loadedPoseKey = string.Empty;
         private FurnitureHandle _dragHandle;
@@ -186,6 +187,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             _pelvis = EditorGUILayout.Vector2Field("Pelvis (frame px)", _pelvis);
             _hand = EditorGUILayout.Vector2Field("Hand / interaction (frame px)", _hand);
             _poseScale = EditorGUILayout.FloatField("Uniform scale", _poseScale);
+            _poseRotation = EditorGUILayout.FloatField("Rotation around pelvis (degrees)", _poseRotation);
             if (EditorGUI.EndChangeCheck()) _compositeApproved = false;
 
             Sprite current = LoadPoseSprite(MemberIds[_memberIndex], _facing, _clip, _frameIndex);
@@ -238,7 +240,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
             DrawAlignedSprite(chair.BaseSprite, chair.SeatAnchorPx, targetSeat, chair.UniformScale, Color.white);
             Sprite character = LoadPoseSprite(MemberIds[_memberIndex], _facing, _clip, _frameIndex);
             float renderedPoseScale = OfficeGridCharacterMover.UniformVisualScale * _poseScale;
-            DrawAlignedSprite(character, _pelvis, targetSeat, renderedPoseScale, Color.white);
+            DrawAlignedSprite(
+                character,
+                _pelvis,
+                targetSeat,
+                renderedPoseScale,
+                Color.white,
+                _poseRotation);
             if (desk.FrontOverlaySprite != null)
                 DrawAlignedSprite(desk.FrontOverlaySprite, desk.OperatorSeatSocketPx, targetSeat, desk.UniformScale, Color.white);
             if (chair.FrontOverlaySprite != null)
@@ -246,7 +254,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
             float chairSeatError = 0f;
             float pelvisSeatError = 0f;
-            Vector2 characterHandFromSeat = (_hand - _pelvis) * renderedPoseScale;
+            Vector2 characterHandFromSeat = RotateVector(
+                (_hand - _pelvis) * renderedPoseScale,
+                _poseRotation);
             Vector2 deskWorkFromSeat = (desk.OperatorWorkSocketPx - desk.OperatorSeatSocketPx) * desk.UniformScale;
             float handWorkError = Vector2.Distance(characterHandFromSeat, deskWorkFromSeat);
             float vectorAngleError = OfficeGridAlignmentMetrics.VectorAngleDifferenceDegrees(
@@ -392,6 +402,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             _pelvis = profile.PelvisAnchorPx;
             _hand = profile.HandAnchorPx;
             _poseScale = profile.UniformScale;
+            _poseRotation = profile.RotationDegrees;
             _compositeApproved = false;
         }
 
@@ -407,7 +418,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private void SavePose(OfficeCharacterSeatPoseProfile profile)
         {
             Undo.RecordObject(_poseCatalog, "Approve office character pose calibration");
-            profile.ApplyCalibration(_pelvis, _hand, _poseScale);
+            profile.ApplyCalibration(_pelvis, _hand, _poseScale, _poseRotation);
             _poseCatalog.Validate();
             EditorUtility.SetDirty(_poseCatalog);
             AssetDatabase.SaveAssets();
@@ -482,14 +493,34 @@ namespace FamilyCompany.Editor.OfficeGridQa
             GUI.color = previous;
         }
 
-        private static void DrawAlignedSprite(Sprite sprite, Vector2 anchorPx, Vector2 targetGui, float scale, Color color)
+        private static void DrawAlignedSprite(
+            Sprite sprite,
+            Vector2 anchorPx,
+            Vector2 targetGui,
+            float scale,
+            Color color,
+            float rotationDegrees = 0f)
         {
             const float previewScale = 0.72f;
             float pixelScale = previewScale * scale;
             Vector2 size = sprite.rect.size;
             Vector2 anchorFromTopLeft = new Vector2(anchorPx.x, size.y - anchorPx.y) * pixelScale;
             Rect rect = new Rect(targetGui - anchorFromTopLeft, size * pixelScale);
+            Matrix4x4 previous = GUI.matrix;
+            if (Mathf.Abs(rotationDegrees) > 0.0001f)
+                GUIUtility.RotateAroundPivot(-rotationDegrees, targetGui);
             DrawSprite(sprite, rect, color);
+            GUI.matrix = previous;
+        }
+
+        private static Vector2 RotateVector(Vector2 vector, float rotationDegrees)
+        {
+            float radians = rotationDegrees * Mathf.Deg2Rad;
+            float cosine = Mathf.Cos(radians);
+            float sine = Mathf.Sin(radians);
+            return new Vector2(
+                vector.x * cosine - vector.y * sine,
+                vector.x * sine + vector.y * cosine);
         }
 
         private static Vector2 PixelToGui(Vector2 pixel, Rect rect, Vector2 spriteSize)

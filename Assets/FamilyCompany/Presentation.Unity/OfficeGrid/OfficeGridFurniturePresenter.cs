@@ -55,7 +55,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 OfficeFurnitureVisualDefinition definition = visualCatalog.Resolve(item.KindId, item.Facing);
                 var root = new GameObject("Furniture_" + item.FurnitureId);
                 root.transform.SetParent(transform, false);
-                root.transform.position = ResolveFootprintCenter(item);
+                root.transform.position = _gridPresenter.SubcellAnchorWorld(item.PlacementAnchor);
                 root.transform.rotation = Quaternion.identity;
                 root.transform.localScale = Vector3.one;
 
@@ -117,7 +117,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 }
             }
 
-            AlignWorkstationsToDeskSockets();
             RecalculateRenderBounds();
 
             if (!hasBounds) _renderBounds = new Bounds(transform.position, Vector3.zero);
@@ -282,29 +281,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             }
         }
 
-        private void AlignWorkstationsToDeskSockets()
-        {
-            foreach (OfficeWorkstationSlot workstation in _semanticGrid.Workstations)
-            {
-                FurnitureVisual desk = RequiredVisual(workstation.DeskFurnitureId);
-                FurnitureVisual chair = RequiredVisual(workstation.ChairFurnitureId);
-                if (!desk.Definition.HasOperatorSeatSocket)
-                    throw new InvalidOperationException("Desk has no operator-seat socket: " + workstation.DeskFurnitureId);
-                if (!chair.Definition.HasSeatAnchor)
-                    throw new InvalidOperationException("Chair has no seat anchor: " + workstation.ChairFurnitureId);
-
-                Vector3 target = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
-                    desk.BaseRenderer,
-                    desk.Definition.OperatorSeatSocketPx);
-                Vector3 current = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
-                    chair.BaseRenderer,
-                    chair.Definition.SeatAnchorPx);
-                Vector3 localDelta = chair.SemanticRoot.InverseTransformVector(target - current);
-                chair.VisualRoot.localPosition += localDelta;
-                RestoreVisualSorting(chair);
-            }
-        }
-
         private void RecalculateRenderBounds()
         {
             bool hasBounds = false;
@@ -321,19 +297,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 }
             }
             if (!hasBounds) _renderBounds = new Bounds(transform.position, Vector3.zero);
-        }
-
-        private Vector3 ResolveFootprintCenter(PlacedOfficeFurniture item)
-        {
-            Vector3 sum = Vector3.zero;
-            int count = 0;
-            for (int y = item.Origin.Y; y < item.Origin.Y + item.Height; y++)
-            for (int x = item.Origin.X; x < item.Origin.X + item.Width; x++)
-            {
-                sum += _gridPresenter.CellCenterWorld(new OfficeGridCoordinate(x, y));
-                count++;
-            }
-            return sum / Math.Max(1, count);
         }
 
         private void ClearGenerated()

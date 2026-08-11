@@ -4,6 +4,7 @@ using System.Linq;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -39,6 +40,7 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private PrototypeBootstrap bootstrap;
         [SerializeField] private OfficeWorkerAgent[] agents = Array.Empty<OfficeWorkerAgent>();
         [SerializeField] private OfficeWaypoint[] waypoints = Array.Empty<OfficeWaypoint>();
+        private IOfficeRuntimeAgent[] _runtimeAgents = Array.Empty<IOfficeRuntimeAgent>();
         [SerializeField] private float secondsPerPersonHour = 0.25f;
         private readonly Dictionary<string, PendingWork> _pending = new Dictionary<string, PendingWork>(StringComparer.Ordinal);
         private int _taskSequence;
@@ -61,6 +63,21 @@ namespace FamilyCompany.Presentation.Unity
             bootstrap = newBootstrap;
             agents = newAgents ?? Array.Empty<OfficeWorkerAgent>();
             waypoints = newWaypoints ?? Array.Empty<OfficeWaypoint>();
+            _runtimeAgents = Array.Empty<IOfficeRuntimeAgent>();
+            secondsPerPersonHour = Mathf.Max(0.01f, workSecondsPerPersonHour);
+            _initialized = false;
+        }
+
+        public void ConfigureRuntime(
+            PrototypeBootstrap newBootstrap,
+            IOfficeRuntimeAgent[] newAgents,
+            float workSecondsPerPersonHour = 0.25f)
+        {
+            Unsubscribe();
+            bootstrap = newBootstrap;
+            agents = Array.Empty<OfficeWorkerAgent>();
+            waypoints = Array.Empty<OfficeWaypoint>();
+            _runtimeAgents = newAgents ?? Array.Empty<IOfficeRuntimeAgent>();
             secondsPerPersonHour = Mathf.Max(0.01f, workSecondsPerPersonHour);
             _initialized = false;
         }
@@ -72,6 +89,11 @@ namespace FamilyCompany.Presentation.Unity
             {
                 agent.AssignedTaskCompleted -= OnAssignedTaskCompleted;
                 agent.AssignedTaskCompleted += OnAssignedTaskCompleted;
+            }
+            foreach (var agent in _runtimeAgents.Where(item => item != null))
+            {
+                agent.AssignedTaskCompleted -= OnRuntimeAssignedTaskCompleted;
+                agent.AssignedTaskCompleted += OnRuntimeAssignedTaskCompleted;
             }
 
             _initialized = true;
@@ -106,6 +128,9 @@ namespace FamilyCompany.Presentation.Unity
                     OfficeAssignmentFailure.MemberUnavailable,
                     $"현재 {schedule.Label}이라 회사 업무를 할 수 없습니다.");
             }
+
+            if (_runtimeAgents.Length > 0)
+                return AssignRuntimeContractWork(offerId, memberId, personHours, contract);
 
             var agent = agents.FirstOrDefault(item => item != null && item.AgentId == memberId);
             if (agent == null)
@@ -156,6 +181,8 @@ namespace FamilyCompany.Presentation.Unity
             {
                 agent.CancelAssignedTask();
             }
+            foreach (var agent in _runtimeAgents.Where(item => item != null))
+                agent.CancelAssignedTask();
 
             _pending.Clear();
             _taskSequence = 0;
@@ -190,12 +217,65 @@ namespace FamilyCompany.Presentation.Unity
             CompletedTaskCount++;
         }
 
+        private void OnRuntimeAssignedTaskCompleted(IOfficeRuntimeAgent agent, string taskId)
+        {
+            CompletePendingWork(taskId);
+        }
+
+        private bool AssignRuntimeContractWork(
+            string offerId,
+            string memberId,
+            int personHours,
+            SubcontractState contract)
+        {
+            IOfficeRuntimeAgent agent = _runtimeAgents.FirstOrDefault(item =>
+                item != null && string.Equals(item.AgentId, memberId, StringComparison.Ordinal));
+            if (agent == null || agent.IsPlayerControlled)
+                return FailAssignment(
+                    OfficeAssignmentFailure.AgentNotFound,
+                    "해당 가족은 직접 조작 대상이거나 Starter Office Actor가 없습니다.");
+            if (agent.HasAssignedTask)
+                return FailAssignment(OfficeAssignmentFailure.AgentBusy, "해당 가족은 이미 계약 업무 중입니다.");
+
+            OfficeActivity activity = ResolveActivity(contract);
+            string taskId = $"office-contract:{offerId}:{memberId}:{_taskSequence:D6}";
+            _taskSequence++;
+            int appliedHours = Math.Min(personHours, contract.RemainingPersonHours);
+            _pending.Add(taskId, new PendingWork(offerId, memberId, appliedHours));
+            if (agent.AssignOfficeTask(taskId, activity, appliedHours * secondsPerPersonHour))
+            {
+                ClearAssignmentFailure();
+                return true;
+            }
+            _pending.Remove(taskId);
+            return FailAssignment(
+                OfficeAssignmentFailure.AgentRejected,
+                "Starter Office Actor가 업무 배정을 받지 못했습니다.");
+        }
+
+        private void CompletePendingWork(string taskId)
+        {
+            if (!_pending.TryGetValue(taskId, out var pending)) return;
+            _pending.Remove(taskId);
+            LastWorkResult = bootstrap.State.Contracts.RecordWork(
+                pending.OfferId,
+                pending.MemberId,
+                pending.PersonHours,
+                bootstrap.State.Time.ElapsedMinutes,
+                bootstrap.State.Family,
+                bootstrap.State.Company);
+            LastCompletedOfferId = pending.OfferId;
+            CompletedTaskCount++;
+        }
+
         private void Unsubscribe()
         {
             foreach (var agent in agents.Where(item => item != null))
             {
                 agent.AssignedTaskCompleted -= OnAssignedTaskCompleted;
             }
+            foreach (var agent in _runtimeAgents.Where(item => item != null))
+                agent.AssignedTaskCompleted -= OnRuntimeAssignedTaskCompleted;
 
             _initialized = false;
         }

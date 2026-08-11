@@ -135,12 +135,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _visualRoot.localPosition = offset;
         }
 
-        public void SetSeatedVisualPose(Vector3 offset, float uniformScaleMultiplier)
+        public void SetSeatedVisualPose(
+            Vector3 offset,
+            float uniformScaleMultiplier,
+            float rotationDegrees = 0f)
         {
             if (_visualRoot == null) throw new InvalidOperationException("Character VisualRoot is not configured.");
             if (uniformScaleMultiplier <= 0f || float.IsNaN(uniformScaleMultiplier) || float.IsInfinity(uniformScaleMultiplier))
                 throw new ArgumentOutOfRangeException(nameof(uniformScaleMultiplier));
             _visualRoot.localScale = Vector3.one * (UniformVisualScale * uniformScaleMultiplier);
+            _visualRoot.localRotation = Quaternion.Euler(0f, 0f, rotationDegrees);
             _visualRoot.localPosition = offset;
         }
 
@@ -153,6 +157,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             if (_visualRoot == null) throw new InvalidOperationException("Character VisualRoot is not configured.");
             _visualRoot.localPosition = Vector3.zero;
+            _visualRoot.localRotation = Quaternion.identity;
             _visualRoot.localScale = Vector3.one * UniformVisualScale;
         }
 

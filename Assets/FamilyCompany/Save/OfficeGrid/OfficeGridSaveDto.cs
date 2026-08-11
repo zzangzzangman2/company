@@ -6,7 +6,7 @@ namespace FamilyCompany.Save.OfficeGrid
     [Serializable]
     public sealed class OfficeGridSaveDto
     {
-        public const int CurrentSchemaVersion = 3;
+        public const int CurrentSchemaVersion = 4;
 
         public int schemaVersion = CurrentSchemaVersion;
         public int width;
@@ -26,6 +26,8 @@ namespace FamilyCompany.Save.OfficeGrid
         public int y;
         public int width;
         public int height;
+        public int placementX2;
+        public int placementY2;
         public int facing;
         public bool blocksMovement;
     }

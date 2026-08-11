@@ -197,3 +197,17 @@
 결정: `OfficeFurnitureVisualCatalog.asset`과 `OfficeCharacterSeatPoseCatalog.asset`은 calibration version 2의 유일한 승인 저장 위치다. PNG 재빌드는 이 값을 덮어쓰지 않는다. 현재 값은 실패 진단 candidate이며 수정은 합성 미리보기와 허용 오차를 함께 보여 주는 `OfficeTycoonAlignmentCalibrationWindow`에서 승인한 뒤 저장한다. 의자 NorthWest 정본의 등받이와 좌판은 인물 뒤 base에 두며, 기존의 넓은 chair front overlay는 사용하지 않는다. 책상 전면의 다리·서랍·앞 모서리만 제한된 front overlay로 인물 하체 앞에 둔다.
 
 이유: V1은 배치에 사용한 ground/pelvis 수치를 같은 식으로 다시 계산해 화면이 어긋나도 통과할 수 있었고, 2×1 책상의 실제 작업자 위치와 프레임별 신체 변화도 표현하지 못했다. 의미 좌표, 실제 아트 캘리브레이션, 합성 QA를 서로 다른 입력으로 만들면 의자 방향·좌판 중심·책상 접지·손 위치의 오류를 수치와 화면 양쪽에서 드러낼 수 있다.
+
+## 2026-08-11 / Starter Office의 유일한 정본은 GameState.OfficeGrid와 Runtime Actor다
+
+결정: `Prototype01`의 실제 게임 상태 위에 Preview Actor를 덧씌우는 이중 월드를 폐기한다. `OfficeTileMigrationPreviewBootstrap`은 단독 QA Scene의 에셋 공급원으로만 남기고, 실제 세션은 `StarterOfficeRuntimeBootstrap`이 정확히 player·older_sister·father·mother 한 명씩 생성한다. 계약과 자율 행동 Coordinator는 구체 Legacy Agent가 아니라 `IOfficeRuntimeAgent`에 바인딩한다.
+
+결정: 가구 Sprite Transform은 배치 데이터가 아니다. `StarterOfficeLayoutAsset`에서 생성한 `OfficeGrid`가 바닥·가구 placement anchor·hard footprint·interaction seat·workstation binding·저장 해시의 단일 정본이다. 가구는 명시적인 예외가 없으면 이동을 막고, 의자는 claim 소유자의 마지막 착석 구간에서만 통과할 수 있다.
+
+결정: 캐릭터 방향은 실제 위치 변화량으로만 결정한다. 캐릭터별 Runtime 방향 예외를 금지하고, source 방향 차이는 `HighMotionDirectionManifest.asset`의 import 정규화로 해결한다. 수학 테스트와 4명×8방향 사람 승인 contact sheet를 함께 요구한다.
+
+이유: 숨은 Legacy Actor, visual-only 의자 보정, 의도 속도 기반 방향은 화면과 게임 상태를 서로 다른 사실로 만든다. 하나의 의미 레이아웃과 하나의 Actor 집합에서 렌더·충돌·경로·좌석·저장을 파생해야 사용자가 편집한 배치도 즉시 같은 규칙을 따른다.
+
+결정: 워크스테이션 손 정렬은 캐릭터나 좌석의 위치 offset으로 보정하지 않는다. 실제 pelvis/hand anchor를 유지한 `OfficeCharacterSeatPoseCatalog` v3에 골반 기준 균등 scale과 회전 calibration을 저장하고, Starter Runtime은 방향 의미가 승인된 `OfficeSeatingV1` Work 프레임만 사용한다. 책상 operator work socket은 모든 가족이 공유한다.
+
+이유: 위치 offset은 의미 root·좌석 claim·충돌과 화면을 다시 분리하고, 방향이 서로 다른 Legacy micro-action 프레임은 실제 손 anchor 계측을 무효화한다. 골반을 좌판에 고정한 자세 calibration은 동일한 소켓·충돌·저장 규칙을 유지하면서 실제 hand anchor를 정확히 맞춘다.

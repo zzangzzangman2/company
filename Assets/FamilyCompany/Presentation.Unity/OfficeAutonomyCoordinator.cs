@@ -4,6 +4,7 @@ using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeSeating.UI;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
@@ -17,6 +18,7 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private PrototypeBootstrap bootstrap;
         [SerializeField] private OfficeWorkerAgent[] agents = Array.Empty<OfficeWorkerAgent>();
         [SerializeField] private OfficeWaypoint[] waypoints = Array.Empty<OfficeWaypoint>();
+        private IOfficeRuntimeAgent[] _runtimeAgents = Array.Empty<IOfficeRuntimeAgent>();
         [SerializeField] private OfficeSeatRegistry seatRegistry;
         [SerializeField] private OfficeSeatPlacementPanel seatPlacementPanel;
         [SerializeField] private float refreshIntervalSeconds = 0.35f;
@@ -45,6 +47,23 @@ namespace FamilyCompany.Presentation.Unity
             bootstrap = newBootstrap;
             agents = newAgents ?? Array.Empty<OfficeWorkerAgent>();
             waypoints = newWaypoints ?? Array.Empty<OfficeWaypoint>();
+            _runtimeAgents = Array.Empty<IOfficeRuntimeAgent>();
+            _boundGameState = null;
+            _initialized = false;
+        }
+
+        public void ConfigureRuntime(
+            PrototypeBootstrap newBootstrap,
+            IOfficeRuntimeAgent[] newAgents)
+        {
+            ResetSeatingRuntimeBindings();
+            bootstrap = newBootstrap;
+            agents = Array.Empty<OfficeWorkerAgent>();
+            waypoints = Array.Empty<OfficeWaypoint>();
+            _runtimeAgents = newAgents ?? Array.Empty<IOfficeRuntimeAgent>();
+            seatRegistry = null;
+            seatPlacementPanel = null;
+            _seatingState = null;
             _boundGameState = null;
             _initialized = false;
         }
@@ -74,7 +93,7 @@ namespace FamilyCompany.Presentation.Unity
                 bootstrap.State.WorldSeed,
                 bootstrap.State.Family,
                 bootstrap.State.Time.ElapsedMinutes);
-            InitializeSeatingRuntime();
+            if (_runtimeAgents.Length == 0) InitializeSeatingRuntime();
             _initialized = true;
             RefreshNow();
         }
@@ -87,6 +106,11 @@ namespace FamilyCompany.Presentation.Unity
                 bootstrap.State.WorldSeed,
                 bootstrap.State.Family,
                 bootstrap.State.Time.ElapsedMinutes);
+            if (_runtimeAgents.Length > 0)
+            {
+                RefreshRuntimeAgents();
+                return;
+            }
             InitializeSeatingRuntime();
 
             var reserved = new HashSet<OfficeWaypoint>(
@@ -261,6 +285,34 @@ namespace FamilyCompany.Presentation.Unity
             }
             _seatingRegistryRevision = revision;
             _seatingInitialized = true;
+        }
+
+        private void RefreshRuntimeAgents()
+        {
+            foreach (IOfficeRuntimeAgent agent in _runtimeAgents
+                         .Where(item => item != null)
+                         .OrderBy(item => item.AgentId, StringComparer.Ordinal))
+            {
+                FamilyMemberState member = bootstrap.State.Family.Members.FirstOrDefault(item =>
+                    string.Equals(item.MemberId, agent.AgentId, StringComparison.Ordinal));
+                if (member == null)
+                {
+                    agent.ClearAutonomousDestination();
+                    continue;
+                }
+                if (agent.IsPlayerControlled)
+                {
+                    agent.ClearAutonomousDestination();
+                    continue;
+                }
+                string status =
+                    $"{member.Autonomy.ActionLabel} · {member.Autonomy.MoodLabel(member.Energy, member.Stress)} · " +
+                    $"체{member.Energy}/스{member.Stress}";
+                string intentId =
+                    $"{(int)member.Autonomy.CurrentAction}:{member.Autonomy.ActionStartedMinute}:" +
+                    $"{(int)member.Autonomy.TargetLocation}";
+                agent.SetAutonomousDestination(intentId, member.Autonomy.TargetLocation, status);
+            }
         }
 
         private static OfficeSeatingState CreateSeatingState(

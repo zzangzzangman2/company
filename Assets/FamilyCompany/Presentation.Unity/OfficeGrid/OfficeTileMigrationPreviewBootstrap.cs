@@ -5,6 +5,7 @@ using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.OfficeSeating;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 namespace FamilyCompany.Presentation.Unity.OfficeGridView
@@ -57,6 +58,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public IReadOnlyList<OfficeGridSeatedWorker> SeatedWorkers => _seatedWorkers;
         public OfficeSeatingState SeatingState => _seatingState;
         public OfficeTilePreviewLayout Layout => layout;
+        public OfficeFurnitureVisualCatalog FurnitureVisualCatalog => furnitureVisualCatalog;
+        public OfficeCharacterSeatPoseCatalog CharacterSeatPoseCatalog => characterSeatPoseCatalog;
+
+        public TileBase[] CopyFloorTiles() => (TileBase[])floorTiles.Clone();
+
+        public Sprite[] CopyWalkFrames(string memberId)
+        {
+            Sprite[] source = memberId switch
+            {
+                "player" => playerFrames,
+                "older_sister" => sisterFrames,
+                "father" => fatherFrames,
+                "mother" => motherFrames,
+                _ => throw new ArgumentException("Unknown family member: " + memberId, nameof(memberId))
+            };
+            return (Sprite[])source.Clone();
+        }
+
+        public OfficeGridSeatingFrameSet CopySeatingFrameSet(string memberId)
+        {
+            OfficeGridSeatingFrameSet source = FindFrameSet(memberId);
+            return new OfficeGridSeatingFrameSet
+            {
+                memberId = source.memberId,
+                sitDownFrames = (Sprite[])source.sitDownFrames.Clone(),
+                workFrames = (Sprite[])source.workFrames.Clone(),
+                standUpFrames = (Sprite[])source.standUpFrames.Clone()
+            };
+        }
 
         public Bounds CombinedRenderBounds
         {
@@ -194,9 +224,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _alignmentDebugOverlay.Configure(this);
         }
 
+        public void DestroyGeneratedPreview()
+        {
+            var existing = transform.Find("GeneratedOfficeTilePreview");
+            if (existing == null) return;
+            if (Application.isPlaying) Destroy(existing.gameObject);
+            else DestroyImmediate(existing.gameObject);
+            _movers.Clear();
+            _seatedWorkers.Clear();
+        }
+
         private void Awake()
         {
-            BuildPreview();
+            bool standalonePreview = SceneManager.GetActiveScene() == gameObject.scene ||
+                                     FindFirstObjectByType<PrototypeBootstrap>() == null;
+            if (standalonePreview) BuildPreview();
         }
 
         private OfficeGridCharacterMover CreateCharacter(

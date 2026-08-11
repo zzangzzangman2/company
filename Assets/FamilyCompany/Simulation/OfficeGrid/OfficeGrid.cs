@@ -73,6 +73,27 @@ namespace FamilyCompany.Simulation.OfficeLayout
             int height,
             OfficeFurnitureFacing facing,
             bool blocksMovement = true)
+            : this(
+                furnitureId,
+                kindId,
+                origin,
+                width,
+                height,
+                DefaultPlacementAnchor(origin, width, height),
+                facing,
+                blocksMovement)
+        {
+        }
+
+        public PlacedOfficeFurniture(
+            string furnitureId,
+            string kindId,
+            OfficeGridCoordinate origin,
+            int width,
+            int height,
+            OfficeGridSubcellAnchor placementAnchor,
+            OfficeFurnitureFacing facing,
+            bool blocksMovement = true)
         {
             FurnitureId = RequiredId(furnitureId, nameof(furnitureId));
             KindId = RequiredId(kindId, nameof(kindId));
@@ -81,6 +102,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
             Origin = origin;
             Width = width;
             Height = height;
+            PlacementAnchor = placementAnchor;
             Facing = facing;
             BlocksMovement = blocksMovement;
         }
@@ -90,8 +112,21 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public OfficeGridCoordinate Origin { get; }
         public int Width { get; }
         public int Height { get; }
+        public OfficeGridSubcellAnchor PlacementAnchor { get; }
         public OfficeFurnitureFacing Facing { get; }
         public bool BlocksMovement { get; }
+
+        public static OfficeGridSubcellAnchor DefaultPlacementAnchor(
+            OfficeGridCoordinate origin,
+            int width,
+            int height)
+        {
+            if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width));
+            if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height));
+            return new OfficeGridSubcellAnchor(
+                checked(origin.X * 2 + width - 1),
+                checked(origin.Y * 2 + height - 1));
+        }
 
         private static string RequiredId(string value, string parameterName)
         {
@@ -311,6 +346,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 AddInt(ref hash, item.Origin.Y);
                 AddInt(ref hash, item.Width);
                 AddInt(ref hash, item.Height);
+                AddInt(ref hash, item.PlacementAnchor.X2);
+                AddInt(ref hash, item.PlacementAnchor.Y2);
                 AddInt(ref hash, (int)item.Facing);
                 AddByte(ref hash, item.BlocksMovement ? (byte)1 : (byte)0);
             }
@@ -350,6 +387,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 var maximumY = checked(item.Origin.Y + item.Height - 1);
                 if (!Contains(item.Origin) || !Contains(new OfficeGridCoordinate(maximumX, maximumY)))
                     throw new ArgumentException($"Furniture is outside the grid: {item.FurnitureId}.", nameof(furniture));
+                if (!Contains(item.PlacementAnchor))
+                    throw new ArgumentException($"Furniture placement anchor is outside the grid: {item.FurnitureId}.", nameof(furniture));
                 if (!item.BlocksMovement) continue;
                 for (var y = item.Origin.Y; y <= maximumY; y++)
                 for (var x = item.Origin.X; x <= maximumX; x++)

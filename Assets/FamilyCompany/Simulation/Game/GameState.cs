@@ -41,11 +41,16 @@ namespace FamilyCompany.Simulation.Game
         public ContractPortfolio Contracts { get; }
         public CompanyGrowthState Growth { get; }
         public StockMarketSessionStateDto StockMarket { get; private set; }
-        public OfficeGrid OfficeGrid { get; }
+        public OfficeGrid OfficeGrid { get; private set; }
 
         public void ReplaceStockMarketState(StockMarketSessionStateDto state)
         {
             StockMarket = state ?? throw new ArgumentNullException(nameof(state));
+        }
+
+        public void ReplaceOfficeGrid(OfficeGrid grid)
+        {
+            OfficeGrid = grid ?? throw new ArgumentNullException(nameof(grid));
         }
     }
 }

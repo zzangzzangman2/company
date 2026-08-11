@@ -103,6 +103,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 new OfficeGridCoordinate(chairX, chairY),
                 1,
                 1,
+                OfficeGridSubcellAnchor.FromCellCenter(new OfficeGridCoordinate(chairX, chairY)),
                 OfficeFurnitureFacing.NorthWest,
                 false));
             seats.Add(new OfficeSeatSlot(

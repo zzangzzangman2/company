@@ -92,3 +92,36 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - OfficeSoundscapeController는 NPC의 최초 관측을 무음으로 시드하고 Inside/Outside·Walking/도착 전이만 감시한다. 퇴실·복귀 문, 프린터 종이, 계약 업무/회의 환경음은 전역 쿨다운을 거쳐 중복 폭주 없이 재생한다.
 - LeisureAudioCueCatalog는 회복 활동 ID와 ImageGen 장면 ID를 1:1로 유지하고 각 장면의 진입 SFX·반복 BGM·완료 SFX를 의미 데이터로 제공한다.
 - `simul`의 세로 화면 배치와 좌표는 아키텍처 입력이 아니다. 재사용 대상은 순수 규칙, 검증 교훈, 라이선스가 확인된 원본 자산이며 모든 후속 화면은 1920×1080 16:9에 새로 투영한다.
+
+## Starter Office Runtime V1
+
+```text
+PrototypeBootstrap / GameState.OfficeGrid
+    ├─ StarterOfficeRuntimeBootstrap (단일 소유권·재빌드·Coordinator binding)
+    ├─ OfficeRuntimeWorld
+    │   ├─ OfficeRuntimeOccupancy (Static / Interaction / Dynamic / Revision)
+    │   ├─ OfficeRuntimePathService (결정론적 cardinal path)
+    │   ├─ OfficeNavigationTrafficRules + MotionIntegrator
+    │   └─ OfficeRuntimeWorkstationService (seat claim·approach·socket)
+    └─ OfficeRuntimeActorRegistry
+        ├─ player + OfficeRuntimePlayerController
+        ├─ older_sister
+        ├─ father
+        └─ mother
+```
+
+- memberId별 활성 Runtime Actor는 정확히 하나다. Starter Runtime이 준비되면 Legacy NPC/player/navigation과 Preview mover는 비활성이다.
+- Occupancy는 모든 이동 후보의 start→end 구간을 actor radius로 표본 검사한다. World Update는 `OfficeNavigationMotionIntegrator`의 안정 substep으로 1×·2×·4× 시간 배속의 tunneling을 막는다.
+- Actor는 현재 셀과 최대 두 개의 예정 셀을 예약하고, 실제 위치·desired velocity·stuck seconds를 기존 교통 규칙에 제공한다. 0.8초 회피, 1.1초 재탐색, 2초 예약 해제로 교착을 복구한다.
+- 좌석 셀은 일반 경로에서 Interaction Occupancy다. claim된 seatId만 접근 경로와 최종 operator anchor 이동에 허용된다.
+- 레이아웃 변경은 semantic `OfficeGrid`를 교체하고 Starter Runtime을 staged rebuild한다. 이전 Actor/path/reservation은 폐기되고 새 Occupancy revision과 레이아웃 해시에 맞춰 다시 바인딩된다.
+- `PlacedOfficeFurniture.PlacementAnchor`가 의미·시각·충돌·저장의 공통 좌표다. `OfficeGridFurniturePresenter`는 책상 소켓에 맞추기 위해 VisualRoot만 따로 이동하지 않는다.
+- Starter Runtime의 착석 표현은 방향이 승인된 `OfficeSeatingV1` Work 프레임과 `OfficeCharacterSeatPoseCatalog` v3를 사용한다. pelvis를 chair seat에 고정한 뒤 catalog의 균등 scale/rotation을 골반 주위에 적용해 hand를 공용 desk work socket에 맞춘다. member/seat 위치 offset은 없다.
+- Windows player 빌드 전 OfficeGrid schema/migration, semantic layout hash/save round-trip, 8방향 수학과 32개 사람 승인 manifest를 검증한다. 그래픽 합성은 player RenderTexture QA 캡처로 별도 확인한다.
+
+## Semantic Office Layout Authoring
+
+- `StarterOfficeLayoutAsset`은 floor, walkability, furniture footprint/anchor/facing/blocking, seat/approach/workstation binding을 직렬화한다.
+- `OfficeLayoutEditorWindow`는 0.5셀 snap, 전체 footprint 이동, 회전, 복사, 삭제, Undo/Redo, Workstation Blueprint와 접근 칸 지정을 제공한다.
+- `OfficePlaceableDefinition`의 기본값은 `BlocksMovement=true`다. 저장 전 overlap, 경계, 필수 좌석, approach, 출구 연결을 검증한다.
+- Runtime Presenter와 Save adapter가 같은 `OfficeGrid.ComputeLayoutHash()`를 사용하며 Scene Transform은 저장 정본이 아니다.

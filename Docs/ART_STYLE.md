@@ -134,3 +134,14 @@
 - 개별 Sprite: `Assets/Art/Office/Pixel/Modules/`
 - 12종: CRT 업무책상, 회전의자, 접수대, 4인 회의탁자, 서류장, 팩스·복사기, 정수기, 2인 소파, 커피탁자, 화분, 유리 파티션, 4단 캐비닛
 - 상태: CANONICAL PROP SET V1. 현재 3D 충돌 모듈을 유지하면서 이후 월드 비주얼 교체에 사용한다.
+
+## Starter Office 이동 방향·배치 표현 규칙
+
+- 정규 걷기 방향 순서는 South, SouthWest, West, NorthWest, North, NorthEast, East, SouthEast다. 화면 XY의 실제 displacement만 이 순서를 결정한다.
+- 방향 전환은 실제 이동 픽셀이 발생한 프레임에만 허용한다. 장애물에 막힌 정지 프레임과 셀 코너 도착 프레임은 마지막 facing을 유지한다.
+- 가족 네 명의 8방향 정본은 `HighMotionDirectionManifest.asset`의 source→canonical 순열과 사람 승인 체크로 관리한다. Runtime에서 memberId별 방향 교체 코드를 두지 않는다.
+- 방향 승인판은 화살표·방향 이름·파일 이름·현재 Sprite를 한 칸에 함께 표시한다. 정본 산출물은 `Artifacts/StarterOfficeDirectionQa/office-character-direction-contact-sheet.png`다.
+- 의자·책상 그림은 semantic placement anchor와 다른 위치로 자동 보정하지 않는다. 잘못된 chair-seat/desk-seat/pelvis/hand 정렬은 Editor에서 오류로 보여 주고 배치 또는 아트 캘리브레이션을 수정한다.
+- 착석 자세 보정은 실제 pelvis/hand 점을 바꾸거나 신체 밖 가상 점을 만들지 않는다. `OfficeCharacterSeatPoseCatalog` v3의 골반 기준 균등 scale·회전만 허용하며, 네 가족 모두 같은 책상 seat/work socket을 사용한다.
+- 실제 업무 화면은 방향 의미가 승인된 `OfficeSeatingV1` Work 프레임을 사용한다. 방향이 좌석 facing과 불일치하는 Legacy micro-action 프레임을 Starter Runtime에 섞지 않는다.
+- 가구 footprint와 interaction cell은 보이는 Sprite의 장식이 아니라 게임 공간의 표현이다. 새 가구는 기본 차단이며 투명 픽셀이나 sorting order로 관통을 숨기지 않는다.

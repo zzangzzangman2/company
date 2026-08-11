@@ -15,6 +15,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         [SerializeField] private Vector2 pelvisAnchorPx;
         [SerializeField] private Vector2 deskInteractionAnchorPx;
         [SerializeField] private float uniformScale = 1f;
+        [SerializeField] private float rotationDegrees;
 
         public string MemberId => memberId;
         public int DirectionIndex => directionIndex;
@@ -24,6 +25,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         public Vector2 DeskInteractionAnchorPx => deskInteractionAnchorPx;
         public Vector2 HandAnchorPx => deskInteractionAnchorPx;
         public float UniformScale => uniformScale;
+        public float RotationDegrees => rotationDegrees;
 
         public static OfficeCharacterSeatPoseProfile Create(
             string memberId,
@@ -32,7 +34,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             int frameIndex,
             Vector2 pelvisAnchorPx,
             Vector2 deskInteractionAnchorPx,
-            float uniformScale = 1f)
+            float uniformScale = 1f,
+            float rotationDegrees = 0f)
         {
             return new OfficeCharacterSeatPoseProfile
             {
@@ -42,16 +45,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
                 frameIndex = frameIndex,
                 pelvisAnchorPx = pelvisAnchorPx,
                 deskInteractionAnchorPx = deskInteractionAnchorPx,
-                uniformScale = uniformScale
+                uniformScale = uniformScale,
+                rotationDegrees = rotationDegrees
             };
         }
 
-        public void ApplyCalibration(Vector2 newPelvisAnchorPx, Vector2 newHandAnchorPx, float newUniformScale)
+        public void ApplyCalibration(
+            Vector2 newPelvisAnchorPx,
+            Vector2 newHandAnchorPx,
+            float newUniformScale,
+            float newRotationDegrees)
         {
             pelvisAnchorPx = newPelvisAnchorPx;
             deskInteractionAnchorPx = newHandAnchorPx;
             uniformScale = newUniformScale;
+            rotationDegrees = newRotationDegrees;
             Validate(new Vector2(256f, 256f));
+        }
+
+        public Vector2 RenderedHandFromPelvisPx(float baseUniformScale)
+        {
+            Vector2 vector = (deskInteractionAnchorPx - pelvisAnchorPx) *
+                             (baseUniformScale * uniformScale);
+            float radians = rotationDegrees * Mathf.Deg2Rad;
+            float cosine = Mathf.Cos(radians);
+            float sine = Mathf.Sin(radians);
+            return new Vector2(
+                vector.x * cosine - vector.y * sine,
+                vector.x * sine + vector.y * cosine);
         }
 
         public void Validate(Vector2 canvasSizePx)
@@ -73,6 +94,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
                 throw new InvalidOperationException($"Character seat pose '{memberId}/{clip}' has invalid frame {frameIndex}.");
             if (uniformScale <= 0f || float.IsNaN(uniformScale) || float.IsInfinity(uniformScale))
                 throw new InvalidOperationException($"Character seat pose '{memberId}/{clip}/{frameIndex}' has invalid scale {uniformScale}.");
+            if (float.IsNaN(rotationDegrees) || float.IsInfinity(rotationDegrees) || Mathf.Abs(rotationDegrees) > 30f)
+                throw new InvalidOperationException($"Character seat pose '{memberId}/{clip}/{frameIndex}' has invalid rotation {rotationDegrees}.");
 
             ValidateAnchor(pelvisAnchorPx, nameof(pelvisAnchorPx), canvasSizePx);
             ValidateAnchor(deskInteractionAnchorPx, nameof(deskInteractionAnchorPx), canvasSizePx);
@@ -91,7 +114,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
     [CreateAssetMenu(menuName = "Family Company/Office/Character Seat Pose Catalog")]
     public sealed class OfficeCharacterSeatPoseCatalog : ScriptableObject
     {
-        public const int CurrentCalibrationVersion = 2;
+        public const int CurrentCalibrationVersion = 3;
         private static readonly Vector2 PoseCanvasSizePx = new Vector2(256f, 256f);
 
         [SerializeField] private int calibrationVersion;

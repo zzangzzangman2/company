@@ -11,6 +11,7 @@ using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.Prototype;
 using FamilyCompany.Presentation.Unity.ManagementUI;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -191,6 +192,30 @@ namespace FamilyCompany.Presentation.Unity
                 _playerWorkInteractor.Configure(this, waypoints);
             }
             return _contractTaskCoordinator;
+        }
+
+        public void BindStarterOfficeRuntime(IOfficeRuntimeAgent[] runtimeAgents)
+        {
+            InitializeNow();
+            if (runtimeAgents == null || runtimeAgents.Length != 4)
+                throw new ArgumentException("Starter Office requires exactly four runtime actors.", nameof(runtimeAgents));
+            if (runtimeAgents.Select(item => item.AgentId).Distinct(StringComparer.Ordinal).Count() != 4)
+                throw new InvalidOperationException("Starter Office runtime actor IDs must be unique.");
+
+            _contractTaskCoordinator = GetComponent<OfficeContractTaskCoordinator>();
+            if (_contractTaskCoordinator == null)
+                _contractTaskCoordinator = gameObject.AddComponent<OfficeContractTaskCoordinator>();
+            _contractTaskCoordinator.ConfigureRuntime(this, runtimeAgents);
+            _contractTaskCoordinator.InitializeNow();
+
+            _officeAutonomyCoordinator = GetComponent<OfficeAutonomyCoordinator>();
+            if (_officeAutonomyCoordinator == null)
+                _officeAutonomyCoordinator = gameObject.AddComponent<OfficeAutonomyCoordinator>();
+            _officeAutonomyCoordinator.ConfigureRuntime(this, runtimeAgents);
+            _officeAutonomyCoordinator.InitializeNow();
+
+            if (_playerWorkInteractor != null) _playerWorkInteractor.enabled = false;
+            EnsureManagementUiPresenter();
         }
 
         private static OfficeWaypoint[] EnsureOfficeExitWaypoint(OfficeWaypoint[] waypoints)

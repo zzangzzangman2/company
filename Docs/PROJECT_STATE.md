@@ -226,3 +226,16 @@ Unity: 6000.3.21f1
 - QA: Unity 6000.3.21f1 `OfficeGridValidation.RunBatch`와 그래픽 `OfficeTileMigrationQa.StartT4T5Batch` 종료 코드 0. 45초에 네 가족 전원 일어서기→approach 이탈→claim 해제→재착석을 수행하고, 60초에 가구 18개의 position/rotation/scale/parent 정확히 0 변화, 12종 ground error 0.000px, 네 가족 pelvis↔seat 0.000px, desk-chair centerline 0.000px, VisualRoot 원복 0.000000, 막힌 칸 침범·좌석 중복 0을 확인했다. Unity SearchDatabase의 기존 `ArgumentOutOfRangeException` 1회는 프로젝트 코드와 무관한 에디터 인덱서 문제로 유지된다.
 - 캡처: 기존 T4/T5 3장과 함께 `Artifacts/OfficeTileMigrationQa/after-office-tile-tycoon-overview-1920x1080.png`, `after-office-tile-tycoon-seated-1920x1080.png`, `after-office-tile-tycoon-anchors-1920x1080.png`, `after-office-tile-tycoon-occlusion-1920x1080.png`, 수치 보고서 `office-tile-tycoon-alignment-report.txt`를 남겼다.
 - 현재 경계: T4~T5는 `OfficeTileMigrationPreview` 격리 씬에만 있다. 현재 플레이테스트 EXE와 `Prototype01`은 여전히 OfficeVisualV2 폴백을 사용한다. 다음 작업은 사용자 캡처 확인 후 T6에서 이 레이어를 메인 사무실에 연결하고 계약·자율 AI 회귀를 다시 실행하는 것이다. A*와 자유 배치 UI는 이번 범위가 아니다.
+
+## 2026-08-11 / Starter Office Runtime V1 통합
+
+- `StarterOfficeRuntimeBootstrap`이 `GameState.OfficeGrid`를 직접 렌더링하고 가족 네 명의 유일한 화면 Actor를 생성한다. Starter Office는 더 이상 하드코딩 Preview 캐릭터 월드가 아니다.
+- 실제 계약·자율 행동·플레이어 입력은 `IOfficeRuntimeAgent`를 통해 같은 네 Actor에 연결된다. Legacy `OfficeWorkerAgent`, `PrototypePlayerController`, `OfficeNavigationWorld`, Preview mover는 Starter Runtime 활성 중 Update하지 않는다.
+- `OfficeRuntimeOccupancy`는 Static Hard, Interaction Seat, Dynamic Actor/Reservation을 분리한다. 반경·연속 구간 검사·고배속 substep·결정론적 교통 양보·재탐색을 적용한다.
+- 이동 Sprite 방향은 의도 속도가 아니라 실제 tile displacement로만 바뀐다. 정지 프레임은 마지막 방향을 유지한다.
+- `StarterOfficeV1.asset`과 `OfficeLayoutEditorWindow`가 의미 배치의 정본이다. 렌더·충돌·좌석·저장은 같은 `OfficeGrid` 해시를 사용하며 Presenter의 visual-only 의자 이동은 제거했다.
+- Save OfficeGrid schema는 placement subcell anchor를 보존하는 v4다. v1~v3은 footprint 중심에서 anchor를 이관한다.
+- 자동 실행 QA 진입점 `-familyCompanyTileRuntimeQa`는 단일 Actor 소유권, 4인 십자 이동, 좁은 통로, 실행 중 책상 추가/제거, 4배속 플레이어 충돌, 실제 8방향, 네 좌석, 계약, 슬롯 저장/불러오기를 `Prototype01`에서 연속 검증한다.
+- Unity 6000.3.21f1의 실제 Simulation/Save/Infrastructure/Presentation/Qa.Core/Editor compiler response로 전체 컴파일 오류 0을 확인했다.
+- Downloads의 `FamilyCompany_BuildAutomation`이 `FamilyCompany_Playtest`를 최신 fingerprint로 빌드했고, 실제 Windows 실행본 `-familyCompanyTileRuntimeQa` Main Flow가 PASS했다. 십자 교차·좁은 통로·런타임 책상 추가/제거·4× 플레이어 책상/카운터/NPC 충돌·8방향·네 좌석·계약·저장/불러오기에서 hard/interaction 무단 통과와 agent penetration은 모두 0이다.
+- 네 워크스테이션은 player/older_sister/father/mother 모두 chair↔desk `0.000px`, pelvis↔seat `0.000px`, hand↔work `0.000px`다. `OfficeCharacterSeatPoseCatalog` v3의 골반 기준 scale/rotation calibration을 사용하며 캐릭터별·좌석별 위치 offset은 없다. 실제 합성 캡처는 `Artifacts/StarterOfficeRuntimeQa/starter-office-four-seat-work.png`, 정본 로그는 `player-main-flow-17.log`다.

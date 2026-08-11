@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using FamilyCompany.Editor.OfficeGridQa;
+using FamilyCompany.Editor.OfficeLayout;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -36,6 +38,11 @@ namespace FamilyCompany.Editor
             if (string.IsNullOrEmpty(outputDirectory))
                 throw new InvalidOperationException("The Windows player output directory is missing: " + outputPath);
             Directory.CreateDirectory(outputDirectory);
+
+            OfficeFurnitureAssetBuilder.UpgradePoseCatalog();
+            OfficeGridValidation.Run();
+            OfficeLayoutValidator.Run();
+            OfficeCharacterDirectionQa.ValidateApprovedDirections();
 
             var scenes = EditorBuildSettings.scenes
                 .Where(scene => scene != null && scene.enabled)

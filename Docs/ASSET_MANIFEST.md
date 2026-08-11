@@ -411,10 +411,37 @@
 ## 2026-08-11 Office Tycoon Alignment V2 calibration
 
 - 정본 에셋: `Assets/FamilyCompany/Presentation.Unity/OfficeGrid/Authoring/OfficeFurnitureVisualCatalog.asset`, `OfficeCharacterSeatPoseCatalog.asset`.
-- 버전: 두 catalog 모두 `calibrationVersion: 2`. 가구 12개 정의, 캐릭터 pose 56개(`4명 × (SitDown 4 + Work 6 + StandUp 4)`)다.
+- 버전: 가구 catalog는 `calibrationVersion: 2`, 캐릭터 pose catalog는 `calibrationVersion: 3`이다. 가구 12개 정의, 캐릭터 pose 56개(`4명 × (SitDown 4 + Work 6 + StandUp 4)`)다.
 - 가구 데이터: 각 정의는 독립 네 점 ground footprint, 의미 footprint 폭/높이, ground/sort를 가진다. desk는 operator seat `(390.445, 49.329)`와 work socket, chair는 seat `(313.007, 153.549)`를 가진다.
 - mask 판정: `office_workstation_front_v4.png`는 책상 앞 모서리·다리·서랍의 제한 전경으로 사용한다. `office_swivel_chair_front_v3.png` 파일은 이전 빌드 재현 자료로 남지만 NorthWest 승인 catalog에서는 참조하지 않으며 런타임에 그리지 않는다.
 - 편집기: `OfficeTycoonAlignmentCalibrationWindow.cs`가 100/200/400% 픽셀 보기, 네 점·socket, clip/frame onion skin, workstation 합성을 제공한다. 합성 승인 전에는 값을 저장할 수 없다.
-- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하되 이미 v2인 calibration asset은 덮어쓰지 않는다.
+- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하되 현재 버전의 calibration asset은 덮어쓰지 않는다. v2→v3 pose 이관은 실제 pelvis/hand를 유지하고 승인된 scale/rotation만 추가한다.
 - QA 산출물 루트: `Artifacts/OfficeTycoonAlignmentV2/`. 정본 검증기는 `OfficeTycoonAlignmentV2Qa.StartBatch`이며 Preview 45초와 Starter 60초를 분리 실행한다.
-- 승인 상태: version 2는 편집·저장 구조의 정본이지만 현재 좌표값은 실패 진단 candidate다. 2026-08-11 전체 QA에서 hand↔work가 8.032~13.322px로 실패했으므로 pose 56개와 가구 네 점을 Calibration Window에서 프레임별로 다시 보고 승인하기 전에는 최종 시각 정본으로 부르지 않는다.
+- 승인 상태: Starter Runtime Main Flow에서 네 명 모두 chair↔desk `0.000px`, pelvis↔seat `0.000px`, hand↔work `0.000px`로 PASS했다. 캐릭터·좌석 위치 offset 없이 공용 desk socket과 pose v3 골반 기준 scale/rotation을 사용한다. 실제 합성 캡처는 `Artifacts/StarterOfficeRuntimeQa/starter-office-four-seat-work.png`다.
+
+## Starter Office Runtime V1 semantic assets
+
+- `Assets/FamilyCompany/Content/Resources/OfficeLayouts/StarterOfficeV1.asset`
+  - 상태: CANONICAL SEMANTIC STARTER LAYOUT V1
+  - 내용: 13×13 floor/walkability, 17 furniture records, placement subcell anchors, 네 workstation/seat/approach binding
+  - 용도: 새 게임의 `GameState.OfficeGrid`, Runtime 렌더·충돌·좌석, Save layout hash의 공통 입력
+- `Assets/FamilyCompany/Content/Resources/HighMotion/HighMotionDirectionManifest.asset`
+  - 상태: CANONICAL DIRECTION IMPORT MANIFEST V1
+  - 내용: 12 캐릭터 source→canonical 8방향 순열, 가족 네 명의 32개 사람 승인 플래그
+  - Runtime member별 방향 예외는 금지하며 `HighMotionCharacterArtBuilder`가 이 manifest로 frame 이름을 정규화한다.
+- `Artifacts/StarterOfficeDirectionQa/local-direction-contact-sheet.png`
+  - 상태: LOCAL HUMAN-REVIEW EVIDENCE
+  - 내용: player·older_sister·father·mother × 8 canonical directions. 화살표·이름·Sprite를 육안 대조해 32/32 승인했다.
+- `Assets/FamilyCompany/Editor/OfficeLayout/OfficeLayoutEditorWindow.cs`
+  - 상태: INTERNAL SEMANTIC AUTHORING TOOL
+  - raw Scene Transform을 저장하지 않으며 `StarterOfficeLayoutAsset`만 수정한다.
+- `Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/`
+  - 상태: CANONICAL STARTER OFFICE PLAYER RUNTIME
+  - Preview art source를 재사용하지만 하드코딩 Preview Actor/route는 생성하지 않는다.
+- `Artifacts/StarterOfficeRuntimeQa/player-main-flow-17.log`
+  - 상태: WINDOWS PLAYER MAIN-FLOW QA EVIDENCE
+  - 단일 Actor, 충돌/회피, 런타임 가구 revision, 8방향, 4좌석 정렬, 계약, 저장/불러오기 연속 PASS 로그다.
+- `Artifacts/StarterOfficeRuntimeQa/starter-office-four-seat-work.png`
+  - 상태: FOUR-WORKSTATION HUMAN-REVIEW EVIDENCE
+  - 1392×699 RenderTexture 캡처에서 가족 네 명의 실제 책상·의자·착석 Work 합성을 확인했다.
+  - SHA-256: `92DB5F0D66158F30FEAB13672440096CCB79121BB1B97D2FE48B63FD39AFAAFE`

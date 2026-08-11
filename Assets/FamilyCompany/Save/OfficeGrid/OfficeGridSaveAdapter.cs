@@ -25,6 +25,8 @@ namespace FamilyCompany.Save.OfficeGrid
                     y = item.Origin.Y,
                     width = item.Width,
                     height = item.Height,
+                    placementX2 = item.PlacementAnchor.X2,
+                    placementY2 = item.PlacementAnchor.Y2,
                     facing = (int)item.Facing,
                     blocksMovement = item.BlocksMovement
                 }).ToList(),
@@ -47,7 +49,7 @@ namespace FamilyCompany.Save.OfficeGrid
         public static OfficeGridState Restore(OfficeGridSaveDto dto)
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));
-            if (dto.schemaVersion != 1 && dto.schemaVersion != 2 &&
+            if (dto.schemaVersion != 1 && dto.schemaVersion != 2 && dto.schemaVersion != 3 &&
                 dto.schemaVersion != OfficeGridSaveDto.CurrentSchemaVersion)
                 throw new InvalidOperationException($"Unsupported office grid schema: {dto.schemaVersion}.");
             if (dto.floorTiles == null || dto.walkable == null || dto.furniture == null || dto.seatSlots == null)
@@ -74,6 +76,10 @@ namespace FamilyCompany.Save.OfficeGrid
                     new OfficeGridCoordinate(item.x, item.y),
                     item.width,
                     item.height,
+                    dto.schemaVersion >= 4
+                        ? new OfficeGridSubcellAnchor(item.placementX2, item.placementY2)
+                        : PlacedOfficeFurniture.DefaultPlacementAnchor(
+                            new OfficeGridCoordinate(item.x, item.y), item.width, item.height),
                     (OfficeFurnitureFacing)item.facing,
                     item.blocksMovement));
             }

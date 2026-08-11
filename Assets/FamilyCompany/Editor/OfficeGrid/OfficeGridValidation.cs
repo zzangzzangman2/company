@@ -22,6 +22,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             ValidateFurnitureAndSeatRoundTrip();
             ValidateSchemaOneSeatMigration();
             ValidateSchemaTwoOperatorAnchorMigration();
+            ValidateSchemaThreeFurniturePlacementMigration();
             ValidateInvalidPayloadsAreRejected();
             ValidateV5Migration();
             Debug.Log("FAMILY_COMPANY_OFFICE_GRID_T1_VALIDATION: PASS");
@@ -112,7 +113,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             var source = OfficeGridLayouts.CreateMigrationPreview();
             var json = JsonUtility.ToJson(OfficeGridSaveAdapter.ToDto(source));
-            RequireContains(json, "\"schemaVersion\":3", "office grid schema");
+            RequireContains(json, "\"schemaVersion\":4", "office grid schema");
             RequireContains(json, "\"workSurfaceFurnitureId\"", "workstation binding payload");
             RequireContains(json, "\"approachX\"", "seat approach payload");
             RequireContains(json, "\"operatorX2\"", "subcell operator payload");
@@ -205,6 +206,26 @@ namespace FamilyCompany.Editor.OfficeGridQa
             AssertEqual(source.ComputeLayoutHash(), restored.ComputeLayoutHash(), "furniture and seat hash roundtrip");
             AssertEqual(2, restored.Furniture.Count, "furniture count");
             AssertEqual(1, restored.SeatSlots.Count, "seat count");
+        }
+
+        private static void ValidateSchemaThreeFurniturePlacementMigration()
+        {
+            var dto = OfficeGridSaveAdapter.ToDto(OfficeGridLayouts.CreateStarterOfficeV1());
+            dto.schemaVersion = 3;
+            foreach (var item in dto.furniture)
+            {
+                item.placementX2 = 0;
+                item.placementY2 = 0;
+            }
+            var restored = OfficeGridSaveAdapter.Restore(dto);
+            foreach (var item in restored.Furniture)
+            {
+                AssertEqual(
+                    PlacedOfficeFurniture.DefaultPlacementAnchor(
+                        item.Origin, item.Width, item.Height),
+                    item.PlacementAnchor,
+                    item.FurnitureId + " schema 3 inferred placement anchor");
+            }
         }
 
         private static void ValidateInvalidPayloadsAreRejected()

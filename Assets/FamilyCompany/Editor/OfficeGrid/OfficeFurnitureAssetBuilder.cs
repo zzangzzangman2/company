@@ -196,6 +196,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
             return catalog;
         }
 
+        public static void UpgradePoseCatalog()
+        {
+            CreateOrUpgradePoseCatalog();
+            AssetDatabase.SaveAssets();
+            LoadCharacterSeatPoseCatalog().Validate();
+        }
+
         public static void Validate()
         {
             var seenKinds = new HashSet<string>(StringComparer.Ordinal);
@@ -352,10 +359,22 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
             int northWest = (int)OfficeSeatFacing8.Northwest;
             var profiles = new List<OfficeCharacterSeatPoseProfile>(56);
-            AddPoseProfiles(profiles, "player", northWest, new Vector2(151f, 65f), new Vector2(91f, 86f));
-            AddPoseProfiles(profiles, "older_sister", northWest, new Vector2(142f, 96f), new Vector2(86f, 113f));
-            AddPoseProfiles(profiles, "father", northWest, new Vector2(157f, 86f), new Vector2(103f, 116f));
-            AddPoseProfiles(profiles, "mother", northWest, new Vector2(150f, 89f), new Vector2(83f, 96f));
+            AddPoseProfiles(
+                profiles, "player", northWest,
+                new Vector2(151f, 65f), new Vector2(91f, 86f),
+                1.174293f, -0.350355f);
+            AddPoseProfiles(
+                profiles, "older_sister", northWest,
+                new Vector2(142f, 96f), new Vector2(86f, 113f),
+                1.27552985f, -2.75361f);
+            AddPoseProfiles(
+                profiles, "father", northWest,
+                new Vector2(157f, 86f), new Vector2(103f, 116f),
+                1.20841674f, 9.414203f);
+            AddPoseProfiles(
+                profiles, "mother", northWest,
+                new Vector2(150f, 89f), new Vector2(83f, 96f),
+                1.10812479f, -13.675914f);
             catalog.ReplaceProfiles(profiles.ToArray(), OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion);
             EditorUtility.SetDirty(catalog);
         }
@@ -365,7 +384,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
             string memberId,
             int direction,
             Vector2 pelvisAnchorPx,
-            Vector2 handAnchorPx)
+            Vector2 handAnchorPx,
+            float uniformScale,
+            float rotationDegrees)
         {
             var clips = new[]
             {
@@ -382,7 +403,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     clip,
                     frame,
                     pelvisAnchorPx,
-                    handAnchorPx));
+                    handAnchorPx,
+                    uniformScale,
+                    rotationDegrees));
             }
         }
 

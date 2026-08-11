@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEditor;
 using UnityEngine;
 
@@ -138,10 +139,14 @@ namespace FamilyCompany.Editor
         public static string[] GetFrameNames(string characterId)
         {
             var names = new List<string>(FramesPerCharacter);
+            HighMotionDirectionManifest manifest = HighMotionDirectionManifest.LoadDefault();
             for (var phase = 0; phase < WalkFrameCount; phase++)
+            for (var canonicalDirection = 0; canonicalDirection < DirectionCount; canonicalDirection++)
             {
-                foreach (var direction in Directions)
-                    names.Add($"{characterId}_{direction}_walk_{phase}");
+                int sourceDirection = manifest == null
+                    ? canonicalDirection
+                    : manifest.ResolveSourceDirection(characterId, canonicalDirection);
+                names.Add($"{characterId}_{Directions[sourceDirection]}_walk_{phase}");
             }
 
             return names.ToArray();

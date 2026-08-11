@@ -35,10 +35,13 @@ namespace FamilyCompany.Presentation.Unity
         private int _preSeatingSortingOrder;
         private bool _seatingSortingOrderActive;
         private bool _navigationAnimationSuppressed;
+        private bool _tileDisplacementDirection;
 
         public int CurrentDirection => _lastDirection;
         public int CurrentWalkFrame => _walkFrame;
-        public bool IsMoving => _worldVelocity.sqrMagnitude > 0.0025f;
+        public bool IsMoving => _tileDisplacementDirection
+            ? _worldVelocity.sqrMagnitude > 0.0000001f
+            : _worldVelocity.sqrMagnitude > 0.0025f;
         public int ConfiguredFrameCount => walkFrames?.Length ?? 0;
         public float BaseFrameSeconds => frameSeconds;
         public float EffectiveFrameSeconds => ResolveEffectiveFrameSeconds();
@@ -104,7 +107,20 @@ namespace FamilyCompany.Presentation.Unity
 
         public void SetWorldVelocity(Vector3 velocity)
         {
+            _tileDisplacementDirection = false;
             _worldVelocity = new Vector3(velocity.x, 0f, velocity.z);
+        }
+
+        public void SetTileDisplacement(Vector2 actualDisplacement)
+        {
+            _tileDisplacementDirection = true;
+            _worldVelocity = new Vector3(actualDisplacement.x, 0f, actualDisplacement.y);
+        }
+
+        public void StopTileMovementButKeepFacing()
+        {
+            _tileDisplacementDirection = true;
+            _worldVelocity = Vector3.zero;
         }
 
         public void ConfigureOfficeWorkAnimationHook(IOfficeSeatedWorkAnimationHook hook)
@@ -220,7 +236,12 @@ namespace FamilyCompany.Presentation.Unity
             if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
             if (IsMoving)
             {
-                _lastDirection = ResolveDirection(_worldVelocity, _lastDirection, facingHysteresisDegrees);
+                _lastDirection = _tileDisplacementDirection
+                    ? ResolveTileDirection(
+                        new Vector2(_worldVelocity.x, _worldVelocity.z),
+                        _lastDirection,
+                        facingHysteresisDegrees)
+                    : ResolveDirection(_worldVelocity, _lastDirection, facingHysteresisDegrees);
                 _frameClock += Mathf.Max(0f, deltaTime);
                 var effectiveFrameSeconds = ResolveEffectiveFrameSeconds();
                 while (_frameClock >= effectiveFrameSeconds)
@@ -243,6 +264,36 @@ namespace FamilyCompany.Presentation.Unity
             var angleFromSouth = Mathf.Atan2(-horizontal, -vertical) * Mathf.Rad2Deg;
             var octant = Mathf.RoundToInt(angleFromSouth / 45f);
             return (octant % DirectionCount + DirectionCount) % DirectionCount;
+        }
+
+        public static int ResolveTileDirection(Vector2 actualDisplacement)
+        {
+            if (float.IsNaN(actualDisplacement.x) || float.IsInfinity(actualDisplacement.x) ||
+                float.IsNaN(actualDisplacement.y) || float.IsInfinity(actualDisplacement.y))
+                throw new ArgumentOutOfRangeException(nameof(actualDisplacement));
+            if (actualDisplacement.sqrMagnitude <= 0.000001f)
+                throw new ArgumentException("Tile displacement must be non-zero.", nameof(actualDisplacement));
+            return ResolveDirectionFromAxes(actualDisplacement.x, actualDisplacement.y);
+        }
+
+        public static int ResolveTileDirection(Vector2 actualDisplacement, int currentDirection)
+        {
+            if (currentDirection < 0 || currentDirection >= DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(currentDirection));
+            if (actualDisplacement.sqrMagnitude <= 0.000001f) return currentDirection;
+            return ResolveTileDirection(actualDisplacement, currentDirection, 7.5f);
+        }
+
+        public static int ResolveTileDirection(
+            Vector2 actualDisplacement,
+            int currentDirection,
+            float hysteresisDegrees)
+        {
+            return OfficeFacingHysteresisRules.ResolveDirection(
+                actualDisplacement.x,
+                actualDisplacement.y,
+                currentDirection,
+                hysteresisDegrees);
         }
 
         public static int ResolveDirectionWithHysteresisFromAxes(
