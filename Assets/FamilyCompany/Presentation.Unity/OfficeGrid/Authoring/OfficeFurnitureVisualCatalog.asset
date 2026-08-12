@@ -38,7 +38,7 @@ MonoBehaviour:
   - kindId: swivel_chair
     facing: 2
     baseSprite: {fileID: 21300000, guid: 5d642bde97f1a844f9aefcc7c4c95a08, type: 3}
-    frontOverlaySprite: {fileID: 0}
+    frontOverlaySprite: {fileID: 21300000, guid: 765e8e592ac1dbe46a89bf68ff564944, type: 3}
     groundAnchorPx: {x: 319.19083, y: 45.333923}
     sortAnchorPx: {x: 319.19083, y: 25.23675}
     groundFootprintPolygonPx:
@@ -55,7 +55,7 @@ MonoBehaviour:
     hasSeatAnchor: 1
     hasWorkSurfaceAnchor: 0
     hasOperatorSeatSocket: 0
-    frontOverlayWhenOccupied: 0
+    frontOverlayWhenOccupied: 1
   - kindId: reception_counter
     facing: 0
     baseSprite: {fileID: 21300000, guid: 087c2dc2ef3118e4497bcd967e9ff5e4, type: 3}

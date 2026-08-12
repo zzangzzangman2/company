@@ -77,6 +77,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public bool HasAssignedTask => _assignedTaskId.Length > 0;
         public string AssignedTaskId => _assignedTaskId;
         public bool IsSeated => Phase == OfficeRuntimeAgentPhase.Working;
+
+        /// <summary>
+        /// True from the moment the seat is claimed until the actor has stepped back out of it.
+        /// Depth uses this rather than <see cref="IsSeated"/> so the body does not flip from behind
+        /// the chair to in front of it partway through sitting down.
+        /// </summary>
+        public bool IsOccupyingSeat =>
+            _seat != null &&
+            Phase != OfficeRuntimeAgentPhase.LeavingSeat &&
+            (Phase == OfficeRuntimeAgentPhase.SittingDown ||
+             Phase == OfficeRuntimeAgentPhase.Working ||
+             Phase == OfficeRuntimeAgentPhase.FinishingWork ||
+             Phase == OfficeRuntimeAgentPhase.StandingUp);
         public bool IsBusy => HasAssignedTask || Phase != OfficeRuntimeAgentPhase.Idle;
         public OfficeActivity CurrentActivity { get; private set; } = OfficeActivity.Break;
         public Vector2 Position => new Vector2(transform.position.x, transform.position.y);
@@ -718,7 +731,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         ResumeAutonomy();
                         return;
                     }
-                    ApplySeatedFloorPlacement();
                     Phase = OfficeRuntimeAgentPhase.SittingDown;
                     CurrentActivity = OfficeActivity.Work;
                     break;

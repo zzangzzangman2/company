@@ -17,7 +17,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     public sealed class OfficeRuntimeDepthSorter
     {
         private const string FurniturePrefix = "f:";
+        private const string FrontPrefix = "n:";
         private const string ActorPrefix = "a:";
+
+        /// <summary>Chair base under the occupant.</summary>
+        private const int BasePriority = 0;
+
+        /// <summary>The person on the seat.</summary>
+        private const int OccupantPriority = 1;
+
+        /// <summary>
+        /// Backrest and near armrest. The camera looks at the occupant's back, so the parts of the
+        /// chair their back rests against are between them and the camera and have to be painted
+        /// over the body - otherwise the hips read as poking through the seat.
+        /// </summary>
+        private const int FrontPriority = 2;
 
         private readonly OfficeGrid _grid;
         private readonly OfficeGridTilemapPresenter _presenter;
@@ -45,12 +59,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             foreach (PlacedOfficeFurniture furniture in _grid.Furniture)
             {
+                int maxX = furniture.Origin.X + furniture.Width - 1;
+                int maxY = furniture.Origin.Y + furniture.Height - 1;
                 _items.Add(new OfficeDepthItem(
                     FurniturePrefix + furniture.FurnitureId,
                     furniture.Origin.X,
                     furniture.Origin.Y,
-                    furniture.Origin.X + furniture.Width - 1,
-                    furniture.Origin.Y + furniture.Height - 1));
+                    maxX,
+                    maxY,
+                    BasePriority));
+                if (_furniturePresenter.HasEnabledFrontOverlay(furniture.FurnitureId))
+                    _items.Add(new OfficeDepthItem(
+                        FrontPrefix + furniture.FurnitureId,
+                        furniture.Origin.X,
+                        furniture.Origin.Y,
+                        maxX,
+                        maxY,
+                        FrontPriority));
             }
 
             if (actors != null)
@@ -66,7 +91,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         ActorPrefix + actor.AgentId,
                         cell.X,
                         cell.Y,
-                        actor.IsSeated ? 1 : 0));
+                        actor.IsOccupyingSeat ? OccupantPriority : BasePriority));
                     _actorRenderers[actor.AgentId] = renderer;
                 }
             }
@@ -77,8 +102,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 if (entry.Key.StartsWith(FurniturePrefix, StringComparison.Ordinal))
                 {
-                    _furniturePresenter.ApplySortingOrder(
+                    _furniturePresenter.ApplyBaseSortingOrder(
                         entry.Key.Substring(FurniturePrefix.Length),
+                        entry.Value);
+                    continue;
+                }
+                if (entry.Key.StartsWith(FrontPrefix, StringComparison.Ordinal))
+                {
+                    _furniturePresenter.ApplyFrontSortingOrder(
+                        entry.Key.Substring(FrontPrefix.Length),
                         entry.Value);
                     continue;
                 }
@@ -90,7 +122,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private OfficeGridCoordinate ResolveActorCell(OfficeRuntimeAgent actor)
         {
-            if (actor.IsSeated && actor.ActiveSeatId.Length > 0)
+            if (actor.IsOccupyingSeat && actor.ActiveSeatId.Length > 0)
             {
                 foreach (OfficeSeatSlot seat in _grid.SeatSlots)
                 {

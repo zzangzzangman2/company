@@ -48,9 +48,9 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 125, y: 39}
-    deskInteractionAnchorPx: {x: 72, y: 88}
+    pelvisAnchorPx: {x: 131, y: 62}
+    deskInteractionAnchorPx: {x: 90, y: 120}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
-    sourceSpriteSha256: BD1EAC26A4F51A3E41BFAC5FC7C16383F262216AC95593AC29D1AEA6C9705E09
+    sourceSpriteSha256: 1F8D8A299555DD50A8ACE551B8627141CFD1C017DFD0B01FE01D57B559E54FF7

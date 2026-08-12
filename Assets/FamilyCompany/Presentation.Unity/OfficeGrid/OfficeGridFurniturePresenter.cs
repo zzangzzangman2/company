@@ -212,15 +212,39 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         }
 
         /// <summary>
-        /// Sets the order for one piece of furniture. The single owner of this is
+        /// True when this piece has a foreground layer that should be painted over an occupant -
+        /// the chair backrest and near armrest, which the camera sees in front of the seated body.
+        /// </summary>
+        public bool HasEnabledFrontOverlay(string furnitureId)
+        {
+            return _visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual) &&
+                   visual.FrontRenderer != null &&
+                   visual.Definition.FrontOverlayWhenOccupied;
+        }
+
+        /// <summary>
+        /// Sets the order for the main body of one piece of furniture. The single owner of this is
         /// <see cref="OfficeRuntime.OfficeRuntimeDepthSorter"/>, which orders the whole office from
         /// its footprints once per frame.
         /// </summary>
-        public void ApplySortingOrder(string furnitureId, int sortingOrder)
+        public void ApplyBaseSortingOrder(string furnitureId, int sortingOrder)
         {
             if (!_visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual)) return;
             visual.BaseRenderer.sortingOrder = sortingOrder;
-            if (visual.FrontRenderer != null) visual.FrontRenderer.sortingOrder = sortingOrder + 1;
+            if (visual.FrontRenderer != null && !visual.Definition.FrontOverlayWhenOccupied)
+            {
+                visual.FrontRenderer.enabled = false;
+                visual.FrontRenderer.sortingOrder = sortingOrder + 1;
+            }
+        }
+
+        /// <summary>Sets the order for the foreground layer, which the sorter keeps above occupants.</summary>
+        public void ApplyFrontSortingOrder(string furnitureId, int sortingOrder)
+        {
+            if (!_visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual)) return;
+            if (visual.FrontRenderer == null) return;
+            visual.FrontRenderer.enabled = true;
+            visual.FrontRenderer.sortingOrder = sortingOrder;
         }
 
         public void ApplySeatOcclusion(OfficeSeatSlot seat, int characterSortingOrder)
