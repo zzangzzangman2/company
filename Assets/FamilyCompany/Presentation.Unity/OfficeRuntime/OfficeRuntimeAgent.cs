@@ -543,7 +543,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                             "starter-office-seat:" + _agentId + ":" + destination.DestinationId,
                             out _seat,
                             out _seatClaim)) return false;
-                    destination = _world.Workstations.DestinationForSeat(_seat);
+                    destination = _world.Workstations.DestinationForSeat(_seat, destination);
                 }
             }
             else if (_seatClaim != null)
@@ -641,7 +641,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
             float arrivalSpeedScale = presentationTargetIndex == _path.Count - 1
-                ? Mathf.Clamp(delta.magnitude / 0.25f, 0.70f, 1f)
+                ? OfficeNavigationMotionIntegrator.ResolveArrivalSpeedScale(delta.magnitude)
                 : 1f;
             _desiredVelocity = desiredDirection * (DefaultMoveSpeed * arrivalSpeedScale);
             _world.Occupancy.UpdateActor(
@@ -707,7 +707,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 targetVelocity,
                 deltaTime,
                 _destination.Value.SeatId,
-                float.PositiveInfinity,
+                delta.magnitude,
                 presentationSemanticDirection * targetVelocity.magnitude);
         }
 
@@ -850,7 +850,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         return;
                     }
                     Phase = OfficeRuntimeAgentPhase.SittingDown;
-                    CurrentActivity = OfficeActivity.Work;
+                    CurrentActivity = _destination.HasValue
+                        ? _destination.Value.Activity
+                        : OfficeActivity.Work;
                     break;
                 }
                 case OfficeRuntimeAgentPhase.SittingDown:
@@ -868,7 +870,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 case OfficeRuntimeAgentPhase.Working:
                     StopMotion();
                     TrackWorkstationMetrics();
-                    if (HasAssignedTask && _assignedActivity == OfficeActivity.Work)
+                    if (HasAssignedTask && _assignedActivity == CurrentActivity)
                         AdvanceAssignedWork(deltaTime);
                     if (_releaseSeatRequested) BeginSafeStand();
                     break;

@@ -7,6 +7,7 @@ using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.Contracts;
+using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
@@ -263,6 +264,8 @@ namespace FamilyCompany.Presentation.Unity
             float previousTimeScale = Time.timeScale;
             Time.timeScale = 4f;
 
+            yield return RunAutonomousMeetingSeatingQa(bootstrap);
+            if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunFourWayIntersectionQa();
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunRuntimeDeskPlacementQa();
@@ -294,6 +297,76 @@ namespace FamilyCompany.Presentation.Unity
             Time.timeScale = previousTimeScale;
             yield return null;
             Application.Quit(0);
+        }
+
+        private IEnumerator RunAutonomousMeetingSeatingQa(PrototypeBootstrap bootstrap)
+        {
+            Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
+            if (actors == null) yield break;
+            string[] meetingMembers = bootstrap.State.Family.Members
+                .Where(member => !string.Equals(member.MemberId, "player", StringComparison.Ordinal) &&
+                                 member.Autonomy.TargetLocation == OfficeSemanticLocation.MeetingRoom)
+                .Select(member => member.MemberId)
+                .OrderBy(memberId => memberId, StringComparer.Ordinal)
+                .ToArray();
+            if (meetingMembers.Length == 0)
+            {
+                FailPlayerQa(37, "seeded morning schedule did not exercise an autonomous NPC meeting");
+                yield break;
+            }
+
+            float started = Time.time;
+            while (Time.time - started < 45f && meetingMembers.Any(memberId =>
+                       !actors[memberId].IsSeated ||
+                       actors[memberId].CurrentActivity != OfficeActivity.Meeting))
+                yield return null;
+
+            foreach (string memberId in meetingMembers)
+            {
+                OfficeRuntimeAgent actor = actors[memberId];
+                string expectedSeatId = "seat_" + memberId;
+                if (!actor.IsSeated || actor.CurrentActivity != OfficeActivity.Meeting ||
+                    !string.Equals(actor.ActiveSeatId, expectedSeatId, StringComparison.Ordinal))
+                {
+                    FailPlayerQa(
+                        38,
+                        $"autonomous meeting did not remain seated for {memberId}: " +
+                        $"phase={actor.Phase} activity={actor.CurrentActivity} seat={actor.ActiveSeatId}");
+                    yield break;
+                }
+                OfficeSeatSlot seat = _starterRuntime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
+                if (!_starterRuntime.World.FurniturePresenter.TryGetRenderer(
+                        seat.ChairFurnitureId,
+                        out SpriteRenderer chairRenderer) || !chairRenderer.enabled)
+                {
+                    FailPlayerQa(39, "occupied meeting chair renderer disappeared for " + memberId);
+                    yield break;
+                }
+            }
+
+            OfficeSeatSlot emptyPlayerSeat = _starterRuntime.World.Workstations.RequiredSeat("seat_player");
+            if (!_starterRuntime.World.FurniturePresenter.TryGetRenderer(
+                    emptyPlayerSeat.ChairFurnitureId,
+                    out SpriteRenderer emptyChairBase) || !emptyChairBase.enabled ||
+                !_starterRuntime.World.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
+                    emptyPlayerSeat.ChairFurnitureId,
+                    out SpriteRenderer emptyChairFront) || !emptyChairFront.enabled)
+            {
+                FailPlayerQa(39, "unoccupied player chair did not retain its complete visible sprite");
+                yield break;
+            }
+
+            string capturePath = QaArtifactPath("starter-office-autonomous-meeting-seated.png");
+            if (!TryCaptureQaCameraFrame(capturePath, out string captureFailure))
+            {
+                FailPlayerQa(39, "autonomous meeting capture failed: " + captureFailure);
+                yield break;
+            }
+            Debug.Log(
+                "STARTER_OFFICE_AUTONOMOUS_MEETING_SEATING_QA_PASS | members=" +
+                string.Join(",", meetingMembers) +
+                " | activity=Meeting seatedAt=assigned-workstation " +
+                "occupiedChairVisible=true emptyChairVisible=true | capture=" + capturePath);
         }
 
         private IEnumerator RunFourWayIntersectionQa()

@@ -68,6 +68,8 @@ namespace FamilyCompany.Simulation.Navigation
     public static class OfficeNavigationMotionIntegrator
     {
         public const float MaximumStableStepSeconds = 0.05f;
+        public const float FinalApproachSlowRadius = 0.48f;
+        public const float MinimumArrivalSpeedScale = 0.24f;
 
         public static OfficeMotionIntegrationResult IntegrateVelocity(
             OfficeNavPoint currentVelocity,
@@ -118,6 +120,18 @@ namespace FamilyCompany.Simulation.Navigation
             return alignment <= -0.70710678f
                 ? baseChangePerSecond * 1.8f
                 : baseChangePerSecond;
+        }
+
+        public static float ResolveArrivalSpeedScale(float remainingDistance)
+        {
+            if (remainingDistance < 0f || float.IsNaN(remainingDistance) ||
+                float.IsInfinity(remainingDistance))
+                throw new ArgumentOutOfRangeException(nameof(remainingDistance));
+            if (remainingDistance >= FinalApproachSlowRadius) return 1f;
+
+            float normalized = remainingDistance / FinalApproachSlowRadius;
+            float smooth = normalized * normalized * (3f - 2f * normalized);
+            return MinimumArrivalSpeedScale + (1f - MinimumArrivalSpeedScale) * smooth;
         }
 
         public static OfficeNavPoint ClampDisplacement(OfficeNavPoint displacement, float maximumDistance)

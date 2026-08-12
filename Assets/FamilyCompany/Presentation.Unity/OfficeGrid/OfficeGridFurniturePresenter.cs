@@ -95,7 +95,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                     frontRenderer.flipX = flipX;
                     frontRenderer.sortingLayerName = "Default";
                     frontRenderer.sortingOrder = baseRenderer.sortingOrder + 1;
-                    frontRenderer.enabled = false;
+                    // The front sprite also contains the visible chair back/near edge, so hiding
+                    // it makes an empty chair appear to vanish. Occupancy changes its depth, not
+                    // whether the authored furniture piece exists.
+                    frontRenderer.enabled = definition.FrontOverlayWhenOccupied;
                     _frontOverlays.Add(item.FurnitureId, frontRenderer);
                 }
 
@@ -224,7 +227,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             return _visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual) &&
                    visual.FrontRenderer != null &&
-                   visual.Definition.FrontOverlayWhenOccupied;
+                   visual.FrontRenderer.enabled;
         }
 
         /// <summary>
@@ -317,7 +320,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             visual.BaseRenderer.sortingOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(sortAnchorWorld);
             if (visual.FrontRenderer != null)
             {
-                visual.FrontRenderer.enabled = false;
+                visual.FrontRenderer.enabled = visual.Definition.FrontOverlayWhenOccupied;
                 visual.FrontRenderer.sortingOrder = visual.BaseRenderer.sortingOrder + 1;
             }
         }

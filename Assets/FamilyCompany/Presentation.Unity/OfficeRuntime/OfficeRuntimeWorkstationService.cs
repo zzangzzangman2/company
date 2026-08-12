@@ -83,15 +83,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string stableKey,
             out OfficeRuntimeDestination destination)
         {
-            if (location == OfficeSemanticLocation.Desk)
+            // NPC meetings use the member's assigned PC as a seated video-call station. The
+            // meeting table currently has no authored chairs, so routing a 60-120 minute meeting
+            // there leaves the family standing motionless for the whole block. Player interaction
+            // still resolves to the physical meeting table.
+            bool seatedNpcMeeting = location == OfficeSemanticLocation.MeetingRoom &&
+                                    !string.Equals(memberId, "player", StringComparison.Ordinal);
+            if (location == OfficeSemanticLocation.Desk || seatedNpcMeeting)
             {
                 OfficeSeatSlot seat = AssignedSeat(memberId) ?? _grid.SeatSlots.FirstOrDefault();
                 if (seat != null)
                 {
+                    OfficeActivity seatedActivity = seatedNpcMeeting
+                        ? OfficeActivity.Meeting
+                        : OfficeActivity.Work;
+                    string destinationPrefix = seatedNpcMeeting ? "video-meeting:" : "desk:";
                     destination = new OfficeRuntimeDestination(
-                        "desk:" + seat.SeatId,
+                        destinationPrefix + seat.SeatId,
                         location,
-                        OfficeActivity.Work,
+                        seatedActivity,
                         seat.ApproachCell,
                         seat.SeatId);
                     return true;
@@ -160,13 +170,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return result;
         }
 
-        public OfficeRuntimeDestination DestinationForSeat(OfficeSeatSlot seat)
+        public OfficeRuntimeDestination DestinationForSeat(
+            OfficeSeatSlot seat,
+            OfficeRuntimeDestination requestedDestination)
         {
             if (seat == null) throw new ArgumentNullException(nameof(seat));
             return new OfficeRuntimeDestination(
-                "desk:" + seat.SeatId,
-                OfficeSemanticLocation.Desk,
-                OfficeActivity.Work,
+                requestedDestination.DestinationId,
+                requestedDestination.SemanticLocation,
+                requestedDestination.Activity,
                 seat.ApproachCell,
                 seat.SeatId);
         }

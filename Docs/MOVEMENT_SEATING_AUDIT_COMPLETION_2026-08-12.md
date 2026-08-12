@@ -34,4 +34,15 @@ python Tools/build_office_seating_qa.py --output <artifact-folder>
 FamilyCompany.exe -batchmode -nographics -familyCompanyTileRuntimeQa -logFile <log-path>
 ```
 
+## 2026-08-12 Meeting seating and empty-chair follow-up
+
+- Long NPC `MeetingRoom` actions now resolve to a seated video meeting at each member's assigned
+  workstation. Direct player interaction with the physical meeting table is unchanged.
+- Releasing a seat no longer hides the chair-front sprite. That layer contains the visible back and
+  near edge, so an empty chair remains complete while occupancy only changes depth ordering.
+- Final approach uses SmoothStep deceleration inside 0.48 world units and clamps displacement to the
+  remaining distance, preventing waypoint overshoot and abrupt stops.
+- The real 08:00 schedule reproduced `father,mother` seated with `Meeting` activity,
+  `occupiedChairVisible=true`, `emptyChairVisible=true`, and agent penetration `0`.
+
 회사의 작업 규칙에 따라 Unity Editor와 플레이어는 모두 숨김/배경 모드로 실행했다.

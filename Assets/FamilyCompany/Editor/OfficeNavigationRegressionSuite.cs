@@ -784,6 +784,19 @@ namespace FamilyCompany.Editor
             Require(Math.Abs(playerStopRate - 12.75f) <= 0.00001f,
                 "direct player release stops faster than acceleration");
             checks += 3;
+
+            float farArrival = OfficeNavigationMotionIntegrator.ResolveArrivalSpeedScale(
+                OfficeNavigationMotionIntegrator.FinalApproachSlowRadius);
+            float middleArrival = OfficeNavigationMotionIntegrator.ResolveArrivalSpeedScale(
+                OfficeNavigationMotionIntegrator.FinalApproachSlowRadius * 0.5f);
+            float nearArrival = OfficeNavigationMotionIntegrator.ResolveArrivalSpeedScale(0f);
+            Require(Math.Abs(farArrival - 1f) <= 0.00001f,
+                "final approach keeps full speed outside the easing radius");
+            Require(middleArrival > nearArrival && middleArrival < farArrival,
+                "final approach speed eases monotonically");
+            Require(Math.Abs(nearArrival - OfficeNavigationMotionIntegrator.MinimumArrivalSpeedScale) <= 0.00001f,
+                "final approach retains a non-zero crawl speed");
+            checks += 3;
             return checks;
         }
 
