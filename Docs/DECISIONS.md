@@ -254,3 +254,14 @@ SittingDown·Working·FinishingWork·StandingUp 전 구간에 유지한다. 공�
 실제로 이동한 프레임이 idle로 덮인다. 또한 X 우선 투영과 실제 변위만의 즉시 방향 전환은 벽·책상 모서리에서
 의도와 반대로 걷는 프레임을 만든다. 시뮬레이션 사실과 표현 heading을 명시적으로 분리하면 충돌 정합성을
 유지하면서도 조작 방향과 화면 방향의 역전을 제한할 수 있다.
+
+## 2026-08-12 / 착석 v5는 Northwest 56개가 완전할 때만 실제 애니메이션을 연다
+
+결정: `OfficeCharacterSeatPoseCatalog` v5에 네 가족별 Northwest SitDown 4, Work 6, StandUp 4를
+저장한다. 56개 모두 사람 승인, 실제 신체 내부 pelvis/hand, source SHA-256, scale 1, rotation 0을
+만족할 때만 Starter Runtime을 `Animated`로 구성한다. 하나라도 빠지면 승인된 Work/0
+`SafeStaticWork`로 fail-closed한다. 렌더 틱 하나에서 여러 착석 프레임을 소비하지 않는다.
+
+이유: 4배속 플레이어 QA에서 기존 누적 while이 한 렌더 틱에 SitDown 두 장을 건너뛰는 결함을
+재현했다. 틱당 한 장 전진으로 바꾼 뒤 네 가족 모두 SitDown 4/4, Work 6/6, StandUp 4/4,
+anchor error 0.000px, rotation 0°, scale deviation 0%, agent penetration 0으로 통과했다.

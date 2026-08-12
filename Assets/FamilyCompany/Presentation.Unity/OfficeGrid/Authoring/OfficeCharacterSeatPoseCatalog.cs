@@ -141,7 +141,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
     [CreateAssetMenu(menuName = "Family Company/Office/Character Seat Pose Catalog")]
     public sealed class OfficeCharacterSeatPoseCatalog : ScriptableObject
     {
-        public const int CurrentCalibrationVersion = 4;
+        public const int CurrentCalibrationVersion = 5;
         private static readonly Vector2 PoseCanvasSizePx = new Vector2(256f, 256f);
 
         [SerializeField] private int calibrationVersion;
@@ -200,6 +200,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
                     directionIndex,
                     OfficeSeatingAnimationClip.Work,
                     0);
+                profile.Validate(PoseCanvasSizePx);
+            }
+        }
+
+        public void ValidateAnimatedNorthwest(IEnumerable<string> memberIds, int directionIndex)
+        {
+            if (memberIds == null) throw new ArgumentNullException(nameof(memberIds));
+            string[] requiredMembers = new List<string>(memberIds).ToArray();
+            int requiredProfileCount = requiredMembers.Length * (
+                OfficeSeatingAnimationFrames.SitDownFrameCount +
+                OfficeSeatingAnimationFrames.WorkFrameCount +
+                OfficeSeatingAnimationFrames.StandUpFrameCount);
+            Validate();
+            if (profiles.Length != requiredProfileCount)
+                throw new InvalidOperationException(
+                    $"Animated Northwest seating requires exactly {requiredProfileCount} approved profiles; found {profiles.Length}.");
+            foreach (string memberId in requiredMembers)
+            foreach (OfficeSeatingAnimationClip clip in Enum.GetValues(typeof(OfficeSeatingAnimationClip)))
+            for (var frame = 0; frame < OfficeSeatingAnimationFrames.FrameCount(clip); frame++)
+            {
+                OfficeCharacterSeatPoseProfile profile = ResolveApproved(
+                    memberId,
+                    directionIndex,
+                    clip,
+                    frame);
                 profile.Validate(PoseCanvasSizePx);
             }
         }

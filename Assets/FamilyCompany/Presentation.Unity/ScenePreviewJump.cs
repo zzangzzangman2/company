@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.Contracts;
+using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -505,6 +507,10 @@ namespace FamilyCompany.Presentation.Unity
                 int observedSemanticDirection = player.SemanticDirection;
                 int observedMotionDirection = player.MotionDirection;
                 int observedVisualDirection = player.CurrentDirection;
+                int observedWalkFrame = player.CurrentWalkFrame;
+                float observedGaitDistance = player.GaitDistance;
+                float observedGaitPhase = player.GaitPhase01;
+                OfficeLocomotionPhase observedLocomotionPhase = player.LocomotionPhase;
                 bool observedProjection = false;
                 string observedSprite = string.Empty;
                 float started = Time.time;
@@ -520,6 +526,10 @@ namespace FamilyCompany.Presentation.Unity
                     observedSemanticDirection = player.SemanticDirection;
                     observedMotionDirection = player.MotionDirection;
                     observedVisualDirection = player.CurrentDirection;
+                    observedWalkFrame = player.CurrentWalkFrame;
+                    observedGaitDistance = player.GaitDistance;
+                    observedGaitPhase = player.GaitPhase01;
+                    observedLocomotionPhase = player.LocomotionPhase;
                     observedProjection = player.WasCollisionProjected;
                     observedSprite = player.CurrentSpriteName;
                 }
@@ -531,9 +541,20 @@ namespace FamilyCompany.Presentation.Unity
                     yield break;
                 }
                 int expected = DirectionalSpriteAnimator.ResolveTileDirection(observedDisplacement);
+                int expectedWalkFrame = OfficeLocomotionGaitRules.DistanceFrame(
+                    observedGaitDistance,
+                    player.StrideLength,
+                    6);
+                float expectedGaitPhase = OfficeLocomotionGaitRules.Phase01(
+                    observedGaitDistance,
+                    player.StrideLength);
                 if (expected != direction || player.CurrentDirection != direction ||
                     observedSemanticDirection != direction || observedMotionDirection != direction ||
-                    observedVisualDirection != direction || observedProjection || observedSpeed < 1.4f)
+                    observedVisualDirection != direction || observedProjection || observedSpeed < 1.4f ||
+                    observedWalkFrame != expectedWalkFrame ||
+                    Mathf.Abs(Mathf.DeltaAngle(observedGaitPhase * 360f, expectedGaitPhase * 360f)) > 0.05f ||
+                    (observedLocomotionPhase != OfficeLocomotionPhase.StartStep &&
+                     observedLocomotionPhase != OfficeLocomotionPhase.Walk))
                 {
                     FailPlayerQa(
                         52,
@@ -541,7 +562,10 @@ namespace FamilyCompany.Presentation.Unity
                         $"frame={observedFrameDisplacement} semantic={observedSemanticDisplacement} " +
                         $"expected={direction} math={expected} semanticDir={observedSemanticDirection} " +
                         $"motionDir={observedMotionDirection} visualDir={observedVisualDirection} " +
-                        $"projected={observedProjection} speed={observedSpeed:F3}");
+                        $"projected={observedProjection} speed={observedSpeed:F3} " +
+                        $"locomotion={observedLocomotionPhase} gaitDistance={observedGaitDistance:F3} " +
+                        $"gaitPhase={observedGaitPhase:F4}/{expectedGaitPhase:F4} " +
+                        $"walkFrame={observedWalkFrame}/{expectedWalkFrame}");
                     yield break;
                 }
                 Debug.Log(
@@ -550,6 +574,8 @@ namespace FamilyCompany.Presentation.Unity
                     $"semanticDisplacement={observedSemanticDisplacement} actualSpeed={observedSpeed:F3} " +
                     $"semanticDir={observedSemanticDirection} motionDir={observedMotionDirection} " +
                     $"visualDir={observedVisualDirection} projected={observedProjection} " +
+                    $"locomotion={observedLocomotionPhase} gaitDistance={observedGaitDistance:F3} " +
+                    $"gaitPhase={observedGaitPhase:F4} walkFrame={observedWalkFrame} " +
                     $"spriteAssetPath=Assets/Art/Characters/Player/Pixel/HighMotion/Frames/{observedSprite}.png");
             }
             if (!RequireZeroActualViolations("eight-direction-player", 53)) yield break;
@@ -675,7 +701,20 @@ namespace FamilyCompany.Presentation.Unity
                     OccupancyMetricSummary());
                 yield break;
             }
-            yield return null;
+            float workLoopStarted = Time.time;
+            while (Time.time - workLoopStarted < 8f &&
+                   QaMemberIds.Any(memberId => actors[memberId].ObservedWorkFrameCount < 6))
+                yield return null;
+            if (QaMemberIds.Any(memberId => actors[memberId].ObservedSitDownFrameCount < 4 ||
+                                                actors[memberId].ObservedWorkFrameCount < 6))
+            {
+                FailPlayerQa(
+                    56,
+                    "animated seating did not expose every SitDown/Work frame: " +
+                    string.Join(",", QaMemberIds.Select(memberId =>
+                        $"{memberId}=sit{actors[memberId].ObservedSitDownFrameCount}/work{actors[memberId].ObservedWorkFrameCount}")));
+                yield break;
+            }
             string[] claims = QaMemberIds.Select(memberId => actors[memberId].ActiveSeatId).ToArray();
             if (claims.Any(string.IsNullOrWhiteSpace) || claims.Distinct(StringComparer.Ordinal).Count() != 4)
             {
@@ -686,7 +725,7 @@ namespace FamilyCompany.Presentation.Unity
             {
                 OfficeRuntimeAgent actor = actors[memberId];
                 OfficeSeatSlot seat = _starterRuntime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
-                string expectedSprite = memberId + "_northwest_sit_work_0";
+                string expectedSpritePrefix = memberId + "_northwest_sit_work_";
                 int actualOrder = actor.PresentationRenderer == null
                     ? int.MinValue
                     : actor.PresentationRenderer.sortingOrder;
@@ -705,19 +744,28 @@ namespace FamilyCompany.Presentation.Unity
                     $"seatContact={actor.SeatContactErrorPx:F3}px chairDesk={actor.ChairDeskErrorPx:F3}px " +
                     $"rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                     $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
-                    $"sprite={actor.CurrentSpriteName} sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
+                    $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
+                    $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
+                    $"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px " +
+                    $"sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
                 bool presentationMatches = actor.SeatContactErrorPx <= 1f &&
                     actor.VisualRotationErrorDegrees <= 0.01f &&
                     actor.VisualScaleDeviation <= 0.001f && actor.CurrentDirection == 3 &&
-                    string.Equals(actor.CurrentSpriteName, expectedSprite, StringComparison.Ordinal) &&
+                    actor.SeatingPresentationMode == OfficeSeatingPresentationMode.Animated &&
+                    actor.ObservedSitDownFrameCount == 4 && actor.ObservedWorkFrameCount == 6 &&
+                    actor.MaxAnimatedAnchorErrorPx <= 1f &&
+                    actor.CurrentSpriteName.StartsWith(expectedSpritePrefix, StringComparison.Ordinal) &&
                     depthCorrect;
                 if (presentationMatches) continue;
                 FailPlayerQa(
                     57,
                     $"seated contact placement failed for {memberId}: " +
                     $"seatContact={actor.SeatContactErrorPx:F2}px rotation={actor.VisualRotationErrorDegrees:F4}deg " +
-                    $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
-                    $"sprite={actor.CurrentSpriteName} sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
+                        $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
+                        $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
+                        $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
+                        $"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px " +
+                        $"sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
                 yield break;
             }
             string capturePath = QaArtifactPath("starter-office-four-seat-work.png");
@@ -739,9 +787,29 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
             if (!RequireZeroActualViolations("four-seat-work", 58)) yield break;
+            foreach (string memberId in QaMemberIds)
+            {
+                if (actors[memberId].QaRequestStand()) continue;
+                FailPlayerQa(58, "animated stand-up could not begin for " + memberId);
+                yield break;
+            }
+            float standStarted = Time.time;
+            while (Time.time - standStarted < 12f &&
+                   QaMemberIds.Any(memberId => actors[memberId].ObservedStandUpFrameCount < 4))
+                yield return null;
+            if (QaMemberIds.Any(memberId => actors[memberId].ObservedStandUpFrameCount < 4))
+            {
+                FailPlayerQa(
+                    58,
+                    "animated seating did not expose every StandUp frame: " +
+                    string.Join(",", QaMemberIds.Select(memberId =>
+                        $"{memberId}=stand{actors[memberId].ObservedStandUpFrameCount}")));
+                yield break;
+            }
             Debug.Log(
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
-                " | placement=seatContact<=1px,rotation=0,scale=canonical,sorting=chairFloor+1 | " +
+                " | animation=4x(SitDown4+Work6+StandUp4) mode=Animated " +
+                "placement=anchorError<=1px,seatContact<=1px,rotation=0,scale=canonical,sorting=chairFloor+1 | " +
                 OccupancyMetricSummary());
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
             yield return null;

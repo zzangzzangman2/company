@@ -185,6 +185,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
             CreateOrUpgradeFurnitureCatalog();
             CreateOrUpgradePoseCatalog();
+            UpgradeAnimatedNorthwestPoseCatalog();
             AssetDatabase.SaveAssets();
             Validate();
             Debug.Log("FAMILY_COMPANY_OFFICE_FURNITURE_TYCOON_ALIGNMENT_V2_BUILD: PASS");
@@ -208,11 +209,86 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
         public static void UpgradePoseCatalog()
         {
-            CreateOrUpgradePoseCatalog();
-            AssetDatabase.SaveAssets();
-            LoadCharacterSeatPoseCatalog().ValidateSafeStaticWork(
+            UpgradeAnimatedNorthwestPoseCatalog();
+            LoadCharacterSeatPoseCatalog().ValidateAnimatedNorthwest(
                 new[] { "player", "older_sister", "father", "mother" },
                 (int)OfficeSeatFacing8.Northwest);
+        }
+
+        [MenuItem("Family Company/Art/Approve Northwest Seating Animation V5")]
+        public static void UpgradeAnimatedNorthwestPoseCatalog()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<OfficeCharacterSeatPoseCatalog>(PoseCatalogPath);
+            if (catalog == null)
+                throw new FileNotFoundException("Office character seat pose catalog is missing.", PoseCatalogPath);
+            bool safeV4Source = catalog.CalibrationVersion == 4 && catalog.Profiles.Count == 4;
+            bool bootstrapV5Source = catalog.CalibrationVersion == 5 && catalog.Profiles.Count == 4;
+            bool repeatableV5Source = catalog.CalibrationVersion == 5 && catalog.Profiles.Count == 56;
+            if (!safeV4Source && !bootstrapV5Source && !repeatableV5Source)
+                throw new InvalidOperationException(
+                    $"Refusing animated seating upgrade from unexpected catalog v{catalog.CalibrationVersion} " +
+                    $"with {catalog.Profiles.Count} profiles.");
+
+            string[] members = { "player", "older_sister", "father", "mother" };
+            Vector2[][] pelvisAnchors =
+            {
+                Points((130,69),(137,60),(143,52),(145,49),(130,49),(130,49),(130,49),(130,49),(130,49),(130,49),(145,49),(143,52),(137,60),(130,69)),
+                Points((130,73),(138,63),(145,55),(147,51),(130,63),(131,63),(131,63),(130,63),(130,63),(129,63),(147,51),(145,55),(138,63),(130,73)),
+                Points((128,69),(138,59),(144,52),(145,49),(123,50),(122,50),(123,50),(123,50),(123,50),(123,50),(145,49),(144,52),(138,59),(128,69)),
+                Points((131,74),(140,64),(146,55),(148,51),(126,62),(127,62),(127,59),(127,64),(126,63),(126,59),(148,51),(146,55),(140,64),(131,74))
+            };
+            Vector2[][] handAnchors =
+            {
+                Points((106,42),(89,52),(77,69),(76,68),(78,90),(67,80),(78,90),(68,91),(74,86),(78,91),(76,68),(77,69),(89,52),(106,42)),
+                Points((109,50),(158,70),(170,58),(176,58),(75,108),(75,108),(75,108),(74,108),(74,108),(74,108),(176,58),(170,58),(158,70),(109,50)),
+                Points((99,78),(86,72),(76,70),(75,70),(76,104),(76,104),(76,104),(76,104),(76,104),(76,104),(75,70),(76,70),(86,72),(99,78)),
+                Points((99,59),(93,55),(80,69),(78,70),(84,87),(75,78),(86,91),(81,84),(84,90),(85,89),(78,70),(80,69),(93,55),(99,59))
+            };
+            OfficeSeatingAnimationClip[] clips =
+            {
+                OfficeSeatingAnimationClip.SitDown,
+                OfficeSeatingAnimationClip.Work,
+                OfficeSeatingAnimationClip.StandUp
+            };
+            int northwest = (int)OfficeSeatFacing8.Northwest;
+            var profiles = new List<OfficeCharacterSeatPoseProfile>(56);
+            for (var memberIndex = 0; memberIndex < members.Length; memberIndex++)
+            {
+                int sequenceIndex = 0;
+                foreach (OfficeSeatingAnimationClip clip in clips)
+                for (var frame = 0; frame < OfficeSeatingAnimationFrames.FrameCount(clip); frame++)
+                {
+                    string sourcePath = OfficeSeatingAnimationFrames.AssetPath(
+                        members[memberIndex],
+                        OfficeSeatFacing8.Northwest,
+                        clip,
+                        frame);
+                    if (!File.Exists(sourcePath))
+                        throw new FileNotFoundException("Approved seating source Sprite is missing.", sourcePath);
+                    profiles.Add(OfficeCharacterSeatPoseProfile.Create(
+                        members[memberIndex],
+                        northwest,
+                        clip,
+                        frame,
+                        pelvisAnchors[memberIndex][sequenceIndex],
+                        handAnchors[memberIndex][sequenceIndex],
+                        1f,
+                        0f,
+                        true,
+                        Sha256(sourcePath)));
+                    sequenceIndex++;
+                }
+            }
+            catalog.ReplaceProfiles(profiles.ToArray(), OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion);
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssets();
+            catalog.ValidateAnimatedNorthwest(members, northwest);
+            Debug.Log("OFFICE_NORTHWEST_SEATING_V5_APPROVAL_PASS | profiles=56 sources=56 scale=1 rotation=0");
+        }
+
+        private static Vector2[] Points(params (int x, int y)[] values)
+        {
+            return values.Select(value => new Vector2(value.x, value.y)).ToArray();
         }
 
         public static void Validate()
@@ -235,7 +311,21 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
             if (seenKinds.Count != 12) throw new InvalidOperationException("Furniture catalog must contain exactly 12 kinds.");
             LoadFurnitureVisualCatalog().Validate();
-            LoadCharacterSeatPoseCatalog().Validate();
+            OfficeCharacterSeatPoseCatalog poseCatalog = LoadCharacterSeatPoseCatalog();
+            string[] members = { "player", "older_sister", "father", "mother" };
+            poseCatalog.ValidateAnimatedNorthwest(members, (int)OfficeSeatFacing8.Northwest);
+            foreach (OfficeCharacterSeatPoseProfile profile in poseCatalog.Profiles)
+            {
+                string sourcePath = OfficeSeatingAnimationFrames.AssetPath(
+                    profile.MemberId,
+                    (OfficeSeatFacing8)profile.DirectionIndex,
+                    profile.Clip,
+                    profile.FrameIndex);
+                string actualSha = Sha256(sourcePath);
+                if (!string.Equals(actualSha, profile.SourceSpriteSha256, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException(
+                        $"Approved seating Sprite SHA mismatch: {profile.MemberId}/{profile.Clip}/{profile.FrameIndex}.");
+            }
         }
 
         private static void BuildAllRuntimePngs()

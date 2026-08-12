@@ -278,6 +278,45 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        public bool CanTraverseStatic(
+            Vector2 start,
+            Vector2 end,
+            float radius,
+            string permittedSeatId)
+        {
+            if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
+                throw new ArgumentOutOfRangeException(nameof(radius));
+            var delta = end - start;
+            var samples = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.045f));
+            for (var sample = 1; sample <= samples; sample++)
+            {
+                Vector2 point = Vector2.Lerp(start, end, sample / (float)samples);
+                if (!PointClearsStatic(point, radius, permittedSeatId, out _)) return false;
+            }
+            return true;
+        }
+
+        public bool HasPresentationClearance(
+            string agentId,
+            Vector2 start,
+            Vector2 end,
+            float radius,
+            float extraClearance = 0.75f)
+        {
+            ActorState self = RequiredActor(agentId);
+            if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
+                throw new ArgumentOutOfRangeException(nameof(radius));
+            if (extraClearance < 0f || float.IsNaN(extraClearance) || float.IsInfinity(extraClearance))
+                throw new ArgumentOutOfRangeException(nameof(extraClearance));
+            foreach (ActorState peer in _actors.Values)
+            {
+                if (ReferenceEquals(peer, self)) continue;
+                float required = radius + peer.Radius + extraClearance;
+                if (DistanceToSegment(peer.Position, start, end) < required) return false;
+            }
+            return true;
+        }
+
         public IReadOnlyList<OfficeTrafficAgentState> TrafficSnapshot()
         {
             return _actors.Values
@@ -292,6 +331,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         }
 
         public OfficeGridCoordinate CurrentCell(string agentId) => RequiredActor(agentId).CurrentCell;
+
+        private static float DistanceToSegment(Vector2 point, Vector2 start, Vector2 end)
+        {
+            Vector2 segment = end - start;
+            float lengthSquared = segment.sqrMagnitude;
+            if (lengthSquared <= 0.0000001f) return Vector2.Distance(point, start);
+            float projection = Mathf.Clamp01(Vector2.Dot(point - start, segment) / lengthSquared);
+            return Vector2.Distance(point, start + segment * projection);
+        }
 
         private void BuildNarrowCorridorComponents()
         {

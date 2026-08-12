@@ -411,11 +411,11 @@
 ## 2026-08-11 Office Tycoon Alignment V2 calibration
 
 - 정본 에셋: `Assets/FamilyCompany/Presentation.Unity/OfficeGrid/Authoring/OfficeFurnitureVisualCatalog.asset`, `OfficeCharacterSeatPoseCatalog.asset`.
-- 버전: 가구 catalog는 `calibrationVersion: 2`, 캐릭터 pose catalog는 `calibrationVersion: 4`다. Starter safe catalog에는 사람 승인된 `NorthWest/Work/0` 4개만 있고 각 항목은 source Sprite SHA-256을 가진다.
+- 버전: 가구 catalog는 `calibrationVersion: 2`, 캐릭터 pose catalog는 `calibrationVersion: 5`다. 캐릭터 catalog에는 사람 승인된 `NorthWest` SitDown 4 + Work 6 + StandUp 4를 네 가족별로 저장해 총 56개이며, 모든 항목이 source Sprite SHA-256을 가진다.
 - 가구 데이터: 각 정의는 독립 네 점 ground footprint, 의미 footprint 폭/높이, ground/sort를 가진다. desk는 operator seat `(390.445, 49.329)`와 work socket, chair는 seat `(313.007, 153.549)`를 가진다.
 - mask 판정: `office_workstation_front_v4.png`는 책상 앞 모서리·다리·서랍의 제한 전경으로 사용한다. `office_swivel_chair_front_v3.png`는 승인 catalog가 참조하며, 착석 중 등받이와 근접 팔걸이를 인물 위에 그리는 의자 전면 레이어다.
 - 편집기: `OfficeTycoonAlignmentCalibrationWindow.cs`가 100/200/400% 픽셀 보기, 네 점·socket, clip/frame onion skin, workstation 합성을 제공한다. 합성 승인 전에는 값을 저장할 수 없다.
-- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하되 현재 버전의 calibration asset은 덮어쓰지 않는다. 구형 v3의 scale/rotation 후보를 v4로 자동 승인하지 않으며 비어 있는 catalog에는 미승인 safe placeholder만 만든다.
+- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하며, 착석 v5 승격은 기존 v4 정적 4개 또는 완전한 v5 56개에서만 허용한다. 구형 v3의 scale/rotation 후보는 자동 이관하지 않는다. 승인 프로필은 빌드 때 원본 SHA를 다시 계산하고 scale `1`, rotation `0`을 강제한다.
 - QA 산출물 루트: `Artifacts/OfficeTycoonAlignmentV2/`. 정본 검증기는 `OfficeTycoonAlignmentV2Qa.StartBatch`이며 Preview 45초와 Starter 60초를 분리 실행한다.
 - 승인 SHA: player `D02E4A5E...59519D`, older_sister `1C7F25EC...FD92C3`, father `60B90628...A4C7E`, mother `1F8D8A29...E54FF7`.
 - 승인 상태: authored Sprite 기준 네 명 모두 rotation `0°`, pose scale `1.000`, hand↔work `0.538px`, pelvis↔seat `0px`, chair↔desk `0px`로 PASS했다. 실제 Windows RenderTexture 기준 hand↔work는 `0.239px`이며 desk front의 얼굴 overlap은 네 명 모두 0, 하체 overlap은 모두 양수다. 실제 합성은 `Artifacts/SeatedSpriteRootCauseV3/starter-office-four-seat-work.png`와 가족별 `*-work-closeup.png`, 수치 보고서는 `seated-sprite-root-cause-v3-report.txt`다.

@@ -354,6 +354,254 @@ namespace FamilyCompany.Simulation.Navigation
         }
     }
 
+    public enum OfficeLocomotionPhase
+    {
+        Idle = 0,
+        StartStep = 1,
+        Walk = 2,
+        Stopping = 3,
+        Pivot = 4,
+        ShortShuffle = 5
+    }
+
+    public readonly struct OfficeLocomotionGaitState
+    {
+        public OfficeLocomotionGaitState(
+            OfficeLocomotionPhase phase,
+            float accumulatedDistance,
+            float episodeDistance,
+            float stopSeconds,
+            float transitionSeconds,
+            int frame,
+            int displayDirection,
+            int pivotTargetDirection)
+        {
+            if (accumulatedDistance < 0f || float.IsNaN(accumulatedDistance) ||
+                float.IsInfinity(accumulatedDistance))
+                throw new ArgumentOutOfRangeException(nameof(accumulatedDistance));
+            if (episodeDistance < 0f || float.IsNaN(episodeDistance) ||
+                float.IsInfinity(episodeDistance))
+                throw new ArgumentOutOfRangeException(nameof(episodeDistance));
+            if (stopSeconds < 0f || float.IsNaN(stopSeconds) || float.IsInfinity(stopSeconds))
+                throw new ArgumentOutOfRangeException(nameof(stopSeconds));
+            if (transitionSeconds < 0f || float.IsNaN(transitionSeconds) ||
+                float.IsInfinity(transitionSeconds))
+                throw new ArgumentOutOfRangeException(nameof(transitionSeconds));
+            if (frame < 0) throw new ArgumentOutOfRangeException(nameof(frame));
+            if (displayDirection < 0 || displayDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(displayDirection));
+            if (pivotTargetDirection < -1 ||
+                pivotTargetDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(pivotTargetDirection));
+            Phase = phase;
+            AccumulatedDistance = accumulatedDistance;
+            EpisodeDistance = episodeDistance;
+            StopSeconds = stopSeconds;
+            TransitionSeconds = transitionSeconds;
+            Frame = frame;
+            DisplayDirection = displayDirection;
+            PivotTargetDirection = pivotTargetDirection;
+        }
+
+        public OfficeLocomotionPhase Phase { get; }
+        public float AccumulatedDistance { get; }
+        public float EpisodeDistance { get; }
+        public float StopSeconds { get; }
+        public float TransitionSeconds { get; }
+        public int Frame { get; }
+        public int DisplayDirection { get; }
+        public int PivotTargetDirection { get; }
+
+        public static OfficeLocomotionGaitState Initial(int direction)
+        {
+            return new OfficeLocomotionGaitState(
+                OfficeLocomotionPhase.Idle,
+                0f,
+                0f,
+                0f,
+                0f,
+                0,
+                direction,
+                -1);
+        }
+    }
+
+    public static class OfficeLocomotionGaitRules
+    {
+        public const float DefaultStrideLength = 1.08f;
+        public const float StopSettleSeconds = 0.10f;
+        public const float PivotSeconds = 0.075f;
+        public const float ShortShuffleStrideFraction = 0.30f;
+        private const float MinimumDistance = 0.000001f;
+
+        public static OfficeLocomotionGaitState Resolve(
+            OfficeLocomotionGaitState state,
+            float actualDistance,
+            float deltaTime,
+            bool motionRequested,
+            int resolvedVisualDirection,
+            float strideLength = DefaultStrideLength,
+            int frameCount = 6)
+        {
+            if (actualDistance < 0f || float.IsNaN(actualDistance) || float.IsInfinity(actualDistance))
+                throw new ArgumentOutOfRangeException(nameof(actualDistance));
+            if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+                throw new ArgumentOutOfRangeException(nameof(deltaTime));
+            if (strideLength <= 0f || float.IsNaN(strideLength) || float.IsInfinity(strideLength))
+                throw new ArgumentOutOfRangeException(nameof(strideLength));
+            if (frameCount < 2) throw new ArgumentOutOfRangeException(nameof(frameCount));
+            if (resolvedVisualDirection < 0 ||
+                resolvedVisualDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(resolvedVisualDirection));
+
+            if (actualDistance > MinimumDistance)
+            {
+                float accumulated = state.AccumulatedDistance + actualDistance;
+                bool freshEpisode = state.Phase == OfficeLocomotionPhase.Idle;
+                float episode = freshEpisode ? actualDistance : state.EpisodeDistance + actualDistance;
+                float shuffleDistance = strideLength * ShortShuffleStrideFraction;
+                int directionDelta = CircularDirectionDistance(
+                    state.DisplayDirection,
+                    resolvedVisualDirection);
+
+                bool beginPivot = directionDelta >= 3 &&
+                                  (state.Phase != OfficeLocomotionPhase.Pivot ||
+                                   state.PivotTargetDirection != resolvedVisualDirection);
+                if (beginPivot)
+                {
+                    return new OfficeLocomotionGaitState(
+                        OfficeLocomotionPhase.Pivot,
+                        accumulated,
+                        episode,
+                        0f,
+                        deltaTime,
+                        NearestContactFrame(state.Frame, frameCount),
+                        state.DisplayDirection,
+                        resolvedVisualDirection);
+                }
+
+                if (state.Phase == OfficeLocomotionPhase.Pivot)
+                {
+                    float pivotSeconds = state.TransitionSeconds + deltaTime;
+                    if (pivotSeconds + 0.000001f < PivotSeconds)
+                    {
+                        return new OfficeLocomotionGaitState(
+                            OfficeLocomotionPhase.Pivot,
+                            accumulated,
+                            episode,
+                            0f,
+                            pivotSeconds,
+                            NearestContactFrame(state.Frame, frameCount),
+                            state.DisplayDirection,
+                            state.PivotTargetDirection);
+                    }
+                    resolvedVisualDirection = state.PivotTargetDirection >= 0
+                        ? state.PivotTargetDirection
+                        : resolvedVisualDirection;
+                }
+
+                OfficeLocomotionPhase movingPhase = episode < shuffleDistance
+                    ? OfficeLocomotionPhase.StartStep
+                    : OfficeLocomotionPhase.Walk;
+                int frame = movingPhase == OfficeLocomotionPhase.Walk
+                    ? DistanceFrame(accumulated, strideLength, frameCount)
+                    : ShuffleFrame(episode, shuffleDistance, frameCount);
+                return new OfficeLocomotionGaitState(
+                    movingPhase,
+                    accumulated,
+                    episode,
+                    0f,
+                    0f,
+                    frame,
+                    resolvedVisualDirection,
+                    -1);
+            }
+
+            if (motionRequested)
+            {
+                return new OfficeLocomotionGaitState(
+                    state.Phase,
+                    state.AccumulatedDistance,
+                    state.EpisodeDistance,
+                    0f,
+                    state.TransitionSeconds,
+                    state.Frame,
+                    state.DisplayDirection,
+                    state.PivotTargetDirection);
+            }
+
+            float stopSeconds = state.StopSeconds + deltaTime;
+            if (state.Phase == OfficeLocomotionPhase.Idle ||
+                stopSeconds + 0.000001f >= StopSettleSeconds)
+            {
+                return new OfficeLocomotionGaitState(
+                    OfficeLocomotionPhase.Idle,
+                    state.AccumulatedDistance,
+                    0f,
+                    stopSeconds,
+                    0f,
+                    NearestContactFrame(state.Frame, frameCount),
+                    state.DisplayDirection,
+                    -1);
+            }
+
+            OfficeLocomotionPhase stoppingPhase =
+                state.EpisodeDistance < strideLength * ShortShuffleStrideFraction
+                    ? OfficeLocomotionPhase.ShortShuffle
+                    : OfficeLocomotionPhase.Stopping;
+            return new OfficeLocomotionGaitState(
+                stoppingPhase,
+                state.AccumulatedDistance,
+                state.EpisodeDistance,
+                stopSeconds,
+                0f,
+                state.Frame,
+                state.DisplayDirection,
+                -1);
+        }
+
+        public static float Phase01(float accumulatedDistance, float strideLength)
+        {
+            if (accumulatedDistance < 0f || float.IsNaN(accumulatedDistance) ||
+                float.IsInfinity(accumulatedDistance))
+                throw new ArgumentOutOfRangeException(nameof(accumulatedDistance));
+            if (strideLength <= 0f || float.IsNaN(strideLength) || float.IsInfinity(strideLength))
+                throw new ArgumentOutOfRangeException(nameof(strideLength));
+            double cycles = accumulatedDistance / strideLength;
+            return (float)(cycles - Math.Floor(cycles));
+        }
+
+        public static int DistanceFrame(float accumulatedDistance, float strideLength, int frameCount)
+        {
+            if (frameCount < 2) throw new ArgumentOutOfRangeException(nameof(frameCount));
+            int frame = (int)Math.Floor(Phase01(accumulatedDistance, strideLength) * frameCount);
+            return Math.Min(frameCount - 1, Math.Max(0, frame));
+        }
+
+        private static int ShuffleFrame(float episodeDistance, float shuffleDistance, int frameCount)
+        {
+            if (shuffleDistance <= MinimumDistance) return 0;
+            return episodeDistance / shuffleDistance < 0.5f ? 0 : frameCount / 2;
+        }
+
+        private static int NearestContactFrame(int frame, int frameCount)
+        {
+            int first = 0;
+            int second = frameCount / 2;
+            int normalized = ((frame % frameCount) + frameCount) % frameCount;
+            int distanceToFirst = Math.Min(normalized, frameCount - normalized);
+            int rawDistanceToSecond = Math.Abs(normalized - second);
+            int distanceToSecond = Math.Min(rawDistanceToSecond, frameCount - rawDistanceToSecond);
+            return distanceToFirst <= distanceToSecond ? first : second;
+        }
+
+        private static int CircularDirectionDistance(int from, int to)
+        {
+            int delta = Math.Abs(from - to) % OfficeFacingHysteresisRules.DirectionCount;
+            return Math.Min(delta, OfficeFacingHysteresisRules.DirectionCount - delta);
+        }
+    }
+
     public static class OfficeNavigationTrafficRules
     {
         public const float PredictionSeconds = 0.55f;

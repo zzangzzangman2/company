@@ -12,18 +12,188 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a75eb28fc0d46941881ecf157c44fc3, type: 3}
   m_Name: OfficeCharacterSeatPoseCatalog
   m_EditorClassIdentifier: FamilyCompany.Presentation.Unity::FamilyCompany.Presentation.Unity.OfficeGridView.Authoring.OfficeCharacterSeatPoseCatalog
-  calibrationVersion: 4
+  calibrationVersion: 5
   profiles:
+  - memberId: player
+    directionIndex: 3
+    clip: 0
+    frameIndex: 0
+    pelvisAnchorPx: {x: 130, y: 69}
+    deskInteractionAnchorPx: {x: 106, y: 42}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 336F899F62D82BD6D5F2504A7C8A42C1BEE025E688463FB9279F4F5EECB1905A
+  - memberId: player
+    directionIndex: 3
+    clip: 0
+    frameIndex: 1
+    pelvisAnchorPx: {x: 137, y: 60}
+    deskInteractionAnchorPx: {x: 89, y: 52}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: DBAE5FD812FF6314D051EDB60EE8C04DFEB5A177F05862495A68442891D81E78
+  - memberId: player
+    directionIndex: 3
+    clip: 0
+    frameIndex: 2
+    pelvisAnchorPx: {x: 143, y: 52}
+    deskInteractionAnchorPx: {x: 77, y: 69}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 3CA20D9F83908F73636C71F64BB8F16AB9359C535B8C79A308F5D832AC4BFC2F
+  - memberId: player
+    directionIndex: 3
+    clip: 0
+    frameIndex: 3
+    pelvisAnchorPx: {x: 145, y: 49}
+    deskInteractionAnchorPx: {x: 76, y: 68}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 14418B66E89886355442301A19C8F4C4570CDE039B70FB2396E23B67FD62F2EC
   - memberId: player
     directionIndex: 3
     clip: 1
     frameIndex: 0
     pelvisAnchorPx: {x: 130, y: 49}
-    deskInteractionAnchorPx: {x: 80, y: 101}
+    deskInteractionAnchorPx: {x: 78, y: 90}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
     sourceSpriteSha256: D02E4A5E7DEFF277D0856869E40768D6A8A87BC408B778D377FC3BEABE59519D
+  - memberId: player
+    directionIndex: 3
+    clip: 1
+    frameIndex: 1
+    pelvisAnchorPx: {x: 130, y: 49}
+    deskInteractionAnchorPx: {x: 67, y: 80}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 9896F3C7FEF7568A063672F1BF9C3FDFCA64D4837AE27BE324308FE532349549
+  - memberId: player
+    directionIndex: 3
+    clip: 1
+    frameIndex: 2
+    pelvisAnchorPx: {x: 130, y: 49}
+    deskInteractionAnchorPx: {x: 78, y: 90}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 79AA8BD8ACC64052B6C5F0AE6C3D1AA08ED7D28881CA8DF578E6868418E19477
+  - memberId: player
+    directionIndex: 3
+    clip: 1
+    frameIndex: 3
+    pelvisAnchorPx: {x: 130, y: 49}
+    deskInteractionAnchorPx: {x: 68, y: 91}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 3F491AA97A5D07DE0B800747F64B9070EB0B46793F15DBEF1D7233835ACA2366
+  - memberId: player
+    directionIndex: 3
+    clip: 1
+    frameIndex: 4
+    pelvisAnchorPx: {x: 130, y: 49}
+    deskInteractionAnchorPx: {x: 74, y: 86}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 5809F7945E3EEE4D6F5177C2BFB5826A05415B5D4D6CEE1D5259032D734BFC2B
+  - memberId: player
+    directionIndex: 3
+    clip: 1
+    frameIndex: 5
+    pelvisAnchorPx: {x: 130, y: 49}
+    deskInteractionAnchorPx: {x: 78, y: 91}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 1104BB4ACD3A0B39C2533D61BB620D1BB0C507289A575EBE816E55035ADC6CF5
+  - memberId: player
+    directionIndex: 3
+    clip: 2
+    frameIndex: 0
+    pelvisAnchorPx: {x: 145, y: 49}
+    deskInteractionAnchorPx: {x: 76, y: 68}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 14418B66E89886355442301A19C8F4C4570CDE039B70FB2396E23B67FD62F2EC
+  - memberId: player
+    directionIndex: 3
+    clip: 2
+    frameIndex: 1
+    pelvisAnchorPx: {x: 143, y: 52}
+    deskInteractionAnchorPx: {x: 77, y: 69}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 3CA20D9F83908F73636C71F64BB8F16AB9359C535B8C79A308F5D832AC4BFC2F
+  - memberId: player
+    directionIndex: 3
+    clip: 2
+    frameIndex: 2
+    pelvisAnchorPx: {x: 137, y: 60}
+    deskInteractionAnchorPx: {x: 89, y: 52}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: DBAE5FD812FF6314D051EDB60EE8C04DFEB5A177F05862495A68442891D81E78
+  - memberId: player
+    directionIndex: 3
+    clip: 2
+    frameIndex: 3
+    pelvisAnchorPx: {x: 130, y: 69}
+    deskInteractionAnchorPx: {x: 106, y: 42}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 336F899F62D82BD6D5F2504A7C8A42C1BEE025E688463FB9279F4F5EECB1905A
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 0
+    frameIndex: 0
+    pelvisAnchorPx: {x: 130, y: 73}
+    deskInteractionAnchorPx: {x: 109, y: 50}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 2B819D1D09B762EDA00BFDC75EE096DD0113C845A655F5EE613FA065E8C42186
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 0
+    frameIndex: 1
+    pelvisAnchorPx: {x: 138, y: 63}
+    deskInteractionAnchorPx: {x: 158, y: 70}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: DD5B347EB2ACDC073E8823EC5D414D2290605B11F8857E37767A5E70909CAF7A
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 0
+    frameIndex: 2
+    pelvisAnchorPx: {x: 145, y: 55}
+    deskInteractionAnchorPx: {x: 170, y: 58}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 7A0991DBF3D08815D1617A9ACBB9B928C3A723A84E787C921FADC1E40DB09592
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 0
+    frameIndex: 3
+    pelvisAnchorPx: {x: 147, y: 51}
+    deskInteractionAnchorPx: {x: 176, y: 58}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: D4AEE15EDC3CAD14F2B18103FE5E5208A06F93016F93F419B3C35CDB265FD112
   - memberId: older_sister
     directionIndex: 3
     clip: 1
@@ -34,23 +204,373 @@ MonoBehaviour:
     rotationDegrees: 0
     humanApproved: 1
     sourceSpriteSha256: 1C7F25EC58F71CB1A28F5052D70CE19F21D496A4CF2C5FADBA68EFAE13FD92C3
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 1
+    frameIndex: 1
+    pelvisAnchorPx: {x: 131, y: 63}
+    deskInteractionAnchorPx: {x: 75, y: 108}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 9A4F86FA997DBE2FD754AACAC3A18EFDE5B3EA672D03B23BB8C6F88258D3ECBC
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 1
+    frameIndex: 2
+    pelvisAnchorPx: {x: 131, y: 63}
+    deskInteractionAnchorPx: {x: 75, y: 108}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: CE990567354F98D0EC63E4B5E4C12614B39BD1B7DC372CDA49B9ED7D44FC5244
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 1
+    frameIndex: 3
+    pelvisAnchorPx: {x: 130, y: 63}
+    deskInteractionAnchorPx: {x: 74, y: 108}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: EC3ABB9C059789FE317554A6EFE9A220357929DEA01EF09B9A3AB1D950C6AB6F
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 1
+    frameIndex: 4
+    pelvisAnchorPx: {x: 130, y: 63}
+    deskInteractionAnchorPx: {x: 74, y: 108}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 7016C4D52A4C07E473D7C1B740FFD1C53110EB83E1713348C992128DF5D31BBD
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 1
+    frameIndex: 5
+    pelvisAnchorPx: {x: 129, y: 63}
+    deskInteractionAnchorPx: {x: 74, y: 108}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: A7350F7CEB6F73F31F297BDEC24C88E00A1BABDFCF315BD9D486B43628984D3E
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 2
+    frameIndex: 0
+    pelvisAnchorPx: {x: 147, y: 51}
+    deskInteractionAnchorPx: {x: 176, y: 58}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: D4AEE15EDC3CAD14F2B18103FE5E5208A06F93016F93F419B3C35CDB265FD112
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 2
+    frameIndex: 1
+    pelvisAnchorPx: {x: 145, y: 55}
+    deskInteractionAnchorPx: {x: 170, y: 58}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 7A0991DBF3D08815D1617A9ACBB9B928C3A723A84E787C921FADC1E40DB09592
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 2
+    frameIndex: 2
+    pelvisAnchorPx: {x: 138, y: 63}
+    deskInteractionAnchorPx: {x: 158, y: 70}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: DD5B347EB2ACDC073E8823EC5D414D2290605B11F8857E37767A5E70909CAF7A
+  - memberId: older_sister
+    directionIndex: 3
+    clip: 2
+    frameIndex: 3
+    pelvisAnchorPx: {x: 130, y: 73}
+    deskInteractionAnchorPx: {x: 109, y: 50}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 2B819D1D09B762EDA00BFDC75EE096DD0113C845A655F5EE613FA065E8C42186
+  - memberId: father
+    directionIndex: 3
+    clip: 0
+    frameIndex: 0
+    pelvisAnchorPx: {x: 128, y: 69}
+    deskInteractionAnchorPx: {x: 99, y: 78}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 97CD9EA3355DCBDE9574FD4A227902B820E8B6A1AA44D4577ED948987547FD1C
+  - memberId: father
+    directionIndex: 3
+    clip: 0
+    frameIndex: 1
+    pelvisAnchorPx: {x: 138, y: 59}
+    deskInteractionAnchorPx: {x: 86, y: 72}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: FB006ED5B5771C3F0C00A132BE5C203B71AE4BEF592BE3387AA8AD80D3FE68EF
+  - memberId: father
+    directionIndex: 3
+    clip: 0
+    frameIndex: 2
+    pelvisAnchorPx: {x: 144, y: 52}
+    deskInteractionAnchorPx: {x: 76, y: 70}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: FFD3B9CFB286E3CA474345F11345738C882854F49D7B116D7C9BE809D27FBAD9
+  - memberId: father
+    directionIndex: 3
+    clip: 0
+    frameIndex: 3
+    pelvisAnchorPx: {x: 145, y: 49}
+    deskInteractionAnchorPx: {x: 75, y: 70}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: FF421E545B5B6050D3829F059A8765C07683516A3CB6D1B00EC937A5D42867DD
   - memberId: father
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 128, y: 50}
-    deskInteractionAnchorPx: {x: 80, y: 104}
+    pelvisAnchorPx: {x: 123, y: 50}
+    deskInteractionAnchorPx: {x: 76, y: 104}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
     sourceSpriteSha256: 60B90628B2E3A38666A5DE09B229C2129333C574F002CB85179A372CA3EA4C7E
+  - memberId: father
+    directionIndex: 3
+    clip: 1
+    frameIndex: 1
+    pelvisAnchorPx: {x: 122, y: 50}
+    deskInteractionAnchorPx: {x: 76, y: 104}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 7BD9EDAC1B42B7715620355B93BD0280A9729ECFFE0A3743B1A62CBB486CDBDC
+  - memberId: father
+    directionIndex: 3
+    clip: 1
+    frameIndex: 2
+    pelvisAnchorPx: {x: 123, y: 50}
+    deskInteractionAnchorPx: {x: 76, y: 104}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 6F248C7B1182F6BD57FB70EE6A84EC89310BE2C43DB3DAA3C4562FE8CCEEDB56
+  - memberId: father
+    directionIndex: 3
+    clip: 1
+    frameIndex: 3
+    pelvisAnchorPx: {x: 123, y: 50}
+    deskInteractionAnchorPx: {x: 76, y: 104}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 5A98CFB2C2AAE6223B45E2D8F526C808A7C73AF6268DC7F4CE3F430BE9B7E5F0
+  - memberId: father
+    directionIndex: 3
+    clip: 1
+    frameIndex: 4
+    pelvisAnchorPx: {x: 123, y: 50}
+    deskInteractionAnchorPx: {x: 76, y: 104}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 94A3D4153FC433AD59CF2E47CF5F807959C49A19E8C381C6B2AE2A6A7C059DF7
+  - memberId: father
+    directionIndex: 3
+    clip: 1
+    frameIndex: 5
+    pelvisAnchorPx: {x: 123, y: 50}
+    deskInteractionAnchorPx: {x: 76, y: 104}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 41FBD3437EC17C1D96B68296BD827A9CEE2B1C5D101C58282ABA0D5B45C2BEB8
+  - memberId: father
+    directionIndex: 3
+    clip: 2
+    frameIndex: 0
+    pelvisAnchorPx: {x: 145, y: 49}
+    deskInteractionAnchorPx: {x: 75, y: 70}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: FF421E545B5B6050D3829F059A8765C07683516A3CB6D1B00EC937A5D42867DD
+  - memberId: father
+    directionIndex: 3
+    clip: 2
+    frameIndex: 1
+    pelvisAnchorPx: {x: 144, y: 52}
+    deskInteractionAnchorPx: {x: 76, y: 70}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: FFD3B9CFB286E3CA474345F11345738C882854F49D7B116D7C9BE809D27FBAD9
+  - memberId: father
+    directionIndex: 3
+    clip: 2
+    frameIndex: 2
+    pelvisAnchorPx: {x: 138, y: 59}
+    deskInteractionAnchorPx: {x: 86, y: 72}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: FB006ED5B5771C3F0C00A132BE5C203B71AE4BEF592BE3387AA8AD80D3FE68EF
+  - memberId: father
+    directionIndex: 3
+    clip: 2
+    frameIndex: 3
+    pelvisAnchorPx: {x: 128, y: 69}
+    deskInteractionAnchorPx: {x: 99, y: 78}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 97CD9EA3355DCBDE9574FD4A227902B820E8B6A1AA44D4577ED948987547FD1C
+  - memberId: mother
+    directionIndex: 3
+    clip: 0
+    frameIndex: 0
+    pelvisAnchorPx: {x: 131, y: 74}
+    deskInteractionAnchorPx: {x: 99, y: 59}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 5F366B8413C0F8ECA45544D69E33735E6C4DF1AF9A8847F898F3498486605B76
+  - memberId: mother
+    directionIndex: 3
+    clip: 0
+    frameIndex: 1
+    pelvisAnchorPx: {x: 140, y: 64}
+    deskInteractionAnchorPx: {x: 93, y: 55}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 2A3386D90001D983856F7B025187602CA2572640E34F704FD9EF83241CFEEE1C
+  - memberId: mother
+    directionIndex: 3
+    clip: 0
+    frameIndex: 2
+    pelvisAnchorPx: {x: 146, y: 55}
+    deskInteractionAnchorPx: {x: 80, y: 69}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: F10FF4AFDE161F7EDFFA2C67C2BC0C64D9CBBACD1AC3D3E16F5FB3892841AFC5
+  - memberId: mother
+    directionIndex: 3
+    clip: 0
+    frameIndex: 3
+    pelvisAnchorPx: {x: 148, y: 51}
+    deskInteractionAnchorPx: {x: 78, y: 70}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: FE30F6572D99256B342AAFBEC5F6919E83D7AE531CF08C1A80EE47B4BBC6202E
   - memberId: mother
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 131, y: 62}
-    deskInteractionAnchorPx: {x: 90, y: 120}
+    pelvisAnchorPx: {x: 126, y: 62}
+    deskInteractionAnchorPx: {x: 84, y: 87}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
     sourceSpriteSha256: 1F8D8A299555DD50A8ACE551B8627141CFD1C017DFD0B01FE01D57B559E54FF7
+  - memberId: mother
+    directionIndex: 3
+    clip: 1
+    frameIndex: 1
+    pelvisAnchorPx: {x: 127, y: 62}
+    deskInteractionAnchorPx: {x: 75, y: 78}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 0A2F1A778FE97246DE2B908BDF3FE7D6AC5DA2EBB27E522EC9D6F7C7CB204A00
+  - memberId: mother
+    directionIndex: 3
+    clip: 1
+    frameIndex: 2
+    pelvisAnchorPx: {x: 127, y: 59}
+    deskInteractionAnchorPx: {x: 86, y: 91}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 695FAFF1B75AA79E062690640FAE3B47C827297DD20C73131D2D843EA6A392F4
+  - memberId: mother
+    directionIndex: 3
+    clip: 1
+    frameIndex: 3
+    pelvisAnchorPx: {x: 127, y: 64}
+    deskInteractionAnchorPx: {x: 81, y: 84}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 63A06E819D07EFFFF9E8A2F06918494B05DE9CB1D96ECD8046A750ED3FA8B5EF
+  - memberId: mother
+    directionIndex: 3
+    clip: 1
+    frameIndex: 4
+    pelvisAnchorPx: {x: 126, y: 63}
+    deskInteractionAnchorPx: {x: 84, y: 90}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 85C8BDAE178B7EA0AEEE0EA3AF6FF10CC1D2A03D1E082E31E87AD7A427B99541
+  - memberId: mother
+    directionIndex: 3
+    clip: 1
+    frameIndex: 5
+    pelvisAnchorPx: {x: 126, y: 59}
+    deskInteractionAnchorPx: {x: 85, y: 89}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: BF481EDDB0FB2CF354A90D6666AB386BB7CC09AC2DE8C081B70C4002A6482986
+  - memberId: mother
+    directionIndex: 3
+    clip: 2
+    frameIndex: 0
+    pelvisAnchorPx: {x: 148, y: 51}
+    deskInteractionAnchorPx: {x: 78, y: 70}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: FE30F6572D99256B342AAFBEC5F6919E83D7AE531CF08C1A80EE47B4BBC6202E
+  - memberId: mother
+    directionIndex: 3
+    clip: 2
+    frameIndex: 1
+    pelvisAnchorPx: {x: 146, y: 55}
+    deskInteractionAnchorPx: {x: 80, y: 69}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: F10FF4AFDE161F7EDFFA2C67C2BC0C64D9CBBACD1AC3D3E16F5FB3892841AFC5
+  - memberId: mother
+    directionIndex: 3
+    clip: 2
+    frameIndex: 2
+    pelvisAnchorPx: {x: 140, y: 64}
+    deskInteractionAnchorPx: {x: 93, y: 55}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 2A3386D90001D983856F7B025187602CA2572640E34F704FD9EF83241CFEEE1C
+  - memberId: mother
+    directionIndex: 3
+    clip: 2
+    frameIndex: 3
+    pelvisAnchorPx: {x: 131, y: 74}
+    deskInteractionAnchorPx: {x: 99, y: 59}
+    uniformScale: 1
+    rotationDegrees: 0
+    humanApproved: 1
+    sourceSpriteSha256: 5F366B8413C0F8ECA45544D69E33735E6C4DF1AF9A8847F898F3498486605B76

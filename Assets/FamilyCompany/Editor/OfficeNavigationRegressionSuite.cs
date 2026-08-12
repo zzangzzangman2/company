@@ -14,6 +14,7 @@ namespace FamilyCompany.Editor
             int oracleSegmentChecks,
             int counterexampleChecks,
             int facingPresentationChecks,
+            int gaitPresentationChecks,
             int collisionSlideChecks,
             int motionPartitionChecks,
             int trafficPermutationChecks,
@@ -28,6 +29,7 @@ namespace FamilyCompany.Editor
             OracleSegmentChecks = oracleSegmentChecks;
             CounterexampleChecks = counterexampleChecks;
             FacingPresentationChecks = facingPresentationChecks;
+            GaitPresentationChecks = gaitPresentationChecks;
             CollisionSlideChecks = collisionSlideChecks;
             MotionPartitionChecks = motionPartitionChecks;
             TrafficPermutationChecks = trafficPermutationChecks;
@@ -43,6 +45,7 @@ namespace FamilyCompany.Editor
         public int OracleSegmentChecks { get; }
         public int CounterexampleChecks { get; }
         public int FacingPresentationChecks { get; }
+        public int GaitPresentationChecks { get; }
         public int CollisionSlideChecks { get; }
         public int MotionPartitionChecks { get; }
         public int TrafficPermutationChecks { get; }
@@ -163,6 +166,7 @@ namespace FamilyCompany.Editor
 
             var counterexampleChecks = ValidateCounterexamples();
             var facingPresentationChecks = ValidateFacingPresentation();
+            var gaitPresentationChecks = ValidateGaitPresentation();
             var collisionSlideChecks = ValidateCollisionSlideSelection();
             var motionPartitionChecks = ValidateMotionPartitioning();
             var trafficPermutationChecks = ValidateTrafficPermutationIndependence();
@@ -175,6 +179,7 @@ namespace FamilyCompany.Editor
                 oracleSegmentChecks,
                 counterexampleChecks,
                 facingPresentationChecks,
+                gaitPresentationChecks,
                 collisionSlideChecks,
                 motionPartitionChecks,
                 trafficPermutationChecks,
@@ -550,6 +555,83 @@ namespace FamilyCompany.Editor
             Require(none.SqrMagnitude <= 0.000001f, "collision slide fails closed when both axes are blocked");
             checks++;
             return checks;
+        }
+
+        private static int ValidateGaitPresentation()
+        {
+            var checks = 0;
+            const float stride = OfficeLocomotionGaitRules.DefaultStrideLength;
+            OfficeLocomotionGaitState at30 = SimulateDistance(1.394f, 30, 1.7f, 0);
+            OfficeLocomotionGaitState at60 = SimulateDistance(1.394f, 60, 1.7f, 0);
+            OfficeLocomotionGaitState at120 = SimulateDistance(1.394f, 120, 1.7f, 0);
+            Require(at30.Frame == at60.Frame && at60.Frame == at120.Frame,
+                "gait phase is identical at 30/60/120fps for the same distance");
+            Require(Math.Abs(at30.AccumulatedDistance - at120.AccumulatedDistance) <= 0.0001f,
+                "gait distance is render-partition independent");
+            checks += 2;
+
+            OfficeLocomotionGaitState slow = SimulateDistance(0.91f, 46, 0.91f / 1.15f, 0);
+            OfficeLocomotionGaitState fast = SimulateDistance(0.91f, 28, 0.91f / 1.65f, 0);
+            Require(slow.Frame == fast.Frame &&
+                    Math.Abs(
+                        OfficeLocomotionGaitRules.Phase01(slow.AccumulatedDistance, stride) -
+                        OfficeLocomotionGaitRules.Phase01(fast.AccumulatedDistance, stride)) <= 0.0001f,
+                "1.15 and 1.65 movement speeds use the same phase at the same distance");
+            checks++;
+
+            OfficeLocomotionGaitState moving = SimulateDistance(0.58f, 20, 0.40f, 0);
+            int frameBeforeStop = moving.Frame;
+            OfficeLocomotionGaitState briefStop = OfficeLocomotionGaitRules.Resolve(
+                moving, 0f, 0.05f, false, 0, stride);
+            Require(briefStop.Phase == OfficeLocomotionPhase.Stopping && briefStop.Frame == frameBeforeStop,
+                "a brief stop preserves the current distance phase");
+            OfficeLocomotionGaitState restarted = OfficeLocomotionGaitRules.Resolve(
+                briefStop, 0.04f, 0.05f, true, 0, stride);
+            Require(restarted.Phase != OfficeLocomotionPhase.Idle,
+                "movement restarted within 100ms does not snap to idle");
+            checks += 2;
+
+            OfficeLocomotionGaitState shortMove = OfficeLocomotionGaitRules.Resolve(
+                OfficeLocomotionGaitState.Initial(0), 0.10f, 0.06f, true, 0, stride);
+            OfficeLocomotionGaitState shortStop = OfficeLocomotionGaitRules.Resolve(
+                shortMove, 0f, 0.05f, false, 0, stride);
+            Require(shortStop.Phase == OfficeLocomotionPhase.ShortShuffle,
+                "movement under 0.3 stride settles as a short shuffle");
+            OfficeLocomotionGaitState settled = OfficeLocomotionGaitRules.Resolve(
+                shortStop, 0f, 0.06f, false, 0, stride);
+            Require(settled.Phase == OfficeLocomotionPhase.Idle,
+                "short shuffle reaches idle after the 100ms settle window");
+            checks += 2;
+
+            OfficeLocomotionGaitState forward = SimulateDistance(0.45f, 12, 0.30f, 0);
+            OfficeLocomotionGaitState pivot = OfficeLocomotionGaitRules.Resolve(
+                forward, 0.02f, 0.03f, true, 4, stride);
+            Require(pivot.Phase == OfficeLocomotionPhase.Pivot && pivot.DisplayDirection == 0,
+                "a 180-degree reversal enters pivot without displaying backward travel");
+            pivot = OfficeLocomotionGaitRules.Resolve(pivot, 0.03f, 0.05f, true, 4, stride);
+            Require(pivot.DisplayDirection == 4 && pivot.Phase != OfficeLocomotionPhase.Pivot,
+                "pivot commits the new direction after its short transition");
+            checks += 2;
+            return checks;
+        }
+
+        private static OfficeLocomotionGaitState SimulateDistance(
+            float distance,
+            int steps,
+            float duration,
+            int direction)
+        {
+            OfficeLocomotionGaitState state = OfficeLocomotionGaitState.Initial(direction);
+            for (var step = 0; step < steps; step++)
+            {
+                state = OfficeLocomotionGaitRules.Resolve(
+                    state,
+                    distance / steps,
+                    duration / steps,
+                    true,
+                    direction);
+            }
+            return state;
         }
 
         private static int ValidateDeadlockRecovery()

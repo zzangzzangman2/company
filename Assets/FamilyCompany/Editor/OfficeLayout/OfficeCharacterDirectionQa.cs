@@ -34,7 +34,7 @@ namespace FamilyCompany.Editor.OfficeLayout
             ValidateApprovedDirections();
             BuildContactSheet();
             Debug.Log(
-                $"OFFICE_CHARACTER_DIRECTION_QA_PASS | math=8/8 visual=32/32 artifact={ContactSheetPath}");
+                $"OFFICE_CHARACTER_DIRECTION_QA_PASS | math=8/8 directions=32/32 frames=192/192 artifact={ContactSheetPath}");
         }
 
         public static void ValidateApprovedDirections()
@@ -42,7 +42,7 @@ namespace FamilyCompany.Editor.OfficeLayout
             ValidateDirectionMath();
             HighMotionDirectionManifest manifest = HighMotionDirectionManifestBuilder.LoadRequired();
             RequireFamilyVisualApproval(manifest);
-            Debug.Log("OFFICE_CHARACTER_DIRECTION_APPROVAL_VALIDATION_PASS | math=8/8 visual=32/32");
+            Debug.Log("OFFICE_CHARACTER_DIRECTION_APPROVAL_VALIDATION_PASS | math=8/8 directions=32/32 frames=192/192");
         }
 
         [MenuItem("Family Company/QA/Build Office Direction Contact Sheet")]
@@ -131,6 +131,14 @@ namespace FamilyCompany.Editor.OfficeLayout
                         throw new InvalidOperationException(
                             $"Human direction approval is incomplete: {memberId}/{DirectionNames[direction]}.");
                 }
+                for (var phase = 0; phase < HighMotionDirectionManifest.WalkFrameCount; phase++)
+                for (var direction = 0; direction < DirectionNames.Length; direction++)
+                {
+                    int frameIndex = phase * HighMotionDirectionManifest.DirectionCount + direction;
+                    if (!entry.FrameVisualApproval[frameIndex])
+                        throw new InvalidOperationException(
+                            $"Human frame approval is incomplete: {memberId}/{DirectionNames[direction]}/phase-{phase}.");
+                }
             }
         }
 
@@ -185,6 +193,8 @@ namespace FamilyCompany.Editor.OfficeLayout
     {
         private HighMotionDirectionManifest _manifest;
         private int _characterIndex;
+        private int _phaseIndex;
+        private Vector2 _scroll;
 
         [MenuItem("Family Company/Office/Character Direction Visual Approval")]
         public static void Open()
@@ -205,14 +215,21 @@ namespace FamilyCompany.Editor.OfficeLayout
             if (_manifest == null) return;
             string[] ids = _manifest.Characters.Select(item => item.MemberId).ToArray();
             _characterIndex = EditorGUILayout.Popup("Character", _characterIndex, ids);
+            _phaseIndex = EditorGUILayout.IntSlider(
+                "Walk phase",
+                _phaseIndex,
+                0,
+                HighMotionDirectionManifest.WalkFrameCount - 1);
             HighMotionDirectionManifest.CharacterDirectionEntry entry =
                 _manifest.Characters[_characterIndex];
             EditorGUILayout.HelpBox(
                 "Check the visible body direction, not the filename. Approval is stored in the import manifest.",
                 MessageType.Info);
+            _scroll = EditorGUILayout.BeginScrollView(_scroll);
             for (var direction = 0; direction < HighMotionDirectionManifest.DirectionCount; direction++)
             {
-                string frameName = HighMotionCharacterArtBuilder.GetFrameNames(entry.MemberId)[direction];
+                int frameIndex = _phaseIndex * HighMotionDirectionManifest.DirectionCount + direction;
+                string frameName = HighMotionCharacterArtBuilder.GetFrameNames(entry.MemberId)[frameIndex];
                 string path = HighMotionCharacterArtBuilder.GetFrameFolder(entry.MemberId) +
                               "/" + frameName + ".png";
                 Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
@@ -227,9 +244,19 @@ namespace FamilyCompany.Editor.OfficeLayout
                     _manifest.SetVisualApproval(entry.MemberId, direction, approved);
                     EditorUtility.SetDirty(_manifest);
                 }
+                bool frameApproved = EditorGUILayout.Toggle(
+                    "Phase frame approval",
+                    entry.FrameVisualApproval[frameIndex]);
+                if (frameApproved != entry.FrameVisualApproval[frameIndex])
+                {
+                    Undo.RecordObject(_manifest, "Approve character walk frame");
+                    _manifest.SetFrameVisualApproval(entry.MemberId, direction, _phaseIndex, frameApproved);
+                    EditorUtility.SetDirty(_manifest);
+                }
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndHorizontal();
             }
+            EditorGUILayout.EndScrollView();
             if (GUILayout.Button("Build 4x8 Contact Sheet")) OfficeCharacterDirectionQa.BuildContactSheet();
             if (GUILayout.Button("Save approvals")) AssetDatabase.SaveAssets();
         }

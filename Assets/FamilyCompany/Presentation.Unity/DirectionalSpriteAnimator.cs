@@ -14,6 +14,7 @@ namespace FamilyCompany.Presentation.Unity
 
         [SerializeField] private SpriteRenderer targetRenderer;
         [SerializeField] private Sprite[] walkFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] idleFrames = Array.Empty<Sprite>();
         [SerializeField] private float frameSeconds = 0.11f;
         [SerializeField, Range(0, WalkFrameCount - 1)] private int idleWalkFrame = 2;
         [SerializeField] private Sprite[] sitDownFrames = Array.Empty<Sprite>();
@@ -24,6 +25,8 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private OfficeSeatingPresentationMode seatingPresentationMode =
             OfficeSeatingPresentationMode.Animated;
         [SerializeField, Range(0f, 20f)] private float facingHysteresisDegrees = 7.5f;
+        [SerializeField, Min(0.1f)] private float strideLength =
+            OfficeLocomotionGaitRules.DefaultStrideLength;
         private Vector3 _worldVelocity;
         private float _frameClock;
         private int _walkFrame;
@@ -48,6 +51,8 @@ namespace FamilyCompany.Presentation.Unity
         private int _lastSemanticDirection;
         private int _lastMotionDirection;
         private bool _usedSemanticHeading;
+        private OfficeLocomotionGaitState _tileGaitState;
+        private bool _tileGaitStateInitialized;
 
         public event Action<OfficeSeatingAnimationClip, int, Sprite> OfficeFrameApplied;
 
@@ -91,6 +96,14 @@ namespace FamilyCompany.Presentation.Unity
         public int SemanticDirection => _lastSemanticDirection;
         public int MotionDirection => _lastMotionDirection;
         public bool UsedSemanticHeading => _usedSemanticHeading;
+        public OfficeLocomotionPhase LocomotionPhase => _tileGaitStateInitialized
+            ? _tileGaitState.Phase
+            : OfficeLocomotionPhase.Idle;
+        public float GaitDistance => _tileGaitStateInitialized ? _tileGaitState.AccumulatedDistance : 0f;
+        public float GaitPhase01 => OfficeLocomotionGaitRules.Phase01(
+            GaitDistance,
+            Mathf.Max(0.1f, strideLength));
+        public float StrideLength => Mathf.Max(0.1f, strideLength);
 
         public void Configure(SpriteRenderer renderer, Sprite[] frames, float secondsPerFrame = 0.11f)
         {
@@ -99,6 +112,22 @@ namespace FamilyCompany.Presentation.Unity
             frameSeconds = Mathf.Max(0.05f, secondsPerFrame);
             _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
             ResetTileFacingState(_lastDirection);
+            ResetTileGaitState(_lastDirection);
+            ApplyFrame();
+        }
+
+        public void ConfigureLocomotion(Sprite[] newIdleFrames, float newStrideLength)
+        {
+            if (newIdleFrames != null && newIdleFrames.Length != 0 &&
+                !HasCompleteFrames(newIdleFrames, DirectionCount))
+                throw new ArgumentException(
+                    $"Idle frames require exactly {DirectionCount} non-null sprites.",
+                    nameof(newIdleFrames));
+            if (newStrideLength <= 0f || float.IsNaN(newStrideLength) || float.IsInfinity(newStrideLength))
+                throw new ArgumentOutOfRangeException(nameof(newStrideLength));
+            idleFrames = newIdleFrames == null ? Array.Empty<Sprite>() : (Sprite[])newIdleFrames.Clone();
+            strideLength = newStrideLength;
+            ResetTileGaitState(_lastDirection);
             ApplyFrame();
         }
 
@@ -220,6 +249,7 @@ namespace FamilyCompany.Presentation.Unity
             _worldVelocity = Vector3.zero;
             _lastDirection = direction;
             ResetTileFacingState(direction);
+            ResetTileGaitState(direction);
             _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
             _seatingClip = null;
             _seatingFrameClock = 0f;
@@ -307,6 +337,7 @@ namespace FamilyCompany.Presentation.Unity
             _seatingFrameClock = 0f;
             _seatingFrame = 0;
             _seatingTransitionComplete = false;
+            ResetTileGaitState(_lastDirection);
             ApplyFrame();
         }
 
@@ -322,11 +353,12 @@ namespace FamilyCompany.Presentation.Unity
             }
             if (_navigationAnimationSuppressed) return;
             if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
-            if (IsMoving)
+            if (_tileDisplacementDirection)
             {
-                if (_tileDisplacementDirection)
+                EnsureTileFacingState();
+                int resolvedVisualDirection = _tileFacingState.VisualDirection;
+                if (IsMoving)
                 {
-                    EnsureTileFacingState();
                     OfficeLocomotionFacingResult facing =
                         OfficeLocomotionPresentationRules.ResolveFacing(
                             _tileFacingState,
@@ -342,30 +374,45 @@ namespace FamilyCompany.Presentation.Unity
                                 facingHysteresisDegrees,
                                 OfficeLocomotionPresentationRules.DefaultHysteresisDegrees));
                     _tileFacingState = facing.State;
-                    _lastDirection = facing.State.VisualDirection;
+                    resolvedVisualDirection = facing.State.VisualDirection;
                     _lastSemanticDirection = facing.SemanticDirection;
                     _lastMotionDirection = facing.MotionDirection;
                     _usedSemanticHeading = facing.UsedSemanticHeading;
                 }
-                else
+                EnsureTileGaitState();
+                _tileGaitState = OfficeLocomotionGaitRules.Resolve(
+                    _tileGaitState,
+                    _tileFrameDisplacement.magnitude,
+                    _tileFrameDeltaTime > 0.000001f ? _tileFrameDeltaTime : Mathf.Max(0f, deltaTime),
+                    _tileSemanticDisplacement.sqrMagnitude > 0.0000001f,
+                    resolvedVisualDirection,
+                    Mathf.Max(0.1f, strideLength),
+                    WalkFrameCount);
+                _lastDirection = _tileGaitState.DisplayDirection;
+                _walkFrame = _tileGaitState.Frame;
+                _frameClock = 0f;
+            }
+            else
+            {
+                if (IsMoving)
                 {
                     _lastDirection = ResolveDirection(
                         _worldVelocity,
                         _lastDirection,
                         facingHysteresisDegrees);
+                    _frameClock += Mathf.Max(0f, deltaTime);
+                    var effectiveFrameSeconds = ResolveEffectiveFrameSeconds();
+                    while (_frameClock >= effectiveFrameSeconds)
+                    {
+                        _frameClock -= effectiveFrameSeconds;
+                        _walkFrame = (_walkFrame + 1) % WalkFrameCount;
+                    }
                 }
-                _frameClock += Mathf.Max(0f, deltaTime);
-                var effectiveFrameSeconds = ResolveEffectiveFrameSeconds();
-                while (_frameClock >= effectiveFrameSeconds)
+                else
                 {
-                    _frameClock -= effectiveFrameSeconds;
-                    _walkFrame = (_walkFrame + 1) % WalkFrameCount;
+                    _frameClock = 0f;
+                    _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
                 }
-            }
-            else
-            {
-                _frameClock = 0f;
-                _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
             }
 
             ApplyFrame();
@@ -457,6 +504,14 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
             if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
+            if (_tileDisplacementDirection &&
+                _tileGaitStateInitialized &&
+                _tileGaitState.Phase == OfficeLocomotionPhase.Idle &&
+                HasCompleteFrames(idleFrames, DirectionCount))
+            {
+                targetRenderer.sprite = idleFrames[_lastDirection];
+                return;
+            }
             targetRenderer.sprite = walkFrames[_walkFrame * DirectionCount + _lastDirection];
         }
 
@@ -487,24 +542,26 @@ namespace FamilyCompany.Presentation.Unity
                 ? Mathf.Max(0.05f, seatedWorkFrameSeconds)
                 : Mathf.Max(0.05f, seatingTransitionFrameSeconds);
             _seatingFrameClock += deltaTime;
-            while (_seatingFrameClock >= secondsPerFrame)
+            if (_seatingFrameClock >= secondsPerFrame)
             {
                 _seatingFrameClock -= secondsPerFrame;
+                // A Sprite can only be presented once per rendered tick. Advancing through several
+                // indices here silently skipped SitDown/StandUp art under time scale or a long frame.
+                // Keep the accumulated remainder, but expose exactly one authored frame per Tick.
                 var nextFrame = _seatingFrame + 1;
                 if (nextFrame < OfficeSeatingAnimationFrames.FrameCount(clip))
                 {
                     _seatingFrame = nextFrame;
-                    continue;
+                    return;
                 }
 
                 if (clip == OfficeSeatingAnimationClip.Work)
                 {
                     _seatingFrame = 0;
-                    continue;
+                    return;
                 }
 
                 _seatingTransitionComplete = true;
-                break;
             }
         }
 
@@ -587,8 +644,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private void EnsureTileFacingState()
         {
-            if (_tileFacingStateInitialized && _tileFacingState.VisualDirection == _lastDirection) return;
-            ResetTileFacingState(_lastDirection);
+            if (!_tileFacingStateInitialized) ResetTileFacingState(_lastDirection);
         }
 
         private void ResetTileFacingState(int direction)
@@ -599,6 +655,18 @@ namespace FamilyCompany.Presentation.Unity
             _lastSemanticDirection = _tileFacingState.VisualDirection;
             _lastMotionDirection = _tileFacingState.VisualDirection;
             _usedSemanticHeading = false;
+        }
+
+        private void EnsureTileGaitState()
+        {
+            if (!_tileGaitStateInitialized) ResetTileGaitState(_lastDirection);
+        }
+
+        private void ResetTileGaitState(int direction)
+        {
+            _tileGaitState = OfficeLocomotionGaitState.Initial(
+                Mathf.Clamp(direction, 0, DirectionCount - 1));
+            _tileGaitStateInitialized = true;
         }
     }
 }

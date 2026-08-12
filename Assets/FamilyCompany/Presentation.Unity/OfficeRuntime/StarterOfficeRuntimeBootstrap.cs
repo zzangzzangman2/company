@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
+using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 
@@ -30,12 +31,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeRuntimeWorld _world;
         private string _layoutHash = string.Empty;
         private bool _building;
+        private OfficeSeatingPresentationMode _seatingPresentationMode =
+            OfficeSeatingPresentationMode.SafeStaticWork;
 
         public bool IsReady { get; private set; }
         public OfficeRuntimeWorld World => _world;
         public IReadOnlyList<OfficeRuntimeAgent> Actors =>
             _world == null ? Array.Empty<OfficeRuntimeAgent>() : _world.Registry.Actors;
         public string LayoutHash => _layoutHash;
+        public OfficeSeatingPresentationMode SeatingPresentationMode => _seatingPresentationMode;
 
         public void Configure(
             PrototypeBootstrap bootstrap,
@@ -115,6 +119,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _assetSource.FurnitureVisualCatalog);
             _world = _generated.AddComponent<OfficeRuntimeWorld>();
             _world.Configure(grid, presenter, furniturePresenter);
+            ResolveSeatingPresentationMode();
 
             var usedSpawns = new HashSet<OfficeGridCoordinate>();
             for (var index = 0; index < MemberIds.Length; index++)
@@ -176,7 +181,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 seating.sitDownFrames,
                 seating.workFrames,
                 seating.standUpFrames,
-                presentationMode: OfficeSeatingPresentationMode.SafeStaticWork);
+                presentationMode: _seatingPresentationMode);
             var actor = root.AddComponent<OfficeRuntimeAgent>();
             actor.Configure(
                 _bootstrap,
@@ -194,6 +199,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 controller.Configure(_bootstrap, actor);
             }
             return actor;
+        }
+
+        private void ResolveSeatingPresentationMode()
+        {
+            var catalog = _assetSource.CharacterSeatPoseCatalog;
+            const int northwest = (int)OfficeSeatFacing8.Northwest;
+            try
+            {
+                catalog.ValidateAnimatedNorthwest(MemberIds, northwest);
+                _seatingPresentationMode = OfficeSeatingPresentationMode.Animated;
+                Debug.Log("STARTER_OFFICE_SEATING_PRESENTATION | mode=Animated profiles=56 facing=Northwest");
+            }
+            catch (Exception animatedFailure)
+            {
+                catalog.ValidateSafeStaticWork(MemberIds, northwest);
+                _seatingPresentationMode = OfficeSeatingPresentationMode.SafeStaticWork;
+                Debug.LogWarning(
+                    "STARTER_OFFICE_SEATING_PRESENTATION | mode=SafeStaticWork reason=" +
+                    animatedFailure.Message);
+            }
         }
 
         private OfficeGridCoordinate FindSpawn(

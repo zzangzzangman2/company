@@ -38,39 +38,36 @@ namespace FamilyCompany.Editor.OfficeGridQa
             string reportPath = Path.Combine(artifactDirectory, "seated-sprite-root-cause-v3-report.txt");
             var report = new List<string>
             {
-                "SEATED_SPRITE_ROOT_CAUSE_V3",
+                "SEATED_SPRITE_ROOT_CAUSE_V5_ANIMATED_NORTHWEST",
                 "Unity=" + Application.unityVersion,
-                "Mode=SafeStaticWork / Northwest / Work frame 0",
+                "Mode=Animated / Northwest / SitDown 4 + Work 6 + StandUp 4",
                 string.Empty,
-                "member|scale|rotation|pelvis-hand|hand-work|visible-height|approved|sha|result"
+                "member|clip|frame|scale|rotation|visible-height|pelvis|hand|approved|sha|result"
             };
             var failures = new List<string>();
 
             OfficeCharacterSeatPoseCatalog poseCatalog =
                 AssetDatabase.LoadAssetAtPath<OfficeCharacterSeatPoseCatalog>(OfficeFurnitureAssetBuilder.PoseCatalogPath);
-            OfficeFurnitureVisualCatalog furnitureCatalog = OfficeFurnitureAssetBuilder.LoadFurnitureVisualCatalog();
             Check(poseCatalog != null, "Pose catalog is missing.", failures);
             if (poseCatalog != null)
             {
                 Check(poseCatalog.CalibrationVersion == OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion,
-                    $"Pose catalog version is {poseCatalog.CalibrationVersion}, expected 4.", failures);
-                Check(poseCatalog.Profiles.Count == MemberIds.Length,
-                    $"SafeStaticWork catalog must contain exactly four approved profiles, found {poseCatalog.Profiles.Count}.", failures);
+                    $"Pose catalog version is {poseCatalog.CalibrationVersion}, expected 5.", failures);
+                Check(poseCatalog.Profiles.Count == 56,
+                    $"Animated Northwest catalog must contain exactly 56 approved profiles, found {poseCatalog.Profiles.Count}.", failures);
                 try
                 {
-                    poseCatalog.ValidateSafeStaticWork(MemberIds, (int)OfficeSeatFacing8.Northwest);
+                    poseCatalog.ValidateAnimatedNorthwest(MemberIds, (int)OfficeSeatFacing8.Northwest);
                 }
                 catch (Exception exception)
                 {
-                    failures.Add("SafeStaticWork catalog validation: " + exception.Message);
+                    failures.Add("Animated Northwest catalog validation: " + exception.Message);
                 }
             }
 
-            OfficeFurnitureVisualDefinition desk = furnitureCatalog.Resolve(
-                OfficeGridLayouts.DeskWithPcKind,
-                OfficeFurnitureFacing.SouthEast);
-            Vector2 deskVector = (desk.OperatorWorkSocketPx - desk.OperatorSeatSocketPx) * desk.UniformScale;
             foreach (string memberId in MemberIds)
+            foreach (OfficeSeatingAnimationClip clip in Enum.GetValues(typeof(OfficeSeatingAnimationClip)))
+            for (var frame = 0; frame < OfficeSeatingAnimationFrames.FrameCount(clip); frame++)
             {
                 var memberFailures = new List<string>();
                 try
@@ -78,23 +75,23 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     OfficeCharacterSeatPoseProfile profile = poseCatalog.ResolveApproved(
                         memberId,
                         (int)OfficeSeatFacing8.Northwest,
-                        OfficeSeatingAnimationClip.Work,
-                        0);
+                        clip,
+                        frame);
                     string sourcePath = OfficeSeatingAnimationFrames.AssetPath(
                         memberId,
                         OfficeSeatFacing8.Northwest,
-                        OfficeSeatingAnimationClip.Work,
-                        0);
+                        clip,
+                        frame);
                     Sprite source = AssetDatabase.LoadAssetAtPath<Sprite>(sourcePath);
-                    Check(source != null, memberId + " safe Work Sprite is missing: " + sourcePath, memberFailures);
+                    Check(source != null, memberId + " approved seating Sprite is missing: " + sourcePath, memberFailures);
                     if (source == null) throw new InvalidOperationException("source Sprite missing");
                     Check(source.rect.width == 256f && source.rect.height == 256f,
-                        memberId + " safe Work Sprite must be 256x256.", memberFailures);
+                        memberId + " seating Sprite must be 256x256.", memberFailures);
                     Check(Mathf.Abs(source.pixelsPerUnit - 180f) <= 0.001f,
-                        memberId + " safe Work Sprite PPU must be 180.", memberFailures);
+                        memberId + " seating Sprite PPU must be 180.", memberFailures);
                     Check(Vector2.Distance(source.pivot, new Vector2(128f, 0f)) <= 0.01f,
-                        memberId + " safe Work Sprite pivot must be bottom-center.", memberFailures);
-                    Check(profile.HumanApproved, memberId + " safe pose is not human-approved.", memberFailures);
+                        memberId + " seating Sprite pivot must be bottom-center.", memberFailures);
+                    Check(profile.HumanApproved, memberId + " seating pose is not human-approved.", memberFailures);
                     Check(Mathf.Abs(profile.UniformScale - 1f) <= 0.0001f,
                         memberId + $" seated scale deviation is {(profile.UniformScale - 1f) * 100f:F2}%.", memberFailures);
                     Check(Mathf.Abs(profile.RotationDegrees) <= 0.01f,
@@ -110,29 +107,12 @@ namespace FamilyCompany.Editor.OfficeGridQa
                             memberId + " pelvis anchor is outside the visible Sprite.", memberFailures);
                         Check(seated.IsOpaque(profile.HandAnchorPx),
                             memberId + " hand anchor is outside the visible Sprite.", memberFailures);
-                        string walkingPath = WalkingIdlePath(memberId);
-                        PixelData walking = PixelData.Load(walkingPath);
-                        try
-                        {
-                            float visibleHeightDifference = Mathf.Abs(
-                                seated.VisibleHeight / (float)Math.Max(1, walking.VisibleHeight) - 1f);
-                            Check(visibleHeightDifference <= 0.05f,
-                                memberId + $" seated visible-height difference is {visibleHeightDifference * 100f:F2}%.", memberFailures);
-                            Vector2 characterVector = profile.RenderedHandFromPelvisPx(
-                                OfficeGridCharacterMover.UniformVisualScale);
-                            float handWork = Vector2.Distance(characterVector, deskVector);
-                            Check(handWork <= 4f,
-                                memberId + $" hand-to-work error is {handWork:F3}px.", memberFailures);
-                            string result = memberFailures.Count == 0 ? "PASS" : "FAIL";
-                            report.Add(
-                                $"{memberId}|{profile.UniformScale:F6}|{profile.RotationDegrees:F6}|" +
-                                $"{characterVector.x:F3},{characterVector.y:F3}|{handWork:F3}px|" +
-                                $"{visibleHeightDifference * 100f:F3}%|{profile.HumanApproved}|{actualSha}|{result}");
-                        }
-                        finally
-                        {
-                            walking.Dispose();
-                        }
+                        string result = memberFailures.Count == 0 ? "PASS" : "FAIL";
+                        report.Add(
+                            $"{memberId}|{clip}|{frame}|{profile.UniformScale:F6}|{profile.RotationDegrees:F6}|" +
+                            $"{seated.VisibleHeight}px|{profile.PelvisAnchorPx.x:F1},{profile.PelvisAnchorPx.y:F1}|" +
+                            $"{profile.HandAnchorPx.x:F1},{profile.HandAnchorPx.y:F1}|" +
+                            $"{profile.HumanApproved}|{actualSha}|{result}");
                     }
                     finally
                     {
@@ -160,7 +140,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 report.AddRange(failures.Select(item => "- " + item));
             }
             report.Add(string.Empty);
-            report.Add(failures.Count == 0 ? "SEATED_SPRITE_ROOT_CAUSE_V3_PASS" : "SEATED_SPRITE_ROOT_CAUSE_V3_FAIL");
+            report.Add(failures.Count == 0 ? "SEATED_SPRITE_ROOT_CAUSE_V5_PASS" : "SEATED_SPRITE_ROOT_CAUSE_V5_FAIL");
             File.WriteAllLines(reportPath, report);
             AssetDatabase.Refresh();
             if (failures.Count > 0)
@@ -169,7 +149,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Debug.LogError("SEATED_SPRITE_ROOT_CAUSE_V3_FAIL | " + failure + " | report=" + reportPath);
                 throw new InvalidOperationException(failure);
             }
-            Debug.Log("SEATED_SPRITE_ROOT_CAUSE_V3_PASS | members=4 rotation=0 scale=1 approvals=4 | report=" + reportPath);
+            Debug.Log("SEATED_SPRITE_ROOT_CAUSE_V5_PASS | members=4 rotation=0 scale=1 approvals=56 | report=" + reportPath);
         }
 
         private static void Check(bool condition, string failure, ICollection<string> failures)

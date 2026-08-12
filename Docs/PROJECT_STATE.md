@@ -285,9 +285,11 @@ Unity: 6000.3.21f1
 - 실제 플레이어 착석 수치: 네 가족 seatContact `0.000px`, rotation `0°`, scale deviation `0%`.
   엄마 character sorting `1008`, chair base `1007`, desk `1005`이며 의자 전면 레이어는 인물 위다.
   캡처·로그는 `Artifacts/MotherSeatedRegenQa/`에 남긴다.
-- 현재 경계: Starter Runtime의 SafeStaticWork는 여전히 `Northwest/Work/0` 한 장만 사용한다.
-  재생성한 frame 1~5는 아트 정본이지만 6프레임 애니메이션을 열기 전에 프레임별 좌판 접점 승인과
-  최대 보정 점프 검증이 필요하다.
+- 2026-08-12 후속 감사에서 이 경계를 해제했다. `OfficeCharacterSeatPoseCatalog` v5는 네 가족의
+  `Northwest` SitDown 4 + Work 6 + StandUp 4, 총 56개를 실제 pelvis/hand와 source SHA로 승인한다.
+  Starter Runtime은 완전한 56개일 때 Animated를 사용하고, 불완전하면 Work/0 정적으로 fail-closed한다.
+- 숨김 Windows 플레이어에서 전원 4/4·6/6·4/4 실제 프레임 적용, seat/animated anchor error `0.000px`,
+  rotation `0°`, scale deviation `0%`, agent penetration `0`, Main Flow 종료 코드 `0`을 확인했다.
 
 ## 2026-08-12 / Movement & Seating Audit 1차 방향·충돌 수정
 

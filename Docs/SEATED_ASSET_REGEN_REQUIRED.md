@@ -201,5 +201,6 @@ mother       ×0.93   (86cm)
 1. 완료: 좌판 등록점 배치, chair base < occupant < chair front, 공통 scale `1.55` 적용.
 2. 완료: 엄마 Northwest Work 0..5 하체 복원, frame 0 앵커·SHA 갱신.
 3. 완료: Unity 6000.3.21f1 전체 검증 및 Windows 플레이어 Main Flow QA.
-4. 다음: SafeStaticWork가 아닌 6프레임 Work 애니메이션을 Starter Runtime에 열 때 각 프레임별 좌판
-   접점을 catalog에 승인하고 최대 보정 점프를 다시 측정한다.
+4. 완료: v5 catalog에 네 가족 `Northwest` SitDown 4 + Work 6 + StandUp 4, 총 56개 pelvis/hand/SHA를
+   승인하고 Starter Runtime Animated를 열었다. 렌더 틱당 한 프레임만 적용해 배속에서도 프레임을
+   건너뛰지 않으며, 숨김 Windows 플레이어에서 전원 4/4·6/6·4/4와 anchor error `0.000px`를 통과했다.

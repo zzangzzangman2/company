@@ -42,7 +42,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _furniturePresenter = furniturePresenter ?? throw new ArgumentNullException(nameof(furniturePresenter));
             _occupancy = new OfficeRuntimeOccupancy();
             _occupancy.Rebuild(grid, presenter);
-            _paths = new OfficeRuntimePathService(grid, _occupancy);
+            _paths = new OfficeRuntimePathService(grid, _occupancy, presenter);
             _workstations = new OfficeRuntimeWorkstationService(
                 grid,
                 presenter,

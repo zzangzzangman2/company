@@ -18,6 +18,7 @@ namespace FamilyCompany.Editor
                 $"seeds={report.Seeds} | paths={report.Paths} | replans={report.Replans} | " +
                 $"segments={report.SegmentChecks} | oracleSegments={report.OracleSegmentChecks} | " +
                 $"counterexamples={report.CounterexampleChecks} | facingPresentation={report.FacingPresentationChecks} | " +
+                $"gaitPresentation={report.GaitPresentationChecks} | " +
                 $"collisionSlides={report.CollisionSlideChecks} | motionPartitions={report.MotionPartitionChecks} | " +
                 $"trafficPermutations={report.TrafficPermutationChecks} | maxStretch={report.MaximumStretch:F3} | " +
                 $"maxExpanded={report.MaximumExpandedNodes}/{FamilyCompany.Simulation.Navigation.OfficeNavigationLimits.MaxExpandedNodes} | " +

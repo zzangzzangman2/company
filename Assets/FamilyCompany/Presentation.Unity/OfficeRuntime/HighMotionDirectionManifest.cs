@@ -11,6 +11,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     public sealed class HighMotionDirectionManifest : ScriptableObject
     {
         public const int DirectionCount = 8;
+        public const int WalkFrameCount = 6;
+        public const int FrameApprovalCount = DirectionCount * WalkFrameCount;
         public const string DefaultResourcePath = "HighMotion/HighMotionDirectionManifest";
 
         [Serializable]
@@ -20,16 +22,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             [SerializeField] private int[] sourceDirectionForCanonical =
                 { 0, 1, 2, 3, 4, 5, 6, 7 };
             [SerializeField] private bool[] visualApproval = new bool[DirectionCount];
+            [SerializeField] private bool[] frameVisualApproval = new bool[FrameApprovalCount];
 
             public string MemberId => memberId;
             public IReadOnlyList<int> SourceDirectionForCanonical => sourceDirectionForCanonical;
             public IReadOnlyList<bool> VisualApproval => visualApproval;
+            public IReadOnlyList<bool> FrameVisualApproval => frameVisualApproval;
 
             internal static CharacterDirectionEntry Identity(string id) => new CharacterDirectionEntry
             {
                 memberId = id,
                 sourceDirectionForCanonical = Enumerable.Range(0, DirectionCount).ToArray(),
-                visualApproval = new bool[DirectionCount]
+                visualApproval = new bool[DirectionCount],
+                frameVisualApproval = new bool[FrameApprovalCount]
             };
 
             internal void SetVisualApproval(int canonicalDirection, bool approved)
@@ -38,6 +43,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     throw new ArgumentOutOfRangeException(nameof(canonicalDirection));
                 EnsureArrays();
                 visualApproval[canonicalDirection] = approved;
+            }
+
+            internal void SetFrameVisualApproval(int canonicalDirection, int phase, bool approved)
+            {
+                if (canonicalDirection < 0 || canonicalDirection >= DirectionCount)
+                    throw new ArgumentOutOfRangeException(nameof(canonicalDirection));
+                if (phase < 0 || phase >= WalkFrameCount)
+                    throw new ArgumentOutOfRangeException(nameof(phase));
+                EnsureArrays();
+                frameVisualApproval[phase * DirectionCount + canonicalDirection] = approved;
             }
 
             internal int Resolve(int canonicalDirection)
@@ -64,6 +79,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         $"Direction manifest for {memberId} must contain eight source rows.");
                 if (visualApproval == null || visualApproval.Length != DirectionCount)
                     visualApproval = new bool[DirectionCount];
+                if (frameVisualApproval == null || frameVisualApproval.Length != FrameApprovalCount)
+                    frameVisualApproval = new bool[FrameApprovalCount];
             }
         }
 
@@ -98,10 +115,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        public bool SetFrameVisualApproval(
+            string memberId,
+            int canonicalDirection,
+            int phase,
+            bool approved)
+        {
+            CharacterDirectionEntry entry = characters.FirstOrDefault(item =>
+                string.Equals(item.MemberId, memberId, StringComparison.Ordinal));
+            if (entry == null) return false;
+            entry.SetFrameVisualApproval(canonicalDirection, phase, approved);
+            return true;
+        }
+
         public void ConfigureIdentity(IEnumerable<string> memberIds)
         {
             if (memberIds == null) throw new ArgumentNullException(nameof(memberIds));
-            version = 1;
+            version = 2;
             characters = memberIds
                 .Select(value => (value ?? string.Empty).Trim())
                 .Where(value => value.Length > 0)
