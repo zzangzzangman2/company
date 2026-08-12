@@ -38,7 +38,9 @@ PPU = 180.0
 TILE_W, TILE_H = 320.0, 160.0
 BASIS_X = (TILE_W / 2.0, TILE_H / 2.0)
 BASIS_Y = (-TILE_W / 2.0, TILE_H / 2.0)
-RUNTIME_CHARACTER_SCALE = 1.69          # OfficeGridCharacterMover.UniformVisualScale
+RUNTIME_CHARACTER_SCALE = 1.69          # the pre-V4 constant, kept to render the "before" state
+SHIPPED_CHARACTER_SCALE = 1.35          # OfficeGridCharacterMover.UniformVisualScale
+SHIPPED_SEATED_FLOOR_COLUMN = 119.0     # OfficeSeatedOccupantContract.SeatedFloorAnchorColumnPx
 MEMBERS = ("player", "older_sister", "father", "mother")
 CHARACTER_CANVAS = 256
 
@@ -266,6 +268,46 @@ def frame_path(member, clip, frame):
 
 
 # --------------------------------------------------------------------------- scene builders
+def build_office_ground(layout, catalog, poses, character_scale=SHIPPED_CHARACTER_SCALE,
+                        floor_column=SHIPPED_SEATED_FLOOR_COLUMN, frame=0, bounds=None):
+    """Shipped model: OfficeSeatedOccupantContract.
+
+    The occupant stands on the chair's floor point, offset only so that `floor_column` of the
+    seated canvas - not the bottom-centre pivot - lands there. Depth is each object's own ground
+    anchor, and the occupant sorts one step in front of the chair. No furniture is re-sorted, so a
+    desk one cell away can never draw its legs over a seated body.
+    """
+    roots = [subcell_px(f["px2"], f["py2"]) for f in layout["furniture"]]
+    if bounds is None:
+        xs = [r[0] for r in roots]
+        ys = [r[1] for r in roots]
+        bounds = (min(xs) - 340, min(ys) - 220, max(xs) + 340, max(ys) + 420)
+    scene = Scene(bounds)
+    for y in range(layout["height"]):
+        for x in range(layout["width"]):
+            scene.add(FLOOR_TILES[(x * 3 + y * 5) % 3], cell_px(x, y),
+                      (TILE_W / 2, 0.0), 1.0, -10000, key=y * 100 + x)
+
+    seats = {s["chair"]: s for s in layout["seats"]}
+    marks = []
+    for item in layout["furniture"]:
+        definition = catalog[item["kind"]]
+        root = subcell_px(item["px2"], item["py2"])
+        order = sorting_order(root[1])
+        scene.add(os.path.join(FURNITURE_ROOT, FURNITURE_PNG[item["kind"]]),
+                  root, definition["ground"], definition["scale"], order, key=item["px2"])
+        seat = seats.get(item["id"])
+        if seat is None:
+            continue
+        member = seat["id"].replace("seat_", "")
+        offset = (CHARACTER_CANVAS / 2.0 - floor_column) * character_scale
+        pivot = (CHARACTER_CANVAS / 2.0, 0.0)
+        scene.add(frame_path(member, "sit_work", frame), (root[0] + offset, root[1]), pivot,
+                  character_scale, order + 1, key=item["px2"] + 1)
+        marks.append(dict(member=member, chair=root, floor=(root[0] + offset, root[1]), seat=root))
+    return scene, marks
+
+
 def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CHARACTER_SCALE,
                  anatomy=None, bounds=None):
     seat_by_chair = {s["chair"]: s for s in layout["seats"]}
@@ -537,18 +579,22 @@ def main():
         say(f"| {member} | ({vector[0]:.0f},{vector[1]:.0f}) | {angle:.1f}deg | {sx:.2f} | {sy:.2f} | {verdict} |")
     say("")
 
-    # ---- proposal render with the blind anatomy anchors
-    for scale in (1.30, 1.50, RUNTIME_CHARACTER_SCALE):
-        s3, marks3 = build_office(layout, catalog, poses, character_scale=scale,
-                                  anatomy=PROPOSED_ANATOMY)
-        image = s3.draw()
-        tiles = [crop_to(image, s3, m["seat"], (520, 560)).convert("RGB") for m in marks3]
-        sheet = Image.new("RGB", (520 * 4, 560))
-        for i, tile in enumerate(tiles):
-            ImageDraw.Draw(tile).text((8, 8), f"{marks3[i]['member']} scale={scale}", fill=(255, 255, 255))
-            sheet.paste(tile, (i * 520, 0))
-        sheet.save(os.path.join(OUT, f"30-proposed-anatomy-four-workstations-scale{scale:.2f}.png"))
-        image.convert("RGB").save(os.path.join(OUT, f"34-proposed-overview-scale{scale:.2f}.png"))
+    # ---- shipped model render (OfficeSeatedOccupantContract)
+    s3, marks3 = build_office_ground(layout, catalog, poses)
+    image = s3.draw()
+    image.convert("RGB").save(os.path.join(OUT, "34-final-starter-office-overview.png"))
+    tiles = [crop_to(image, s3, m["chair"], (520, 560)).convert("RGB") for m in marks3]
+    sheet = Image.new("RGB", (520 * 4, 560))
+    for i, tile in enumerate(tiles):
+        ImageDraw.Draw(tile).text((8, 8), f"{marks3[i]['member']} scale={SHIPPED_CHARACTER_SCALE} "
+                                          f"column={SHIPPED_SEATED_FLOOR_COLUMN:.0f}", fill=(255, 255, 255))
+        sheet.paste(tile, (i * 520, 0))
+    sheet.save(os.path.join(OUT, "30-final-static-four-workstations.png"))
+
+    say("[shipped model] OfficeSeatedOccupantContract")
+    say(f"  character scale {SHIPPED_CHARACTER_SCALE}, seated floor column {SHIPPED_SEATED_FLOOR_COLUMN:.0f}")
+    say("  occupant sorting = chair ground order + 1, no furniture order is rewritten")
+    say("")
 
     open(os.path.join(OUT, "office-visual-coherence-v4-report.txt"), "w", encoding="utf-8").write(
         "\n".join(report) + "\n")

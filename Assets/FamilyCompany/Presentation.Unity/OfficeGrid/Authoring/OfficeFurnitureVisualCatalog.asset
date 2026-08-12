@@ -34,7 +34,7 @@ MonoBehaviour:
     hasSeatAnchor: 0
     hasWorkSurfaceAnchor: 1
     hasOperatorSeatSocket: 1
-    frontOverlayWhenOccupied: 1
+    frontOverlayWhenOccupied: 0
   - kindId: swivel_chair
     facing: 2
     baseSprite: {fileID: 21300000, guid: 5d642bde97f1a844f9aefcc7c4c95a08, type: 3}

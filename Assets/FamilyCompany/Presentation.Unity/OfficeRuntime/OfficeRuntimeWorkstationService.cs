@@ -180,12 +180,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public Vector3 ChairSeatAnchorWorld(OfficeSeatSlot seat) =>
             _furniturePresenter.SeatAnchorWorld(seat.ChairFurnitureId);
 
+        /// <summary>
+        /// Floor point of the chair - the semantic anchor its sprite pivot already stands on. This
+        /// is where a seated occupant is placed, per <see cref="OfficeSeatedOccupantContract"/>.
+        /// </summary>
+        public Vector3 ChairFloorAnchorWorld(OfficeSeatSlot seat)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            PlacedOfficeFurniture chair = _grid.Furniture.FirstOrDefault(item =>
+                string.Equals(item.FurnitureId, seat.ChairFurnitureId, StringComparison.Ordinal));
+            if (chair == null)
+                throw new InvalidOperationException("Seat has no chair furniture: " + seat.SeatId);
+            return _presenter.SubcellAnchorWorld(chair.PlacementAnchor);
+        }
+
         public Vector3 DeskSeatSocketWorld(OfficeSeatSlot seat) =>
             _furniturePresenter.OperatorSeatSocketWorld(seat.WorkSurfaceFurnitureId);
 
         public Vector3 DeskWorkSocketWorld(OfficeSeatSlot seat) =>
             _furniturePresenter.OperatorWorkSocketWorld(seat.WorkSurfaceFurnitureId);
 
+        /// <summary>
+        /// Depth for a seated occupant. The occupant stands on the chair's floor point and sorts one
+        /// step in front of it; no furniture order is rewritten. Re-sorting a desk around whoever is
+        /// sitting nearby is what used to draw desk legs over a seated character, so it is gone.
+        /// </summary>
         public void ApplyPresentationStack(
             OfficeSeatSlot seat,
             SpriteRenderer characterRenderer,
@@ -193,9 +212,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (seat == null) throw new ArgumentNullException(nameof(seat));
             if (characterRenderer == null) throw new ArgumentNullException(nameof(characterRenderer));
-            int baseOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(semanticActorWorld);
-            characterRenderer.sortingOrder = baseOrder;
-            _furniturePresenter.ApplySeatOcclusion(seat, baseOrder);
+            characterRenderer.sortingOrder =
+                OfficeSeatedOccupantContract.OccupantSortingOrder(ChairFloorAnchorWorld(seat));
         }
 
         public void ApplyDynamicCharacterOrder(

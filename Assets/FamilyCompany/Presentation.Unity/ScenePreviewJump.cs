@@ -632,32 +632,29 @@ namespace FamilyCompany.Presentation.Unity
                 OfficeRuntimeAgent actor = actors[memberId];
                 OfficeSeatSlot seat = _starterRuntime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
                 string expectedSprite = memberId + "_northwest_sit_work_0";
+                int expectedOrder = OfficeSeatedOccupantContract.OccupantSortingOrder(
+                    _starterRuntime.World.Workstations.ChairFloorAnchorWorld(seat));
+                int actualOrder = actor.PresentationRenderer == null
+                    ? int.MinValue
+                    : actor.PresentationRenderer.sortingOrder;
                 Debug.Log(
                     $"STARTER_OFFICE_WORKSTATION_ALIGNMENT_SAMPLE | member={memberId} " +
-                    $"chairDesk={actor.ChairDeskErrorPx:F3}px pelvisSeat={actor.PelvisSeatErrorPx:F3}px " +
-                    $"handWork={actor.HandWorkErrorPx:F3}px rotation={actor.VisualRotationErrorDegrees:F4}deg " +
+                    $"seatFloor={actor.SeatFloorErrorPx:F3}px chairDesk={actor.ChairDeskErrorPx:F3}px " +
+                    $"rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                     $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
-                    $"sprite={actor.CurrentSpriteName}");
-                bool presentationMatches = actor.ChairDeskErrorPx <= 2f && actor.PelvisSeatErrorPx <= 2f &&
-                    actor.HandWorkErrorPx <= 4f && actor.VisualRotationErrorDegrees <= 0.01f &&
-                    actor.VisualScaleDeviation <= 0.03f && actor.CurrentDirection == 3 &&
+                    $"sprite={actor.CurrentSpriteName} sorting={actualOrder}/{expectedOrder}");
+                bool presentationMatches = actor.SeatFloorErrorPx <= 1f &&
+                    actor.VisualRotationErrorDegrees <= 0.01f &&
+                    actor.VisualScaleDeviation <= 0.001f && actor.CurrentDirection == 3 &&
                     string.Equals(actor.CurrentSpriteName, expectedSprite, StringComparison.Ordinal) &&
-                    actor.PresentationRenderer != null &&
-                    _starterRuntime.World.FurniturePresenter.SeatOcclusionMatches(
-                        seat,
-                        actor.PresentationRenderer.sortingOrder);
+                    actualOrder == expectedOrder;
                 if (presentationMatches) continue;
                 FailPlayerQa(
                     57,
-                    $"workstation alignment exceeded threshold for {memberId}: " +
-                    $"chairDesk={actor.ChairDeskErrorPx:F2}px pelvis={actor.PelvisSeatErrorPx:F2}px " +
-                    $"hand={actor.HandWorkErrorPx:F2}px rotation={actor.VisualRotationErrorDegrees:F4}deg " +
+                    $"seated floor placement failed for {memberId}: " +
+                    $"seatFloor={actor.SeatFloorErrorPx:F2}px rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                     $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
-                    $"sprite={actor.CurrentSpriteName} sorting=" +
-                    (actor.PresentationRenderer != null &&
-                     _starterRuntime.World.FurniturePresenter.SeatOcclusionMatches(
-                         seat,
-                         actor.PresentationRenderer.sortingOrder)));
+                    $"sprite={actor.CurrentSpriteName} sorting={actualOrder} expected={expectedOrder}");
                 yield break;
             }
             string capturePath = QaArtifactPath("starter-office-four-seat-work.png");
@@ -681,7 +678,8 @@ namespace FamilyCompany.Presentation.Unity
             if (!RequireZeroActualViolations("four-seat-work", 58)) yield break;
             Debug.Log(
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
-                " | alignment=chairDesk<=2px,pelvis<=2px,hand<=4px | " + OccupancyMetricSummary());
+                " | placement=seatFloor<=1px,rotation=0,scale=canonical,sorting=chairFloor+1 | " +
+                OccupancyMetricSummary());
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
             yield return null;
         }

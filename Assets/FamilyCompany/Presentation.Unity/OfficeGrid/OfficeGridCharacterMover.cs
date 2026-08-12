@@ -7,9 +7,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
     [DisallowMultipleComponent]
     public sealed class OfficeGridCharacterMover : MonoBehaviour
     {
-        // The canonical 256px high-motion canvases contain different amounts of transparent
-        // headroom. 1.69 keeps every family silhouette between 14% and 18% at ortho 6.6.
-        public const float UniformVisualScale = 1.69f;
+        // Physical scale, not screen occupancy. The furniture art is the ruler: the swivel chair
+        // seat sits 108.2px above its own floor anchor and the desk surface 161px, so one drawn
+        // centimetre is about 2.2px. 1.35 is the largest scale at which a seated family member
+        // still fits that chair - hips inside the cushion, feet reaching the floor in front of the
+        // castor base. 1.50 already overhangs the seat and 1.69 dwarfs the chair entirely.
+        // Measured with Tools/office_visual_coherence_v4_probe.py against the real sprites.
+        public const float UniformVisualScale = 1.35f;
         public const float DefaultMoveSpeed = 1.75f;
         public const int DynamicSortingBase = 5000;
 
