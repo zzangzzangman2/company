@@ -271,6 +271,8 @@ namespace FamilyCompany.Editor
             float maximumFrameDisplacement = 0f;
             bool projected = false;
             float collisionSettleSeconds = 0f;
+            Vector2 contactPosition = Vector2.zero;
+            bool hasContactPosition = false;
             int blockedBefore = fixture.Occupancy.BlockedStaticMoveCount +
                                 fixture.Occupancy.BlockedInteractionMoveCount;
             string failure = string.Empty;
@@ -314,7 +316,13 @@ namespace FamilyCompany.Editor
                         previousDisplacement,
                         OfficeRuntimeAgent.DefaultRadius,
                         string.Empty,
-                        out bool stepProjected);
+                        out bool stepProjected,
+                        out Vector2 contactDisplacement);
+                    if (stepProjected && !hasContactPosition)
+                    {
+                        contactPosition = current + contactDisplacement;
+                        hasContactPosition = true;
+                    }
                     projected |= stepProjected;
                     // The contact step can contain both approach and slide. Count only complete
                     // post-contact simulation time so every render partition receives the same
@@ -342,6 +350,7 @@ namespace FamilyCompany.Editor
                                fixture.Occupancy.BlockedInteractionMoveCount;
             if (blockedAfter <= blockedBefore) failure = AppendFailure(failure, "collision was not exercised");
             if (!projected) failure = AppendFailure(failure, "collision projection was not observed");
+            if (!hasContactPosition) failure = AppendFailure(failure, "collision contact was not captured");
             if (fixture.Occupancy.StaticViolationCount != 0 ||
                 fixture.Occupancy.InteractionViolationCount != 0 ||
                 fixture.Occupancy.AgentPenetrationCount != 0)
@@ -350,6 +359,7 @@ namespace FamilyCompany.Editor
             if (maximumFrameDisplacement > maximumExpectedFrame)
                 failure = AppendFailure(failure, "frame displacement exceeded integrated speed bound");
             fixture.Occupancy.UnregisterActor(agentId);
+            Vector2 boundaryStop = hasContactPosition ? contactPosition : current;
             return new CollisionCaseResult
             {
                 target = fixture.Spec.KindId,
@@ -363,8 +373,8 @@ namespace FamilyCompany.Editor
                 speed = speed,
                 startX = start.x,
                 startY = start.y,
-                finalX = current.x,
-                finalY = current.y,
+                finalX = boundaryStop.x,
+                finalY = boundaryStop.y,
                 maximumFrameDisplacement = maximumFrameDisplacement,
                 blockedAttempts = blockedAfter - blockedBefore,
                 staticViolations = fixture.Occupancy.StaticViolationCount,

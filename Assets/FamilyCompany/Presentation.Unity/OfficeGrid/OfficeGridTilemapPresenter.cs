@@ -20,6 +20,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private Tilemap _floorTilemap;
         private TilemapRenderer _floorRenderer;
         private OfficeGrid _semanticGrid;
+        private Vector3[] _cellCenters = Array.Empty<Vector3>();
 
         public Grid UnityGrid => _unityGrid;
         public Tilemap FloorTilemap => _floorTilemap;
@@ -43,6 +44,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _unityGrid.cellLayout = GridLayout.CellLayout.Isometric;
             _unityGrid.cellSwizzle = GridLayout.CellSwizzle.XYZ;
             _unityGrid.cellSize = new Vector3(TileWorldWidth, TileWorldHeight, 1f);
+            _cellCenters = new Vector3[checked(semanticGrid.Width * semanticGrid.Height)];
+            for (var y = 0; y < semanticGrid.Height; y++)
+            for (var x = 0; x < semanticGrid.Width; x++)
+                _cellCenters[y * semanticGrid.Width + x] =
+                    _unityGrid.GetCellCenterWorld(new Vector3Int(x, y, 0));
 
             EnsureTilemap();
             _floorTilemap.ClearAllTiles();
@@ -63,7 +69,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");
             if (!_semanticGrid.Contains(cell)) throw new ArgumentOutOfRangeException(nameof(cell));
-            return _unityGrid.GetCellCenterWorld(new Vector3Int(cell.X, cell.Y, 0));
+            return _cellCenters[cell.Y * _semanticGrid.Width + cell.X];
         }
 
         public Vector3 SubcellAnchorWorld(OfficeGridSubcellAnchor anchor)
@@ -114,13 +120,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");
             Vector3Int unityCell = _unityGrid.WorldToCell(worldPosition);
-            var direct = new OfficeGridCoordinate(unityCell.x, unityCell.y);
-            if (_semanticGrid.Contains(direct)) return direct;
-
-            // Outside the authored office, preserve the old nearest-border behavior. Runtime
-            // collision probes inside the grid take the constant-time WorldToCell path above.
             var best = new OfficeGridCoordinate(0, 0);
             var bestDistance = float.PositiveInfinity;
+            bool foundLocal = false;
+            for (var y = unityCell.y - 1; y <= unityCell.y + 1; y++)
+            for (var x = unityCell.x - 1; x <= unityCell.x + 1; x++)
+            {
+                var candidate = new OfficeGridCoordinate(x, y);
+                if (!_semanticGrid.Contains(candidate)) continue;
+                var distance = (CellCenterWorld(candidate) - worldPosition).sqrMagnitude;
+                if (distance >= bestDistance) continue;
+                bestDistance = distance;
+                best = candidate;
+                foundLocal = true;
+            }
+            if (foundLocal) return best;
+
+            // Far outside the authored office, preserve the old nearest-border behavior. Inside
+            // the grid, WorldToCell plus its eight neighbors is the exact nearest-center set.
             for (var y = 0; y < _semanticGrid.Height; y++)
             for (var x = 0; x < _semanticGrid.Width; x++)
             {

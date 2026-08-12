@@ -25,12 +25,38 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string permittedSeatId,
             out bool collisionProjected)
         {
+            return Resolve(
+                occupancy,
+                agentId,
+                start,
+                intendedDisplacement,
+                semanticVelocity,
+                previousDisplacement,
+                radius,
+                permittedSeatId,
+                out collisionProjected,
+                out _);
+        }
+
+        public static Vector2 Resolve(
+            OfficeRuntimeOccupancy occupancy,
+            string agentId,
+            Vector2 start,
+            Vector2 intendedDisplacement,
+            Vector2 semanticVelocity,
+            Vector2 previousDisplacement,
+            float radius,
+            string permittedSeatId,
+            out bool collisionProjected,
+            out Vector2 contactDisplacement)
+        {
             if (occupancy == null) throw new ArgumentNullException(nameof(occupancy));
             if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
                 throw new ArgumentOutOfRangeException(nameof(radius));
             if (intendedDisplacement.sqrMagnitude <= MinimumDisplacementSquared)
             {
                 collisionProjected = false;
+                contactDisplacement = Vector2.zero;
                 return Vector2.zero;
             }
             if (occupancy.CanMove(
@@ -41,6 +67,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     permittedSeatId))
             {
                 collisionProjected = false;
+                contactDisplacement = intendedDisplacement;
                 return intendedDisplacement;
             }
 
@@ -51,6 +78,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 intendedDisplacement,
                 radius,
                 permittedSeatId);
+            contactDisplacement = contact;
             Vector2 contactPosition = start + contact;
             Vector2 remaining = intendedDisplacement - contact;
             Vector2 safeX = RefineSafeDisplacement(
