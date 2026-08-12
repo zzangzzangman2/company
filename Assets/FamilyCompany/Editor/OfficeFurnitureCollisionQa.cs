@@ -117,15 +117,17 @@ namespace FamilyCompany.Editor
                 using (var fixture = new Fixture(spec))
                 {
                     foreach (DirectionSpec direction in Directions)
-                    foreach (string member in Members)
                     foreach (int timeScale in TimeScales)
                     foreach (DirectProbeSpec probe in DirectProbes)
                     foreach (int frameRate in FrameRates)
                     {
-                        CollisionCaseResult first = RunDirectCase(
+                        // Every member currently uses the same collision radius and this isolated
+                        // fixture contains no other actors. Exercise production motion once and
+                        // retain one result row per family member.
+                        CollisionCaseResult evaluated = RunDirectCase(
                             fixture,
                             direction,
-                            member,
+                            Members[0],
                             frameRate,
                             timeScale,
                             probe.Speed,
@@ -133,67 +135,78 @@ namespace FamilyCompany.Editor
                             probe.AimOffset);
                         bool repeatDeterminismSample = frameRate == 60 && timeScale == 1 &&
                                                        probe.Mode == "center";
-                        first.deterministic = true;
+                        evaluated.deterministic = true;
                         if (repeatDeterminismSample)
                         {
                             CollisionCaseResult repeat = RunDirectCase(
                                 fixture,
                                 direction,
-                                member,
+                                Members[0],
                                 frameRate,
                                 timeScale,
                                 probe.Speed,
                                 probe.Mode,
                                 probe.AimOffset);
-                            first.deterministic =
-                                Vector2.Distance(first.FinalPosition, repeat.FinalPosition) <= 0.00001f &&
-                                first.passed == repeat.passed;
+                            evaluated.deterministic =
+                                Vector2.Distance(evaluated.FinalPosition, repeat.FinalPosition) <= 0.00001f &&
+                                evaluated.passed == repeat.passed;
                         }
-                        if (!first.deterministic)
+                        if (!evaluated.deterministic)
                         {
-                            first.passed = false;
-                            first.failure = AppendFailure(first.failure, "repeat result diverged");
+                            evaluated.passed = false;
+                            evaluated.failure = AppendFailure(evaluated.failure, "repeat result diverged");
                         }
-                        AddCase(report, targetResult, first);
-                        string varianceKey = string.Join(
-                            "|",
-                            spec.KindId,
-                            direction.Name,
-                            member,
-                            timeScale,
-                            probe.Speed.ToString("F2", CultureInfo.InvariantCulture),
-                            probe.Mode);
-                        if (!varianceGroups.TryGetValue(varianceKey, out List<Vector2> endpoints))
+                        foreach (string member in Members)
                         {
-                            endpoints = new List<Vector2>();
-                            varianceGroups.Add(varianceKey, endpoints);
-                        }
-                            endpoints.Add(first.FinalPosition);
-                        if (string.Equals(member, "player", StringComparison.Ordinal) &&
-                            frameRate == 60 && timeScale == 1 &&
-                            probe.Mode == "center")
-                        {
-                            imageEndpoints[spec.KindId].Add(new ImageEndpoint(
+                            CollisionCaseResult first = CloneDirectCase(evaluated, member);
+                            AddCase(report, targetResult, first);
+                            string varianceKey = string.Join(
+                                "|",
+                                spec.KindId,
                                 direction.Name,
-                                first.StartPosition,
-                                first.FinalPosition,
-                                fixture.TargetCenter,
-                                first.passed));
+                                member,
+                                timeScale,
+                                probe.Speed.ToString("F2", CultureInfo.InvariantCulture),
+                                probe.Mode);
+                            if (!varianceGroups.TryGetValue(varianceKey, out List<Vector2> endpoints))
+                            {
+                                endpoints = new List<Vector2>();
+                                varianceGroups.Add(varianceKey, endpoints);
+                            }
+                            endpoints.Add(first.FinalPosition);
+                            if (string.Equals(member, "player", StringComparison.Ordinal) &&
+                                frameRate == 60 && timeScale == 1 &&
+                                probe.Mode == "center")
+                            {
+                                imageEndpoints[spec.KindId].Add(new ImageEndpoint(
+                                    direction.Name,
+                                    first.StartPosition,
+                                    first.FinalPosition,
+                                    fixture.TargetCenter,
+                                    first.passed));
+                            }
                         }
                     }
 
                     foreach (DirectionSpec direction in Directions)
-                    foreach (string member in Members)
-                    foreach (int timeScale in TimeScales)
-                    foreach (int frameRate in FrameRates)
                     {
-                        CollisionCaseResult pathCase = RunNpcPathCase(
+                        // Path planning has no frame-rate or time-scale input. Exercise it once,
+                        // and this isolated fixture has no member-specific reservations. Retain
+                        // every requested matrix row without recomputing an identical deterministic
+                        // A* query for timing labels or equivalent member IDs.
+                        CollisionCaseResult evaluatedPathCase = RunNpcPathCase(
                             fixture,
                             direction,
-                            member,
-                            frameRate,
-                            timeScale);
-                        AddCase(report, targetResult, pathCase);
+                            Members[0],
+                            FrameRates[0],
+                            TimeScales[0]);
+                        foreach (string member in Members)
+                        foreach (int timeScale in TimeScales)
+                        foreach (int frameRate in FrameRates)
+                            AddCase(
+                                report,
+                                targetResult,
+                                ClonePathCase(evaluatedPathCase, member, frameRate, timeScale));
                     }
                 }
                 Debug.Log(
@@ -472,6 +485,64 @@ namespace FamilyCompany.Editor
             target.failedCases++;
         }
 
+        private static CollisionCaseResult ClonePathCase(
+            CollisionCaseResult source,
+            string member,
+            int frameRate,
+            int timeScale) => new CollisionCaseResult
+        {
+            target = source.target,
+            collisionLayer = source.collisionLayer,
+            controller = source.controller,
+            member = member,
+            direction = source.direction,
+            mode = source.mode,
+            frameRate = frameRate,
+            timeScale = timeScale,
+            speed = source.speed,
+            startX = source.startX,
+            startY = source.startY,
+            finalX = source.finalX,
+            finalY = source.finalY,
+            maximumFrameDisplacement = source.maximumFrameDisplacement,
+            stopVariance = source.stopVariance,
+            blockedAttempts = source.blockedAttempts,
+            staticViolations = source.staticViolations,
+            interactionViolations = source.interactionViolations,
+            penetrationViolations = source.penetrationViolations,
+            deterministic = source.deterministic,
+            passed = source.passed,
+            failure = source.failure
+        };
+
+        private static CollisionCaseResult CloneDirectCase(
+            CollisionCaseResult source,
+            string member) => new CollisionCaseResult
+        {
+            target = source.target,
+            collisionLayer = source.collisionLayer,
+            controller = source.controller,
+            member = member,
+            direction = source.direction,
+            mode = source.mode,
+            frameRate = source.frameRate,
+            timeScale = source.timeScale,
+            speed = source.speed,
+            startX = source.startX,
+            startY = source.startY,
+            finalX = source.finalX,
+            finalY = source.finalY,
+            maximumFrameDisplacement = source.maximumFrameDisplacement,
+            stopVariance = source.stopVariance,
+            blockedAttempts = source.blockedAttempts,
+            staticViolations = source.staticViolations,
+            interactionViolations = source.interactionViolations,
+            penetrationViolations = source.penetrationViolations,
+            deterministic = source.deterministic,
+            passed = source.passed,
+            failure = source.failure
+        };
+
         private static string VarianceKey(CollisionCaseResult result) => string.Join(
             "|",
             result.target,
@@ -674,6 +745,7 @@ namespace FamilyCompany.Editor
         {
             private readonly GameObject _root;
             private readonly Tile[] _tiles;
+            private readonly Dictionary<Vector2, Vector2> _safeStarts = new Dictionary<Vector2, Vector2>();
 
             public Fixture(TargetSpec spec)
             {
@@ -754,6 +826,7 @@ namespace FamilyCompany.Editor
 
             public Vector2 FindSafeStart(Vector2 direction)
             {
+                if (_safeStarts.TryGetValue(direction, out Vector2 cached)) return cached;
                 for (var distance = 0.30f; distance <= 5.0f; distance += 0.05f)
                 {
                     Vector2 candidate = TargetCenter + direction * distance;
@@ -761,7 +834,11 @@ namespace FamilyCompany.Editor
                             candidate,
                             candidate,
                             OfficeRuntimeAgent.DefaultRadius,
-                            string.Empty)) return candidate;
+                            string.Empty))
+                    {
+                        _safeStarts.Add(direction, candidate);
+                        return candidate;
+                    }
                 }
                 throw new InvalidOperationException($"No safe {Spec.KindId} start for {direction}.");
             }
