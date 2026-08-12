@@ -37,13 +37,24 @@ namespace FamilyCompany.Presentation.Unity
         private bool _navigationAnimationSuppressed;
         private bool _tileDisplacementDirection;
         private bool _externallyTicked;
+        private Vector2 _tileFrameDisplacement;
+        private Vector2 _tileSemanticDisplacement;
+        private float _tileFrameDeltaTime;
+        private float _tileActualSpeed;
+        private bool _tileFrameCollisionProjected;
+        private bool _tilePresentationFrameOpen;
+        private OfficeLocomotionFacingState _tileFacingState;
+        private bool _tileFacingStateInitialized;
+        private int _lastSemanticDirection;
+        private int _lastMotionDirection;
+        private bool _usedSemanticHeading;
 
         public event Action<OfficeSeatingAnimationClip, int, Sprite> OfficeFrameApplied;
 
         public int CurrentDirection => _lastDirection;
         public int CurrentWalkFrame => _walkFrame;
         public bool IsMoving => _tileDisplacementDirection
-            ? _worldVelocity.sqrMagnitude > 0.0000001f
+            ? _tileFrameDisplacement.sqrMagnitude > 0.0000001f
             : _worldVelocity.sqrMagnitude > 0.0025f;
         public int ConfiguredFrameCount => walkFrames?.Length ?? 0;
         public float BaseFrameSeconds => frameSeconds;
@@ -73,6 +84,13 @@ namespace FamilyCompany.Presentation.Unity
             _officeWorkSession == null || _officeWorkSession.IsSafeToStand;
         public bool IsNavigationAnimationSuppressed => _navigationAnimationSuppressed;
         public OfficeSeatingPresentationMode SeatingPresentationMode => seatingPresentationMode;
+        public Vector2 AccumulatedTileDisplacement => _tileFrameDisplacement;
+        public Vector2 SemanticTileDisplacement => _tileSemanticDisplacement;
+        public float ActualTileSpeed => _tileActualSpeed;
+        public bool WasCollisionProjected => _tileFrameCollisionProjected;
+        public int SemanticDirection => _lastSemanticDirection;
+        public int MotionDirection => _lastMotionDirection;
+        public bool UsedSemanticHeading => _usedSemanticHeading;
 
         public void Configure(SpriteRenderer renderer, Sprite[] frames, float secondsPerFrame = 0.11f)
         {
@@ -80,6 +98,7 @@ namespace FamilyCompany.Presentation.Unity
             walkFrames = frames ?? Array.Empty<Sprite>();
             frameSeconds = Mathf.Max(0.05f, secondsPerFrame);
             _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
+            ResetTileFacingState(_lastDirection);
             ApplyFrame();
         }
 
@@ -119,18 +138,70 @@ namespace FamilyCompany.Presentation.Unity
         public void SetWorldVelocity(Vector3 velocity)
         {
             _tileDisplacementDirection = false;
+            _tilePresentationFrameOpen = false;
             _worldVelocity = new Vector3(velocity.x, 0f, velocity.z);
         }
 
         public void SetTileDisplacement(Vector2 actualDisplacement)
         {
             _tileDisplacementDirection = true;
+            _tilePresentationFrameOpen = false;
+            _tileFrameDisplacement = actualDisplacement;
+            _tileSemanticDisplacement = actualDisplacement;
+            _tileFrameDeltaTime = 1f;
+            _tileActualSpeed = actualDisplacement.magnitude;
+            _tileFrameCollisionProjected = false;
             _worldVelocity = new Vector3(actualDisplacement.x, 0f, actualDisplacement.y);
+        }
+
+        public void BeginTilePresentationFrame()
+        {
+            _tileDisplacementDirection = true;
+            _tilePresentationFrameOpen = true;
+            _tileFrameDisplacement = Vector2.zero;
+            _tileSemanticDisplacement = Vector2.zero;
+            _tileFrameDeltaTime = 0f;
+            _tileActualSpeed = 0f;
+            _tileFrameCollisionProjected = false;
+            _usedSemanticHeading = false;
+        }
+
+        public void AccumulateTileMotion(
+            Vector2 semanticVelocity,
+            Vector2 actualDisplacement,
+            float deltaTime,
+            bool collisionProjected)
+        {
+            if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+                throw new ArgumentOutOfRangeException(nameof(deltaTime));
+            if (!_tilePresentationFrameOpen) BeginTilePresentationFrame();
+            _tileSemanticDisplacement += semanticVelocity * deltaTime;
+            _tileFrameDisplacement += actualDisplacement;
+            _tileFrameDeltaTime += deltaTime;
+            _tileFrameCollisionProjected |= collisionProjected;
+            _tileActualSpeed = _tileFrameDeltaTime > 0.000001f
+                ? _tileFrameDisplacement.magnitude / _tileFrameDeltaTime
+                : 0f;
+            _worldVelocity = new Vector3(
+                _tileFrameDisplacement.x,
+                0f,
+                _tileFrameDisplacement.y);
+        }
+
+        public void EndTilePresentationFrame()
+        {
+            _tilePresentationFrameOpen = false;
         }
 
         public void StopTileMovementButKeepFacing()
         {
             _tileDisplacementDirection = true;
+            if (_tilePresentationFrameOpen) return;
+            _tileFrameDisplacement = Vector2.zero;
+            _tileSemanticDisplacement = Vector2.zero;
+            _tileFrameDeltaTime = 0f;
+            _tileActualSpeed = 0f;
+            _tileFrameCollisionProjected = false;
             _worldVelocity = Vector3.zero;
         }
 
@@ -148,6 +219,7 @@ namespace FamilyCompany.Presentation.Unity
             EndOfficeWorkSession();
             _worldVelocity = Vector3.zero;
             _lastDirection = direction;
+            ResetTileFacingState(direction);
             _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
             _seatingClip = null;
             _seatingFrameClock = 0f;
@@ -252,12 +324,36 @@ namespace FamilyCompany.Presentation.Unity
             if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
             if (IsMoving)
             {
-                _lastDirection = _tileDisplacementDirection
-                    ? ResolveTileDirection(
-                        new Vector2(_worldVelocity.x, _worldVelocity.z),
+                if (_tileDisplacementDirection)
+                {
+                    EnsureTileFacingState();
+                    OfficeLocomotionFacingResult facing =
+                        OfficeLocomotionPresentationRules.ResolveFacing(
+                            _tileFacingState,
+                            new OfficeNavPoint(
+                                _tileSemanticDisplacement.x,
+                                _tileSemanticDisplacement.y),
+                            new OfficeNavPoint(
+                                _tileFrameDisplacement.x,
+                                _tileFrameDisplacement.y),
+                            _tileFrameDeltaTime > 0.000001f ? _tileFrameDeltaTime : Mathf.Max(0f, deltaTime),
+                            _tileFrameCollisionProjected,
+                            Mathf.Min(
+                                facingHysteresisDegrees,
+                                OfficeLocomotionPresentationRules.DefaultHysteresisDegrees));
+                    _tileFacingState = facing.State;
+                    _lastDirection = facing.State.VisualDirection;
+                    _lastSemanticDirection = facing.SemanticDirection;
+                    _lastMotionDirection = facing.MotionDirection;
+                    _usedSemanticHeading = facing.UsedSemanticHeading;
+                }
+                else
+                {
+                    _lastDirection = ResolveDirection(
+                        _worldVelocity,
                         _lastDirection,
-                        facingHysteresisDegrees)
-                    : ResolveDirection(_worldVelocity, _lastDirection, facingHysteresisDegrees);
+                        facingHysteresisDegrees);
+                }
                 _frameClock += Mathf.Max(0f, deltaTime);
                 var effectiveFrameSeconds = ResolveEffectiveFrameSeconds();
                 while (_frameClock >= effectiveFrameSeconds)
@@ -370,6 +466,7 @@ namespace FamilyCompany.Presentation.Unity
                 throw new ArgumentOutOfRangeException(nameof(direction));
             _worldVelocity = Vector3.zero;
             _lastDirection = direction;
+            ResetTileFacingState(direction);
             _seatingClip = clip;
             _seatingFrameClock = 0f;
             _seatingFrame = 0;
@@ -483,8 +580,25 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!IsMoving) return frameSeconds;
             const float referenceWalkSpeed = 1.8f;
-            var speedScale = Mathf.Clamp(_worldVelocity.magnitude / referenceWalkSpeed, 0.65f, 1.75f);
+            float speed = _tileDisplacementDirection ? _tileActualSpeed : _worldVelocity.magnitude;
+            var speedScale = Mathf.Clamp(speed / referenceWalkSpeed, 0.65f, 1.75f);
             return frameSeconds / speedScale;
+        }
+
+        private void EnsureTileFacingState()
+        {
+            if (_tileFacingStateInitialized && _tileFacingState.VisualDirection == _lastDirection) return;
+            ResetTileFacingState(_lastDirection);
+        }
+
+        private void ResetTileFacingState(int direction)
+        {
+            _tileFacingState = OfficeLocomotionFacingState.Initial(
+                Mathf.Clamp(direction, 0, DirectionCount - 1));
+            _tileFacingStateInitialized = true;
+            _lastSemanticDirection = _tileFacingState.VisualDirection;
+            _lastMotionDirection = _tileFacingState.VisualDirection;
+            _usedSemanticHeading = false;
         }
     }
 }

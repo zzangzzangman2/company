@@ -101,6 +101,25 @@ namespace FamilyCompany.Simulation.Navigation
             return new OfficeMotionIntegrationResult(targetVelocity, rampDisplacement + steadyDisplacement);
         }
 
+        public static float ResolveVelocityChangeRate(
+            OfficeNavPoint currentVelocity,
+            OfficeNavPoint targetVelocity,
+            float baseChangePerSecond,
+            bool directPlayerControl)
+        {
+            if (baseChangePerSecond <= 0f || float.IsNaN(baseChangePerSecond) ||
+                float.IsInfinity(baseChangePerSecond))
+                throw new ArgumentOutOfRangeException(nameof(baseChangePerSecond));
+            if (!directPlayerControl) return baseChangePerSecond;
+            if (currentVelocity.SqrMagnitude <= 0.000001f) return baseChangePerSecond;
+            if (targetVelocity.SqrMagnitude <= 0.000001f) return baseChangePerSecond * 1.7f;
+
+            float alignment = OfficeNavPoint.Dot(currentVelocity.Normalized, targetVelocity.Normalized);
+            return alignment <= -0.70710678f
+                ? baseChangePerSecond * 1.8f
+                : baseChangePerSecond;
+        }
+
         public static OfficeNavPoint ClampDisplacement(OfficeNavPoint displacement, float maximumDistance)
         {
             if (maximumDistance < 0f || float.IsNaN(maximumDistance) || float.IsInfinity(maximumDistance))
@@ -129,6 +148,209 @@ namespace FamilyCompany.Simulation.Navigation
                 throw new ArgumentOutOfRangeException(nameof(stepIndex));
             if (stepIndex < stepCount - 1) return MaximumStableStepSeconds;
             return deltaTime - MaximumStableStepSeconds * (stepCount - 1);
+        }
+    }
+
+    public static class OfficeCollisionSlideRules
+    {
+        public static OfficeNavPoint SelectBestAxisSlide(
+            OfficeNavPoint intendedDisplacement,
+            OfficeNavPoint semanticVelocity,
+            OfficeNavPoint previousDisplacement,
+            bool canMoveX,
+            bool canMoveZ,
+            string stableKey)
+        {
+            bool hasX = canMoveX && Math.Abs(intendedDisplacement.X) > 0.000001f;
+            bool hasZ = canMoveZ && Math.Abs(intendedDisplacement.Z) > 0.000001f;
+            if (!hasX && !hasZ) return new OfficeNavPoint(0f, 0f);
+            var xOnly = new OfficeNavPoint(intendedDisplacement.X, 0f);
+            var zOnly = new OfficeNavPoint(0f, intendedDisplacement.Z);
+            if (!hasX) return zOnly;
+            if (!hasZ) return xOnly;
+
+            float xScore = Score(xOnly, semanticVelocity, previousDisplacement);
+            float zScore = Score(zOnly, semanticVelocity, previousDisplacement);
+            if (Math.Abs(xScore - zScore) > 0.000001f)
+                return xScore > zScore ? xOnly : zOnly;
+            return StablePreferX(stableKey) ? xOnly : zOnly;
+        }
+
+        private static float Score(
+            OfficeNavPoint candidate,
+            OfficeNavPoint semanticVelocity,
+            OfficeNavPoint previousDisplacement)
+        {
+            OfficeNavPoint semantic = semanticVelocity.SqrMagnitude > 0.000001f
+                ? semanticVelocity.Normalized
+                : candidate.Normalized;
+            float progress = OfficeNavPoint.Dot(candidate, semantic);
+            float alignment = OfficeNavPoint.Dot(candidate.Normalized, semantic) * candidate.Magnitude * 0.05f;
+            float continuity = previousDisplacement.SqrMagnitude > 0.000001f
+                ? Math.Max(0f, OfficeNavPoint.Dot(candidate.Normalized, previousDisplacement.Normalized)) *
+                  candidate.Magnitude * 0.02f
+                : 0f;
+            return progress + alignment + continuity;
+        }
+
+        private static bool StablePreferX(string stableKey)
+        {
+            unchecked
+            {
+                uint hash = 2166136261;
+                string value = stableKey ?? string.Empty;
+                for (var index = 0; index < value.Length; index++)
+                {
+                    hash ^= value[index];
+                    hash *= 16777619;
+                }
+                return (hash & 1u) == 0u;
+            }
+        }
+    }
+
+    public readonly struct OfficeLocomotionFacingState
+    {
+        public OfficeLocomotionFacingState(
+            int visualDirection,
+            int candidateDirection,
+            float candidateSeconds,
+            float projectedSeconds)
+        {
+            if (visualDirection < 0 || visualDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(visualDirection));
+            if (candidateDirection < -1 || candidateDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(candidateDirection));
+            VisualDirection = visualDirection;
+            CandidateDirection = candidateDirection;
+            CandidateSeconds = Math.Max(0f, candidateSeconds);
+            ProjectedSeconds = Math.Max(0f, projectedSeconds);
+        }
+
+        public int VisualDirection { get; }
+        public int CandidateDirection { get; }
+        public float CandidateSeconds { get; }
+        public float ProjectedSeconds { get; }
+
+        public static OfficeLocomotionFacingState Initial(int visualDirection)
+        {
+            return new OfficeLocomotionFacingState(visualDirection, -1, 0f, 0f);
+        }
+    }
+
+    public readonly struct OfficeLocomotionFacingResult
+    {
+        public OfficeLocomotionFacingResult(
+            OfficeLocomotionFacingState state,
+            int semanticDirection,
+            int motionDirection,
+            bool usedSemanticHeading)
+        {
+            State = state;
+            SemanticDirection = semanticDirection;
+            MotionDirection = motionDirection;
+            UsedSemanticHeading = usedSemanticHeading;
+        }
+
+        public OfficeLocomotionFacingState State { get; }
+        public int SemanticDirection { get; }
+        public int MotionDirection { get; }
+        public bool UsedSemanticHeading { get; }
+    }
+
+    public static class OfficeLocomotionPresentationRules
+    {
+        public const float DefaultHysteresisDegrees = 4f;
+        public const float DefaultFacingStabilizationSeconds = 0.075f;
+        public const float CollisionProjectionHoldSeconds = 0.15f;
+        private const float MinimumMotionSquared = 0.0000001f;
+        private const float CosineFortyFiveDegrees = 0.70710678f;
+
+        public static OfficeLocomotionFacingResult ResolveFacing(
+            OfficeLocomotionFacingState state,
+            OfficeNavPoint semanticDisplacement,
+            OfficeNavPoint motionDisplacement,
+            float deltaTime,
+            bool collisionProjected,
+            float hysteresisDegrees = DefaultHysteresisDegrees,
+            float stabilizationSeconds = DefaultFacingStabilizationSeconds)
+        {
+            if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+                throw new ArgumentOutOfRangeException(nameof(deltaTime));
+            if (hysteresisDegrees < 0f || hysteresisDegrees >= 22.5f ||
+                float.IsNaN(hysteresisDegrees) || float.IsInfinity(hysteresisDegrees))
+                throw new ArgumentOutOfRangeException(nameof(hysteresisDegrees));
+            if (stabilizationSeconds < 0f || float.IsNaN(stabilizationSeconds) ||
+                float.IsInfinity(stabilizationSeconds))
+                throw new ArgumentOutOfRangeException(nameof(stabilizationSeconds));
+
+            int current = state.VisualDirection;
+            int semanticDirection = ResolveNearestDirection(semanticDisplacement, current);
+            int motionDirection = ResolveNearestDirection(motionDisplacement, current);
+            float projectedSeconds = collisionProjected
+                ? state.ProjectedSeconds + deltaTime
+                : 0f;
+            if (motionDisplacement.SqrMagnitude <= MinimumMotionSquared)
+            {
+                return new OfficeLocomotionFacingResult(
+                    new OfficeLocomotionFacingState(current, -1, 0f, projectedSeconds),
+                    semanticDirection,
+                    motionDirection,
+                    false);
+            }
+
+            bool hasSemantic = semanticDisplacement.SqrMagnitude > MinimumMotionSquared;
+            bool aligned = !hasSemantic ||
+                           OfficeNavPoint.Dot(
+                               semanticDisplacement.Normalized,
+                               motionDisplacement.Normalized) >= CosineFortyFiveDegrees;
+            bool useSemantic = hasSemantic &&
+                               ((!aligned && !collisionProjected) ||
+                                (collisionProjected && projectedSeconds <= CollisionProjectionHoldSeconds));
+            OfficeNavPoint heading = useSemantic ? semanticDisplacement : motionDisplacement;
+            int proposed = OfficeFacingHysteresisRules.ResolveDirection(
+                heading.X,
+                heading.Z,
+                current,
+                hysteresisDegrees);
+            if (proposed == current)
+            {
+                return new OfficeLocomotionFacingResult(
+                    new OfficeLocomotionFacingState(current, -1, 0f, projectedSeconds),
+                    semanticDirection,
+                    motionDirection,
+                    useSemantic);
+            }
+
+            float candidateSeconds = state.CandidateDirection == proposed
+                ? state.CandidateSeconds + deltaTime
+                : deltaTime;
+            int candidateDirection = proposed;
+            if (candidateSeconds + 0.000001f >= stabilizationSeconds)
+            {
+                current = proposed;
+                candidateDirection = -1;
+                candidateSeconds = 0f;
+            }
+            return new OfficeLocomotionFacingResult(
+                new OfficeLocomotionFacingState(
+                    current,
+                    candidateDirection,
+                    candidateSeconds,
+                    projectedSeconds),
+                semanticDirection,
+                motionDirection,
+                useSemantic);
+        }
+
+        public static int ResolveNearestDirection(OfficeNavPoint heading, int fallbackDirection)
+        {
+            if (fallbackDirection < 0 || fallbackDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(fallbackDirection));
+            if (heading.SqrMagnitude <= MinimumMotionSquared) return fallbackDirection;
+            double angle = Math.Atan2(-heading.X, -heading.Z) * 180d / Math.PI;
+            if (angle < 0d) angle += 360d;
+            return ((int)Math.Floor(angle / 45d + 0.5d)) % OfficeFacingHysteresisRules.DirectionCount;
         }
     }
 

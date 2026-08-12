@@ -113,6 +113,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!_configured) return;
             float deltaTime = Time.deltaTime;
             if (deltaTime <= 0f) return;
+            foreach (OfficeRuntimeAgent actor in _registry.Actors)
+            {
+                if (actor != null && actor.isActiveAndEnabled) actor.BeginPresentationFrame();
+            }
             int stepCount = OfficeNavigationMotionIntegrator.CalculateStepCount(deltaTime);
             for (var step = 0; step < stepCount; step++)
             {

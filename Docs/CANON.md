@@ -82,4 +82,4 @@
 - `CreateMigrationPreview()`의 가구 18개·12종·파티션 구성은 T1~T5 회귀 fixture 전용이다. 실제 게임 기본 사무실로 사용하지 않는다.
 - workstation은 desk/chair/seat binding, seat/approach cell, NorthWest facing, 반 셀 operator anchor를 가진다. 네 가족의 의미 root는 좌석 셀 중심·scale 1이다.
 - 시각 calibration의 유일한 저장 위치는 version 2의 `OfficeFurnitureVisualCatalog.asset`과 `OfficeCharacterSeatPoseCatalog.asset`이다. 현재 좌표는 V2 실패 진단 candidate이며, 의자 좌판 중심·책상 operator socket·가구 네 점 footprint·clip/frame별 실제 pelvis/hand를 수동 교정하고 전체 QA를 통과한 값만 최종 승인 데이터가 된다.
-- NorthWest 회전의자의 등받이는 인물 뒤 base로만 그린다. chair front overlay로 등받이나 좌판을 몸 위에 다시 그리지 않는다. 책상 front overlay는 하체 앞의 다리·서랍·앞 모서리만 담당한다.
+- NorthWest 회전의자의 좌판과 등받이 대부분은 인물 뒤 base로 그린다. chair front overlay는 등받이의 제한된 전면 가장자리와 근접 팔걸이만 인물 위에 그리고 좌판·몸통을 덮지 않는다. 책상 front overlay는 하체 앞의 다리·서랍·앞 모서리만 담당한다.

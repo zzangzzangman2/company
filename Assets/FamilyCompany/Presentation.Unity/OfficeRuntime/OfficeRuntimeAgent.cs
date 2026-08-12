@@ -107,6 +107,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         /// </summary>
         public float SeatContactErrorPx => _seatContactErrorPx;
         public Vector2 LastActualDisplacement => _lastActualDisplacement;
+        public Vector2 AccumulatedFrameDisplacement => _animator == null
+            ? Vector2.zero
+            : _animator.AccumulatedTileDisplacement;
+        public Vector2 SemanticFrameDisplacement => _animator == null
+            ? Vector2.zero
+            : _animator.SemanticTileDisplacement;
+        public float ActualPresentationSpeed => _animator == null ? 0f : _animator.ActualTileSpeed;
+        public bool WasCollisionProjected => _animator != null && _animator.WasCollisionProjected;
+        public int SemanticDirection => _animator == null ? 0 : _animator.SemanticDirection;
+        public int MotionDirection => _animator == null ? 0 : _animator.MotionDirection;
+        public bool UsedSemanticHeading => _animator != null && _animator.UsedSemanticHeading;
         public int CurrentDirection => _animator == null ? 0 : _animator.CurrentDirection;
         public SpriteRenderer PresentationRenderer => _renderer;
         public float VisualRotationErrorDegrees => _visualRoot == null
@@ -440,10 +451,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             TickArrivedWork(deltaTime);
         }
 
+        public void BeginPresentationFrame()
+        {
+            _animator?.BeginTilePresentationFrame();
+        }
+
         public void TickPresentation(float deltaTime)
         {
             if (_animator == null || deltaTime < 0f) return;
             _animator.Tick(deltaTime);
+            _animator.EndTilePresentationFrame();
             if (_seat != null && _renderer != null)
             {
                 _world.Workstations.ApplyPresentationStack(_seat, _renderer, transform.position);
@@ -872,26 +889,48 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void MoveWithCollision(Vector2 targetVelocity, float deltaTime, string permittedSeatId)
         {
-            OfficeMotionIntegrationResult motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
+            float changePerSecond = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
                 new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
                 7.5f,
+                _playerControlled);
+            OfficeMotionIntegrationResult motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
+                new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
+                new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
+                changePerSecond,
                 deltaTime);
             _currentVelocity = new Vector2(motion.Velocity.X, motion.Velocity.Z);
             Vector2 intended = new Vector2(motion.Displacement.X, motion.Displacement.Z);
             Vector2 before = Position;
             Vector2 actual = intended;
+            bool collisionProjected = false;
             if (!_world.Occupancy.CanMove(_agentId, before, before + actual, AgentRadius, permittedSeatId))
             {
                 Vector2 xOnly = new Vector2(actual.x, 0f);
                 Vector2 yOnly = new Vector2(0f, actual.y);
-                if (Mathf.Abs(xOnly.x) > 0.00001f &&
-                    _world.Occupancy.CanMove(_agentId, before, before + xOnly, AgentRadius, permittedSeatId))
-                    actual = xOnly;
-                else if (Mathf.Abs(yOnly.y) > 0.00001f &&
-                         _world.Occupancy.CanMove(_agentId, before, before + yOnly, AgentRadius, permittedSeatId))
-                    actual = yOnly;
-                else actual = Vector2.zero;
+                bool canMoveX = Mathf.Abs(xOnly.x) > 0.00001f &&
+                                _world.Occupancy.CanMove(
+                                    _agentId,
+                                    before,
+                                    before + xOnly,
+                                    AgentRadius,
+                                    permittedSeatId);
+                bool canMoveY = Mathf.Abs(yOnly.y) > 0.00001f &&
+                                _world.Occupancy.CanMove(
+                                    _agentId,
+                                    before,
+                                    before + yOnly,
+                                    AgentRadius,
+                                    permittedSeatId);
+                OfficeNavPoint slide = OfficeCollisionSlideRules.SelectBestAxisSlide(
+                    new OfficeNavPoint(actual.x, actual.y),
+                    new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
+                    new OfficeNavPoint(_lastActualDisplacement.x, _lastActualDisplacement.y),
+                    canMoveX,
+                    canMoveY,
+                    _agentId);
+                actual = new Vector2(slide.X, slide.Z);
+                collisionProjected = actual.sqrMagnitude > 0.0000001f;
             }
             if (actual.sqrMagnitude > 0.0000001f)
             {
@@ -899,15 +938,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     before.x + actual.x,
                     before.y + actual.y,
                     transform.position.z);
-                _animator.SetTileDisplacement(actual);
                 _stuckSeconds = Mathf.Max(0f, _stuckSeconds - deltaTime * 2f);
             }
             else
             {
                 _currentVelocity = Vector2.zero;
-                _animator.StopTileMovementButKeepFacing();
                 if (targetVelocity.sqrMagnitude > 0.01f) _stuckSeconds += deltaTime;
             }
+            _animator.AccumulateTileMotion(targetVelocity, actual, deltaTime, collisionProjected);
             _lastActualDisplacement = actual;
             _desiredVelocity = targetVelocity;
             _world.Workstations.ApplyDynamicCharacterOrder(_renderer, transform.position);

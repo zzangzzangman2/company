@@ -13,6 +13,8 @@ namespace FamilyCompany.Editor
             int segmentChecks,
             int oracleSegmentChecks,
             int counterexampleChecks,
+            int facingPresentationChecks,
+            int collisionSlideChecks,
             int motionPartitionChecks,
             int trafficPermutationChecks,
             float maximumStretch,
@@ -25,6 +27,8 @@ namespace FamilyCompany.Editor
             SegmentChecks = segmentChecks;
             OracleSegmentChecks = oracleSegmentChecks;
             CounterexampleChecks = counterexampleChecks;
+            FacingPresentationChecks = facingPresentationChecks;
+            CollisionSlideChecks = collisionSlideChecks;
             MotionPartitionChecks = motionPartitionChecks;
             TrafficPermutationChecks = trafficPermutationChecks;
             MaximumStretch = maximumStretch;
@@ -38,6 +42,8 @@ namespace FamilyCompany.Editor
         public int SegmentChecks { get; }
         public int OracleSegmentChecks { get; }
         public int CounterexampleChecks { get; }
+        public int FacingPresentationChecks { get; }
+        public int CollisionSlideChecks { get; }
         public int MotionPartitionChecks { get; }
         public int TrafficPermutationChecks { get; }
         public float MaximumStretch { get; }
@@ -156,7 +162,8 @@ namespace FamilyCompany.Editor
             }
 
             var counterexampleChecks = ValidateCounterexamples();
-            ValidateFacingHysteresis();
+            var facingPresentationChecks = ValidateFacingPresentation();
+            var collisionSlideChecks = ValidateCollisionSlideSelection();
             var motionPartitionChecks = ValidateMotionPartitioning();
             var trafficPermutationChecks = ValidateTrafficPermutationIndependence();
             var deadlockTicks = ValidateDeadlockRecovery();
@@ -167,6 +174,8 @@ namespace FamilyCompany.Editor
                 segmentChecks,
                 oracleSegmentChecks,
                 counterexampleChecks,
+                facingPresentationChecks,
+                collisionSlideChecks,
                 motionPartitionChecks,
                 trafficPermutationChecks,
                 maximumStretch,
@@ -417,30 +426,130 @@ namespace FamilyCompany.Editor
                 "grid dimension overflow fails closed before allocation");
         }
 
-        private static void ValidateFacingHysteresis()
+        private static int ValidateFacingPresentation()
         {
-            var direction = 0;
-            foreach (var degrees in new[] { 20f, 24f, 27f, 23f, 29f })
-            {
-                AxesFromSouthAngle(degrees, out var horizontal, out var vertical);
-                direction = OfficeFacingHysteresisRules.ResolveDirection(horizontal, vertical, direction, 7.5f);
-                Require(direction == 0, $"facing hysteresis held south at {degrees:F1}");
-            }
+            var checks = 0;
+            OfficeLocomotionFacingState state = OfficeLocomotionFacingState.Initial(0);
+            OfficeNavPoint heading24 = HeadingFromSouthAngle(24f);
+            OfficeLocomotionFacingResult result = OfficeLocomotionPresentationRules.ResolveFacing(
+                state, heading24, heading24, 0.04f, false);
+            Require(result.State.VisualDirection == 0, "small facing hysteresis holds south at 24 degrees");
+            checks++;
 
-            AxesFromSouthAngle(31f, out var switchHorizontal, out var switchVertical);
-            direction = OfficeFacingHysteresisRules.ResolveDirection(
-                switchHorizontal,
-                switchVertical,
-                direction,
-                7.5f);
-            Require(direction == 1, "facing hysteresis commits after margin");
-            AxesFromSouthAngle(24f, out var returnHorizontal, out var returnVertical);
-            direction = OfficeFacingHysteresisRules.ResolveDirection(
-                returnHorizontal,
-                returnVertical,
-                direction,
-                7.5f);
-            Require(direction == 1, "facing hysteresis prevents immediate flip back");
+            OfficeNavPoint heading27 = HeadingFromSouthAngle(27f);
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                result.State, heading27, heading27, 0.04f, false);
+            Require(result.State.VisualDirection == 0, "new facing waits for the stabilization window");
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                result.State, heading27, heading27, 0.04f, false);
+            Require(result.State.VisualDirection == 1, "27 degree turn commits within 80ms");
+            checks += 2;
+
+            OfficeNavPoint heading23 = HeadingFromSouthAngle(23f);
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                result.State, heading23, heading23, 0.04f, false);
+            Require(result.State.VisualDirection == 1, "small return jitter does not flip immediately");
+            checks++;
+
+            state = OfficeLocomotionFacingState.Initial(6);
+            OfficeNavPoint semanticEast = new OfficeNavPoint(1f, 0f);
+            OfficeNavPoint projectedNorth = new OfficeNavPoint(0f, 1f);
+            for (var sample = 0; sample < 3; sample++)
+            {
+                result = OfficeLocomotionPresentationRules.ResolveFacing(
+                    state, semanticEast, projectedNorth, 0.05f, true);
+                state = result.State;
+                Require(state.VisualDirection == 6 && result.UsedSemanticHeading,
+                    "short collision projection keeps semantic east facing");
+                checks++;
+            }
+            for (var sample = 0; sample < 2; sample++)
+            {
+                result = OfficeLocomotionPresentationRules.ResolveFacing(
+                    state, semanticEast, projectedNorth, 0.05f, true);
+                state = result.State;
+            }
+            Require(state.VisualDirection == 4 && !result.UsedSemanticHeading,
+                "sustained collision projection eventually follows north motion");
+            checks++;
+
+            state = OfficeLocomotionFacingState.Initial(0);
+            OfficeNavPoint semanticNorth = new OfficeNavPoint(0f, 1f);
+            OfficeNavPoint inertiaSouth = new OfficeNavPoint(0f, -1f);
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                state, semanticNorth, inertiaSouth, 0.04f, false);
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                result.State, semanticNorth, inertiaSouth, 0.04f, false);
+            Require(result.State.VisualDirection == 4 && result.UsedSemanticHeading,
+                "reverse input commits semantic north instead of displaying backward travel");
+            checks++;
+            return checks;
+        }
+
+        private static int ValidateCollisionSlideSelection()
+        {
+            var checks = 0;
+            OfficeNavPoint intended = new OfficeNavPoint(1f, 1f);
+            OfficeNavPoint xPreferred = OfficeCollisionSlideRules.SelectBestAxisSlide(
+                intended,
+                new OfficeNavPoint(2f, 0.5f),
+                new OfficeNavPoint(0f, 0f),
+                true,
+                true,
+                "agent");
+            Require(Math.Abs(xPreferred.X) > 0.9f && Math.Abs(xPreferred.Z) < 0.0001f,
+                "collision slide maximizes semantic X progress");
+            checks++;
+
+            OfficeNavPoint zPreferred = OfficeCollisionSlideRules.SelectBestAxisSlide(
+                intended,
+                new OfficeNavPoint(0.5f, 2f),
+                new OfficeNavPoint(0f, 0f),
+                true,
+                true,
+                "agent");
+            Require(Math.Abs(zPreferred.Z) > 0.9f && Math.Abs(zPreferred.X) < 0.0001f,
+                "collision slide maximizes semantic Z progress");
+            checks++;
+
+            OfficeNavPoint continuous = OfficeCollisionSlideRules.SelectBestAxisSlide(
+                intended,
+                new OfficeNavPoint(1f, 1f),
+                new OfficeNavPoint(0f, 0.5f),
+                true,
+                true,
+                "agent");
+            Require(Math.Abs(continuous.Z) > 0.9f && Math.Abs(continuous.X) < 0.0001f,
+                "collision slide keeps the previous stable axis on a semantic tie");
+            checks++;
+
+            OfficeNavPoint stableA = OfficeCollisionSlideRules.SelectBestAxisSlide(
+                intended,
+                new OfficeNavPoint(1f, 1f),
+                new OfficeNavPoint(0f, 0f),
+                true,
+                true,
+                "stable-agent");
+            OfficeNavPoint stableB = OfficeCollisionSlideRules.SelectBestAxisSlide(
+                intended,
+                new OfficeNavPoint(1f, 1f),
+                new OfficeNavPoint(0f, 0f),
+                true,
+                true,
+                "stable-agent");
+            Require(stableA.Equals(stableB), "collision slide tie-break is deterministic");
+            checks++;
+
+            OfficeNavPoint none = OfficeCollisionSlideRules.SelectBestAxisSlide(
+                intended,
+                new OfficeNavPoint(1f, 1f),
+                new OfficeNavPoint(0f, 0f),
+                false,
+                false,
+                "agent");
+            Require(none.SqrMagnitude <= 0.000001f, "collision slide fails closed when both axes are blocked");
+            checks++;
+            return checks;
         }
 
         private static int ValidateDeadlockRecovery()
@@ -570,6 +679,29 @@ namespace FamilyCompany.Editor
             Require(Math.Abs(reconstructedDelta - 2f) <= 0.00001f,
                 "large delta slicing preserves elapsed time");
             checks += 2;
+
+            float playerReverseRate = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
+                new OfficeNavPoint(1f, 0f),
+                new OfficeNavPoint(-1f, 0f),
+                7.5f,
+                true);
+            float npcReverseRate = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
+                new OfficeNavPoint(1f, 0f),
+                new OfficeNavPoint(-1f, 0f),
+                7.5f,
+                false);
+            float playerStopRate = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
+                new OfficeNavPoint(1f, 0f),
+                new OfficeNavPoint(0f, 0f),
+                7.5f,
+                true);
+            Require(Math.Abs(playerReverseRate - 13.5f) <= 0.00001f,
+                "direct player reversal decelerates before changing direction");
+            Require(Math.Abs(npcReverseRate - 7.5f) <= 0.00001f,
+                "NPC steering retains the canonical acceleration");
+            Require(Math.Abs(playerStopRate - 12.75f) <= 0.00001f,
+                "direct player release stops faster than acceleration");
+            checks += 3;
             return checks;
         }
 
@@ -726,6 +858,12 @@ namespace FamilyCompany.Editor
             var radians = degrees * Math.PI / 180d;
             horizontal = (float)-Math.Sin(radians);
             vertical = (float)-Math.Cos(radians);
+        }
+
+        private static OfficeNavPoint HeadingFromSouthAngle(float degrees)
+        {
+            AxesFromSouthAngle(degrees, out float horizontal, out float vertical);
+            return new OfficeNavPoint(horizontal, vertical);
         }
 
         private static bool PathsEqual(OfficeNavPath left, OfficeNavPath right)

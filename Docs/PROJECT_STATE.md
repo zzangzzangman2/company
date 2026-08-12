@@ -288,3 +288,24 @@ Unity: 6000.3.21f1
 - 현재 경계: Starter Runtime의 SafeStaticWork는 여전히 `Northwest/Work/0` 한 장만 사용한다.
   재생성한 frame 1~5는 아트 정본이지만 6프레임 애니메이션을 열기 전에 프레임별 좌판 접점 승인과
   최대 보정 점프 검증이 필요하다.
+
+## 2026-08-12 / Movement & Seating Audit 1차 방향·충돌 수정
+
+- Downloads의 `FAMILY_COMPANY_MOVEMENT_SEATING_AUDIT_2026-08-12.md`를 현재 `main`과 대조했다.
+  감사 기준 `f8d7d82` 이후의 레이아웃 편집기 변경은 이동 핵심 코드를 바꾸지 않았으므로 P0 원인이
+  현재 런타임에도 남아 있음을 확인했다.
+- `OfficeRuntimeWorld`가 렌더 프레임 시작에 네 Actor의 표현 누적을 열고 모든 0.05초 이하 이동 substep의
+  의미 변위·실제 변위·시간·충돌 투영 여부를 합산한 뒤 한 번만 Animator에 적용한다. 보행 속도는 더 이상
+  한 substep의 변위량이 아니라 `렌더 프레임 실제 이동거리 / 누적 시간`이다.
+- 방향 표현은 4° hysteresis와 0.075초 후보 안정화를 사용한다. 충돌로 축 투영된 첫 0.15초와 직접 조작의
+  급반전에서는 의미 heading을 표시하되, 위치·이동 여부·보행 속도는 계속 실제 변위만 사용한다.
+- 충돌 시 무조건 X축부터 시도하던 순서를 제거했다. 의미 목적지 진행량, 직전 실제 이동 축 연속성,
+  agent ID 기반 결정론 tie-break로 X/Z slide 중 하나를 고르며 둘 다 막히면 정지한다. 직접 조작 플레이어의
+  정지/135° 이상 반전 감속률만 높이고 NPC 적분률은 유지했다.
+- Unity 6000.3.21f1 백그라운드 `PrototypeValidation`과 `OfficeNavigationValidation`이 PASS했다.
+  회귀 수치는 128 seeds, 1,152 paths, facing 9, collision slide 5, motion partition 8이며 정식 Windows x64
+  build warning은 0이다. 숨김 `-familyCompanyTileRuntimeQa`에서 8방향 모두 semantic/motion/visual 방향 일치,
+  실제 속도 1.650, 충돌 3종 reverse-facing 0, 최대 방향 불일치 0초, 네 좌석 seatContact 1px 이하를 통과했다.
+- 착석 애니메이션은 이번 단계에서 열지 않았다. SafeStaticWork frame 0, 공통 scale 1.55, 승인 좌판 접점,
+  chair base < character < limited chair front 정본을 유지한다. 다음 감사 단계는 거리 기반 gait phase,
+  start/stop/idle 표현, 경로 smoothing, 전체 보행 frame 육안 QA, 승인된 착석 다중 frame 순이다.

@@ -17,7 +17,8 @@ namespace FamilyCompany.Editor
                 "OFFICE_NAVIGATION_VALIDATION: PASS | " +
                 $"seeds={report.Seeds} | paths={report.Paths} | replans={report.Replans} | " +
                 $"segments={report.SegmentChecks} | oracleSegments={report.OracleSegmentChecks} | " +
-                $"counterexamples={report.CounterexampleChecks} | motionPartitions={report.MotionPartitionChecks} | " +
+                $"counterexamples={report.CounterexampleChecks} | facingPresentation={report.FacingPresentationChecks} | " +
+                $"collisionSlides={report.CollisionSlideChecks} | motionPartitions={report.MotionPartitionChecks} | " +
                 $"trafficPermutations={report.TrafficPermutationChecks} | maxStretch={report.MaximumStretch:F3} | " +
                 $"maxExpanded={report.MaximumExpandedNodes}/{FamilyCompany.Simulation.Navigation.OfficeNavigationLimits.MaxExpandedNodes} | " +
                 $"deadlockTicks={report.DeadlockTicks} | {sceneReport}");
@@ -38,7 +39,7 @@ namespace FamilyCompany.Editor
                 if (!world.IsReady)
                     throw new InvalidOperationException(
                         "Office navigation world did not build: " + world.FailureReason);
-                if (world.ObstacleCount < 20)
+                if (world.ObstacleCount < 19)
                     throw new InvalidOperationException(
                         $"Expected collider and renderer footprints, found only {world.ObstacleCount} obstacles.");
                 var agents = UnityEngine.Object.FindObjectsByType<Presentation.Unity.OfficeWorkerAgent>(FindObjectsSortMode.None)

@@ -204,7 +204,7 @@
 
 결정: 가구 Sprite Transform은 배치 데이터가 아니다. `StarterOfficeLayoutAsset`에서 생성한 `OfficeGrid`가 바닥·가구 placement anchor·hard footprint·interaction seat·workstation binding·저장 해시의 단일 정본이다. 가구는 명시적인 예외가 없으면 이동을 막고, 의자는 claim 소유자의 마지막 착석 구간에서만 통과할 수 있다.
 
-결정: 캐릭터 방향은 실제 위치 변화량으로만 결정한다. 캐릭터별 Runtime 방향 예외를 금지하고, source 방향 차이는 `HighMotionDirectionManifest.asset`의 import 정규화로 해결한다. 수학 테스트와 4명×8방향 사람 승인 contact sheet를 함께 요구한다.
+결정: 캐릭터의 이동 여부와 보행 속도는 렌더 프레임 전체의 실제 위치 변화량으로 결정한다. 방향은 실제 이동 heading을 기본으로 하되, 충돌 축 투영의 첫 0.15초와 직접 조작 급반전에서는 의미 heading을 짧게 유지한다. 캐릭터별 Runtime 방향 예외를 금지하고, source 방향 차이는 `HighMotionDirectionManifest.asset`의 import 정규화로 해결한다. 수학 테스트와 4명×8방향 사람 승인 contact sheet를 함께 요구한다.
 
 이유: 숨은 Legacy Actor, visual-only 의자 보정, 의도 속도 기반 방향은 화면과 게임 상태를 서로 다른 사실로 만든다. 하나의 의미 레이아웃과 하나의 Actor 집합에서 렌더·충돌·경로·좌석·저장을 파생해야 사용자가 편집한 배치도 즉시 같은 규칙을 따른다.
 
@@ -238,3 +238,19 @@ SittingDown·Working·FinishingWork·StandingUp 전 구간에 유지한다. 공�
 전원이 좌판 아래로 가라앉는다. 또한 의자 sort anchor가 ground anchor보다 약 20px 낮아 바닥 순서만
 사용하면 좌판이 골반을 덮는다. 실제 Windows 플레이어에서 네 가족 seatContact `0.000px`, 의자 base <
 인물 < 의자 전면 레이어 순서, 엄마의 무릎·종아리·발 전체 노출을 확인했다.
+
+## 2026-08-12 / 이동 시뮬레이션과 방향·보행 표현의 시간 단위를 분리한다
+
+결정: 한 렌더 프레임이 여러 0.05초 이하 substep으로 나뉘어도 Animator에는 마지막 substep이 아니라
+전체 실제 변위, 전체 의미 변위, 전체 경과 시간을 한 번 전달한다. `IsMoving`은 전체 실제 변위로 판정하고
+보행 cadence의 속도 단위는 `실제 이동거리 / 초`로 계산한다. 8방향 경계는 4° hysteresis와 0.075초
+후보 안정화를 사용하며, 충돌 축 투영 중 의미 heading 보존은 최대 0.15초로 제한한다.
+
+결정: 대각선 이동이 막혔을 때 X축을 무조건 먼저 선택하지 않는다. 통과 가능한 X/Z 후보를 의미 목적지
+진행량, 직전 실제 축 연속성, agent ID 기반 안정 tie-break로 비교한다. 직접 조작 플레이어의 정지와 135°
+이상 반전만 각각 기본 속도 변화율의 1.7배·1.8배로 응답시키고 NPC의 기존 변화율은 유지한다.
+
+이유: 변위량을 속도로 사용하면 FPS와 substep 수에 따라 발걸음 주기가 달라지고, 마지막 substep만 보면
+실제로 이동한 프레임이 idle로 덮인다. 또한 X 우선 투영과 실제 변위만의 즉시 방향 전환은 벽·책상 모서리에서
+의도와 반대로 걷는 프레임을 만든다. 시뮬레이션 사실과 표현 heading을 명시적으로 분리하면 충돌 정합성을
+유지하면서도 조작 방향과 화면 방향의 역전을 제한할 수 있다.

@@ -499,12 +499,29 @@ namespace FamilyCompany.Presentation.Unity
                 player.QaTeleportToCell(new OfficeGridCoordinate(12, 12));
                 player.QaSetPlayerInput(QaDirectionVectors[direction]);
                 Vector2 observedDisplacement = Vector2.zero;
+                Vector2 observedFrameDisplacement = Vector2.zero;
+                Vector2 observedSemanticDisplacement = Vector2.zero;
+                float observedSpeed = 0f;
+                int observedSemanticDirection = player.SemanticDirection;
+                int observedMotionDirection = player.MotionDirection;
+                int observedVisualDirection = player.CurrentDirection;
+                bool observedProjection = false;
+                string observedSprite = string.Empty;
                 float started = Time.time;
                 while (Time.time - started < 2f)
                 {
                     yield return null;
                     if (player.LastActualDisplacement.sqrMagnitude > observedDisplacement.sqrMagnitude)
                         observedDisplacement = player.LastActualDisplacement;
+                    if (player.AccumulatedFrameDisplacement.sqrMagnitude <= 0.0000001f) continue;
+                    observedFrameDisplacement = player.AccumulatedFrameDisplacement;
+                    observedSemanticDisplacement = player.SemanticFrameDisplacement;
+                    observedSpeed = player.ActualPresentationSpeed;
+                    observedSemanticDirection = player.SemanticDirection;
+                    observedMotionDirection = player.MotionDirection;
+                    observedVisualDirection = player.CurrentDirection;
+                    observedProjection = player.WasCollisionProjected;
+                    observedSprite = player.CurrentSpriteName;
                 }
                 player.QaSetPlayerInput(Vector2.zero);
                 yield return null;
@@ -514,18 +531,26 @@ namespace FamilyCompany.Presentation.Unity
                     yield break;
                 }
                 int expected = DirectionalSpriteAnimator.ResolveTileDirection(observedDisplacement);
-                if (expected != direction || player.CurrentDirection != direction)
+                if (expected != direction || player.CurrentDirection != direction ||
+                    observedSemanticDirection != direction || observedMotionDirection != direction ||
+                    observedVisualDirection != direction || observedProjection || observedSpeed < 1.4f)
                 {
                     FailPlayerQa(
                         52,
                         $"direction mismatch {QaDirectionNames[direction]}: vector={observedDisplacement} " +
-                        $"expected={direction} math={expected} animator={player.CurrentDirection}");
+                        $"frame={observedFrameDisplacement} semantic={observedSemanticDisplacement} " +
+                        $"expected={direction} math={expected} semanticDir={observedSemanticDirection} " +
+                        $"motionDir={observedMotionDirection} visualDir={observedVisualDirection} " +
+                        $"projected={observedProjection} speed={observedSpeed:F3}");
                     yield break;
                 }
                 Debug.Log(
                     $"STARTER_OFFICE_DIRECTION_SAMPLE_PASS | index={direction} name={QaDirectionNames[direction]} " +
-                    $"actualDisplacement={observedDisplacement} animator={player.CurrentDirection} " +
-                    $"spriteAssetPath=Assets/Art/Characters/Player/Pixel/HighMotion/Frames/{player.CurrentSpriteName}.png");
+                    $"stepDisplacement={observedDisplacement} frameDisplacement={observedFrameDisplacement} " +
+                    $"semanticDisplacement={observedSemanticDisplacement} actualSpeed={observedSpeed:F3} " +
+                    $"semanticDir={observedSemanticDirection} motionDir={observedMotionDirection} " +
+                    $"visualDir={observedVisualDirection} projected={observedProjection} " +
+                    $"spriteAssetPath=Assets/Art/Characters/Player/Pixel/HighMotion/Frames/{observedSprite}.png");
             }
             if (!RequireZeroActualViolations("eight-direction-player", 53)) yield break;
             Debug.Log("STARTER_OFFICE_EIGHT_DIRECTION_QA_PASS | samples=8 | " + OccupancyMetricSummary());
@@ -564,6 +589,9 @@ namespace FamilyCompany.Presentation.Unity
                 float started = Time.time;
                 Vector2 previous = player.Position;
                 float maximumFrameDisplacement = 0f;
+                float mismatchedFacingSeconds = 0f;
+                int reverseFacingFrames = 0;
+                int projectedFrames = 0;
                 while (Time.time - started < 10f)
                 {
                     yield return null;
@@ -571,6 +599,26 @@ namespace FamilyCompany.Presentation.Unity
                         maximumFrameDisplacement,
                         Vector2.Distance(previous, player.Position));
                     previous = player.Position;
+                    if (player.AccumulatedFrameDisplacement.sqrMagnitude <= 0.0000001f) continue;
+                    if (player.WasCollisionProjected) projectedFrames++;
+                    int expectedDirection = player.UsedSemanticHeading
+                        ? player.SemanticDirection
+                        : player.MotionDirection;
+                    int directionDelta = Mathf.Abs(player.CurrentDirection - expectedDirection);
+                    directionDelta = Mathf.Min(directionDelta, DirectionalSpriteAnimator.DirectionCount - directionDelta);
+                    if (directionDelta >= 3) reverseFacingFrames++;
+                    if (directionDelta >= 2) mismatchedFacingSeconds += Time.deltaTime;
+                    else mismatchedFacingSeconds = 0f;
+                    if (reverseFacingFrames > 0 || mismatchedFacingSeconds > 0.15f)
+                    {
+                        FailPlayerQa(
+                            65 + scenario,
+                            $"player {labels[scenario]} facing diverged: semanticDir={player.SemanticDirection} " +
+                            $"motionDir={player.MotionDirection} visualDir={player.CurrentDirection} " +
+                            $"usedSemantic={player.UsedSemanticHeading} projected={player.WasCollisionProjected} " +
+                            $"mismatchSeconds={mismatchedFacingSeconds:F3} reverseFrames={reverseFacingFrames}");
+                        yield break;
+                    }
                 }
                 player.QaSetPlayerInput(Vector2.zero);
                 yield return null;
@@ -590,7 +638,9 @@ namespace FamilyCompany.Presentation.Unity
                 Debug.Log(
                     $"STARTER_OFFICE_PLAYER_COLLISION_SAMPLE_PASS | target={labels[scenario]} " +
                     $"duration=10.00 timeScale={Time.timeScale:F1} maxFrameDelta={maximumFrameDisplacement:F4} " +
-                    "replans=0 arrivals=0 | " + OccupancyMetricSummary());
+                    $"projectedFrames={projectedFrames} reverseFacingFrames={reverseFacingFrames} " +
+                    $"maxMismatchSeconds={mismatchedFacingSeconds:F3} replans=0 arrivals=0 | " +
+                    OccupancyMetricSummary());
             }
             Debug.Log("STARTER_OFFICE_PLAYER_COLLISION_QA_PASS | scenarios=3 | timeScale=4");
         }
