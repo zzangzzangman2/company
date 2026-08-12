@@ -75,7 +75,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private void Start()
         {
-            Debug.Log("[StarterOfficeTileRuntime] 처음하기/불러오기 = Starter 타일 사무실 · F9 = 단방향 복구");
+            Debug.Log("[StarterOfficeTileRuntime] 처음하기/불러오기 = Starter 타일 사무실 · F2 = 배치 편집 · F9 = 단방향 복구");
             if (System.Array.IndexOf(
                     System.Environment.GetCommandLineArgs(),
                     "-familyCompanyTileRuntimeQa") >= 0)
@@ -183,6 +183,10 @@ namespace FamilyCompany.Presentation.Unity
             if (_starterRuntime == null)
                 _starterRuntime = bootstrap.gameObject.AddComponent<StarterOfficeRuntimeBootstrap>();
             _starterRuntime.Configure(gameBootstrap, bootstrap, previewCamera, _legacyRenderers);
+            var layoutEditor = _starterRuntime.GetComponent<OfficeLayoutEditModeController>();
+            if (layoutEditor == null)
+                layoutEditor = _starterRuntime.gameObject.AddComponent<OfficeLayoutEditModeController>();
+            layoutEditor.Configure(_starterRuntime, previewCamera);
             if (!_starterRuntime.IsReady)
             {
                 _loading = false;

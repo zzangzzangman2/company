@@ -69,7 +69,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             BindCoordinators();
         }
 
-        public void ApplyLayoutForQa(OfficeGrid grid)
+        /// <summary>
+        /// Replaces the semantic layout and rebuilds render, collision, seats and save state from it.
+        /// The single entry point for any layout change, so the editor cannot move a sprite without
+        /// moving the collision footprint with it.
+        /// </summary>
+        public void ApplyLayout(OfficeGrid grid)
         {
             if (grid == null) throw new ArgumentNullException(nameof(grid));
             if (_building) throw new InvalidOperationException("Starter Office is already rebuilding.");
@@ -77,6 +82,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             IsReady = false;
             StartCoroutine(RebuildForLayoutChange());
         }
+
+        public void ApplyLayoutForQa(OfficeGrid grid) => ApplyLayout(grid);
 
         private void BuildRuntime()
         {
