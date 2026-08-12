@@ -355,6 +355,19 @@ namespace FamilyCompany.Simulation.Family
         {
             string desk = "desk:" + member.MemberId;
             string current = "current:" + member.MemberId;
+            if (member.Autonomy.CurrentAction == AutonomousOfficeAction.Meeting)
+            {
+                // Starter Office has no authored meeting-table chairs yet. Preserve the existing
+                // assigned-PC video-meeting contract while varying the visible seated behavior.
+                return new[]
+                {
+                    new Candidate(OfficeMicroAction.PreparingMeeting, "meeting:main", OfficeSemanticLocation.MeetingRoom, 24),
+                    new Candidate(OfficeMicroAction.PhoneCall, desk, OfficeSemanticLocation.MeetingRoom, 22),
+                    new Candidate(OfficeMicroAction.ReadingDocument, "meeting-docs:" + member.MemberId, OfficeSemanticLocation.MeetingRoom, 18),
+                    new Candidate(OfficeMicroAction.Typing, "meeting-typing:" + member.MemberId, OfficeSemanticLocation.MeetingRoom, 16),
+                    new Candidate(OfficeMicroAction.LookingAround, current, OfficeSemanticLocation.MeetingRoom, 8)
+                };
+            }
             var common = new List<Candidate>
             {
                 new Candidate(OfficeMicroAction.Stretching, "stretch:" + member.MemberId, OfficeSemanticLocation.OpenArea, 6),
