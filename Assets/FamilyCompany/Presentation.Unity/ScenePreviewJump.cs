@@ -278,6 +278,8 @@ namespace FamilyCompany.Presentation.Unity
             _starterRuntime.ApplyLayoutForQa(OfficeGridLayouts.CreateStarterOfficeV1());
             yield return WaitForRuntimeReady(46, "restore StarterOfficeV1");
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
+            yield return RunMicroActionDestinationQa();
+            if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunPlayerCollisionQa();
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunFourSeatWorkQa();
@@ -742,6 +744,59 @@ namespace FamilyCompany.Presentation.Unity
                     OccupancyMetricSummary());
             }
             Debug.Log("STARTER_OFFICE_PLAYER_COLLISION_QA_PASS | scenarios=3 | timeScale=4");
+        }
+
+        private IEnumerator RunMicroActionDestinationQa()
+        {
+            Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
+            if (actors == null) yield break;
+            OfficeRuntimeAgent player = actors["player"];
+            var locations = new[]
+            {
+                OfficeSemanticLocation.Filing,
+                OfficeSemanticLocation.Printer,
+                OfficeSemanticLocation.Water,
+                OfficeSemanticLocation.Coffee,
+                OfficeSemanticLocation.OpenArea
+            };
+            foreach (OfficeSemanticLocation location in locations)
+            {
+                _starterRuntime.World.Occupancy.ResetMetrics();
+                player.QaTeleportToCell(new OfficeGridCoordinate(5, 6));
+                actors["older_sister"].QaTeleportToCell(new OfficeGridCoordinate(10, 2));
+                actors["father"].QaTeleportToCell(new OfficeGridCoordinate(1, 9));
+                actors["mother"].QaTeleportToCell(new OfficeGridCoordinate(10, 10));
+                if (!player.QaBeginSemanticLocation(
+                        location,
+                        "micro-destination-" + location,
+                        out OfficeGridCoordinate destination))
+                {
+                    FailPlayerQa(72, "micro-action destination could not be resolved: " + location);
+                    yield break;
+                }
+
+                float started = Time.time;
+                while (Time.time - started < 20f && !player.QaReachedCell(destination))
+                    yield return null;
+                if (!player.QaReachedCell(destination))
+                {
+                    FailPlayerQa(
+                        73,
+                        $"micro-action destination was unreachable: {location} target={destination} " +
+                        $"position={player.Position} phase={player.Phase} stuck={player.StuckSeconds:F2} | " +
+                        OccupancyMetricSummary());
+                    yield break;
+                }
+                if (!RequireZeroActualViolations("micro-destination-" + location, 74)) yield break;
+                Debug.Log(
+                    $"STARTER_OFFICE_MICRO_DESTINATION_SAMPLE_PASS | location={location} " +
+                    $"cell={destination} | {OccupancyMetricSummary()}");
+            }
+            foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
+            Debug.Log(
+                "STARTER_OFFICE_MICRO_DESTINATION_QA_PASS | " +
+                "locations=Filing,Printer,Water,Coffee,OpenArea unreachable=0");
+            yield return null;
         }
 
         private IEnumerator RunFourSeatWorkQa()

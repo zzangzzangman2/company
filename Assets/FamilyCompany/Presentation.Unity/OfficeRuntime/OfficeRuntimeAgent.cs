@@ -398,6 +398,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return BeginDestination(destination);
         }
 
+        public bool QaBeginSemanticLocation(
+            OfficeSemanticLocation location,
+            string scenarioId,
+            out OfficeGridCoordinate destinationCell)
+        {
+            if (!_qaControl) BeginQaControl();
+            if (!_world.Workstations.TryResolveDestination(
+                    location,
+                    _agentId,
+                    scenarioId ?? "qa-semantic-location",
+                    out OfficeRuntimeDestination destination))
+            {
+                destinationCell = default;
+                return false;
+            }
+            destinationCell = destination.Cell;
+            return BeginDestination(destination);
+        }
+
         public bool QaRequestStand()
         {
             if (!_qaControl || Phase != OfficeRuntimeAgentPhase.Working) return false;
