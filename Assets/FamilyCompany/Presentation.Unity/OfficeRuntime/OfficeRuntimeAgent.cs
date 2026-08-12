@@ -76,6 +76,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private Vector3 _standTransitionTargetPelvisWorld;
         private bool _sitTransitionInitialized;
         private bool _standTransitionInitialized;
+        private float _sitPlacementProgress01;
+        private float _standPlacementProgress01;
         private int _observedSitDownFrameMask;
         private int _observedWorkFrameMask;
         private int _observedStandUpFrameMask;
@@ -876,7 +878,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
                 case OfficeRuntimeAgentPhase.SittingDown:
                     StopMotion();
-                    if (!_animator.IsOfficeSeatingTransitionComplete) return;
+                    if (!_animator.IsOfficeSeatingTransitionComplete || _sitPlacementProgress01 < 0.9999f)
+                        return;
                     if (!_animator.BeginSeatedWork())
                     {
                         ReleaseSeatImmediately();
@@ -908,7 +911,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     break;
                 case OfficeRuntimeAgentPhase.StandingUp:
                     StopMotion();
-                    if (!_animator.IsOfficeSeatingTransitionComplete) return;
+                    if (!_animator.IsOfficeSeatingTransitionComplete || _standPlacementProgress01 < 0.9999f)
+                        return;
                     ResetVisualPose();
                     _world.Workstations.ClearOcclusion(_seat);
                     _animator.ResumeWalkingAfterSeating();
@@ -1158,13 +1162,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                                 profile.PelvisAnchorPx);
                         _sitTransitionInitialized = true;
                         _standTransitionInitialized = false;
+                        _sitPlacementProgress01 = 0f;
                     }
+                    _sitPlacementProgress01 = ResolveStepLimitedTransitionProgress(
+                        _sitTransitionStartPelvisWorld,
+                        cushion,
+                        _sitPlacementProgress01,
+                        SmoothStep01(_animator.CurrentOfficeSeatingProgress01));
                     desiredPelvis = Vector3.Lerp(
                         _sitTransitionStartPelvisWorld,
                         cushion,
-                        SmoothStep01(_animator.CurrentOfficeSeatingProgress01));
+                        _sitPlacementProgress01);
                     break;
                 case OfficeSeatingAnimationClip.Work:
+                    _sitPlacementProgress01 = 1f;
                     desiredPelvis = cushion;
                     break;
                 case OfficeSeatingAnimationClip.StandUp:
@@ -1181,11 +1192,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                                 _renderer,
                                 finalProfile.PelvisAnchorPx);
                         _standTransitionInitialized = true;
+                        _standPlacementProgress01 = 0f;
                     }
+                    _standPlacementProgress01 = ResolveStepLimitedTransitionProgress(
+                        cushion,
+                        _standTransitionTargetPelvisWorld,
+                        _standPlacementProgress01,
+                        SmoothStep01(_animator.CurrentOfficeSeatingProgress01));
                     desiredPelvis = Vector3.Lerp(
                         cushion,
                         _standTransitionTargetPelvisWorld,
-                        SmoothStep01(_animator.CurrentOfficeSeatingProgress01));
+                        _standPlacementProgress01);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(clip));
@@ -1270,6 +1287,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return progress * progress * (3f - (2f * progress));
         }
 
+        private static float ResolveStepLimitedTransitionProgress(
+            Vector3 startWorld,
+            Vector3 endWorld,
+            float currentProgress,
+            float targetProgress)
+        {
+            targetProgress = Mathf.Clamp01(targetProgress);
+            if (targetProgress <= currentProgress) return currentProgress;
+            if (Camera.main == null) return targetProgress;
+            float travelPx = OfficeGridAlignmentMetrics.ScreenDistance(
+                Camera.main,
+                startWorld,
+                endWorld);
+            if (travelPx <= 0.001f) return targetProgress;
+            const float maximumPelvisStepPx = 1.9f;
+            return Mathf.MoveTowards(
+                currentProgress,
+                targetProgress,
+                maximumPelvisStepPx / travelPx);
+        }
+
         private void RecordTransitionMotion(
             OfficeSeatingAnimationClip clip,
             Vector3 pelvisWorld,
@@ -1347,6 +1385,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _alignedFrame = -1;
                 _sitTransitionInitialized = false;
                 _standTransitionInitialized = false;
+                _sitPlacementProgress01 = 0f;
+                _standPlacementProgress01 = 0f;
                 ResetTransitionMotionMetrics();
                 if (_animator != null && _animator.IsOfficeSeatingPoseActive)
                     _animator.ResumeWalkingAfterSeating();
