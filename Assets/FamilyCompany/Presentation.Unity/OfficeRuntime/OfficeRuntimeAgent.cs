@@ -91,6 +91,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public float HandWorkErrorPx => _handWorkErrorPx;
         public Vector2 LastActualDisplacement => _lastActualDisplacement;
         public int CurrentDirection => _animator == null ? 0 : _animator.CurrentDirection;
+        public SpriteRenderer PresentationRenderer => _renderer;
+        public float VisualRotationErrorDegrees => _visualRoot == null
+            ? float.PositiveInfinity
+            : Quaternion.Angle(Quaternion.identity, _visualRoot.localRotation);
+        public float VisualScaleDeviation => _visualRoot == null
+            ? float.PositiveInfinity
+            : Mathf.Max(
+                Mathf.Abs((_visualRoot.localScale.x / OfficeGridCharacterMover.UniformVisualScale) - 1f),
+                Mathf.Max(
+                    Mathf.Abs((_visualRoot.localScale.y / OfficeGridCharacterMover.UniformVisualScale) - 1f),
+                    Mathf.Abs((_visualRoot.localScale.z / OfficeGridCharacterMover.UniformVisualScale) - 1f)));
         public string CurrentSpriteName => _renderer == null || _renderer.sprite == null
             ? string.Empty
             : _renderer.sprite.name;
@@ -144,7 +155,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _playerControlled = playerControlled;
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             _visualRoot = visualRoot ?? throw new ArgumentNullException(nameof(visualRoot));
+            if (_animator != null) _animator.OfficeFrameApplied -= HandleOfficeFrameApplied;
             _animator = animator ?? throw new ArgumentNullException(nameof(animator));
+            _animator.SetExternallyTicked(true);
+            _animator.OfficeFrameApplied += HandleOfficeFrameApplied;
             _poseCatalog = poseCatalog ?? throw new ArgumentNullException(nameof(poseCatalog));
             AgentRadius = Mathf.Max(0.12f, radius);
             transform.position = _world.Presenter.CellCenterWorld(spawnCell);
@@ -353,7 +367,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public void TickRuntime(float deltaTime)
         {
             if (deltaTime <= 0f) return;
-            RefreshSeatPose();
             _world.Occupancy.UpdateActor(
                 _agentId,
                 Position,
@@ -408,6 +421,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             StopMotion();
             TickArrivedWork(deltaTime);
+        }
+
+        public void TickPresentation(float deltaTime)
+        {
+            if (_animator == null || deltaTime < 0f) return;
+            _animator.Tick(deltaTime);
+            if (_seat != null && _renderer != null)
+            {
+                _world.Workstations.ApplyPresentationStack(_seat, _renderer, transform.position);
+            }
         }
 
         private bool BeginDestination(OfficeRuntimeDestination destination)
@@ -682,18 +705,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         return;
                     }
                     transform.position = new Vector3(target.x, target.y, transform.position.z);
+                    _seatDirection = FacingDirection(_seat.Facing);
                     if (!_seatClaim.TryOccupy(out _) ||
-                        !_animator.PrepareOfficeSeatingFacing(
-                            FacingDirection(_seat.Facing),
-                            OfficeSeatForegroundOcclusionMode.Default) ||
-                        !_animator.BeginSitDown(FacingDirection(_seat.Facing)))
+                        !_animator.PrepareOfficeSeatingFacing(_seatDirection) ||
+                        !_animator.BeginSitDown(_seatDirection))
                     {
                         ReleaseSeatImmediately();
                         ResumeAutonomy();
                         return;
                     }
-                    _seatDirection = FacingDirection(_seat.Facing);
-                    _world.Workstations.ApplyOcclusion(_seat, _renderer.sortingOrder);
+                    _world.Workstations.ApplyPresentationStack(_seat, _renderer, transform.position);
                     Phase = OfficeRuntimeAgentPhase.SittingDown;
                     CurrentActivity = OfficeActivity.Work;
                     break;
@@ -873,7 +894,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             _lastActualDisplacement = actual;
             _desiredVelocity = targetVelocity;
-            _renderer.sortingOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(transform.position);
+            _world.Workstations.ApplyDynamicCharacterOrder(_renderer, transform.position);
             _world.Occupancy.UpdateActor(
                 _agentId,
                 Position,
@@ -898,36 +919,49 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _seat?.SeatId ?? string.Empty);
         }
 
-        private void RefreshSeatPose()
+        private void HandleOfficeFrameApplied(
+            OfficeSeatingAnimationClip clip,
+            int frame,
+            Sprite appliedSprite)
         {
-            if (_seat == null || !_animator.CurrentOfficeSeatingClip.HasValue) return;
-            OfficeSeatingAnimationClip clip = _animator.CurrentOfficeSeatingClip.Value;
-            int frame = _animator.CurrentOfficeSeatingFrame;
-            if (_alignedClip == clip && _alignedFrame == frame) return;
-            OfficeCharacterSeatPoseProfile profile = _poseCatalog.Resolve(
+            if (_seat == null || appliedSprite == null) return;
+            OfficeCharacterSeatPoseProfile profile = _poseCatalog.ResolveApproved(
                 _agentId,
                 _seatDirection,
                 clip,
                 frame);
+            ApplySeatedPose(profile);
+            _alignedClip = clip;
+            _alignedFrame = frame;
+        }
+
+        private void ApplySeatedPose(OfficeCharacterSeatPoseProfile profile)
+        {
+            if (profile == null) throw new ArgumentNullException(nameof(profile));
+            if (!profile.HumanApproved)
+                throw new InvalidOperationException($"Unapproved seated pose reached runtime for {_agentId}.");
+            if (Mathf.Abs(profile.RotationDegrees) > 0.01f)
+                throw new InvalidOperationException($"Seated pose rotation must be zero for {_agentId}.");
+            if (profile.UniformScale < 0.97f || profile.UniformScale > 1.03f)
+                throw new InvalidOperationException($"Seated pose scale is outside 0.97..1.03 for {_agentId}.");
             ResetVisualPose();
             _visualRoot.localScale = Vector3.one *
                                      (OfficeGridCharacterMover.UniformVisualScale * profile.UniformScale);
-            _visualRoot.localRotation = Quaternion.Euler(0f, 0f, profile.RotationDegrees);
+            _visualRoot.localRotation = Quaternion.identity;
             Vector3 pelvis = OfficeGridAlignmentMetrics.SpriteAnchorWorld(_renderer, profile.PelvisAnchorPx);
             Vector3 seat = _world.Workstations.ChairSeatAnchorWorld(_seat);
             _visualRoot.localPosition = transform.InverseTransformVector(seat - pelvis);
-            _alignedClip = clip;
-            _alignedFrame = frame;
+            _world.Workstations.ApplyPresentationStack(_seat, _renderer, transform.position);
         }
 
         private void TrackWorkstationMetrics()
         {
             if (_seat == null || Camera.main == null) return;
-            OfficeCharacterSeatPoseProfile profile = _poseCatalog.Resolve(
+            OfficeCharacterSeatPoseProfile profile = _poseCatalog.ResolveApproved(
                 _agentId,
                 _seatDirection,
                 OfficeSeatingAnimationClip.Work,
-                _animator.CurrentOfficeSeatingFrame);
+                0);
             _chairDeskErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
                 Camera.main,
                 _world.Workstations.ChairSeatAnchorWorld(_seat),
@@ -998,6 +1032,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void OnDestroy()
         {
+            if (_animator != null)
+            {
+                _animator.OfficeFrameApplied -= HandleOfficeFrameApplied;
+                _animator.SetExternallyTicked(false);
+            }
             if (_world != null) _world.Occupancy.UnregisterActor(_agentId);
             ReleaseSeatImmediately();
         }

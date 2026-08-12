@@ -16,6 +16,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         [SerializeField] private Vector2 deskInteractionAnchorPx;
         [SerializeField] private float uniformScale = 1f;
         [SerializeField] private float rotationDegrees;
+        [SerializeField] private bool humanApproved;
+        [SerializeField] private string sourceSpriteSha256 = string.Empty;
 
         public string MemberId => memberId;
         public int DirectionIndex => directionIndex;
@@ -26,6 +28,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         public Vector2 HandAnchorPx => deskInteractionAnchorPx;
         public float UniformScale => uniformScale;
         public float RotationDegrees => rotationDegrees;
+        public bool HumanApproved => humanApproved;
+        public string SourceSpriteSha256 => sourceSpriteSha256 ?? string.Empty;
 
         public static OfficeCharacterSeatPoseProfile Create(
             string memberId,
@@ -35,7 +39,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             Vector2 pelvisAnchorPx,
             Vector2 deskInteractionAnchorPx,
             float uniformScale = 1f,
-            float rotationDegrees = 0f)
+            float rotationDegrees = 0f,
+            bool humanApproved = false,
+            string sourceSpriteSha256 = "")
         {
             return new OfficeCharacterSeatPoseProfile
             {
@@ -46,7 +52,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
                 pelvisAnchorPx = pelvisAnchorPx,
                 deskInteractionAnchorPx = deskInteractionAnchorPx,
                 uniformScale = uniformScale,
-                rotationDegrees = rotationDegrees
+                rotationDegrees = rotationDegrees,
+                humanApproved = humanApproved,
+                sourceSpriteSha256 = sourceSpriteSha256 ?? string.Empty
             };
         }
 
@@ -54,12 +62,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             Vector2 newPelvisAnchorPx,
             Vector2 newHandAnchorPx,
             float newUniformScale,
-            float newRotationDegrees)
+            bool approved,
+            string newSourceSpriteSha256)
         {
             pelvisAnchorPx = newPelvisAnchorPx;
             deskInteractionAnchorPx = newHandAnchorPx;
             uniformScale = newUniformScale;
-            rotationDegrees = newRotationDegrees;
+            rotationDegrees = 0f;
+            humanApproved = approved;
+            sourceSpriteSha256 = newSourceSpriteSha256 ?? string.Empty;
             Validate(new Vector2(256f, 256f));
         }
 
@@ -67,12 +78,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         {
             Vector2 vector = (deskInteractionAnchorPx - pelvisAnchorPx) *
                              (baseUniformScale * uniformScale);
-            float radians = rotationDegrees * Mathf.Deg2Rad;
-            float cosine = Mathf.Cos(radians);
-            float sine = Mathf.Sin(radians);
-            return new Vector2(
-                vector.x * cosine - vector.y * sine,
-                vector.x * sine + vector.y * cosine);
+            return vector;
         }
 
         public void Validate(Vector2 canvasSizePx)
@@ -92,10 +98,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             int frameCount = OfficeSeatingAnimationFrames.FrameCount(clip);
             if (frameIndex < 0 || frameIndex >= frameCount)
                 throw new InvalidOperationException($"Character seat pose '{memberId}/{clip}' has invalid frame {frameIndex}.");
-            if (uniformScale <= 0f || float.IsNaN(uniformScale) || float.IsInfinity(uniformScale))
-                throw new InvalidOperationException($"Character seat pose '{memberId}/{clip}/{frameIndex}' has invalid scale {uniformScale}.");
-            if (float.IsNaN(rotationDegrees) || float.IsInfinity(rotationDegrees) || Mathf.Abs(rotationDegrees) > 30f)
-                throw new InvalidOperationException($"Character seat pose '{memberId}/{clip}/{frameIndex}' has invalid rotation {rotationDegrees}.");
+            if (float.IsNaN(uniformScale) || float.IsInfinity(uniformScale) ||
+                uniformScale < 0.97f || uniformScale > 1.03f)
+                throw new InvalidOperationException(
+                    $"Character seat pose '{memberId}/{clip}/{frameIndex}' scale {uniformScale} is outside 0.97..1.03.");
+            if (float.IsNaN(rotationDegrees) || float.IsInfinity(rotationDegrees) ||
+                Mathf.Abs(rotationDegrees) > 0.01f)
+                throw new InvalidOperationException(
+                    $"Character seat pose '{memberId}/{clip}/{frameIndex}' rotation {rotationDegrees} must be zero.");
+            if (humanApproved && !IsSha256(sourceSpriteSha256))
+                throw new InvalidOperationException(
+                    $"Character seat pose '{memberId}/{clip}/{frameIndex}' approval has no valid source Sprite SHA-256.");
 
             ValidateAnchor(pelvisAnchorPx, nameof(pelvisAnchorPx), canvasSizePx);
             ValidateAnchor(deskInteractionAnchorPx, nameof(deskInteractionAnchorPx), canvasSizePx);
@@ -109,12 +122,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
                     $"Character seat pose '{memberId}/{directionIndex}' {anchorName} {anchor} is outside {canvasSizePx}.");
             }
         }
+
+        private static bool IsSha256(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Length != 64) return false;
+            for (int index = 0; index < value.Length; index++)
+            {
+                char current = value[index];
+                bool hexadecimal = current >= '0' && current <= '9' ||
+                                   current >= 'a' && current <= 'f' ||
+                                   current >= 'A' && current <= 'F';
+                if (!hexadecimal) return false;
+            }
+            return true;
+        }
     }
 
     [CreateAssetMenu(menuName = "Family Company/Office/Character Seat Pose Catalog")]
     public sealed class OfficeCharacterSeatPoseCatalog : ScriptableObject
     {
-        public const int CurrentCalibrationVersion = 3;
+        public const int CurrentCalibrationVersion = 4;
         private static readonly Vector2 PoseCanvasSizePx = new Vector2(256f, 256f);
 
         [SerializeField] private int calibrationVersion;
@@ -147,6 +174,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             }
 
             throw new KeyNotFoundException($"Character seat pose '{memberId}/{directionIndex}/{clip}/{frameIndex}' is not registered.");
+        }
+
+        public OfficeCharacterSeatPoseProfile ResolveApproved(
+            string memberId,
+            int directionIndex,
+            OfficeSeatingAnimationClip clip,
+            int frameIndex)
+        {
+            OfficeCharacterSeatPoseProfile result = Resolve(memberId, directionIndex, clip, frameIndex);
+            if (!result.HumanApproved)
+                throw new InvalidOperationException(
+                    $"Character seat pose '{memberId}/{directionIndex}/{clip}/{frameIndex}' is not human-approved.");
+            return result;
+        }
+
+        public void ValidateSafeStaticWork(IEnumerable<string> memberIds, int directionIndex)
+        {
+            if (memberIds == null) throw new ArgumentNullException(nameof(memberIds));
+            Validate();
+            foreach (string memberId in memberIds)
+            {
+                OfficeCharacterSeatPoseProfile profile = ResolveApproved(
+                    memberId,
+                    directionIndex,
+                    OfficeSeatingAnimationClip.Work,
+                    0);
+                profile.Validate(PoseCanvasSizePx);
+            }
         }
 
         public void ReplaceProfiles(OfficeCharacterSeatPoseProfile[] values, int newCalibrationVersion)

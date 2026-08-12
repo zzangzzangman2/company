@@ -85,11 +85,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _mover = mover ?? throw new ArgumentNullException(nameof(mover));
             _poseCatalog = poseCatalog ?? throw new ArgumentNullException(nameof(poseCatalog));
             _seatingState = seatingState ?? throw new ArgumentNullException(nameof(seatingState));
+            if (_animator != null) _animator.OfficeFrameApplied -= HandleOfficeFrameApplied;
             _animator = mover.Animator ?? throw new InvalidOperationException("Grid worker animator is missing.");
+            _animator.OfficeFrameApplied += HandleOfficeFrameApplied;
             _seat = FindSeat(grid, seatId);
             _direction = FacingDirection(_seat.Facing);
             MemberId = memberId.Trim();
-            _poseProfile = poseCatalog.Resolve(
+            _poseProfile = poseCatalog.ResolveApproved(
                 MemberId,
                 _direction,
                 OfficeSeatingAnimationClip.Work,
@@ -104,7 +106,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _maxFrameCorrectionJumpWorld = 0f;
             _maxWorkPelvisErrorPx = 0f;
             _maxWorkHandErrorPx = 0f;
-            _animator.ConfigureOfficeSeating(sitDownFrames, workFrames, standUpFrames);
+            _animator.ConfigureOfficeSeating(
+                sitDownFrames,
+                workFrames,
+                standUpFrames,
+                presentationMode: OfficeSeatingPresentationMode.SafeStaticWork);
         }
 
         public float FootError()
@@ -153,7 +159,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private void Update()
         {
             if (_seat == null) return;
-            RefreshPoseAlignmentForCurrentFrame();
             switch (_phase)
             {
                 case OfficeGridSeatingPhase.WaitingForNavigation:
@@ -280,29 +285,41 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private void RefreshPoseAlignmentForCurrentFrame(bool force = false)
         {
             if (!_animator.CurrentOfficeSeatingClip.HasValue) return;
-            OfficeSeatingAnimationClip clip = _animator.CurrentOfficeSeatingClip.Value;
-            int frame = _animator.CurrentOfficeSeatingFrame;
+            OfficeSeatingAnimationClip clip = OfficeSeatingAnimationClip.Work;
+            const int frame = 0;
             if (!force && _alignedClip == clip && _alignedFrame == frame) return;
-            _poseProfile = _poseCatalog.Resolve(MemberId, _direction, clip, frame);
+            _poseProfile = _poseCatalog.ResolveApproved(MemberId, _direction, clip, frame);
             ApplyPoseAlignment(_poseProfile);
             _alignedClip = clip;
             _alignedFrame = frame;
         }
 
+        private void HandleOfficeFrameApplied(
+            OfficeSeatingAnimationClip clip,
+            int frame,
+            Sprite appliedSprite)
+        {
+            if (appliedSprite == null || clip != OfficeSeatingAnimationClip.Work || frame != 0) return;
+            RefreshPoseAlignmentForCurrentFrame(force: true);
+        }
+
         private void ApplyPoseAlignment(OfficeCharacterSeatPoseProfile profile)
         {
+            if (!profile.HumanApproved || Mathf.Abs(profile.RotationDegrees) > 0.01f ||
+                profile.UniformScale < 0.97f || profile.UniformScale > 1.03f)
+                throw new InvalidOperationException(MemberId + " has an unsafe seated Sprite transform.");
             _mover.ResetVisualPose();
             _mover.SetSeatedVisualPose(
                 Vector3.zero,
                 profile.UniformScale,
-                profile.RotationDegrees);
+                0f);
             Vector3 pelvisWorld = _mover.SpriteAnchorWorld(profile.PelvisAnchorPx);
             Vector3 seatWorld = _furniturePresenter.OperatorSeatSocketWorld(_seat.WorkSurfaceFurnitureId);
             Vector3 localDelta = transform.InverseTransformVector(seatWorld - pelvisWorld);
             _mover.SetSeatedVisualPose(
                 localDelta,
                 profile.UniformScale,
-                profile.RotationDegrees);
+                0f);
 
             Vector3 currentVisualPosition = _mover.VisualRoot.position;
             if (_hasPreviousAlignedVisualPosition)
@@ -382,6 +399,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
         private void OnDestroy()
         {
+            if (_animator != null) _animator.OfficeFrameApplied -= HandleOfficeFrameApplied;
             _claim?.Dispose();
             _claim = null;
         }

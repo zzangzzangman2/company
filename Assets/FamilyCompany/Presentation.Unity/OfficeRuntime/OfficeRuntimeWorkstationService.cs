@@ -186,8 +186,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public Vector3 DeskWorkSocketWorld(OfficeSeatSlot seat) =>
             _furniturePresenter.OperatorWorkSocketWorld(seat.WorkSurfaceFurnitureId);
 
-        public void ApplyOcclusion(OfficeSeatSlot seat, int sortingOrder) =>
-            _furniturePresenter.ApplySeatOcclusion(seat, sortingOrder);
+        public void ApplyPresentationStack(
+            OfficeSeatSlot seat,
+            SpriteRenderer characterRenderer,
+            Vector3 semanticActorWorld)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            if (characterRenderer == null) throw new ArgumentNullException(nameof(characterRenderer));
+            int baseOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(semanticActorWorld);
+            characterRenderer.sortingOrder = baseOrder;
+            _furniturePresenter.ApplySeatOcclusion(seat, baseOrder);
+        }
+
+        public void ApplyDynamicCharacterOrder(
+            SpriteRenderer characterRenderer,
+            Vector3 semanticActorWorld)
+        {
+            if (characterRenderer == null) throw new ArgumentNullException(nameof(characterRenderer));
+            characterRenderer.sortingOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(semanticActorWorld);
+        }
 
         public void ClearOcclusion(OfficeSeatSlot seat) =>
             _furniturePresenter.ClearSeatOcclusion(seat);

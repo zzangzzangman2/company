@@ -374,26 +374,19 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Camera camera)
         {
             OfficeCharacterSeatPoseCatalog catalog = OfficeFurnitureAssetBuilder.LoadCharacterSeatPoseCatalog();
-            OfficeCharacterSeatPoseProfile previous = null;
-            for (int frame = 0; frame < OfficeSeatingAnimationFrames.WorkFrameCount; frame++)
-            {
-                OfficeCharacterSeatPoseProfile current = catalog.Resolve(
-                    worker.MemberId,
-                    worker.DirectionIndex,
-                    OfficeSeatingAnimationClip.Work,
-                    frame);
-                if (previous != null)
-                {
-                    float renderedScale = OfficeGridCharacterMover.UniformVisualScale * current.UniformScale;
-                    float pelvisDrift = Vector2.Distance(previous.PelvisAnchorPx, current.PelvisAnchorPx) * renderedScale;
-                    float handDrift = Vector2.Distance(previous.HandAnchorPx, current.HandAnchorPx) * renderedScale;
-                    Require(pelvisDrift <= 1f,
-                        $"{worker.MemberId} work pelvis anchor drift is {pelvisDrift:F3}px at frame {frame}.");
-                    Require(handDrift <= 2f,
-                        $"{worker.MemberId} work hand anchor drift is {handDrift:F3}px at frame {frame}.");
-                }
-                previous = current;
-            }
+            catalog.ValidateSafeStaticWork(new[] { worker.MemberId }, worker.DirectionIndex);
+            OfficeCharacterSeatPoseProfile safe = catalog.ResolveApproved(
+                worker.MemberId,
+                worker.DirectionIndex,
+                OfficeSeatingAnimationClip.Work,
+                0);
+            Require(Mathf.Abs(safe.UniformScale - 1f) <= 0.0001f,
+                worker.MemberId + " SafeStaticWork scale is not canonical.");
+            Require(Mathf.Abs(safe.RotationDegrees) <= 0.01f,
+                worker.MemberId + " SafeStaticWork rotates the whole Sprite.");
+            Require(safe.HumanApproved,
+                worker.MemberId + " SafeStaticWork is not human-approved.");
+            Append($"SAFE_STATIC_WORK | member={worker.MemberId} | frame=0 | pelvisDrift=0.000px | handDrift=0.000px | sourceSha={safe.SourceSpriteSha256}");
         }
 
         private static bool ValidateFurnitureOverlayContract(
@@ -535,7 +528,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "Furniture calibration was overwritten by a rebuild.");
             Require(string.Equals(Sha256(poseBefore), Sha256(poseAfter), StringComparison.Ordinal),
                 "Pose calibration was overwritten by a rebuild.");
-            Append("CALIBRATION_ASSETS | PASS | version=2 | rebuild=non-destructive");
+            Append("CALIBRATION_ASSETS | PASS | furnitureVersion=2 poseVersion=4 | rebuild=non-destructive");
         }
 
         private static void Capture(

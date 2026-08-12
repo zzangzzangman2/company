@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
@@ -54,8 +56,6 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private float _furnitureScale = 1f;
         private Vector2 _pelvis;
         private Vector2 _hand;
-        private float _poseScale = 1f;
-        private float _poseRotation;
         private string _loadedFurnitureKey = string.Empty;
         private string _loadedPoseKey = string.Empty;
         private FurnitureHandle _dragHandle;
@@ -66,7 +66,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         public static void Open()
         {
             var window = GetWindow<OfficeTycoonAlignmentCalibrationWindow>();
-            window.titleContent = new GUIContent("Office Alignment V2");
+            window.titleContent = new GUIContent("Office Alignment V3");
             window.minSize = new Vector2(900f, 650f);
             window.Show();
         }
@@ -112,7 +112,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                GUILayout.Label("Office Tycoon Alignment V2 — authored calibration", EditorStyles.boldLabel);
+                GUILayout.Label("Office Tycoon Alignment V3 — translation-only seated calibration", EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Reload", EditorStyles.toolbarButton)) ReloadCatalogs();
             }
@@ -186,8 +186,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
             EditorGUI.BeginChangeCheck();
             _pelvis = EditorGUILayout.Vector2Field("Pelvis (frame px)", _pelvis);
             _hand = EditorGUILayout.Vector2Field("Hand / interaction (frame px)", _hand);
-            _poseScale = EditorGUILayout.FloatField("Uniform scale", _poseScale);
-            _poseRotation = EditorGUILayout.FloatField("Rotation around pelvis (degrees)", _poseRotation);
+            EditorGUILayout.LabelField("Uniform scale", "1.000 (locked)");
+            EditorGUILayout.LabelField("Whole-Sprite rotation", "0.000° (locked)");
             if (EditorGUI.EndChangeCheck()) _compositeApproved = false;
 
             Sprite current = LoadPoseSprite(MemberIds[_memberIndex], _facing, _clip, _frameIndex);
@@ -210,7 +210,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             OfficeCharacterSeatPoseProfile previousProfile = _frameIndex > 0
                 ? TryResolvePose(_frameIndex - 1)
                 : null;
-            float renderedPoseScale = OfficeGridCharacterMover.UniformVisualScale * _poseScale;
+            float renderedPoseScale = OfficeGridCharacterMover.UniformVisualScale;
             float pelvisDrift = previousProfile == null ? 0f : Vector2.Distance(previousProfile.PelvisAnchorPx, _pelvis) * renderedPoseScale;
             float handDrift = previousProfile == null ? 0f : Vector2.Distance(previousProfile.HandAnchorPx, _hand) * renderedPoseScale;
             EditorGUILayout.LabelField($"Previous frame drift — pelvis {pelvisDrift:F2}px / hand {handDrift:F2}px");
@@ -239,14 +239,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
             DrawAlignedSprite(desk.BaseSprite, desk.OperatorSeatSocketPx, targetSeat, desk.UniformScale, Color.white);
             DrawAlignedSprite(chair.BaseSprite, chair.SeatAnchorPx, targetSeat, chair.UniformScale, Color.white);
             Sprite character = LoadPoseSprite(MemberIds[_memberIndex], _facing, _clip, _frameIndex);
-            float renderedPoseScale = OfficeGridCharacterMover.UniformVisualScale * _poseScale;
+            float renderedPoseScale = OfficeGridCharacterMover.UniformVisualScale;
             DrawAlignedSprite(
                 character,
                 _pelvis,
                 targetSeat,
                 renderedPoseScale,
-                Color.white,
-                _poseRotation);
+                Color.white);
             if (desk.FrontOverlaySprite != null)
                 DrawAlignedSprite(desk.FrontOverlaySprite, desk.OperatorSeatSocketPx, targetSeat, desk.UniformScale, Color.white);
             if (chair.FrontOverlaySprite != null)
@@ -254,9 +253,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
             float chairSeatError = 0f;
             float pelvisSeatError = 0f;
-            Vector2 characterHandFromSeat = RotateVector(
-                (_hand - _pelvis) * renderedPoseScale,
-                _poseRotation);
+            Vector2 characterHandFromSeat = (_hand - _pelvis) * renderedPoseScale;
             Vector2 deskWorkFromSeat = (desk.OperatorWorkSocketPx - desk.OperatorSeatSocketPx) * desk.UniformScale;
             float handWorkError = Vector2.Distance(characterHandFromSeat, deskWorkFromSeat);
             float vectorAngleError = OfficeGridAlignmentMetrics.VectorAngleDifferenceDegrees(
@@ -267,7 +264,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 deskWorkFromSeat);
             float footprintError = FootprintResidual(desk);
             bool pass = chairSeatError <= 2f && pelvisSeatError <= 2f && handWorkError <= 4f &&
-                        vectorAngleError <= 2f && vectorLengthError <= 0.04f && footprintError <= 2f;
+                         vectorAngleError <= 2f && vectorLengthError <= 0.04f && footprintError <= 2f;
             EditorGUILayout.LabelField(
                 $"pelvis↔seat {pelvisSeatError:F2}px    chair↔desk seat {chairSeatError:F2}px    hand↔work {handWorkError:F2}px    footprint max {footprintError:F2}px",
                 EditorStyles.boldLabel);
@@ -276,8 +273,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 pass
-                    ? "The numeric composite is within V2 tolerances. Inspect the body, chair backrest, desk front edge, and hand visually before approval."
-                    : "Composite is outside V2 tolerances. Return to the furniture or character tab and calibrate the authored points.",
+                    ? "Translation-only values pass. Inspect the full body, chair, desk edge, head, legs, and actual keyboard contact before human approval."
+                    : "Composite is outside V3 tolerances. Re-click real pelvis/hand or fix the Sprite/work socket; scale and rotation cannot be used.",
                 pass ? MessageType.Info : MessageType.Error);
             using (new EditorGUI.DisabledScope(!pass))
             {
@@ -401,8 +398,6 @@ namespace FamilyCompany.Editor.OfficeGridQa
             _loadedPoseKey = key;
             _pelvis = profile.PelvisAnchorPx;
             _hand = profile.HandAnchorPx;
-            _poseScale = profile.UniformScale;
-            _poseRotation = profile.RotationDegrees;
             _compositeApproved = false;
         }
 
@@ -418,7 +413,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private void SavePose(OfficeCharacterSeatPoseProfile profile)
         {
             Undo.RecordObject(_poseCatalog, "Approve office character pose calibration");
-            profile.ApplyCalibration(_pelvis, _hand, _poseScale, _poseRotation);
+            Sprite sprite = LoadPoseSprite(profile.MemberId, (OfficeSeatFacing8)profile.DirectionIndex, profile.Clip, profile.FrameIndex);
+            profile.ApplyCalibration(_pelvis, _hand, 1f, true, ComputeSpriteSha256(sprite));
             _poseCatalog.Validate();
             EditorUtility.SetDirty(_poseCatalog);
             AssetDatabase.SaveAssets();
@@ -513,14 +509,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
             GUI.matrix = previous;
         }
 
-        private static Vector2 RotateVector(Vector2 vector, float rotationDegrees)
+        private static string ComputeSpriteSha256(Sprite sprite)
         {
-            float radians = rotationDegrees * Mathf.Deg2Rad;
-            float cosine = Mathf.Cos(radians);
-            float sine = Mathf.Sin(radians);
-            return new Vector2(
-                vector.x * cosine - vector.y * sine,
-                vector.x * sine + vector.y * cosine);
+            string path = AssetDatabase.GetAssetPath(sprite);
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                throw new InvalidOperationException("Cannot hash seating Sprite: " + path);
+            using SHA256 sha = SHA256.Create();
+            return BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(path))).Replace("-", string.Empty);
         }
 
         private static Vector2 PixelToGui(Vector2 pixel, Rect rect, Vector2 spriteSize)

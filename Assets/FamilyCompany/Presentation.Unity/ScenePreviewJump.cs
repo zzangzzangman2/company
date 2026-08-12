@@ -630,17 +630,34 @@ namespace FamilyCompany.Presentation.Unity
             foreach (string memberId in QaMemberIds)
             {
                 OfficeRuntimeAgent actor = actors[memberId];
+                OfficeSeatSlot seat = _starterRuntime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
+                string expectedSprite = memberId + "_northwest_sit_work_0";
                 Debug.Log(
                     $"STARTER_OFFICE_WORKSTATION_ALIGNMENT_SAMPLE | member={memberId} " +
                     $"chairDesk={actor.ChairDeskErrorPx:F3}px pelvisSeat={actor.PelvisSeatErrorPx:F3}px " +
-                    $"handWork={actor.HandWorkErrorPx:F3}px");
-                if (actor.ChairDeskErrorPx <= 2f && actor.PelvisSeatErrorPx <= 2f &&
-                    actor.HandWorkErrorPx <= 4f) continue;
+                    $"handWork={actor.HandWorkErrorPx:F3}px rotation={actor.VisualRotationErrorDegrees:F4}deg " +
+                    $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
+                    $"sprite={actor.CurrentSpriteName}");
+                bool presentationMatches = actor.ChairDeskErrorPx <= 2f && actor.PelvisSeatErrorPx <= 2f &&
+                    actor.HandWorkErrorPx <= 4f && actor.VisualRotationErrorDegrees <= 0.01f &&
+                    actor.VisualScaleDeviation <= 0.03f && actor.CurrentDirection == 3 &&
+                    string.Equals(actor.CurrentSpriteName, expectedSprite, StringComparison.Ordinal) &&
+                    actor.PresentationRenderer != null &&
+                    _starterRuntime.World.FurniturePresenter.SeatOcclusionMatches(
+                        seat,
+                        actor.PresentationRenderer.sortingOrder);
+                if (presentationMatches) continue;
                 FailPlayerQa(
                     57,
                     $"workstation alignment exceeded threshold for {memberId}: " +
                     $"chairDesk={actor.ChairDeskErrorPx:F2}px pelvis={actor.PelvisSeatErrorPx:F2}px " +
-                    $"hand={actor.HandWorkErrorPx:F2}px");
+                    $"hand={actor.HandWorkErrorPx:F2}px rotation={actor.VisualRotationErrorDegrees:F4}deg " +
+                    $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
+                    $"sprite={actor.CurrentSpriteName} sorting=" +
+                    (actor.PresentationRenderer != null &&
+                     _starterRuntime.World.FurniturePresenter.SeatOcclusionMatches(
+                         seat,
+                         actor.PresentationRenderer.sortingOrder)));
                 yield break;
             }
             string capturePath = QaArtifactPath("starter-office-four-seat-work.png");
@@ -650,6 +667,17 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
             Debug.Log("STARTER_OFFICE_FOUR_SEAT_CAPTURE | path=" + capturePath);
+            foreach (string memberId in QaMemberIds)
+            {
+                if (TryCaptureQaWorkstationCloseup(memberId, actors[memberId], out string closeupPath,
+                        out string closeupFailure))
+                {
+                    Debug.Log($"SEATED_SPRITE_ROOT_CAUSE_V3_CLOSEUP | member={memberId} path={closeupPath}");
+                    continue;
+                }
+                FailPlayerQa(58, $"{memberId} workstation close-up failed: {closeupFailure}");
+                yield break;
+            }
             if (!RequireZeroActualViolations("four-seat-work", 58)) yield break;
             Debug.Log(
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
@@ -678,6 +706,62 @@ namespace FamilyCompany.Presentation.Unity
 
         private static bool TryCaptureQaCameraFrame(string path, out string failure)
         {
+            return TryCaptureQaCameraFrame(path, 1392, 699, out failure);
+        }
+
+        private bool TryCaptureQaWorkstationCloseup(
+            string memberId,
+            OfficeRuntimeAgent actor,
+            out string path,
+            out string failure)
+        {
+            path = QaArtifactPath(memberId.Replace('_', '-') + "-work-closeup.png");
+            failure = string.Empty;
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                failure = "Camera.main is missing";
+                return false;
+            }
+            if (actor == null || actor.PresentationRenderer == null)
+            {
+                failure = "actor presentation renderer is missing";
+                return false;
+            }
+
+            OfficeSeatSlot seat = _starterRuntime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
+            Bounds bounds = actor.PresentationRenderer.bounds;
+            EncapsulateFurnitureRenderers(seat.ChairFurnitureId, ref bounds);
+            if (seat.HasWorkstationBinding) EncapsulateFurnitureRenderers(seat.WorkSurfaceFurnitureId, ref bounds);
+
+            Vector3 previousPosition = camera.transform.position;
+            Quaternion previousRotation = camera.transform.rotation;
+            float previousSize = camera.orthographicSize;
+            try
+            {
+                camera.transform.position = new Vector3(bounds.center.x, bounds.center.y, previousPosition.z);
+                camera.orthographicSize = Mathf.Max(1.1f, Mathf.Max(bounds.extents.x, bounds.extents.y) * 1.18f);
+                return TryCaptureQaCameraFrame(path, 1024, 1024, out failure);
+            }
+            finally
+            {
+                camera.transform.position = previousPosition;
+                camera.transform.rotation = previousRotation;
+                camera.orthographicSize = previousSize;
+            }
+        }
+
+        private void EncapsulateFurnitureRenderers(string furnitureId, ref Bounds bounds)
+        {
+            if (!_starterRuntime.World.FurniturePresenter.TryGetSemanticRoot(furnitureId, out Transform root)) return;
+            foreach (SpriteRenderer renderer in root.GetComponentsInChildren<SpriteRenderer>(true))
+            {
+                if (renderer.enabled && renderer.gameObject.activeInHierarchy) bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        private static bool TryCaptureQaCameraFrame(string path, int width, int height, out string failure)
+        {
             failure = string.Empty;
             Camera camera = Camera.main;
             if (camera == null)
@@ -686,8 +770,6 @@ namespace FamilyCompany.Presentation.Unity
                 return false;
             }
 
-            const int width = 1392;
-            const int height = 699;
             RenderTexture previousTarget = camera.targetTexture;
             RenderTexture previousActive = RenderTexture.active;
             var target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);

@@ -411,13 +411,14 @@
 ## 2026-08-11 Office Tycoon Alignment V2 calibration
 
 - 정본 에셋: `Assets/FamilyCompany/Presentation.Unity/OfficeGrid/Authoring/OfficeFurnitureVisualCatalog.asset`, `OfficeCharacterSeatPoseCatalog.asset`.
-- 버전: 가구 catalog는 `calibrationVersion: 2`, 캐릭터 pose catalog는 `calibrationVersion: 3`이다. 가구 12개 정의, 캐릭터 pose 56개(`4명 × (SitDown 4 + Work 6 + StandUp 4)`)다.
+- 버전: 가구 catalog는 `calibrationVersion: 2`, 캐릭터 pose catalog는 `calibrationVersion: 4`다. Starter safe catalog에는 사람 승인된 `NorthWest/Work/0` 4개만 있고 각 항목은 source Sprite SHA-256을 가진다.
 - 가구 데이터: 각 정의는 독립 네 점 ground footprint, 의미 footprint 폭/높이, ground/sort를 가진다. desk는 operator seat `(390.445, 49.329)`와 work socket, chair는 seat `(313.007, 153.549)`를 가진다.
 - mask 판정: `office_workstation_front_v4.png`는 책상 앞 모서리·다리·서랍의 제한 전경으로 사용한다. `office_swivel_chair_front_v3.png` 파일은 이전 빌드 재현 자료로 남지만 NorthWest 승인 catalog에서는 참조하지 않으며 런타임에 그리지 않는다.
 - 편집기: `OfficeTycoonAlignmentCalibrationWindow.cs`가 100/200/400% 픽셀 보기, 네 점·socket, clip/frame onion skin, workstation 합성을 제공한다. 합성 승인 전에는 값을 저장할 수 없다.
-- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하되 현재 버전의 calibration asset은 덮어쓰지 않는다. v2→v3 pose 이관은 실제 pelvis/hand를 유지하고 승인된 scale/rotation만 추가한다.
+- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하되 현재 버전의 calibration asset은 덮어쓰지 않는다. 구형 v3의 scale/rotation 후보를 v4로 자동 승인하지 않으며 비어 있는 catalog에는 미승인 safe placeholder만 만든다.
 - QA 산출물 루트: `Artifacts/OfficeTycoonAlignmentV2/`. 정본 검증기는 `OfficeTycoonAlignmentV2Qa.StartBatch`이며 Preview 45초와 Starter 60초를 분리 실행한다.
-- 승인 상태: Starter Runtime Main Flow에서 네 명 모두 chair↔desk `0.000px`, pelvis↔seat `0.000px`, hand↔work `0.000px`로 PASS했다. 캐릭터·좌석 위치 offset 없이 공용 desk socket과 pose v3 골반 기준 scale/rotation을 사용한다. 실제 합성 캡처는 `Artifacts/StarterOfficeRuntimeQa/starter-office-four-seat-work.png`다.
+- 승인 SHA: player `D02E4A5E...59519D`, older_sister `1C7F25EC...FD92C3`, father `60B90628...A4C7E`, mother `BD1EAC26...705E09`.
+- 승인 상태: authored Sprite 기준 네 명 모두 rotation `0°`, pose scale `1.000`, hand↔work `0.538px`, pelvis↔seat `0px`, chair↔desk `0px`로 PASS했다. 실제 Windows RenderTexture 기준 hand↔work는 `0.239px`이며 desk front의 얼굴 overlap은 네 명 모두 0, 하체 overlap은 모두 양수다. 실제 합성은 `Artifacts/SeatedSpriteRootCauseV3/starter-office-four-seat-work.png`와 가족별 `*-work-closeup.png`, 수치 보고서는 `seated-sprite-root-cause-v3-report.txt`다.
 
 ## Starter Office Runtime V1 semantic assets
 

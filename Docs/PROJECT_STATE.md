@@ -238,4 +238,15 @@ Unity: 6000.3.21f1
 - 자동 실행 QA 진입점 `-familyCompanyTileRuntimeQa`는 단일 Actor 소유권, 4인 십자 이동, 좁은 통로, 실행 중 책상 추가/제거, 4배속 플레이어 충돌, 실제 8방향, 네 좌석, 계약, 슬롯 저장/불러오기를 `Prototype01`에서 연속 검증한다.
 - Unity 6000.3.21f1의 실제 Simulation/Save/Infrastructure/Presentation/Qa.Core/Editor compiler response로 전체 컴파일 오류 0을 확인했다.
 - Downloads의 `FamilyCompany_BuildAutomation`이 `FamilyCompany_Playtest`를 최신 fingerprint로 빌드했고, 실제 Windows 실행본 `-familyCompanyTileRuntimeQa` Main Flow가 PASS했다. 십자 교차·좁은 통로·런타임 책상 추가/제거·4× 플레이어 책상/카운터/NPC 충돌·8방향·네 좌석·계약·저장/불러오기에서 hard/interaction 무단 통과와 agent penetration은 모두 0이다.
-- 네 워크스테이션은 player/older_sister/father/mother 모두 chair↔desk `0.000px`, pelvis↔seat `0.000px`, hand↔work `0.000px`다. `OfficeCharacterSeatPoseCatalog` v3의 골반 기준 scale/rotation calibration을 사용하며 캐릭터별·좌석별 위치 offset은 없다. 실제 합성 캡처는 `Artifacts/StarterOfficeRuntimeQa/starter-office-four-seat-work.png`, 정본 로그는 `player-main-flow-17.log`다.
+- 네 워크스테이션의 배치 오차는 chair↔desk `0.000px`, pelvis↔seat `0.000px`다. b53c355 당시 사용한 pose v3 scale/rotation은 아래 Seated Sprite Root Cause V3에서 폐기하고 v4 safe profile로 교체했다.
+
+## 2026-08-11 / Seated Sprite Root Cause V3 완료
+
+- b53c355의 pose v3는 56개 반복 프로필에 10.81~27.55% 확대와 최대 13.68° 회전을 저장해 착석 얼굴·몸·다리를 왜곡했다. 실패 기준은 `Artifacts/SeatedSpriteRootCauseV3/b53c355-baseline-fail.txt`에 고정했다.
+- `DirectionalSpriteAnimator`가 Sprite를 적용한 뒤 pose 이벤트를 발행하고, `OfficeRuntimeAgent`는 승인된 pelvis→chair seat translation만 적용한다. `VisualRoot.localRotation=identity`, pose scale `1.0`이며 앉기/일하기 내부 상태와 무관하게 safe 화면은 `NorthWest/Work/0`을 유지한다.
+- `OfficeCharacterSeatPoseCatalog`를 v4로 올리고 네 가족 safe profile 4개만 `HumanApproved + source Sprite SHA-256`으로 승인했다. 구형 v3는 자동 승인·자동 덮어쓰지 않는다.
+- 엄마 safe 원화는 정체성·의상·포즈를 유지한 최근접 이웃 정규화로 visible height 차이를 9.58%에서 5.00%로 줄였고 SHA와 실제 pelvis/hand anchor를 다시 승인했다.
+- `OfficeRuntimeWorkstationService`가 desk base `-2`, chair base `-1`, character, desk front `+1`, chair back `+2` 정렬 stack을 단독 소유한다. tile runtime의 legacy order `100` 사용은 0이다.
+- Unity 6000.3.21f1 V3 정적 QA는 전원 rotation `0°`, scale `1.000`, pelvis↔seat `0px`, hand↔work `0.538px`, visible height 차이 `1.37~5.00%`, 승인 SHA 일치로 PASS했다.
+- 최신 Downloads Windows 빌드의 `-familyCompanyTileRuntimeQa` Main Flow가 PASS했다. 단일 Actor·가구 revision·충돌·8방향·네 좌석·계약·저장 회귀와 가족별 1024×1024 클로즈업은 `Artifacts/SeatedSpriteRootCauseV3/`에 남겼다.
+- 기존 desk front 마스크가 older_sister의 upper-body 18샘플을 덮는 실패를 재현한 뒤 재생성 exclusion으로 제거했다. 최종 그래픽 45+60초 QA는 얼굴 overlap 전원 0, 하체 overlap 전원 양수, 가구 Transform 변화 0, 전원 stand/reseat와 저장 왕복까지 PASS했다.

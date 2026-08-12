@@ -168,7 +168,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             animator.ConfigureOfficeSeating(
                 seating.sitDownFrames,
                 seating.workFrames,
-                seating.standUpFrames);
+                seating.standUpFrames,
+                presentationMode: OfficeSeatingPresentationMode.SafeStaticWork);
             var actor = root.AddComponent<OfficeRuntimeAgent>();
             actor.Configure(
                 _bootstrap,

@@ -10,6 +10,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
         StandUp = 2
     }
 
+    public enum OfficeSeatingPresentationMode
+    {
+        Animated = 0,
+        SafeStaticWork = 1
+    }
+
     public enum OfficeWorkerSeatingPhase
     {
         None = 0,

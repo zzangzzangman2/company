@@ -98,7 +98,7 @@
 - CRT 업무책상 정본은 `office_workstation_v4.png`다. 바닥까지 내려오는 넓은 막음판을 쓰지 않고, 분리된 네 다리와 서랍장 아래의 바닥 틈이 보여야 한다. 실제 바닥선에는 작은 발만 닿아야 하며 책상이 바닥에 박혀 보이는 실루엣은 실패다.
 - 착석 중에는 `office_workstation_front_v4.png`가 하체 앞의 책상 모서리·앞판만 담당한다. 모니터·얼굴·머리를 덮거나 책상 전체를 항상 앞/뒤로 두면 실패다.
 - runtime canvas의 footprint는 ground 한 점 추정이 아니라 승인된 네 점 폴리곤이다. 1×1·2×1 모두 320×160 등각 타일 투영 네 모서리와 각 점 2px 이내여야 하며, 비균등 확대나 종류별 런타임 위치 보정으로 맞추지 않는다.
-- 가족의 착석 anchor는 256×256 프레임에서 실제 pelvis와 실제 손을 클릭해 member/direction/clip/frame별로 저장한다. 수치 통과를 위해 신체 밖의 가상 hand/pelvis 좌표를 쓰지 않는다. 동일 Work 루프의 프레임 간 pelvis drift는 1px, hand drift는 2px 이내다.
+- 가족의 착석 anchor는 256×256 프레임에서 실제 pelvis와 실제 손을 클릭해 member/direction/clip/frame별로 저장한다. 수치 통과를 위해 신체 밖의 가상 hand/pelvis 좌표를 쓰지 않는다. 승인 항목은 source Sprite SHA-256을 함께 저장하며, 현재 safe mode는 네 가족의 `NorthWest/Work/0` 한 장씩만 사용한다.
 
 ## 플레이어 도트 정본
 
@@ -142,6 +142,6 @@
 - 가족 네 명의 8방향 정본은 `HighMotionDirectionManifest.asset`의 source→canonical 순열과 사람 승인 체크로 관리한다. Runtime에서 memberId별 방향 교체 코드를 두지 않는다.
 - 방향 승인판은 화살표·방향 이름·파일 이름·현재 Sprite를 한 칸에 함께 표시한다. 정본 산출물은 `Artifacts/StarterOfficeDirectionQa/office-character-direction-contact-sheet.png`다.
 - 의자·책상 그림은 semantic placement anchor와 다른 위치로 자동 보정하지 않는다. 잘못된 chair-seat/desk-seat/pelvis/hand 정렬은 Editor에서 오류로 보여 주고 배치 또는 아트 캘리브레이션을 수정한다.
-- 착석 자세 보정은 실제 pelvis/hand 점을 바꾸거나 신체 밖 가상 점을 만들지 않는다. `OfficeCharacterSeatPoseCatalog` v3의 골반 기준 균등 scale·회전만 허용하며, 네 가족 모두 같은 책상 seat/work socket을 사용한다.
-- 실제 업무 화면은 방향 의미가 승인된 `OfficeSeatingV1` Work 프레임을 사용한다. 방향이 좌석 facing과 불일치하는 Legacy micro-action 프레임을 Starter Runtime에 섞지 않는다.
+- 착석 자세 보정은 실제 pelvis/hand 점을 바꾸거나 신체 밖 가상 점을 만들지 않는다. `OfficeCharacterSeatPoseCatalog` v4는 pelvis→chair seat translation만 허용하며 `VisualRoot.localRotation=identity`, pose scale `1.0`을 강제한다. 배율 허용 범위는 0.97~1.03이지만 safe 승인값은 전원 1.0이다.
+- 실제 업무 화면은 사람 승인·SHA 일치가 확인된 `OfficeSeatingV1` `NorthWest/Work/0`을 사용한다. 방향이 좌석 facing과 불일치하는 Legacy micro-action, 미승인 프레임, 다른 프레임으로의 fallback을 Starter Runtime에 섞지 않는다.
 - 가구 footprint와 interaction cell은 보이는 Sprite의 장식이 아니라 게임 공간의 표현이다. 새 가구는 기본 차단이며 투명 픽셀이나 sorting order로 관통을 숨기지 않는다.

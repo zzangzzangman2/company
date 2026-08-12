@@ -65,10 +65,10 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - 각 `OfficeSeatSlot`에서 파생한 `OfficeWorkstationSlot`은 desk/chair/seat ID, seat/approach cell, facing, 반 셀 정밀도의 `OperatorAnchor`를 한 의미 단위로 묶는다. 저장 서브스키마 v3은 `operatorX2/operatorY2`를 보존하고 v1은 레거시 좌석, v2는 연결된 work-surface 방향의 반 셀 operator anchor로 안전 이관한다.
 - `OfficeFurnitureVisualCatalog` calibration v2는 12종·방향별 base/front Sprite, ground/sort, 네 점 ground footprint, 의미 footprint 크기, chair seat, desk operator seat/work socket, 양의 균등 scale을 명시한다. 네 점은 타일맵이 독립 계산한 footprint 투영과 각 점 2px 이내여야 한다.
 - `OfficeGridFurniturePresenter`는 의미 root를 footprint 중심·scale 1에 고정하고, 자식 `VisualRoot`에만 균등 scale과 승인된 socket 정렬을 적용한다. desk를 먼저 배치하고 desk operator seat socket에 chair seat를 맞춘다. chair·desk의 의미 root와 footprint는 이 시각 보정으로 이동하지 않는다.
-- `OfficeGridCharacterMover`의 의미 root는 항상 scale 1·좌석 셀 중심이며 SpriteRenderer는 균등 scale 1.69의 자식 `VisualRoot`에 있다. `OfficeGridSeatedWorker`는 desk operator seat socket에 clip/frame별 실제 pelvis anchor를 맞추고 실제 hand anchor와 desk work socket을 별도로 계측한다. 일어서면 위치와 scale을 함께 정본 상태로 복원한다.
-- `OfficeCharacterSeatPoseCatalog` calibration v2의 키는 member/direction/clip/frame이다. 지원하지 않는 방향이나 누락 프레임을 다른 pose로 fallback하지 않는다. Work 전 프레임은 pelvis 2px·hand 4px, 프레임 간 보정 jump 1px 허용치를 만족해야 한다.
-- 착석 중 상대 정렬은 책상 base < 의자 base < 캐릭터 < 책상 front다. NorthWest 의자 등받이는 캐릭터 뒤 base에 속하므로 chair front overlay를 만들지 않는다. 책상 front는 고정 Y 절단이 아니라 앞 모서리·다리·서랍만 포함하는 원본 좌표 픽셀 마스크다.
-- `OfficeTycoonAlignmentCalibrationWindow`는 가구 100/200/400% 픽셀 보기, 네 점 footprint·socket 드래그, character clip/frame·onion skin, workstation 합성과 실시간 오차를 제공한다. 합성 승인을 하지 않으면 catalog에 저장할 수 없다. PNG 빌더는 calibration v2 에셋을 재생성하거나 상수로 덮어쓰지 않는다.
+- `OfficeGridCharacterMover`의 의미 root는 항상 scale 1·좌석 셀 중심이며 SpriteRenderer는 균등 scale 1.69의 자식 `VisualRoot`에 있다. 착석 Sprite가 적용된 직후 `OfficeRuntimeAgent`가 승인된 실제 pelvis를 chair seat로 옮기는 translation만 적용한다. `VisualRoot.localRotation`은 identity, pose scale은 1.0이며 일어서면 위치·회전·scale을 정본 상태로 복원한다.
+- `OfficeCharacterSeatPoseCatalog` calibration v4의 키는 member/direction/clip/frame이고 각 승인 항목은 `humanApproved`와 source Sprite SHA-256을 가진다. Starter Runtime safe mode는 네 가족의 `NorthWest/Work/0` 정확히 4개만 허용하며 미승인·SHA 불일치·다른 방향/프레임을 fallback하지 않는다.
+- 착석 중 정렬 stack은 `OfficeRuntimeWorkstationService`만 소유한다. character order를 기준으로 desk base `-2`, chair base `-1`, character `0`, desk front `+1`, chair back `+2`다. 책상 front는 고정 Y 절단이 아니라 앞 모서리·다리·서랍만 포함하는 원본 좌표 픽셀 마스크다.
+- `OfficeTycoonAlignmentCalibrationWindow`는 가구 100/200/400% 픽셀 보기, 네 점 footprint·socket 드래그, character clip/frame·onion skin, workstation 합성과 실시간 오차를 제공한다. 자세 scale/rotation은 각각 1.000/0.000으로 잠그고 실제 pelvis/hand와 사람 승인·source SHA만 저장한다. PNG 빌더는 기존 calibration asset을 자동 승인하거나 덮어쓰지 않는다.
 - `OfficeGridCollisionMonitor`는 실제 Transform을 매 프레임 가장 가까운 셀로 투영해 막힌 셀 침범을 계측하는 QA 전용 경계다. 결과는 저장하지 않는다.
 - `OfficeTycoonAlignmentV2Qa`는 Preview와 Starter를 분리 실행하고 1920×1080 캡처, 실제 네 점 footprint, chair↔desk socket, pelvis↔seat, hand↔work, 프레임 안정성, 얼굴/하체 overlay, 60초 Transform 0 변화, 충돌·중복 claim·저장 왕복을 검사한다. 기존 `Prototype01`의 OfficeVisualV2·Collider·계약·자율 AI는 T6 통합 전까지 폴백으로 유지한다.
 - 2026-08-11 사용자 폐기 결정으로 OfficeVisualV2 base/foreground/guide PNG는 저장소와 빌드에서 제거했다. `Prototype01`의 계약·자율 AI·Collider는 시뮬레이션 호환용으로 유지하되 Renderer/Camera는 세션 시작 때 차단하고, `OfficeTileMigrationPreview`를 additive로 올린 StarterOfficeV1만 월드로 렌더한다. `F9`는 구형 화면 복귀가 아니라 이 타일 표시를 복구하는 단방향 키다.
@@ -116,7 +116,7 @@ PrototypeBootstrap / GameState.OfficeGrid
 - 좌석 셀은 일반 경로에서 Interaction Occupancy다. claim된 seatId만 접근 경로와 최종 operator anchor 이동에 허용된다.
 - 레이아웃 변경은 semantic `OfficeGrid`를 교체하고 Starter Runtime을 staged rebuild한다. 이전 Actor/path/reservation은 폐기되고 새 Occupancy revision과 레이아웃 해시에 맞춰 다시 바인딩된다.
 - `PlacedOfficeFurniture.PlacementAnchor`가 의미·시각·충돌·저장의 공통 좌표다. `OfficeGridFurniturePresenter`는 책상 소켓에 맞추기 위해 VisualRoot만 따로 이동하지 않는다.
-- Starter Runtime의 착석 표현은 방향이 승인된 `OfficeSeatingV1` Work 프레임과 `OfficeCharacterSeatPoseCatalog` v3를 사용한다. pelvis를 chair seat에 고정한 뒤 catalog의 균등 scale/rotation을 골반 주위에 적용해 hand를 공용 desk work socket에 맞춘다. member/seat 위치 offset은 없다.
+- Starter Runtime의 착석 표현은 `OfficeSeatingV1`의 사람 승인 `NorthWest/Work/0`과 `OfficeCharacterSeatPoseCatalog` v4만 사용한다. Animator가 Sprite를 적용한 뒤 이벤트로 pelvis→chair seat translation만 수행하며 회전·확대와 member/seat별 위치 offset은 없다. 손 오차는 실제 손 anchor와 아트로 해결한다.
 - Windows player 빌드 전 OfficeGrid schema/migration, semantic layout hash/save round-trip, 8방향 수학과 32개 사람 승인 manifest를 검증한다. 그래픽 합성은 player RenderTexture QA 캡처로 별도 확인한다.
 
 ## Semantic Office Layout Authoring

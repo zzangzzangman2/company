@@ -211,3 +211,11 @@
 결정: 워크스테이션 손 정렬은 캐릭터나 좌석의 위치 offset으로 보정하지 않는다. 실제 pelvis/hand anchor를 유지한 `OfficeCharacterSeatPoseCatalog` v3에 골반 기준 균등 scale과 회전 calibration을 저장하고, Starter Runtime은 방향 의미가 승인된 `OfficeSeatingV1` Work 프레임만 사용한다. 책상 operator work socket은 모든 가족이 공유한다.
 
 이유: 위치 offset은 의미 root·좌석 claim·충돌과 화면을 다시 분리하고, 방향이 서로 다른 Legacy micro-action 프레임은 실제 손 anchor 계측을 무효화한다. 골반을 좌판에 고정한 자세 calibration은 동일한 소켓·충돌·저장 규칙을 유지하면서 실제 hand anchor를 정확히 맞춘다.
+
+## 2026-08-11 / Seated Sprite Root Cause V3는 회전·확대를 폐기하고 승인된 정적 자세로 봉합한다
+
+결정: b53c355의 pose v3 골반 기준 scale/rotation 교정을 폐기한다. `VisualRoot.localRotation`은 항상 identity, pose scale은 1.0으로 고정하고 Animator가 Sprite를 적용한 직후 실제 pelvis를 chair seat로 옮기는 translation만 허용한다. 손이 공용 work socket과 맞지 않으면 실제 anchor 또는 원화를 수정하며 회전·확대로 맞추지 않는다.
+
+결정: `OfficeCharacterSeatPoseCatalog` v4는 `HumanApproved`와 source Sprite SHA-256이 일치하는 네 가족의 `NorthWest/Work/0`만 safe mode에서 허용한다. v3의 56개 반복 프로필은 자동 이관·자동 승인하지 않는다. 정렬 순서는 `OfficeRuntimeWorkstationService`가 desk base `-2`, chair base `-1`, character, desk front `+1`, chair back `+2`로 단독 소유한다.
+
+이유: b53c355는 player 17.43%, older_sister 27.55%, father 20.84%, mother 10.81% 확대와 최대 13.68° 회전을 자세 전체에 적용해 손 오차를 줄이는 대신 얼굴·몸·다리 비율을 찌그러뜨렸다. source SHA가 없는 반복 프로필은 실제 Sprite 변경도 감지하지 못했다. V4 safe mode는 화면 품질을 승인 가능한 한 장으로 제한하고, 실제 아트가 준비된 프레임만 점진적으로 확장한다.

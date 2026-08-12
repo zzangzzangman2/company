@@ -41,6 +41,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Vector2? sourceSeatAnchorPx = null,
                 Vector2? sourceWorkSurfaceAnchorPx = null,
                 Vector2[] sourceForegroundPolygon = null,
+                Vector2[] sourceForegroundExclusionPolygon = null,
                 Vector2? sourceOperatorSeatSocketPx = null,
                 int semanticFootprintWidth = 1,
                 int semanticFootprintHeight = 1)
@@ -57,6 +58,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 SourceSeatAnchorPx = sourceSeatAnchorPx;
                 SourceWorkSurfaceAnchorPx = sourceWorkSurfaceAnchorPx;
                 SourceForegroundPolygon = sourceForegroundPolygon ?? Array.Empty<Vector2>();
+                SourceForegroundExclusionPolygon = sourceForegroundExclusionPolygon ?? Array.Empty<Vector2>();
                 SourceOperatorSeatSocketPx = sourceOperatorSeatSocketPx;
                 SemanticFootprintWidth = semanticFootprintWidth;
                 SemanticFootprintHeight = semanticFootprintHeight;
@@ -74,6 +76,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             public Vector2? SourceSeatAnchorPx { get; }
             public Vector2? SourceWorkSurfaceAnchorPx { get; }
             public Vector2[] SourceForegroundPolygon { get; }
+            public Vector2[] SourceForegroundExclusionPolygon { get; }
             public Vector2? SourceOperatorSeatSocketPx { get; }
             public int SemanticFootprintWidth { get; }
             public int SemanticFootprintHeight { get; }
@@ -111,6 +114,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     new Vector2(320f, 100f), new Vector2(1225f, 100f),
                     new Vector2(1225f, 520f), new Vector2(710f, 365f),
                     new Vector2(320f, 550f)
+                },
+                // The right drawer edge crosses older_sister's approved upper-body pixels.
+                // Keep the lower desk occlusion, but never redraw this small region over a face.
+                sourceForegroundExclusionPolygon: new[]
+                {
+                    new Vector2(968f, 435f), new Vector2(1016f, 435f),
+                    new Vector2(1016f, 461f), new Vector2(968f, 461f)
                 }),
             new FurnitureSpec(
                 OfficeGridLayouts.SwivelChairKind,
@@ -200,7 +210,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             CreateOrUpgradePoseCatalog();
             AssetDatabase.SaveAssets();
-            LoadCharacterSeatPoseCatalog().Validate();
+            LoadCharacterSeatPoseCatalog().ValidateSafeStaticWork(
+                new[] { "player", "older_sister", "father", "mother" },
+                (int)OfficeSeatFacing8.Northwest);
         }
 
         public static void Validate()
@@ -279,7 +291,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     pixel = pixel.a < 128 ? new Color32(0, 0, 0, 0) : new Color32(pixel.r, pixel.g, pixel.b, 255);
                     int outputIndex = (destinationY + y) * CanvasWidth + destinationX + x;
                     output[outputIndex] = pixel;
-                    if (pixel.a > 0 && PointInPolygon(new Vector2(sourceX + 0.5f, sourceY + 0.5f), spec.SourceForegroundPolygon))
+                    Vector2 sourcePoint = new Vector2(sourceX + 0.5f, sourceY + 0.5f);
+                    if (pixel.a > 0 && PointInPolygon(sourcePoint, spec.SourceForegroundPolygon) &&
+                        !PointInPolygon(sourcePoint, spec.SourceForegroundExclusionPolygon))
                         front[outputIndex] = pixel;
                 }
 
@@ -347,66 +361,51 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private static void CreateOrUpgradePoseCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<OfficeCharacterSeatPoseCatalog>(PoseCatalogPath);
+            bool created = catalog == null;
             if (catalog == null)
             {
                 catalog = ScriptableObject.CreateInstance<OfficeCharacterSeatPoseCatalog>();
                 AssetDatabase.CreateAsset(catalog, PoseCatalogPath);
             }
 
-            if (catalog.CalibrationVersion == OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion &&
-                catalog.Profiles.Count == 56)
+            if (!created && catalog.Profiles.Count > 0)
+            {
+                if (catalog.CalibrationVersion != OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion)
+                    throw new InvalidOperationException(
+                        $"Character seat pose catalog v{catalog.CalibrationVersion} requires manual migration to v{OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion}; the builder will not auto-approve or overwrite it.");
+                catalog.Validate();
                 return;
+            }
 
             int northWest = (int)OfficeSeatFacing8.Northwest;
-            var profiles = new List<OfficeCharacterSeatPoseProfile>(56);
-            AddPoseProfiles(
-                profiles, "player", northWest,
-                new Vector2(151f, 65f), new Vector2(91f, 86f),
-                1.174293f, -0.350355f);
-            AddPoseProfiles(
-                profiles, "older_sister", northWest,
-                new Vector2(142f, 96f), new Vector2(86f, 113f),
-                1.27552985f, -2.75361f);
-            AddPoseProfiles(
-                profiles, "father", northWest,
-                new Vector2(157f, 86f), new Vector2(103f, 116f),
-                1.20841674f, 9.414203f);
-            AddPoseProfiles(
-                profiles, "mother", northWest,
-                new Vector2(150f, 89f), new Vector2(83f, 96f),
-                1.10812479f, -13.675914f);
+            var profiles = new List<OfficeCharacterSeatPoseProfile>(4)
+            {
+                CreateUnapprovedSafeStaticProfile("player", northWest, new Vector2(145f, 65f), new Vector2(75f, 90f)),
+                CreateUnapprovedSafeStaticProfile("older_sister", northWest, new Vector2(145f, 85f), new Vector2(75f, 110f)),
+                CreateUnapprovedSafeStaticProfile("father", northWest, new Vector2(155f, 80f), new Vector2(85f, 105f)),
+                CreateUnapprovedSafeStaticProfile("mother", northWest, new Vector2(140f, 55f), new Vector2(70f, 80f))
+            };
             catalog.ReplaceProfiles(profiles.ToArray(), OfficeCharacterSeatPoseCatalog.CurrentCalibrationVersion);
             EditorUtility.SetDirty(catalog);
         }
 
-        private static void AddPoseProfiles(
-            ICollection<OfficeCharacterSeatPoseProfile> profiles,
+        private static OfficeCharacterSeatPoseProfile CreateUnapprovedSafeStaticProfile(
             string memberId,
             int direction,
             Vector2 pelvisAnchorPx,
-            Vector2 handAnchorPx,
-            float uniformScale,
-            float rotationDegrees)
+            Vector2 handAnchorPx)
         {
-            var clips = new[]
-            {
-                OfficeSeatingAnimationClip.SitDown,
+            return OfficeCharacterSeatPoseProfile.Create(
+                memberId,
+                direction,
                 OfficeSeatingAnimationClip.Work,
-                OfficeSeatingAnimationClip.StandUp
-            };
-            foreach (OfficeSeatingAnimationClip clip in clips)
-            for (int frame = 0; frame < OfficeSeatingAnimationFrames.FrameCount(clip); frame++)
-            {
-                profiles.Add(OfficeCharacterSeatPoseProfile.Create(
-                    memberId,
-                    direction,
-                    clip,
-                    frame,
-                    pelvisAnchorPx,
-                    handAnchorPx,
-                    uniformScale,
-                    rotationDegrees));
-            }
+                0,
+                pelvisAnchorPx,
+                handAnchorPx,
+                1f,
+                0f,
+                false,
+                string.Empty);
         }
 
         private static Sprite RequiredSprite(string path)

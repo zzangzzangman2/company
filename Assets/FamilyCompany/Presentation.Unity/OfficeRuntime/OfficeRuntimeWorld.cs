@@ -119,6 +119,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (actor != null && actor.isActiveAndEnabled) actor.TickRuntime(stepDelta);
                 }
             }
+            foreach (OfficeRuntimeAgent actor in _registry.Actors)
+            {
+                if (actor != null && actor.isActiveAndEnabled) actor.TickPresentation(deltaTime);
+            }
         }
 
         private void OnDestroy()
