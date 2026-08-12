@@ -336,3 +336,12 @@ Unity: 6000.3.21f1
 - 전체 충돌 매트릭스는 스타터 가구 10종 + 회전의자 + 벽, 8방향, 가족 4명, 직접/NPC, 30/60/120fps, TimeScale 1/2/4, 저속/고속 10,368건을 검증한다. 상세 산출물은 Artifacts/OfficeFurnitureCollisionQa에 기록한다.
 - 완료 기록: Docs/FAMILY_COMPANY_POST_PUSH_P2_SUBCELL_COLLISION_COMPLETION_2026-08-12.md
 - 다음 P2: 이동 시작/정지/idle/방향 전환 표현 보강.
+## 2026-08-12 / Post-push P2 이동 전환 완료
+
+- 가족 4명에게 `turn_in_place`, `walk_start`, `walk_stop`, `short_shuffle` 4클립을 추가했다. 각 클립은 8방향×2포즈이며 전체 256개 PNG가 서로 독립된 아트다.
+- `DirectionalSpriteAnimator`가 거리 기반 `StartStep/Walk/Stopping/Idle/ShortShuffle/Pivot` 상태에 맞춰 전용 클립을 선택한다. `Walk`만 기존 6프레임 루프를 유지한다.
+- `OfficeLocomotionTransitionCatalog.asset`은 256개 슬롯, 가족별 원본 시트 결합 SHA-256, 256×256/180 PPU/하단 중앙 피벗 규격을 검증한다.
+- 모든 프레임의 발바닥은 X=128, 하단 여백 8px로 정규화했고 하드 알파를 적용했다.
+- Unity 6000.3.21f1 백그라운드 QA: 전환 asset/runtime PASS, `OfficeNavigationValidation` PASS, `PrototypeValidation` PASS.
+- 완료 보고서: `Docs/FAMILY_COMPANY_POST_PUSH_P2_LOCOMOTION_TRANSITIONS_COMPLETION_2026-08-12.md`
+- 원문 P2 필수 항목은 모두 완료했다. 6→8 기본 보행 확대는 선택 후속으로 남긴다.

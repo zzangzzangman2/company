@@ -270,3 +270,8 @@ anchor error 0.000px, rotation 0°, scale deviation 0%, agent penetration 0으�
 결정: OfficeFurnitureCollisionCatalog에 가구 종류·방향·의미 footprint 크기별 4×4 서브셀 마스크와 clearance padding을 기록한다. 직접 이동, NPC 경로 탐색, 좁은 통로, Interaction 좌석은 모두 OfficeRuntimeOccupancy의 동일한 반지름 확장 마스크를 사용한다. 프로필이 없거나 배치 크기·방향이 다르면 기존 전체 셀 충돌로 fail-closed 한다. 시각 정렬용 groundFootprintPolygonPx는 충돌 정본으로 사용하지 않는다.
 
 이유: 전체 의미 셀 사각형은 화분·커피 테이블·의자처럼 실제 바닥 실루엣이 작은 물체 주변에서 보이지 않는 벽을 만든다. 반대로 시각 스프라이트의 footprint는 정렬과 가림을 위한 값이라 gameplay clearance와 변경 주기가 다르다. 전용 마스크를 두면 현재 가족 반지름을 보존하면서 모서리 오탐을 줄이고, 미등록 콘텐츠는 안전하게 기존 동작을 유지할 수 있다.
+## 2026-08-12 / 이동 전환은 기존 6프레임 보행 루프와 별도 클립으로 유지
+
+결정: 가족 4명의 `turn_in_place`, `walk_start`, `walk_stop`, `short_shuffle`를 각각 8방향×2포즈의 독립 아트로 제작한다. `Walk` 상태만 기존 8방향×6프레임 루프를 사용하고, `Pivot`, `StartStep`, `Stopping/Idle`, `ShortShuffle`은 각 전용 클립을 사용한다. 모든 전환 PNG는 256×256, 180 PPU, Point, 하단 중앙 피벗이며 보이는 발바닥을 캔버스 하단 8px에 정렬한다.
+
+이유: gait 상태만 나누고 같은 걷기 프레임을 출력하면 출발·급정지·짧은 이동·90도 이상 회전이 시각적으로 구분되지 않는다. 반대로 기본 보행을 바로 8프레임으로 늘리는 것보다 짧은 전환에 전용 2포즈를 제공하는 편이 체감 개선이 크고, 기존 검증된 보행 루프를 보존할 수 있다. 발바닥 정규화는 생성 시트마다 다른 여백 때문에 방향 변경 때 캐릭터가 튀는 문제를 방지한다.

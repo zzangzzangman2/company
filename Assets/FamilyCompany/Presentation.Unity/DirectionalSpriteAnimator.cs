@@ -11,10 +11,17 @@ namespace FamilyCompany.Presentation.Unity
         public const int DirectionCount = 8;
         public const int WalkFrameCount = 6;
         public const int RequiredFrameCount = DirectionCount * WalkFrameCount;
+        public const int LocomotionTransitionPoseCount = 2;
+        public const int LocomotionTransitionClipCount = 4;
+        public const int LocomotionTransitionFramesPerClip =
+            DirectionCount * LocomotionTransitionPoseCount;
+        public const int RequiredLocomotionTransitionFrameCount =
+            LocomotionTransitionClipCount * LocomotionTransitionFramesPerClip;
 
         [SerializeField] private SpriteRenderer targetRenderer;
         [SerializeField] private Sprite[] walkFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] idleFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite[] locomotionTransitionFrames = Array.Empty<Sprite>();
         [SerializeField] private float frameSeconds = 0.11f;
         [SerializeField, Range(0, WalkFrameCount - 1)] private int idleWalkFrame = 2;
         [SerializeField] private Sprite[] sitDownFrames = Array.Empty<Sprite>();
@@ -64,6 +71,18 @@ namespace FamilyCompany.Presentation.Unity
             ? _tileFrameDisplacement.sqrMagnitude > 0.0000001f
             : _worldVelocity.sqrMagnitude > 0.0025f;
         public int ConfiguredFrameCount => walkFrames?.Length ?? 0;
+        public int ConfiguredLocomotionTransitionFrameCount =>
+            locomotionTransitionFrames?.Length ?? 0;
+        public bool IsLocomotionTransitionSpriteActive =>
+            !_seatingClip.HasValue &&
+            _tileDisplacementDirection &&
+            _tileGaitStateInitialized &&
+            _tileGaitState.Phase != OfficeLocomotionPhase.Walk &&
+            HasCompleteFrames(
+                locomotionTransitionFrames,
+                RequiredLocomotionTransitionFrameCount);
+        public int CurrentLocomotionTransitionPose =>
+            IsLocomotionTransitionSpriteActive ? ResolveLocomotionTransitionPose() : -1;
         public float BaseFrameSeconds => frameSeconds;
         public float EffectiveFrameSeconds => ResolveEffectiveFrameSeconds();
         public int IdleWalkFrame => Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
@@ -134,6 +153,42 @@ namespace FamilyCompany.Presentation.Unity
             strideLength = newStrideLength;
             ResetTileGaitState(_lastDirection);
             ApplyFrame();
+        }
+
+        public void ConfigureLocomotionTransitions(Sprite[] newTransitionFrames)
+        {
+            if (newTransitionFrames != null && newTransitionFrames.Length != 0 &&
+                !HasCompleteFrames(
+                    newTransitionFrames,
+                    RequiredLocomotionTransitionFrameCount))
+            {
+                throw new ArgumentException(
+                    $"Locomotion transitions require exactly " +
+                    $"{RequiredLocomotionTransitionFrameCount} non-null sprites.",
+                    nameof(newTransitionFrames));
+            }
+            locomotionTransitionFrames = newTransitionFrames == null
+                ? Array.Empty<Sprite>()
+                : (Sprite[])newTransitionFrames.Clone();
+            ApplyFrame();
+        }
+
+        public Sprite GetLocomotionTransitionFrame(
+            OfficeLocomotionPhase phase,
+            int direction,
+            int pose)
+        {
+            if (direction < 0 || direction >= DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(direction));
+            if (pose < 0 || pose >= LocomotionTransitionPoseCount)
+                throw new ArgumentOutOfRangeException(nameof(pose));
+            if (!HasCompleteFrames(
+                    locomotionTransitionFrames,
+                    RequiredLocomotionTransitionFrameCount)) return null;
+            int clip = ResolveLocomotionTransitionClip(phase);
+            return locomotionTransitionFrames[
+                clip * LocomotionTransitionFramesPerClip +
+                direction * LocomotionTransitionPoseCount + pose];
         }
 
         public void ConfigureOfficeSeating(
@@ -513,6 +568,14 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
             if (walkFrames == null || walkFrames.Length < RequiredFrameCount) return;
+            if (IsLocomotionTransitionSpriteActive)
+            {
+                targetRenderer.sprite = GetLocomotionTransitionFrame(
+                    _tileGaitState.Phase,
+                    _lastDirection,
+                    ResolveLocomotionTransitionPose());
+                return;
+            }
             if (_tileDisplacementDirection &&
                 _tileGaitStateInitialized &&
                 _tileGaitState.Phase == OfficeLocomotionPhase.Idle &&
@@ -522,6 +585,42 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
             targetRenderer.sprite = walkFrames[_walkFrame * DirectionCount + _lastDirection];
+        }
+
+        private int ResolveLocomotionTransitionPose()
+        {
+            float shuffleDistance = Mathf.Max(0.1f, strideLength) *
+                                    OfficeLocomotionGaitRules.ShortShuffleStrideFraction;
+            return _tileGaitState.Phase switch
+            {
+                OfficeLocomotionPhase.Idle => 1,
+                OfficeLocomotionPhase.StartStep =>
+                    _tileGaitState.EpisodeDistance < shuffleDistance * 0.5f ? 0 : 1,
+                OfficeLocomotionPhase.Stopping =>
+                    _tileGaitState.StopSeconds < OfficeLocomotionGaitRules.StopSettleSeconds * 0.5f
+                        ? 0
+                        : 1,
+                OfficeLocomotionPhase.ShortShuffle =>
+                    _tileGaitState.StopSeconds <
+                    OfficeLocomotionGaitRules.StopSettleSeconds * 0.5f ? 0 : 1,
+                OfficeLocomotionPhase.Pivot =>
+                    _tileGaitState.TransitionSeconds <
+                    OfficeLocomotionGaitRules.PivotSeconds * 0.5f ? 0 : 1,
+                _ => 0
+            };
+        }
+
+        private static int ResolveLocomotionTransitionClip(OfficeLocomotionPhase phase)
+        {
+            return phase switch
+            {
+                OfficeLocomotionPhase.Pivot => 0,
+                OfficeLocomotionPhase.StartStep => 1,
+                OfficeLocomotionPhase.Stopping => 2,
+                OfficeLocomotionPhase.ShortShuffle => 3,
+                OfficeLocomotionPhase.Idle => 2,
+                _ => 1
+            };
         }
 
         private void BeginOfficeSeatingClip(OfficeSeatingAnimationClip clip, int direction)

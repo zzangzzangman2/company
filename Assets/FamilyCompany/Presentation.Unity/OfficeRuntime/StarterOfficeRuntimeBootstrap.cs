@@ -31,6 +31,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeRuntimeWorld _world;
         private string _layoutHash = string.Empty;
         private bool _building;
+        private OfficeLocomotionTransitionCatalog _locomotionTransitionCatalog;
         private OfficeSeatingPresentationMode _seatingPresentationMode =
             OfficeSeatingPresentationMode.SafeStaticWork;
 
@@ -120,6 +121,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _world = _generated.AddComponent<OfficeRuntimeWorld>();
             _world.Configure(grid, presenter, furniturePresenter);
             ResolveSeatingPresentationMode();
+            _locomotionTransitionCatalog = OfficeLocomotionTransitionCatalog.LoadDefault();
+            if (_locomotionTransitionCatalog == null)
+            {
+                Debug.LogWarning(
+                    "STARTER_OFFICE_LOCOMOTION_TRANSITIONS | mode=WalkFallback reason=CatalogMissing");
+            }
+            else
+            {
+                _locomotionTransitionCatalog.Validate();
+            }
 
             var usedSpawns = new HashSet<OfficeGridCoordinate>();
             for (var index = 0; index < MemberIds.Length; index++)
@@ -176,6 +187,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             renderer.sortingLayerName = "Default";
             var animator = root.AddComponent<DirectionalSpriteAnimator>();
             animator.Configure(renderer, _assetSource.CopyWalkFrames(memberId));
+            if (_locomotionTransitionCatalog != null)
+                animator.ConfigureLocomotionTransitions(
+                    _locomotionTransitionCatalog.CopyFrames(memberId));
             OfficeGridSeatingFrameSet seating = _assetSource.CopySeatingFrameSet(memberId);
             animator.ConfigureOfficeSeating(
                 seating.sitDownFrames,
