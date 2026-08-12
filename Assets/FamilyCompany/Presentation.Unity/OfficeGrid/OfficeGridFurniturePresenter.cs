@@ -52,7 +52,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             bool hasBounds = false;
             foreach (PlacedOfficeFurniture item in semanticGrid.Furniture)
             {
-                OfficeFurnitureVisualDefinition definition = visualCatalog.Resolve(item.KindId, item.Facing);
+                if (!visualCatalog.TryResolveWithMirror(
+                        item.KindId, item.Facing, out OfficeFurnitureVisualDefinition definition, out bool flipX))
+                    throw new InvalidOperationException(
+                        $"Furniture visual '{item.KindId}/{item.Facing}' has neither authored nor mirrored art.");
                 var root = new GameObject("Furniture_" + item.FurnitureId);
                 root.transform.SetParent(transform, false);
                 root.transform.position = _gridPresenter.SubcellAnchorWorld(item.PlacementAnchor);
@@ -72,6 +75,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 baseRoot.transform.localScale = Vector3.one;
                 var baseRenderer = baseRoot.AddComponent<SpriteRenderer>();
                 baseRenderer.sprite = definition.BaseSprite;
+                baseRenderer.flipX = flipX;
                 baseRenderer.sortingLayerName = "Default";
                 Vector3 sortAnchorWorld = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
                     baseRenderer,
@@ -88,6 +92,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                     frontRoot.transform.localScale = Vector3.one;
                     frontRenderer = frontRoot.AddComponent<SpriteRenderer>();
                     frontRenderer.sprite = definition.FrontOverlaySprite;
+                    frontRenderer.flipX = flipX;
                     frontRenderer.sortingLayerName = "Default";
                     frontRenderer.sortingOrder = baseRenderer.sortingOrder + 1;
                     frontRenderer.enabled = false;

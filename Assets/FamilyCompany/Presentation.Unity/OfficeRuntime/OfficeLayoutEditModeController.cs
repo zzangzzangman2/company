@@ -24,6 +24,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public const KeyCode ToggleKey = KeyCode.F2;
         private const int UndoDepth = 32;
 
+        /// <summary>Names the player sees. An id like water_dispenser tells them nothing.</summary>
+        private static readonly Dictionary<string, string> KindNames =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                { OfficeGridLayouts.DeskWithPcKind, "업무 책상" },
+                { OfficeGridLayouts.SwivelChairKind, "사무 의자" },
+                { OfficeGridLayouts.ReceptionCounterKind, "접수대" },
+                { OfficeGridLayouts.MeetingTableKind, "회의 탁자" },
+                { OfficeGridLayouts.DocumentBookcaseKind, "서류 책장" },
+                { OfficeGridLayouts.FaxCopierKind, "팩스·복사기" },
+                { OfficeGridLayouts.WaterDispenserKind, "정수기" },
+                { OfficeGridLayouts.SofaKind, "소파" },
+                { OfficeGridLayouts.CoffeeTableKind, "커피 테이블" },
+                { OfficeGridLayouts.PottedPlantKind, "화분" },
+                { OfficeGridLayouts.PartitionKind, "파티션" },
+                { OfficeGridLayouts.FilingCabinetKind, "서류 캐비닛" }
+            };
+
         private readonly OfficeLayoutEditModeSkin _skin = new OfficeLayoutEditModeSkin();
         private readonly List<OfficeGrid> _undo = new List<OfficeGrid>();
         private readonly List<GameObject> _overlay = new List<GameObject>();
@@ -31,13 +49,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private StarterOfficeRuntimeBootstrap _runtime;
         private Camera _camera;
         private Sprite _cellSprite;
-        private string _selectedFurnitureId = string.Empty;
+        private string _selectedId = string.Empty;
+        private string _hoverId = string.Empty;
         private bool _dragging;
         private OfficeGridCoordinate _dragOrigin;
         private OfficeGridCoordinate _dragCurrent;
         private string _toast = string.Empty;
         private float _toastUntil;
-        private bool _showAllFootprints = true;
         private string _overlaySignature = string.Empty;
 
         public bool IsOpen { get; private set; }
@@ -59,141 +77,159 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             RefreshOverlay();
         }
 
-        private void OnDisable()
-        {
-            ClearOverlay();
-        }
+        private void OnDisable() => ClearOverlay();
 
         private void Toggle()
         {
             IsOpen = !IsOpen;
-            _selectedFurnitureId = string.Empty;
+            _selectedId = string.Empty;
+            _hoverId = string.Empty;
             _dragging = false;
             ClearOverlay();
-            Say(IsOpen ? "배치 편집 모드" : "편집 종료");
+            Say(IsOpen ? "배치 편집 · 물건을 끌어서 옮기세요" : "편집을 닫았습니다");
         }
 
-        // ------------------------------------------------------------------ input
-        private void HandlePointer()
+        // ------------------------------------------------------------------ picking
+        /// <summary>
+        /// Picks by drawn sprite, not by floor cell. A water dispenser or a bookcase is drawn far
+        /// above the tile it stands on, so cell picking only ever caught wide flat things like desks
+        /// and made everything else look immovable. Ties go to the frontmost sprite, which is the one
+        /// the player believes they clicked.
+        /// </summary>
+        private string PickAt(Vector3 worldPoint)
         {
-            if (_camera == null || Grid == null) return;
-            if (IsPointerOverPanel(Input.mousePosition)) return;
-            if (!TryPointerCell(out OfficeGridCoordinate cell)) return;
-
-            if (Input.GetMouseButtonDown(0))
+            OfficeGrid grid = Grid;
+            if (grid == null) return string.Empty;
+            var best = string.Empty;
+            int bestOrder = int.MinValue;
+            foreach (KeyValuePair<string, SpriteRenderer> entry
+                     in _runtime.World.FurniturePresenter.Renderers)
             {
-                string hit = FurnitureAt(cell);
-                if (hit.Length == 0)
-                {
-                    _selectedFurnitureId = string.Empty;
-                    return;
-                }
-                _selectedFurnitureId = hit;
-                _dragging = true;
-                _dragOrigin = cell;
-                _dragCurrent = cell;
-                return;
+                SpriteRenderer renderer = entry.Value;
+                if (renderer == null || !renderer.enabled || renderer.sprite == null) continue;
+                Bounds bounds = renderer.bounds;
+                if (worldPoint.x < bounds.min.x || worldPoint.x > bounds.max.x) continue;
+                if (worldPoint.y < bounds.min.y || worldPoint.y > bounds.max.y) continue;
+                if (renderer.sortingOrder <= bestOrder) continue;
+                bestOrder = renderer.sortingOrder;
+                best = entry.Key;
             }
+            if (best.Length > 0) return best;
 
-            if (_dragging && Input.GetMouseButton(0))
-            {
-                _dragCurrent = cell;
-                return;
-            }
-
-            if (_dragging && Input.GetMouseButtonUp(0))
-            {
-                _dragging = false;
-                int deltaX = _dragCurrent.X - _dragOrigin.X;
-                int deltaY = _dragCurrent.Y - _dragOrigin.Y;
-                if (deltaX != 0 || deltaY != 0) Move(deltaX, deltaY);
-            }
-        }
-
-        private void HandleKeys()
-        {
-            if (_selectedFurnitureId.Length == 0) return;
-            if (Input.GetKeyDown(KeyCode.LeftArrow)) Move(-1, 0);
-            if (Input.GetKeyDown(KeyCode.RightArrow)) Move(1, 0);
-            if (Input.GetKeyDown(KeyCode.UpArrow)) Move(0, 1);
-            if (Input.GetKeyDown(KeyCode.DownArrow)) Move(0, -1);
-            if (Input.GetKeyDown(KeyCode.Delete)) Remove();
-            if (Input.GetKeyDown(KeyCode.Z) &&
-                (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))) Undo();
-        }
-
-        private bool TryPointerCell(out OfficeGridCoordinate cell)
-        {
-            cell = default;
-            if (_runtime.World == null) return false;
-            Vector3 world = _camera.ScreenToWorldPoint(Input.mousePosition);
-            world.z = 0f;
-            cell = _runtime.World.Presenter.NearestCell(world);
-            return Grid.Contains(cell);
-        }
-
-        private string FurnitureAt(OfficeGridCoordinate cell)
-        {
-            foreach (PlacedOfficeFurniture item in Grid.Furniture)
+            // nothing drawn under the cursor: fall back to whatever occupies that floor cell
+            OfficeGridCoordinate cell = _runtime.World.Presenter.NearestCell(worldPoint);
+            if (!grid.Contains(cell)) return string.Empty;
+            foreach (PlacedOfficeFurniture item in grid.Furniture)
             {
                 if (cell.X < item.Origin.X || cell.X > item.Origin.X + item.Width - 1) continue;
                 if (cell.Y < item.Origin.Y || cell.Y > item.Origin.Y + item.Height - 1) continue;
                 return item.FurnitureId;
             }
-            foreach (OfficeSeatSlot seat in Grid.SeatSlots)
-                if (seat.Cell.Equals(cell)) return seat.ChairFurnitureId;
             return string.Empty;
+        }
+
+        private void HandlePointer()
+        {
+            if (_camera == null || Grid == null) return;
+            if (IsPointerOverPanel(Input.mousePosition))
+            {
+                _hoverId = string.Empty;
+                return;
+            }
+            Vector3 world = _camera.ScreenToWorldPoint(Input.mousePosition);
+            world.z = 0f;
+            OfficeGridCoordinate cell = _runtime.World.Presenter.NearestCell(world);
+            if (!_dragging) _hoverId = PickAt(world);
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                _selectedId = PickAt(world);
+                if (_selectedId.Length == 0) return;
+                _dragging = true;
+                _dragOrigin = cell;
+                _dragCurrent = cell;
+                return;
+            }
+            if (_dragging && Input.GetMouseButton(0))
+            {
+                _dragCurrent = cell;
+                return;
+            }
+            if (_dragging && Input.GetMouseButtonUp(0))
+            {
+                _dragging = false;
+                Move(_dragCurrent.X - _dragOrigin.X, _dragCurrent.Y - _dragOrigin.Y);
+            }
+        }
+
+        private void HandleKeys()
+        {
+            if (Input.GetKeyDown(KeyCode.Z) &&
+                (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            {
+                Undo();
+                return;
+            }
+            if (_selectedId.Length == 0) return;
+            if (Input.GetKeyDown(KeyCode.LeftArrow)) Move(-1, 0);
+            if (Input.GetKeyDown(KeyCode.RightArrow)) Move(1, 0);
+            if (Input.GetKeyDown(KeyCode.UpArrow)) Move(0, 1);
+            if (Input.GetKeyDown(KeyCode.DownArrow)) Move(0, -1);
+            if (Input.GetKeyDown(KeyCode.R)) Rotate();
+            if (Input.GetKeyDown(KeyCode.Delete)) Remove();
         }
 
         // ------------------------------------------------------------------ edits
         private void Move(int deltaX, int deltaY)
         {
+            if (deltaX == 0 && deltaY == 0) return;
             OfficeGrid grid = Grid;
-            if (grid == null || _selectedFurnitureId.Length == 0) return;
-            OfficeLayoutEditResult result = OfficeLayoutEditRules.MoveFurniture(
-                grid, _selectedFurnitureId, deltaX, deltaY);
-            if (!result.Success)
-            {
-                Say(result.Message);
-                return;
-            }
-            Commit(grid, result.Grid, "이동");
+            if (grid == null || _selectedId.Length == 0) return;
+            Apply(grid, OfficeLayoutEditRules.MoveFurniture(grid, _selectedId, deltaX, deltaY), "옮겼습니다");
+        }
+
+        private void Rotate()
+        {
+            OfficeGrid grid = Grid;
+            if (grid == null || _selectedId.Length == 0) return;
+            Apply(grid, OfficeLayoutEditRules.RotateFurniture(grid, _selectedId), "돌렸습니다");
         }
 
         private void Remove()
         {
             OfficeGrid grid = Grid;
-            if (grid == null || _selectedFurnitureId.Length == 0) return;
-            OfficeLayoutEditResult result = OfficeLayoutEditRules.RemoveFurniture(grid, _selectedFurnitureId);
+            if (grid == null || _selectedId.Length == 0) return;
+            OfficeLayoutEditResult result = OfficeLayoutEditRules.RemoveFurniture(grid, _selectedId);
+            if (result.Success) _selectedId = string.Empty;
+            Apply(grid, result, "치웠습니다");
+        }
+
+        private void Apply(OfficeGrid previous, OfficeLayoutEditResult result, string label)
+        {
             if (!result.Success)
             {
-                Say(result.Message);
+                if (result.Failure != OfficeLayoutEditFailure.NothingToDo) Say(result.Message);
                 return;
             }
-            _selectedFurnitureId = string.Empty;
-            Commit(grid, result.Grid, "삭제");
+            _undo.Add(previous);
+            if (_undo.Count > UndoDepth) _undo.RemoveAt(0);
+            _runtime.ApplyLayout(result.Grid);
+            ClearOverlay();
+            Say(label);
         }
 
         private void Undo()
         {
             if (_undo.Count == 0)
             {
-                Say("되돌릴 편집이 없습니다.");
+                Say("되돌릴 편집이 없습니다");
                 return;
             }
             OfficeGrid previous = _undo[_undo.Count - 1];
             _undo.RemoveAt(_undo.Count - 1);
             _runtime.ApplyLayout(previous);
-            Say("되돌렸습니다.");
-        }
-
-        private void Commit(OfficeGrid previous, OfficeGrid next, string label)
-        {
-            _undo.Add(previous);
-            if (_undo.Count > UndoDepth) _undo.RemoveAt(0);
-            _runtime.ApplyLayout(next);
             ClearOverlay();
-            Say($"{label} 완료 · 해시 {next.ComputeLayoutHash().Substring(0, 8)}");
+            Say("되돌렸습니다");
         }
 
         private void Export()
@@ -229,72 +265,61 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             OfficeGrid grid = Grid;
             if (grid == null) return;
-            // Rebuilding forty sprites every frame would churn the heap for nothing; the overlay only
-            // changes when the selection, the drag cell, the toggle or the layout itself changes.
             string signature = string.Join(
                 "|",
-                _selectedFurnitureId,
-                _dragging ? _dragCurrent.ToString() : "-",
-                _dragging ? _dragOrigin.ToString() : "-",
-                _showAllFootprints ? "1" : "0",
+                _selectedId,
+                _hoverId,
+                _dragging ? _dragCurrent + ">" + _dragOrigin : "-",
                 grid.ComputeLayoutHash());
             if (string.Equals(signature, _overlaySignature, StringComparison.Ordinal)) return;
             _overlaySignature = signature;
             ClearOverlay();
             EnsureCellSprite();
 
-            if (_showAllFootprints)
-            {
-                foreach (PlacedOfficeFurniture item in grid.Furniture)
-                {
-                    if (!item.BlocksMovement) continue;
-                    foreach (OfficeGridCoordinate cell in OfficeLayoutEditRules.FootprintCells(item))
-                        DrawCell(cell, new Color(0.85f, 0.35f, 0.30f, 0.16f));
-                }
-                foreach (OfficeSeatSlot seat in grid.SeatSlots)
-                {
-                    DrawCell(seat.Cell, new Color(0.32f, 0.72f, 0.66f, 0.30f));
-                    DrawCell(seat.ApproachCell, new Color(0.95f, 0.80f, 0.35f, 0.22f));
-                }
-            }
+            if (_hoverId.Length > 0 && !string.Equals(_hoverId, _selectedId, StringComparison.Ordinal))
+                foreach (OfficeGridCoordinate cell in GroupCells(grid, _hoverId))
+                    DrawCell(cell, new Color(1f, 1f, 1f, 0.20f));
 
-            if (_selectedFurnitureId.Length == 0) return;
-            PlacedOfficeFurniture selected = grid.Furniture.FirstOrDefault(item =>
-                string.Equals(item.FurnitureId, _selectedFurnitureId, StringComparison.Ordinal));
-            if (selected == null) return;
-
+            if (_selectedId.Length == 0) return;
             int deltaX = _dragging ? _dragCurrent.X - _dragOrigin.X : 0;
             int deltaY = _dragging ? _dragCurrent.Y - _dragOrigin.Y : 0;
-            bool valid = deltaX == 0 && deltaY == 0 ||
-                         OfficeLayoutEditRules.MoveFurniture(grid, _selectedFurnitureId, deltaX, deltaY).Success;
+            bool valid = (deltaX == 0 && deltaY == 0) ||
+                         OfficeLayoutEditRules.MoveFurniture(grid, _selectedId, deltaX, deltaY).Success;
             Color tint = valid
-                ? new Color(0.36f, 0.74f, 0.45f, 0.42f)
-                : new Color(0.82f, 0.34f, 0.31f, 0.45f);
-            foreach (OfficeGridCoordinate cell in GroupCells(grid, selected))
+                ? new Color(0.36f, 0.80f, 0.48f, 0.45f)
+                : new Color(0.86f, 0.32f, 0.28f, 0.50f);
+            foreach (OfficeGridCoordinate cell in GroupCells(grid, _selectedId))
             {
                 var moved = new OfficeGridCoordinate(cell.X + deltaX, cell.Y + deltaY);
                 if (grid.Contains(moved)) DrawCell(moved, tint);
             }
         }
 
-        private IEnumerable<OfficeGridCoordinate> GroupCells(OfficeGrid grid, PlacedOfficeFurniture selected)
+        /// <summary>Cells the whole object covers - a workstation reports desk, chair and approach.</summary>
+        private IEnumerable<OfficeGridCoordinate> GroupCells(OfficeGrid grid, string furnitureId)
         {
-            OfficeSeatSlot owner = grid.SeatSlots.FirstOrDefault(seat =>
-                string.Equals(seat.ChairFurnitureId, selected.FurnitureId, StringComparison.Ordinal) ||
-                string.Equals(seat.WorkSurfaceFurnitureId, selected.FurnitureId, StringComparison.Ordinal));
-            if (owner == null) return OfficeLayoutEditRules.FootprintCells(selected);
+            PlacedOfficeFurniture item = grid.Furniture.FirstOrDefault(f =>
+                string.Equals(f.FurnitureId, furnitureId, StringComparison.Ordinal));
+            if (item == null) return Array.Empty<OfficeGridCoordinate>();
+            OfficeSeatSlot owner = OwnerSeat(grid, furnitureId);
+            if (owner == null) return OfficeLayoutEditRules.FootprintCells(item);
 
             var cells = new List<OfficeGridCoordinate>();
-            foreach (PlacedOfficeFurniture item in grid.Furniture)
+            foreach (PlacedOfficeFurniture part in grid.Furniture)
             {
-                if (!string.Equals(item.FurnitureId, owner.ChairFurnitureId, StringComparison.Ordinal) &&
-                    !string.Equals(item.FurnitureId, owner.WorkSurfaceFurnitureId, StringComparison.Ordinal))
+                if (!string.Equals(part.FurnitureId, owner.ChairFurnitureId, StringComparison.Ordinal) &&
+                    !string.Equals(part.FurnitureId, owner.WorkSurfaceFurnitureId, StringComparison.Ordinal))
                     continue;
-                cells.AddRange(OfficeLayoutEditRules.FootprintCells(item));
+                cells.AddRange(OfficeLayoutEditRules.FootprintCells(part));
             }
             cells.Add(owner.ApproachCell);
             return cells;
         }
+
+        private static OfficeSeatSlot OwnerSeat(OfficeGrid grid, string furnitureId) =>
+            grid.SeatSlots.FirstOrDefault(seat =>
+                string.Equals(seat.ChairFurnitureId, furnitureId, StringComparison.Ordinal) ||
+                string.Equals(seat.WorkSurfaceFurnitureId, furnitureId, StringComparison.Ordinal));
 
         private void DrawCell(OfficeGridCoordinate cell, Color color)
         {
@@ -332,10 +357,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             for (var y = 0; y < height; y++)
             for (var x = 0; x < width; x++)
             {
-                float dx = Mathf.Abs(x - width * 0.5f) / (width * 0.5f);
-                float dy = Mathf.Abs(y - height * 0.5f) / (height * 0.5f);
-                float edge = dx + dy;
-                texture.SetPixel(x, y, edge <= 1f ? (edge >= 0.88f ? Color.white : new Color(1f, 1f, 1f, 0.75f)) : clear);
+                float edge = Mathf.Abs(x - width * 0.5f) / (width * 0.5f) +
+                             Mathf.Abs(y - height * 0.5f) / (height * 0.5f);
+                texture.SetPixel(
+                    x,
+                    y,
+                    edge <= 1f ? (edge >= 0.86f ? Color.white : new Color(1f, 1f, 1f, 0.62f)) : clear);
             }
             texture.Apply();
             _cellSprite = Sprite.Create(
@@ -349,137 +376,101 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private void Say(string message)
         {
             _toast = message ?? string.Empty;
-            _toastUntil = Time.unscaledTime + 3.2f;
+            _toastUntil = Time.unscaledTime + 3f;
+        }
+
+        private string DisplayName(OfficeGrid grid, string furnitureId)
+        {
+            PlacedOfficeFurniture item = grid?.Furniture.FirstOrDefault(f =>
+                string.Equals(f.FurnitureId, furnitureId, StringComparison.Ordinal));
+            if (item == null) return string.Empty;
+            string name = KindNames.TryGetValue(item.KindId, out string known) ? known : item.KindId;
+            OfficeSeatSlot owner = OwnerSeat(grid, furnitureId);
+            return owner == null ? name : name + " (워크스테이션)";
         }
 
         // ------------------------------------------------------------------ panel
         private Rect PanelRect()
         {
-            float width = _skin.Round(330);
-            float height = _skin.Round(430);
-            return new Rect(Screen.width - width - _skin.Round(24), _skin.Round(24), width, height);
+            float width = _skin.Round(300);
+            float height = _skin.Round(232);
+            return new Rect(Screen.width - width - _skin.Round(22), _skin.Round(22), width, height);
         }
 
         private bool IsPointerOverPanel(Vector3 mousePosition)
         {
             if (!IsOpen) return false;
-            Rect rect = PanelRect();
             var point = new Vector2(mousePosition.x, Screen.height - mousePosition.y);
-            return rect.Contains(point);
+            return PanelRect().Contains(point);
         }
 
         private void OnGUI()
         {
             if (!IsOpen) return;
             _skin.EnsureBuilt();
+            OfficeGrid grid = Grid;
             Rect panel = PanelRect();
 
-            GUI.color = Color.white;
             GUI.DrawTexture(
                 new Rect(panel.x + 4f, panel.y + 6f, panel.width, panel.height),
                 _skin.ShadowTexture);
             GUI.Box(panel, GUIContent.none, _skin.PanelStyle);
 
-            float header = _skin.Round(44);
-            GUI.Box(new Rect(panel.x, panel.y, panel.width, header), "  사무실 배치 편집", _skin.HeaderStyle);
+            float header = _skin.Round(42);
+            GUI.Box(new Rect(panel.x, panel.y, panel.width, header), "  사무실 배치", _skin.HeaderStyle);
 
-            float pad = _skin.Round(18);
+            float pad = _skin.Round(16);
             float x = panel.x + pad;
             float width = panel.width - pad * 2f;
-            float y = panel.y + header + _skin.Round(14);
-            float line = _skin.Round(24);
+            float y = panel.y + header + _skin.Round(12);
+            float line = _skin.Round(23);
 
-            OfficeGrid grid = Grid;
-            PlacedOfficeFurniture selected = grid == null || _selectedFurnitureId.Length == 0
-                ? null
-                : grid.Furniture.FirstOrDefault(item =>
-                    string.Equals(item.FurnitureId, _selectedFurnitureId, StringComparison.Ordinal));
-            OfficeSeatSlot owner = selected == null || grid == null
-                ? null
-                : grid.SeatSlots.FirstOrDefault(seat =>
-                    string.Equals(seat.ChairFurnitureId, selected.FurnitureId, StringComparison.Ordinal) ||
-                    string.Equals(seat.WorkSurfaceFurnitureId, selected.FurnitureId, StringComparison.Ordinal));
-
-            GUI.Label(new Rect(x, y, width, line), selected == null ? "선택 없음" : selected.KindId, _skin.TitleStyle);
-            y += line;
-            GUI.Label(
-                new Rect(x, y, width, line),
-                selected == null
-                    ? "가구를 클릭해 선택하세요"
-                    : (owner != null ? "워크스테이션 · 책상+의자+좌석 함께 이동" : "단일 가구"),
-                _skin.HintStyle);
+            bool has = _selectedId.Length > 0 && grid != null;
+            string title = has
+                ? DisplayName(grid, _selectedId)
+                : (_hoverId.Length > 0 ? DisplayName(grid, _hoverId) : "물건을 클릭하세요");
+            GUI.Label(new Rect(x, y, width, line + _skin.Round(4)), title, _skin.TitleStyle);
             y += line + _skin.Round(6);
 
-            if (selected != null)
-            {
-                Row(x, ref y, width, line, "위치", $"({selected.Origin.X}, {selected.Origin.Y})");
-                Row(x, ref y, width, line, "크기", $"{selected.Width} x {selected.Height}");
-                Row(x, ref y, width, line, "통행", selected.BlocksMovement ? "막음" : "통과");
-                if (owner != null)
-                {
-                    Row(x, ref y, width, line, "좌석", $"({owner.Cell.X}, {owner.Cell.Y})");
-                    Row(x, ref y, width, line, "접근칸", $"({owner.ApproachCell.X}, {owner.ApproachCell.Y})");
-                }
-                y += _skin.Round(8);
-            }
+            GUI.Label(
+                new Rect(x, y, width, line),
+                has ? "끌어서 옮기기 · 방향키로 한 칸씩" : "정수기·화분·소파 전부 옮길 수 있습니다",
+                _skin.HintStyle);
+            y += line + _skin.Round(8);
 
-            float buttonHeight = _skin.Round(36);
+            float buttonHeight = _skin.Round(38);
             float gap = _skin.Round(8);
             float half = (width - gap) * 0.5f;
+            bool canRotate = has && OfficeLayoutEditRules.CanRotate(grid, _selectedId);
 
-            bool hasSelection = selected != null;
-            if (Button(new Rect(x, y, half, buttonHeight), "← 왼쪽", hasSelection)) Move(-1, 0);
-            if (Button(new Rect(x + half + gap, y, half, buttonHeight), "오른쪽 →", hasSelection)) Move(1, 0);
+            if (Button(new Rect(x, y, half, buttonHeight), "회전  R", canRotate)) Rotate();
+            if (Button(new Rect(x + half + gap, y, half, buttonHeight), "치우기", has, danger: true)) Remove();
             y += buttonHeight + gap;
-            if (Button(new Rect(x, y, half, buttonHeight), "↑ 뒤로", hasSelection)) Move(0, 1);
-            if (Button(new Rect(x + half + gap, y, half, buttonHeight), "↓ 앞으로", hasSelection)) Move(0, -1);
-            y += buttonHeight + gap;
-
-            if (Button(new Rect(x, y, half, buttonHeight), "회전", false)) { }
-            if (Button(new Rect(x + half + gap, y, half, buttonHeight), "삭제", hasSelection, danger: true)) Remove();
-            y += buttonHeight + _skin.Round(4);
-            GUI.Label(new Rect(x, y, width, line), "회전은 방향별 가구·좌석 아트가 준비되면 열립니다", _skin.HintStyle);
-            y += line + gap;
-
             if (Button(new Rect(x, y, half, buttonHeight), "되돌리기", _undo.Count > 0)) Undo();
             if (Button(new Rect(x + half + gap, y, half, buttonHeight), "내보내기", grid != null)) Export();
-            y += buttonHeight + gap;
+            y += buttonHeight + _skin.Round(6);
 
-            string toggleLabel = _showAllFootprints ? "점유 표시 끄기" : "점유 표시 켜기";
-            if (Button(new Rect(x, y, width, buttonHeight), toggleLabel, true)) _showAllFootprints = !_showAllFootprints;
-            y += buttonHeight + gap;
+            if (has && !canRotate)
+            {
+                GUI.Label(new Rect(x, y, width, line), "책상·의자는 방향별 아트가 없어 회전 불가", _skin.HintStyle);
+                y += line;
+            }
 
             GUI.Label(
-                new Rect(x, y, width, line * 3f),
-                "드래그로 이동 · 방향키 한 칸 · Delete 삭제 · Ctrl+Z 되돌리기 · F2 닫기",
-                _skin.HintStyle);
-
-            float legendY = panel.yMax - _skin.Round(30);
-            GUI.Label(new Rect(x, legendY, width, line), Legend(grid), _skin.ChipStyle);
+                new Rect(x, panel.yMax - _skin.Round(30), width, line),
+                grid == null
+                    ? "레이아웃 없음"
+                    : $"가구 {grid.Furniture.Count} · 편집 {_undo.Count}회 · F2 닫기",
+                _skin.ChipStyle);
 
             if (_toast.Length > 0 && Time.unscaledTime < _toastUntil)
             {
-                var size = _skin.ToastStyle.CalcSize(new GUIContent(_toast));
-                var rect = new Rect(
-                    (Screen.width - size.x) * 0.5f,
-                    Screen.height - _skin.Round(96),
-                    size.x,
-                    size.y);
-                GUI.Label(rect, _toast, _skin.ToastStyle);
+                Vector2 size = _skin.ToastStyle.CalcSize(new GUIContent(_toast));
+                GUI.Label(
+                    new Rect((Screen.width - size.x) * 0.5f, Screen.height - _skin.Round(92), size.x, size.y),
+                    _toast,
+                    _skin.ToastStyle);
             }
-        }
-
-        private string Legend(OfficeGrid grid)
-        {
-            if (grid == null) return "레이아웃 없음";
-            return $"가구 {grid.Furniture.Count} · 좌석 {grid.SeatSlots.Count} · 편집 {_undo.Count}회";
-        }
-
-        private void Row(float x, ref float y, float width, float line, string label, string value)
-        {
-            GUI.Label(new Rect(x, y, width * 0.45f, line), label, _skin.BodyStyle);
-            GUI.Label(new Rect(x + width * 0.45f, y, width * 0.55f, line), value, _skin.ValueStyle);
-            y += line;
         }
 
         private bool Button(Rect rect, string label, bool enabled, bool danger = false)
@@ -487,8 +478,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             GUIStyle style = !enabled
                 ? _skin.DisabledButtonStyle
                 : (danger ? _skin.DangerButtonStyle : _skin.ButtonStyle);
-            bool pressed = GUI.Button(rect, label, style);
-            return pressed && enabled;
+            return GUI.Button(rect, label, style) && enabled;
         }
     }
 }

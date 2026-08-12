@@ -215,6 +215,51 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             throw new KeyNotFoundException($"Furniture visual '{kindId}/{facing}' is not registered.");
         }
 
+        /// <summary>
+        /// Resolves a facing that may only exist as the horizontal mirror of an authored one.
+        /// Isometric SouthEast mirrors to SouthWest and NorthWest to NorthEast, so flipping the
+        /// sprite on X turns a piece to face the other way without inventing pixels. Facings that
+        /// are neither authored nor a mirror return false - the caller must refuse rather than draw
+        /// the wrong side.
+        /// </summary>
+        public bool TryResolveWithMirror(
+            string kindId,
+            OfficeFurnitureFacing facing,
+            out OfficeFurnitureVisualDefinition definition,
+            out bool flipX)
+        {
+            flipX = false;
+            definition = null;
+            foreach (OfficeFurnitureVisualDefinition candidate in definitions)
+            {
+                if (candidate == null || !string.Equals(candidate.KindId, kindId, StringComparison.Ordinal))
+                    continue;
+                if (candidate.Facing == facing)
+                {
+                    definition = candidate;
+                    flipX = false;
+                    return true;
+                }
+                if (MirrorOf(candidate.Facing) == facing)
+                {
+                    definition = candidate;
+                    flipX = true;
+                }
+            }
+            return definition != null;
+        }
+
+        public static OfficeFurnitureFacing MirrorOf(OfficeFurnitureFacing facing)
+        {
+            switch (facing)
+            {
+                case OfficeFurnitureFacing.SouthEast: return OfficeFurnitureFacing.SouthWest;
+                case OfficeFurnitureFacing.SouthWest: return OfficeFurnitureFacing.SouthEast;
+                case OfficeFurnitureFacing.NorthWest: return OfficeFurnitureFacing.NorthEast;
+                default: return OfficeFurnitureFacing.NorthWest;
+            }
+        }
+
         public void ReplaceDefinitions(OfficeFurnitureVisualDefinition[] values, int newCalibrationVersion)
         {
             definitions = values ?? Array.Empty<OfficeFurnitureVisualDefinition>();

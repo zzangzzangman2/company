@@ -137,28 +137,63 @@ namespace FamilyCompany.Simulation.OfficeLayout
         }
 
         /// <summary>
-        /// Rotation needs a sprite, a foreground mask, a desk socket, a chair seat and a seated pose
-        /// for the target facing. Presentation owns all five, so the caller passes what exists; with
-        /// nothing supported the editor must keep the button disabled rather than fall back quietly.
+        /// The facings an isometric sprite can honestly be drawn at when only one was authored:
+        /// itself, and its horizontal mirror. SouthEast mirrors to SouthWest and NorthWest mirrors
+        /// to NorthEast, so flipping the sprite on X turns the piece to face the other way without
+        /// inventing pixels. The remaining two facings would need real art.
         /// </summary>
-        public static OfficeLayoutEditResult RotateWorkstation(
-            OfficeGrid grid,
-            string seatId,
-            IReadOnlyCollection<OfficeFurnitureFacing> supportedFacings)
+        public static OfficeFurnitureFacing Mirror(OfficeFurnitureFacing facing)
+        {
+            switch (facing)
+            {
+                case OfficeFurnitureFacing.SouthEast: return OfficeFurnitureFacing.SouthWest;
+                case OfficeFurnitureFacing.SouthWest: return OfficeFurnitureFacing.SouthEast;
+                case OfficeFurnitureFacing.NorthWest: return OfficeFurnitureFacing.NorthEast;
+                default: return OfficeFurnitureFacing.NorthWest;
+            }
+        }
+
+        /// <summary>
+        /// Turns a free standing piece to face the other way. The footprint is unchanged - a mirror
+        /// is not a quarter turn - so this can only fail if the piece does not exist or belongs to a
+        /// workstation, where the desk, chair, seat and approach would all have to turn together and
+        /// no art exists for the resulting facings.
+        /// </summary>
+        public static OfficeLayoutEditResult RotateFurniture(OfficeGrid grid, string furnitureId)
         {
             if (grid == null) throw new ArgumentNullException(nameof(grid));
-            OfficeSeatSlot seat = grid.SeatSlots.FirstOrDefault(item => Same(item.SeatId, seatId));
-            if (seat == null)
+            PlacedOfficeFurniture target = Find(grid, furnitureId);
+            if (target == null)
                 return OfficeLayoutEditResult.Fail(
-                    OfficeLayoutEditFailure.UnknownTarget, $"좌석 '{seatId}'가 없습니다.");
-            var next = (OfficeFurnitureFacing)(((int)seat.Facing + 1) & 3);
-            if (supportedFacings == null || !supportedFacings.Contains(next))
+                    OfficeLayoutEditFailure.UnknownTarget, $"가구 '{furnitureId}'가 없습니다.");
+            if (grid.SeatSlots.Any(seat =>
+                    Same(seat.ChairFurnitureId, furnitureId) || Same(seat.WorkSurfaceFurnitureId, furnitureId)))
                 return OfficeLayoutEditResult.Fail(
                     OfficeLayoutEditFailure.RotationUnsupported,
-                    $"{next} 방향 아트가 없어 회전할 수 없습니다.");
-            return OfficeLayoutEditResult.Fail(
-                OfficeLayoutEditFailure.RotationUnsupported,
-                "회전은 방향별 가구·좌석 아트가 갖춰진 뒤에 열립니다.");
+                    "워크스테이션은 방향별 책상·의자·착석 아트가 준비되면 회전할 수 있습니다.");
+
+            var rotated = new PlacedOfficeFurniture(
+                target.FurnitureId,
+                target.KindId,
+                target.Origin,
+                target.Width,
+                target.Height,
+                target.PlacementAnchor,
+                Mirror(target.Facing),
+                target.BlocksMovement);
+            return Rebuild(
+                grid,
+                grid.Furniture.Select(item => Same(item.FurnitureId, furnitureId) ? rotated : item).ToList(),
+                grid.SeatSlots.ToList());
+        }
+
+        /// <summary>True when the editor should offer the rotate button for this piece.</summary>
+        public static bool CanRotate(OfficeGrid grid, string furnitureId)
+        {
+            if (grid == null) throw new ArgumentNullException(nameof(grid));
+            if (Find(grid, furnitureId) == null) return false;
+            return !grid.SeatSlots.Any(seat =>
+                Same(seat.ChairFurnitureId, furnitureId) || Same(seat.WorkSurfaceFurnitureId, furnitureId));
         }
 
         /// <summary>Cells a piece of furniture would occupy after a move, for the editor overlay.</summary>

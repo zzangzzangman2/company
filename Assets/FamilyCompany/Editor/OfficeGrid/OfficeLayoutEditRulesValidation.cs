@@ -78,11 +78,28 @@ namespace FamilyCompany.Editor.OfficeGrid
                     "floor reopened after removal");
             }
 
+            foreach (string propId in new[]
+                     { "water", "plant", "sofa", "copier", "bookcase", "filing", "coffee", "meeting", "reception" })
+            {
+                Require(
+                    failures,
+                    OfficeLayoutEditRules.RotateFurniture(start, propId).Success,
+                    propId + " rotates by mirroring its facing");
+                bool movable = false;
+                foreach (Vector2Int step in new[]
+                         {
+                             new Vector2Int(1, 0), new Vector2Int(-1, 0),
+                             new Vector2Int(0, 1), new Vector2Int(0, -1)
+                         })
+                    if (OfficeLayoutEditRules.MoveFurniture(start, propId, step.x, step.y).Success) movable = true;
+                Require(failures, movable, propId + " can move to a neighbouring cell");
+            }
             Require(
                 failures,
-                OfficeLayoutEditRules.RotateWorkstation(start, "seat_player", Array.Empty<OfficeFurnitureFacing>())
-                    .Failure == OfficeLayoutEditFailure.RotationUnsupported,
-                "rotation is refused explicitly instead of falling back");
+                !OfficeLayoutEditRules.CanRotate(start, "desk_player") &&
+                OfficeLayoutEditRules.RotateFurniture(start, "desk_player").Failure ==
+                OfficeLayoutEditFailure.RotationUnsupported,
+                "a workstation refuses rotation explicitly instead of falling back");
 
             var accepted = 0;
             var refused = 0;
