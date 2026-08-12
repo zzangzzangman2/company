@@ -2,8 +2,8 @@
 param(
     [string]$CanonicalProjectPath = 'C:\Users\godho\Documents\Codex\family_company_unity',
     [string]$UnityEditorPath = 'C:\Users\godho\Documents\Codex\UnityEditors\6000.3.21f1\Editor\Unity.exe',
-    [string]$FinalOutputPath = 'C:\Users\godho\Downloads\FamilyCompany_Playtest',
-    [string]$AutomationRoot = 'C:\Users\godho\Downloads\FamilyCompany_BuildAutomation',
+    [string]$FinalOutputPath = 'C:\Users\godho\Downloads\Family\FamilyCompany_Playtest',
+    [string]$AutomationRoot = 'C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation',
     [int]$UnityWaitTimeoutMinutes = 120,
     [int]$UnityRetrySeconds = 15,
     [int]$MaximumLogFiles = 30

@@ -8,9 +8,9 @@ function Get-FamilyCompanyBuildDefaults {
         CanonicalProjectPath = 'C:\Users\godho\Documents\Codex\family_company_unity'
         UnityEditorPath      = 'C:\Users\godho\Documents\Codex\UnityEditors\6000.3.21f1\Editor\Unity.exe'
         UnityVersion         = '6000.3.21f1'
-        DownloadsPath        = 'C:\Users\godho\Downloads'
-        FinalOutputPath      = 'C:\Users\godho\Downloads\FamilyCompany_Playtest'
-        AutomationRoot       = 'C:\Users\godho\Downloads\FamilyCompany_BuildAutomation'
+        DownloadsPath        = 'C:\Users\godho\Downloads\Family'
+        FinalOutputPath      = 'C:\Users\godho\Downloads\Family\FamilyCompany_Playtest'
+        AutomationRoot       = 'C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation'
         ExecutableName       = 'FamilyCompany.exe'
         FirstScene           = 'Assets/FamilyCompany/Scenes/Prototype01.unity'
     }

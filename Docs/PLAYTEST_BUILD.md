@@ -25,11 +25,11 @@ powershell -ExecutionPolicy Bypass -File C:\Users\godho\Documents\Codex\family_c
 | --- | --- |
 | `-CanonicalProjectPath` | `C:\Users\godho\Documents\Codex\family_company_unity` |
 | `-UnityEditorPath` | `C:\Users\godho\Documents\Codex\UnityEditors\6000.3.21f1\Editor\Unity.exe` |
-| `-FinalOutputPath` | `C:\Users\godho\Downloads\FamilyCompany_Playtest` |
-| `-AutomationRoot` | `C:\Users\godho\Downloads\FamilyCompany_BuildAutomation` |
+| `-FinalOutputPath` | `C:\Users\godho\Downloads\Family\FamilyCompany_Playtest` |
+| `-AutomationRoot` | `C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation` |
 | `-UnityWaitTimeoutMinutes` | `120` |
 
-실행 결과는 `C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`다. Unity를 열지 않고 이 파일만 실행하면 된다.
+실행 결과는 `C:\Users\godho\Downloads\Family\FamilyCompany_Playtest\FamilyCompany.exe`다. Unity를 열지 않고 이 파일만 실행하면 된다.
 
 현재 플레이테스트 빌드는 정식 첫 씬 `Prototype01`과 기본 사무실 렌더인 `OfficeTileMigrationPreview`를 함께 포함한다. `처음하기`와 `불러오기`는 StarterOfficeV1 타일 사무실을 자동으로 올린다. `F9`는 구형 사무실로 토글하지 않고 타일 표시가 누락됐을 때 복구하는 단방향 키다. `F5`는 LiveContent 재로딩 키라서 타일 사무실 전환에는 사용하지 않는다.
 
@@ -42,15 +42,15 @@ powershell -ExecutionPolicy Bypass -File C:\Users\godho\Documents\Codex\family_c
 
 ## 상태 확인
 
-`C:\Users\godho\Downloads\FamilyCompany_BuildAutomation\build-status.json`에 `state`, `head`, `branch`, `fingerprint`, `finalPath`, 그리고 automation/unity 로그 경로가 기록된다. `logs/`에는 회차별 로그가 최대 30개 남는다. 이미 성공한 지문과 같으면 재빌드를 건너뛴다.
+`C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation\build-status.json`에 `state`, `head`, `branch`, `fingerprint`, `finalPath`, 그리고 automation/unity 로그 경로가 기록된다. `logs/`에는 회차별 로그가 최대 30개 남는다. 이미 성공한 지문과 같으면 재빌드를 건너뛴다.
 
 동시에 두 빌드가 돌지 않도록 `build.lock`으로 배타 잠금을 잡고, 잠겨 있으면 exit 23으로 `SkippedLocked`를 남긴다.
 
 ## 현재 보관 중인 빌드의 출처
 
-`C:\Users\godho\Downloads\FamilyCompany_Playtest`에 있는 빌드는 다음 기준이다.
+`C:\Users\godho\Downloads\Family\FamilyCompany_Playtest`에 있는 빌드는 다음 기준이다.
 
-- 실행 파일: `C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`
+- 실행 파일: `C:\Users\godho\Downloads\Family\FamilyCompany_Playtest\FamilyCompany.exe`
 - 빌드 시각: 2026-08-11 16:52:03 KST
 - Unity: `6000.3.21f1 (c02631ffc030)`
 - 기록된 HEAD: `b875ceb3a7b8122ea3c96cd2f0d7bf2e7dd839a8`, 브랜치 `main`

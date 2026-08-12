@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$AutomationRoot = 'C:\Users\godho\Downloads\FamilyCompany_BuildAutomation',
+    [string]$AutomationRoot = 'C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation',
     [int]$WaitSeconds = 30,
     [switch]$Force
 )
