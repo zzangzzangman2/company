@@ -1064,36 +1064,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Mathf.Max(0f, maximumDistance));
             Vector2 intended = new Vector2(clampedDisplacement.X, clampedDisplacement.Z);
             Vector2 before = Position;
-            Vector2 actual = intended;
-            bool collisionProjected = false;
-            if (!_world.Occupancy.CanMove(_agentId, before, before + actual, AgentRadius, permittedSeatId))
-            {
-                Vector2 xOnly = new Vector2(actual.x, 0f);
-                Vector2 yOnly = new Vector2(0f, actual.y);
-                bool canMoveX = Mathf.Abs(xOnly.x) > 0.00001f &&
-                                _world.Occupancy.CanMove(
-                                    _agentId,
-                                    before,
-                                    before + xOnly,
-                                    AgentRadius,
-                                    permittedSeatId);
-                bool canMoveY = Mathf.Abs(yOnly.y) > 0.00001f &&
-                                _world.Occupancy.CanMove(
-                                    _agentId,
-                                    before,
-                                    before + yOnly,
-                                    AgentRadius,
-                                    permittedSeatId);
-                OfficeNavPoint slide = OfficeCollisionSlideRules.SelectBestAxisSlide(
-                    new OfficeNavPoint(actual.x, actual.y),
-                    new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
-                    new OfficeNavPoint(_lastActualDisplacement.x, _lastActualDisplacement.y),
-                    canMoveX,
-                    canMoveY,
-                    _agentId);
-                actual = new Vector2(slide.X, slide.Z);
-                collisionProjected = actual.sqrMagnitude > 0.0000001f;
-            }
+            Vector2 actual = OfficeRuntimeCollisionMotion.Resolve(
+                _world.Occupancy,
+                _agentId,
+                before,
+                intended,
+                targetVelocity,
+                _lastActualDisplacement,
+                AgentRadius,
+                permittedSeatId,
+                out bool collisionProjected);
             if (actual.sqrMagnitude > 0.0000001f)
             {
                 transform.position = new Vector3(

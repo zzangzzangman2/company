@@ -113,6 +113,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public OfficeGridCoordinate NearestCell(Vector3 worldPosition)
         {
             if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");
+            Vector3Int unityCell = _unityGrid.WorldToCell(worldPosition);
+            var direct = new OfficeGridCoordinate(unityCell.x, unityCell.y);
+            if (_semanticGrid.Contains(direct)) return direct;
+
+            // Outside the authored office, preserve the old nearest-border behavior. Runtime
+            // collision probes inside the grid take the constant-time WorldToCell path above.
             var best = new OfficeGridCoordinate(0, 0);
             var bestDistance = float.PositiveInfinity;
             for (var y = 0; y < _semanticGrid.Height; y++)
