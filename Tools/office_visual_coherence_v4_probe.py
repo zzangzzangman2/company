@@ -9,8 +9,8 @@ Mirrored runtime rules
   OfficeGridTilemapPresenter : isometric basis, cell 320x160 px, PPU 180
   OfficeGridFurniturePresenter: sprite pivot == groundAnchorPx, VisualRoot scale == uniformScale
   OfficeGridCharacterMover    : UniformVisualScale, sortingOrder = 5000 - round(worldY * 100)
-  OfficeRuntimeAgent          : VisualRoot offset pins pelvisAnchorPx onto the chair seatAnchorPx
-  WorkstationService          : desk-2 / chair-1 / character / deskFront+1 / chairFront+2
+  OfficeRuntimeAgent          : VisualRoot offset pins the seat contact onto the chair cushion
+  WorkstationService          : occupant sorts one step in front of its chair, furniture untouched
 
 Nothing here writes to the project; it only reads assets and writes Artifacts/OfficeVisualCoherenceV4.
 
@@ -39,8 +39,7 @@ TILE_W, TILE_H = 320.0, 160.0
 BASIS_X = (TILE_W / 2.0, TILE_H / 2.0)
 BASIS_Y = (-TILE_W / 2.0, TILE_H / 2.0)
 RUNTIME_CHARACTER_SCALE = 1.69          # the pre-V4 constant, kept to render the "before" state
-SHIPPED_CHARACTER_SCALE = 1.35          # OfficeGridCharacterMover.UniformVisualScale
-SHIPPED_SEATED_FLOOR_COLUMN = 119.0     # OfficeSeatedOccupantContract.SeatedFloorAnchorColumnPx
+SHIPPED_CHARACTER_SCALE = 1.55          # OfficeGridCharacterMover.UniformVisualScale
 MEMBERS = ("player", "older_sister", "father", "mother")
 CHARACTER_CANVAS = 256
 
@@ -268,46 +267,6 @@ def frame_path(member, clip, frame):
 
 
 # --------------------------------------------------------------------------- scene builders
-def build_office_ground(layout, catalog, poses, character_scale=SHIPPED_CHARACTER_SCALE,
-                        floor_column=SHIPPED_SEATED_FLOOR_COLUMN, frame=0, bounds=None):
-    """Shipped model: OfficeSeatedOccupantContract.
-
-    The occupant stands on the chair's floor point, offset only so that `floor_column` of the
-    seated canvas - not the bottom-centre pivot - lands there. Depth is each object's own ground
-    anchor, and the occupant sorts one step in front of the chair. No furniture is re-sorted, so a
-    desk one cell away can never draw its legs over a seated body.
-    """
-    roots = [subcell_px(f["px2"], f["py2"]) for f in layout["furniture"]]
-    if bounds is None:
-        xs = [r[0] for r in roots]
-        ys = [r[1] for r in roots]
-        bounds = (min(xs) - 340, min(ys) - 220, max(xs) + 340, max(ys) + 420)
-    scene = Scene(bounds)
-    for y in range(layout["height"]):
-        for x in range(layout["width"]):
-            scene.add(FLOOR_TILES[(x * 3 + y * 5) % 3], cell_px(x, y),
-                      (TILE_W / 2, 0.0), 1.0, -10000, key=y * 100 + x)
-
-    seats = {s["chair"]: s for s in layout["seats"]}
-    marks = []
-    for item in layout["furniture"]:
-        definition = catalog[item["kind"]]
-        root = subcell_px(item["px2"], item["py2"])
-        order = sorting_order(root[1])
-        scene.add(os.path.join(FURNITURE_ROOT, FURNITURE_PNG[item["kind"]]),
-                  root, definition["ground"], definition["scale"], order, key=item["px2"])
-        seat = seats.get(item["id"])
-        if seat is None:
-            continue
-        member = seat["id"].replace("seat_", "")
-        offset = (CHARACTER_CANVAS / 2.0 - floor_column) * character_scale
-        pivot = (CHARACTER_CANVAS / 2.0, 0.0)
-        scene.add(frame_path(member, "sit_work", frame), (root[0] + offset, root[1]), pivot,
-                  character_scale, order + 1, key=item["px2"] + 1)
-        marks.append(dict(member=member, chair=root, floor=(root[0] + offset, root[1]), seat=root))
-    return scene, marks
-
-
 def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CHARACTER_SCALE,
                  anatomy=None, bounds=None):
     seat_by_chair = {s["chair"]: s for s in layout["seats"]}
@@ -338,27 +297,14 @@ def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CH
         png = os.path.join(FURNITURE_ROOT, FURNITURE_PNG[item["kind"]])
         sort_world = sprite_point(root, definition["ground"], definition["sort"], definition["scale"])
         base_order = sorting_order(sort_world[1])
-        character_order = None
-        if seated and (item["id"] in occupied_chairs or item["id"] in occupied_desks):
-            seat = seat_by_chair.get(item["id"]) or next(s for s in layout["seats"] if s["desk"] == item["id"])
-            chair = next(f for f in layout["furniture"] if f["id"] == seat["chair"])
-            chair_root = subcell_px(chair["px2"], chair["py2"])
-            chair_def = catalog[chair["kind"]]
-            seat_world = sprite_point(chair_root, chair_def["ground"], chair_def["seat"], chair_def["scale"])
-            member = seat["id"].replace("seat_", "")
-            pose = (anatomy or {}).get(member) or (poses[member]["pelvis"], poses[member]["hand"])
-            pivot = (CHARACTER_CANVAS / 2.0, 0.0)
-            visual_root = (seat_world[0] - (pose[0][0] - pivot[0]) * character_scale,
-                           seat_world[1] - (pose[0][1] - pivot[1]) * character_scale)
-            character_order = sorting_order(subcell_px(*seat["operator"])[1])
-            base_order = character_order - (1 if item["id"] in occupied_chairs else 2)
+        # Shipped rule: every object keeps its own ground-anchor order. Nothing is re-sorted
+        # around an occupant, which is what used to draw desk legs across a seated body.
         scene.add(png, root, definition["ground"], definition["scale"], base_order,
                   key=item["px2"] + item["py2"])
         front = FURNITURE_FRONT_PNG.get(item["kind"])
-        if front and definition["front_when_occupied"] and character_order is not None:
+        if front and definition["front_when_occupied"] and item["id"] in occupied_chairs:
             scene.add(os.path.join(FURNITURE_ROOT, front), root, definition["ground"],
-                      definition["scale"],
-                      character_order + (2 if item["id"] in occupied_chairs else 1))
+                      definition["scale"], base_order + 2)
 
     if seated:
         for seat in layout["seats"]:
@@ -379,8 +325,10 @@ def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CH
                           visual_root[1] + (pose[1][1] - pivot[1]) * character_scale)
             clip_name = "sit_work"
             frame = poses[member]["frame"]
+            chair_sort_world = sprite_point(chair_root, chair_def["ground"], chair_def["sort"],
+                                            chair_def["scale"])
             scene.add(frame_path(member, clip_name, frame), visual_root, pivot, character_scale,
-                      sorting_order(subcell_px(*seat["operator"])[1]))
+                      sorting_order(chair_sort_world[1]) + 1)
             marks.append(dict(member=member, seat=seat_world, work=work_world, opseat=opseat_world,
                               hand=hand_world, visual_root=visual_root, chair=chair_root, desk=desk_root))
     return scene, marks
@@ -579,21 +527,24 @@ def main():
         say(f"| {member} | ({vector[0]:.0f},{vector[1]:.0f}) | {angle:.1f}deg | {sx:.2f} | {sy:.2f} | {verdict} |")
     say("")
 
-    # ---- shipped model render (OfficeSeatedOccupantContract)
-    s3, marks3 = build_office_ground(layout, catalog, poses)
+    # ---- shipped model render (OfficeSeatedOccupantContract: seat contact -> chair cushion)
+    s3, marks3 = build_office(layout, catalog, poses, character_scale=SHIPPED_CHARACTER_SCALE)
     image = s3.draw()
     image.convert("RGB").save(os.path.join(OUT, "34-final-starter-office-overview.png"))
-    tiles = [crop_to(image, s3, m["chair"], (520, 560)).convert("RGB") for m in marks3]
+    tiles = [crop_to(image, s3, m["seat"], (520, 560)).convert("RGB") for m in marks3]
     sheet = Image.new("RGB", (520 * 4, 560))
     for i, tile in enumerate(tiles):
-        ImageDraw.Draw(tile).text((8, 8), f"{marks3[i]['member']} scale={SHIPPED_CHARACTER_SCALE} "
-                                          f"column={SHIPPED_SEATED_FLOOR_COLUMN:.0f}", fill=(255, 255, 255))
+        ImageDraw.Draw(tile).text((8, 8), f"{marks3[i]['member']} scale={SHIPPED_CHARACTER_SCALE}",
+                                  fill=(255, 255, 255))
         sheet.paste(tile, (i * 520, 0))
     sheet.save(os.path.join(OUT, "30-final-static-four-workstations.png"))
 
     say("[shipped model] OfficeSeatedOccupantContract")
-    say(f"  character scale {SHIPPED_CHARACTER_SCALE}, seated floor column {SHIPPED_SEATED_FLOOR_COLUMN:.0f}")
+    say(f"  character scale {SHIPPED_CHARACTER_SCALE}; seat contact pinned to the chair cushion")
     say("  occupant sorting = chair ground order + 1, no furniture order is rewritten")
+    say("  seat contacts are the catalog values, measured off the silhouettes:")
+    for member in MEMBERS:
+        say(f"    {member:<13} {poses[member]['pelvis']}")
     say("")
 
     open(os.path.join(OUT, "office-visual-coherence-v4-report.txt"), "w", encoding="utf-8").write(

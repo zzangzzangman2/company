@@ -64,7 +64,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _alignedFrame = -1;
         private bool _presentationAway;
         private float _chairDeskErrorPx;
-        private float _seatFloorErrorPx;
+        private float _seatContactErrorPx;
         private bool _qaControl;
         private Vector2 _lastActualDisplacement;
         private OfficeGridCoordinate? _yieldCell;
@@ -88,11 +88,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public float ChairDeskErrorPx => _chairDeskErrorPx;
 
         /// <summary>
-        /// Screen distance between the floor column of the seated sprite and the chair's floor
-        /// anchor. This is the only seated placement number that can fail, and it is computed from
-        /// the live Transform, never hardcoded.
+        /// Screen distance between the seat contact of the drawn sprite and the chair cushion
+        /// anchor. The only seated placement number that can fail, computed from the live
+        /// SpriteRenderer - never hardcoded.
         /// </summary>
-        public float SeatFloorErrorPx => _seatFloorErrorPx;
+        public float SeatContactErrorPx => _seatContactErrorPx;
         public Vector2 LastActualDisplacement => _lastActualDisplacement;
         public int CurrentDirection => _animator == null ? 0 : _animator.CurrentDirection;
         public SpriteRenderer PresentationRenderer => _renderer;
@@ -929,42 +929,55 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Sprite appliedSprite)
         {
             if (_seat == null || appliedSprite == null) return;
-            // The catalog no longer positions anyone; it stays the approval gate for the sheet that
-            // is allowed on screen. Placement itself comes from the floor contract below, so a new
-            // frame can never drift the body.
-            _poseCatalog.ResolveApproved(_agentId, _seatDirection, clip, frame);
-            ApplySeatedFloorPlacement();
+            OfficeCharacterSeatPoseProfile profile = _poseCatalog.ResolveApproved(
+                _agentId,
+                _seatDirection,
+                clip,
+                frame);
+            ApplySeatedContactPlacement(profile);
             _alignedClip = clip;
             _alignedFrame = frame;
         }
 
         /// <summary>
-        /// Stand the occupant on the chair's floor point. See <see cref="OfficeSeatedOccupantContract"/>:
-        /// one shared column, translation only, no per-member and no per-frame correction.
+        /// Put the sheet's seat contact point on the chair cushion, per
+        /// <see cref="OfficeSeatedOccupantContract"/>. Translation only - the scale stays canonical
+        /// and the rotation stays identity, so a wrong sheet can never be bent into place.
         /// </summary>
-        private void ApplySeatedFloorPlacement()
+        private void ApplySeatedContactPlacement(OfficeCharacterSeatPoseProfile profile)
         {
-            if (_seat == null) return;
-            Vector3 floor = _world.Workstations.ChairFloorAnchorWorld(_seat);
-            transform.position = new Vector3(floor.x, floor.y, transform.position.z);
-            _visualRoot.localScale = Vector3.one * OfficeGridCharacterMover.UniformVisualScale;
+            if (_seat == null || profile == null) return;
+            if (Mathf.Abs(profile.RotationDegrees) > 0.01f)
+                throw new InvalidOperationException($"Seated pose rotation must be zero for {_agentId}.");
+            if (Mathf.Abs(profile.UniformScale - 1f) > 0.0001f)
+                throw new InvalidOperationException($"Seated pose scale must be 1 for {_agentId}.");
+            _visualRoot.localPosition = Vector3.zero;
             _visualRoot.localRotation = Quaternion.identity;
-            _visualRoot.localPosition = OfficeSeatedOccupantContract.VisualOffset(
-                OfficeGridCharacterMover.UniformVisualScale);
+            _visualRoot.localScale = Vector3.one * OfficeGridCharacterMover.UniformVisualScale;
+            Vector3 contact = OfficeSeatedOccupantContract.OccupantSeatContactWorld(
+                _renderer,
+                profile.PelvisAnchorPx);
+            Vector3 cushion = _world.Workstations.ChairSeatAnchorWorld(_seat);
+            _visualRoot.localPosition = transform.InverseTransformVector(cushion - contact);
             _world.Workstations.ApplyPresentationStack(_seat, _renderer, transform.position);
         }
 
         private void TrackWorkstationMetrics()
         {
             if (_seat == null || Camera.main == null) return;
+            OfficeCharacterSeatPoseProfile profile = _poseCatalog.ResolveApproved(
+                _agentId,
+                _seatDirection,
+                OfficeSeatingAnimationClip.Work,
+                _alignedFrame < 0 ? 0 : _alignedFrame);
             _chairDeskErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
                 Camera.main,
                 _world.Workstations.ChairSeatAnchorWorld(_seat),
                 _world.Workstations.DeskSeatSocketWorld(_seat));
-            _seatFloorErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
+            _seatContactErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
                 Camera.main,
-                OfficeSeatedOccupantContract.OccupantFloorWorld(_renderer),
-                _world.Workstations.ChairFloorAnchorWorld(_seat));
+                OfficeSeatedOccupantContract.OccupantSeatContactWorld(_renderer, profile.PelvisAnchorPx),
+                _world.Workstations.ChairSeatAnchorWorld(_seat));
         }
 
         private void ReleaseSeatImmediately()

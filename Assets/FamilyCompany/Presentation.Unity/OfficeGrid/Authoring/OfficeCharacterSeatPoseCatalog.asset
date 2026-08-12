@@ -18,8 +18,8 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 145, y: 65}
-    deskInteractionAnchorPx: {x: 75, y: 90}
+    pelvisAnchorPx: {x: 130, y: 49}
+    deskInteractionAnchorPx: {x: 80, y: 101}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
@@ -28,8 +28,8 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 145, y: 85}
-    deskInteractionAnchorPx: {x: 75, y: 110}
+    pelvisAnchorPx: {x: 130, y: 63}
+    deskInteractionAnchorPx: {x: 75, y: 108}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
@@ -38,8 +38,8 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 155, y: 80}
-    deskInteractionAnchorPx: {x: 85, y: 105}
+    pelvisAnchorPx: {x: 128, y: 50}
+    deskInteractionAnchorPx: {x: 80, y: 104}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
@@ -48,8 +48,8 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 138, y: 59}
-    deskInteractionAnchorPx: {x: 68, y: 84}
+    pelvisAnchorPx: {x: 125, y: 39}
+    deskInteractionAnchorPx: {x: 72, y: 88}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1

@@ -171,6 +171,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 seat.SeatId);
         }
 
+        /// <summary>
+        /// Sorting order the chair sprite itself renders at. The chair's sort anchor sits below its
+        /// ground anchor, so an occupant ordered from the floor point alone ends up behind the seat
+        /// and the cushion covers their hips.
+        /// </summary>
+        public int ChairBaseSortingOrder(OfficeSeatSlot seat)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            return OfficeGridCharacterMover.ResolveDynamicSortingOrder(
+                _furniturePresenter.SortAnchorWorld(seat.ChairFurnitureId));
+        }
+
         public Vector3 SeatOperatorWorld(OfficeSeatSlot seat) =>
             _presenter.SubcellAnchorWorld(seat.OperatorAnchor);
 
@@ -213,7 +225,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (seat == null) throw new ArgumentNullException(nameof(seat));
             if (characterRenderer == null) throw new ArgumentNullException(nameof(characterRenderer));
             characterRenderer.sortingOrder =
-                OfficeSeatedOccupantContract.OccupantSortingOrder(ChairFloorAnchorWorld(seat));
+                OfficeSeatedOccupantContract.OccupantSortingOrder(ChairBaseSortingOrder(seat));
         }
 
         public void ApplyDynamicCharacterOrder(

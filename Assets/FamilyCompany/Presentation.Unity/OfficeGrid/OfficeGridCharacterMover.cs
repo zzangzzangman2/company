@@ -8,12 +8,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
     public sealed class OfficeGridCharacterMover : MonoBehaviour
     {
         // Physical scale, not screen occupancy. The furniture art is the ruler: the swivel chair
-        // seat sits 108.2px above its own floor anchor and the desk surface 161px, so one drawn
-        // centimetre is about 2.2px. 1.35 is the largest scale at which a seated family member
-        // still fits that chair - hips inside the cushion, feet reaching the floor in front of the
-        // castor base. 1.50 already overhangs the seat and 1.69 dwarfs the chair entirely.
-        // Measured with Tools/office_visual_coherence_v4_probe.py against the real sprites.
-        public const float UniformVisualScale = 1.35f;
+        // cushion sits 108.2px above its own floor anchor and the desk surface 161px, so one drawn
+        // centimetre is about 2.2px. At 1.55 a family member seated on that cushion keeps their
+        // shoes at floor level in front of the castor base; 1.69 overshoots the chair and 1.35
+        // leaves the legs visibly short. Measured against the real sprites with
+        // Tools/office_visual_coherence_v4_probe.py.
+        public const float UniformVisualScale = 1.55f;
         public const float DefaultMoveSpeed = 1.75f;
         public const int DynamicSortingBase = 5000;
 
