@@ -1141,9 +1141,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     desiredPelvis = Vector3.Lerp(
                         _sitTransitionStartPelvisWorld,
                         cushion,
-                        OfficeSeatingAnimationFrames.SitDownFrameCount <= 1
-                            ? 1f
-                            : frame / (float)(OfficeSeatingAnimationFrames.SitDownFrameCount - 1));
+                        ResolveNaturalSeatTransitionProgress(
+                            frame,
+                            OfficeSeatingAnimationFrames.SitDownFrameCount));
                     break;
                 case OfficeSeatingAnimationClip.Work:
                     desiredPelvis = cushion;
@@ -1166,9 +1166,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     desiredPelvis = Vector3.Lerp(
                         cushion,
                         _standTransitionTargetPelvisWorld,
-                        OfficeSeatingAnimationFrames.StandUpFrameCount <= 1
-                            ? 1f
-                            : frame / (float)(OfficeSeatingAnimationFrames.StandUpFrameCount - 1));
+                        ResolveNaturalSeatTransitionProgress(
+                            frame,
+                            OfficeSeatingAnimationFrames.StandUpFrameCount));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(clip));
@@ -1244,6 +1244,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 value >>= 1;
             }
             return result;
+        }
+
+        private static float ResolveNaturalSeatTransitionProgress(int frame, int frameCount)
+        {
+            if (frameCount <= 1) return 1f;
+            float progress = Mathf.Clamp01(frame / (float)(frameCount - 1));
+            // Smoothstep keeps the first and last seating beats gentle instead of
+            // dropping the pelvis by the same large amount on every Sprite swap.
+            return progress * progress * (3f - (2f * progress));
         }
 
         private void TrackWorkstationMetrics()

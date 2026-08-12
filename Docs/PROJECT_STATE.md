@@ -1,5 +1,22 @@
 # PROJECT STATE
 
+## 2026-08-12 / Mother seated-work stabilization and gentler seat transition
+
+- Rebuilt `mother_northwest_sit_work_0..5.png` from the existing approved art with frame 0 as the
+  canonical body. Head, hair, torso, cardigan, skirt, knees, legs, and shoes now remain pixel-identical;
+  only the near forearm/wrist/hand region changes across the six-frame loop.
+- Added `Tools/stabilize_mother_work_frames.py` so stabilization is deterministic and repeatable.
+  A second pass reports registration `0,0`, score `0.00` for every frame and makes no further change.
+- Unified the mother's six Work pelvis anchors at `(126,62)`, regenerated the v5 pose catalog, and
+  refreshed all six source SHA-256 approvals.
+- Seat/stand presentation now uses smoothstep progress rather than equal linear drops, and the
+  transition cadence is 0.15 seconds per frame so the first and final beats ease in/out naturally.
+- Background-only Unity 6000.3.21f1 validation passed: `SEATED_SPRITE_ROOT_CAUSE_V5_PASS` with
+  56 approved profiles, source QA `frames=56`, Windows build exit `0`, and actual player QA exit `0`.
+  The player observed all four family members' SitDown `4/4`, Work `6/6`, StandUp `4/4`; the mother's
+  seat contact and animated anchor error were both `0.000px`, with rotation/scale deviation `0` and
+  agent penetrations `0`. Autonomous father/mother meeting seating and visible chairs also passed.
+
 최종 갱신: 2026-08-11
 현재 단계: Office Runtime V1 통합 완료 / Management V0.8 + Market Port S2 / 가족 자율 행동·실제 이동과 SIMUL 호가·체결 정확 이식
 Unity: 6000.3.21f1

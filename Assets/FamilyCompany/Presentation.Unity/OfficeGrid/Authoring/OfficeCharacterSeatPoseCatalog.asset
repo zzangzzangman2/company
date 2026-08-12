@@ -483,57 +483,57 @@ MonoBehaviour:
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
-    sourceSpriteSha256: 1F8D8A299555DD50A8ACE551B8627141CFD1C017DFD0B01FE01D57B559E54FF7
+    sourceSpriteSha256: DB90E98AEA8854B8ABA6A85CF09F7957316D5752D503D6634713C2EA3C71A4B0
   - memberId: mother
     directionIndex: 3
     clip: 1
     frameIndex: 1
-    pelvisAnchorPx: {x: 127, y: 62}
+    pelvisAnchorPx: {x: 126, y: 62}
     deskInteractionAnchorPx: {x: 75, y: 78}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
-    sourceSpriteSha256: 0A2F1A778FE97246DE2B908BDF3FE7D6AC5DA2EBB27E522EC9D6F7C7CB204A00
+    sourceSpriteSha256: 0458B0E297F55A6009734D4826D74DC822D438051DD19D64AC27C95CFA40104B
   - memberId: mother
     directionIndex: 3
     clip: 1
     frameIndex: 2
-    pelvisAnchorPx: {x: 127, y: 59}
+    pelvisAnchorPx: {x: 126, y: 62}
     deskInteractionAnchorPx: {x: 86, y: 91}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
-    sourceSpriteSha256: 695FAFF1B75AA79E062690640FAE3B47C827297DD20C73131D2D843EA6A392F4
+    sourceSpriteSha256: 7F6BF3FD9227393700F40D0090CF2E9180F04485442C7C5AD23BB4574450F9DC
   - memberId: mother
     directionIndex: 3
     clip: 1
     frameIndex: 3
-    pelvisAnchorPx: {x: 127, y: 64}
+    pelvisAnchorPx: {x: 126, y: 62}
     deskInteractionAnchorPx: {x: 81, y: 84}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
-    sourceSpriteSha256: 63A06E819D07EFFFF9E8A2F06918494B05DE9CB1D96ECD8046A750ED3FA8B5EF
+    sourceSpriteSha256: 16A086838FD4AC3AA812056CFE9209EFAF2A1064E491DCAA939AA3931E80CEBA
   - memberId: mother
     directionIndex: 3
     clip: 1
     frameIndex: 4
-    pelvisAnchorPx: {x: 126, y: 63}
+    pelvisAnchorPx: {x: 126, y: 62}
     deskInteractionAnchorPx: {x: 84, y: 90}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
-    sourceSpriteSha256: 85C8BDAE178B7EA0AEEE0EA3AF6FF10CC1D2A03D1E082E31E87AD7A427B99541
+    sourceSpriteSha256: E3AD8F2FF68298B012FA50326594B2BD3771AA5B82AB6DF6D64DE5466893A57F
   - memberId: mother
     directionIndex: 3
     clip: 1
     frameIndex: 5
-    pelvisAnchorPx: {x: 126, y: 59}
+    pelvisAnchorPx: {x: 126, y: 62}
     deskInteractionAnchorPx: {x: 85, y: 89}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
-    sourceSpriteSha256: BF481EDDB0FB2CF354A90D6666AB386BB7CC09AC2DE8C081B70C4002A6482986
+    sourceSpriteSha256: C1068EAC1F3F988DE67BE0684D7E4F959E253BB9101AF0C756AB4AEB7185C7A3
   - memberId: mother
     directionIndex: 3
     clip: 2

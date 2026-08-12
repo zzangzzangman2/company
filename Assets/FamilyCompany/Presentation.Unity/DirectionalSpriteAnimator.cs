@@ -20,7 +20,7 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private Sprite[] sitDownFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] seatedWorkFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] standUpFrames = Array.Empty<Sprite>();
-        [SerializeField] private float seatingTransitionFrameSeconds = 0.11f;
+        [SerializeField] private float seatingTransitionFrameSeconds = 0.15f;
         [SerializeField] private float seatedWorkFrameSeconds = 0.14f;
         [SerializeField] private OfficeSeatingPresentationMode seatingPresentationMode =
             OfficeSeatingPresentationMode.Animated;
@@ -135,7 +135,7 @@ namespace FamilyCompany.Presentation.Unity
             Sprite[] newSitDownFrames,
             Sprite[] newSeatedWorkFrames,
             Sprite[] newStandUpFrames,
-            float transitionSecondsPerFrame = 0.11f,
+            float transitionSecondsPerFrame = 0.15f,
             float workSecondsPerFrame = 0.14f,
             OfficeSeatingPresentationMode presentationMode = OfficeSeatingPresentationMode.Animated)
         {
