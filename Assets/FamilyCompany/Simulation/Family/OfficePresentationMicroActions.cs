@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.OfficeInteractions;
 
 namespace FamilyCompany.Simulation.Family
 {
@@ -226,6 +227,19 @@ namespace FamilyCompany.Simulation.Family
             public int Weight { get; }
         }
 
+        public static IReadOnlyList<OfficeInteractionCandidateSnapshot> LegacyCandidateSnapshots(
+            FamilyMemberState member)
+        {
+            if (member == null) throw new ArgumentNullException(nameof(member));
+            return Candidates(member)
+                .Select(candidate => new OfficeInteractionCandidateSnapshot(
+                    candidate.Action,
+                    candidate.TargetId,
+                    candidate.Location,
+                    candidate.Weight))
+                .ToArray();
+        }
+
         public static void EnsureActions(int worldSeed, FamilyState family, long minute)
         {
             if (family == null) throw new ArgumentNullException(nameof(family));
@@ -328,8 +342,22 @@ namespace FamilyCompany.Simulation.Family
             }
 
             Candidate selected = WeightedPick(worldSeed, member, state, candidates);
+            OfficeInteractionSelectionTrace trace = BuildShadowSelectionTrace(
+                worldSeed,
+                member,
+                minute,
+                candidates,
+                selected);
             if (selected.Action == OfficeMicroAction.ShortConversation &&
-                TryBeginConversation(worldSeed, family, member, minute)) return;
+                TryBeginConversation(worldSeed, family, member, minute))
+            {
+                OfficeMicroActionState conversation = member.Autonomy.MicroAction;
+                OfficeInteractionShadowDiagnostics.Record(trace.WithAuthoritativeOutcome(
+                    (int)(conversation.EndsMinute - conversation.StartedMinute),
+                    conversation.PartnerMemberId,
+                    conversation.TargetId));
+                return;
+            }
             if (selected.Action == OfficeMicroAction.ShortConversation)
             {
                 candidates.Remove(selected);
@@ -340,6 +368,7 @@ namespace FamilyCompany.Simulation.Family
                         OfficeSemanticLocation.None,
                         1)
                     : WeightedPick(worldSeed, member, state, candidates);
+                trace = BuildShadowSelectionTrace(worldSeed, member, minute, candidates, selected);
             }
             int duration = DurationMinutes(worldSeed, member.MemberId, state.SequenceIndex + 1, selected.Action);
             state.Begin(
@@ -349,6 +378,50 @@ namespace FamilyCompany.Simulation.Family
                 minute,
                 duration,
                 member.Autonomy.ActionStartedMinute);
+            OfficeInteractionShadowDiagnostics.Record(trace.WithAuthoritativeOutcome(
+                duration,
+                string.Empty,
+                selected.TargetId));
+        }
+
+        private static OfficeInteractionSelectionTrace BuildShadowSelectionTrace(
+            int worldSeed,
+            FamilyMemberState member,
+            long minute,
+            IReadOnlyList<Candidate> legacyCandidates,
+            Candidate authoritative)
+        {
+            OfficeInteractionCandidate[] interactionCandidates = legacyCandidates
+                .Select(candidate => OfficeInteractionCatalog.ResolveLegacyCandidate(
+                    member,
+                    candidate.Action,
+                    candidate.TargetId,
+                    candidate.Location,
+                    candidate.Weight))
+                .ToArray();
+            OfficeInteractionScoreBreakdown[] scores = interactionCandidates
+                .Select(candidate => OfficeInteractionScoring.Score(member, candidate))
+                .ToArray();
+            OfficeInteractionCandidate authoritativeInteraction = OfficeInteractionCatalog.ResolveLegacyCandidate(
+                member,
+                authoritative.Action,
+                authoritative.TargetId,
+                authoritative.Location,
+                authoritative.Weight);
+            OfficeInteractionScoreBreakdown shadow = OfficeInteractionScoring.SelectShadow(
+                worldSeed,
+                member,
+                scores);
+            return new OfficeInteractionSelectionTrace(
+                worldSeed,
+                member.MemberId,
+                minute,
+                member.Autonomy.CurrentAction,
+                member.Autonomy.ActionStartedMinute,
+                member.Autonomy.MicroAction.SequenceIndex + 1,
+                authoritativeInteraction.OfferId,
+                shadow?.OfferId ?? string.Empty,
+                scores);
         }
 
         private static IEnumerable<Candidate> Candidates(FamilyMemberState member)
