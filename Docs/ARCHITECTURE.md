@@ -23,6 +23,7 @@
 - 모든 회계 거래는 차변 합계와 대변 합계가 같다.
 - 저장 대상은 의미 상태다. Transform, 렌더러 캐시, UI 선택 상태는 저장하지 않는다.
 - 가족 자율 행동은 30분 절대 경계에서 진행하며 현재 행동·의미 목적지·처리 시각·누적 업무/휴식·사건만 저장한다. 같은 seed와 목표 시각이면 시간 진행 호출을 나눠도 결과가 같다.
+- P1.5 `OfficeInteractions`는 Unity 참조가 없는 Interaction Definition/Catalog와 정수 Utility 점수 추적을 소유한다. 현재 선택 정본은 기존 `WeightedPick`이며 Shadow 선택과 score trace는 저장 상태나 행동 결과를 변경하지 않는다.
 - 계약 저장은 제안 원본, 수락·납기·해결 시각, 상태, 완료 인시와 가족별 기여 인시를 보존한다. 스키마 v2는 스키마 v1을 빈 계약 목록으로 이관한다.
 - 주식시장 session·호가·체결 계산은 순수 C#이며 `companyId + date + minute + pulse`를 안정 키로 사용한다.
 - 플레이어 지정가 대기주문은 가격우선·시간우선 FIFO와 queue-ahead를 순수 C#으로 유지하고, Unity UI·저장·원장은 이 코어의 결과만 투영한다.
@@ -84,6 +85,14 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - OfficeWaypoint는 위치, 업무 종류, 최소·최대 체류 시간을 가진다.
 - 체류 시간은 agentId, 정거장 횟수, waypointId에 StableRandom 키를 적용해 재현된다.
 - 현재 경로는 사전 정의된 안전 통로다. 사무실 배치를 플레이어가 자유 편집하게 되면 경로 탐색 계층을 추가한다.
+
+## Native Smart Interaction P1.5
+
+- `OfficeInteractionDefinition`은 행동, 의미 위치, target template, 가구 kind, 지속 시간, capacity, cooldown, 접근·예약 정책과 역할별 기존 weight를 순수 C# 데이터로 묶는다.
+- `OfficeInteractionCatalog`는 현재 13종 Micro Action의 표준·회의·fallback 후보 20개를 광고한다. 기존 후보 생성은 아직 정본이며 Editor QA가 action/location/target/weight 1:1 parity를 검사한다.
+- `OfficeInteractionScoring`은 기존 weight×20, macro compatibility, Energy/Stress 기반 need, 미방문 novelty, availability와 repetition을 정수로 합산한다. 후보는 OfferId 정렬 뒤 StableRandom top-band로 Shadow 선택하므로 입력 배열 순서에 독립적이다.
+- `OfficeInteractionSelectionTrace`는 legacy 선택, Shadow 선택, duration, resolved target, partner와 후보별 점수 분해를 진단 이벤트로 노출한다. 구독자가 없으면 retained state가 없으며 저장 스키마 v7은 그대로다.
+- 외부 Behavior Tree·Utility AI·GOAP 패키지는 설치하지 않는다. 런타임 가구 Offer Resolver, Utility 활성화, 명시적 실행/중단 lifecycle은 Shadow 관찰 결과를 검토한 뒤 별도 단계에서 진행한다.
 
 ## 오디오 프레젠테이션
 

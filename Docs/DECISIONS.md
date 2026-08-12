@@ -275,3 +275,15 @@ anchor error 0.000px, rotation 0°, scale deviation 0%, agent penetration 0으�
 결정: 가족 4명의 `turn_in_place`, `walk_start`, `walk_stop`, `short_shuffle`를 각각 8방향×2포즈의 독립 아트로 제작한다. `Walk` 상태만 기존 8방향×6프레임 루프를 사용하고, `Pivot`, `StartStep`, `Stopping/Idle`, `ShortShuffle`은 각 전용 클립을 사용한다. 모든 전환 PNG는 256×256, 180 PPU, Point, 하단 중앙 피벗이며 보이는 발바닥을 캔버스 하단 8px에 정렬한다.
 
 이유: gait 상태만 나누고 같은 걷기 프레임을 출력하면 출발·급정지·짧은 이동·90도 이상 회전이 시각적으로 구분되지 않는다. 반대로 기본 보행을 바로 8프레임으로 늘리는 것보다 짧은 전환에 전용 2포즈를 제공하는 편이 체감 개선이 크고, 기존 검증된 보행 루프를 보존할 수 있다. 발바닥 정규화는 생성 시트마다 다른 여백 때문에 방향 변경 때 캐릭터가 튀는 문제를 방지한다.
+
+## 2026-08-12 / P1.5는 외부 AI 엔진이 아니라 내부 Shadow Smart Interaction으로 시작한다
+
+결정: NPBehave·CrystalAI·TotalAI·GOAP를 설치하거나 소스를 복사하지 않는다. 현재 13종 Micro Action과
+기존 `WeightedPick`을 행동 선택의 정본으로 유지한 채, 순수 C# `OfficeInteractionCatalog`에 현재 후보의
+action/location/target/weight를 1:1 표현한다. 새 Utility는 정수 score breakdown과 결정론적 top-band
+Shadow 선택만 기록하며 GameState·Save DTO·OfficeRuntimeAgent·패키지 manifest를 변경하지 않는다.
+
+이유: 현재 P1은 이미 쿨다운, capacity, 대화 pair, 45분 책상 제한, step/jump·save/load 결정론을 갖고 있다.
+새 프레임워크는 이 정본을 중복시키지만, 스마트 오브젝트식 정의와 Utility 점수 분해는 선택 이유와 향후
+가구 Offer 연결을 검증하는 데 유용하다. Shadow 모드는 실제 플레이 결과를 보존한 상태에서 점수 품질과
+결정론을 측정하고 다음 활성화 여부를 별도로 판단하게 한다.

@@ -1,5 +1,24 @@
 # PROJECT STATE
 
+## 2026-08-12 / P1.5 Native Deterministic Smart Interaction Shadow 기반 완료
+
+- 외부 NPC AI 패키지 없이 순수 C# `OfficeInteractionDefinition`, `OfficeInteractionCatalog`,
+  `OfficeInteractionScoreBreakdown`, `OfficeInteractionSelectionTrace`를 추가했다.
+- 현재 13종 Micro Action을 표준·회의·fallback Interaction 정의 20개로 표현하고 역할별 기존 weight,
+  target template, 위치, 가구 kind, 지속 시간, capacity, cooldown, 접근·예약 정책을 기록했다.
+- 실제 선택은 기존 `WeightedPick`이 계속 담당한다. Shadow Utility는 정수 점수와
+  `office-interaction-pick-v1:worldSeed:memberId:macroStart:sequence` StableRandom 키로 비교 선택만 남긴다.
+- 변경 전후 4시간 P1 행동 서명이 정확히 같고 저장 스키마 v7, 1분 step/4시간 jump,
+  save/load, capacity, 대화 pair, 45분 책상 제한을 유지한다.
+- Catalog parity QA는 20 definitions, 13 actions, 80 role/macro/previous-location cases를 검사한다.
+  Shadow QA는 128 seeds×4 hours에서 13,777 traces와 68,807 candidate scores를 2회 재생하고 후보 역순
+  불변성을 확인했다. 선택 차이 8,804건은 실제 행동에 적용하지 않은 분석 자료다.
+- 산출물은 `Artifacts/OfficeInteractionUtilityShadow/`의 `summary.md`, `score-traces.json`,
+  `selection-comparison.json`, `divergent-selections.md`, `determinism-signature.txt`이며 signature는
+  `363f11108739c53997036681dacd25b25d0f645b586cb269f09a84ddc25cef3b`이다.
+- 다음 단계는 별도 요청 후 진행한다: 실제 배치 가구 Offer Resolver, Shadow 결과 조정·Utility 활성화,
+  선택/예약/이동/수행/중단 cleanup lifecycle. 현재는 Runtime·Save·GameState를 변경하지 않는다.
+
 ## 2026-08-12 / Mother seated-work stabilization and gentler seat transition
 
 - Rebuilt `mother_northwest_sit_work_0..5.png` from the existing approved art with frame 0 as the
