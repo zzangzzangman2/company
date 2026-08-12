@@ -280,10 +280,7 @@ namespace FamilyCompany.Presentation.Unity
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunPlayerCollisionQa();
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
-            float collisionQaTimeScale = Time.timeScale;
-            Time.timeScale = 1f;
             yield return RunFourSeatWorkQa();
-            Time.timeScale = collisionQaTimeScale;
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunContractAndSaveLoadQa(bootstrap);
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;

@@ -519,7 +519,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public void TickPresentation(float deltaTime)
         {
             if (_animator == null || deltaTime < 0f) return;
-            _animator.Tick(deltaTime);
+            // Office time can run at 2x/4x, but a human sit/stand gesture should keep its real
+            // 0.62s/0.56s presentation duration instead of dropping into the chair in a few ticks.
+            float presentationDeltaTime = _animator.IsOfficeSeatingPoseActive
+                ? Mathf.Max(0f, Time.unscaledDeltaTime)
+                : deltaTime;
+            _animator.Tick(presentationDeltaTime);
             _animator.EndTilePresentationFrame();
             if (_seat != null && _renderer != null)
             {
