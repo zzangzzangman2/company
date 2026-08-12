@@ -695,6 +695,10 @@ namespace FamilyCompany.Presentation.Unity
                 float maximumReverseFacingSeconds = 0f;
                 int reverseFacingFrames = 0;
                 int projectedFrames = 0;
+                float naturalFacingHandoffSeconds =
+                    OfficeLocomotionPresentationRules.DefaultFacingStabilizationSeconds +
+                    OfficeLocomotionGaitRules.PivotSeconds +
+                    0.05f;
                 while (Time.time - started < 10f)
                 {
                     yield return null;
@@ -720,10 +724,11 @@ namespace FamilyCompany.Presentation.Unity
                     else reverseFacingSeconds = 0f;
                     if (directionDelta >= 2) mismatchedFacingSeconds += Time.deltaTime;
                     else mismatchedFacingSeconds = 0f;
-                    // The facing contract deliberately stabilizes a new direction for 75 ms so
-                    // input hand-off does not flicker. A single reverse frame at 4x is therefore
-                    // expected; sustained reverse presentation still fails closed.
-                    if (reverseFacingSeconds > 0.10f || mismatchedFacingSeconds > 0.15f)
+                    // A full reversal first stabilizes the new heading, then finishes the planted
+                    // foot pivot. Allow exactly that authored hand-off plus one slow-frame margin;
+                    // sustained reverse presentation still fails closed.
+                    if (reverseFacingSeconds > naturalFacingHandoffSeconds ||
+                        mismatchedFacingSeconds > naturalFacingHandoffSeconds)
                     {
                         FailPlayerQa(
                             65 + scenario,
