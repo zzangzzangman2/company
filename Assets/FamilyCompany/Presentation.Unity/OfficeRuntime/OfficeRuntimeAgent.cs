@@ -606,7 +606,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 start,
                 _destination.Value.Cell,
                 _destination.Value.SeatId,
-                _stuckSeconds >= OfficeNavigationTrafficRules.ReplanThresholdSeconds);
+                _stuckSeconds >= OfficeNavigationTrafficRules.ReplanThresholdSeconds,
+                AgentRadius);
             _path.Clear();
             _path.AddRange(result);
             _pathIndex = _path.Count > 1 ? 1 : 0;

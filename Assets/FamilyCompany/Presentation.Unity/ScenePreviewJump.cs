@@ -761,17 +761,37 @@ namespace FamilyCompany.Presentation.Unity
             };
             foreach (OfficeSemanticLocation location in locations)
             {
+                string scenarioId = "micro-destination-" + location;
+                if (!_starterRuntime.World.Workstations.TryResolveDestination(
+                        location,
+                        "player",
+                        scenarioId,
+                        out OfficeRuntimeDestination expectedDestination))
+                {
+                    FailPlayerQa(72, "micro-action destination could not be resolved: " + location);
+                    yield break;
+                }
+
+                var playerStart = new OfficeGridCoordinate(5, 6);
+                player.QaTeleportToCell(playerStart);
+                ParkQaActorsAwayFrom(actors, "player", playerStart, expectedDestination.Cell);
+                // Teleports intentionally bypass traversal. Start the measurement only after every
+                // actor is parked on a radius-clear cell so setup cannot pollute collision metrics.
                 _starterRuntime.World.Occupancy.ResetMetrics();
-                player.QaTeleportToCell(new OfficeGridCoordinate(5, 6));
-                actors["older_sister"].QaTeleportToCell(new OfficeGridCoordinate(10, 2));
-                actors["father"].QaTeleportToCell(new OfficeGridCoordinate(1, 9));
-                actors["mother"].QaTeleportToCell(new OfficeGridCoordinate(10, 10));
                 if (!player.QaBeginSemanticLocation(
                         location,
-                        "micro-destination-" + location,
+                        scenarioId,
                         out OfficeGridCoordinate destination))
                 {
                     FailPlayerQa(72, "micro-action destination could not be resolved: " + location);
+                    yield break;
+                }
+                if (!destination.Equals(expectedDestination.Cell))
+                {
+                    FailPlayerQa(
+                        72,
+                        $"micro-action destination changed during deterministic resolution: {location} " +
+                        $"expected={expectedDestination.Cell} actual={destination}");
                     yield break;
                 }
 
@@ -797,6 +817,52 @@ namespace FamilyCompany.Presentation.Unity
                 "STARTER_OFFICE_MICRO_DESTINATION_QA_PASS | " +
                 "locations=Filing,Printer,Water,Coffee,OpenArea unreachable=0");
             yield return null;
+        }
+
+        private void ParkQaActorsAwayFrom(
+            IReadOnlyDictionary<string, OfficeRuntimeAgent> actors,
+            string activeMemberId,
+            OfficeGridCoordinate activeStart,
+            OfficeGridCoordinate destination)
+        {
+            OfficeRuntimeWorld world = _starterRuntime.World;
+            Vector2 destinationWorld = world.Presenter.CellCenterWorld(destination);
+            var reserved = new List<Vector2>
+            {
+                world.Presenter.CellCenterWorld(activeStart)
+            };
+            List<OfficeGridCoordinate> parkingCells = Enumerable.Range(1, world.Grid.Height - 2)
+                .SelectMany(y => Enumerable.Range(1, world.Grid.Width - 2)
+                    .Select(x => new OfficeGridCoordinate(x, y)))
+                .Where(cell => world.Occupancy.IsCellPassable(cell, string.Empty, string.Empty, false))
+                .Where(cell =>
+                {
+                    Vector2 center = world.Presenter.CellCenterWorld(cell);
+                    return world.Occupancy.CanTraverseStatic(
+                        center,
+                        center,
+                        OfficeRuntimeAgent.DefaultRadius,
+                        string.Empty);
+                })
+                .OrderByDescending(cell =>
+                    Vector2.SqrMagnitude((Vector2)world.Presenter.CellCenterWorld(cell) - destinationWorld))
+                .ThenBy(cell => cell.Y)
+                .ThenBy(cell => cell.X)
+                .ToList();
+
+            foreach (KeyValuePair<string, OfficeRuntimeAgent> item in actors
+                         .Where(item => !string.Equals(item.Key, activeMemberId, StringComparison.Ordinal))
+                         .OrderBy(item => item.Key, StringComparer.Ordinal))
+            {
+                OfficeGridCoordinate parkingCell = parkingCells.First(cell =>
+                {
+                    Vector2 center = world.Presenter.CellCenterWorld(cell);
+                    return Vector2.Distance(center, destinationWorld) >= 1.5f &&
+                           reserved.All(position => Vector2.Distance(position, center) >= 1.0f);
+                });
+                item.Value.QaTeleportToCell(parkingCell);
+                reserved.Add(world.Presenter.CellCenterWorld(parkingCell));
+            }
         }
 
         private IEnumerator RunFourSeatWorkQa()

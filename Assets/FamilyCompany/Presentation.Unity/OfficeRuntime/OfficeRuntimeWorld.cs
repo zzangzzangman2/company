@@ -69,14 +69,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeGridCoordinate start,
             OfficeGridCoordinate goal,
             string permittedSeatId,
-            bool avoidDynamic = false)
+            bool avoidDynamic = false,
+            float radius = OfficeRuntimeAgent.DefaultRadius)
         {
             IReadOnlyList<OfficeGridCoordinate> result = _paths.FindPath(
                 agentId,
                 start,
                 goal,
                 permittedSeatId,
-                avoidDynamic);
+                avoidDynamic,
+                radius);
             if (result.Count > 0) ReplanCount++;
             return result;
         }

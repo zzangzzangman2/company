@@ -321,7 +321,32 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     center,
                     center,
                     OfficeRuntimeAgent.DefaultRadius,
-                    string.Empty)) result.Add(cell);
+                    string.Empty) &&
+                HasRadiusClearEntrance(cell, center)) result.Add(cell);
+        }
+
+        private bool HasRadiusClearEntrance(OfficeGridCoordinate cell, Vector2 center)
+        {
+            var offsets = new[]
+            {
+                new OfficeGridCoordinate(1, 0),
+                new OfficeGridCoordinate(0, -1),
+                new OfficeGridCoordinate(-1, 0),
+                new OfficeGridCoordinate(0, 1)
+            };
+            foreach (OfficeGridCoordinate offset in offsets)
+            {
+                var neighbor = new OfficeGridCoordinate(cell.X + offset.X, cell.Y + offset.Y);
+                if (!_grid.Contains(neighbor) ||
+                    !_occupancy.IsCellPassable(neighbor, string.Empty, string.Empty, false)) continue;
+                Vector3 neighbor3 = _presenter.CellCenterWorld(neighbor);
+                if (_occupancy.CanTraverseStatic(
+                        new Vector2(neighbor3.x, neighbor3.y),
+                        center,
+                        OfficeRuntimeAgent.DefaultRadius,
+                        string.Empty)) return true;
+            }
+            return false;
         }
 
         private static string MemberIdFromSeat(string seatId)

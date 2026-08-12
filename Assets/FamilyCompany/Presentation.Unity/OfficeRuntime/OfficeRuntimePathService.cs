@@ -35,8 +35,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeGridCoordinate start,
             OfficeGridCoordinate goal,
             string permittedSeatId = "",
-            bool avoidDynamic = false)
+            bool avoidDynamic = false,
+            float radius = OfficeRuntimeAgent.DefaultRadius)
         {
+            if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
+                throw new ArgumentOutOfRangeException(nameof(radius));
             if (!_grid.Contains(start) || !_grid.Contains(goal)) return Array.Empty<OfficeGridCoordinate>();
             var queue = new Queue<OfficeGridCoordinate>();
             var visited = new HashSet<OfficeGridCoordinate> { start };
@@ -55,6 +58,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     // statically testable. Replans avoid every dynamic cell before that goal.
                     bool includeDynamic = avoidDynamic && !next.Equals(goal);
                     if (!_occupancy.IsCellPassable(next, agentId, permittedSeatId, includeDynamic)) continue;
+                    Vector3 currentCenter3 = _presenter.CellCenterWorld(current);
+                    Vector3 nextCenter3 = _presenter.CellCenterWorld(next);
+                    if (!_occupancy.CanTraverseStatic(
+                            new Vector2(currentCenter3.x, currentCenter3.y),
+                            new Vector2(nextCenter3.x, nextCenter3.y),
+                            radius,
+                            permittedSeatId)) continue;
                     visited.Add(next);
                     parent[next] = current;
                     queue.Enqueue(next);
