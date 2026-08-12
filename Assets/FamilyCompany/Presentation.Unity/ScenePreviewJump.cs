@@ -280,7 +280,10 @@ namespace FamilyCompany.Presentation.Unity
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunPlayerCollisionQa();
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
+            float collisionQaTimeScale = Time.timeScale;
+            Time.timeScale = 1f;
             yield return RunFourSeatWorkQa();
+            Time.timeScale = collisionQaTimeScale;
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunContractAndSaveLoadQa(bootstrap);
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
@@ -820,6 +823,8 @@ namespace FamilyCompany.Presentation.Unity
                     $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
                     $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
                     $"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px " +
+                    $"pelvisStep={actor.MaxTransitionPelvisStepPx:F3}px " +
+                    $"monotonicViolations={actor.TransitionMonotonicViolationCount} " +
                     $"sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
                 bool presentationMatches = actor.SeatContactErrorPx <= 1f &&
                     actor.VisualRotationErrorDegrees <= 0.01f &&
@@ -827,6 +832,8 @@ namespace FamilyCompany.Presentation.Unity
                     actor.SeatingPresentationMode == OfficeSeatingPresentationMode.Animated &&
                     actor.ObservedSitDownFrameCount == 4 && actor.ObservedWorkFrameCount == 6 &&
                     actor.MaxAnimatedAnchorErrorPx <= 1f &&
+                    actor.MaxTransitionPelvisStepPx <= 2f &&
+                    actor.TransitionMonotonicViolationCount == 0 &&
                     actor.CurrentSpriteName.StartsWith(expectedSpritePrefix, StringComparison.Ordinal) &&
                     depthCorrect;
                 if (presentationMatches) continue;
@@ -838,6 +845,8 @@ namespace FamilyCompany.Presentation.Unity
                         $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
                         $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
                         $"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px " +
+                        $"pelvisStep={actor.MaxTransitionPelvisStepPx:F3}px " +
+                        $"monotonicViolations={actor.TransitionMonotonicViolationCount} " +
                         $"sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
                 yield break;
             }
@@ -857,6 +866,23 @@ namespace FamilyCompany.Presentation.Unity
                     continue;
                 }
                 FailPlayerQa(58, $"{memberId} workstation close-up failed: {closeupFailure}");
+                yield break;
+            }
+            foreach (string memberId in QaMemberIds)
+            {
+                if (TryCaptureQaChairOverlayComparison(
+                        memberId,
+                        actors[memberId],
+                        out string overlayOnPath,
+                        out string overlayOffPath,
+                        out string overlayFailure))
+                {
+                    Debug.Log(
+                        $"STARTER_OFFICE_CHAIR_OVERLAY_COMPARISON | member={memberId} " +
+                        $"on={overlayOnPath} off={overlayOffPath}");
+                    continue;
+                }
+                FailPlayerQa(58, $"{memberId} chair overlay comparison failed: {overlayFailure}");
                 yield break;
             }
             if (!RequireZeroActualViolations("four-seat-work", 58)) yield break;
@@ -879,10 +905,23 @@ namespace FamilyCompany.Presentation.Unity
                         $"{memberId}=stand{actors[memberId].ObservedStandUpFrameCount}")));
                 yield break;
             }
+            if (QaMemberIds.Any(memberId =>
+                    actors[memberId].MaxTransitionPelvisStepPx > 2f ||
+                    actors[memberId].TransitionMonotonicViolationCount != 0))
+            {
+                FailPlayerQa(
+                    58,
+                    "continuous seating motion failed: " +
+                    string.Join(",", QaMemberIds.Select(memberId =>
+                        $"{memberId}=maxStep{actors[memberId].MaxTransitionPelvisStepPx:F3}px/" +
+                        $"reverse{actors[memberId].TransitionMonotonicViolationCount}")));
+                yield break;
+            }
             Debug.Log(
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
                 " | animation=4x(SitDown4+Work6+StandUp4) mode=Animated " +
-                "placement=anchorError<=1px,seatContact<=1px,rotation=0,scale=canonical,sorting=chairFloor+1 | " +
+                "placement=continuous,maxPelvisStep<=2px,monotonic,anchorError<=1px," +
+                "seatContact<=1px,rotation=0,scale=canonical,sorting=chairFloor+1 | " +
                 OccupancyMetricSummary());
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
             yield return null;
@@ -947,6 +986,61 @@ namespace FamilyCompany.Presentation.Unity
             }
             finally
             {
+                camera.transform.position = previousPosition;
+                camera.transform.rotation = previousRotation;
+                camera.orthographicSize = previousSize;
+            }
+        }
+
+        private bool TryCaptureQaChairOverlayComparison(
+            string memberId,
+            OfficeRuntimeAgent actor,
+            out string overlayOnPath,
+            out string overlayOffPath,
+            out string failure)
+        {
+            string stem = memberId.Replace('_', '-');
+            overlayOnPath = QaArtifactPath(stem + "-chair-overlay-on.png");
+            overlayOffPath = QaArtifactPath(stem + "-chair-overlay-off.png");
+            failure = string.Empty;
+            Camera camera = Camera.main;
+            if (camera == null || actor == null || actor.PresentationRenderer == null)
+            {
+                failure = "camera or actor presentation renderer is missing";
+                return false;
+            }
+
+            OfficeSeatSlot seat = _starterRuntime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
+            if (!_starterRuntime.World.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
+                    seat.ChairFurnitureId,
+                    out SpriteRenderer chairOverlay) || chairOverlay == null)
+            {
+                failure = "chair front overlay renderer is missing for " + seat.ChairFurnitureId;
+                return false;
+            }
+
+            bool previousOverlayEnabled = chairOverlay.enabled;
+            Vector3 previousPosition = camera.transform.position;
+            Quaternion previousRotation = camera.transform.rotation;
+            float previousSize = camera.orthographicSize;
+            try
+            {
+                chairOverlay.enabled = true;
+                Bounds bounds = actor.PresentationRenderer.bounds;
+                EncapsulateFurnitureRenderers(seat.ChairFurnitureId, ref bounds);
+                if (seat.HasWorkstationBinding)
+                    EncapsulateFurnitureRenderers(seat.WorkSurfaceFurnitureId, ref bounds);
+                camera.transform.position = new Vector3(bounds.center.x, bounds.center.y, previousPosition.z);
+                camera.orthographicSize = Mathf.Max(
+                    1.1f,
+                    Mathf.Max(bounds.extents.x, bounds.extents.y) * 1.18f);
+                if (!TryCaptureQaCameraFrame(overlayOnPath, 1024, 1024, out failure)) return false;
+                chairOverlay.enabled = false;
+                return TryCaptureQaCameraFrame(overlayOffPath, 1024, 1024, out failure);
+            }
+            finally
+            {
+                chairOverlay.enabled = previousOverlayEnabled;
                 camera.transform.position = previousPosition;
                 camera.transform.rotation = previousRotation;
                 camera.orthographicSize = previousSize;

@@ -80,6 +80,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _observedWorkFrameMask;
         private int _observedStandUpFrameMask;
         private float _maxAnimatedAnchorErrorPx;
+        private bool _hasTransitionPelvisSample;
+        private OfficeSeatingAnimationClip _transitionPelvisClip;
+        private Vector2 _previousTransitionPelvisScreen;
+        private float _previousTransitionCushionDistancePx;
+        private float _maxTransitionPelvisStepPx;
+        private int _transitionMonotonicViolationCount;
 
         public event Action<IOfficeRuntimeAgent, string> AssignedTaskCompleted;
 
@@ -154,6 +160,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public int ObservedWorkFrameCount => CountBits(_observedWorkFrameMask);
         public int ObservedStandUpFrameCount => CountBits(_observedStandUpFrameMask);
         public float MaxAnimatedAnchorErrorPx => _maxAnimatedAnchorErrorPx;
+        public float MaxTransitionPelvisStepPx => _maxTransitionPelvisStepPx;
+        public int TransitionMonotonicViolationCount => _transitionMonotonicViolationCount;
         public float VisualRotationErrorDegrees => _visualRoot == null
             ? float.PositiveInfinity
             : Quaternion.Angle(Quaternion.identity, _visualRoot.localRotation);
@@ -319,6 +327,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _observedWorkFrameMask = 0;
             _observedStandUpFrameMask = 0;
             _maxAnimatedAnchorErrorPx = 0f;
+            ResetTransitionMotionMetrics();
+            _maxTransitionPelvisStepPx = 0f;
+            _transitionMonotonicViolationCount = 0;
             _arrived = false;
             _yieldCell = null;
             ReleaseSeatImmediately();
@@ -841,6 +852,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     }
                     transform.position = new Vector3(target.x, target.y, transform.position.z);
                     _seatDirection = FacingDirection(_seat.Facing);
+                    _sitTransitionInitialized = false;
+                    _standTransitionInitialized = false;
+                    _hasTransitionPelvisSample = false;
                     if (!_seatClaim.TryOccupy(out _) ||
                         !_animator.PrepareOfficeSeatingFacing(_seatDirection) ||
                         !_animator.BeginSitDown(_seatDirection))
@@ -883,6 +897,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         ResumeAutonomy();
                         return;
                     }
+                    _standTransitionInitialized = false;
+                    _hasTransitionPelvisSample = false;
                     Phase = OfficeRuntimeAgentPhase.StandingUp;
                     break;
                 case OfficeRuntimeAgentPhase.StandingUp:
@@ -1128,7 +1144,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             switch (clip)
             {
                 case OfficeSeatingAnimationClip.SitDown:
-                    if (frame == 0 || !_sitTransitionInitialized)
+                    if (!_sitTransitionInitialized)
                     {
                         ResetVisualPose();
                         _sitTransitionStartPelvisWorld =
@@ -1141,15 +1157,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     desiredPelvis = Vector3.Lerp(
                         _sitTransitionStartPelvisWorld,
                         cushion,
-                        ResolveNaturalSeatTransitionProgress(
-                            frame,
-                            OfficeSeatingAnimationFrames.SitDownFrameCount));
+                        SmoothStep01(_animator.CurrentOfficeSeatingProgress01));
                     break;
                 case OfficeSeatingAnimationClip.Work:
                     desiredPelvis = cushion;
                     break;
                 case OfficeSeatingAnimationClip.StandUp:
-                    if (frame == 0 || !_standTransitionInitialized)
+                    if (!_standTransitionInitialized)
                     {
                         OfficeCharacterSeatPoseProfile finalProfile = _poseCatalog.ResolveApproved(
                             _agentId,
@@ -1166,14 +1180,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     desiredPelvis = Vector3.Lerp(
                         cushion,
                         _standTransitionTargetPelvisWorld,
-                        ResolveNaturalSeatTransitionProgress(
-                            frame,
-                            OfficeSeatingAnimationFrames.StandUpFrameCount));
+                        SmoothStep01(_animator.CurrentOfficeSeatingProgress01));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(clip));
             }
             ApplySeatAnchorPlacement(profile, desiredPelvis);
+            RecordTransitionMotion(clip, desiredPelvis, cushion);
             if (Camera.main != null)
             {
                 float error = OfficeGridAlignmentMetrics.ScreenDistance(
@@ -1246,13 +1259,49 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return result;
         }
 
-        private static float ResolveNaturalSeatTransitionProgress(int frame, int frameCount)
+        private static float SmoothStep01(float progress)
         {
-            if (frameCount <= 1) return 1f;
-            float progress = Mathf.Clamp01(frame / (float)(frameCount - 1));
-            // Smoothstep keeps the first and last seating beats gentle instead of
-            // dropping the pelvis by the same large amount on every Sprite swap.
+            progress = Mathf.Clamp01(progress);
             return progress * progress * (3f - (2f * progress));
+        }
+
+        private void RecordTransitionMotion(
+            OfficeSeatingAnimationClip clip,
+            Vector3 pelvisWorld,
+            Vector3 cushionWorld)
+        {
+            if (clip == OfficeSeatingAnimationClip.Work || Camera.main == null) return;
+            Vector2 pelvisScreen = Camera.main.WorldToScreenPoint(pelvisWorld);
+            float cushionDistancePx = OfficeGridAlignmentMetrics.ScreenDistance(
+                Camera.main,
+                pelvisWorld,
+                cushionWorld);
+            if (!_hasTransitionPelvisSample || _transitionPelvisClip != clip)
+            {
+                _hasTransitionPelvisSample = true;
+                _transitionPelvisClip = clip;
+                _previousTransitionPelvisScreen = pelvisScreen;
+                _previousTransitionCushionDistancePx = cushionDistancePx;
+                return;
+            }
+
+            _maxTransitionPelvisStepPx = Mathf.Max(
+                _maxTransitionPelvisStepPx,
+                Vector2.Distance(_previousTransitionPelvisScreen, pelvisScreen));
+            const float monotonicTolerancePx = 0.01f;
+            bool reversed = clip == OfficeSeatingAnimationClip.SitDown
+                ? cushionDistancePx > _previousTransitionCushionDistancePx + monotonicTolerancePx
+                : cushionDistancePx < _previousTransitionCushionDistancePx - monotonicTolerancePx;
+            if (reversed) _transitionMonotonicViolationCount++;
+            _previousTransitionPelvisScreen = pelvisScreen;
+            _previousTransitionCushionDistancePx = cushionDistancePx;
+        }
+
+        private void ResetTransitionMotionMetrics()
+        {
+            _hasTransitionPelvisSample = false;
+            _previousTransitionPelvisScreen = Vector2.zero;
+            _previousTransitionCushionDistancePx = 0f;
         }
 
         private void TrackWorkstationMetrics()
@@ -1289,6 +1338,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _releaseSeatRequested = false;
                 _alignedClip = null;
                 _alignedFrame = -1;
+                _sitTransitionInitialized = false;
+                _standTransitionInitialized = false;
+                ResetTransitionMotionMetrics();
                 if (_animator != null && _animator.IsOfficeSeatingPoseActive)
                     _animator.ResumeWalkingAfterSeating();
                 ResetVisualPose();

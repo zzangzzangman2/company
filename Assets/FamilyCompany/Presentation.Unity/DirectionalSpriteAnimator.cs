@@ -20,7 +20,8 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private Sprite[] sitDownFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] seatedWorkFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] standUpFrames = Array.Empty<Sprite>();
-        [SerializeField] private float seatingTransitionFrameSeconds = 0.15f;
+        [SerializeField] private float sitDownDurationSeconds = 0.62f;
+        [SerializeField] private float standUpDurationSeconds = 0.56f;
         [SerializeField] private float seatedWorkFrameSeconds = 0.14f;
         [SerializeField] private OfficeSeatingPresentationMode seatingPresentationMode =
             OfficeSeatingPresentationMode.Animated;
@@ -32,7 +33,8 @@ namespace FamilyCompany.Presentation.Unity
         private int _walkFrame;
         private int _lastDirection;
         private OfficeSeatingAnimationClip? _seatingClip;
-        private float _seatingFrameClock;
+        private float _seatingElapsedSeconds;
+        private float _seatingProgress01;
         private int _seatingFrame;
         private bool _seatingTransitionComplete;
         private IOfficeSeatedWorkAnimationHook _officeWorkHook;
@@ -81,6 +83,9 @@ namespace FamilyCompany.Presentation.Unity
             _seatingTransitionComplete;
         public OfficeSeatingAnimationClip? CurrentOfficeSeatingClip => _seatingClip;
         public int CurrentOfficeSeatingFrame => _seatingFrame;
+        public float CurrentOfficeSeatingProgress01 => _seatingProgress01;
+        public float SitDownDurationSeconds => Mathf.Max(0.05f, sitDownDurationSeconds);
+        public float StandUpDurationSeconds => Mathf.Max(0.05f, standUpDurationSeconds);
         public bool SupportsOfficeWorkAnimationHook => true;
         public bool HasOfficeWorkFallback =>
             HasCompleteFrames(seatedWorkFrames, OfficeSeatingAnimationFrames.WorkSpriteCount);
@@ -135,7 +140,8 @@ namespace FamilyCompany.Presentation.Unity
             Sprite[] newSitDownFrames,
             Sprite[] newSeatedWorkFrames,
             Sprite[] newStandUpFrames,
-            float transitionSecondsPerFrame = 0.15f,
+            float newSitDownDurationSeconds = 0.62f,
+            float newStandUpDurationSeconds = 0.56f,
             float workSecondsPerFrame = 0.14f,
             OfficeSeatingPresentationMode presentationMode = OfficeSeatingPresentationMode.Animated)
         {
@@ -154,7 +160,8 @@ namespace FamilyCompany.Presentation.Unity
             sitDownFrames = (Sprite[])newSitDownFrames.Clone();
             seatedWorkFrames = (Sprite[])newSeatedWorkFrames.Clone();
             standUpFrames = (Sprite[])newStandUpFrames.Clone();
-            seatingTransitionFrameSeconds = Mathf.Max(0.05f, transitionSecondsPerFrame);
+            sitDownDurationSeconds = Mathf.Max(0.05f, newSitDownDurationSeconds);
+            standUpDurationSeconds = Mathf.Max(0.05f, newStandUpDurationSeconds);
             seatedWorkFrameSeconds = Mathf.Max(0.05f, workSecondsPerFrame);
             seatingPresentationMode = presentationMode;
         }
@@ -252,7 +259,8 @@ namespace FamilyCompany.Presentation.Unity
             ResetTileGaitState(direction);
             _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
             _seatingClip = null;
-            _seatingFrameClock = 0f;
+            _seatingElapsedSeconds = 0f;
+            _seatingProgress01 = 0f;
             _seatingFrame = 0;
             _seatingTransitionComplete = false;
             ApplyFrame();
@@ -334,7 +342,8 @@ namespace FamilyCompany.Presentation.Unity
         {
             EndOfficeWorkSession();
             _seatingClip = null;
-            _seatingFrameClock = 0f;
+            _seatingElapsedSeconds = 0f;
+            _seatingProgress01 = 0f;
             _seatingFrame = 0;
             _seatingTransitionComplete = false;
             ResetTileGaitState(_lastDirection);
@@ -523,7 +532,8 @@ namespace FamilyCompany.Presentation.Unity
             _lastDirection = direction;
             ResetTileFacingState(direction);
             _seatingClip = clip;
-            _seatingFrameClock = 0f;
+            _seatingElapsedSeconds = 0f;
+            _seatingProgress01 = 0f;
             _seatingFrame = 0;
             _seatingTransitionComplete = false;
             ApplyFrame();
@@ -538,31 +548,37 @@ namespace FamilyCompany.Presentation.Unity
                 _officeWorkSession.Tick(deltaTime);
                 return;
             }
-            var secondsPerFrame = clip == OfficeSeatingAnimationClip.Work
-                ? Mathf.Max(0.05f, seatedWorkFrameSeconds)
-                : Mathf.Max(0.05f, seatingTransitionFrameSeconds);
-            _seatingFrameClock += deltaTime;
-            if (_seatingFrameClock >= secondsPerFrame)
+
+            if (clip == OfficeSeatingAnimationClip.Work)
             {
-                _seatingFrameClock -= secondsPerFrame;
-                // A Sprite can only be presented once per rendered tick. Advancing through several
-                // indices here silently skipped SitDown/StandUp art under time scale or a long frame.
-                // Keep the accumulated remainder, but expose exactly one authored frame per Tick.
-                var nextFrame = _seatingFrame + 1;
-                if (nextFrame < OfficeSeatingAnimationFrames.FrameCount(clip))
-                {
-                    _seatingFrame = nextFrame;
-                    return;
-                }
-
-                if (clip == OfficeSeatingAnimationClip.Work)
-                {
-                    _seatingFrame = 0;
-                    return;
-                }
-
-                _seatingTransitionComplete = true;
+                _seatingElapsedSeconds += deltaTime;
+                var secondsPerFrame = Mathf.Max(0.05f, seatedWorkFrameSeconds);
+                if (_seatingElapsedSeconds < secondsPerFrame) return;
+                _seatingElapsedSeconds -= secondsPerFrame;
+                _seatingFrame = (_seatingFrame + 1) %
+                    OfficeSeatingAnimationFrames.FrameCount(clip);
+                return;
             }
+
+            var durationSeconds = clip == OfficeSeatingAnimationClip.SitDown
+                ? Mathf.Max(0.05f, sitDownDurationSeconds)
+                : Mathf.Max(0.05f, standUpDurationSeconds);
+            _seatingElapsedSeconds = Mathf.Min(durationSeconds, _seatingElapsedSeconds + deltaTime);
+            _seatingProgress01 = Mathf.Clamp01(_seatingElapsedSeconds / durationSeconds);
+
+            // Presentation advances at most one authored pose per rendered Tick. This preserves all
+            // 4/4 transition poses even after a long frame while placement follows elapsed progress.
+            var frameCount = OfficeSeatingAnimationFrames.FrameCount(clip);
+            var desiredFrame = Mathf.Min(
+                frameCount - 1,
+                Mathf.FloorToInt(_seatingProgress01 * frameCount));
+            if (_seatingFrame < desiredFrame)
+            {
+                _seatingFrame++;
+            }
+
+            _seatingTransitionComplete =
+                _seatingProgress01 >= 1f && _seatingFrame >= frameCount - 1;
         }
 
         private Sprite[] FramesFor(OfficeSeatingAnimationClip clip)
@@ -586,7 +602,8 @@ namespace FamilyCompany.Presentation.Unity
         {
             EndOfficeWorkSession();
             _seatingClip = null;
-            _seatingFrameClock = 0f;
+            _seatingElapsedSeconds = 0f;
+            _seatingProgress01 = 0f;
             _seatingFrame = 0;
             _seatingTransitionComplete = false;
             ApplyFrame();

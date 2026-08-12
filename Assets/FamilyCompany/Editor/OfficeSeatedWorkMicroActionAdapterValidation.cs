@@ -314,13 +314,24 @@ namespace FamilyCompany.Editor
                 var standFrames = fixture.CreateSprites(OfficeSeatingAnimationFrames.StandUpSpriteCount, "stand");
                 animator.Configure(renderer, walkFrames);
                 animator.ConfigureOfficeSeating(sitFrames, workFrames, standFrames);
+                AssertApproximately(0.62f, animator.SitDownDurationSeconds, 0.0001f, "sit-down duration");
+                AssertApproximately(0.56f, animator.StandUpDurationSeconds, 0.0001f, "stand-up duration");
+
+                var sitFrameMask = 0;
+                var standFrameMask = 0;
+                animator.OfficeFrameApplied += (clip, frame, _) =>
+                {
+                    if (clip == OfficeSeatingAnimationClip.SitDown) sitFrameMask |= 1 << frame;
+                    if (clip == OfficeSeatingAnimationClip.StandUp) standFrameMask |= 1 << frame;
+                };
 
                 const int direction = 4;
                 AssertTrue(
                     animator.PrepareOfficeSeatingFacing(direction, OfficeSeatForegroundOcclusionMode.Default),
                     "fallback prepare");
                 AssertTrue(animator.BeginSitDown(direction), "fallback sit-down");
-                animator.Tick(1f);
+                CompleteTransition(animator, 0.62f, "fallback sit-down");
+                AssertEqual(0b1111, sitFrameMask, "fallback exposes all four sit poses");
                 AssertTrue(animator.BeginSeatedWork(), "fallback work begin");
                 animator.Tick(0.15f);
                 AssertSame(
@@ -337,8 +348,10 @@ namespace FamilyCompany.Editor
                 AssertTrue(
                     animator.PrepareOfficeSeatingFacing(direction, OfficeSeatForegroundOcclusionMode.Default),
                     "adapter prepare");
+                sitFrameMask = 0;
                 AssertTrue(animator.BeginSitDown(direction), "adapter sit-down");
-                animator.Tick(1f);
+                CompleteTransition(animator, 0.62f, "adapter sit-down");
+                AssertEqual(0b1111, sitFrameMask, "adapter exposes all four sit poses");
                 AssertTrue(animator.BeginSeatedWork(), "adapter work begin");
                 AssertTrue(animator.enabled, "DirectionalSpriteAnimator remains enabled during work");
                 animator.Tick(0.01f);
@@ -351,8 +364,8 @@ namespace FamilyCompany.Editor
                 AssertTrue(animator.BeginStandUp(), "stand-up begins after handoff");
                 AssertTrue(animator.enabled, "DirectionalSpriteAnimator remains enabled for stand-up");
                 AssertFalse(animator.IsOfficeWorkHookActive, "stand-up disposes hook session once");
-                animator.Tick(1f);
-                AssertTrue(animator.IsOfficeSeatingTransitionComplete, "stand-up clip completes");
+                CompleteTransition(animator, 0.56f, "stand-up");
+                AssertEqual(0b1111, standFrameMask, "stand-up exposes all four poses");
                 animator.ResumeWalkingAfterSeating();
                 AssertTrue(animator.enabled, "DirectionalSpriteAnimator remains enabled after seating");
             }
@@ -405,6 +418,32 @@ namespace FamilyCompany.Editor
         {
             if (!EqualityComparer<T>.Default.Equals(expected, actual))
                 throw new InvalidOperationException($"{label}: expected {expected}, actual {actual}.");
+        }
+
+        private static void AssertApproximately(float expected, float actual, float tolerance, string label)
+        {
+            if (Mathf.Abs(expected - actual) > tolerance)
+                throw new InvalidOperationException($"{label}: expected {expected}, actual {actual}.");
+        }
+
+        private static void CompleteTransition(
+            DirectionalSpriteAnimator animator,
+            float expectedDuration,
+            string label)
+        {
+            const float tickSeconds = 0.01f;
+            var elapsed = 0f;
+            var previousProgress = animator.CurrentOfficeSeatingProgress01;
+            for (var tick = 0; tick < 200 && !animator.IsOfficeSeatingTransitionComplete; tick++)
+            {
+                animator.Tick(tickSeconds);
+                elapsed += tickSeconds;
+                float progress = animator.CurrentOfficeSeatingProgress01;
+                AssertTrue(progress + 0.000001f >= previousProgress, label + " progress is monotonic");
+                previousProgress = progress;
+            }
+            AssertTrue(animator.IsOfficeSeatingTransitionComplete, label + " completes");
+            AssertApproximately(expectedDuration, elapsed, tickSeconds + 0.0001f, label + " elapsed time");
         }
 
         private sealed class ValidationFixture : IDisposable
