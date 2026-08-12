@@ -278,6 +278,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     AddIfOpen(result, new OfficeGridCoordinate(x - 1, y));
                     AddIfOpen(result, new OfficeGridCoordinate(x, y + 1));
                     AddIfOpen(result, new OfficeGridCoordinate(x, y - 1));
+                    AddIfOpen(result, new OfficeGridCoordinate(x + 2, y));
+                    AddIfOpen(result, new OfficeGridCoordinate(x - 2, y));
+                    AddIfOpen(result, new OfficeGridCoordinate(x, y + 2));
+                    AddIfOpen(result, new OfficeGridCoordinate(x, y - 2));
                 }
             }
             return result.OrderBy(item => item.Y).ThenBy(item => item.X).ToList();
@@ -309,8 +313,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void AddIfOpen(ISet<OfficeGridCoordinate> result, OfficeGridCoordinate cell)
         {
-            if (_grid.Contains(cell) && _occupancy.IsCellPassable(cell, string.Empty, string.Empty, false))
-                result.Add(cell);
+            if (!_grid.Contains(cell) ||
+                !_occupancy.IsCellPassable(cell, string.Empty, string.Empty, false)) return;
+            Vector3 center3 = _presenter.CellCenterWorld(cell);
+            var center = new Vector2(center3.x, center3.y);
+            if (_occupancy.CanTraverseStatic(
+                    center,
+                    center,
+                    OfficeRuntimeAgent.DefaultRadius,
+                    string.Empty)) result.Add(cell);
         }
 
         private static string MemberIdFromSeat(string seatId)
