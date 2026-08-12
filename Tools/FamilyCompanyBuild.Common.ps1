@@ -85,7 +85,10 @@ function Invoke-CanonicalGitText {
         $previousErrorActionPreference = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
         try {
-            $output = & git -C $ProjectPath @Arguments 2> $standardErrorPath
+            # The managed Codex workspace can be owned by its sandbox service account while
+            # this build runs as the signed-in Windows user. Trust only the already-validated
+            # canonical project path instead of mutating the user's global Git configuration.
+            $output = & git -c "safe.directory=$ProjectPath" -C $ProjectPath @Arguments 2> $standardErrorPath
             $exitCode = $LASTEXITCODE
         }
         finally {
