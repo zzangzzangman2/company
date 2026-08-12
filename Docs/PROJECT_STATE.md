@@ -328,3 +328,11 @@ Unity: 6000.3.21f1
 - 착석 애니메이션은 이번 단계에서 열지 않았다. SafeStaticWork frame 0, 공통 scale 1.55, 승인 좌판 접점,
   chair base < character < limited chair front 정본을 유지한다. 다음 감사 단계는 거리 기반 gait phase,
   start/stop/idle 표현, 경로 smoothing, 전체 보행 frame 육안 QA, 승인된 착석 다중 frame 순이다.
+## 2026-08-12 / Post-push P2 가구 4×4 서브셀 충돌
+
+- 가구 충돌을 의미 셀 전체 사각형에서 gameplay 전용 OfficeFurnitureCollisionCatalog로 교체했다. 12종 가구가 4×4-per-cell 마스크와 clearance padding을 가지며 미등록·크기/방향 불일치는 전체 셀 fallback으로 막힌다.
+- 레이아웃에서 가구 때문에 walkable=false인 셀과 실제 비보행 바닥을 분리했다. 직접 이동, NPC A*, 좁은 통로, 회전의자 Interaction, 책상 좌석 예외가 모두 같은 OfficeRuntimeOccupancy 마스크를 사용한다.
+- 프로필 전용 Unity QA가 profiles 12, authored subcells 288, fallback subcells 16, production-radius full-cell false positives removed 78로 PASS했다.
+- 전체 충돌 매트릭스는 스타터 가구 10종 + 회전의자 + 벽, 8방향, 가족 4명, 직접/NPC, 30/60/120fps, TimeScale 1/2/4, 저속/고속 10,368건을 검증한다. 상세 산출물은 Artifacts/OfficeFurnitureCollisionQa에 기록한다.
+- 완료 기록: Docs/FAMILY_COMPANY_POST_PUSH_P2_SUBCELL_COLLISION_COMPLETION_2026-08-12.md
+- 다음 P2: 이동 시작/정지/idle/방향 전환 표현 보강.

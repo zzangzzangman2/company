@@ -1,0 +1,140 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a91c6d8f3be24aa897cc9f2f2636a701, type: 3}
+  m_Name: OfficeFurnitureCollisionCatalog
+  m_EditorClassIdentifier: FamilyCompany.Presentation.Unity::FamilyCompany.Presentation.Unity.OfficeGridView.Authoring.OfficeFurnitureCollisionCatalog
+  profileVersion: 1
+  profiles:
+  - kindId: desk_with_pc
+    facing: 0
+    semanticFootprintWidth: 2
+    semanticFootprintHeight: 1
+    clearancePadding: 0.02
+    occupiedRows:
+    - .######.
+    - '########'
+    - '########'
+    - .######.
+  - kindId: swivel_chair
+    facing: 2
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 1
+    clearancePadding: 0.01
+    occupiedRows:
+    - .##.
+    - '####'
+    - '####'
+    - .##.
+  - kindId: reception_counter
+    facing: 0
+    semanticFootprintWidth: 2
+    semanticFootprintHeight: 1
+    clearancePadding: 0.02
+    occupiedRows:
+    - .######.
+    - '########'
+    - '########'
+    - .######.
+  - kindId: meeting_table
+    facing: 0
+    semanticFootprintWidth: 2
+    semanticFootprintHeight: 1
+    clearancePadding: 0.02
+    occupiedRows:
+    - .######.
+    - .######.
+    - .######.
+    - .######.
+  - kindId: document_bookcase
+    facing: 0
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 1
+    clearancePadding: 0.02
+    occupiedRows:
+    - .##.
+    - '####'
+    - '####'
+    - .##.
+  - kindId: fax_copier
+    facing: 0
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 1
+    clearancePadding: 0.02
+    occupiedRows:
+    - .##.
+    - '####'
+    - '####'
+    - .##.
+  - kindId: water_dispenser
+    facing: 0
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 1
+    clearancePadding: 0.02
+    occupiedRows:
+    - .##.
+    - .##.
+    - '####'
+    - .##.
+  - kindId: sofa
+    facing: 0
+    semanticFootprintWidth: 2
+    semanticFootprintHeight: 1
+    clearancePadding: 0.02
+    occupiedRows:
+    - .######.
+    - '########'
+    - '########'
+    - .######.
+  - kindId: coffee_table
+    facing: 0
+    semanticFootprintWidth: 2
+    semanticFootprintHeight: 1
+    clearancePadding: 0.01
+    occupiedRows:
+    - ..####..
+    - .######.
+    - .######.
+    - ..####..
+  - kindId: potted_plant
+    facing: 0
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 1
+    clearancePadding: 0.01
+    occupiedRows:
+    - '....'
+    - .##.
+    - .##.
+    - '....'
+  - kindId: partition
+    facing: 2
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 2
+    clearancePadding: 0.02
+    occupiedRows:
+    - .##.
+    - .##.
+    - .##.
+    - .##.
+    - .##.
+    - .##.
+    - .##.
+    - .##.
+  - kindId: filing_cabinet
+    facing: 0
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 1
+    clearancePadding: 0.02
+    occupiedRows:
+    - .##.
+    - '####'
+    - '####'
+    - .##.

@@ -265,3 +265,8 @@ SittingDown·Working·FinishingWork·StandingUp 전 구간에 유지한다. 공�
 이유: 4배속 플레이어 QA에서 기존 누적 while이 한 렌더 틱에 SitDown 두 장을 건너뛰는 결함을
 재현했다. 틱당 한 장 전진으로 바꾼 뒤 네 가족 모두 SitDown 4/4, Work 6/6, StandUp 4/4,
 anchor error 0.000px, rotation 0°, scale deviation 0%, agent penetration 0으로 통과했다.
+## 2026-08-12 / 가구 충돌은 시각 footprint와 분리한 4×4 gameplay profile이 소유한다
+
+결정: OfficeFurnitureCollisionCatalog에 가구 종류·방향·의미 footprint 크기별 4×4 서브셀 마스크와 clearance padding을 기록한다. 직접 이동, NPC 경로 탐색, 좁은 통로, Interaction 좌석은 모두 OfficeRuntimeOccupancy의 동일한 반지름 확장 마스크를 사용한다. 프로필이 없거나 배치 크기·방향이 다르면 기존 전체 셀 충돌로 fail-closed 한다. 시각 정렬용 groundFootprintPolygonPx는 충돌 정본으로 사용하지 않는다.
+
+이유: 전체 의미 셀 사각형은 화분·커피 테이블·의자처럼 실제 바닥 실루엣이 작은 물체 주변에서 보이지 않는 벽을 만든다. 반대로 시각 스프라이트의 footprint는 정렬과 가림을 위한 값이라 gameplay clearance와 변경 주기가 다르다. 전용 마스크를 두면 현재 가족 반지름을 보존하면서 모서리 오탐을 줄이고, 미등록 콘텐츠는 안전하게 기존 동작을 유지할 수 있다.

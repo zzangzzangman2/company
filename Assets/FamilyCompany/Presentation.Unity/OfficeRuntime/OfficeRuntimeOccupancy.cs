@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
+using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
@@ -17,6 +18,53 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
     public sealed class OfficeRuntimeOccupancy
     {
+        private sealed class FurnitureObstacle
+        {
+            public PlacedOfficeFurniture Furniture;
+            public OfficeFurnitureCollisionProfile Profile;
+            public OfficeRuntimeOccupancyLayer Layer;
+            public string InteractionSeatId = string.Empty;
+            public readonly HashSet<string> PermittedWorkSurfaceSeatIds =
+                new HashSet<string>(StringComparer.Ordinal);
+
+            public bool IsPermitted(string permittedSeatId)
+            {
+                if (permittedSeatId.Length == 0) return false;
+                return string.Equals(InteractionSeatId, permittedSeatId, StringComparison.Ordinal) ||
+                       PermittedWorkSurfaceSeatIds.Contains(permittedSeatId);
+            }
+        }
+
+        private readonly struct ContinuousGridTransform
+        {
+            public ContinuousGridTransform(Vector2 origin, Vector2 basisX, Vector2 basisY)
+            {
+                Origin = origin;
+                BasisX = basisX;
+                BasisY = basisY;
+                Determinant = basisX.x * basisY.y - basisX.y * basisY.x;
+            }
+
+            public Vector2 Origin { get; }
+            public Vector2 BasisX { get; }
+            public Vector2 BasisY { get; }
+            public float Determinant { get; }
+
+            public bool TryConvert(Vector2 point, out float gridX, out float gridY)
+            {
+                if (Mathf.Abs(Determinant) <= 0.000001f)
+                {
+                    gridX = 0f;
+                    gridY = 0f;
+                    return false;
+                }
+                Vector2 delta = point - Origin;
+                gridX = (delta.x * BasisY.y - delta.y * BasisY.x) / Determinant;
+                gridY = (BasisX.x * delta.y - BasisX.y * delta.x) / Determinant;
+                return true;
+            }
+        }
+
         private sealed class ActorState
         {
             public string AgentId;
@@ -29,11 +77,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 new HashSet<OfficeGridCoordinate>();
         }
 
-        private readonly HashSet<OfficeGridCoordinate> _hard = new HashSet<OfficeGridCoordinate>();
+        private static readonly Vector2[] CollisionDirections =
+        {
+            Vector2.zero,
+            Vector2.right, Vector2.left, Vector2.up, Vector2.down,
+            new Vector2(0.7071f, 0.7071f), new Vector2(-0.7071f, 0.7071f),
+            new Vector2(0.7071f, -0.7071f), new Vector2(-0.7071f, -0.7071f)
+        };
+
+        private readonly HashSet<OfficeGridCoordinate> _hardFloor =
+            new HashSet<OfficeGridCoordinate>();
+        private readonly List<FurnitureObstacle> _furnitureObstacles =
+            new List<FurnitureObstacle>();
         private readonly Dictionary<OfficeGridCoordinate, string> _interactionSeats =
             new Dictionary<OfficeGridCoordinate, string>();
-        private readonly Dictionary<OfficeGridCoordinate, string> _seatWorkSurfaceCells =
-            new Dictionary<OfficeGridCoordinate, string>();
+        private readonly HashSet<string> _profiledInteractionSeatIds =
+            new HashSet<string>(StringComparer.Ordinal);
         private readonly Dictionary<string, ActorState> _actors =
             new Dictionary<string, ActorState>(StringComparer.Ordinal);
         private readonly Dictionary<OfficeGridCoordinate, int> _narrowCorridorIds =
@@ -67,36 +126,67 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
-            _hard.Clear();
+            _hardFloor.Clear();
+            _furnitureObstacles.Clear();
             _interactionSeats.Clear();
-            _seatWorkSurfaceCells.Clear();
+            _profiledInteractionSeatIds.Clear();
             _narrowCorridorIds.Clear();
             _narrowCorridorOwners.Clear();
-            for (var y = 0; y < grid.Height; y++)
-            for (var x = 0; x < grid.Width; x++)
-            {
-                var cell = new OfficeGridCoordinate(x, y);
-                if (!grid.IsWalkable(cell)) _hard.Add(cell);
-            }
-
-            foreach (var furniture in grid.Furniture)
+            var blockingFurnitureCells = new HashSet<OfficeGridCoordinate>();
+            foreach (PlacedOfficeFurniture furniture in grid.Furniture)
             {
                 if (!furniture.BlocksMovement) continue;
                 for (var y = furniture.Origin.Y; y < furniture.Origin.Y + furniture.Height; y++)
                 for (var x = furniture.Origin.X; x < furniture.Origin.X + furniture.Width; x++)
-                    _hard.Add(new OfficeGridCoordinate(x, y));
+                    blockingFurnitureCells.Add(new OfficeGridCoordinate(x, y));
+            }
+            for (var y = 0; y < grid.Height; y++)
+            for (var x = 0; x < grid.Width; x++)
+            {
+                var cell = new OfficeGridCoordinate(x, y);
+                // Authored layouts also mark cells beneath blocking furniture as unwalkable.
+                // Those cells must be removed from floor occupancy so the furniture's precise
+                // subcell mask, rather than the old whole-cell rectangle, owns the collision.
+                if (!grid.IsWalkable(cell) && !blockingFurnitureCells.Contains(cell))
+                    _hardFloor.Add(cell);
             }
 
-            foreach (var seat in grid.SeatSlots) _interactionSeats[seat.Cell] = seat.SeatId;
+            OfficeFurnitureCollisionCatalog catalog =
+                Resources.Load<OfficeFurnitureCollisionCatalog>(
+                    OfficeFurnitureCollisionCatalog.DefaultResourcePath);
+            if (catalog != null) catalog.Validate();
+            var obstaclesByFurnitureId = new Dictionary<string, FurnitureObstacle>(StringComparer.Ordinal);
+            foreach (PlacedOfficeFurniture furniture in grid.Furniture)
+            {
+                if (!furniture.BlocksMovement) continue;
+                var obstacle = CreateObstacle(
+                    furniture,
+                    OfficeRuntimeOccupancyLayer.StaticHard,
+                    string.Empty,
+                    catalog);
+                _furnitureObstacles.Add(obstacle);
+                obstaclesByFurnitureId[furniture.FurnitureId] = obstacle;
+            }
+
             foreach (OfficeSeatSlot seat in grid.SeatSlots)
             {
+                _interactionSeats[seat.Cell] = seat.SeatId;
+                PlacedOfficeFurniture seatFurniture = grid.Furniture.FirstOrDefault(item =>
+                    string.Equals(item.FurnitureId, seat.FurnitureId, StringComparison.Ordinal));
+                if (seatFurniture != null && !seatFurniture.BlocksMovement)
+                {
+                    _furnitureObstacles.Add(CreateObstacle(
+                        seatFurniture,
+                        OfficeRuntimeOccupancyLayer.Interaction,
+                        seat.SeatId,
+                        catalog));
+                    _profiledInteractionSeatIds.Add(seat.SeatId);
+                }
                 if (!seat.HasWorkstationBinding) continue;
-                PlacedOfficeFurniture workSurface = grid.Furniture.FirstOrDefault(item =>
-                    string.Equals(item.FurnitureId, seat.WorkSurfaceFurnitureId, StringComparison.Ordinal));
-                if (workSurface == null) continue;
-                for (var y = workSurface.Origin.Y; y < workSurface.Origin.Y + workSurface.Height; y++)
-                for (var x = workSurface.Origin.X; x < workSurface.Origin.X + workSurface.Width; x++)
-                    _seatWorkSurfaceCells[new OfficeGridCoordinate(x, y)] = seat.SeatId;
+                if (obstaclesByFurnitureId.TryGetValue(
+                        seat.WorkSurfaceFurnitureId,
+                        out FurnitureObstacle workSurfaceObstacle))
+                    workSurfaceObstacle.PermittedWorkSurfaceSeatIds.Add(seat.SeatId);
             }
             BuildNarrowCorridorComponents();
             foreach (var actor in _actors.Values) actor.Reservations.Clear();
@@ -229,9 +319,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string permittedSeatId,
             bool includeDynamic)
         {
-            if (_grid == null || !_grid.Contains(cell) || _hard.Contains(cell)) return false;
-            if (_interactionSeats.TryGetValue(cell, out string seatId) &&
-                !string.Equals(seatId, permittedSeatId, StringComparison.Ordinal)) return false;
+            if (_grid == null || !_grid.Contains(cell)) return false;
+            Vector3 center = _presenter.CellCenterWorld(cell);
+            if (!PointClearsStatic(
+                    new Vector2(center.x, center.y),
+                    OfficeRuntimeAgent.DefaultRadius,
+                    permittedSeatId ?? string.Empty,
+                    out _)) return false;
             if (!includeDynamic) return true;
             foreach (ActorState peer in _actors.Values)
             {
@@ -393,8 +487,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
         }
 
-        private bool IsStaticOpen(OfficeGridCoordinate cell) =>
-            _grid.Contains(cell) && !_hard.Contains(cell) && !_interactionSeats.ContainsKey(cell);
+        private bool IsStaticOpen(OfficeGridCoordinate cell)
+        {
+            if (!_grid.Contains(cell)) return false;
+            Vector3 center = _presenter.CellCenterWorld(cell);
+            return PointClearsStatic(
+                new Vector2(center.x, center.y),
+                OfficeRuntimeAgent.DefaultRadius,
+                string.Empty,
+                out _);
+        }
 
         private void ReleaseExitedNarrowCorridors(ActorState actor)
         {
@@ -426,45 +528,111 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string permittedSeatId,
             out OfficeRuntimeOccupancyLayer blockedLayer)
         {
-            var offsets = new[]
+            string permitted = permittedSeatId ?? string.Empty;
+            foreach (Vector2 direction in CollisionDirections)
             {
-                Vector2.zero,
-                new Vector2(radius, 0f), new Vector2(-radius, 0f),
-                new Vector2(0f, radius), new Vector2(0f, -radius),
-                new Vector2(radius * 0.7071f, radius * 0.7071f),
-                new Vector2(-radius * 0.7071f, radius * 0.7071f),
-                new Vector2(radius * 0.7071f, -radius * 0.7071f),
-                new Vector2(-radius * 0.7071f, -radius * 0.7071f)
-            };
-            foreach (Vector2 offset in offsets)
-            {
+                Vector2 samplePoint = point + direction * radius;
                 OfficeGridCoordinate cell = _presenter.NearestCell(
-                    new Vector3(point.x + offset.x, point.y + offset.y, 0f));
+                    new Vector3(samplePoint.x, samplePoint.y, 0f));
                 if (!_grid.Contains(cell))
                 {
                     blockedLayer = OfficeRuntimeOccupancyLayer.StaticHard;
                     return false;
                 }
-                if (_hard.Contains(cell))
+                if (_hardFloor.Contains(cell))
                 {
-                    bool permittedWorkSurface = permittedSeatId.Length > 0 &&
-                                                _seatWorkSurfaceCells.TryGetValue(cell, out string ownerSeatId) &&
-                                                string.Equals(ownerSeatId, permittedSeatId, StringComparison.Ordinal);
-                    if (!permittedWorkSurface)
-                    {
-                        blockedLayer = OfficeRuntimeOccupancyLayer.StaticHard;
-                        return false;
-                    }
+                    blockedLayer = OfficeRuntimeOccupancyLayer.StaticHard;
+                    return false;
                 }
                 if (_interactionSeats.TryGetValue(cell, out string seatId) &&
-                    !string.Equals(seatId, permittedSeatId, StringComparison.Ordinal))
+                    !_profiledInteractionSeatIds.Contains(seatId) &&
+                    !string.Equals(seatId, permitted, StringComparison.Ordinal))
                 {
                     blockedLayer = OfficeRuntimeOccupancyLayer.Interaction;
                     return false;
                 }
             }
+
+            ContinuousGridTransform gridTransform = CaptureContinuousGridTransform();
+            foreach (FurnitureObstacle obstacle in _furnitureObstacles)
+            {
+                if (obstacle.IsPermitted(permitted)) continue;
+                float expandedRadius = radius + (obstacle.Profile?.ClearancePadding ?? 0f);
+                foreach (Vector2 direction in CollisionDirections)
+                {
+                    Vector2 samplePoint = point + direction * expandedRadius;
+                    if (!PointInsideObstacle(samplePoint, obstacle, gridTransform)) continue;
+                    blockedLayer = obstacle.Layer;
+                    return false;
+                }
+            }
             blockedLayer = default;
             return true;
+        }
+
+        private static FurnitureObstacle CreateObstacle(
+            PlacedOfficeFurniture furniture,
+            OfficeRuntimeOccupancyLayer layer,
+            string interactionSeatId,
+            OfficeFurnitureCollisionCatalog catalog)
+        {
+            OfficeFurnitureCollisionProfile profile = null;
+            catalog?.TryResolve(
+                furniture.KindId,
+                furniture.Facing,
+                furniture.Width,
+                furniture.Height,
+                out profile);
+            return new FurnitureObstacle
+            {
+                Furniture = furniture,
+                Profile = profile,
+                Layer = layer,
+                InteractionSeatId = interactionSeatId ?? string.Empty
+            };
+        }
+
+        private bool PointInsideObstacle(
+            Vector2 point,
+            FurnitureObstacle obstacle,
+            ContinuousGridTransform gridTransform)
+        {
+            if (!gridTransform.TryConvert(point, out float gridX, out float gridY))
+                return false;
+            PlacedOfficeFurniture furniture = obstacle.Furniture;
+            float localX = gridX - furniture.Origin.X + 0.5f;
+            float localY = gridY - furniture.Origin.Y + 0.5f;
+            if (localX < 0f || localY < 0f || localX >= furniture.Width || localY >= furniture.Height)
+                return false;
+            if (obstacle.Profile == null) return true;
+            int subcellX = Mathf.Min(
+                furniture.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell - 1,
+                Mathf.FloorToInt(localX * OfficeFurnitureCollisionCatalog.SubcellsPerCell));
+            int subcellY = Mathf.Min(
+                furniture.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell - 1,
+                Mathf.FloorToInt(localY * OfficeFurnitureCollisionCatalog.SubcellsPerCell));
+            return obstacle.Profile.IsOccupied(subcellX, subcellY);
+        }
+
+        private ContinuousGridTransform CaptureContinuousGridTransform()
+        {
+            Vector3 center00 = _presenter.CellCenterWorld(new OfficeGridCoordinate(0, 0));
+            Vector3 center10 = _grid.Width > 1
+                ? _presenter.CellCenterWorld(new OfficeGridCoordinate(1, 0))
+                : center00 + new Vector3(
+                    OfficeGridTilemapPresenter.TileWorldWidth * 0.5f,
+                    OfficeGridTilemapPresenter.TileWorldHeight * 0.5f,
+                    0f);
+            Vector3 center01 = _grid.Height > 1
+                ? _presenter.CellCenterWorld(new OfficeGridCoordinate(0, 1))
+                : center00 + new Vector3(
+                    -OfficeGridTilemapPresenter.TileWorldWidth * 0.5f,
+                    OfficeGridTilemapPresenter.TileWorldHeight * 0.5f,
+                    0f);
+            var origin = new Vector2(center00.x, center00.y);
+            var basisX = new Vector2(center10.x - center00.x, center10.y - center00.y);
+            var basisY = new Vector2(center01.x - center00.x, center01.y - center00.y);
+            return new ContinuousGridTransform(origin, basisX, basisY);
         }
 
         private ActorState RequiredActor(string agentId)

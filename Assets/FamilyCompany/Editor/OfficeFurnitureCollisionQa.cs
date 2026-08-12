@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
+using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
@@ -53,7 +54,20 @@ namespace FamilyCompany.Editor
             Debug.Log(
                 "FAMILY_COMPANY_OFFICE_FURNITURE_COLLISION_QA: PASS | " +
                 $"targets={report.targets.Count} cases={report.totalCases} " +
+                $"profiles={report.authoredProfileCount} subcells={report.profileSubcellChecks} " +
+                $"defaultRadiusClearances={report.defaultRadiusClearances} " +
                 $"maxStopVariance={report.maximumStopVariance:F5} artifacts={OutputDirectory()}");
+        }
+
+        [MenuItem("Family Company/QA/Office Furniture Collision Profiles Only")]
+        public static void RunProfilesOnly()
+        {
+            CollisionProfileValidationResult result = ValidateCollisionProfiles(BuildTargetSpecs());
+            Debug.Log(
+                "FAMILY_COMPANY_OFFICE_FURNITURE_COLLISION_PROFILES: PASS | " +
+                $"profiles={result.AuthoredProfileCount} subcells={result.SubcellChecks} " +
+                $"fallbackSubcells={result.FallbackSubcellChecks} " +
+                $"defaultRadiusClearances={result.DefaultRadiusClearances}");
         }
 
         private static CollisionReport Execute()
@@ -62,34 +76,8 @@ namespace FamilyCompany.Editor
             SemanticOfficeGrid starter = asset == null
                 ? OfficeGridLayouts.CreateStarterOfficeV1()
                 : asset.BuildGrid();
-            List<TargetSpec> specs = starter.Furniture
-                .Where(item => item.BlocksMovement)
-                .GroupBy(item => item.KindId, StringComparer.Ordinal)
-                .Select(group => group.OrderBy(item => item.FurnitureId, StringComparer.Ordinal).First())
-                .OrderBy(item => item.KindId, StringComparer.Ordinal)
-                .Select(item => new TargetSpec(
-                    item.KindId,
-                    item.Width,
-                    item.Height,
-                    item.Facing,
-                    false,
-                    false))
-                .ToList();
-            specs.Add(new TargetSpec(
-                OfficeGridLayouts.SwivelChairKind,
-                1,
-                1,
-                OfficeFurnitureFacing.NorthWest,
-                true,
-                false));
-            specs.Add(new TargetSpec(
-                "wall_unwalkable_floor",
-                1,
-                1,
-                OfficeFurnitureFacing.SouthEast,
-                false,
-                true));
-            specs = specs.OrderBy(item => item.KindId, StringComparer.Ordinal).ToList();
+            List<TargetSpec> specs = BuildTargetSpecs(starter);
+            CollisionProfileValidationResult profileValidation = ValidateCollisionProfiles(specs);
 
             var report = new CollisionReport
             {
@@ -97,7 +85,11 @@ namespace FamilyCompany.Editor
                 layoutHash = starter.ComputeLayoutHash(),
                 frameRates = (int[])FrameRates.Clone(),
                 timeScales = (int[])TimeScales.Clone(),
-                members = (string[])Members.Clone()
+                members = (string[])Members.Clone(),
+                authoredProfileCount = profileValidation.AuthoredProfileCount,
+                profileSubcellChecks = profileValidation.SubcellChecks,
+                fallbackSubcellChecks = profileValidation.FallbackSubcellChecks,
+                defaultRadiusClearances = profileValidation.DefaultRadiusClearances
             };
             var varianceGroups = new Dictionary<string, List<Vector2>>(StringComparer.Ordinal);
             var imageEndpoints = new Dictionary<string, List<ImageEndpoint>>(StringComparer.Ordinal);
@@ -259,6 +251,190 @@ namespace FamilyCompany.Editor
                 BuildMarkdown(report),
                 new UTF8Encoding(false));
             return report;
+        }
+
+        private static List<TargetSpec> BuildTargetSpecs(SemanticOfficeGrid starter = null)
+        {
+            if (starter == null)
+            {
+                StarterOfficeLayoutAsset asset = StarterOfficeLayoutAsset.LoadDefault();
+                starter = asset == null ? OfficeGridLayouts.CreateStarterOfficeV1() : asset.BuildGrid();
+            }
+            List<TargetSpec> specs = starter.Furniture
+                .Where(item => item.BlocksMovement)
+                .GroupBy(item => item.KindId, StringComparer.Ordinal)
+                .Select(group => group.OrderBy(item => item.FurnitureId, StringComparer.Ordinal).First())
+                .OrderBy(item => item.KindId, StringComparer.Ordinal)
+                .Select(item => new TargetSpec(
+                    item.KindId,
+                    item.Width,
+                    item.Height,
+                    item.Facing,
+                    false,
+                    false))
+                .ToList();
+            specs.Add(new TargetSpec(
+                OfficeGridLayouts.SwivelChairKind,
+                1,
+                1,
+                OfficeFurnitureFacing.NorthWest,
+                true,
+                false));
+            specs.Add(new TargetSpec(
+                "wall_unwalkable_floor",
+                1,
+                1,
+                OfficeFurnitureFacing.SouthEast,
+                false,
+                true));
+            specs = specs.OrderBy(item => item.KindId, StringComparer.Ordinal).ToList();
+            return specs;
+        }
+
+        private static CollisionProfileValidationResult ValidateCollisionProfiles(
+            IReadOnlyList<TargetSpec> specs)
+        {
+            OfficeFurnitureCollisionCatalog catalog =
+                Resources.Load<OfficeFurnitureCollisionCatalog>(
+                    OfficeFurnitureCollisionCatalog.DefaultResourcePath);
+            if (catalog == null)
+                throw new InvalidOperationException("Default office furniture collision catalog is missing.");
+            catalog.Validate();
+
+            var profileSpecs = specs.Where(item => !item.IsWall).ToList();
+            foreach (OfficeFurnitureCollisionProfile catalogProfile in catalog.Profiles)
+            {
+                bool alreadyCovered = profileSpecs.Any(item =>
+                    string.Equals(item.KindId, catalogProfile.KindId, StringComparison.Ordinal) &&
+                    item.Facing == catalogProfile.Facing &&
+                    item.Width == catalogProfile.SemanticFootprintWidth &&
+                    item.Height == catalogProfile.SemanticFootprintHeight);
+                if (alreadyCovered) continue;
+                profileSpecs.Add(new TargetSpec(
+                    catalogProfile.KindId,
+                    catalogProfile.SemanticFootprintWidth,
+                    catalogProfile.SemanticFootprintHeight,
+                    catalogProfile.Facing,
+                    string.Equals(
+                        catalogProfile.KindId,
+                        OfficeGridLayouts.SwivelChairKind,
+                        StringComparison.Ordinal),
+                    false));
+            }
+
+            var result = new CollisionProfileValidationResult();
+            var failures = new List<string>();
+            foreach (TargetSpec spec in profileSpecs)
+            {
+                if (!catalog.TryResolve(
+                        spec.KindId,
+                        spec.Facing,
+                        spec.Width,
+                        spec.Height,
+                        out OfficeFurnitureCollisionProfile profile))
+                {
+                    failures.Add($"missing authored profile {spec.KindId}/{spec.Facing} {spec.Width}x{spec.Height}");
+                    continue;
+                }
+
+                result.AuthoredProfileCount++;
+                using (var fixture = new Fixture(spec))
+                {
+                    int subcellWidth = spec.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    int subcellHeight = spec.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    for (var subcellY = 0; subcellY < subcellHeight; subcellY++)
+                    for (var subcellX = 0; subcellX < subcellWidth; subcellX++)
+                    {
+                        Vector2 point = fixture.FurnitureLocalPoint(
+                            (subcellX + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell,
+                            (subcellY + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell);
+                        bool expectedOccupied = profile.IsOccupied(subcellX, subcellY);
+                        bool clearsTinyProbe = fixture.Occupancy.CanTraverseStatic(
+                            point,
+                            point,
+                            0.005f,
+                            string.Empty);
+                        result.SubcellChecks++;
+                        if (clearsTinyProbe == expectedOccupied)
+                            failures.Add(
+                                $"{spec.KindId} subcell ({subcellX},{subcellY}) " +
+                                $"expected {(expectedOccupied ? "occupied" : "open")}");
+                    }
+
+                    if (spec.IsChair)
+                    {
+                        Vector2 seatCenter = fixture.FurnitureLocalPoint(0.5f, 0.5f);
+                        if (!fixture.Occupancy.CanTraverseStatic(
+                                seatCenter,
+                                seatCenter,
+                                OfficeRuntimeAgent.DefaultRadius,
+                                "qa_chair_seat"))
+                            failures.Add("swivel_chair owner cannot enter its permitted interaction profile");
+                    }
+                }
+
+                var fallbackComparisonSpec = new TargetSpec(
+                    "qa_unregistered_furniture",
+                    spec.Width,
+                    spec.Height,
+                    spec.Facing,
+                    false,
+                    false);
+                using (var authoredFixture = new Fixture(spec))
+                using (var fallbackFixture = new Fixture(fallbackComparisonSpec))
+                {
+                    int scanWidth = spec.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    int scanHeight = spec.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    for (var scanY = -2; scanY <= scanHeight + 1; scanY++)
+                    for (var scanX = -2; scanX <= scanWidth + 1; scanX++)
+                    {
+                        float localX = (scanX + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                        float localY = (scanY + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                        Vector2 authoredPoint = authoredFixture.FurnitureLocalPoint(localX, localY);
+                        Vector2 fallbackPoint = fallbackFixture.FurnitureLocalPoint(localX, localY);
+                        bool authoredClears = authoredFixture.Occupancy.CanTraverseStatic(
+                            authoredPoint,
+                            authoredPoint,
+                            OfficeRuntimeAgent.DefaultRadius,
+                            string.Empty);
+                        bool fullCellFallbackBlocks = !fallbackFixture.Occupancy.CanTraverseStatic(
+                            fallbackPoint,
+                            fallbackPoint,
+                            OfficeRuntimeAgent.DefaultRadius,
+                            string.Empty);
+                        if (authoredClears && fullCellFallbackBlocks)
+                            result.DefaultRadiusClearances++;
+                    }
+                }
+            }
+
+            var fallbackSpec = new TargetSpec(
+                "qa_unregistered_furniture",
+                1,
+                1,
+                OfficeFurnitureFacing.SouthEast,
+                false,
+                false);
+            using (var fixture = new Fixture(fallbackSpec))
+            {
+                for (var subcellY = 0; subcellY < OfficeFurnitureCollisionCatalog.SubcellsPerCell; subcellY++)
+                for (var subcellX = 0; subcellX < OfficeFurnitureCollisionCatalog.SubcellsPerCell; subcellX++)
+                {
+                    Vector2 point = fixture.FurnitureLocalPoint(
+                        (subcellX + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell,
+                        (subcellY + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell);
+                    result.FallbackSubcellChecks++;
+                    if (fixture.Occupancy.CanTraverseStatic(point, point, 0.005f, string.Empty))
+                        failures.Add($"full-cell fallback left subcell ({subcellX},{subcellY}) open");
+                }
+            }
+
+            if (result.DefaultRadiusClearances == 0)
+                failures.Add("authored profiles remove no full-cell false positives at the production radius");
+            if (failures.Count > 0)
+                throw new InvalidOperationException(
+                    "Office furniture collision profile QA failed: " + string.Join("; ", failures.Take(40)));
+            return result;
         }
 
         private static CollisionCaseResult RunDirectCase(
@@ -589,6 +765,10 @@ namespace FamilyCompany.Editor
             text.AppendLine($"- Starter layout hash: `{report.layoutHash}`");
             text.AppendLine($"- Cases: **{report.totalCases}**");
             text.AppendLine($"- Failures: **{report.failedCases}**");
+            text.AppendLine($"- Authored 4x4 profiles: **{report.authoredProfileCount}**");
+            text.AppendLine($"- Authored subcell checks: **{report.profileSubcellChecks}**");
+            text.AppendLine($"- Full-cell fallback checks: **{report.fallbackSubcellChecks}**");
+            text.AppendLine($"- Full-cell false positives removed at the production radius: **{report.defaultRadiusClearances}**");
             text.AppendLine($"- Maximum 30/60/120fps stop variance: **{report.maximumStopVariance:F5}** world unit");
             text.AppendLine("- Matrix: 8 directions × 4 family members × player input/NPC path × " +
                             "30/60/120fps × TimeScale 1/2/4 × low/high speed");
@@ -646,7 +826,47 @@ namespace FamilyCompany.Editor
                 PlotPoint(extentX + extentY),
                 PlotPoint(-extentX + extentY)
             };
-            FillPolygon(texture, footprint, fill);
+            OfficeFurnitureCollisionCatalog collisionCatalog =
+                Resources.Load<OfficeFurnitureCollisionCatalog>(
+                    OfficeFurnitureCollisionCatalog.DefaultResourcePath);
+            OfficeFurnitureCollisionProfile profile = null;
+            bool hasProfile = !spec.IsWall && collisionCatalog != null &&
+                              collisionCatalog.TryResolve(
+                                  spec.KindId,
+                                  spec.Facing,
+                                  spec.Width,
+                                  spec.Height,
+                                  out profile);
+            if (hasProfile)
+            {
+                int subcellWidth = spec.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                int subcellHeight = spec.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                for (var subcellY = 0; subcellY < subcellHeight; subcellY++)
+                for (var subcellX = 0; subcellX < subcellWidth; subcellX++)
+                {
+                    if (!profile.IsOccupied(subcellX, subcellY)) continue;
+                    float minimumX = subcellX /
+                                     (float)OfficeFurnitureCollisionCatalog.SubcellsPerCell -
+                                     spec.Width * 0.5f;
+                    float minimumY = subcellY /
+                                     (float)OfficeFurnitureCollisionCatalog.SubcellsPerCell -
+                                     spec.Height * 0.5f;
+                    float maximumX = minimumX + 1f / OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    float maximumY = minimumY + 1f / OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    Vector2[] subcell =
+                    {
+                        PlotPoint(basisX * minimumX + basisY * minimumY),
+                        PlotPoint(basisX * maximumX + basisY * minimumY),
+                        PlotPoint(basisX * maximumX + basisY * maximumY),
+                        PlotPoint(basisX * minimumX + basisY * maximumY)
+                    };
+                    FillPolygon(texture, subcell, fill);
+                }
+            }
+            else
+            {
+                FillPolygon(texture, footprint, fill);
+            }
             for (var corner = 0; corner < footprint.Length; corner++)
             {
                 Vector2 from = footprint[corner];
@@ -824,6 +1044,17 @@ namespace FamilyCompany.Editor
             public OfficeRuntimeOccupancy Occupancy { get; }
             public OfficeRuntimePathService Paths { get; }
 
+            public Vector2 FurnitureLocalPoint(float localX, float localY)
+            {
+                Vector3 origin = Presenter.CellCenterWorld(TargetCell);
+                Vector3 basisX = Presenter.CellCenterWorld(
+                    new OfficeGridCoordinate(TargetCell.X + 1, TargetCell.Y)) - origin;
+                Vector3 basisY = Presenter.CellCenterWorld(
+                    new OfficeGridCoordinate(TargetCell.X, TargetCell.Y + 1)) - origin;
+                Vector3 world = origin + basisX * (localX - 0.5f) + basisY * (localY - 0.5f);
+                return new Vector2(world.x, world.y);
+            }
+
             public Vector2 FindSafeStart(Vector2 direction)
             {
                 if (_safeStarts.TryGetValue(direction, out Vector2 cached)) return cached;
@@ -938,9 +1169,21 @@ namespace FamilyCompany.Editor
             public string[] members;
             public int totalCases;
             public int failedCases;
+            public int authoredProfileCount;
+            public int profileSubcellChecks;
+            public int fallbackSubcellChecks;
+            public int defaultRadiusClearances;
             public float maximumStopVariance;
             public List<CollisionTargetResult> targets = new List<CollisionTargetResult>();
             public List<CollisionCaseResult> cases = new List<CollisionCaseResult>();
+        }
+
+        private sealed class CollisionProfileValidationResult
+        {
+            public int AuthoredProfileCount;
+            public int SubcellChecks;
+            public int FallbackSubcellChecks;
+            public int DefaultRadiusClearances;
         }
 
         [Serializable]
