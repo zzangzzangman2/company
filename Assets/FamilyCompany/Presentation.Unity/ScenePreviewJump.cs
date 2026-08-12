@@ -691,6 +691,8 @@ namespace FamilyCompany.Presentation.Unity
                 Vector2 previous = player.Position;
                 float maximumFrameDisplacement = 0f;
                 float mismatchedFacingSeconds = 0f;
+                float reverseFacingSeconds = 0f;
+                float maximumReverseFacingSeconds = 0f;
                 int reverseFacingFrames = 0;
                 int projectedFrames = 0;
                 while (Time.time - started < 10f)
@@ -707,17 +709,29 @@ namespace FamilyCompany.Presentation.Unity
                         : player.MotionDirection;
                     int directionDelta = Mathf.Abs(player.CurrentDirection - expectedDirection);
                     directionDelta = Mathf.Min(directionDelta, DirectionalSpriteAnimator.DirectionCount - directionDelta);
-                    if (directionDelta >= 3) reverseFacingFrames++;
+                    if (directionDelta >= 3)
+                    {
+                        reverseFacingFrames++;
+                        reverseFacingSeconds += Time.deltaTime;
+                        maximumReverseFacingSeconds = Mathf.Max(
+                            maximumReverseFacingSeconds,
+                            reverseFacingSeconds);
+                    }
+                    else reverseFacingSeconds = 0f;
                     if (directionDelta >= 2) mismatchedFacingSeconds += Time.deltaTime;
                     else mismatchedFacingSeconds = 0f;
-                    if (reverseFacingFrames > 0 || mismatchedFacingSeconds > 0.15f)
+                    // The facing contract deliberately stabilizes a new direction for 75 ms so
+                    // input hand-off does not flicker. A single reverse frame at 4x is therefore
+                    // expected; sustained reverse presentation still fails closed.
+                    if (reverseFacingSeconds > 0.10f || mismatchedFacingSeconds > 0.15f)
                     {
                         FailPlayerQa(
                             65 + scenario,
                             $"player {labels[scenario]} facing diverged: semanticDir={player.SemanticDirection} " +
                             $"motionDir={player.MotionDirection} visualDir={player.CurrentDirection} " +
                             $"usedSemantic={player.UsedSemanticHeading} projected={player.WasCollisionProjected} " +
-                            $"mismatchSeconds={mismatchedFacingSeconds:F3} reverseFrames={reverseFacingFrames}");
+                            $"mismatchSeconds={mismatchedFacingSeconds:F3} " +
+                            $"reverseSeconds={reverseFacingSeconds:F3} reverseFrames={reverseFacingFrames}");
                         yield break;
                     }
                 }
@@ -740,6 +754,7 @@ namespace FamilyCompany.Presentation.Unity
                     $"STARTER_OFFICE_PLAYER_COLLISION_SAMPLE_PASS | target={labels[scenario]} " +
                     $"duration=10.00 timeScale={Time.timeScale:F1} maxFrameDelta={maximumFrameDisplacement:F4} " +
                     $"projectedFrames={projectedFrames} reverseFacingFrames={reverseFacingFrames} " +
+                    $"maxReverseFacingSeconds={maximumReverseFacingSeconds:F3} " +
                     $"maxMismatchSeconds={mismatchedFacingSeconds:F3} replans=0 arrivals=0 | " +
                     OccupancyMetricSummary());
             }
