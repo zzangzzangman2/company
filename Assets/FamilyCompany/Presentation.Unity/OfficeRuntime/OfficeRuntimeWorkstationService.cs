@@ -114,6 +114,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 OfficeSemanticLocation.Printer => OfficeGridLayouts.FaxCopierKind,
                 OfficeSemanticLocation.MeetingRoom => OfficeGridLayouts.MeetingTableKind,
                 OfficeSemanticLocation.Lounge => OfficeGridLayouts.SofaKind,
+                OfficeSemanticLocation.Filing => OfficeGridLayouts.DocumentBookcaseKind,
+                OfficeSemanticLocation.Water => OfficeGridLayouts.WaterDispenserKind,
+                OfficeSemanticLocation.Coffee => OfficeGridLayouts.CoffeeTableKind,
                 _ => string.Empty
             };
             OfficeActivity activity = location switch
@@ -122,12 +125,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 OfficeSemanticLocation.Printer => OfficeActivity.Printing,
                 OfficeSemanticLocation.MeetingRoom => OfficeActivity.Meeting,
                 OfficeSemanticLocation.Lounge => OfficeActivity.Break,
+                OfficeSemanticLocation.Filing => OfficeActivity.Printing,
+                OfficeSemanticLocation.Water => OfficeActivity.Break,
+                OfficeSemanticLocation.Coffee => OfficeActivity.Break,
+                OfficeSemanticLocation.OpenArea => OfficeActivity.Break,
                 OfficeSemanticLocation.Exit => OfficeActivity.Outside,
                 _ => OfficeActivity.Walking
             };
             var candidates = location == OfficeSemanticLocation.Exit
                 ? ExitCandidates()
-                : InteractionCandidates(kind);
+                : location == OfficeSemanticLocation.OpenArea
+                    ? OpenAreaCandidates()
+                    : InteractionCandidates(kind);
             if (candidates.Count == 0)
             {
                 destination = default;
@@ -281,6 +290,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 var cell = new OfficeGridCoordinate(x, 1);
                 if (_occupancy.IsCellPassable(cell, string.Empty, string.Empty, false)) result.Add(cell);
+            }
+            return result;
+        }
+
+        private List<OfficeGridCoordinate> OpenAreaCandidates()
+        {
+            var result = new List<OfficeGridCoordinate>();
+            for (var y = 2; y < _grid.Height - 1; y++)
+            for (var x = 1; x < _grid.Width - 1; x++)
+            {
+                var cell = new OfficeGridCoordinate(x, y);
+                if (!_occupancy.IsCellPassable(cell, string.Empty, string.Empty, false)) continue;
+                result.Add(cell);
             }
             return result;
         }

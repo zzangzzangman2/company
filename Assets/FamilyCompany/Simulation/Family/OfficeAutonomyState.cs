@@ -31,7 +31,11 @@ namespace FamilyCompany.Simulation.Family
         Printer = 3,
         MeetingRoom = 4,
         Lounge = 5,
-        Exit = 6
+        Exit = 6,
+        Filing = 7,
+        Water = 8,
+        Coffee = 9,
+        OpenArea = 10
     }
 
     public sealed class OfficeAutonomyState
@@ -47,7 +51,8 @@ namespace FamilyCompany.Simulation.Family
             int burnoutCount = 0,
             string lastIncidentSummary = "",
             long lastIncidentMinute = -1,
-            long lastSocialEventDay = -1)
+            long lastSocialEventDay = -1,
+            OfficeMicroActionState microAction = null)
         {
             if (actionStartedMinute < 0) throw new ArgumentOutOfRangeException(nameof(actionStartedMinute));
             if (actionEndsMinute < 0) throw new ArgumentOutOfRangeException(nameof(actionEndsMinute));
@@ -69,6 +74,7 @@ namespace FamilyCompany.Simulation.Family
             LastIncidentSummary = lastIncidentSummary ?? string.Empty;
             LastIncidentMinute = lastIncidentMinute;
             LastSocialEventDay = lastSocialEventDay;
+            MicroAction = microAction ?? new OfficeMicroActionState();
         }
 
         public AutonomousOfficeAction CurrentAction { get; private set; }
@@ -82,6 +88,7 @@ namespace FamilyCompany.Simulation.Family
         public string LastIncidentSummary { get; private set; }
         public long LastIncidentMinute { get; private set; }
         public long LastSocialEventDay { get; private set; }
+        public OfficeMicroActionState MicroAction { get; }
 
         public string ActionLabel
         {

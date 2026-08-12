@@ -21,6 +21,7 @@ namespace FamilyCompany.Simulation.Family
                     ChooseNextAction(worldSeed, family, member, elapsedMinute);
                 }
             }
+            OfficePresentationMicroActionSimulation.EnsureActions(worldSeed, family, elapsedMinute);
         }
 
         public static void AdvanceTo(int worldSeed, FamilyState family, long elapsedMinute)
@@ -46,11 +47,14 @@ namespace FamilyCompany.Simulation.Family
                     ChooseNextAction(worldSeed, family, member, autonomy.LastProcessedMinute);
                 }
             }
+            OfficePresentationMicroActionSimulation.EnsureActions(worldSeed, family, firstProcessedMinute);
 
             var cursor = firstProcessedMinute;
             while (NextPulseBoundary(cursor) <= elapsedMinute)
             {
                 var boundary = NextPulseBoundary(cursor);
+                if (boundary > 0)
+                    OfficePresentationMicroActionSimulation.AdvanceTo(worldSeed, family, boundary - 1);
                 foreach (var member in family.Members)
                 {
                     ApplyPulse(member);
@@ -71,9 +75,12 @@ namespace FamilyCompany.Simulation.Family
                         ChooseNextAction(worldSeed, family, member, boundary);
                     }
                 }
+                OfficePresentationMicroActionSimulation.EnsureActions(worldSeed, family, boundary);
 
                 cursor = boundary;
             }
+
+            OfficePresentationMicroActionSimulation.AdvanceTo(worldSeed, family, elapsedMinute);
 
             foreach (var member in family.Members)
             {

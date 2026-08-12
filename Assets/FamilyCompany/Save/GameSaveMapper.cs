@@ -62,7 +62,27 @@ namespace FamilyCompany.Save
                         burnoutCount = member.Autonomy.BurnoutCount,
                         lastIncidentSummary = member.Autonomy.LastIncidentSummary,
                         lastIncidentMinute = member.Autonomy.LastIncidentMinute,
-                        lastSocialEventDay = member.Autonomy.LastSocialEventDay
+                        lastSocialEventDay = member.Autonomy.LastSocialEventDay,
+                        microAction = new OfficeMicroActionSaveDto
+                        {
+                            action = (int)member.Autonomy.MicroAction.Action,
+                            targetId = member.Autonomy.MicroAction.TargetId,
+                            targetLocation = (int)member.Autonomy.MicroAction.TargetLocation,
+                            startedMinute = member.Autonomy.MicroAction.StartedMinute,
+                            endsMinute = member.Autonomy.MicroAction.EndsMinute,
+                            sequenceIndex = member.Autonomy.MicroAction.SequenceIndex,
+                            partnerMemberId = member.Autonomy.MicroAction.PartnerMemberId,
+                            macroActionStartedMinute = member.Autonomy.MicroAction.MacroActionStartedMinute,
+                            lastAction = (int)member.Autonomy.MicroAction.LastAction,
+                            lastTargetId = member.Autonomy.MicroAction.LastTargetId,
+                            lastTargetEndedMinute = member.Autonomy.MicroAction.LastTargetEndedMinute,
+                            lastWaterStartedMinute = member.Autonomy.MicroAction.LastWaterStartedMinute,
+                            lastCoffeeStartedMinute = member.Autonomy.MicroAction.LastCoffeeStartedMinute,
+                            lastConversationStartedMinute = member.Autonomy.MicroAction.LastConversationStartedMinute,
+                            lastConversationPartnerId = member.Autonomy.MicroAction.LastConversationPartnerId,
+                            deskResidenceStartedMinute = member.Autonomy.MicroAction.DeskResidenceStartedMinute,
+                            visitedLocationMask = member.Autonomy.MicroAction.VisitedLocationMask
+                        }
                     },
                     careerMemories = member.CareerMemories.Select(memory => new CareerMemorySaveDto
                     {
@@ -171,7 +191,7 @@ namespace FamilyCompany.Save
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5 && save.schemaVersion != 6)
+            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5 && save.schemaVersion != 6 && save.schemaVersion != 7)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -227,7 +247,27 @@ namespace FamilyCompany.Save
                             member.autonomy.burnoutCount,
                             member.autonomy.lastIncidentSummary,
                             member.autonomy.lastIncidentMinute,
-                            member.autonomy.lastSocialEventDay)
+                            member.autonomy.lastSocialEventDay,
+                            save.schemaVersion >= 7 && member.autonomy.microAction != null
+                                ? new OfficeMicroActionState(
+                                    (OfficeMicroAction)member.autonomy.microAction.action,
+                                    member.autonomy.microAction.targetId,
+                                    (OfficeSemanticLocation)member.autonomy.microAction.targetLocation,
+                                    member.autonomy.microAction.startedMinute,
+                                    member.autonomy.microAction.endsMinute,
+                                    member.autonomy.microAction.sequenceIndex,
+                                    member.autonomy.microAction.partnerMemberId,
+                                    member.autonomy.microAction.macroActionStartedMinute,
+                                    (OfficeMicroAction)member.autonomy.microAction.lastAction,
+                                    member.autonomy.microAction.lastTargetId,
+                                    member.autonomy.microAction.lastTargetEndedMinute,
+                                    member.autonomy.microAction.lastWaterStartedMinute,
+                                    member.autonomy.microAction.lastCoffeeStartedMinute,
+                                    member.autonomy.microAction.lastConversationStartedMinute,
+                                    member.autonomy.microAction.lastConversationPartnerId,
+                                    member.autonomy.microAction.deskResidenceStartedMinute,
+                                    member.autonomy.microAction.visitedLocationMask)
+                                : new OfficeMicroActionState())
                     : new OfficeAutonomyState(lastProcessedMinute: save.elapsedMinutes);
                 return new FamilyMemberState(
                     member.memberId,

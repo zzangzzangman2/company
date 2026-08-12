@@ -140,7 +140,8 @@ namespace FamilyCompany.Presentation.Unity
                                   authoring != null && authoring.IsRuntimeValid);
                 agent.SetOfficeSeatingRuntimeEnabled(memberCanUseSeating);
 
-                var candidates = ResolveCandidates(member.Autonomy.TargetLocation);
+                OfficeSemanticLocation presentationLocation = PresentationLocation(member);
+                var candidates = ResolveCandidates(presentationLocation);
                 OfficeWaypoint autonomyWaypoint = null;
                 if (candidates.Length > 0)
                 {
@@ -148,11 +149,11 @@ namespace FamilyCompany.Presentation.Unity
                 }
 
                 var status =
-                    $"{member.Autonomy.ActionLabel} · {member.Autonomy.MoodLabel(member.Energy, member.Stress)} · " +
+                    $"{PresentationActionLabel(member)} · {member.Autonomy.MoodLabel(member.Energy, member.Stress)} · " +
                     $"체{member.Energy}/스{member.Stress}";
                 var autonomyIntentId = autonomyWaypoint == null
                     ? string.Empty
-                    : $"{(int)member.Autonomy.CurrentAction}:{member.Autonomy.ActionStartedMinute}:{autonomyWaypoint.WaypointId}";
+                    : PresentationIntentId(member, autonomyWaypoint.WaypointId);
 
                 var contractSeatWaypoint = agent.HasAssignedTask &&
                                            agent.TargetWaypoint != null &&
@@ -169,7 +170,7 @@ namespace FamilyCompany.Presentation.Unity
                         $"계약 · {status}");
                 }
                 else if (!agent.HasAssignedTask &&
-                         member.Autonomy.TargetLocation == OfficeSemanticLocation.Desk &&
+                         presentationLocation == OfficeSemanticLocation.Desk &&
                          autonomyWaypoint != null)
                 {
                     EnsureSeatDestination(agent, member, autonomyIntentId, autonomyWaypoint, status);
@@ -186,8 +187,8 @@ namespace FamilyCompany.Presentation.Unity
                 }
 
                 agent.SetAutonomousDestination(autonomyIntentId, autonomyWaypoint, status);
-                if (member.Autonomy.TargetLocation != OfficeSemanticLocation.Lounge &&
-                    member.Autonomy.TargetLocation != OfficeSemanticLocation.MeetingRoom)
+                if (presentationLocation != OfficeSemanticLocation.Lounge &&
+                    presentationLocation != OfficeSemanticLocation.MeetingRoom)
                 {
                     reserved.Add(autonomyWaypoint);
                 }
@@ -305,13 +306,12 @@ namespace FamilyCompany.Presentation.Unity
                     agent.ClearAutonomousDestination();
                     continue;
                 }
+                OfficeSemanticLocation presentationLocation = PresentationLocation(member);
                 string status =
-                    $"{member.Autonomy.ActionLabel} · {member.Autonomy.MoodLabel(member.Energy, member.Stress)} · " +
+                    $"{PresentationActionLabel(member)} · {member.Autonomy.MoodLabel(member.Energy, member.Stress)} · " +
                     $"체{member.Energy}/스{member.Stress}";
-                string intentId =
-                    $"{(int)member.Autonomy.CurrentAction}:{member.Autonomy.ActionStartedMinute}:" +
-                    $"{(int)member.Autonomy.TargetLocation}";
-                agent.SetAutonomousDestination(intentId, member.Autonomy.TargetLocation, status);
+                string intentId = PresentationIntentId(member, ((int)presentationLocation).ToString());
+                agent.SetAutonomousDestination(intentId, presentationLocation, status);
             }
         }
 
@@ -491,12 +491,43 @@ namespace FamilyCompany.Presentation.Unity
                 case OfficeSemanticLocation.Lounge:
                     activity = OfficeActivity.Break;
                     break;
+                case OfficeSemanticLocation.Filing:
+                    activity = OfficeActivity.Printing;
+                    break;
+                case OfficeSemanticLocation.Water:
+                case OfficeSemanticLocation.Coffee:
+                case OfficeSemanticLocation.OpenArea:
+                    activity = OfficeActivity.Break;
+                    break;
                 case OfficeSemanticLocation.Exit:
                     activity = OfficeActivity.Outside;
                     break;
             }
 
             return waypoints.Where(item => item != null && item.Activity == activity).ToArray();
+        }
+
+        private static OfficeSemanticLocation PresentationLocation(FamilyMemberState member)
+        {
+            OfficeMicroActionState micro = member.Autonomy.MicroAction;
+            return micro.Action != OfficeMicroAction.None &&
+                   micro.TargetLocation != OfficeSemanticLocation.None
+                ? micro.TargetLocation
+                : member.Autonomy.TargetLocation;
+        }
+
+        private static string PresentationActionLabel(FamilyMemberState member)
+        {
+            string micro = member.Autonomy.MicroAction.ActionLabel;
+            return string.IsNullOrEmpty(micro) ? member.Autonomy.ActionLabel : micro;
+        }
+
+        private static string PresentationIntentId(FamilyMemberState member, string destinationKey)
+        {
+            OfficeMicroActionState micro = member.Autonomy.MicroAction;
+            return $"{(int)member.Autonomy.CurrentAction}:{member.Autonomy.ActionStartedMinute}:" +
+                   $"micro:{(int)micro.Action}:{micro.StartedMinute}:{micro.SequenceIndex}:" +
+                   $"{micro.TargetId}:{destinationKey}";
         }
 
         private OfficeWaypoint PickWaypoint(
@@ -506,7 +537,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             var start = StableRandom.StableRandomInt(
                 $"office-autonomy-waypoint:{bootstrap.State.WorldSeed}:{member.MemberId}:" +
-                $"{member.Autonomy.ActionStartedMinute}:{(int)member.Autonomy.TargetLocation}",
+                $"{member.Autonomy.MicroAction.SequenceIndex}:{member.Autonomy.MicroAction.TargetId}",
                 candidates.Length);
             for (var offset = 0; offset < candidates.Length; offset++)
             {

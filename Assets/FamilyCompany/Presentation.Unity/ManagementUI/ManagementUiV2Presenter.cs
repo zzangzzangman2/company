@@ -363,7 +363,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
                 AddText(card, member.CompanyDuty, 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
                 AddText(card, $"개발 {member.Stats.Development}   속도 {member.Stats.Speed}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
                 AddText(card, $"체력 {member.Energy}   스트레스 {member.Stress}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
-                AddText(card, member.Autonomy.ActionLabel, 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
+                AddText(card, AutonomyPresentationLabel(member), 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
             }
         }
 
@@ -711,16 +711,22 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             {
                 var interactor = FindFirstObjectByType<PlayerOfficeWorkInteractor>();
                 if (interactor != null && interactor.IsWorking) return "타이핑 · 직접 작업";
-                return member.Autonomy.ActionLabel;
+                return AutonomyPresentationLabel(member);
             }
             if (_agents.TryGetValue(member.MemberId, out var agent))
             {
-                if (agent.IsPresentationAway) return member.Autonomy.ActionLabel;
+                if (agent.IsPresentationAway) return AutonomyPresentationLabel(member);
                 if (agent.CurrentActivity == OfficeActivity.Walking) return $"이동 · {agent.CurrentActivityLabel}";
                 if (agent.CurrentActivity == OfficeActivity.Work) return $"타이핑 · {agent.CurrentActivityLabel}";
                 return agent.CurrentActivityLabel;
             }
-            return member.Autonomy.ActionLabel;
+            return AutonomyPresentationLabel(member);
+        }
+
+        private static string AutonomyPresentationLabel(FamilyMemberState member)
+        {
+            string micro = member.Autonomy.MicroAction.ActionLabel;
+            return string.IsNullOrEmpty(micro) ? member.Autonomy.ActionLabel : micro;
         }
 
         private static string ObservationStatusLabel(OfficeObservationStatusKind kind)

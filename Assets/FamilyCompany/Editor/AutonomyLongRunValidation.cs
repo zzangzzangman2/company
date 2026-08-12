@@ -24,7 +24,7 @@ namespace FamilyCompany.Editor
                 ValidateDailyJumpMatchesHourlySteps();
                 var longRunState = ValidateSevenDayBoundsAndRecovery();
                 ValidateForcedBurnoutRecovery();
-                ValidateSaveV5RoundTrip(longRunState);
+                ValidateSaveV7RoundTrip(longRunState);
                 Debug.Log("FAMILY_COMPANY_AUTONOMY_LONG_RUN_VALIDATION: PASS");
             }
             catch (Exception exception)
@@ -108,12 +108,12 @@ namespace FamilyCompany.Editor
             }
         }
 
-        private static void ValidateSaveV5RoundTrip(GameState source)
+        private static void ValidateSaveV7RoundTrip(GameState source)
         {
             var sourceDto = GameSaveMapper.ToDto(source);
-            AssertEqual(5, sourceDto.schemaVersion, "save schema v5");
+            AssertEqual(7, sourceDto.schemaVersion, "save schema v7");
             var restored = GameSaveMapper.FromDto(sourceDto);
-            AssertStateEqual(source, restored, "save v5 round trip");
+            AssertStateEqual(source, restored, "save v7 round trip");
         }
 
         private static void AssertStateEqual(GameState expected, GameState actual, string label)
@@ -122,7 +122,7 @@ namespace FamilyCompany.Editor
             var actualJson = JsonUtility.ToJson(GameSaveMapper.ToDto(actual));
             if (!string.Equals(expectedJson, actualJson, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException($"{label}: serialized v5 states differ.");
+                throw new InvalidOperationException($"{label}: serialized states differ.");
             }
         }
 

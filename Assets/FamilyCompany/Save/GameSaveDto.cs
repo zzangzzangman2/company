@@ -7,7 +7,7 @@ namespace FamilyCompany.Save
     [Serializable]
     public sealed class GameSaveDto
     {
-        public int schemaVersion = 6;
+        public int schemaVersion = 7;
         public int worldSeed;
         public long elapsedMinutes;
         public CompanySaveDto company = new CompanySaveDto();
@@ -69,6 +69,29 @@ namespace FamilyCompany.Save
         public string lastIncidentSummary = string.Empty;
         public long lastIncidentMinute = -1;
         public long lastSocialEventDay = -1;
+        public OfficeMicroActionSaveDto microAction = new OfficeMicroActionSaveDto();
+    }
+
+    [Serializable]
+    public sealed class OfficeMicroActionSaveDto
+    {
+        public int action;
+        public string targetId = string.Empty;
+        public int targetLocation;
+        public long startedMinute;
+        public long endsMinute;
+        public int sequenceIndex;
+        public string partnerMemberId = string.Empty;
+        public long macroActionStartedMinute = -1;
+        public int lastAction;
+        public string lastTargetId = string.Empty;
+        public long lastTargetEndedMinute = -100000;
+        public long lastWaterStartedMinute = -100000;
+        public long lastCoffeeStartedMinute = -100000;
+        public long lastConversationStartedMinute = -100000;
+        public string lastConversationPartnerId = string.Empty;
+        public long deskResidenceStartedMinute = -1;
+        public int visitedLocationMask;
     }
 
     [Serializable]
