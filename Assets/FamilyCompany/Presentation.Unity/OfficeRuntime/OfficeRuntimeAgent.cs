@@ -82,7 +82,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private float _maxAnimatedAnchorErrorPx;
         private bool _hasTransitionPelvisSample;
         private OfficeSeatingAnimationClip _transitionPelvisClip;
-        private Vector2 _previousTransitionPelvisScreen;
+        private Vector2 _previousTransitionPelvisOffsetScreen;
         private float _previousTransitionCushionDistancePx;
         private float _maxTransitionPelvisStepPx;
         private int _transitionMonotonicViolationCount;
@@ -1277,6 +1277,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (clip == OfficeSeatingAnimationClip.Work || Camera.main == null) return;
             Vector2 pelvisScreen = Camera.main.WorldToScreenPoint(pelvisWorld);
+            Vector2 cushionScreen = Camera.main.WorldToScreenPoint(cushionWorld);
+            Vector2 pelvisOffsetScreen = pelvisScreen - cushionScreen;
             float cushionDistancePx = OfficeGridAlignmentMetrics.ScreenDistance(
                 Camera.main,
                 pelvisWorld,
@@ -1285,27 +1287,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 _hasTransitionPelvisSample = true;
                 _transitionPelvisClip = clip;
-                _previousTransitionPelvisScreen = pelvisScreen;
+                _previousTransitionPelvisOffsetScreen = pelvisOffsetScreen;
                 _previousTransitionCushionDistancePx = cushionDistancePx;
                 return;
             }
 
             _maxTransitionPelvisStepPx = Mathf.Max(
                 _maxTransitionPelvisStepPx,
-                Vector2.Distance(_previousTransitionPelvisScreen, pelvisScreen));
+                Vector2.Distance(_previousTransitionPelvisOffsetScreen, pelvisOffsetScreen));
             const float monotonicTolerancePx = 0.01f;
             bool reversed = clip == OfficeSeatingAnimationClip.SitDown
                 ? cushionDistancePx > _previousTransitionCushionDistancePx + monotonicTolerancePx
                 : cushionDistancePx < _previousTransitionCushionDistancePx - monotonicTolerancePx;
             if (reversed) _transitionMonotonicViolationCount++;
-            _previousTransitionPelvisScreen = pelvisScreen;
+            _previousTransitionPelvisOffsetScreen = pelvisOffsetScreen;
             _previousTransitionCushionDistancePx = cushionDistancePx;
         }
 
         private void ResetTransitionMotionMetrics()
         {
             _hasTransitionPelvisSample = false;
-            _previousTransitionPelvisScreen = Vector2.zero;
+            _previousTransitionPelvisOffsetScreen = Vector2.zero;
             _previousTransitionCushionDistancePx = 0f;
         }
 
