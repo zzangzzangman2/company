@@ -213,9 +213,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _furniturePresenter.OperatorWorkSocketWorld(seat.WorkSurfaceFurnitureId);
 
         /// <summary>
-        /// Depth for a seated occupant. The occupant stands on the chair's floor point and sorts one
-        /// step in front of it; no furniture order is rewritten. Re-sorting a desk around whoever is
-        /// sitting nearby is what used to draw desk legs over a seated character, so it is gone.
+        /// Kept as the seating hook, but sorting is no longer decided here.
+        /// <see cref="OfficeRuntimeDepthSorter"/> orders the whole office from its footprints once
+        /// per frame, so there is exactly one owner of every sorting order.
         /// </summary>
         public void ApplyPresentationStack(
             OfficeSeatSlot seat,
@@ -224,16 +224,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (seat == null) throw new ArgumentNullException(nameof(seat));
             if (characterRenderer == null) throw new ArgumentNullException(nameof(characterRenderer));
-            characterRenderer.sortingOrder =
-                OfficeSeatedOccupantContract.OccupantSortingOrder(ChairBaseSortingOrder(seat));
         }
 
+        /// <summary>Superseded by <see cref="OfficeRuntimeDepthSorter"/>; kept for the walk path's call site.</summary>
         public void ApplyDynamicCharacterOrder(
             SpriteRenderer characterRenderer,
             Vector3 semanticActorWorld)
         {
             if (characterRenderer == null) throw new ArgumentNullException(nameof(characterRenderer));
-            characterRenderer.sortingOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(semanticActorWorld);
         }
 
         public void ClearOcclusion(OfficeSeatSlot seat) =>

@@ -211,6 +211,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return points;
         }
 
+        /// <summary>
+        /// Sets the order for one piece of furniture. The single owner of this is
+        /// <see cref="OfficeRuntime.OfficeRuntimeDepthSorter"/>, which orders the whole office from
+        /// its footprints once per frame.
+        /// </summary>
+        public void ApplySortingOrder(string furnitureId, int sortingOrder)
+        {
+            if (!_visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual)) return;
+            visual.BaseRenderer.sortingOrder = sortingOrder;
+            if (visual.FrontRenderer != null) visual.FrontRenderer.sortingOrder = sortingOrder + 1;
+        }
+
         public void ApplySeatOcclusion(OfficeSeatSlot seat, int characterSortingOrder)
         {
             if (seat == null) throw new ArgumentNullException(nameof(seat));

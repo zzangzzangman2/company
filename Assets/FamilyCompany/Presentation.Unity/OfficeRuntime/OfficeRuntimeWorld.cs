@@ -18,6 +18,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeRuntimeOccupancy _occupancy;
         private OfficeRuntimePathService _paths;
         private OfficeRuntimeWorkstationService _workstations;
+        private OfficeRuntimeDepthSorter _depthSorter;
         private bool _configured;
 
         public OfficeGrid Grid => _grid;
@@ -26,6 +27,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public OfficeRuntimeOccupancy Occupancy => _occupancy;
         public OfficeRuntimePathService Paths => _paths;
         public OfficeRuntimeWorkstationService Workstations => _workstations;
+        public OfficeRuntimeDepthSorter DepthSorter => _depthSorter;
         public OfficeRuntimeActorRegistry Registry => _registry;
         public int ReplanCount { get; private set; }
         public int ArrivalCount { get; private set; }
@@ -46,6 +48,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 presenter,
                 furniturePresenter,
                 _occupancy);
+            _depthSorter = new OfficeRuntimeDepthSorter(grid, presenter, furniturePresenter);
             _configured = true;
         }
 
@@ -123,6 +126,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 if (actor != null && actor.isActiveAndEnabled) actor.TickPresentation(deltaTime);
             }
+            // One footprint sort owns every sorting order in the office, applied last so nothing
+            // can leave a stale per-sprite order behind.
+            _depthSorter.Apply(_registry.Actors);
         }
 
         private void OnDestroy()

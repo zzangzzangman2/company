@@ -266,6 +266,55 @@ def frame_path(member, clip, frame):
     return os.path.join(CHARACTER_DIR[member], f"{member}_{SEAT_DIRECTION}_{clip}_{frame}.png")
 
 
+
+def depth_relation(a, b):
+    """Mirror of Simulation/OfficeGrid/OfficeIsometricDepth.Compare."""
+    a_past_x = a["minX"] > b["maxX"]
+    b_past_x = b["minX"] > a["maxX"]
+    a_past_y = a["minY"] > b["maxY"]
+    b_past_y = b["minY"] > a["maxY"]
+    if (a_past_x and b_past_y) or (b_past_x and a_past_y):
+        return 0
+    if a_past_x or a_past_y:
+        return 1
+    if b_past_x or b_past_y:
+        return -1
+    same = (a["minX"] == b["minX"] and a["maxX"] == b["maxX"] and
+            a["minY"] == b["minY"] and a["maxY"] == b["maxY"])
+    if same and a["priority"] != b["priority"]:
+        return 1 if a["priority"] < b["priority"] else -1
+    return 0
+
+
+def footprint_sort(items):
+    """Mirror of OfficeIsometricDepth.Sort - returns ids back to front."""
+    order = sorted(
+        range(len(items)),
+        key=lambda i: (-(items[i]["maxX"] + items[i]["maxY"]),
+                       -(items[i]["minX"] + items[i]["minY"]),
+                       items[i]["priority"], items[i]["id"]))
+    behind = [0] * len(items)
+    ahead = [[] for _ in items]
+    for a in range(len(items)):
+        for b in range(a + 1, len(items)):
+            relation = depth_relation(items[a], items[b])
+            if relation > 0:
+                ahead[a].append(b)
+                behind[b] += 1
+            elif relation < 0:
+                ahead[b].append(a)
+                behind[a] += 1
+    result, emitted = [], [False] * len(items)
+    while len(result) < len(items):
+        chosen = next((i for i in order if not emitted[i] and behind[i] == 0),
+                      next(i for i in order if not emitted[i]))
+        emitted[chosen] = True
+        result.append(items[chosen]["id"])
+        for nxt in ahead[chosen]:
+            if behind[nxt] > 0:
+                behind[nxt] -= 1
+    return result
+
 # --------------------------------------------------------------------------- scene builders
 def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CHARACTER_SCALE,
                  anatomy=None, bounds=None):

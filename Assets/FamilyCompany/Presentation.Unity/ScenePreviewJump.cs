@@ -632,29 +632,37 @@ namespace FamilyCompany.Presentation.Unity
                 OfficeRuntimeAgent actor = actors[memberId];
                 OfficeSeatSlot seat = _starterRuntime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
                 string expectedSprite = memberId + "_northwest_sit_work_0";
-                int expectedOrder = OfficeSeatedOccupantContract.OccupantSortingOrder(
-                    _starterRuntime.World.Workstations.ChairBaseSortingOrder(seat));
                 int actualOrder = actor.PresentationRenderer == null
                     ? int.MinValue
                     : actor.PresentationRenderer.sortingOrder;
+                int chairOrder = int.MaxValue;
+                int deskOrder = int.MaxValue;
+                if (_starterRuntime.World.FurniturePresenter.TryGetRenderer(
+                        seat.ChairFurnitureId, out SpriteRenderer chairRenderer))
+                    chairOrder = chairRenderer.sortingOrder;
+                if (seat.HasWorkstationBinding &&
+                    _starterRuntime.World.FurniturePresenter.TryGetRenderer(
+                        seat.WorkSurfaceFurnitureId, out SpriteRenderer deskRenderer))
+                    deskOrder = deskRenderer.sortingOrder;
+                bool depthCorrect = actualOrder > chairOrder && actualOrder > deskOrder;
                 Debug.Log(
                     $"STARTER_OFFICE_WORKSTATION_ALIGNMENT_SAMPLE | member={memberId} " +
                     $"seatContact={actor.SeatContactErrorPx:F3}px chairDesk={actor.ChairDeskErrorPx:F3}px " +
                     $"rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                     $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
-                    $"sprite={actor.CurrentSpriteName} sorting={actualOrder}/{expectedOrder}");
+                    $"sprite={actor.CurrentSpriteName} sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
                 bool presentationMatches = actor.SeatContactErrorPx <= 1f &&
                     actor.VisualRotationErrorDegrees <= 0.01f &&
                     actor.VisualScaleDeviation <= 0.001f && actor.CurrentDirection == 3 &&
                     string.Equals(actor.CurrentSpriteName, expectedSprite, StringComparison.Ordinal) &&
-                    actualOrder == expectedOrder;
+                    depthCorrect;
                 if (presentationMatches) continue;
                 FailPlayerQa(
                     57,
                     $"seated contact placement failed for {memberId}: " +
                     $"seatContact={actor.SeatContactErrorPx:F2}px rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                     $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
-                    $"sprite={actor.CurrentSpriteName} sorting={actualOrder} expected={expectedOrder}");
+                    $"sprite={actor.CurrentSpriteName} sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
                 yield break;
             }
             string capturePath = QaArtifactPath("starter-office-four-seat-work.png");
