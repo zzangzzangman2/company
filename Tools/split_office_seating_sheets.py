@@ -22,6 +22,20 @@ PART_DIRECTIONS = {
     "b": DIRECTIONS[4:],
 }
 GUID_NAMESPACE = "family-company/office-seating-v1/"
+APPROVED_FRAME_OVERRIDES = {
+    "Assets/Art/Characters/Family/Mother/Pixel/OfficeSeatingV1/Frames/mother_northwest_sit_work_0.png":
+        "1F8D8A299555DD50A8ACE551B8627141CFD1C017DFD0B01FE01D57B559E54FF7",
+    "Assets/Art/Characters/Family/Mother/Pixel/OfficeSeatingV1/Frames/mother_northwest_sit_work_1.png":
+        "0A2F1A778FE97246DE2B908BDF3FE7D6AC5DA2EBB27E522EC9D6F7C7CB204A00",
+    "Assets/Art/Characters/Family/Mother/Pixel/OfficeSeatingV1/Frames/mother_northwest_sit_work_2.png":
+        "695FAFF1B75AA79E062690640FAE3B47C827297DD20C73131D2D843EA6A392F4",
+    "Assets/Art/Characters/Family/Mother/Pixel/OfficeSeatingV1/Frames/mother_northwest_sit_work_3.png":
+        "63A06E819D07EFFFF9E8A2F06918494B05DE9CB1D96ECD8046A750ED3FA8B5EF",
+    "Assets/Art/Characters/Family/Mother/Pixel/OfficeSeatingV1/Frames/mother_northwest_sit_work_4.png":
+        "85C8BDAE178B7EA0AEEE0EA3AF6FF10CC1D2A03D1E082E31E87AD7A427B99541",
+    "Assets/Art/Characters/Family/Mother/Pixel/OfficeSeatingV1/Frames/mother_northwest_sit_work_5.png":
+        "BF481EDDB0FB2CF354A90D6666AB386BB7CC09AC2DE8C081B70C4002A6482986",
+}
 
 
 @dataclass(frozen=True)
@@ -174,6 +188,25 @@ def rgba_hash(image: Image.Image) -> str:
     return hashlib.sha256(image.tobytes()).hexdigest()
 
 
+def load_approved_override(repo: Path, path: Path) -> Image.Image | None:
+    relative = path.relative_to(repo).as_posix()
+    expected_sha = APPROVED_FRAME_OVERRIDES.get(relative)
+    if expected_sha is None:
+        return None
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    actual_sha = hashlib.sha256(path.read_bytes()).hexdigest().upper()
+    if actual_sha != expected_sha:
+        raise ValueError(f"{path}: approved override SHA mismatch {actual_sha}")
+    with Image.open(path) as loaded:
+        image = loaded.convert("RGBA")
+    require_hard_alpha(image, str(path))
+    box = image.getchannel("A").getbbox()
+    if image.size != (CELL, CELL) or box is None or box[3] != FOOT_BASELINE + 1 or box[3] - box[1] != 228:
+        raise ValueError(f"{path}: approved override canvas/bounds failure {image.size} {box}")
+    return image
+
+
 def save_or_compare(path: Path, image: Image.Image, verify_only: bool) -> None:
     if verify_only:
         if not path.is_file():
@@ -258,6 +291,11 @@ def split_character(repo: Path, spec: CharacterSpec, verify_only: bool, template
         sit = [normalize(image, scale, f"{spec.character_id}/{direction}/sit_down/{phase}") for phase, image in enumerate(transition_rows[row_index])]
         work_density_scale = work_a_density_scale if row_index < 4 else work_b_density_scale
         work = [normalize(image, scale * work_density_scale, f"{spec.character_id}/{direction}/sit_work/{phase}") for phase, image in enumerate(work_rows[row_index])]
+        for phase in range(len(work)):
+            override_path = frame_dir/f"{spec.character_id}_{direction}_sit_work_{phase}.png"
+            approved_override = load_approved_override(repo, override_path)
+            if approved_override is not None:
+                work[phase] = approved_override
         clips = {"sit_down": sit, "sit_work": work, "stand_up": list(reversed(sit))}
         for clip, images in clips.items():
             hashes = [rgba_hash(image) for image in images]
@@ -266,8 +304,10 @@ def split_character(repo: Path, spec: CharacterSpec, verify_only: bool, template
             for phase, image in enumerate(images):
                 key = (direction, clip, phase)
                 path = frame_dir/f"{spec.character_id}_{direction}_{clip}_{phase}.png"
-                save_or_compare(path, image, verify_only)
-                if not verify_only:
+                is_override = path.relative_to(repo).as_posix() in APPROVED_FRAME_OVERRIDES
+                if not is_override:
+                    save_or_compare(path, image, verify_only)
+                if not verify_only and not is_override:
                     write_frame_meta(repo, path, template)
                 validate_frame_meta(path)
                 frames[key] = image

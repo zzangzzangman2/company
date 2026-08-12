@@ -259,7 +259,7 @@
 - 개별 프레임: 인물별 8방향×`sit_down` 4 + `sit_work` 6 + `stand_up` 4 = 112장, 총 448장. `stand_up`은 승인된 `sit_down`의 정확한 역순이다.
 - 출력 규격: 각 256×256 RGBA, 알파 0/255, 피사체 비어 있음·잘림 없음, 발 기준선 y=248. Unity 메타는 Sprite/Single, Point, mipmap 없음, 무압축, 180 PPU, 하단 중앙 커스텀 피벗 `(0.5, 0)`이다.
 - 밀도 정규화: HighMotion 48프레임의 인물별 중앙 높이를 기준으로 한 가지 캐릭터 축척만 적용했다. work A/B 생성 시트의 밀도 차이는 큰 파트만 고정 비율로 축소해 맞췄으며 프레임별 임의 축척은 없다. 최종 캐릭터 축척은 플레이어 `1.041`, 누나 `1.038`, 아빠 `1.021`, 엄마 `1.029`; work A/B 보정은 각각 플레이어 `0.965/1.000`, 누나 `0.984/1.000`, 아빠 `0.995/1.000`, 엄마 `0.903/1.000`이다.
-- 기계 분할·검증 도구: `Tools/split_office_seating_sheets.py`. 실제 실루엣을 행/열로 검출하고 상체 중앙·발 기준선을 정렬하며, `--verify-only`에서 source로부터 448장을 바이트 단위 재현한다.
+- 기계 분할·검증 도구: `Tools/split_office_seating_sheets.py`. 실제 실루엣을 행/열로 검출하고 상체 중앙·발 기준선을 정렬한다. 2026-08-12 이후 엄마 Northwest Work 6장은 잘린 source sheet를 다시 분할하지 않는 승인 override이므로 `--verify-only`의 source 바이트 재현 대상에서 제외하고 아래 최종 SHA로 검증한다.
 - QA 산출물: 인물별 transition 8방향 접촉 시트와 work 8방향 접촉 시트 각 1장(총 8장), work 6프레임 GIF 각 1개(총 4개). 각 정본 루트의 `QA/`에 저장한다.
 - 자동 QA: source 16장 크기·하드 알파·16/24 실루엣 계약, 프레임 448장·메타 448개, 비어 있음 0, 부분 알파 0, 잘림 0, 기본 동작 프레임 고유 해시 320개, 승인 역순 중복 128개, 전체 렌더 해시 320개, 프레임 GUID 448개 고유, Assets 전체 GUID 중복 0. GIF 루프 경계/일반 인접 RMS 최대 비율은 `1.442`다.
 - 육안 QA: 8개 접촉 시트에서 남→남서→서→북서→북→북동→동→남동 방향, standing→seated→standing 순서, 손의 키보드·마우스 변화, 무모자 플레이어와 가족 정체성, 의자 없음, 머리·손·발 미절단을 확인했다.
@@ -413,11 +413,11 @@
 - 정본 에셋: `Assets/FamilyCompany/Presentation.Unity/OfficeGrid/Authoring/OfficeFurnitureVisualCatalog.asset`, `OfficeCharacterSeatPoseCatalog.asset`.
 - 버전: 가구 catalog는 `calibrationVersion: 2`, 캐릭터 pose catalog는 `calibrationVersion: 4`다. Starter safe catalog에는 사람 승인된 `NorthWest/Work/0` 4개만 있고 각 항목은 source Sprite SHA-256을 가진다.
 - 가구 데이터: 각 정의는 독립 네 점 ground footprint, 의미 footprint 폭/높이, ground/sort를 가진다. desk는 operator seat `(390.445, 49.329)`와 work socket, chair는 seat `(313.007, 153.549)`를 가진다.
-- mask 판정: `office_workstation_front_v4.png`는 책상 앞 모서리·다리·서랍의 제한 전경으로 사용한다. `office_swivel_chair_front_v3.png` 파일은 이전 빌드 재현 자료로 남지만 NorthWest 승인 catalog에서는 참조하지 않으며 런타임에 그리지 않는다.
+- mask 판정: `office_workstation_front_v4.png`는 책상 앞 모서리·다리·서랍의 제한 전경으로 사용한다. `office_swivel_chair_front_v3.png`는 승인 catalog가 참조하며, 착석 중 등받이와 근접 팔걸이를 인물 위에 그리는 의자 전면 레이어다.
 - 편집기: `OfficeTycoonAlignmentCalibrationWindow.cs`가 100/200/400% 픽셀 보기, 네 점·socket, clip/frame onion skin, workstation 합성을 제공한다. 합성 승인 전에는 값을 저장할 수 없다.
 - 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하되 현재 버전의 calibration asset은 덮어쓰지 않는다. 구형 v3의 scale/rotation 후보를 v4로 자동 승인하지 않으며 비어 있는 catalog에는 미승인 safe placeholder만 만든다.
 - QA 산출물 루트: `Artifacts/OfficeTycoonAlignmentV2/`. 정본 검증기는 `OfficeTycoonAlignmentV2Qa.StartBatch`이며 Preview 45초와 Starter 60초를 분리 실행한다.
-- 승인 SHA: player `D02E4A5E...59519D`, older_sister `1C7F25EC...FD92C3`, father `60B90628...A4C7E`, mother `BD1EAC26...705E09`.
+- 승인 SHA: player `D02E4A5E...59519D`, older_sister `1C7F25EC...FD92C3`, father `60B90628...A4C7E`, mother `1F8D8A29...E54FF7`.
 - 승인 상태: authored Sprite 기준 네 명 모두 rotation `0°`, pose scale `1.000`, hand↔work `0.538px`, pelvis↔seat `0px`, chair↔desk `0px`로 PASS했다. 실제 Windows RenderTexture 기준 hand↔work는 `0.239px`이며 desk front의 얼굴 overlap은 네 명 모두 0, 하체 overlap은 모두 양수다. 실제 합성은 `Artifacts/SeatedSpriteRootCauseV3/starter-office-four-seat-work.png`와 가족별 `*-work-closeup.png`, 수치 보고서는 `seated-sprite-root-cause-v3-report.txt`다.
 
 ## Starter Office Runtime V1 semantic assets
@@ -446,3 +446,32 @@
   - 상태: FOUR-WORKSTATION HUMAN-REVIEW EVIDENCE
   - 1392×699 RenderTexture 캡처에서 가족 네 명의 실제 책상·의자·착석 Work 합성을 확인했다.
   - SHA-256: `92DB5F0D66158F30FEAB13672440096CCB79121BB1B97D2FE48B63FD39AFAAFE`
+
+## 2026-08-12 Mother Northwest Work 하체 재생성
+
+- 상태: **GENERATED 6/6 · IMPORT/PLAYER QA PASS**
+- 대상: `Assets/Art/Characters/Family/Mother/Pixel/OfficeSeatingV1/Frames/mother_northwest_sit_work_0..5.png`.
+- 생성 모드: OpenAI 내장 `imagegen`의 기존 이미지 편집을 프레임별 1회 사용했다. 각 대상 프레임을
+  자세·손동작 기준, `mother_office_neutral_v1.png`를 얼굴·머리·복장 기준, 먼저 승인한 재생성 프레임을
+  하체 비율·신발·scale·배치 일관성 기준으로 사용했다.
+- 프롬프트 핵심: Northwest 착석 작업 상체와 피치 카디건·크림 블라우스·청록 스커트를 유지하고,
+  누락된 무릎·종아리·양발·갈색 사무화를 전부 복원한다. 인물 한 명만, 가구·바닥·그림자·문자 없음,
+  평면 `#00FF00` 배경, hard-edge pixel cluster, 프레임 0을 포함한 6장 동일 perceived scale.
+- 후처리: 공식 `remove_chroma_key.py`로 chroma 제거, 녹색 spill 제거, nearest-neighbor로 visible height
+  228px 통일, 우측 경계 x=172·하단 경계 y=249에 정렬했다. 최종은 256×256 RGBA, alpha 0/255,
+  발바닥 하단 여백 7px다. 기존 `.meta`의 Sprite/Single·180 PPU·Point·mipmap 없음·bottom-center pivot은
+  변경하지 않았다.
+- frame 0 승인 좌판 등록점/손 앵커: `(131,62)` / `(90,120)`. 자동 해부학 후보 `(149,75)`는
+  실제 chair sprite 합성에서 좌판을 벗어나므로 폐기했고, 승인 등록점과 확정 runtime scale `1.55`를
+  `OfficeCharacterSeatPoseCatalog.asset`에 기록했다.
+- 최종 SHA-256:
+  - frame 0: `1F8D8A299555DD50A8ACE551B8627141CFD1C017DFD0B01FE01D57B559E54FF7`
+  - frame 1: `0A2F1A778FE97246DE2B908BDF3FE7D6AC5DA2EBB27E522EC9D6F7C7CB204A00`
+  - frame 2: `695FAFF1B75AA79E062690640FAE3B47C827297DD20C73131D2D843EA6A392F4`
+  - frame 3: `63A06E819D07EFFFF9E8A2F06918494B05DE9CB1D96ECD8046A750ED3FA8B5EF`
+  - frame 4: `85C8BDAE178B7EA0AEEE0EA3AF6FF10CC1D2A03D1E082E31E87AD7A427B99541`
+  - frame 5: `BF481EDDB0FB2CF354A90D6666AB386BB7CC09AC2DE8C081B70C4002A6482986`
+- 검증 증거: `Artifacts/MotherSeatedRegenQa/`의 before/after contact sheet, 엄마 closeup, 네 가족
+  RenderTexture 합성, Unity 전체 검증 로그와 Windows player Main Flow 로그. 실제 플레이어에서 엄마
+  seatContact `0.000px`, rotation `0°`, scale deviation `0%`, character sorting `1008`, chair base `1007`,
+  desk `1005`를 확인했다. 의자 전면 레이어는 착석 인물 위에 유지된다.

@@ -101,6 +101,8 @@ Unity: 6000.3.21f1
 - `CharacterOfficeRuntimeQa`의 PLAY_SNAPSHOT이 좌석 단계·claim·seating clip·work hook·safe-stand·목표 활동을 함께 기록하도록 보강했다. 정지 원인이 좌석 생명주기인지 이동 차단인지 로그만으로 판별된다.
 - 기존 `agent/contract-lifecycle-v0-3`의 전체 작업을 `main`에 fast-forward 통합하고 로컬·GitHub 원격 보조 브랜치를 모두 제거했다. 이후 정본 개발 브랜치는 `main` 하나만 사용하며 새 branch나 worktree를 만들지 않는다.
 
+- 콘텐츠 핫리로드 계층 A 구현: 플레이테스트 exe가 빌드 폴더 옆 `FamilyCompany_LiveData` 정션을 통해 프로젝트의 Content JSON을 직접 읽고, 게임 안에서 F5로 다시 읽는다. 외부 폴더가 없으면 빌드 내장 TextAsset으로 되돌아간다. 설계와 남은 계층 B·C는 `Docs/LIVE_PATCH_V1.md`에 있다.
+
 ## 진행 중
 
 - Stock 실제 회사/증권계좌 UI와 Save 연결은 완료했다. 남은 범위는 체결별 회사 총계정원장 전기, 외부 생성 tape/orderbook 전체 상태 영속화, 시세·뉴스·유동성 S3와 기업행동 S4의 역사 연결이다.
@@ -193,6 +195,8 @@ Unity: 6000.3.21f1
 - 2026-08-11: 미해결 관찰. PASS한 PlayMode 로그에도 `MANAGEMENT_UI_MISSING_GLYPH: 우리 가족회사`가 1회 남는다. 별도로 `UnityEditor.Search.SearchDatabase.GetDefaultSearchDatabase`의 `ArgumentOutOfRangeException`이 1회 나오지만 이는 에디터 검색 인덱서 내부 문제로 프로젝트 코드와 무관하다.
 - 2026-08-11: 정본 작업 폴더에서 원격 최신 `d74f29e`를 받은 뒤 `main`과 `origin/main`을 같은 커밋으로 맞췄다. Korea History V1 validator를 다시 실행해 국내 회사 82개·등록부 83행·2000~2003 상세 25개·사건 42개·진입/퇴출 앵커 42개·인수 후보 20개·출처 100개와 오류 0을 확인했다.
 - 2026-08-11: `main` 정본 작업 폴더에서 Unity 6000.3.21f1 `PrototypeValidation.Run`을 재실행해 `OFFICE_VISUAL_V2_ASSET_READY_PASS`(colliders=24, occupancy=90.4%), `SCENE_LINKAGE_PASS`(family=4, npcAgents=3, framesPerFamily=48), `OFFICE_SEATING_BUILDER_VALIDATION: PASS`(components=4, seats=4, frames=448, `hook=fallback`), `FAMILY_COMPANY_VALIDATION: PASS`와 종료 코드 0을 확인했다.
+- 2026-08-11: 콘텐츠 핫리로드 계층 A 실제 exe 검증 통과. Windows 플레이테스트 빌드에서 `[LiveContent] 등록부 83행 · 외부 파일`을 확인했고, 환경 변수 `FAMILYCOMPANY_LIVE_CONTENT`로 회사 1개를 뺀 사본을 지정하자 같은 exe가 `82행 · 외부 파일`로 바뀌어 외부 JSON을 실제로 읽는 것을 증명함. 정션을 치우면 로그가 사라지고 예외 0으로 내장본을 쓰는 폴백도 확인함. 정션은 빌드 출력 폴더 밖이라 재빌드 후에도 생존함. PrototypeValidation과 전체 컴파일은 오류·경고 0.
+- 참고: 플레이테스트 빌드는 `WindowsPlayerBuild.cs`가 비-Development로 강제하므로 `DEVELOPMENT_BUILD` 심볼로 감싼 코드는 exe에서 컴파일되지 않는다. 개발용 기능은 컴파일 심볼 대신 외부 폴더 존재 같은 런타임 opt-in으로 게이트한다.
 - 참고: -nographics에서 Camera.Render를 호출하면 Unity 네이티브 렌더러가 충돌하므로 시각 캡처에만 -nographics를 쓰지 않는다. 일반 빌드와 로직 검증에는 -nographics를 계속 사용한다.
 
 ### 2026-08-10 OfficeVisualV2 calibration handoff
@@ -227,6 +231,18 @@ Unity: 6000.3.21f1
 - 캡처: 기존 T4/T5 3장과 함께 `Artifacts/OfficeTileMigrationQa/after-office-tile-tycoon-overview-1920x1080.png`, `after-office-tile-tycoon-seated-1920x1080.png`, `after-office-tile-tycoon-anchors-1920x1080.png`, `after-office-tile-tycoon-occlusion-1920x1080.png`, 수치 보고서 `office-tile-tycoon-alignment-report.txt`를 남겼다.
 - 현재 경계: T4~T5는 `OfficeTileMigrationPreview` 격리 씬에만 있다. 현재 플레이테스트 EXE와 `Prototype01`은 여전히 OfficeVisualV2 폴백을 사용한다. 다음 작업은 사용자 캡처 확인 후 T6에서 이 레이어를 메인 사무실에 연결하고 계약·자율 AI 회귀를 다시 실행하는 것이다. A*와 자유 배치 UI는 이번 범위가 아니다.
 
+## 2026-08-11 Office Tycoon Alignment V2 진행 상태
+
+- V1 순환 검증을 교체했다. 기존 화면에서 새 hand-to-work 실패 조건을 먼저 실행해 player 1.745px·older_sister 2.703px·father 9.059px·mother 10.128px을 계측했고 father에서 의도대로 FAIL했다. 기준 로그는 `Artifacts/OfficeTycoonAlignmentV2/unity-v2-baseline-fail.log`다.
+- 실제 초기 레이아웃 `CreateStarterOfficeV1()`을 추가하고 GameState 기본값과 v1~v5 save 이관을 Starter로 바꿨다. Migration Preview는 파티션을 포함한 T1~T5 fixture로만 유지한다.
+- `OfficeWorkstationSlot`, 반 셀 `OperatorAnchor`, officeGrid schema 3의 `operatorX2/Y2`, 가구 네 점 footprint, desk operator seat/work socket, member/direction/clip/frame pose 56개를 추가했다. 두 calibration catalog는 version 2다.
+- 의자 좌판 중심을 runtime `(313.007,153.549)`, desk operator seat를 `(390.445,49.329)`로 다시 승인했다. 당시의 넓은 chair front overlay는 몸을 과도하게 덮어 제거했다. `08d398b`에서는 등받이·근접 팔걸이만 남긴 제한 전경을 다시 연결해 의자 관통을 막는다.
+- `OfficeTycoonAlignmentCalibrationWindow`와 전용 `OfficeTycoonAlignmentV2Qa`를 추가했다. V2 QA는 Preview 45초 + Starter 60초, stand/reseat, 1920×1080 6장, footprint/socket/pelvis/hand/frame/mask/Transform/collision/claim/save 표를 검사한다.
+- Simulation/Save/Presentation/Editor Roslyn 컴파일은 오류 0이다. 오프라인 4인 합성에서 엉덩이-좌판 중심과 등받이 뒤 배치를 육안 확인했다.
+- 오후 Unity 라이선스가 다시 인식돼 실제 PlayMode까지 진입했다. `OfficeGridValidation`, 타일 빌드, 가구 V2 결정론 빌드, calibration asset 비파괴 검사는 PASS했고 Preview 18개 가구의 persisted four-corner residual은 모두 0.000px였다. 이 수치만으로 실제 다리·바퀴 접점을 육안 승인하지 않는다.
+- 실제 45+60초 Unity 그래픽 QA를 끝까지 실행했다. 가구 의미/시각 Transform 변화 0, blocking 침범 0, 좌석 claim 4개 고유, 네 명 stand/reseat, 저장 왕복 해시를 통과했고 1920×1080 진단 캡처 6장을 생성했다. 최종 결과는 아래 손 정렬 때문에 의도적으로 FAIL이다.
+- **당시 미완료/차단:** 실제 NorthWest work pose의 공용 desk 대비 1920×1080 손 오차는 player 8.032px, older_sister 11.906px, father 12.336px, mother 13.322px이다. 가족별 pelvis→hand 방향도 0.349°/2.754°/9.414°/13.676°로 달라 좌석별 offset 없이 한 소켓을 동시에 맞출 수 없었다. 이 과거 차단은 아래 Seated Sprite Root Cause V3와 2026-08-12 재검증에서 해소됐으며 현재 차단이 아니다. 상세는 `Docs/OFFICE_ALIGNMENT_V2.md`다.
+
 ## 2026-08-11 / Starter Office Runtime V1 통합
 
 - `StarterOfficeRuntimeBootstrap`이 `GameState.OfficeGrid`를 직접 렌더링하고 가족 네 명의 유일한 화면 Actor를 생성한다. Starter Office는 더 이상 하드코딩 Preview 캐릭터 월드가 아니다.
@@ -246,7 +262,29 @@ Unity: 6000.3.21f1
 - `DirectionalSpriteAnimator`가 Sprite를 적용한 뒤 pose 이벤트를 발행하고, `OfficeRuntimeAgent`는 승인된 pelvis→chair seat translation만 적용한다. `VisualRoot.localRotation=identity`, pose scale `1.0`이며 앉기/일하기 내부 상태와 무관하게 safe 화면은 `NorthWest/Work/0`을 유지한다.
 - `OfficeCharacterSeatPoseCatalog`를 v4로 올리고 네 가족 safe profile 4개만 `HumanApproved + source Sprite SHA-256`으로 승인했다. 구형 v3는 자동 승인·자동 덮어쓰지 않는다.
 - 엄마 safe 원화는 정체성·의상·포즈를 유지한 최근접 이웃 정규화로 visible height 차이를 9.58%에서 5.00%로 줄였고 SHA와 실제 pelvis/hand anchor를 다시 승인했다.
-- `OfficeRuntimeWorkstationService`가 desk base `-2`, chair base `-1`, character, desk front `+1`, chair back `+2` 정렬 stack을 단독 소유한다. tile runtime의 legacy order `100` 사용은 0이다.
+- `OfficeRuntimeDepthSorter`가 전체 가구 footprint와 Actor를 한 번에 정렬하고, 착석 시 chair base < character < chair front 순서를 보장한다. tile runtime의 legacy order `100` 사용은 0이다.
 - Unity 6000.3.21f1 V3 정적 QA는 전원 rotation `0°`, scale `1.000`, pelvis↔seat `0px`, hand↔work `0.538px`, visible height 차이 `1.37~5.00%`, 승인 SHA 일치로 PASS했다.
 - 최신 Downloads Windows 빌드의 `-familyCompanyTileRuntimeQa` Main Flow가 PASS했다. 단일 Actor·가구 revision·충돌·8방향·네 좌석·계약·저장 회귀와 가족별 1024×1024 클로즈업은 `Artifacts/SeatedSpriteRootCauseV3/`에 남겼다.
 - 기존 desk front 마스크가 older_sister의 upper-body 18샘플을 덮는 실패를 재현한 뒤 재생성 exclusion으로 제거했다. 최종 그래픽 45+60초 QA는 얼굴 overlap 전원 0, 하체 overlap 전원 양수, 가구 Transform 변화 0, 전원 stand/reseat와 저장 왕복까지 PASS했다.
+
+## 2026-08-12 / Mother Northwest Work 하체 복원 및 실제 플레이어 재검증
+
+- `mother_northwest_sit_work_0..5.png` 6장을 내장 ImageGen 편집으로 재생성했다. 원본에서 잘렸던
+  무릎·종아리·양발·갈색 사무화를 전부 복원했고 256×256, visible height 228px, alpha 0/255,
+  발바닥 하단 여백 7px로 통일했다. frame 0의 5% 과대 크기도 제거했다.
+- 엄마 frame 0의 승인 좌판 등록점/손 접점을 `(131,62)` / `(90,120)`으로 확정하고 source SHA를
+  `1F8D8A29...E54FF7`로 갱신했다. 자동 해부학 후보 `(149,75)`는 실제 chair sprite 합성에서 몸을
+  좌판 밖으로 밀어내므로 폐기했다.
+- Unity `6000.3.21f1` 백그라운드 컴파일에서 `6299cd9`에 남아 있던 폐기 메서드 호출 1곳,
+  Editor QA의 `OfficeGrid` 타입/네임스페이스 충돌 7곳, edit mode의 `DontDestroyOnLoad`/비동기 scene
+  load를 수정했다. 최종 `PrototypeValidation`은 컴파일 오류·예외 없이 `FAMILY_COMPANY_VALIDATION: PASS`다.
+- 정식 Windows x64 빌드는 warning 0으로 성공했고 `Downloads/Family/FamilyCompany_Playtest`에 승격했다.
+  이전 실행본은 `FamilyCompany_Playtest.previous.20260812-033231`에 복구용으로 보존했다. 숨김 창 `-batchmode
+  -familyCompanyTileRuntimeQa`는 8방향 이동, 사거리 교차, 좁은 통로, 런타임 책상 추가/제거,
+  책상·카운터·NPC 충돌, 네 좌석, 계약, 저장/불러오기를 종료 코드 0으로 통과했다.
+- 실제 플레이어 착석 수치: 네 가족 seatContact `0.000px`, rotation `0°`, scale deviation `0%`.
+  엄마 character sorting `1008`, chair base `1007`, desk `1005`이며 의자 전면 레이어는 인물 위다.
+  캡처·로그는 `Artifacts/MotherSeatedRegenQa/`에 남긴다.
+- 현재 경계: Starter Runtime의 SafeStaticWork는 여전히 `Northwest/Work/0` 한 장만 사용한다.
+  재생성한 frame 1~5는 아트 정본이지만 6프레임 애니메이션을 열기 전에 프레임별 좌판 접점 승인과
+  최대 보정 점프 검증이 필요하다.

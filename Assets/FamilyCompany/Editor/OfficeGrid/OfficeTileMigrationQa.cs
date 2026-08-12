@@ -714,12 +714,16 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Capture(camera, path, 1920, 1080);
         }
 
-        private static PlacedOfficeFurniture FindFurniture(OfficeGrid grid, string furnitureId)
+        private static PlacedOfficeFurniture FindFurniture(
+            FamilyCompany.Simulation.OfficeLayout.OfficeGrid grid,
+            string furnitureId)
         {
             return grid.Furniture.Single(item => string.Equals(item.FurnitureId, furnitureId, StringComparison.Ordinal));
         }
 
-        private static OfficeSeatSlot FindSeat(OfficeGrid grid, string seatId)
+        private static OfficeSeatSlot FindSeat(
+            FamilyCompany.Simulation.OfficeLayout.OfficeGrid grid,
+            string seatId)
         {
             return grid.SeatSlots.Single(item => string.Equals(item.SeatId, seatId, StringComparison.Ordinal));
         }

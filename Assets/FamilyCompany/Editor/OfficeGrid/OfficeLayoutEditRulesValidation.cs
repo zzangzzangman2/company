@@ -20,13 +20,14 @@ namespace FamilyCompany.Editor.OfficeGrid
         public static void Run()
         {
             var failures = new List<string>();
-            OfficeGrid start = OfficeGridLayouts.CreateStarterOfficeV1();
+            FamilyCompany.Simulation.OfficeLayout.OfficeGrid start =
+                OfficeGridLayouts.CreateStarterOfficeV1();
 
             OfficeLayoutEditResult moved = OfficeLayoutEditRules.MoveWorkstation(start, "seat_player", 2, 0);
             Require(failures, moved.Success, "workstation moves two cells east: " + moved.Message);
             if (moved.Success)
             {
-                OfficeGrid grid = moved.Grid;
+                FamilyCompany.Simulation.OfficeLayout.OfficeGrid grid = moved.Grid;
                 PlacedOfficeFurniture desk = grid.Furniture.First(f => f.FurnitureId == "desk_player");
                 PlacedOfficeFurniture chair = grid.Furniture.First(f => f.FurnitureId == "chair_player");
                 OfficeSeatSlot seat = grid.SeatSlots.First(s => s.SeatId == "seat_player");

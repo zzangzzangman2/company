@@ -1,24 +1,28 @@
 # SEATED ASSET REGEN REQUIRED
 
 Office Visual Coherence V4 · P0 독립 진단 결과
-기준 HEAD `46c20b7` (`fix: remove seated sprite distortion`) · Unity `6000.3.21f1`
+진단 기준 HEAD `46c20b7` · 적용 기준 HEAD `08d398b` + 엄마 Work 6장 교체 · Unity `6000.3.21f1`
 측정 도구: `Tools/office_visual_coherence_v4_probe.py` (Unity 없이 런타임 합성을 그대로 재현)
 산출물: `Artifacts/OfficeVisualCoherenceV4/` (git 제외 경로)
 
 이 문서는 **어떤 문제가 코드·데이터로 해결되고 어떤 것이 원본 PNG 재생성인지**만 판정한다.
 자동 추정값은 정본이 아니며, 사용자 승인 전까지 catalog에 기록하지 않는다.
 
-> **채택된 해법 (2026-08-12)**: 인물별 앵커 보정을 전부 폐기하고 등각 타이쿤 표준인
-> **바닥 접점 배치**로 교체했다. `OfficeSeatedOccupantContract` 하나가 규칙 전체를 소유한다.
-> 아래 §1.2·§2.2의 앵커 논의는 폐기된 방식에 대한 원인 기록으로만 남긴다.
-> 남는 실제 재생성 대상은 §2.4 `mother_northwest_sit_work_0.png` 하나다.
+> **채택된 해법 (2026-08-12, `08d398b`)**: 바닥 접점 배치를 폐기하고 승인된 인물 좌판 등록점을
+> 실제 의자 cushion anchor에 고정한다. 착석 중에는 의자 base < 인물 < 의자 등받이/근접 팔걸이
+> 전면 레이어 순서로 그리며, 공통 시각 scale은 `1.55`다. `OfficeRuntimeDepthSorter`가 footprint와
+> 착석 상태를 함께 사용해 이 깊이 규칙을 소유한다.
+> 아래 §1.2·§2.2는 실패 원인 기록으로만 남긴다. §2.4의 엄마 `Northwest/Work/0..5`는 전부
+> 하체가 잘린 원본이었으므로 6장 모두 재생성·교체했다.
 
 ---
 
 ## 0. 측정 환경
 
-작업 PC에 Unity `6000.3.21f1`이 없다(설치본은 `2019.4.40f1`뿐). 따라서 Unity 배치모드 컴파일·PlayMode
-캡처를 이 PC에서 실행할 수 없다. 대신 런타임 합성 규칙을 그대로 옮긴 오프라인 프로브를 만들었다.
+최초 진단 PC에는 Unity `6000.3.21f1`이 없어 오프라인 프로브로 판정했다. 최종 적용 PC에서는 같은
+버전으로 화면 없는 batchmode 컴파일·`PrototypeValidation`, Windows x64 빌드, 숨김 창 플레이어
+`-familyCompanyTileRuntimeQa`를 실행했다. 최종 플레이어 캡처와 로그는
+`Artifacts/MotherSeatedRegenQa/`에 남긴다.
 
 프로브가 재현하는 규칙
 
@@ -27,7 +31,7 @@ Office Visual Coherence V4 · P0 독립 진단 결과
 | `OfficeGridTilemapPresenter` 등각 basis, cell 320×160, PPU 180 | 동일 |
 | `OfficeGridFurniturePresenter` pivot = `groundAnchorPx` | 동일 |
 | `OfficeRuntimeAgent.ApplySeatedPose` pelvis→chair seat 고정 | 동일 |
-| `ApplyPresentationStack` desk−2 / chair−1 / character / deskFront+1 / chairFront+2 | 동일 |
+| `OfficeRuntimeDepthSorter` footprint sort: chair base < occupant < chair front | 동일 |
 | `ResolveDynamicSortingOrder = 5000 − round(worldY×100)` | 동일 |
 
 **동치 확인**: 프로브 출력과 마지막 실제 Unity 캡처
@@ -152,23 +156,28 @@ father       ×1.00   (92cm)
 mother       ×0.93   (86cm)
 ```
 
-### 2.4 `mother_northwest_sit_work_0.png` — **REGENERATE 또는 재정규화**
+### 2.4 `mother_northwest_sit_work_0..5.png` — **REGENERATED 6/6**
 
 ```text
-판정: REGENERATE (frame 0만)
-이유:
-  - frame 0 실루엣 228px / area 19,602
-  - frame 1~5 실루엣 217px / area 17,855~18,026
-  - 즉 frame 0만 약 5% 확대된 별도 이미지다(V3의 nearest-neighbor 정규화 산물).
-  - Animated 복원 시 Work 루프 첫 프레임에서 pelvis가 튄다.
-  - 좌측 x=32까지 실루엣이 나가 캔버스 경계에 치마가 잘린다(다른 프레임은 x=36~37).
-유지할 외형: 피치 카디건·크림 블라우스·청록 스커트, 얼굴·머리 동일
-필수 canvas: 256×256, PPU 180, bottom-center pivot
-필수 접점: seatContact ≈ (143,52), primaryHandContact ≈ (72,88) — 승인 후 확정
-사용 방향: Northwest character / SouthEast desk
+판정: REGENERATED (frame 0..5 전부)
+원본 결함:
+  - 6장 모두 256px 하단에서 청록 스커트가 직선으로 잘려 무릎·종아리·발이 없었다.
+  - frame 0만 visible height 228px, frame 1~5는 217px로 약 5% 크게 시작했다.
+최종 규격:
+  - 6장 모두 256×256 RGBA, visible height 228px, hard alpha 0/255, 하단 여백 7px.
+  - 무릎·종아리·갈색 사무화·발바닥 전체가 canvas 안에 있고 frame 0 과대 크기는 제거됐다.
+  - 피치 카디건·크림 블라우스·청록 스커트, 얼굴·머리와 Northwest 작업 자세를 유지했다.
+  - Unity import는 기존 meta의 180 PPU·Point·mipmap 없음·bottom-center pivot을 그대로 사용한다.
+재측정:
+  - frame 0 승인 seat registration = (131,62), handContact = (90,120), source SHA-256 =
+    1F8D8A299555DD50A8ACE551B8627141CFD1C017DFD0B01FE01D57B559E54FF7.
+  - 자동 해부학 후보 `(149,75)`는 실제 의자 합성에서 몸을 좌판 밖으로 밀어내므로 폐기했다.
+    `(131,62)`는 desk 벡터 역산값이 아니라 실제 chair sprite의 좌판과 등받이에 맞춘 승인 등록점이다.
+  - 6장 자동 seat candidate 편차는 x 1px·y 6px 이내다.
+  - 실제 플레이어에서 승인 등록점과 의자 cushion anchor의 seatContact 오차를 0.000px로 검증했다.
 ```
 
-다른 세 인물의 `*_northwest_sit_work_0..5.png`는 프레임 간 실루엣 편차가 1px 이하로 재생성 대상이 아니다.
+다른 세 인물의 `*_northwest_sit_work_0..5.png`는 교체하지 않았다.
 
 ---
 
@@ -177,20 +186,20 @@ mother       ×0.93   (86cm)
 | 원인 | 코드 | 데이터 | 원본 PNG | 판정 |
 |---|---|---|---|---|
 | global scale 1.69 (화면 점유율 기준) | ○ | ○ | 정규화 필요 | 캐릭터 4종 공통 규격 정규화 후 단일 scale |
-| seat contact 앵커 | | ○ | | 데이터 재측정 (제안값 승인 대기) |
-| hand contact 앵커 | | ○ | | 데이터 재측정 + 판정 기준 재정의 |
+| seat contact 앵커 | | ○ | | 완료 · frame 0 승인 등록점 `(131,62)` |
+| hand contact 앵커 | | ○ | | 완료 · frame 0 승인 접점 `(90,120)` |
 | desk work socket | | ○ | B안 시 desk 1장 | 데이터 수정, 필요 시 책상 재생성 |
-| desk front mask | ○ | ○ | | 인물 exclusion 제거, 배치상 overlay off |
-| chair front layer | ○ | ○ | chair front 1장 | 후순위 |
-| mother work frame 0 | | | ○ | REGENERATE |
+| desk front mask | ○ | ○ | | 완료 · 얼굴 미침범/하체 전경 overlap 검증 |
+| chair front layer | ○ | ○ | chair front 1장 | 완료 · 착석 전 구간에서 인물 위 전경으로 사용 |
+| mother work frame 0..5 | | ○ | ○ | REGENERATED 6/6 · 좌판 접점/SHA 갱신 |
 | 착석 포즈 자체 | | | 유지 | 재생성 불필요 |
 
 ---
 
 ## 4. 다음 순서
 
-1. 위 제안 앵커 4쌍과 scale 후보(1.30 / 1.50 / 1.69) 중 사용자 육안 승인.
-2. 승인값을 `OfficeCharacterSeatPoseCatalog`에 anatomy 스키마(v5)로 기록하고 승인 증거(합성 캡처 해시)를 남긴다.
-3. desk work socket을 실제 키보드로 교정, desk front overlay의 인물 exclusion 제거.
-4. `DirectionalSpriteAnimator`의 `frame = 0` 하드코딩과 calibration window의 `= 0f` 하드코딩 제거.
-5. Unity 6000.3.21f1이 있는 환경에서 컴파일·PlayMode 회귀와 실제 1920×1080 캡처로 재승인.
+1. 완료: 좌판 등록점 배치, chair base < occupant < chair front, 공통 scale `1.55` 적용.
+2. 완료: 엄마 Northwest Work 0..5 하체 복원, frame 0 앵커·SHA 갱신.
+3. 완료: Unity 6000.3.21f1 전체 검증 및 Windows 플레이어 Main Flow QA.
+4. 다음: SafeStaticWork가 아닌 6프레임 Work 애니메이션을 Starter Runtime에 열 때 각 프레임별 좌판
+   접점을 catalog에 승인하고 최대 보정 점프를 다시 측정한다.

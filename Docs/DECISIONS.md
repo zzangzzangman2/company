@@ -194,7 +194,7 @@
 
 결정: `CreateMigrationPreview()`는 T1~T5 회귀 fixture로만 유지하고 새 게임과 구형 저장 이관은 파티션이 없는 `CreateStarterOfficeV1()`을 사용한다. 책상·의자·좌석은 `OfficeWorkstationSlot`으로 명시적으로 묶고 반 셀 `OperatorAnchor`, 책상 operator seat/work socket, 의자 seat anchor를 각각 보존한다. 가구는 의미 root와 균등 scale `VisualRoot`를 분리하며, 실제 타일 footprint는 단일 ground 점이 아니라 독립 저장된 네 꼭짓점으로 검사한다. 가족 착석 pose는 구성원·방향뿐 아니라 SitDown/Work/StandUp의 clip/frame까지 키로 사용한다.
 
-결정: `OfficeFurnitureVisualCatalog.asset`과 `OfficeCharacterSeatPoseCatalog.asset`은 calibration version 2의 유일한 승인 저장 위치다. PNG 재빌드는 이 값을 덮어쓰지 않는다. 현재 값은 실패 진단 candidate이며 수정은 합성 미리보기와 허용 오차를 함께 보여 주는 `OfficeTycoonAlignmentCalibrationWindow`에서 승인한 뒤 저장한다. 의자 NorthWest 정본의 등받이와 좌판은 인물 뒤 base에 두며, 기존의 넓은 chair front overlay는 사용하지 않는다. 책상 전면의 다리·서랍·앞 모서리만 제한된 front overlay로 인물 하체 앞에 둔다.
+결정: `OfficeFurnitureVisualCatalog.asset`과 `OfficeCharacterSeatPoseCatalog.asset`은 calibration version 2의 유일한 승인 저장 위치다. PNG 재빌드는 이 값을 덮어쓰지 않는다. 현재 값은 실패 진단 candidate이며 수정은 합성 미리보기와 허용 오차를 함께 보여 주는 `OfficeTycoonAlignmentCalibrationWindow`에서 승인한 뒤 저장한다. 의자 NorthWest 정본의 등받이와 좌판은 인물 뒤 base에 둔다. 당시의 넓은 chair front overlay 미사용 결정은 `08d398b`에서 등받이·근접 팔걸이만 남긴 제한 전경으로 대체됐다. 책상 전면의 다리·서랍·앞 모서리도 제한된 front overlay로 인물 하체 앞에 둔다.
 
 이유: V1은 배치에 사용한 ground/pelvis 수치를 같은 식으로 다시 계산해 화면이 어긋나도 통과할 수 있었고, 2×1 책상의 실제 작업자 위치와 프레임별 신체 변화도 표현하지 못했다. 의미 좌표, 실제 아트 캘리브레이션, 합성 QA를 서로 다른 입력으로 만들면 의자 방향·좌판 중심·책상 접지·손 위치의 오류를 수치와 화면 양쪽에서 드러낼 수 있다.
 
@@ -216,6 +216,25 @@
 
 결정: b53c355의 pose v3 골반 기준 scale/rotation 교정을 폐기한다. `VisualRoot.localRotation`은 항상 identity, pose scale은 1.0으로 고정하고 Animator가 Sprite를 적용한 직후 실제 pelvis를 chair seat로 옮기는 translation만 허용한다. 손이 공용 work socket과 맞지 않으면 실제 anchor 또는 원화를 수정하며 회전·확대로 맞추지 않는다.
 
-결정: `OfficeCharacterSeatPoseCatalog` v4는 `HumanApproved`와 source Sprite SHA-256이 일치하는 네 가족의 `NorthWest/Work/0`만 safe mode에서 허용한다. v3의 56개 반복 프로필은 자동 이관·자동 승인하지 않는다. 정렬 순서는 `OfficeRuntimeWorkstationService`가 desk base `-2`, chair base `-1`, character, desk front `+1`, chair back `+2`로 단독 소유한다.
+결정: `OfficeCharacterSeatPoseCatalog` v4는 `HumanApproved`와 source Sprite SHA-256이 일치하는 네 가족의 `NorthWest/Work/0`만 safe mode에서 허용한다. v3의 56개 반복 프로필은 자동 이관·자동 승인하지 않는다. 현재 정렬의 단일 소유자는 `OfficeRuntimeDepthSorter`이며 가구 footprint와 착석 상태를 함께 정렬해 chair base < character < chair front를 보장한다.
 
 이유: b53c355는 player 17.43%, older_sister 27.55%, father 20.84%, mother 10.81% 확대와 최대 13.68° 회전을 자세 전체에 적용해 손 오차를 줄이는 대신 얼굴·몸·다리 비율을 찌그러뜨렸다. source SHA가 없는 반복 프로필은 실제 Sprite 변경도 감지하지 못했다. V4 safe mode는 화면 품질을 승인 가능한 한 장으로 제한하고, 실제 아트가 준비된 프레임만 점진적으로 확장한다.
+
+## 2026-08-12 / 착석은 승인 좌판 등록점·의자 전후 레이어·공통 scale 1.55로 고정한다
+
+결정: 착석 인물은 자기 바닥 접점을 의자 바닥에 세우지 않는다. 프레임별 실제 엉덩이/좌판 접점을
+`OfficeCharacterSeatPoseCatalog`에 기록하고 의자의 실제 cushion anchor에 translation으로 고정한다.
+착석 인물은 의자 base보다 앞, 등받이·근접 팔걸이 전면 레이어보다 뒤에 그린다. 이 규칙은
+SittingDown·Working·FinishingWork·StandingUp 전 구간에 유지한다. 공통 캐릭터 시각 scale은 `1.55`,
+회전·pose scale·member별 scale은 계속 금지한다.
+
+결정: 엄마 `Northwest/Work/0..5`는 원본 6장 모두 하단에서 다리가 잘렸으므로 전부 교체한다. 최종
+6장은 256×256, visible height 228px, hard alpha, 발바닥 하단 여백 7px로 통일하고 frame 0의 좌판
+등록점 `(131,62)`, 손 접점 `(90,120)`, 새 source SHA를 승인 catalog에 기록한다. 자동 해부학 후보
+`(149,75)`는 실제 의자 합성에서 좌판을 벗어나므로 폐기한다. SafeStaticWork는 계속 frame 0만 사용하고,
+나머지 5장은 프레임별 접점 승인 후에만 애니메이션 런타임에 연다.
+
+이유: 의자 좌판은 바닥 접점보다 108.2px 위인데 기존 가족 엉덩이는 발보다 52~76px 위라 바닥 정렬 시
+전원이 좌판 아래로 가라앉는다. 또한 의자 sort anchor가 ground anchor보다 약 20px 낮아 바닥 순서만
+사용하면 좌판이 골반을 덮는다. 실제 Windows 플레이어에서 네 가족 seatContact `0.000px`, 의자 base <
+인물 < 의자 전면 레이어 순서, 엄마의 무릎·종아리·발 전체 노출을 확인했다.

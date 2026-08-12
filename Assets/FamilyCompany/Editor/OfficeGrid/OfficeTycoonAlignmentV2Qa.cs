@@ -239,7 +239,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             int kindCount,
             bool expectsPartition)
         {
-            OfficeGrid grid = bootstrap.Presenter.SemanticGrid;
+            FamilyCompany.Simulation.OfficeLayout.OfficeGrid grid = bootstrap.Presenter.SemanticGrid;
             Require(grid.Width == 13 && grid.Height == 13, "Office layout is not 13x13.");
             Require(grid.Furniture.Count == furnitureCount,
                 $"Office layout has {grid.Furniture.Count} furniture objects instead of {furnitureCount}.");
@@ -396,7 +396,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             if (!bootstrap.FurniturePresenter.TryGetDefinition(item.FurnitureId, out OfficeFurnitureVisualDefinition definition))
                 return false;
             if (item.KindId == OfficeGridLayouts.SwivelChairKind)
-                return definition.FrontOverlaySprite == null && !definition.FrontOverlayWhenOccupied;
+                return definition.FrontOverlaySprite != null && definition.FrontOverlayWhenOccupied;
             if (item.KindId == OfficeGridLayouts.DeskWithPcKind)
                 return definition.FrontOverlaySprite != null && definition.FrontOverlayWhenOccupied;
             return definition.FrontOverlaySprite == null;
@@ -414,6 +414,12 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "Chair renderer is missing for mask QA.");
             Require(chair.sortingOrder < mover.TargetRenderer.sortingOrder,
                 worker.MemberId + " chair base renders in front of the character.");
+            Require(bootstrap.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
+                    seat.ChairFurnitureId,
+                    out SpriteRenderer chairOverlay) && chairOverlay.enabled,
+                worker.MemberId + " chair front overlay is not active.");
+            Require(chairOverlay.sortingOrder > mover.TargetRenderer.sortingOrder,
+                worker.MemberId + " chair front overlay does not render above the character.");
             Require(bootstrap.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
                     seat.WorkSurfaceFurnitureId,
                     out SpriteRenderer deskOverlay) && deskOverlay.enabled,
@@ -506,8 +512,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "Not all family members completed reseating.");
             Require(bootstrap.SeatedWorkers.Select(item => item.SeatId).Distinct(StringComparer.Ordinal).Count() == 4,
                 "Duplicate seat claim after reseat.");
-            OfficeGrid grid = bootstrap.Presenter.SemanticGrid;
-            OfficeGrid restored = OfficeGridSaveAdapter.Restore(OfficeGridSaveAdapter.ToDto(grid));
+            FamilyCompany.Simulation.OfficeLayout.OfficeGrid grid = bootstrap.Presenter.SemanticGrid;
+            FamilyCompany.Simulation.OfficeLayout.OfficeGrid restored =
+                OfficeGridSaveAdapter.Restore(OfficeGridSaveAdapter.ToDto(grid));
             Require(grid.ComputeLayoutHash() == restored.ComputeLayoutHash(),
                 "Starter Office save/load changed the layout hash.");
             Append($"RUNTIME | PASS | collisions=0 claims=4 unique=4 saveHash={grid.ComputeLayoutHash()} unsupportedFacingFallbacks=0");

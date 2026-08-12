@@ -54,12 +54,13 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (_instance != null || FindPreviewBuildIndex() < 0) return;
             var host = new GameObject("~StarterOfficeTileRuntime");
-            DontDestroyOnLoad(host);
+            if (Application.isPlaying) DontDestroyOnLoad(host);
             _instance = host.AddComponent<ScenePreviewJump>();
         }
 
         public static void ShowStarterOffice()
         {
+            if (!Application.isPlaying) return;
             if (_instance == null)
             {
                 AutoInstall();
