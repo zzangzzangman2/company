@@ -7,7 +7,8 @@ namespace FamilyCompany.Presentation.Unity
 {
     public sealed class TitleMoneyRainRenderer : MonoBehaviour
     {
-        public const string BackgroundResourcePath = "Title/MoneyRain/money_rain_office_background_v1";
+        public const string BackgroundResourcePath = "Title/MoneyRain/money_rain_tycoon_background_v2";
+        public const string PortraitBackgroundResourcePath = "Title/MoneyRain/money_rain_tycoon_background_portrait_v3";
         public const string MintBundleResourcePath = "Title/MoneyRain/money_bundle_mint_v1";
         public const string CoralBundleResourcePath = "Title/MoneyRain/money_bundle_coral_v1";
         public const string SkyBundleResourcePath = "Title/MoneyRain/money_bundle_sky_v1";
@@ -33,6 +34,7 @@ namespace FamilyCompany.Presentation.Unity
         };
 
         private Texture2D _backgroundTexture;
+        private Texture2D _portraitBackgroundTexture;
         private readonly Texture2D[] _bundleTextures = new Texture2D[3];
         private Texture2D _fallbackBackgroundTexture;
         private Texture2D _menuPanelTexture;
@@ -85,6 +87,20 @@ namespace FamilyCompany.Presentation.Unity
         {
             var width = Mathf.Max(1f, screenWidth);
             var height = Mathf.Max(1f, screenHeight);
+            if (IsCompactLayout(width, height))
+            {
+                var heroHeight = CalculateCompactHeroHeight(width, height);
+                var margin = Mathf.Clamp(width * 0.035f, 14f, 24f);
+                var menuTop = Mathf.Max(132f, heroHeight - 12f);
+                return new TitleMoneyRainLayout(
+                    new Rect(0f, 0f, width, height),
+                    new Rect(
+                        margin,
+                        menuTop,
+                        Mathf.Max(1f, width - margin * 2f),
+                        Mathf.Max(1f, height - menuTop - margin)));
+            }
+
             var menuX = Mathf.Max(70f, width * 0.075f);
             var menuWidth = Mathf.Clamp(width * 0.31f, 450f, 620f);
             var panelWidth = Mathf.Clamp(width * 0.48f, 640f, 1120f);
@@ -93,6 +109,23 @@ namespace FamilyCompany.Presentation.Unity
             return new TitleMoneyRainLayout(
                 new Rect(0f, 0f, panelWidth, height),
                 new Rect(menuX, Mathf.Max(105f, height * 0.12f), menuWidth, Mathf.Max(1f, height - 175f)));
+        }
+
+        public static bool IsCompactLayout(float screenWidth, float screenHeight)
+        {
+            var width = Mathf.Max(1f, screenWidth);
+            var height = Mathf.Max(1f, screenHeight);
+            return width / height < 1.35f;
+        }
+
+        public static float CalculateCompactHeroHeight(float screenWidth, float screenHeight)
+        {
+            var width = Mathf.Max(1f, screenWidth);
+            var height = Mathf.Max(1f, screenHeight);
+            return Mathf.Clamp(
+                Mathf.Min(width * 9f / 16f, height * 0.55f),
+                Mathf.Min(180f, height * 0.42f),
+                height * 0.62f);
         }
 
         public static TitleMoneyRainBundlePose CalculateBundlePose(int index, float unscaledTime, float screenWidth, float screenHeight)
@@ -177,6 +210,7 @@ namespace FamilyCompany.Presentation.Unity
         private void EnsureResources(float unscaledTime)
         {
             var missingAny = _backgroundTexture == null;
+            if (_portraitBackgroundTexture == null) missingAny = true;
             for (var index = 0; index < _bundleTextures.Length; index++)
             {
                 if (_bundleTextures[index] == null) missingAny = true;
@@ -185,6 +219,8 @@ namespace FamilyCompany.Presentation.Unity
             if (!missingAny || unscaledTime < _nextResourceRetryTime) return;
             _nextResourceRetryTime = unscaledTime + ResourceRetryIntervalSeconds;
             if (_backgroundTexture == null) _backgroundTexture = Resources.Load<Texture2D>(BackgroundResourcePath);
+            if (_portraitBackgroundTexture == null)
+                _portraitBackgroundTexture = Resources.Load<Texture2D>(PortraitBackgroundResourcePath);
             if (_bundleTextures[0] == null) _bundleTextures[0] = Resources.Load<Texture2D>(MintBundleResourcePath);
             if (_bundleTextures[1] == null) _bundleTextures[1] = Resources.Load<Texture2D>(CoralBundleResourcePath);
             if (_bundleTextures[2] == null) _bundleTextures[2] = Resources.Load<Texture2D>(SkyBundleResourcePath);
@@ -194,6 +230,14 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (_backgroundTexture != null)
             {
+                if (IsCompactLayout(fullScreen.width, fullScreen.height))
+                {
+                    DrawTextureAspectFill(
+                        fullScreen,
+                        _portraitBackgroundTexture != null ? _portraitBackgroundTexture : _backgroundTexture);
+                    return;
+                }
+
                 DrawTextureAspectFill(fullScreen, _backgroundTexture);
                 return;
             }
@@ -224,6 +268,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private void DrawReadabilityPanel(Rect fullScreen)
         {
+            if (IsCompactLayout(fullScreen.width, fullScreen.height)) return;
             EnsureFallbackTextures();
             var layout = CalculateLayout(fullScreen.width, fullScreen.height);
             var panel = layout.ReadabilityPanel;
@@ -265,10 +310,10 @@ namespace FamilyCompany.Presentation.Unity
             for (var x = 0; x < width; x++)
             {
                 var progress = x / (float)(width - 1);
-                var alpha = progress <= 0.84f
-                    ? Mathf.Lerp(0.98f, 0.92f, progress / 0.84f)
-                    : Mathf.Lerp(0.92f, 0f, (progress - 0.84f) / 0.16f);
-                texture.SetPixel(x, 0, new Color(1f, 0.98f, 0.91f, alpha));
+                var alpha = progress <= 0.72f
+                    ? Mathf.Lerp(0.72f, 0.46f, progress / 0.72f)
+                    : Mathf.Lerp(0.46f, 0f, (progress - 0.72f) / 0.28f);
+                texture.SetPixel(x, 0, new Color(0.055f, 0.047f, 0.045f, alpha));
             }
 
             texture.Apply(false, true);

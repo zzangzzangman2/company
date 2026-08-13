@@ -18,7 +18,8 @@ namespace FamilyCompany.Editor
 
         private static readonly string[] RuntimeTexturePaths =
         {
-            "Assets/Art/UI/Resources/Title/MoneyRain/money_rain_office_background_v1.png",
+            "Assets/Art/UI/Resources/Title/MoneyRain/money_rain_tycoon_background_v2.png",
+            "Assets/Art/UI/Resources/Title/MoneyRain/money_rain_tycoon_background_portrait_v3.png",
             "Assets/Art/UI/Resources/Title/MoneyRain/money_bundle_mint_v1.png",
             "Assets/Art/UI/Resources/Title/MoneyRain/money_bundle_coral_v1.png",
             "Assets/Art/UI/Resources/Title/MoneyRain/money_bundle_sky_v1.png"
@@ -69,7 +70,7 @@ namespace FamilyCompany.Editor
                     throw new InvalidOperationException("Money-rain texture has not imported as Texture2D: " + assetPath);
                 }
 
-                if (index == 0) continue;
+                if (index <= 1) continue;
                 var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
                 if (importer == null)
                 {
@@ -142,9 +143,28 @@ namespace FamilyCompany.Editor
 
         private static void ValidateResponsiveLayout()
         {
+            ValidateCompactLayout(440f, 481f);
+            ValidateCompactLayout(768f, 1024f);
             ValidateLayout(1280f, 720f);
             ValidateLayout(1920f, 1080f);
             ValidateLayout(3440f, 1080f);
+        }
+
+        private static void ValidateCompactLayout(float width, float height)
+        {
+            Assert(TitleMoneyRainRenderer.IsCompactLayout(width, height),
+                $"Expected compact title layout at {width:0}x{height:0}.");
+            var layout = TitleMoneyRainRenderer.CalculateLayout(width, height);
+            var menu = layout.MenuSafeArea;
+            var heroHeight = TitleMoneyRainRenderer.CalculateCompactHeroHeight(width, height);
+            Assert(menu.x >= 0f && menu.y >= 0f && menu.xMax <= width && menu.yMax <= height + 0.01f,
+                $"Compact menu safe area is clipped at {width:0}x{height:0}.");
+            Assert(menu.width >= width - 50f && menu.height >= 200f,
+                $"Compact menu does not have enough room at {width:0}x{height:0}.");
+            Assert(heroHeight <= menu.y + 12.01f,
+                $"Compact menu leaves an unexpected gap below the hero at {width:0}x{height:0}.");
+            Assert(layout.ReadabilityPanel.width >= width && layout.ReadabilityPanel.height >= height,
+                $"Compact layout backdrop does not cover the screen at {width:0}x{height:0}.");
         }
 
         private static void ValidateLayout(float width, float height)

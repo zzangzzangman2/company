@@ -50,7 +50,33 @@ namespace FamilyCompany.Presentation.Unity
         private GUIStyle _buttonStyle;
         private GUIStyle _slotStyle;
         private GUIStyle _panelStyle;
+        private GUIStyle _mainTitleStyle;
+        private GUIStyle _mainTitleShadowStyle;
+        private GUIStyle _mainSubtitleStyle;
+        private GUIStyle _mainChipStyle;
+        private GUIStyle _mainButtonStyle;
+        private GUIStyle _mainButtonPrimaryStyle;
+        private GUIStyle _mainButtonDangerStyle;
+        private GUIStyle _mainButtonDisabledStyle;
+        private GUIStyle _mainButtonTitleStyle;
+        private GUIStyle _mainButtonDetailStyle;
+        private GUIStyle _mainButtonIndexStyle;
+        private GUIStyle _mainInfoStyle;
+        private GUIStyle _mainShortcutStyle;
+        private GUIStyle _mainCompactTextButtonStyle;
+        private GUIStyle _mainCompactDangerButtonStyle;
+        private GUIStyle _mainInfoBoxStyle;
+        private GUIStyle _mainChipBoxStyle;
         private Texture2D _solidTexture;
+        private Texture2D _mainButtonTexture;
+        private Texture2D _mainButtonHoverTexture;
+        private Texture2D _mainButtonActiveTexture;
+        private Texture2D _mainButtonPrimaryTexture;
+        private Texture2D _mainButtonPrimaryHoverTexture;
+        private Texture2D _mainButtonDangerTexture;
+        private Texture2D _mainButtonDisabledTexture;
+        private Texture2D _mainInfoTexture;
+        private Texture2D _mainChipTexture;
         private int _styleHeight;
         private int _activeSlot = UnityJsonSaveRepository.MinimumSlot;
         private int _pendingNewGameSlot;
@@ -130,6 +156,15 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (Application.isPlaying && Time.timeScale == 0f) Time.timeScale = 1f;
             if (_solidTexture != null) Destroy(_solidTexture);
+            DestroyRuntimeTexture(_mainButtonTexture);
+            DestroyRuntimeTexture(_mainButtonHoverTexture);
+            DestroyRuntimeTexture(_mainButtonActiveTexture);
+            DestroyRuntimeTexture(_mainButtonPrimaryTexture);
+            DestroyRuntimeTexture(_mainButtonPrimaryHoverTexture);
+            DestroyRuntimeTexture(_mainButtonDangerTexture);
+            DestroyRuntimeTexture(_mainButtonDisabledTexture);
+            DestroyRuntimeTexture(_mainInfoTexture);
+            DestroyRuntimeTexture(_mainChipTexture);
         }
 
         private void EnsureTitleMoneyRainRenderer()
@@ -552,36 +587,109 @@ namespace FamilyCompany.Presentation.Unity
 
         private void DrawMainMenu()
         {
-            DrawMenuBackground("2000년 1월 3일 · 대한민국");
-            var width = Mathf.Clamp(Screen.width * 0.31f, 450f, 620f);
-            var x = Mathf.Max(70f, Screen.width * 0.075f);
-            var top = Mathf.Max(105f, Screen.height * 0.12f);
-            GUILayout.BeginArea(new Rect(x, top, width, Screen.height - top - 70f));
-            GUILayout.Label("가족회사", _titleStyle);
-            GUILayout.Label("네 식구가 시작한 가장 작은 회사", _subtitleStyle);
-            GUILayout.Space(34f);
-            var previousBackgroundColor = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(0.72f, 0.93f, 0.88f, 1f);
-            if (GUILayout.Button("처음하기", _buttonStyle, GUILayout.Height(62f))) ShowNewGameSlotsNow();
+            DrawMenuBackground(null);
+            DrawLeftMainMenu(TitleMoneyRainRenderer.IsCompactLayout(Screen.width, Screen.height));
+        }
 
-            GUI.enabled = HasAnySave;
-            if (GUILayout.Button("이어하기", _buttonStyle, GUILayout.Height(62f))) ContinueLatestNow();
-            if (GUILayout.Button("불러오기", _buttonStyle, GUILayout.Height(62f))) ShowLoadSlotsNow();
-            GUI.enabled = true;
+        private void DrawLeftMainMenu(bool compact)
+        {
+            var scale = compact
+                ? Mathf.Clamp(Mathf.Min(Screen.width / 440f, Screen.height / 481f), 0.82f, 1.18f)
+                : Mathf.Clamp(Screen.height / (float)ReferenceHeight, 0.72f, 1.25f);
+            var x = compact ? 20f * scale : Mathf.Max(72f, Screen.width * 0.065f);
+            var top = compact ? 21f * scale : 62f * scale;
+            var menuWidth = compact
+                ? Mathf.Min(190f * scale, Screen.width * 0.48f)
+                : Mathf.Clamp(288f * scale, 230f, 340f);
+            var titleWidth = compact ? Mathf.Min(280f * scale, Screen.width - x - 16f) : 520f * scale;
 
-            var mode = Screen.fullScreenMode == FullScreenMode.Windowed ? "창 모드" : "전체 화면";
-            if (GUILayout.Button($"화면 설정 · {mode}", _buttonStyle, GUILayout.Height(56f))) ToggleFullscreenNow();
-            if (GUILayout.Button("종료", _buttonStyle, GUILayout.Height(56f))) Application.Quit();
-            GUILayout.Space(18f);
-            GUILayout.Label(_notice, _bodyStyle);
-            GUILayout.Space(7f);
-            GUILayout.Label("2000년의 작은 하청 사무실에서 시작해 실제 회사들과 경쟁하고 역사를 바꾸세요.", _smallStyle);
-            GUI.backgroundColor = previousBackgroundColor;
-            GUILayout.EndArea();
-            GUI.Label(
-                new Rect(Screen.width - 360f, Screen.height - 108f, 320f, 72f),
-                "F11  전체 화면 전환\nESC  게임 메뉴\nCtrl+S  현재 슬롯 빠른 저장",
-                _smallStyle);
+            DrawColoredLabel(new Rect(x + 2f, top, titleWidth, 20f * scale),
+                "FAMILY COMPANY  /  SEOUL 2000", _mainChipStyle, new Color(1f, 0.48f, 0.34f, 1f));
+
+            var titleRect = new Rect(x, top + 20f * scale, titleWidth, 74f * scale);
+            var shadowRect = titleRect;
+            shadowRect.x += 3f * scale;
+            shadowRect.y += 4f * scale;
+            GUI.Label(shadowRect, "가족회사", _mainTitleShadowStyle);
+            GUI.Label(titleRect, "가족회사", _mainTitleStyle);
+            DrawColoredLabel(new Rect(x + 2f, top + 90f * scale, titleWidth, 24f * scale),
+                "네 식구가 함께 만드는 작은 회사의 역사", _mainSubtitleStyle,
+                new Color(0.93f, 0.86f, 0.72f, 0.96f));
+
+            var menuY = compact ? 141f * scale : 276f * scale;
+            var rowHeight = compact ? 33f * scale : 47f * scale;
+            var gap = compact ? 5f * scale : 8f * scale;
+            var latestSlot = GetLatestSaveSlot();
+
+            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "01", "새 회사", true,
+                    MainMenuButtonKind.Primary))
+                ShowNewGameSlotsNow();
+            menuY += rowHeight + gap;
+            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "02", "이어하기", latestSlot.HasValue,
+                    MainMenuButtonKind.Standard))
+                ContinueLatestNow();
+            menuY += rowHeight + gap;
+            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "03", "불러오기", true,
+                    MainMenuButtonKind.Standard))
+                ShowLoadSlotsNow();
+            menuY += rowHeight + gap;
+            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "04", "화면 설정", true,
+                    MainMenuButtonKind.Standard))
+                ToggleFullscreenNow();
+            menuY += rowHeight + gap;
+            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "05", "종료", true,
+                    MainMenuButtonKind.Danger))
+                Application.Quit();
+
+            var statusY = compact ? Screen.height - 59f * scale : menuY + rowHeight + 24f * scale;
+            DrawSolid(new Rect(x, statusY, menuWidth, 1f), new Color(1f, 0.48f, 0.34f, 0.72f));
+            DrawColoredLabel(new Rect(x, statusY + 7f * scale, menuWidth, 19f * scale),
+                "2000.01.03  ·  가족 4명  ·  500만원", _mainInfoStyle,
+                new Color(1f, 0.89f, 0.69f, 1f));
+            DrawColoredLabel(new Rect(x, statusY + 27f * scale, menuWidth, 18f * scale),
+                string.IsNullOrWhiteSpace(_notice) ? "작은 의뢰 하나부터 시작하세요." : _notice,
+                _mainButtonDetailStyle, new Color(0.83f, 0.78f, 0.70f, 0.92f));
+        }
+
+        private bool DrawLeftMenuRow(
+            Rect rect,
+            string index,
+            string title,
+            bool enabled,
+            MainMenuButtonKind kind)
+        {
+            var style = kind == MainMenuButtonKind.Primary
+                ? _mainButtonPrimaryStyle
+                : kind == MainMenuButtonKind.Danger ? _mainButtonDangerStyle : _mainButtonStyle;
+            if (!enabled) style = _mainButtonDisabledStyle;
+            var previousEnabled = GUI.enabled;
+            GUI.enabled = enabled;
+            var clicked = GUI.Button(rect, GUIContent.none, style);
+            GUI.enabled = previousEnabled;
+
+            var primary = kind == MainMenuButtonKind.Primary;
+            var danger = kind == MainMenuButtonKind.Danger;
+            var indexColor = enabled
+                ? primary ? new Color(0.35f, 0.12f, 0.10f, 0.84f) : new Color(1f, 0.48f, 0.34f, 0.92f)
+                : new Color(0.49f, 0.48f, 0.46f, 0.78f);
+            var titleColor = enabled
+                ? primary ? new Color(0.17f, 0.08f, 0.07f, 1f)
+                    : danger ? new Color(1f, 0.58f, 0.48f, 1f) : new Color(1f, 0.94f, 0.82f, 1f)
+                : new Color(0.49f, 0.48f, 0.46f, 0.88f);
+            var side = Mathf.Clamp(rect.height * 0.95f, 28f, 46f);
+            DrawColoredLabel(new Rect(rect.x + 5f, rect.y, side, rect.height),
+                index, _mainButtonIndexStyle, indexColor);
+            DrawColoredLabel(new Rect(rect.x + side, rect.y, rect.width - side - 12f, rect.height),
+                title, _mainButtonTitleStyle, titleColor);
+            return clicked;
+        }
+
+        private static void DrawColoredLabel(Rect rect, string text, GUIStyle style, Color color)
+        {
+            var previous = GUI.color;
+            GUI.color = color;
+            GUI.Label(rect, text, style);
+            GUI.color = previous;
         }
 
         private void DrawMenuBackground(string eyebrow)
@@ -589,9 +697,11 @@ namespace FamilyCompany.Presentation.Unity
             var fullScreen = new Rect(0f, 0f, Screen.width, Screen.height);
             EnsureTitleMoneyRainRenderer();
             if (_titleMoneyRainRenderer != null) _titleMoneyRainRenderer.Draw(fullScreen);
-            else DrawSolid(fullScreen, new Color(1f, 0.96f, 0.86f, 1f));
-            DrawSolid(new Rect(0f, Screen.height - 14f, Screen.width, 14f), new Color(0.96f, 0.49f, 0.38f, 1f));
-            GUI.Label(new Rect(Screen.width * 0.075f, 46f, Screen.width * 0.6f, 40f), eyebrow, _smallStyle);
+            else DrawSolid(fullScreen, new Color(0.055f, 0.047f, 0.045f, 1f));
+            if (!string.IsNullOrWhiteSpace(eyebrow))
+            {
+                GUI.Label(new Rect(Screen.width * 0.075f, 46f, Screen.width * 0.6f, 40f), eyebrow, _mainSubtitleStyle);
+            }
         }
 
 
@@ -884,6 +994,7 @@ namespace FamilyCompany.Presentation.Unity
             _styleHeight = targetHeight;
             var scale = Mathf.Clamp(targetHeight / (float)ReferenceHeight, 0.75f, 1.35f);
             EnsureSolidTexture();
+            EnsureMainMenuTextures();
             _titleStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = Mathf.RoundToInt(70f * scale),
@@ -939,6 +1050,251 @@ namespace FamilyCompany.Presentation.Unity
             _slotStyle.hover.background = _solidTexture;
             _slotStyle.active.background = _solidTexture;
             _panelStyle = new GUIStyle(GUI.skin.box);
+
+            _mainTitleStyle = new GUIStyle(_titleStyle)
+            {
+                fontSize = Mathf.RoundToInt(76f * scale),
+                normal = { textColor = new Color(1f, 0.94f, 0.78f, 1f) }
+            };
+            _mainTitleShadowStyle = new GUIStyle(_mainTitleStyle)
+            {
+                normal = { textColor = new Color(0.01f, 0.09f, 0.10f, 0.80f) }
+            };
+            _mainSubtitleStyle = new GUIStyle(_subtitleStyle)
+            {
+                fontSize = Mathf.RoundToInt(22f * scale),
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = new Color(0.93f, 0.86f, 0.72f, 1f) }
+            };
+            _mainChipStyle = new GUIStyle(_smallStyle)
+            {
+                fontSize = Mathf.RoundToInt(13f * scale),
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft,
+                normal = { textColor = new Color(1f, 0.48f, 0.34f, 1f) }
+            };
+            _mainButtonTitleStyle = new GUIStyle(_headingStyle)
+            {
+                fontSize = Mathf.RoundToInt(21f * scale),
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                normal = { textColor = Color.white }
+            };
+            _mainButtonDetailStyle = new GUIStyle(_smallStyle)
+            {
+                fontSize = Mathf.RoundToInt(13f * scale),
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                normal = { textColor = new Color(0.83f, 0.78f, 0.70f, 0.92f) }
+            };
+            _mainButtonIndexStyle = new GUIStyle(_headingStyle)
+            {
+                fontSize = Mathf.RoundToInt(16f * scale),
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new Color(1f, 0.48f, 0.34f, 0.92f) }
+            };
+            _mainInfoStyle = new GUIStyle(_smallStyle)
+            {
+                fontSize = Mathf.RoundToInt(14f * scale),
+                fontStyle = FontStyle.Bold,
+                clipping = TextClipping.Clip,
+                normal = { textColor = new Color(1f, 0.89f, 0.69f, 1f) }
+            };
+            _mainShortcutStyle = new GUIStyle(_smallStyle)
+            {
+                fontSize = Mathf.RoundToInt(13f * scale),
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                normal = { textColor = new Color(0.69f, 0.87f, 0.82f, 0.92f) }
+            };
+            _mainCompactTextButtonStyle = new GUIStyle(_mainShortcutStyle)
+            {
+                fontSize = Mathf.RoundToInt(14f * scale),
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                padding = new RectOffset(4, 4, 2, 2),
+                normal = { textColor = new Color(0.72f, 0.91f, 0.85f, 0.96f) },
+                hover = { textColor = new Color(1f, 0.91f, 0.63f, 1f) },
+                active = { textColor = new Color(1f, 0.60f, 0.43f, 1f) }
+            };
+            _mainCompactDangerButtonStyle = new GUIStyle(_mainCompactTextButtonStyle)
+            {
+                normal = { textColor = new Color(1f, 0.58f, 0.50f, 0.96f) },
+                hover = { textColor = new Color(1f, 0.80f, 0.66f, 1f) },
+                active = { textColor = new Color(0.90f, 0.30f, 0.26f, 1f) }
+            };
+
+            var roundedBorder = new RectOffset(24, 24, 24, 24);
+            _mainButtonStyle = CreateMainMenuButtonStyle(
+                _mainButtonTexture,
+                _mainButtonHoverTexture,
+                _mainButtonActiveTexture,
+                roundedBorder);
+            _mainButtonPrimaryStyle = CreateMainMenuButtonStyle(
+                _mainButtonPrimaryTexture,
+                _mainButtonPrimaryHoverTexture,
+                _mainButtonActiveTexture,
+                roundedBorder);
+            _mainButtonDangerStyle = CreateMainMenuButtonStyle(
+                _mainButtonDangerTexture,
+                _mainButtonHoverTexture,
+                _mainButtonActiveTexture,
+                roundedBorder);
+            _mainButtonDisabledStyle = CreateMainMenuButtonStyle(
+                _mainButtonDisabledTexture,
+                _mainButtonDisabledTexture,
+                _mainButtonDisabledTexture,
+                roundedBorder);
+            _mainInfoBoxStyle = new GUIStyle(GUI.skin.box)
+            {
+                border = roundedBorder,
+                normal = { background = _mainInfoTexture }
+            };
+            _mainChipBoxStyle = new GUIStyle(GUI.skin.box)
+            {
+                border = roundedBorder,
+                normal = { background = _mainChipTexture }
+            };
+        }
+
+        private static GUIStyle CreateMainMenuButtonStyle(
+            Texture2D normal,
+            Texture2D hover,
+            Texture2D active,
+            RectOffset border)
+        {
+            var style = new GUIStyle(GUI.skin.button)
+            {
+                border = border,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+                overflow = new RectOffset(0, 0, 0, 0)
+            };
+            style.normal.background = normal;
+            style.hover.background = hover;
+            style.active.background = active;
+            style.focused.background = hover;
+            style.onNormal.background = normal;
+            style.onHover.background = hover;
+            style.onActive.background = active;
+            style.onFocused.background = hover;
+            return style;
+        }
+
+        private void EnsureMainMenuTextures()
+        {
+            if (_mainButtonTexture != null) return;
+            _mainButtonTexture = BuildRoundedUiTexture(
+                "Main Menu Charcoal",
+                new Color(0.11f, 0.095f, 0.09f, 0.92f),
+                new Color(0.055f, 0.047f, 0.045f, 0.96f),
+                new Color(0.58f, 0.49f, 0.40f, 0.72f));
+            _mainButtonHoverTexture = BuildRoundedUiTexture(
+                "Main Menu Warm Hover",
+                new Color(0.98f, 0.79f, 0.57f, 1f),
+                new Color(0.94f, 0.46f, 0.31f, 1f),
+                new Color(1f, 0.91f, 0.71f, 1f));
+            _mainButtonActiveTexture = BuildRoundedUiTexture(
+                "Main Menu Active",
+                new Color(0.98f, 0.57f, 0.36f, 1f),
+                new Color(0.86f, 0.35f, 0.28f, 1f),
+                new Color(1f, 0.88f, 0.66f, 1f));
+            _mainButtonPrimaryTexture = BuildRoundedUiTexture(
+                "Main Menu Coral Primary",
+                new Color(1f, 0.66f, 0.46f, 1f),
+                new Color(0.93f, 0.35f, 0.27f, 1f),
+                new Color(1f, 0.88f, 0.67f, 1f));
+            _mainButtonPrimaryHoverTexture = BuildRoundedUiTexture(
+                "Main Menu Coral Primary Hover",
+                new Color(1f, 0.83f, 0.58f, 1f),
+                new Color(1f, 0.49f, 0.31f, 1f),
+                new Color(1f, 0.96f, 0.78f, 1f));
+            _mainButtonDangerTexture = BuildRoundedUiTexture(
+                "Main Menu Danger",
+                new Color(0.20f, 0.24f, 0.25f, 0.96f),
+                new Color(0.11f, 0.13f, 0.14f, 0.98f),
+                new Color(0.91f, 0.39f, 0.34f, 0.92f));
+            _mainButtonDisabledTexture = BuildRoundedUiTexture(
+                "Main Menu Disabled",
+                new Color(0.105f, 0.095f, 0.09f, 0.82f),
+                new Color(0.065f, 0.058f, 0.055f, 0.88f),
+                new Color(0.30f, 0.27f, 0.24f, 0.62f));
+            _mainInfoTexture = BuildRoundedUiTexture(
+                "Main Menu Info",
+                new Color(0.11f, 0.095f, 0.09f, 0.90f),
+                new Color(0.055f, 0.047f, 0.045f, 0.94f),
+                new Color(0.75f, 0.50f, 0.36f, 0.72f));
+            _mainChipTexture = BuildRoundedUiTexture(
+                "Main Menu Chip",
+                new Color(1f, 0.88f, 0.67f, 0.98f),
+                new Color(0.97f, 0.57f, 0.38f, 0.98f),
+                new Color(1f, 0.96f, 0.82f, 1f));
+        }
+
+        private static Texture2D BuildRoundedUiTexture(string textureName, Color top, Color bottom, Color borderColor)
+        {
+            const int width = 96;
+            const int height = 64;
+            const int radius = 15;
+            const int border = 3;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = textureName,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            for (var y = 0; y < height; y++)
+            {
+                var progress = y / (float)(height - 1);
+                for (var x = 0; x < width; x++)
+                {
+                    if (!IsInsideRoundedRect(x, y, width, height, radius))
+                    {
+                        texture.SetPixel(x, y, Color.clear);
+                        continue;
+                    }
+
+                    var insideFill = IsInsideRoundedRect(
+                        x - border,
+                        y - border,
+                        width - border * 2,
+                        height - border * 2,
+                        radius - border);
+                    var color = insideFill ? Color.Lerp(top, bottom, progress) : borderColor;
+                    if (insideFill && y <= border + 1) color = Color.Lerp(color, Color.white, 0.12f);
+                    texture.SetPixel(x, y, color);
+                }
+            }
+
+            texture.Apply(false, true);
+            return texture;
+        }
+
+        private static bool IsInsideRoundedRect(int x, int y, int width, int height, int radius)
+        {
+            if (x < 0 || y < 0 || x >= width || y >= height) return false;
+            if (x >= radius && x < width - radius) return true;
+            if (y >= radius && y < height - radius) return true;
+            var centerX = x < radius ? radius : width - radius - 1;
+            var centerY = y < radius ? radius : height - radius - 1;
+            var dx = x - centerX;
+            var dy = y - centerY;
+            return dx * dx + dy * dy <= radius * radius;
+        }
+
+        private static void DestroyRuntimeTexture(Texture2D texture)
+        {
+            if (texture == null) return;
+            if (Application.isPlaying) Destroy(texture);
+            else DestroyImmediate(texture);
+        }
+
+        private enum MainMenuButtonKind
+        {
+            Standard,
+            Primary,
+            Danger
         }
 
 

@@ -1,5 +1,39 @@
 # PROJECT STATE
 
+## 2026-08-13 / Compact Title No-Letterbox V6 완료
+
+- 16:9 V2 배경을 440×481 중앙에 scale-to-fit해 생기던 큰 위아래 검은 띠를 제거했다. 기존 사무실을 기준으로 위쪽 벽·창문과 아래쪽 바닥·식물을 확장한 1195×1316 compact 전용 `money_rain_tycoon_background_portrait_v3.png`를 추가했다.
+- compact 런타임은 세로 V3를 화면 전체 aspect-fill하고, 가로 화면은 기존 16:9 V2를 계속 사용한다. 왼쪽 33px 세로 메뉴, 코랄·크림·차콜 UI와 돈다발 12개/2.8초 루프는 유지했다.
+- 440×481 정적 QA 프리뷰에서 검은 여백 0, 가족 4인 노출, 왼쪽 메뉴 가독성을 확인했다. Simulation/Presentation/Editor Bee 컴파일은 모두 오류 0이다.
+
+## 2026-08-13 / Main Title Left Menu V5 완료
+
+- 하단 메뉴 배치를 폐기하고 compact·가로 화면 모두 왼쪽 세로 메뉴로 통일했다. 440×481 기준 각 행은 높이 33px, 폭 190px이며 `새 회사/이어하기/불러오기/화면 설정/종료`가 한 열로 정렬된다.
+- 기존 민트·청록 UI 팔레트와 하단 삼색 리본을 제거했다. 새 UI는 코랄 기본 선택, 크림 텍스트, 차콜 보조 버튼, 웜그레이 테두리만 사용하며 제목 위의 작은 SEOUL 2000 라벨과 왼쪽 상태선으로 위계를 만든다.
+- compact 배경은 상단 고정이 아니라 화면 중앙에 16:9 원본 전체를 표시한다. 메뉴는 원화의 왼쪽 저복잡도 영역에 겹치고 오른쪽 가족 사무실, 누나 맨발, 주인공·엄마의 사람 방향 CRT/키보드는 잘리지 않는다. 돈다발 12개/2.8초 루프는 유지했다.
+- 새 Simulation 파일을 명시적으로 포함해 Simulation/Presentation/Editor Bee 컴파일을 다시 실행했고 모두 오류 0이었다. 실제 사용자 캡처와 같은 440×481 정적 QA 프리뷰에서 메뉴 크기·오피스 노출·녹색 UI 제거를 확인했다.
+
+## 2026-08-13 / Main Title Minimal UI V4 완료
+
+- 사용자 피드백에 따라 compact V3의 큰 외곽 패널, NEW/CONTINUE 배지, 버튼별 설명과 3개의 보조 카드 테두리를 제거했다. `새 회사/이어하기`는 높이 42px 전후의 얇은 버튼 2개만 유지하고 `불러오기/화면 설정/종료`는 구분선이 있는 텍스트 메뉴 한 줄로 축소했다.
+- 같은 축소 규칙을 가로 화면에도 적용해 5개의 72px 설명 카드를 더 이상 사용하지 않는다. 배경·가족·사람을 향하는 컴퓨터·돈다발 12개/2.8초 루프와 모든 메뉴 동작은 그대로다.
+- 440×481 정적 QA 프리뷰에서 메뉴가 차지하는 면적과 텍스트 잘림을 확인했다. Bee 응답 파일이 새 Simulation 소스를 아직 포함하지 않아 해당 파일을 명시적으로 포함한 뒤 Simulation/Presentation/Editor를 재컴파일했고 모두 오류 0이었다.
+
+## 2026-08-13 / Main Title Compact UI V3 완료
+
+- 실제 440×481 창에서 16:9 배경을 화면 전체 aspect-fill해 가족 사무실이 오른쪽 조각만 보이던 문제를 수정했다. 가로세로비 1.35 미만에서는 배경 전체를 상단 16:9 히어로 영역에 `ScaleToFit`으로 표시하고 아래는 짙은 청록 메뉴 영역으로 분리한다.
+- 세로형 메인 메뉴는 긴 카드 5개를 쌓지 않는다. `새 회사/이어하기` 2개 큰 타일과 `불러오기/화면/종료` 3개 작은 타일, 한 줄 상태 정보로 재구성해 440×481에서도 오피스와 가족 4인이 화면 절반 이상 보인다.
+- 기존 돈다발 3종·12개 인스턴스·2.8초 `Time.unscaledTime` 루프와 모든 버튼 동작은 유지했다. 상단 히어로에 원본 배경 전체가 들어가므로 누나의 맨발과 사람을 향하는 주인공·엄마의 CRT/키보드 방향도 세로 창에서 잘리지 않는다.
+- 440×481 및 768×1024 compact layout 계약을 `TitleMoneyRainValidation`에 추가했다. Unity Bee Presentation/Editor 응답 파일 재컴파일은 오류 0이며, Unity 에디터 실행은 기존과 같이 로컬 라이선스 부재 때문에 보류했다. 동일 비율 정적 QA 프리뷰에서 히어로/메뉴 경계와 텍스트 잘림을 육안 확인했다.
+
+## 2026-08-13 / Main Title Tycoon UI V2 완료
+
+- 메인 화면의 단순한 밝은 사무실·민트 사각 버튼 구성을 등각 도트 경영게임 키아트와 전용 타이틀 UI로 교체했다. 새 활성 배경은 `money_rain_tycoon_background_v2.png`이며 왼쪽 42% 메뉴 안전 영역과 오른쪽 가족 4인의 실제 역할 장면을 분리한다.
+- 배경은 프로젝트의 SIMUL v3 화풍 앵커, 등각 사무실 도트 타깃, 가족 4인 승인 이동 Sprite를 참조한 OpenAI 내장 ImageGen 생성물이다. 누나는 정본대로 맨발이며, 사용자 피드백에 따라 주인공·엄마의 CRT 화면과 키보드가 각각 앉은 사람을 향하도록 다시 편집했다.
+- Unity IMGUI는 새 회사/이어하기/불러오기/화면 설정/종료를 번호·제목·설명 3단 위계의 9-slice 카드로 표시한다. 최근 저장이 없을 때의 비활성 상태, 시작 날짜·가족 수·창업 자금 상태 스트립, 단축키 줄과 민트·코랄 하단 리본을 추가했다.
+- 기존 돈다발 3종, 12개 인스턴스, `Time.unscaledTime`, 2.8초 폐루프 경로는 그대로 유지했다. GIF는 여전히 QA 전용이고 런타임은 배경과 투명 돈다발 PNG만 그린다.
+- Unity 라이선스 부재로 에디터 실행 검증은 `No valid Unity Editor license found`에서 차단됐다. 대신 Unity 6000.3.21f1 Bee의 실제 Presentation/Editor Roslyn 응답 파일로 두 어셈블리를 재컴파일해 오류 0을 확인했고, 동일 좌표·팔레트·돈다발 궤적의 1920×1080 정적 QA 프리뷰에서 메뉴 안전 영역, 글자 잘림, 네 가족, 누나 맨발, 주인공·엄마 CRT 방향을 육안 확인했다. 라이선스 복구 후 `TitleMoneyRainValidation.Run`과 Windows QA player 캡처를 다시 실행한다.
+
 ## 2026-08-13 / P1.5 Placed Furniture Interaction Offer Resolver 완료
 
 - 순수 C# `OfficeInteractionOffer`와 `OfficeInteractionOfferFactory`를 추가했다. 한 Definition이 실제 배치된 가구 인스턴스마다 `interactionId@furnitureId` Offer 하나를 만들며 location, furniture kind, capacity, approach policy를 Definition에서 그대로 가져온다.

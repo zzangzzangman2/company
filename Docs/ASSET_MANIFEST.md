@@ -164,6 +164,29 @@
 - 애니메이션: 하늘색은 뒤, 코랄은 중간, 민트는 앞 깊이로 크기·그림자를 달리하고, 닫힌 대각 타원 경로와 사인 회전으로 시작/끝 속도를 연속시켰다. GIF는 시각 확인용이며 Unity에서는 배경과 투명 PNG 3장을 저비용으로 별도 애니메이션한다.
 - QA: 사람·찌그러진 누나·인물 잔상 0, 읽을 수 있거나 글자처럼 뭉친 표기 0, 카지노/검정·금색 고급 분위기 0. 루프 경계 프레임 RMS 17.910, 일반 인접 프레임 중앙값 16.845로 경계 점프가 일반 이동량과 같은 수준이다.
 
+### Money Rain Tycoon 타이틀 V2
+
+- 상태: **ACTIVE TITLE BACKGROUND · 기존 배경과 돈다발 원본 보존**
+- 경로: `Assets/Art/UI/Resources/Title/MoneyRain/money_rain_tycoon_background_v2.png`
+- 규격: 1672×941 RGB, 16:9
+- SHA-256: `3F65163581951FB92DB72C13CE0850AF37F7E2CC526B4390F3AC7A0BD82B9933`
+- 내용: 왼쪽 42% 저복잡도 짙은 청록 메뉴 영역, 오른쪽 주인공·누나·아빠·엄마가 CRT 조사·서류 운반·전화 응대·회계를 수행하는 2000년 등각 도트 가족 사무실
+- 정본: 가족 4인의 승인 도트 외형과 연령·복장을 유지한다. 누나는 맨발이며 주인공·엄마 CRT의 화면과 키보드는 앉은 사람을 향한다.
+- 제작: OpenAI 내장 ImageGen. Image 1은 SIMUL v3 화풍 앵커, Image 2는 등각 사무실 도트 타깃, Image 3은 가족 4인 승인 이동 Sprite contact sheet를 각각 화풍·공간·정체성 참조로 분리했다. 최초 생성 뒤 누나 신발 제거와 주인공·엄마 CRT 방향 교정을 `precise-object-edit`로 수행했다.
+- 후처리: 최종 편집 출력의 오른쪽 바깥 1px을 동일한 최외곽 열로 연장해 원래 타이틀 규격 1672×941 RGB로 비파괴 정규화했다.
+- 프롬프트 핵심: 정확한 16:9, 오른쪽 58%의 실제 업무 장면, 왼쪽 42% UI 안전 영역, CRT·유선 전화·팩스·바인더·종이 서류, 글자·로고·버튼·돈·워터마크 금지.
+- 런타임: `TitleMoneyRainRenderer`가 이 배경을 aspect-fill한 뒤 기존 민트·코랄·하늘 돈다발 12개를 `Time.unscaledTime` 2.8초 폐루프로 그린다. 제목·메뉴·저장 상태는 Unity IMGUI가 별도 렌더한다.
+
+### Money Rain Tycoon 세로 확장 V3
+
+- 상태: **ACTIVE COMPACT TITLE BACKGROUND · V2 가로 배경 보존**
+- 경로: `Assets/Art/UI/Resources/Title/MoneyRain/money_rain_tycoon_background_portrait_v3.png`
+- 규격: 1195×1316 RGB, compact 10:11 대응
+- SHA-256: `EA5E55A29A9F7B4B159E32F035CA8DBC2C8AEF23B07BFA58459F62E1998895D7`
+- 제작: OpenAI 내장 ImageGen `precise-object-edit`. V2를 편집 대상으로 사용해 중앙 가족 사무실은 유지하고 위쪽 벽·창문과 아래쪽 바닥·식물 영역만 자연스럽게 확장했다.
+- 정본: 가족 4인, 누나 맨발, 주인공·엄마의 사람 방향 CRT/키보드를 유지한다. 왼쪽은 작은 세로 메뉴용 저복잡도 영역이며 이미지 안 UI·문구·돈다발은 없다.
+- 런타임: 가로세로비 1.35 미만에서 `TitleMoneyRainRenderer`가 이 이미지를 aspect-fill한다. 440×481에서 위아래 검은 레터박스 없이 화면 전체를 채운다.
+
 ## 부모 캐릭터
 
 ### 아빠
