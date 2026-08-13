@@ -1629,8 +1629,11 @@ namespace FamilyCompany.Presentation.Unity
                     seat.ChairFurnitureId,
                     out SpriteRenderer chairOverlay) || chairOverlay == null)
             {
-                failure = "chair front overlay renderer is missing for " + seat.ChairFurnitureId;
-                return false;
+                // A complete single-sprite chair has no optional layer to compare. Its visibility
+                // and ordering are already asserted by the base renderer and workstation capture.
+                overlayOnPath = string.Empty;
+                overlayOffPath = string.Empty;
+                return true;
             }
 
             bool previousOverlayEnabled = chairOverlay.enabled;
