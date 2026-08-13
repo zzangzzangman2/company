@@ -159,7 +159,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 OfficeFurnitureFacing.NorthWest, new Vector2(834f, 126f), new Vector2(834f, 108f),
                 semanticFootprintHeight: 2),
             new FurnitureSpec(OfficeGridLayouts.FilingCabinetKind, "office_filing_cabinet", 200, 370,
-                OfficeFurnitureFacing.SouthEast, new Vector2(884f, 100f), new Vector2(884f, 82f))
+                OfficeFurnitureFacing.SouthEast, new Vector2(884f, 100f), new Vector2(884f, 82f)),
+            new FurnitureSpec(OfficeGridLayouts.EntranceDoorKind, "office_entrance_door", 310, 410,
+                OfficeFurnitureFacing.SouthEast, new Vector2(604f, 108f), new Vector2(604f, 108f),
+                "v1")
         };
 
         public static IReadOnlyList<string> KindIds => Specs.Select(item => item.KindId).ToArray();
@@ -311,7 +314,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     throw new InvalidOperationException("Furniture ground anchor is outside the runtime canvas: " + spec.RuntimePath);
             }
 
-            if (seenKinds.Count != 12) throw new InvalidOperationException("Furniture catalog must contain exactly 12 kinds.");
+            if (seenKinds.Count != 13) throw new InvalidOperationException("Furniture catalog must contain exactly 13 kinds.");
             LoadFurnitureVisualCatalog().Validate();
             OfficeCharacterSeatPoseCatalog poseCatalog = LoadCharacterSeatPoseCatalog();
             string[] members = { "player", "older_sister", "father", "mother" };

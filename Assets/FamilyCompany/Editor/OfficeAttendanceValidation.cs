@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Simulation.OfficeLayout;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,10 +26,9 @@ namespace FamilyCompany.Editor
                     "Second actor must retain the stagger at 09:00.");
                 Require(OfficeAttendanceRules.HasArrived(day.AddHours(9).AddMinutes(3), 3),
                     "Fourth actor must arrive by 09:03.");
-                Require(!OfficeAttendanceRules.HasArrived(day.AddHours(9).AddMinutes(10), 11),
-                    "Twelfth actor must retain the shared stagger at 09:10.");
-                Require(OfficeAttendanceRules.HasArrived(day.AddHours(9).AddMinutes(11), 11),
-                    "All twelve family and employee actors must be inside by 09:11.");
+                Require(OfficeRuntimeWorkstationService.StarterEntranceCell.Equals(
+                        new OfficeGridCoordinate(8, 1)),
+                    "Starter attendance must use the one canonical office door.");
                 Require(OfficeAttendanceRules.Resolve(day.AddHours(18)) ==
                         OfficeAttendancePhase.AfterWork, "18:00 must begin departure.");
                 Require(OfficeAttendanceRules.Resolve(day.AddDays(5).AddHours(10)) ==
@@ -46,7 +47,7 @@ namespace FamilyCompany.Editor
                 Require(state.Family.Members.All(member =>
                         member.Autonomy.TargetLocation != OfficeSemanticLocation.Exit),
                     "09:00 office intents must not send newly arrived family back to the exit.");
-                Debug.Log("OFFICE_ATTENDANCE_VALIDATION: PASS | start=08:50 entry=09:00..09:11 actors=12 exit=18:00");
+                Debug.Log("OFFICE_ATTENDANCE_VALIDATION: PASS | start=08:50 entry=09:00..09:03 family=4 exit=18:00");
             }
             catch (Exception exception)
             {

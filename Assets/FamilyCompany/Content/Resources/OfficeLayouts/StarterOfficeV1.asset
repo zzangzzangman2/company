@@ -527,6 +527,16 @@ MonoBehaviour:
     placementY2: 16
     facing: 0
     blocksMovement: 1
+  - furnitureId: entrance_door
+    kindId: entrance_door
+    originX: 8
+    originY: 1
+    width: 1
+    height: 1
+    placementX2: 16
+    placementY2: 2
+    facing: 0
+    blocksMovement: 0
   seats:
   - seatId: seat_player
     chairFurnitureId: chair_player

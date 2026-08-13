@@ -2,6 +2,17 @@
 
 최종 갱신: 2026-08-13
 
+## Starter office entrance door (2026-08-13)
+
+- Source: `Assets/Art/Office/Tiles/Furniture/Source/office_entrance_door_alpha_v1.png`
+- Runtime: `Assets/Art/Office/Tiles/Furniture/Runtime/office_entrance_door_v1.png`
+- Status: CANONICAL GENERATED OFFICE FURNITURE ASSET
+- Creation: OpenAI built-in ImageGen, generated specifically for this project as a transparent-background isometric pixel-art wooden office entrance door with frosted glass and warm tycoon-game rendering, then edited with the same tool into a clearly open 70-degree state so actors traverse a visible doorway.
+- Source SHA-256: `963F3866977198FDE51544A710337A0A3A96BE280E6376FE3C6C02526F011BF2`
+- Runtime SHA-256: `E5AB08357E9211B3A446E814D69BCE5820298569ED3FED3A86F6A37D5D8C04F1`
+- Runtime ownership: `OfficeFurnitureAssetBuilder` scales the source to the semantic 1x1 footprint, preserves alpha, and writes the Unity sprite metadata. The door is nonblocking because the attendance actor traverses its single canonical cell `(8,1)`.
+- Rights: project-owned generated asset; no third-party source material.
+
 ## 권리 선언
 
 사용자는 아래 기존/파생 이미지가 GPT 생성 에셋이며 자신이 사용 권리를 보유한다고 명시했다.

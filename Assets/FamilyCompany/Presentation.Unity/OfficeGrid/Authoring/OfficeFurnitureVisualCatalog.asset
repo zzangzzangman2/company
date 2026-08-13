@@ -266,3 +266,24 @@ MonoBehaviour:
     hasWorkSurfaceAnchor: 0
     hasOperatorSeatSocket: 0
     frontOverlayWhenOccupied: 0
+  - kindId: entrance_door
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: bdb0baaefb381c84abbbb6802479ee22, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 323.75516, y: 24}
+    sortAnchorPx: {x: 323.75516, y: 24}
+    groundFootprintPolygonPx:
+    - {x: 323.75516, y: -56}
+    - {x: 483.75516, y: 24}
+    - {x: 323.75516, y: 104}
+    - {x: 163.75516, y: 24}
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 1
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    operatorSeatSocketPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    hasOperatorSeatSocket: 0
+    frontOverlayWhenOccupied: 0

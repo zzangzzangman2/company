@@ -26,6 +26,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _assignedSeats =
             new Dictionary<string, string>(StringComparer.Ordinal);
+        // StarterOfficeV1 has one entrance. Keep the authority here instead of treating every
+        // open cell along the south edge as an interchangeable/random door.
+        public static readonly OfficeGridCoordinate StarterEntranceCell =
+            new OfficeGridCoordinate(8, 1);
 
         public OfficeRuntimeWorkstationService(
             OfficeGrid grid,
@@ -355,21 +359,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string stableKey,
             out OfficeRuntimeDestination destination)
         {
-            List<OfficeGridCoordinate> candidates = OpenAreaCandidates()
-                .Where(cell => cell.Y >= 2 && cell.Y <= Math.Min(_grid.Height - 2, 5))
-                .Where(cell => _occupancy.IsCellPassable(cell, memberId, string.Empty, true))
-                .OrderBy(cell => cell.Y)
-                .ThenBy(cell => cell.X)
-                .ToList();
-            if (candidates.Count == 0)
+            OfficeGridCoordinate selected = ResolveAttendanceEntryCell(memberId);
+            if (!_grid.Contains(selected))
             {
                 destination = default;
                 return false;
             }
-            int index = StableRandom.StableRandomInt(
-                "starter-office-attendance-entry:" + stableKey + ":" + memberId,
-                candidates.Count);
-            OfficeGridCoordinate selected = candidates[index];
             destination = new OfficeRuntimeDestination(
                 "attendance-open:" + selected.X + ":" + selected.Y,
                 OfficeSemanticLocation.OpenArea,
@@ -383,35 +378,39 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string stableKey,
             out OfficeRuntimeDestination destination)
         {
-            IReadOnlyList<OfficeTrafficAgentState> traffic = _occupancy.TrafficSnapshot();
-            List<OfficeGridCoordinate> candidates = ExitCandidates()
-                .Where(cell =>
-                {
-                    Vector3 center3 = _presenter.CellCenterWorld(cell);
-                    var center = new Vector2(center3.x, center3.y);
-                    return traffic.All(peer =>
-                        Vector2.Distance(
-                            center,
-                            new Vector2(peer.Position.X, peer.Position.Z)) >= 0.55f);
-                })
-                .OrderBy(cell => cell.X)
-                .ThenBy(cell => cell.Y)
-                .ToList();
-            if (candidates.Count == 0)
+            OfficeGridCoordinate selected = StarterEntranceCell;
+            if (!_grid.Contains(selected) ||
+                !_occupancy.IsCellPassable(selected, memberId, string.Empty, true))
             {
                 destination = default;
                 return false;
             }
-            int index = StableRandom.StableRandomInt(
-                "starter-office-attendance-door:" + stableKey + ":" + memberId,
-                candidates.Count);
-            OfficeGridCoordinate selected = candidates[index];
             destination = new OfficeRuntimeDestination(
                 "attendance-door:" + selected.X + ":" + selected.Y,
                 OfficeSemanticLocation.Exit,
                 OfficeActivity.Outside,
                 selected);
             return true;
+        }
+
+        private OfficeGridCoordinate ResolveAttendanceEntryCell(string memberId)
+        {
+            // All four actors emerge from the same door, then immediately clear it along the
+            // reception corridor. The deterministic fallback is only for a live layout edit that
+            // temporarily blocks the preferred corridor cell.
+            OfficeGridCoordinate[] corridor =
+            {
+                new OfficeGridCoordinate(8, 2),
+                new OfficeGridCoordinate(8, 3),
+                new OfficeGridCoordinate(9, 2),
+                new OfficeGridCoordinate(9, 3)
+            };
+            foreach (OfficeGridCoordinate cell in corridor)
+            {
+                if (_grid.Contains(cell) &&
+                    _occupancy.IsCellPassable(cell, memberId, string.Empty, true)) return cell;
+            }
+            return new OfficeGridCoordinate(-1, -1);
         }
 
         public OfficeSeatSlot RequiredSeat(string seatId)
@@ -588,13 +587,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private List<OfficeGridCoordinate> ExitCandidates()
         {
-            var result = new List<OfficeGridCoordinate>();
-            for (var x = 1; x < _grid.Width - 1; x++)
-            {
-                var cell = new OfficeGridCoordinate(x, 1);
-                if (_occupancy.IsCellPassable(cell, string.Empty, string.Empty, false)) result.Add(cell);
-            }
-            return result;
+            return _grid.Contains(StarterEntranceCell) &&
+                   _occupancy.IsCellPassable(StarterEntranceCell, string.Empty, string.Empty, false)
+                ? new List<OfficeGridCoordinate> { StarterEntranceCell }
+                : new List<OfficeGridCoordinate>();
         }
 
         private List<OfficeGridCoordinate> OpenAreaCandidates()

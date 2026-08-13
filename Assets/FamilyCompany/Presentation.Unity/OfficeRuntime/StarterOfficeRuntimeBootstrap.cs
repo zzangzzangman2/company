@@ -16,12 +16,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     {
         private static readonly string[] FamilyMemberIds =
             { "player", "older_sister", "father", "mother" };
-        private static readonly string[] EmployeeMemberIds =
-        {
-            "kim_seoa", "lee_jian", "choi_iseo", "jung_arin",
-            "park_haeun", "han_sua", "oh_jiwoo", "yoon_chaea"
-        };
-        private static readonly string[] MemberIds = FamilyMemberIds.Concat(EmployeeMemberIds).ToArray();
+        // Candidates are content only until the player hires them. Creating all eight candidates
+        // as live runtime actors made every presentation step, depth sort and occupancy query 3x
+        // heavier and incorrectly showed unhired people in the starting company.
+        private static readonly string[] MemberIds = FamilyMemberIds;
         private static readonly OfficeGridCoordinate[] PreferredSpawns =
         {
             new OfficeGridCoordinate(1, 2),
@@ -40,7 +38,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private string _layoutHash = string.Empty;
         private bool _building;
         private OfficeLocomotionTransitionCatalog _locomotionTransitionCatalog;
-        private OfficeRuntimeCharacterArtCatalog _runtimeCharacterArtCatalog;
         private readonly Dictionary<string, OfficeWorkActionFrameSet> _workActionFrameSets =
             new Dictionary<string, OfficeWorkActionFrameSet>(StringComparer.Ordinal);
         private readonly Dictionary<string, OfficeRuntimeAgentLayoutSnapshot> _layoutSnapshots =
@@ -143,7 +140,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _world.Configure(grid, presenter, furniturePresenter);
             ResolveSeatingPresentationMode();
             _locomotionTransitionCatalog = OfficeLocomotionTransitionCatalog.LoadDefault();
-            _runtimeCharacterArtCatalog = OfficeRuntimeCharacterArtCatalog.LoadDefault();
             if (_locomotionTransitionCatalog == null)
             {
                 Debug.LogWarning(
@@ -201,11 +197,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     string.Join(" | ", report.Errors));
                 return;
             }
-            string codeDefaultHash = OfficeGridLayouts.CreateStarterOfficeV1().ComputeLayoutHash();
-            if (!string.Equals(
-                    _bootstrap.State.OfficeGrid.ComputeLayoutHash(),
-                    codeDefaultHash,
-                    StringComparison.Ordinal)) return;
+            OfficeGrid codeDefault = OfficeGridLayouts.CreateStarterOfficeV1();
+            string currentHash = _bootstrap.State.OfficeGrid.ComputeLayoutHash();
+            bool usesCurrentDefault = string.Equals(
+                currentHash,
+                codeDefault.ComputeLayoutHash(),
+                StringComparison.Ordinal);
+            OfficeLayoutEditResult legacyWithoutDoor =
+                OfficeLayoutEditRules.RemoveFurniture(codeDefault, "entrance_door");
+            bool usesLegacyDefault = legacyWithoutDoor.Success && string.Equals(
+                currentHash,
+                legacyWithoutDoor.Grid.ComputeLayoutHash(),
+                StringComparison.Ordinal);
+            if (!usesCurrentDefault && !usesLegacyDefault) return;
             OfficeGrid definitionGrid = definition.BuildGrid();
             _bootstrap.State.ReplaceOfficeGrid(definitionGrid);
         }
@@ -223,12 +227,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             renderer.sortingLayerName = "Default";
             var animator = root.AddComponent<DirectionalSpriteAnimator>();
             bool familyMember = Array.IndexOf(FamilyMemberIds, memberId) >= 0;
-            Sprite[] walkFrames;
-            if (familyMember)
-                walkFrames = _assetSource.CopyWalkFrames(memberId);
-            else if (_runtimeCharacterArtCatalog == null ||
-                     !_runtimeCharacterArtCatalog.TryCopyWalkFrames(memberId, out walkFrames))
-                throw new InvalidOperationException("Runtime character art is missing: " + memberId);
+            Sprite[] walkFrames = _assetSource.CopyWalkFrames(memberId);
             animator.Configure(renderer, walkFrames);
             if (familyMember && _locomotionTransitionCatalog != null)
                 animator.ConfigureLocomotionTransitions(

@@ -22,6 +22,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public const string PottedPlantKind = "potted_plant";
         public const string PartitionKind = "partition";
         public const string FilingCabinetKind = "filing_cabinet";
+        public const string EntranceDoorKind = "entrance_door";
 
         public static OfficeGrid CreateMigrationPreview()
         {
@@ -65,6 +66,14 @@ namespace FamilyCompany.Simulation.OfficeLayout
             if (includeMigrationPartition)
                 AddBlocking(furniture, "partition", PartitionKind, 6, 6, 1, 2, OfficeFurnitureFacing.NorthWest);
             AddBlocking(furniture, "filing", FilingCabinetKind, 11, 8, 1, 1, OfficeFurnitureFacing.SouthEast);
+            furniture.Add(new PlacedOfficeFurniture(
+                "entrance_door",
+                EntranceDoorKind,
+                new OfficeGridCoordinate(8, 1),
+                1,
+                1,
+                OfficeFurnitureFacing.SouthEast,
+                false));
 
             foreach (var item in furniture)
             {

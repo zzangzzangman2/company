@@ -413,8 +413,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             var grid = bootstrap.Presenter.SemanticGrid;
             bool starter = bootstrap.Layout == OfficeTilePreviewLayout.StarterOfficeV1;
-            int expectedFurnitureCount = starter ? 17 : 18;
-            int expectedKindCount = starter ? 11 : 12;
+            int expectedFurnitureCount = starter ? 18 : 19;
+            int expectedKindCount = starter ? 12 : 13;
             Require(grid.Furniture.Count >= 8, "T4 furniture count is below eight.");
             Require(grid.Furniture.Select(item => item.KindId).Distinct(StringComparer.Ordinal).Count() >= 4,
                 "T4 furniture kind count is below four.");
@@ -426,8 +426,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     bootstrap.FurniturePresenter.Renderers.Count == grid.Furniture.Count,
                 "T4 furniture renderers do not match semantic furniture.");
             Require(bootstrap.FurniturePresenter.VisualCatalog != null &&
-                    bootstrap.FurniturePresenter.VisualCatalog.Definitions.Count == 12,
-                "T4 visual catalog must contain 12 definitions.");
+                    bootstrap.FurniturePresenter.VisualCatalog.Definitions.Count == 13,
+                "T4 visual catalog must contain 13 definitions.");
             bootstrap.FurniturePresenter.VisualCatalog.Validate();
             foreach (var item in grid.Furniture)
             {

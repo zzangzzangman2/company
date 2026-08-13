@@ -1,5 +1,11 @@
 # PROJECT STATE
 
+## 2026-08-13 / Starting roster and single-door attendance correction
+
+- The initial office runtime now creates only the four family members. The eight employee candidates remain content for the future hiring system and no longer consume per-frame motion, occupancy, sprite animation, and depth-sort work before they are hired.
+- Replaced the former random south-edge entrance selection with one canonical door at grid `(8,1)`. Family entry is deterministic from that door into the reception corridor, one person per game minute from 09:00 through 09:03.
+- Added a canonical 2000s Korean office entrance-door pixel prop and bound it to the same semantic entrance cell. Attendance no longer starts a second autonomy path/reservation in the same frame as door entry, removing the per-arrival double pathfinding hitch.
+
 ## 2026-08-13 / Portable one-click Windows build entry complete
 
 - Added repository-root `BUILD_WINDOWS.cmd` and `RUN_WINDOWS.cmd`, so another Windows PC can clone/pull and build or launch the playtest without copying a user-specific Downloads command file.

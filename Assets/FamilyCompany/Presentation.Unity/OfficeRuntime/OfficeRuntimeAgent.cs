@@ -468,7 +468,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _autonomyRequestedInteractionId = normalizedInteractionId;
             _autonomyLayoutRevision = -1;
             _autonomyDestination = null;
-            if (!HasAssignedTask) TryStartAutonomyRequest();
+            // Attendance owns the first short path from the only door into the reception
+            // corridor. Do not resolve a second autonomy path in the same frame: that duplicate
+            // path/reservation work was the visible hitch on every arrival.
+            if (!HasAssignedTask && !_attendanceArrivalActive) TryStartAutonomyRequest();
         }
 
         public void ClearAutonomousDestination()
@@ -818,7 +821,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private bool TryStartAutonomyRequest()
         {
-            if (_playerControlled || _qaControl || HasAssignedTask || _autonomyIntentId.Length == 0)
+            if (_playerControlled || _qaControl || HasAssignedTask || _attendanceArrivalActive ||
+                _autonomyIntentId.Length == 0)
                 return false;
 
             OfficeRuntimeDestination destination;

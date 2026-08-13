@@ -44,7 +44,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private static readonly string[] QaMemberIds =
             { "player", "older_sister", "father", "mother" };
-        private const int RuntimeActorCount = 12;
+        private const int RuntimeActorCount = 4;
         private static readonly string[] QaDirectionNames =
             { "South", "SouthWest", "West", "NorthWest", "North", "NorthEast", "East", "SouthEast" };
         private static readonly Vector2[] QaDirectionVectors =
@@ -552,7 +552,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (_starterRuntime.Actors.Count != RuntimeActorCount)
             {
-                FailPlayerQa(35, "attendance roster did not contain twelve runtime actors");
+                FailPlayerQa(35, "attendance roster did not contain the four starting family actors");
                 yield break;
             }
             if (_starterRuntime.Actors.Any(actor => actor == null || !actor.IsPresentationAway))
@@ -575,25 +575,19 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
 
-            bootstrap.AdvanceTimeNow(11L);
+            bootstrap.AdvanceTimeNow(3L);
             float attendanceDeadline = Time.unscaledTime + 30f;
             while (_starterRuntime.Actors.Any(actor => actor.IsPresentationAway) &&
                    Time.unscaledTime < attendanceDeadline)
                 yield return null;
             if (_starterRuntime.Actors.Any(actor => actor.IsPresentationAway))
             {
-                FailPlayerQa(35, "all twelve actors were not present by 09:11");
+                FailPlayerQa(35, "all four family actors were not present by 09:03");
                 yield break;
             }
             Debug.Log(
-                "STARTER_OFFICE_ATTENDANCE_FLOW_QA_PASS | start=08:50 hidden=12 " +
-                "entry=09:00..09:11 present=12 exit=18:00");
-            // The remaining legacy movement/seating scenarios intentionally isolate the four
-            // canonical family actors. Employees are already covered above by the shared roster,
-            // hidden-before-open and staggered-entry assertions.
-            foreach (OfficeRuntimeAgent employee in _starterRuntime.Actors.Where(actor =>
-                         Array.IndexOf(QaMemberIds, actor.AgentId) < 0))
-                employee.SetAttendanceOutside(true, false);
+                "STARTER_OFFICE_ATTENDANCE_FLOW_QA_PASS | start=08:50 hidden=4 " +
+                "door=(8,1) entry=09:00..09:03 present=4 exit=18:00");
         }
 
         private IEnumerator RunFourWayIntersectionQa()
