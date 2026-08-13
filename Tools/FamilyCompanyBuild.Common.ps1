@@ -272,8 +272,11 @@ function Test-AnyUnityEditorRunning {
         return $processes.Count -gt 0
     }
     catch {
-        # If process inspection is unavailable, fail safe instead of starting a second editor.
-        return $true
+        # Managed Windows accounts can be denied Win32_Process/CIM access even though the
+        # ordinary process table is readable. Falling back to Get-Process avoids an endless
+        # "Unity is already running" wait while still matching only Unity.exe.
+        $processes = @(Get-Process -Name Unity -ErrorAction SilentlyContinue)
+        return $processes.Count -gt 0
     }
 }
 
