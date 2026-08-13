@@ -632,7 +632,12 @@ namespace FamilyCompany.Presentation.Unity
             {
                 string incomplete = string.Join(",", _starterRuntime.Actors
                     .Where(actor => actor.AttendanceSeatArrivalCount < 1)
-                    .Select(actor => actor.AgentId + ":" + actor.Phase));
+                    .Select(actor =>
+                        actor.AgentId + ":" + actor.Phase +
+                        ":cell=" + _starterRuntime.World.Occupancy.CurrentCell(actor.AgentId) +
+                        ":position=" + actor.Position +
+                        ":stuck=" + actor.StuckSeconds.ToString("F2") +
+                        ":path=" + actor.PresentationPathIndex + "/" + actor.SemanticPathLength));
                 FailPlayerQa(35, "family did not complete door-to-assigned-seat arrival: " + incomplete);
                 yield break;
             }
