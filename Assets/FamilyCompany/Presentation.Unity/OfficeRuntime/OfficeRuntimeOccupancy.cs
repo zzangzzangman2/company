@@ -442,6 +442,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        public string DescribeMoveBlocker(
+            string agentId,
+            Vector2 start,
+            Vector2 end,
+            float radius,
+            string permittedSeatId)
+        {
+            var delta = end - start;
+            var samples = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.045f));
+            for (var sample = 1; sample <= samples; sample++)
+            {
+                Vector2 point = Vector2.Lerp(start, end, sample / (float)samples);
+                if (!PointClearsStatic(point, radius, permittedSeatId, out OfficeRuntimeOccupancyLayer layer))
+                    return "static=" + layer;
+                OfficeGridCoordinate pointCell = _presenter.NearestCell(new Vector3(point.x, point.y, 0f));
+                foreach (ActorState peer in _actors.Values)
+                {
+                    if (!peer.IsPresent || string.Equals(peer.AgentId, agentId, StringComparison.Ordinal)) continue;
+                    if (peer.Reservations.Contains(pointCell) && !peer.CurrentCell.Equals(pointCell))
+                        return $"peer={peer.AgentId}:reserved={pointCell}";
+                    float margin = Vector2.Distance(point, peer.Position) - (radius + peer.Radius);
+                    if (margin < -0.01f)
+                        return $"peer={peer.AgentId}:overlap={margin:F3}:cell={peer.CurrentCell}";
+                }
+            }
+            return "unknown";
+        }
+
         public bool CanTraverseStatic(
             Vector2 start,
             Vector2 end,

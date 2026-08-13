@@ -233,6 +233,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public bool IsPresentationAway => _presentationAway;
         public int AttendanceSeatArrivalCount => _attendanceSeatArrivalCount;
         public string LastReservationBlocker { get; private set; } = string.Empty;
+        public string LastMovementBlocker { get; private set; } = string.Empty;
 
         public OfficeObservationStatusKind StatusKind
         {
@@ -1599,7 +1600,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Vector2? presentationSemanticVelocity = null)
         {
             Vector2 integrationTargetVelocity = targetVelocity;
-            if (RequiresPivotBeforeMoving(targetVelocity)) integrationTargetVelocity = Vector2.zero;
+            bool waitingForPivot = RequiresPivotBeforeMoving(targetVelocity);
+            if (waitingForPivot) integrationTargetVelocity = Vector2.zero;
             float changePerSecond = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
                 new OfficeNavPoint(integrationTargetVelocity.x, integrationTargetVelocity.y),
@@ -1640,7 +1642,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 _currentVelocity = Vector2.zero;
                 if (targetVelocity.sqrMagnitude > 0.01f) _stuckSeconds += deltaTime;
+                LastMovementBlocker = waitingForPivot
+                    ? $"pivot={_animator.CurrentDirection}->{DirectionalSpriteAnimator.ResolveTileDirection(targetVelocity, _animator.CurrentDirection)}:{_animator.LocomotionPhase}"
+                    : _world.Occupancy.DescribeMoveBlocker(
+                        _agentId,
+                        before,
+                        before + intended,
+                        AgentRadius,
+                        permittedSeatId);
             }
+            if (actual.sqrMagnitude > 0.0000001f) LastMovementBlocker = string.Empty;
             _animator.AccumulateTileMotion(
                 presentationSemanticVelocity ?? targetVelocity,
                 actual,

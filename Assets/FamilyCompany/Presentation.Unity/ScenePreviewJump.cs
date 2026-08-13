@@ -638,7 +638,8 @@ namespace FamilyCompany.Presentation.Unity
                         ":position=" + actor.Position +
                         ":stuck=" + actor.StuckSeconds.ToString("F2") +
                         ":path=" + actor.PresentationPathIndex + "/" + actor.SemanticPathLength +
-                        ":blocker=" + actor.LastReservationBlocker));
+                        ":reservation=" + actor.LastReservationBlocker +
+                        ":movement=" + actor.LastMovementBlocker));
                 FailPlayerQa(35, "family did not complete door-to-assigned-seat arrival: " + incomplete);
                 yield break;
             }
