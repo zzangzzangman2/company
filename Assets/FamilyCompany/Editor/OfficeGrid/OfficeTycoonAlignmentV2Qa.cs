@@ -276,6 +276,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Append("|---|---:|---:|---|---|");
                 foreach (PlacedOfficeFurniture item in bootstrap.Presenter.SemanticGrid.Furniture)
                 {
+                    Require(item.HasCanonicalPlacementAnchor,
+                        item.FurnitureId + " placement anchor is not the footprint center.");
                     Require(bootstrap.FurniturePresenter.TryGetRenderer(item.FurnitureId, out SpriteRenderer renderer),
                         "Missing furniture renderer: " + item.FurnitureId);
                     Require(bootstrap.FurniturePresenter.TryGetDefinition(item.FurnitureId, out OfficeFurnitureVisualDefinition definition),

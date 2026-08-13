@@ -128,6 +128,14 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 checked(origin.Y * 2 + height - 1));
         }
 
+        /// <summary>
+        /// True when the rendered pivot is the exact half-cell center of the collision footprint.
+        /// Keeping this invariant means a moved or mirrored prop cannot accumulate an independent
+        /// presentation offset that no longer matches navigation and interaction cells.
+        /// </summary>
+        public bool HasCanonicalPlacementAnchor =>
+            PlacementAnchor.Equals(DefaultPlacementAnchor(Origin, Width, Height));
+
         private static string RequiredId(string value, string parameterName)
         {
             var canonical = (value ?? string.Empty).Trim();

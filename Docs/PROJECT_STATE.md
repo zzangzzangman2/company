@@ -1,5 +1,13 @@
 # PROJECT STATE
 
+## 2026-08-13 / Starter Office furniture tile snap complete
+
+- Unified all 17 starter furniture placement anchors at the exact half-cell center of each hard footprint. Render root, collision footprint, and interaction reference now share one pivot, so moving or mirroring a prop cannot accumulate an unrelated visual offset.
+- Removed the swivel chair's exceptional `(40px, 120px)` presentation offset. Occupied-chair contact correction remains inside the existing seating lifecycle; an empty chair always restores to its tile-aligned origin.
+- StarterOfficeLayoutAsset and save restore normalize legacy placement values to the canonical footprint center. The editor's former free anchor nudge now performs a canonical snap instead of separating art from collision.
+- Unity 6000.3.21f1: `FAMILY_COMPANY_OFFICE_GRID_T1_VALIDATION: PASS`, `OFFICE_FURNITURE_TILE_SNAP_VALIDATION: PASS` (17 furniture/12 definitions), and Starter preview visual residual `maxCorner=0.0001px`, `maxCenter=0.0001px` PASS.
+- The rebuilt Windows/D3D player passed loading, 08:50-to-09:00 attendance, modern HUD, autonomous meeting seating, four-seat work contact, four-way traffic, live desk placement/removal, and narrow-corridor QA. All four family workstations reported `seatContact=0px`; the maximum typing hand residual was `3.481px` (limit `4px`).
+
 ## 2026-08-13 / GitHub Main README 동기화 완료
 
 - GitHub 메인 README를 현재 정본과 비교해 16:9 전용으로 보이던 화면 설명, 구형 `OFFICE_V0_2` 문서 안내, 잘못된 플레이테스트 경로와 모호한 Windows 빌드 설명을 수정했다.

@@ -65,12 +65,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
                 var visualRootObject = new GameObject("VisualRoot");
                 visualRootObject.transform.SetParent(root.transform, false);
-                Vector2 presentationOffset = definition.PresentationOffsetPx;
-                visualRootObject.transform.localPosition = new Vector3(
-                    (flipX ? -presentationOffset.x : presentationOffset.x) /
-                    OfficeGridTilemapPresenter.PixelsPerUnit,
-                    presentationOffset.y / OfficeGridTilemapPresenter.PixelsPerUnit,
-                    0f);
+                visualRootObject.transform.localPosition = Vector3.zero;
                 visualRootObject.transform.localRotation = Quaternion.identity;
                 visualRootObject.transform.localScale = Vector3.one * definition.UniformScale;
 

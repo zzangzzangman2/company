@@ -72,14 +72,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 new OfficeGridCoordinate(originX, originY),
                 width,
                 height,
-                new OfficeGridSubcellAnchor(placementX2, placementY2),
+                PlacedOfficeFurniture.DefaultPlacementAnchor(
+                    new OfficeGridCoordinate(originX, originY), width, height),
                 facing,
                 blocksMovement);
 
-            internal void TranslateAnchor(int deltaX2, int deltaY2)
+            internal void SnapAnchorToFootprintCenter()
             {
-                placementX2 = checked(placementX2 + deltaX2);
-                placementY2 = checked(placementY2 + deltaY2);
+                OfficeGridSubcellAnchor anchor = PlacedOfficeFurniture.DefaultPlacementAnchor(
+                    new OfficeGridCoordinate(originX, originY), width, height);
+                placementX2 = anchor.X2;
+                placementY2 = anchor.Y2;
             }
 
             internal void TranslateFootprint(int deltaX, int deltaY)
@@ -95,6 +98,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 int previousWidth = width;
                 width = height;
                 height = previousWidth;
+                SnapAnchorToFootprintCenter();
                 facing = (OfficeFurnitureFacing)(((int)facing + 1) & 3);
             }
 
@@ -258,13 +262,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             seats = grid.SeatSlots.Select(SeatRecord.From).ToList();
         }
 
-        public bool TranslateFurnitureAnchor(string furnitureId, int deltaX2, int deltaY2)
+        public bool SnapFurnitureAnchorToFootprint(string furnitureId)
         {
             FurnitureRecord record = FindFurniture(furnitureId);
             if (record == null) return false;
-            record.TranslateAnchor(deltaX2, deltaY2);
-            foreach (SeatRecord seat in seats.Where(item => item.ChairFurnitureId == record.FurnitureId))
-                seat.TranslateOperator(deltaX2, deltaY2);
+            record.SnapAnchorToFootprintCenter();
             return true;
         }
 

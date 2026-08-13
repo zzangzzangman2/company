@@ -14,8 +14,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         [SerializeField] private Sprite frontOverlaySprite;
         [SerializeField] private Vector2 groundAnchorPx;
         [SerializeField] private Vector2 sortAnchorPx;
-        [SerializeField, Tooltip("Presentation-only Sprite offset in authored pixels. Semantic placement and collision remain unchanged.")]
-        private Vector2 presentationOffsetPx;
         [SerializeField] private Vector2[] groundFootprintPolygonPx = Array.Empty<Vector2>();
         [SerializeField] private int semanticFootprintWidth = 1;
         [SerializeField] private int semanticFootprintHeight = 1;
@@ -34,7 +32,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
         public Sprite FrontOverlaySprite => frontOverlaySprite;
         public Vector2 GroundAnchorPx => groundAnchorPx;
         public Vector2 SortAnchorPx => sortAnchorPx;
-        public Vector2 PresentationOffsetPx => presentationOffsetPx;
         public IReadOnlyList<Vector2> GroundFootprintPolygonPx => groundFootprintPolygonPx;
         public int SemanticFootprintWidth => semanticFootprintWidth;
         public int SemanticFootprintHeight => semanticFootprintHeight;
@@ -66,8 +63,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
             int semanticFootprintWidth,
             int semanticFootprintHeight,
             Vector2 operatorSeatSocketPx,
-            bool hasOperatorSeatSocket,
-            Vector2 presentationOffsetPx)
+            bool hasOperatorSeatSocket)
         {
             return new OfficeFurnitureVisualDefinition
             {
@@ -77,7 +73,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
                 frontOverlaySprite = frontOverlaySprite,
                 groundAnchorPx = groundAnchorPx,
                 sortAnchorPx = sortAnchorPx,
-                presentationOffsetPx = presentationOffsetPx,
                 groundFootprintPolygonPx = groundFootprintPolygonPx == null
                     ? Array.Empty<Vector2>()
                     : (Vector2[])groundFootprintPolygonPx.Clone(),
@@ -134,7 +129,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView.Authoring
 
             ValidateAnchor(groundAnchorPx, nameof(groundAnchorPx));
             ValidateAnchor(sortAnchorPx, nameof(sortAnchorPx));
-            ValidateFinite(presentationOffsetPx, nameof(presentationOffsetPx));
             if (semanticFootprintWidth <= 0 || semanticFootprintHeight <= 0)
                 throw new InvalidOperationException($"Furniture visual '{kindId}/{facing}' has an invalid semantic footprint.");
             if (groundFootprintPolygonPx == null || groundFootprintPolygonPx.Length != 4)

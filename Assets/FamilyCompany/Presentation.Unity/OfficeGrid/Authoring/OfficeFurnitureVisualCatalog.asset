@@ -51,7 +51,6 @@ MonoBehaviour:
     seatAnchorPx: {x: 313.00708, y: 153.54948}
     workSurfaceAnchorPx: {x: 0, y: 0}
     operatorSeatSocketPx: {x: 0, y: 0}
-    presentationOffsetPx: {x: 40, y: 120}
     uniformScale: 1
     hasSeatAnchor: 1
     hasWorkSurfaceAnchor: 0

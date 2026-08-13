@@ -23,6 +23,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             ValidateSchemaOneSeatMigration();
             ValidateSchemaTwoOperatorAnchorMigration();
             ValidateSchemaThreeFurniturePlacementMigration();
+            ValidateSchemaFourFurniturePlacementNormalization();
             ValidateInvalidPayloadsAreRejected();
             ValidateV5Migration();
             Debug.Log("FAMILY_COMPANY_OFFICE_GRID_T1_VALIDATION: PASS");
@@ -107,6 +108,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 AssertEqual(true, grid.IsWalkable(workstation.SeatCell), workstation.SeatId + " starter seat walkable");
                 AssertEqual(true, grid.IsWalkable(workstation.ApproachCell), workstation.SeatId + " starter approach walkable");
             }
+            foreach (var item in grid.Furniture)
+                AssertEqual(true, item.HasCanonicalPlacementAnchor, item.FurnitureId + " canonical floor anchor");
         }
 
         private static void ValidateLayoutSaveRoundTrip()
@@ -226,6 +229,19 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     item.PlacementAnchor,
                     item.FurnitureId + " schema 3 inferred placement anchor");
             }
+        }
+
+        private static void ValidateSchemaFourFurniturePlacementNormalization()
+        {
+            var dto = OfficeGridSaveAdapter.ToDto(OfficeGridLayouts.CreateStarterOfficeV1());
+            foreach (var item in dto.furniture)
+            {
+                item.placementX2 += 1;
+                item.placementY2 -= 1;
+            }
+            var restored = OfficeGridSaveAdapter.Restore(dto);
+            foreach (var item in restored.Furniture)
+                AssertEqual(true, item.HasCanonicalPlacementAnchor, item.FurnitureId + " schema 4 snapped anchor");
         }
 
         private static void ValidateInvalidPayloadsAreRejected()

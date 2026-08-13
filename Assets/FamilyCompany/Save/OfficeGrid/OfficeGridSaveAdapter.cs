@@ -76,10 +76,8 @@ namespace FamilyCompany.Save.OfficeGrid
                     new OfficeGridCoordinate(item.x, item.y),
                     item.width,
                     item.height,
-                    dto.schemaVersion >= 4
-                        ? new OfficeGridSubcellAnchor(item.placementX2, item.placementY2)
-                        : PlacedOfficeFurniture.DefaultPlacementAnchor(
-                            new OfficeGridCoordinate(item.x, item.y), item.width, item.height),
+                    PlacedOfficeFurniture.DefaultPlacementAnchor(
+                        new OfficeGridCoordinate(item.x, item.y), item.width, item.height),
                     (OfficeFurnitureFacing)item.facing,
                     item.blocksMovement));
             }

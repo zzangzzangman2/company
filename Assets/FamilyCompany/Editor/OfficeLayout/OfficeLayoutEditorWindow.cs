@@ -176,17 +176,12 @@ namespace FamilyCompany.Editor.OfficeLayout
                 $"({selected.PlacementX2}/2, {selected.PlacementY2}/2)");
             EditorGUILayout.LabelField("Blocks movement", selected.BlocksMovement.ToString());
 
-            EditorGUILayout.LabelField("0.5-cell semantic movement", EditorStyles.miniBoldLabel);
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("← 0.5")) Mutate("Move furniture anchor", () =>
-                _asset.TranslateFurnitureAnchor(_selectedFurnitureId, -1, 0));
-            if (GUILayout.Button("↑ 0.5")) Mutate("Move furniture anchor", () =>
-                _asset.TranslateFurnitureAnchor(_selectedFurnitureId, 0, 1));
-            if (GUILayout.Button("↓ 0.5")) Mutate("Move furniture anchor", () =>
-                _asset.TranslateFurnitureAnchor(_selectedFurnitureId, 0, -1));
-            if (GUILayout.Button("0.5 →")) Mutate("Move furniture anchor", () =>
-                _asset.TranslateFurnitureAnchor(_selectedFurnitureId, 1, 0));
-            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.HelpBox(
+                "The semantic anchor is locked to the footprint center so movement and rotation stay tile-aligned.",
+                MessageType.Info);
+            if (GUILayout.Button("Snap anchor to footprint center"))
+                Mutate("Snap furniture anchor", () =>
+                    _asset.SnapFurnitureAnchorToFootprint(_selectedFurnitureId));
 
             EditorGUILayout.LabelField("Whole footprint movement", EditorStyles.miniBoldLabel);
             EditorGUILayout.BeginHorizontal();

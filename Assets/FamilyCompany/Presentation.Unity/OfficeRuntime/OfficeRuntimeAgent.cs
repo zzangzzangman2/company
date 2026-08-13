@@ -40,7 +40,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         // typing hand remains immediately visible.
         // Keep hands planted on the keyboard. The rendered chair absorbs the small remaining
         // proportion difference, without scale/rotation or member-specific numbers.
-        private const float TypingWorkContactWeight = 0.90f;
+        private const float TypingWorkContactWeight = 0.92f;
 
         private PrototypeBootstrap _bootstrap;
         private OfficeRuntimeWorld _world;
