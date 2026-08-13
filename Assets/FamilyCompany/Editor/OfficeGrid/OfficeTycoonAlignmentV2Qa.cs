@@ -173,7 +173,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             {
                 OfficeTileMigrationPreviewBootstrap bootstrap = RequiredBootstrap(OfficeTilePreviewLayout.MigrationPreview);
                 Camera camera = RequiredCamera();
-                ValidateLayout(bootstrap, 19, 13, expectsPartition: true);
+                ValidateLayout(bootstrap, 21, 14, expectsPartition: true);
                 Capture(bootstrap, camera, PreviewSeatedPath, false);
                 Require(bootstrap.AlignmentDebugOverlay != null, "Preview alignment overlay is missing.");
                 bootstrap.AlignmentDebugOverlay.SetOverlayEnabled(true);
@@ -203,7 +203,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Camera camera = RequiredCamera();
                 if (stage == 3 && FurnitureSnapshots.Count == 0)
                 {
-                    ValidateLayout(bootstrap, 18, 12, expectsPartition: false);
+                    ValidateLayout(bootstrap, 20, 13, expectsPartition: false);
                     SnapshotFurniture(bootstrap);
                     Capture(bootstrap, camera, StarterOverviewPath, false);
                 }

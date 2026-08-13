@@ -72,6 +72,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _standingFacingDirection = -1;
         private bool _attendanceDepartureActive;
         private bool _attendanceArrivalActive;
+        private int _attendanceSeatArrivalCount;
+        private OfficeRuntimeDestination? _preparedAttendanceDestination;
+        private readonly List<OfficeGridCoordinate> _preparedAttendancePath =
+            new List<OfficeGridCoordinate>();
         private string _assignedTaskId = string.Empty;
         private float _assignedWorkRemaining;
         private long _assignedLastObservedMinute;
@@ -227,6 +231,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ? string.Empty
             : _renderer.sprite.name;
         public bool IsPresentationAway => _presentationAway;
+        public int AttendanceSeatArrivalCount => _attendanceSeatArrivalCount;
 
         public OfficeObservationStatusKind StatusKind
         {
@@ -468,9 +473,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _autonomyRequestedInteractionId = normalizedInteractionId;
             _autonomyLayoutRevision = -1;
             _autonomyDestination = null;
-            // Attendance owns the first short path from the only door into the reception
-            // corridor. Do not resolve a second autonomy path in the same frame: that duplicate
-            // path/reservation work was the visible hitch on every arrival.
+            // Attendance owns the prewarmed door-to-desk route until the actor is seated. Do not
+            // resolve a competing autonomy path in the same frame.
             if (!HasAssignedTask && !_attendanceArrivalActive) TryStartAutonomyRequest();
         }
 
@@ -503,6 +507,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _autonomyDestination = null;
             _attendanceDepartureActive = false;
             _attendanceArrivalActive = false;
+            _attendanceSeatArrivalCount = 0;
+            _preparedAttendanceDestination = null;
+            _preparedAttendancePath.Clear();
             _standingFacingDirection = -1;
             _destination = null;
             _pendingDestination = null;
@@ -578,28 +585,47 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     out OfficeRuntimeDestination entry)) return;
             Vector3 entrance = _world.Presenter.CellCenterWorld(entry.Cell);
             transform.position = new Vector3(entrance.x, entrance.y, transform.position.z);
-            Phase = OfficeRuntimeAgentPhase.Idle;
-            CurrentActivity = OfficeActivity.Break;
-            SetPresentationAway(false);
-            StopMotion();
-            OfficeRuntimeDestination entryTarget = default;
-            bool hasEntryTarget = false;
-            for (int attempt = 0; attempt < 12 && !hasEntryTarget; attempt++)
-            {
-                if (!_world.Workstations.TryResolveAttendanceEntryDestination(
-                        _agentId,
-                        "attendance-entry-target:" + _agentId + ":" + attempt,
-                        out OfficeRuntimeDestination candidate)) continue;
-                entryTarget = candidate;
-                hasEntryTarget = true;
-            }
-            if (hasEntryTarget && BeginDestination(entryTarget))
+            if ((!_preparedAttendanceDestination.HasValue || _preparedAttendancePath.Count == 0) &&
+                !PrepareAttendanceArrival()) return;
+            if (BeginPreparedAttendanceDestination(
+                    _preparedAttendanceDestination.Value,
+                    _preparedAttendancePath))
             {
                 _attendanceArrivalActive = true;
-                Debug.Log("STARTER_OFFICE_ATTENDANCE_ENTRY | member=" + _agentId);
+                Debug.Log(
+                    "STARTER_OFFICE_ATTENDANCE_ENTRY | member=" + _agentId +
+                    " | routeCells=" + _preparedAttendancePath.Count +
+                    " | destination=" + _preparedAttendanceDestination.Value.DestinationId);
             }
-            else
-                TryStartAutonomyRequest();
+        }
+
+        /// <summary>
+        /// Resolves the family's canonical door-to-desk route while the loading presentation is
+        /// visible. The 09:00 arrival then only reserves its already assigned seat and adopts this
+        /// route, avoiding a synchronous path search or a temporary corridor stop on entry.
+        /// </summary>
+        public bool PrepareAttendanceArrival()
+        {
+            _preparedAttendanceDestination = null;
+            _preparedAttendancePath.Clear();
+            OfficeGridCoordinate entrance = OfficeRuntimeWorkstationService.StarterEntranceCell;
+            if (!_world.Grid.Contains(entrance) || !_world.Grid.IsWalkable(entrance)) return false;
+            if (!_world.Workstations.TryResolveDestination(
+                    OfficeSemanticLocation.Desk,
+                    _agentId,
+                    "attendance-desk:" + _agentId,
+                    out OfficeRuntimeDestination destination)) return false;
+            IReadOnlyList<OfficeGridCoordinate> route = _world.Paths.FindPath(
+                _agentId,
+                entrance,
+                destination.Cell,
+                destination.SeatId,
+                false,
+                AgentRadius);
+            if (route.Count < 2) return false;
+            _preparedAttendanceDestination = destination;
+            _preparedAttendancePath.AddRange(route);
+            return true;
         }
 
         public void SetPlayerInput(Vector2 input)
@@ -987,6 +1013,45 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return RebuildPath();
         }
 
+        private bool BeginPreparedAttendanceDestination(
+            OfficeRuntimeDestination destination,
+            IReadOnlyList<OfficeGridCoordinate> route)
+        {
+            if (!destination.RequiresSeat || route == null || route.Count < 2) return false;
+            OfficeGridCoordinate current = _world.Presenter.NearestCell(transform.position);
+            if (!route[0].Equals(current) ||
+                !route[route.Count - 1].Equals(destination.Cell)) return false;
+
+            _standingFacingDirection = -1;
+            ReleaseSeatImmediately();
+            if (!_world.Workstations.TryReserveSeat(
+                    _agentId,
+                    destination.SeatId,
+                    "starter-office-attendance-seat:" + _agentId,
+                    out _seat,
+                    out _seatClaim)) return false;
+            destination = _world.Workstations.DestinationForSeat(_seat, destination);
+
+            SetPresentationAway(false);
+            _world.Occupancy.UpdateActor(
+                _agentId,
+                Position,
+                Vector2.zero,
+                0f,
+                destination.SeatId);
+            _destination = destination;
+            _pendingDestination = null;
+            _arrived = false;
+            CurrentActivity = OfficeActivity.Walking;
+            Phase = OfficeRuntimeAgentPhase.Navigating;
+            _path.Clear();
+            _path.AddRange(route);
+            _pathIndex = 1;
+            _presentationPathIndex = _pathIndex;
+            _pathRevision = _world.Occupancy.Revision;
+            return true;
+        }
+
         private bool RebuildPath()
         {
             if (!_destination.HasValue) return false;
@@ -1349,6 +1414,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     }
                     Phase = OfficeRuntimeAgentPhase.Working;
                     _arrived = true;
+                    if (_attendanceArrivalActive)
+                    {
+                        _attendanceArrivalActive = false;
+                        _attendanceSeatArrivalCount++;
+                        Debug.Log(
+                            "STARTER_OFFICE_ATTENDANCE_SEATED | member=" + _agentId +
+                            " | count=" + _attendanceSeatArrivalCount);
+                    }
                     if (_interactionPhase == OfficeRuntimeInteractionPhase.Aligning)
                         _interactionPhase = OfficeRuntimeInteractionPhase.Performing;
                     break;

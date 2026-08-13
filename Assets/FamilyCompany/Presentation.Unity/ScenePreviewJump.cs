@@ -32,7 +32,7 @@ namespace FamilyCompany.Presentation.Unity
         private float _loadingProgress;
         private float _loadingDisplayedProgress;
         private float _loadingStartedAt;
-        private string _loadingStage = "사무실 준비 시작";
+        private string _loadingStage = "출근 준비를 시작하는 중";
         private bool _loadingUiLogged;
         private bool _loadingUiCapturePending;
         private bool _loadingUiCaptureComplete;
@@ -176,9 +176,9 @@ namespace FamilyCompany.Presentation.Unity
 
             float left = card.x + 42f * scale;
             GUI.Label(new Rect(left, card.y + 32f * scale, card.width - 84f * scale, 24f * scale),
-                "우리 가족회사  ·  OFFICE STARTUP", eyebrow);
+                "우리 가족회사  ·  MORNING SETUP", eyebrow);
             GUI.Label(new Rect(left, card.y + 66f * scale, card.width - 84f * scale, 46f * scale),
-                "첫 영업일을 준비하고 있어요", title);
+                "출근 준비 중", title);
             GUI.Label(new Rect(left, card.y + 122f * scale, card.width - 84f * scale, 26f * scale),
                 _loadingStage, body);
 
@@ -193,9 +193,9 @@ namespace FamilyCompany.Presentation.Unity
 
             int dots = Mathf.FloorToInt(Time.unscaledTime * 2.4f) % 4;
             GUI.Label(new Rect(left, card.y + 238f * scale, card.width - 84f * scale, 26f * scale),
-                "연결 중" + new string('·', dots), body);
+                "출근 준비 중" + new string('·', dots), body);
             GUI.Label(new Rect(left, card.y + 272f * scale, card.width - 84f * scale, 24f * scale),
-                "사무실 동선과 캐릭터를 연결하고 있습니다. 잠시만 기다려 주세요.", body);
+                "가족별 출근 경로와 지정 좌석을 미리 준비하고 있습니다.", body);
         }
 
         private static void DrawSolid(Rect rect, Color color)
@@ -211,7 +211,24 @@ namespace FamilyCompany.Presentation.Unity
             if (_tileOfficeActive)
             {
                 var bootstrap = Object.FindFirstObjectByType<PrototypeBootstrap>();
-                if (bootstrap != null) _starterRuntime?.Rebind(bootstrap);
+                if (bootstrap == null) return;
+                if (bootstrap.UiScreen == PrototypeUiScreen.Playing)
+                {
+                    if (_loading) return;
+                    _loading = true;
+                    _loadingProgress = 0.12f;
+                    _loadingDisplayedProgress = 0f;
+                    _loadingStartedAt = Time.unscaledTime;
+                    _loadingStage = "가족 네 명의 출근 준비를 확인하는 중";
+                    _loadingUiLogged = false;
+                    _loadingUiCapturePending = Array.IndexOf(
+                        Environment.GetCommandLineArgs(),
+                        "-familyCompanyTileRuntimeQa") >= 0;
+                    _loadingUiCaptureComplete = !_loadingUiCapturePending;
+                    CaptureAndHideLegacyRenderers();
+                    StartCoroutine(RebindStarterOfficeWithLoading(bootstrap));
+                }
+                else _starterRuntime?.Rebind(bootstrap);
                 return;
             }
             if (_loading) return;
@@ -219,7 +236,7 @@ namespace FamilyCompany.Presentation.Unity
             _loadingProgress = 0.02f;
             _loadingDisplayedProgress = 0f;
             _loadingStartedAt = Time.unscaledTime;
-            _loadingStage = "사무실 공간을 확인하는 중";
+            _loadingStage = "오늘의 사무실을 확인하는 중";
             _loadingUiLogged = false;
             _loadingUiCapturePending = Array.IndexOf(
                 Environment.GetCommandLineArgs(),
@@ -227,6 +244,28 @@ namespace FamilyCompany.Presentation.Unity
             _loadingUiCaptureComplete = !_loadingUiCapturePending;
             CaptureAndHideLegacyRenderers();
             StartCoroutine(LoadStarterOffice());
+        }
+
+        private IEnumerator RebindStarterOfficeWithLoading(PrototypeBootstrap bootstrap)
+        {
+            // Always present one real frame before the synchronous rebind. This prevents the New
+            // Game click from looking frozen even when the additive office was warmed at title.
+            yield return null;
+            _loadingProgress = 0.62f;
+            _loadingStage = "문에서 지정 좌석까지 출근 동선을 미리 계산하는 중";
+            yield return null;
+            _starterRuntime?.Rebind(bootstrap);
+            _loadingProgress = 1f;
+            _loadingDisplayedProgress = 1f;
+            _loadingStage = "09:00 출근 준비 완료";
+            yield return null;
+            float loadingCaptureDeadline = Time.unscaledTime + 2f;
+            while (!_loadingUiCaptureComplete && Time.unscaledTime < loadingCaptureDeadline)
+                yield return null;
+            Debug.Log(
+                "STARTER_OFFICE_LOADING_UI_COMPLETE | mode=WarmRebind elapsed=" +
+                (Time.unscaledTime - _loadingStartedAt).ToString("F2") + "s");
+            _loading = false;
         }
 
         private void CaptureAndHideLegacyRenderers()
@@ -259,7 +298,7 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             _loadingProgress = 0.58f;
-            _loadingStage = "가구 배치와 충돌 영역을 맞추는 중";
+            _loadingStage = "현관과 외벽을 세우는 중";
             yield return null;
 
             if (!previewScene.IsValid() || !previewScene.isLoaded)
@@ -319,11 +358,11 @@ namespace FamilyCompany.Presentation.Unity
             if (_starterRuntime == null)
                 _starterRuntime = bootstrap.gameObject.AddComponent<StarterOfficeRuntimeBootstrap>();
             _loadingProgress = 0.76f;
-            _loadingStage = "가족과 직원 동선을 연결하는 중";
+            _loadingStage = "가족 네 명의 출근 동선을 미리 계산하는 중";
             yield return null;
             _starterRuntime.Configure(gameBootstrap, bootstrap, previewCamera, _legacyRenderers);
             _loadingProgress = 0.93f;
-            _loadingStage = "업무 화면을 마무리하는 중";
+            _loadingStage = "09:00 출근 준비를 마무리하는 중";
             yield return null;
             float loadingCaptureDeadline = Time.unscaledTime + 2f;
             while (!_loadingUiCaptureComplete && Time.unscaledTime < loadingCaptureDeadline)
@@ -585,9 +624,22 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(35, "all four family actors were not present by 09:03");
                 yield break;
             }
+            float seatDeadline = Time.unscaledTime + 45f;
+            while (_starterRuntime.Actors.Any(actor => actor.AttendanceSeatArrivalCount < 1) &&
+                   Time.unscaledTime < seatDeadline)
+                yield return null;
+            if (_starterRuntime.Actors.Any(actor => actor.AttendanceSeatArrivalCount < 1))
+            {
+                string incomplete = string.Join(",", _starterRuntime.Actors
+                    .Where(actor => actor.AttendanceSeatArrivalCount < 1)
+                    .Select(actor => actor.AgentId + ":" + actor.Phase));
+                FailPlayerQa(35, "family did not complete door-to-assigned-seat arrival: " + incomplete);
+                yield break;
+            }
             Debug.Log(
                 "STARTER_OFFICE_ATTENDANCE_FLOW_QA_PASS | start=08:50 hidden=4 " +
-                "door=(8,1) entry=09:00..09:03 present=4 exit=18:00");
+                "doorVisual=(8,0) entrance=(8,1) entry=09:00..09:03 present=4 " +
+                "assignedSeatArrivals=4 stagingStops=0 exit=18:00");
         }
 
         private IEnumerator RunFourWayIntersectionQa()

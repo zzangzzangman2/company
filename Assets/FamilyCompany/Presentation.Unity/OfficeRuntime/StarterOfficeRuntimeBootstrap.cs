@@ -88,6 +88,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return;
             }
             foreach (OfficeRuntimeAgent actor in Actors) actor.ResetRuntimeState();
+            PrepareAttendanceArrivals();
             BindCoordinators();
         }
 
@@ -175,6 +176,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             DisableLegacyRuntime();
             _world.ValidateCanonicalActors();
             ValidateSingleRuntimeOwnership();
+            PrepareAttendanceArrivals();
             BindCoordinators();
             FitCamera(presenter, furniturePresenter);
             foreach (Renderer renderer in _legacyRenderers)
@@ -183,6 +185,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _building = false;
             _layoutSnapshots.Clear();
             LogOwnershipPass();
+        }
+
+        private void PrepareAttendanceArrivals()
+        {
+            int prepared = 0;
+            foreach (OfficeRuntimeAgent actor in Actors)
+                if (actor != null && actor.PrepareAttendanceArrival()) prepared++;
+            if (prepared != Actors.Count)
+            {
+                // Layout editing and focused QA fixtures may intentionally remove assigned desks
+                // or the canonical entrance. They must still rebuild; attendance simply falls
+                // back to unavailable until a complete office layout is applied again.
+                Debug.LogWarning(
+                    $"STARTER_OFFICE_ATTENDANCE_PREWARM_SKIPPED | prepared={prepared} " +
+                    $"actors={Actors.Count} layoutHash={_layoutHash}");
+                return;
+            }
+            Debug.Log(
+                "STARTER_OFFICE_ATTENDANCE_PREWARM_PASS | routes=" + prepared +
+                " | entrance=(8,1)");
         }
 
         private void ApplyStarterDefinitionWhenStateUsesCodeDefault()
@@ -203,15 +225,51 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 currentHash,
                 codeDefault.ComputeLayoutHash(),
                 StringComparison.Ordinal);
-            OfficeLayoutEditResult legacyWithoutDoor =
-                OfficeLayoutEditRules.RemoveFurniture(codeDefault, "entrance_door");
-            bool usesLegacyDefault = legacyWithoutDoor.Success && string.Equals(
-                currentHash,
-                legacyWithoutDoor.Grid.ComputeLayoutHash(),
-                StringComparison.Ordinal);
+            OfficeGrid legacyWithoutDoor = BuildLegacyStarterDefault(false);
+            OfficeGrid legacySingleDoor = BuildLegacyStarterDefault(true);
+            bool usesLegacyDefault = string.Equals(
+                                         currentHash,
+                                         legacyWithoutDoor.ComputeLayoutHash(),
+                                         StringComparison.Ordinal) ||
+                                     string.Equals(
+                                         currentHash,
+                                         legacySingleDoor.ComputeLayoutHash(),
+                                         StringComparison.Ordinal);
             if (!usesCurrentDefault && !usesLegacyDefault) return;
             OfficeGrid definitionGrid = definition.BuildGrid();
             _bootstrap.State.ReplaceOfficeGrid(definitionGrid);
+        }
+
+        private static OfficeGrid BuildLegacyStarterDefault(bool includeSingleDoor)
+        {
+            OfficeGrid current = OfficeGridLayouts.CreateStarterOfficeV1();
+            OfficeFloorTileKind[] floor = current.CopyFloorTiles();
+            floor[7] = OfficeFloorTileKind.WarmWoodA;
+            floor[8] = OfficeFloorTileKind.WarmWoodA;
+            floor[9] = OfficeFloorTileKind.WarmWoodA;
+            var furniture = current.Furniture.Where(item =>
+                    !string.Equals(item.FurnitureId, "entrance_wall_left", StringComparison.Ordinal) &&
+                    !string.Equals(item.FurnitureId, "entrance_door", StringComparison.Ordinal) &&
+                    !string.Equals(item.FurnitureId, "entrance_wall_right", StringComparison.Ordinal))
+                .ToList();
+            if (includeSingleDoor)
+            {
+                furniture.Add(new PlacedOfficeFurniture(
+                    "entrance_door",
+                    OfficeGridLayouts.EntranceDoorKind,
+                    new OfficeGridCoordinate(8, 1),
+                    1,
+                    1,
+                    OfficeFurnitureFacing.SouthEast,
+                    false));
+            }
+            return new OfficeGrid(
+                current.Width,
+                current.Height,
+                floor,
+                current.CopyWalkable(),
+                furniture,
+                current.SeatSlots);
         }
 
         private OfficeRuntimeAgent CreateActor(

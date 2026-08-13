@@ -23,6 +23,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public const string PartitionKind = "partition";
         public const string FilingCabinetKind = "filing_cabinet";
         public const string EntranceDoorKind = "entrance_door";
+        public const string EntranceWallKind = "entrance_wall";
 
         public static OfficeGrid CreateMigrationPreview()
         {
@@ -47,6 +48,11 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 floor[index] = (OfficeFloorTileKind)(1 + PositiveModulo(x * 3 + y * 5, 3));
                 walkable[index] = x > 0 && x < width - 1 && y > 0 && y < height - 1;
             }
+            // Remove the floor directly outside the entrance facade. This leaves the first
+            // walkable interior cell at (8,1) and makes the wall/door read as the room boundary.
+            floor[7] = OfficeFloorTileKind.Void;
+            floor[8] = OfficeFloorTileKind.Void;
+            floor[9] = OfficeFloorTileKind.Void;
 
             var furniture = new List<PlacedOfficeFurniture>();
             var seats = new List<OfficeSeatSlot>();
@@ -66,14 +72,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
             if (includeMigrationPartition)
                 AddBlocking(furniture, "partition", PartitionKind, 6, 6, 1, 2, OfficeFurnitureFacing.NorthWest);
             AddBlocking(furniture, "filing", FilingCabinetKind, 11, 8, 1, 1, OfficeFurnitureFacing.SouthEast);
-            furniture.Add(new PlacedOfficeFurniture(
-                "entrance_door",
-                EntranceDoorKind,
-                new OfficeGridCoordinate(8, 1),
-                1,
-                1,
-                OfficeFurnitureFacing.SouthEast,
-                false));
+            AddEntranceFacade(furniture);
 
             foreach (var item in furniture)
             {
@@ -84,6 +83,37 @@ namespace FamilyCompany.Simulation.OfficeLayout
             }
 
             return new OfficeGrid(width, height, floor, walkable, furniture, seats);
+        }
+
+        private static void AddEntranceFacade(ICollection<PlacedOfficeFurniture> furniture)
+        {
+            // The visual facade sits on the non-walkable outer boundary. Actors appear on the
+            // first interior cell (8,1), directly behind the opening, so the doorway reads as an
+            // exterior entrance instead of an isolated prop standing in the middle of the floor.
+            furniture.Add(new PlacedOfficeFurniture(
+                "entrance_wall_left",
+                EntranceWallKind,
+                new OfficeGridCoordinate(7, 0),
+                1,
+                1,
+                OfficeFurnitureFacing.SouthEast,
+                false));
+            furniture.Add(new PlacedOfficeFurniture(
+                "entrance_door",
+                EntranceDoorKind,
+                new OfficeGridCoordinate(8, 0),
+                1,
+                1,
+                OfficeFurnitureFacing.SouthEast,
+                false));
+            furniture.Add(new PlacedOfficeFurniture(
+                "entrance_wall_right",
+                EntranceWallKind,
+                new OfficeGridCoordinate(9, 0),
+                1,
+                1,
+                OfficeFurnitureFacing.SouthEast,
+                false));
         }
 
         private static void AddWorkstation(

@@ -29,6 +29,18 @@ namespace FamilyCompany.Editor
                 Require(OfficeRuntimeWorkstationService.StarterEntranceCell.Equals(
                         new OfficeGridCoordinate(8, 1)),
                     "Starter attendance must use the one canonical office door.");
+                FamilyCompany.Simulation.OfficeLayout.OfficeGrid office =
+                    OfficeGridLayouts.CreateStarterOfficeV1();
+                Require(office.IsWalkable(new OfficeGridCoordinate(8, 1)),
+                    "The interior entrance cell must stay walkable.");
+                Require(office.FloorAt(new OfficeGridCoordinate(8, 0)) == OfficeFloorTileKind.Void,
+                    "The exterior side of the entrance must not render as interior floor.");
+                Require(office.Furniture.Count(item =>
+                            item.KindId == OfficeGridLayouts.EntranceWallKind) == 2 &&
+                        office.Furniture.Any(item =>
+                            item.FurnitureId == "entrance_door" &&
+                            item.Origin.Equals(new OfficeGridCoordinate(8, 0))),
+                    "Starter entrance must be one outer door between two wall bays.");
                 Require(OfficeAttendanceRules.Resolve(day.AddHours(18)) ==
                         OfficeAttendancePhase.AfterWork, "18:00 must begin departure.");
                 Require(OfficeAttendanceRules.Resolve(day.AddDays(5).AddHours(10)) ==
@@ -55,6 +67,19 @@ namespace FamilyCompany.Editor
                 Debug.LogError("OFFICE_ATTENDANCE_VALIDATION: FAIL");
                 if (Application.isBatchMode) EditorApplication.Exit(1);
                 throw;
+            }
+        }
+
+        public static void RunBatch()
+        {
+            try
+            {
+                Run();
+                EditorApplication.Exit(0);
+            }
+            catch
+            {
+                EditorApplication.Exit(1);
             }
         }
 

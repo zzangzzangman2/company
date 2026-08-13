@@ -354,25 +354,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return TryResolveDestination(location, memberId, stableKey, out destination);
         }
 
-        public bool TryResolveAttendanceEntryDestination(
-            string memberId,
-            string stableKey,
-            out OfficeRuntimeDestination destination)
-        {
-            OfficeGridCoordinate selected = ResolveAttendanceEntryCell(memberId);
-            if (!_grid.Contains(selected))
-            {
-                destination = default;
-                return false;
-            }
-            destination = new OfficeRuntimeDestination(
-                "attendance-open:" + selected.X + ":" + selected.Y,
-                OfficeSemanticLocation.OpenArea,
-                OfficeActivity.Break,
-                selected);
-            return true;
-        }
-
         public bool TryResolveAttendanceEntrance(
             string memberId,
             string stableKey,
@@ -391,26 +372,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 OfficeActivity.Outside,
                 selected);
             return true;
-        }
-
-        private OfficeGridCoordinate ResolveAttendanceEntryCell(string memberId)
-        {
-            // All four actors emerge from the same door, then immediately clear it along the
-            // reception corridor. The deterministic fallback is only for a live layout edit that
-            // temporarily blocks the preferred corridor cell.
-            OfficeGridCoordinate[] corridor =
-            {
-                new OfficeGridCoordinate(8, 2),
-                new OfficeGridCoordinate(8, 3),
-                new OfficeGridCoordinate(9, 2),
-                new OfficeGridCoordinate(9, 3)
-            };
-            foreach (OfficeGridCoordinate cell in corridor)
-            {
-                if (_grid.Contains(cell) &&
-                    _occupancy.IsCellPassable(cell, memberId, string.Empty, true)) return cell;
-            }
-            return new OfficeGridCoordinate(-1, -1);
         }
 
         public OfficeSeatSlot RequiredSeat(string seatId)
