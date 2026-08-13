@@ -1,5 +1,11 @@
 # PROJECT STATE
 
+## 2026-08-13 / GitHub Main README 동기화 완료
+
+- GitHub 메인 README를 현재 정본과 비교해 16:9 전용으로 보이던 화면 설명, 구형 `OFFICE_V0_2` 문서 안내, 잘못된 플레이테스트 경로와 모호한 Windows 빌드 설명을 수정했다.
+- 왼쪽 메뉴까지 포함한 440×481 V6 정적 QA 캡처를 `Docs/Images/`에 보존해 README 상단 미리보기로 추가하고, StarterOfficeV1·반응형 타이틀·기존 SIMUL 모바일 UI 복제 금지 규칙을 현재 `CANON`·`ARCHITECTURE`·`FRONTEND`·`DO_NOTS`와 맞췄다.
+- README의 Markdown 링크, 이미지 경로, 자동화 파일, Unity 버전과 시작 씬이 모두 존재하는지 확인했다. `FRONTEND_V0_4`의 폐기된 중간안과 현재 V6 규칙을 구분하고 문서 갱신일도 2026-08-13으로 맞췄다.
+
 ## 2026-08-13 / Compact Title No-Letterbox V6 완료
 
 - 16:9 V2 배경을 440×481 중앙에 scale-to-fit해 생기던 큰 위아래 검은 띠를 제거했다. 기존 사무실을 기준으로 위쪽 벽·창문과 아래쪽 바닥·식물을 확장한 1195×1316 compact 전용 `money_rain_tycoon_background_portrait_v3.png`를 추가했다.
@@ -80,8 +86,8 @@
   seat contact and animated anchor error were both `0.000px`, with rotation/scale deviation `0` and
   agent penetrations `0`. Autonomous father/mother meeting seating and visible chairs also passed.
 
-최종 갱신: 2026-08-11
-현재 단계: Office Runtime V1 통합 완료 / Management V0.8 + Market Port S2 / 가족 자율 행동·실제 이동과 SIMUL 호가·체결 정확 이식
+최종 갱신: 2026-08-13
+현재 단계: Main Title V6 / Office Runtime V1 / Management V0.8 + Market Port S2
 Unity: 6000.3.21f1
 
 ## 현재 목표

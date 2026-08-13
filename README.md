@@ -2,6 +2,10 @@
 
 14살 플레이어가 엄마·아빠·누나와 2000년의 작은 오피스텔 사무실에서 시작해, 하청을 버티고 자체 사업을 세우며 실제 기업들과 경쟁해 세계적인 회사로 성장하는 싱글플레이 생활 경영 RPG다.
 
+<p align="center">
+  <img src="Docs/Images/family-company-main-title-v6-440x481.png" width="440" alt="가족회사 V6 메인 타이틀과 왼쪽 세로 메뉴" />
+</p>
+
 ## 우리가 만드는 게임
 
 - 시작은 `2000-01-03 08:00`, 가족 4명, 자본금 500만 원이다.
@@ -10,7 +14,8 @@
 - 하청 수익으로 R&D를 해금하고 시장을 조사해 웹·모바일·하드웨어·패션 등 자체 사업과 제품으로 확장한다.
 - 2000~2026 국내 실제 회사·사건·상장 종목을 기준선으로 사용하되, 플레이어의 경쟁·인수·기술 선점으로 역사를 바꿀 수 있다.
 - 주식은 별도 장난감이 아니라 회사 자금과 연결된 경영 리스크다. 실제 장 시간, 7+7 호가, 가격·시간 우선 FIFO, 수수료·세금과 저장 결정론을 유지한다.
-- 화면은 1920×1080 PC 가로형이며, 밝고 캐주얼한 SIMUL-v3 화풍과 실제 한글 UI를 사용한다.
+- 기본 화면은 1920×1080 PC 16:9이며, 작은 창은 440×481까지 별도 compact 타이틀 배경과 반응형 한글 UI로 대응한다.
+- 타이틀은 가족 4인이 일하는 등각 도트 사무실, 왼쪽 세로 메뉴, 코랄·크림·차콜 UI와 2.8초 돈다발 연출을 사용한다.
 
 기능별 완료·진행·미완료와 정확한 다음 순서는 [PROJECT_STATE.md](Docs/PROJECT_STATE.md) 하나를 정본으로 본다.
 
@@ -34,13 +39,13 @@
 | 3 | [CANON.md](Docs/CANON.md) | 가족·나이·외형·콘텐츠 정본 |
 | 4 | [DECISIONS.md](Docs/DECISIONS.md) | 구조와 방향을 그렇게 정한 이유 |
 | 5 | [ARCHITECTURE.md](Docs/ARCHITECTURE.md) | 순수 시뮬레이션·저장·Unity 프레젠테이션 경계 |
-| 사무실·UI·이미지 | [ART_STYLE.md](Docs/ART_STYLE.md), [OFFICE_V0_2.md](Docs/OFFICE_V0_2.md) | 공식 화풍, 16:9 UI, 사무실 공간 규칙 |
+| 사무실·UI·이미지 | [ART_STYLE.md](Docs/ART_STYLE.md), [CANON.md](Docs/CANON.md), [ARCHITECTURE.md](Docs/ARCHITECTURE.md), [FRONTEND_V0_4.md](Docs/FRONTEND_V0_4.md) | 공식 화풍, StarterOfficeV1 정본, 런타임 구조와 반응형 UI |
 | 계약·경영 재미 | [CONTRACTS_V0_3.md](Docs/CONTRACTS_V0_3.md), [GAMEPLAY_FUN_V1.md](Docs/GAMEPLAY_FUN_V1.md) | 계약 정본과 재미 제안서 구분 |
 | 주식·SIMUL 이식 | [SIMUL_MARKET_PORT.md](Docs/SIMUL_MARKET_PORT.md), [STOCK_MARKET_LANDSCAPE_V1.md](Docs/STOCK_MARKET_LANDSCAPE_V1.md) | 시장 정본 경계와 가로형 UI/호가 검증 |
 | 실제 회사 역사 | [CLAUDE_HANDOFF_HISTORY_DATA.md](Docs/CLAUDE_HANDOFF_HISTORY_DATA.md), [CLAUDE_HISTORY_PROGRESS.md](Docs/CLAUDE_HISTORY_PROGRESS.md) | History 전용 경로, 데이터 개수와 불확실성 |
 | 집 PC 재개 | [HOME_PC_CONTINUATION_GUIDE.md](Docs/HOME_PC_CONTINUATION_GUIDE.md) | 설치·pull·Unity 최초 확인 순서 |
 | Windows 실행본 | [PLAYTEST_BUILD.md](Docs/PLAYTEST_BUILD.md) | 최신 EXE 재빌드와 산출물 위치 |
-| 금지 사례 | [DO_NOTS.md](Docs/DO_NOTS.md) | 미래 누설·가짜 직원·세로 UI 등 반복 금지 |
+| 금지 사례 | [DO_NOTS.md](Docs/DO_NOTS.md) | 미래 누설·가짜 직원·기존 SIMUL 모바일 UI 복제 등 반복 금지 |
 
 제안 문서는 아이디어 입력일 뿐 자동으로 정본이 아니다. 구현·검증 후에만 `PROJECT_STATE`와 `DECISIONS`에 반영한다.
 
@@ -65,10 +70,10 @@ git pull --ff-only origin main
 - 장시간 검증: 백그라운드 프로세스로 실행하고 로그의 명시적 PASS/FAIL과 종료 코드를 함께 확인
 - 사용자 입력이 필요한 EXE 육안 검증은 자동 실행하지 않고 먼저 알림
 
-현재 참고 실행본은 `C:/Users/godho/Downloads/FamilyCompany_Playtest/FamilyCompany.exe`다. 정확한 빌드 출처와 해시는 [PLAYTEST_BUILD.md](Docs/PLAYTEST_BUILD.md)를 따른다.
+현재 참고 실행본은 `C:/Users/godho/Downloads/Family/FamilyCompany_Playtest/FamilyCompany.exe`다. 정확한 빌드 출처와 해시는 [PLAYTEST_BUILD.md](Docs/PLAYTEST_BUILD.md)를 따른다.
 
 ## 기본 자동화
 
 - `Tools/BuildPrototype.ps1`: `Prototype01` 재생성
 - `Tools/ValidatePrototype.ps1`: 시간·RNG·가족·회계·저장·에셋 검증
-- `Tools/Build-FamilyCompanyWindows.ps1`: Unity 없이 실행할 Windows 플레이테스트 빌드 생성
+- `Tools/Build-FamilyCompanyWindows.ps1`: Unity 백그라운드 빌드로 독립 실행 Windows 플레이테스트 생성
