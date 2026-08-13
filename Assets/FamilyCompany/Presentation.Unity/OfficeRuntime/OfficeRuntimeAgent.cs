@@ -33,12 +33,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public const float DefaultRadius = 0.22f;
         public const float DefaultMoveSpeed = 1.65f;
         private const float ArrivalDistance = 0.035f;
-        // Translation-only least-squares placement. The keyboard receives a little more weight
-        // because the chair foreground safely hides a small pelvis residual, while a floating
-        // typing hand remains immediately visible.
-        // Keep hands planted on the keyboard. The rendered chair absorbs the small remaining
-        // proportion difference, without scale/rotation or member-specific numbers.
-        private const float TypingWorkContactWeight = 0.92f;
+        // Typing is anchored by the authored hand socket, never by a member-specific body offset.
+        // The shared chair presentation follows the resulting pelvis position, so every body can
+        // keep both hands planted on the keyboard without scale/rotation distortion.
+        private const float TypingWorkContactWeight = 1f;
 
         private PrototypeBootstrap _bootstrap;
         private OfficeRuntimeWorld _world;
