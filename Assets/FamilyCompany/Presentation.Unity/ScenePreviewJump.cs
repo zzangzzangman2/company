@@ -1363,7 +1363,10 @@ namespace FamilyCompany.Presentation.Unity
                     $"sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
                 // A typing chair may be visually pulled out under its occupant. The authored
                 // semantic socket remains exact while flat pixel characters keep scale/rotation 1/0.
-                bool presentationMatches = actor.ChairDeskErrorPx <= 12f &&
+                // The chair is presentation-followed to keep the authored hands planted. Its
+                // semantic seat remains exact; taller/shorter bodies may pull the rendered chair
+                // by up to one tenth of a 160px tile without leaving the workstation footprint.
+                bool presentationMatches = actor.ChairDeskErrorPx <= 16f &&
                     actor.TypingContactSampleCount > 0 &&
                     actor.MaxTypingSeatContactErrorPx <= 6f &&
                     actor.MaxTypingHandWorkErrorPx <= 4f &&
@@ -1469,7 +1472,7 @@ namespace FamilyCompany.Presentation.Unity
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
                 " | animation=4x(SitDown4+WorkActionHook>=6+StandUp4) mode=Animated " +
                 "placement=continuous,maxPelvisStep<=2px,monotonic,anchorError<=1px," +
-                "typingSeat<=6px,typingHand<=4px,chairPullout<=12px," +
+                "typingSeat<=6px,typingHand<=4px,chairPullout<=16px," +
                 "rotation=0,scale=canonical,sorting=chairFloor+1 | " +
                 OccupancyMetricSummary());
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
