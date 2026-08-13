@@ -232,6 +232,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             : _renderer.sprite.name;
         public bool IsPresentationAway => _presentationAway;
         public int AttendanceSeatArrivalCount => _attendanceSeatArrivalCount;
+        public string LastReservationBlocker { get; private set; } = string.Empty;
 
         public OfficeObservationStatusKind StatusKind
         {
@@ -1158,6 +1159,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _seat?.SeatId ?? string.Empty);
             if (!_world.Occupancy.TryReservePath(_agentId, currentCell, upcoming))
             {
+                LastReservationBlocker = _world.Occupancy.DescribePathReservationBlocker(
+                    _agentId,
+                    currentCell,
+                    upcoming);
                 _stuckSeconds += deltaTime;
                 OfficeTrafficDecision blockedTraffic = _world.ResolveTraffic(
                     _agentId,
@@ -1184,6 +1189,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return;
             }
 
+            LastReservationBlocker = string.Empty;
             _yieldCell = null;
 
             if (delta.magnitude <= ArrivalDistance)

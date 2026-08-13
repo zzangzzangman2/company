@@ -353,6 +353,36 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ReleaseNarrowCorridors(agentId ?? string.Empty);
         }
 
+        public string DescribePathReservationBlocker(
+            string agentId,
+            OfficeGridCoordinate current,
+            IReadOnlyList<OfficeGridCoordinate> upcoming)
+        {
+            ActorState self = RequiredActor(agentId);
+            var requested = new List<OfficeGridCoordinate> { current };
+            if (upcoming != null)
+            {
+                for (var index = 0; index < upcoming.Count && index < 2; index++)
+                    if (!requested.Contains(upcoming[index])) requested.Add(upcoming[index]);
+            }
+            foreach (OfficeGridCoordinate cell in requested)
+            {
+                if (_narrowCorridorIds.TryGetValue(cell, out int corridorId) &&
+                    _narrowCorridorOwners.TryGetValue(corridorId, out string ownerId) &&
+                    !string.Equals(ownerId, self.AgentId, StringComparison.Ordinal))
+                    return $"corridor={corridorId}:owner={ownerId}:cell={cell}";
+                foreach (ActorState peer in _actors.Values)
+                {
+                    if (ReferenceEquals(peer, self) || !peer.IsPresent) continue;
+                    if (peer.CurrentCell.Equals(cell))
+                        return $"peer={peer.AgentId}:current={cell}";
+                    if (peer.Reservations.Contains(cell))
+                        return $"peer={peer.AgentId}:reserved={cell}";
+                }
+            }
+            return "unknown";
+        }
+
         public bool IsCellPassable(
             OfficeGridCoordinate cell,
             string agentId,
