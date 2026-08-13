@@ -1846,7 +1846,11 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(61, "runtime contract work advanced while game time was stopped");
                 yield break;
             }
-            bootstrap.AdvanceTimeNow(contract.RemainingPersonHours * 60L);
+            // AssignContractWorkNow queues one four-person-hour chunk, not the entire offer.
+            // Advance exactly that authoritative duration so the worker remains inside the
+            // 09:00-18:00 attendance window while proving that frames alone produce no work.
+            long assignedMinutes = Math.Min(4, contract.RemainingPersonHours) * 60L;
+            bootstrap.AdvanceTimeNow(assignedMinutes);
             started = Time.time;
             while (Time.time - started < 45f && coordinator.CompletedTaskCount == completedBefore)
                 yield return null;
