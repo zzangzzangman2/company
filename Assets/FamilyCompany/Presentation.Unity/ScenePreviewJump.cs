@@ -565,12 +565,19 @@ namespace FamilyCompany.Presentation.Unity
             OfficeSeatSlot emptyPlayerSeat = _starterRuntime.World.Workstations.RequiredSeat("seat_player");
             if (!_starterRuntime.World.FurniturePresenter.TryGetRenderer(
                     emptyPlayerSeat.ChairFurnitureId,
-                    out SpriteRenderer emptyChairBase) || !emptyChairBase.enabled ||
-                !_starterRuntime.World.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
-                    emptyPlayerSeat.ChairFurnitureId,
-                    out SpriteRenderer emptyChairFront) || !emptyChairFront.enabled)
+                    out SpriteRenderer emptyChairBase) || !emptyChairBase.enabled)
             {
-                FailPlayerQa(39, "unoccupied player chair did not retain its complete visible sprite");
+                FailPlayerQa(39, "unoccupied player chair base sprite disappeared");
+                yield break;
+            }
+            // Some chairs are authored as a complete single sprite while others are split into
+            // base/front layers. A split front must remain visible when empty, but a single-sprite
+            // chair must not fail merely because it has no redundant front renderer.
+            if (_starterRuntime.World.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
+                    emptyPlayerSeat.ChairFurnitureId,
+                    out SpriteRenderer emptyChairFront) && !emptyChairFront.enabled)
+            {
+                FailPlayerQa(39, "unoccupied player chair front sprite disappeared");
                 yield break;
             }
 
