@@ -27,3 +27,7 @@
 *.VC.db
 sysinfo.txt
 crashlytics-build.properties
+
+# Python bytecode from Tools scripts
+__pycache__/
+*.pyc
