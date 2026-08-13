@@ -67,6 +67,7 @@ namespace FamilyCompany.Presentation.Unity
 
         public int CurrentDirection => _lastDirection;
         public int CurrentWalkFrame => _walkFrame;
+        public bool IsOfficeWorkAnimationHookActive => _officeWorkSession != null;
         public bool IsMoving => _tileDisplacementDirection
             ? _tileFrameDisplacement.sqrMagnitude > 0.0000001f
             : _worldVelocity.sqrMagnitude > 0.0025f;
@@ -296,6 +297,41 @@ namespace FamilyCompany.Presentation.Unity
             _worldVelocity = Vector3.zero;
         }
 
+        public void AccumulateStandingFacingRequest(int direction, float deltaTime)
+        {
+            if (direction < 0 || direction >= DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(direction));
+            Vector2 heading = direction switch
+            {
+                0 => new Vector2(0f, -1f),
+                1 => new Vector2(-1f, -1f),
+                2 => new Vector2(-1f, 0f),
+                3 => new Vector2(-1f, 1f),
+                4 => new Vector2(0f, 1f),
+                5 => new Vector2(1f, 1f),
+                6 => new Vector2(1f, 0f),
+                7 => new Vector2(1f, -1f),
+                _ => Vector2.zero
+            };
+            AccumulateTileMotion(heading, Vector2.zero, deltaTime, false);
+        }
+
+        public void RestoreStandingFacing(int direction)
+        {
+            if (direction < 0 || direction >= DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(direction));
+            if (_seatingClip.HasValue)
+                throw new InvalidOperationException("Standing facing cannot be restored during a seating clip.");
+
+            _worldVelocity = Vector3.zero;
+            _lastDirection = direction;
+            _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
+            _frameClock = 0f;
+            ResetTileFacingState(direction);
+            ResetTileGaitState(direction);
+            ApplyFrame();
+        }
+
         public void ConfigureOfficeWorkAnimationHook(IOfficeSeatedWorkAnimationHook hook)
         {
             EndOfficeWorkSession();
@@ -421,7 +457,8 @@ namespace FamilyCompany.Presentation.Unity
             {
                 EnsureTileFacingState();
                 int resolvedVisualDirection = _tileFacingState.VisualDirection;
-                if (IsMoving)
+                bool hasSemanticRequest = _tileSemanticDisplacement.sqrMagnitude > 0.0000001f;
+                if (IsMoving || hasSemanticRequest)
                 {
                     OfficeLocomotionFacingResult facing =
                         OfficeLocomotionPresentationRules.ResolveFacing(

@@ -242,7 +242,9 @@ namespace FamilyCompany.Presentation.Unity
             _taskSequence++;
             int appliedHours = Math.Min(personHours, contract.RemainingPersonHours);
             _pending.Add(taskId, new PendingWork(offerId, memberId, appliedHours));
-            if (agent.AssignOfficeTask(taskId, activity, appliedHours * secondsPerPersonHour))
+            // Runtime contract production is governed by the authoritative GameTime.  Real frames
+            // only animate travel and work; one person-hour always consumes sixty game minutes.
+            if (agent.AssignOfficeTask(taskId, activity, appliedHours * 60f))
             {
                 ClearAssignmentFailure();
                 return true;

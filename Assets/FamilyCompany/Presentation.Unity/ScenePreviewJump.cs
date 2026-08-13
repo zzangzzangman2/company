@@ -274,6 +274,8 @@ namespace FamilyCompany.Presentation.Unity
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunEightDirectionMovementQa();
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
+            yield return RunReversalPivotQa();
+            if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
 
             _starterRuntime.ApplyLayoutForQa(OfficeGridLayouts.CreateStarterOfficeV1());
             yield return WaitForRuntimeReady(46, "restore StarterOfficeV1");
@@ -433,6 +435,8 @@ namespace FamilyCompany.Presentation.Unity
             }
             float motionStart = Time.time;
             while (Time.time - motionStart < 0.35f) yield return null;
+            OfficeGridCoordinate preservedPlayerCell =
+                _starterRuntime.World.Presenter.NearestCell(actors["player"].transform.position);
 
             string previousHash = _starterRuntime.LayoutHash;
             _starterRuntime.ApplyLayoutForQa(CreateRuntimeDeskQaLayout());
@@ -446,6 +450,20 @@ namespace FamilyCompany.Presentation.Unity
 
             actors = RequiredQaActors();
             if (actors == null) yield break;
+            OfficeGridCoordinate restoredPlayerCell =
+                _starterRuntime.World.Presenter.NearestCell(actors["player"].transform.position);
+            if (_starterRuntime.World.Occupancy.IsCellPassable(
+                    preservedPlayerCell,
+                    "player",
+                    string.Empty,
+                    false) &&
+                !restoredPlayerCell.Equals(preservedPlayerCell))
+            {
+                FailPlayerQa(
+                    44,
+                    $"layout rebuild reset player location: {preservedPlayerCell} -> {restoredPlayerCell}");
+                yield break;
+            }
             actors["player"].QaTeleportToCell(new OfficeGridCoordinate(5, 6));
             actors["older_sister"].QaTeleportToCell(new OfficeGridCoordinate(9, 2));
             actors["father"].QaTeleportToCell(new OfficeGridCoordinate(1, 9));
@@ -597,7 +615,10 @@ namespace FamilyCompany.Presentation.Unity
                     if (player.AccumulatedFrameDisplacement.sqrMagnitude <= 0.0000001f) continue;
                     observedFrameDisplacement = player.AccumulatedFrameDisplacement;
                     observedSemanticDisplacement = player.SemanticFrameDisplacement;
-                    observedSpeed = player.ActualPresentationSpeed;
+                    // Frame partitioning can leave the final sampled frame partially filled even
+                    // while the held-input run reached cruise speed. Gate the run on its peak
+                    // actual speed instead of whichever render frame happened to be last.
+                    observedSpeed = Mathf.Max(observedSpeed, player.ActualPresentationSpeed);
                     observedSemanticDirection = player.SemanticDirection;
                     observedMotionDirection = player.MotionDirection;
                     observedVisualDirection = player.CurrentDirection;
@@ -625,7 +646,8 @@ namespace FamilyCompany.Presentation.Unity
                     player.StrideLength);
                 if (expected != direction || player.CurrentDirection != direction ||
                     observedSemanticDirection != direction || observedMotionDirection != direction ||
-                    observedVisualDirection != direction || observedProjection || observedSpeed < 1.4f ||
+                    observedVisualDirection != direction || observedProjection ||
+                    observedSpeed < OfficeRuntimeAgent.DefaultMoveSpeed * 0.75f ||
                     observedWalkFrame != expectedWalkFrame ||
                     Mathf.Abs(Mathf.DeltaAngle(observedGaitPhase * 360f, expectedGaitPhase * 360f)) > 0.05f ||
                     (observedLocomotionPhase != OfficeLocomotionPhase.StartStep &&
@@ -695,10 +717,6 @@ namespace FamilyCompany.Presentation.Unity
                 float maximumReverseFacingSeconds = 0f;
                 int reverseFacingFrames = 0;
                 int projectedFrames = 0;
-                float naturalFacingHandoffSeconds =
-                    OfficeLocomotionPresentationRules.DefaultFacingStabilizationSeconds +
-                    OfficeLocomotionGaitRules.PivotSeconds +
-                    0.05f;
                 while (Time.time - started < 10f)
                 {
                     yield return null;
@@ -708,9 +726,7 @@ namespace FamilyCompany.Presentation.Unity
                     previous = player.Position;
                     if (player.AccumulatedFrameDisplacement.sqrMagnitude <= 0.0000001f) continue;
                     if (player.WasCollisionProjected) projectedFrames++;
-                    int expectedDirection = player.UsedSemanticHeading
-                        ? player.SemanticDirection
-                        : player.MotionDirection;
+                    int expectedDirection = player.MotionDirection;
                     int directionDelta = Mathf.Abs(player.CurrentDirection - expectedDirection);
                     directionDelta = Mathf.Min(directionDelta, DirectionalSpriteAnimator.DirectionCount - directionDelta);
                     if (directionDelta >= 3)
@@ -724,11 +740,9 @@ namespace FamilyCompany.Presentation.Unity
                     else reverseFacingSeconds = 0f;
                     if (directionDelta >= 2) mismatchedFacingSeconds += Time.deltaTime;
                     else mismatchedFacingSeconds = 0f;
-                    // A full reversal first stabilizes the new heading, then finishes the planted
-                    // foot pivot. Allow exactly that authored hand-off plus one slow-frame margin;
-                    // sustained reverse presentation still fails closed.
-                    if (reverseFacingSeconds > naturalFacingHandoffSeconds ||
-                        mismatchedFacingSeconds > naturalFacingHandoffSeconds)
+                    // Any actual walking frame that faces three or four octants away is a visible
+                    // backwards step. Reversals must stop and pivot before displacement resumes.
+                    if (directionDelta >= 3)
                     {
                         FailPlayerQa(
                             65 + scenario,
@@ -764,6 +778,91 @@ namespace FamilyCompany.Presentation.Unity
                     OccupancyMetricSummary());
             }
             Debug.Log("STARTER_OFFICE_PLAYER_COLLISION_QA_PASS | scenarios=3 | timeScale=4");
+        }
+
+        private IEnumerator RunReversalPivotQa()
+        {
+            Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
+            if (actors == null) yield break;
+            OfficeRuntimeAgent player = actors["player"];
+            player.QaTeleportToCell(new OfficeGridCoordinate(12, 12));
+            actors["older_sister"].QaTeleportToCell(new OfficeGridCoordinate(3, 3));
+            actors["father"].QaTeleportToCell(new OfficeGridCoordinate(21, 3));
+            actors["mother"].QaTeleportToCell(new OfficeGridCoordinate(21, 21));
+
+            player.QaSetPlayerInput(Vector2.down);
+            float started = Time.time;
+            bool establishedSouth = false;
+            while (Time.time - started < 2f)
+            {
+                yield return null;
+                Vector2 displacement = player.AccumulatedFrameDisplacement;
+                if (displacement.sqrMagnitude <= 0.0000001f) continue;
+                int motionDirection = DirectionalSpriteAnimator.ResolveTileDirection(displacement);
+                if (motionDirection == 0 && player.CurrentDirection == 0)
+                {
+                    establishedSouth = true;
+                    break;
+                }
+            }
+            if (!establishedSouth)
+            {
+                player.QaSetPlayerInput(Vector2.zero);
+                FailPlayerQa(54, "reversal QA could not establish southward walking");
+                yield break;
+            }
+
+            player.QaSetPlayerInput(Vector2.up);
+            bool plantedNorthFacingObserved = false;
+            bool resumedNorth = false;
+            int movingFrames = 0;
+            started = Time.time;
+            while (Time.time - started < 3f)
+            {
+                yield return null;
+                Vector2 displacement = player.AccumulatedFrameDisplacement;
+                if (displacement.sqrMagnitude <= 0.0000001f)
+                {
+                    if (player.CurrentDirection == 4) plantedNorthFacingObserved = true;
+                    continue;
+                }
+
+                movingFrames++;
+                int actualDirection = DirectionalSpriteAnimator.ResolveTileDirection(displacement);
+                if (player.CurrentDirection != actualDirection)
+                {
+                    player.QaSetPlayerInput(Vector2.zero);
+                    FailPlayerQa(
+                        54,
+                        $"reversal rendered a non-motion facing: actual={actualDirection} " +
+                        $"visual={player.CurrentDirection} displacement={displacement} " +
+                        $"locomotion={player.LocomotionPhase}");
+                    yield break;
+                }
+                if (actualDirection != 4) continue;
+                if (!plantedNorthFacingObserved)
+                {
+                    player.QaSetPlayerInput(Vector2.zero);
+                    FailPlayerQa(54, "reverse acceleration started before a planted north-facing pivot");
+                    yield break;
+                }
+                resumedNorth = true;
+                break;
+            }
+            player.QaSetPlayerInput(Vector2.zero);
+            yield return null;
+            if (!plantedNorthFacingObserved || !resumedNorth)
+            {
+                FailPlayerQa(
+                    54,
+                    $"reversal did not complete stop-pivot-resume: planted={plantedNorthFacingObserved} " +
+                    $"resumed={resumedNorth} movingFrames={movingFrames} direction={player.CurrentDirection} " +
+                    $"locomotion={player.LocomotionPhase}");
+                yield break;
+            }
+            Debug.Log(
+                "STARTER_OFFICE_REVERSAL_PIVOT_QA_PASS | southWalk=true plantedNorthPivot=true " +
+                $"northResume=true movingFrames={movingFrames}");
         }
 
         private IEnumerator RunMicroActionDestinationQa()
@@ -917,16 +1016,19 @@ namespace FamilyCompany.Presentation.Unity
             }
             float workLoopStarted = Time.time;
             while (Time.time - workLoopStarted < 8f &&
-                   QaMemberIds.Any(memberId => actors[memberId].ObservedWorkFrameCount < 6))
+                   QaMemberIds.Any(memberId => !HasObservedWorkPresentation(actors[memberId])))
                 yield return null;
             if (QaMemberIds.Any(memberId => actors[memberId].ObservedSitDownFrameCount < 4 ||
-                                                actors[memberId].ObservedWorkFrameCount < 6))
+                                                !HasObservedWorkPresentation(actors[memberId])))
             {
                 FailPlayerQa(
                     56,
-                    "animated seating did not expose every SitDown/Work frame: " +
+                    "animated seating did not expose every SitDown/work-action frame: " +
                     string.Join(",", QaMemberIds.Select(memberId =>
-                        $"{memberId}=sit{actors[memberId].ObservedSitDownFrameCount}/work{actors[memberId].ObservedWorkFrameCount}")));
+                        $"{memberId}=sit{actors[memberId].ObservedSitDownFrameCount}/" +
+                        $"work{actors[memberId].ObservedWorkFrameCount}/" +
+                        $"hook{actors[memberId].IsOfficeWorkAnimationHookActive}:" +
+                        actors[memberId].ObservedOfficeWorkHookSpriteCount)));
                 yield break;
             }
             string[] claims = QaMemberIds.Select(memberId => actors[memberId].ActiveSeatId).ToArray();
@@ -960,6 +1062,8 @@ namespace FamilyCompany.Presentation.Unity
                     $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
                     $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
                     $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
+                    $"workHook={actor.IsOfficeWorkAnimationHookActive}:" +
+                    $"{actor.ObservedOfficeWorkHookSpriteCount} " +
                     $"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px " +
                     $"pelvisStep={actor.MaxTransitionPelvisStepPx:F3}px " +
                     $"monotonicViolations={actor.TransitionMonotonicViolationCount} " +
@@ -968,11 +1072,13 @@ namespace FamilyCompany.Presentation.Unity
                     actor.VisualRotationErrorDegrees <= 0.01f &&
                     actor.VisualScaleDeviation <= 0.001f && actor.CurrentDirection == 3 &&
                     actor.SeatingPresentationMode == OfficeSeatingPresentationMode.Animated &&
-                    actor.ObservedSitDownFrameCount == 4 && actor.ObservedWorkFrameCount == 6 &&
+                    actor.ObservedSitDownFrameCount == 4 && HasObservedWorkPresentation(actor) &&
                     actor.MaxAnimatedAnchorErrorPx <= 1f &&
                     actor.MaxTransitionPelvisStepPx <= 2f &&
                     actor.TransitionMonotonicViolationCount == 0 &&
-                    actor.CurrentSpriteName.StartsWith(expectedSpritePrefix, StringComparison.Ordinal) &&
+                    (actor.IsOfficeWorkAnimationHookActive
+                        ? IsOfficeWorkActionSprite(memberId, actor.CurrentSpriteName)
+                        : actor.CurrentSpriteName.StartsWith(expectedSpritePrefix, StringComparison.Ordinal)) &&
                     depthCorrect;
                 if (presentationMatches) continue;
                 FailPlayerQa(
@@ -982,6 +1088,8 @@ namespace FamilyCompany.Presentation.Unity
                         $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
                         $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
                         $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
+                        $"workHook={actor.IsOfficeWorkAnimationHookActive}:" +
+                        $"{actor.ObservedOfficeWorkHookSpriteCount} " +
                         $"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px " +
                         $"pelvisStep={actor.MaxTransitionPelvisStepPx:F3}px " +
                         $"monotonicViolations={actor.TransitionMonotonicViolationCount} " +
@@ -1057,12 +1165,27 @@ namespace FamilyCompany.Presentation.Unity
             }
             Debug.Log(
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
-                " | animation=4x(SitDown4+Work6+StandUp4) mode=Animated " +
+                " | animation=4x(SitDown4+WorkActionHook>=6+StandUp4) mode=Animated " +
                 "placement=continuous,maxPelvisStep<=2px,monotonic,anchorError<=1px," +
                 "seatContact<=1px,rotation=0,scale=canonical,sorting=chairFloor+1 | " +
                 OccupancyMetricSummary());
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
             yield return null;
+        }
+
+        private static bool HasObservedWorkPresentation(OfficeRuntimeAgent actor)
+        {
+            return actor != null && (actor.IsOfficeWorkAnimationHookActive
+                ? actor.ObservedOfficeWorkHookSpriteCount >= 6
+                : actor.ObservedWorkFrameCount >= 6);
+        }
+
+        private static bool IsOfficeWorkActionSprite(string memberId, string spriteName)
+        {
+            if (string.IsNullOrWhiteSpace(memberId) || string.IsNullOrWhiteSpace(spriteName)) return false;
+            return spriteName.StartsWith(memberId + "_typing_", StringComparison.Ordinal) ||
+                   spriteName.StartsWith(memberId + "_mouse_", StringComparison.Ordinal) ||
+                   spriteName.StartsWith(memberId + "_drink_", StringComparison.Ordinal);
         }
 
         private static string QaArtifactPath(string fileName)
@@ -1265,7 +1388,18 @@ namespace FamilyCompany.Presentation.Unity
                     (coordinator == null ? string.Empty : ": " + coordinator.LastAssignmentFailureLabel));
                 yield break;
             }
+            // Rendering frames may move the actor to its workstation, but may not create work while
+            // authoritative game time is stopped.
             float started = Time.time;
+            while (Time.time - started < 2f)
+                yield return null;
+            if (coordinator.CompletedTaskCount != completedBefore)
+            {
+                FailPlayerQa(61, "runtime contract work advanced while game time was stopped");
+                yield break;
+            }
+            bootstrap.AdvanceTimeNow(contract.RemainingPersonHours * 60L);
+            started = Time.time;
             while (Time.time - started < 45f && coordinator.CompletedTaskCount == completedBefore)
                 yield return null;
             if (coordinator.CompletedTaskCount == completedBefore ||

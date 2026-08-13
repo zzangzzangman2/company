@@ -414,3 +414,16 @@ Unity: 6000.3.21f1
 - Unity 6000.3.21f1 백그라운드 QA: 전환 asset/runtime PASS, `OfficeNavigationValidation` PASS, `PrototypeValidation` PASS.
 - 완료 보고서: `Docs/FAMILY_COMPANY_POST_PUSH_P2_LOCOMOTION_TRANSITIONS_COMPLETION_2026-08-12.md`
 - 원문 P2 필수 항목은 모두 완료했다. 6→8 기본 보행 확대는 선택 후속으로 남긴다.
+
+## 2026-08-13 / Starter Office 자연스러운 이동·상호작용 보강 완료
+
+- 걷기 원화는 `6b7b020`에서 12명×8방향×6프레임을 동일 상체 기준으로 안정화했다. 자동발견 strict 결과는 걷기 96/96, 전체 `walk/typing/mouse/drink` 계약 192/192 PASS다. 업무 동작은 의도적인 손·컵 변화를 걷기 전체 프레임 변화율로 오판하지 않고 정확한 프레임 구조·고유성·RGBA/hard alpha·세로 좌석 접점으로 검사한다.
+- 이동 중 표시 방향은 의미 입력이 아니라 렌더 프레임의 실제 변위를 즉시 따른다. 실제 이동 중 3옥탄트 이상 역방향은 첫 프레임에 실패하며, 급반전은 감속→정지→제자리 Pivot→새 방향 가속 순서다. 정지 상태에서도 의미 입력으로 90°/180° 제자리 회전이 가능하다.
+- 긴 직선의 표현용 6셀 lookahead와 실제 경로 진행 커서를 분리했다. 통과한 셀을 계속 예약하거나 동적 장애물 뒤에 이미 지난 셀로 되돌아가는 stale cursor를 제거했다. 코너 anticipation은 Animator용 의미 방향만 바꾸지 않고 실제 root 궤적을 안전 clearance 안에서 둥글게 만든다.
+- 비좌석 시설은 실제 `furnitureId` 단위 예약을 사용한다. 복사기·정수기·서류함은 exclusive, 커피는 capacity 2이며 접근 칸은 사람마다 고유하다. 이동 전 claim, 도착 시 live layout/접근 칸 재검증, 가구 방향 제자리 정렬, Performing, intent 변경·계약 override·경로 실패·reset/disable/destroy 시 complete/abort/release를 한 수명주기로 연결했다. `filing-read`와 `filing-document`는 같은 책장 자원을 공유한다.
+- 좌석은 같은 책상에서 행동만 바뀌면 현재 claim을 재사용해 불필요하게 일어나지 않는다. 앉기 전에 좌석 방향으로 제자리 회전하고, 일어나는 동안에는 chair depth/occlusion과 claim을 유지하며 실제 exit step 이후 해제한다. Starter가 기존 typing/mouse/drink frame set을 새 Actor에도 다시 연결한다.
+- 레이아웃 적용 전 Actor의 셀·바라보는 방향·외출 상태·남은 계약 분·최신 자율 의도를 transient snapshot으로 잡고 재생성 뒤 복구한다. 외출 Actor는 occupancy presence에서 즉시 빠지고 복귀 때 다시 등록되어 보이지 않는 출구 ghost collision을 만들지 않는다.
+- 계약 생산은 `Time.deltaTime`이 아니라 `GameTime.ElapsedMinutes` 변화만 소비한다. 게임 분이 멈춘 동안 실제 몇 초가 흘러도 person-hour가 생산되지 않는다.
+- 외부 순수 회귀는 Roslyn Simulation/Presentation/Editor compile 오류 0, navigation 128 seeds·1,152 paths, stale path cursor, animation strict 192/192 PASS다. 실제 Starter Player QA에는 stop-pivot-resume 급반전과 실제 변위↔표시 방향 즉시 일치 검사를 추가했다.
+- Unity 6000.3.21f1 로그인·라이선스를 정상 확인하고 Windows x64 비개발 빌드를 `C:/Users/godho/Downloads/Family/FamilyCompany_Playtest/FamilyCompany.exe`로 새로 승격했다. 실제 빌드 EXE의 headless Starter 전체 QA는 급반전 stop-pivot-resume, 8방향, 비좌석 상호작용 목적지, 충돌 3종, 네 좌석 work action hook/stand-up, 계약·저장·불러오기를 모두 통과했고 `reverseFacingFrames=0`, agent penetration 0을 기록했다. 빌드 fingerprint는 `A0F5135C4DCE9159D6298998FE77DF913E2C6D93D8ED513F12DE621100F53073`이며 최종 로그는 `Artifacts/MovementRuntimeQaLatest/family-company-player-qa-final-clean.log`다.
+- fail-closed 잔여: 소파 `PairedConversation`/`GroupMeeting`의 원자적 두 사람 claim, NW 외 좌석의 사람별·방향별 pelvis/hand 수동 승인, 서서 사용하는 시설 전용 원화, 호흡 Idle/이모트/떠오르는 수치의 생동감 레이어. 가족 4명은 새 contact sheet 육안 확인 뒤 `Human visual approval`을 다시 기록했고, 직원 후보 8명은 별도 육안 승인 전까지 manifest에서 미승인 상태를 유지한다.

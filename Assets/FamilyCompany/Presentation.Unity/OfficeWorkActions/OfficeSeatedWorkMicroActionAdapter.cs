@@ -96,6 +96,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             private double _subMillisecondRemainder;
             private bool _stopRequested;
             private bool _disposed;
+            private long _safeStopAtMilliseconds = -1L;
 
             public Session(
                 int worldSeed,
@@ -135,7 +136,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
                 }
             }
 
-            public bool IsSafeToStand => _disposed || _machine.IsStandHandoffReady;
+            public bool IsSafeToStand =>
+                _disposed ||
+                _machine.IsStandHandoffReady ||
+                (_stopRequested && _safeStopAtMilliseconds >= 0L &&
+                 _machine.ProcessedMilliseconds >= _safeStopAtMilliseconds);
 
             public void Tick(float deltaTime)
             {
@@ -159,6 +164,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             {
                 if (_disposed || _stopRequested) return;
                 _stopRequested = true;
+                if (_frameSet.TryGetUsableClip(_machine.CurrentAction, out OfficeWorkActionClip clip) &&
+                    clip.Loop)
+                {
+                    long loopMilliseconds = checked((long)clip.FramesPerDirection * clip.MillisecondsPerFrame);
+                    long phase = loopMilliseconds <= 0L
+                        ? 0L
+                        : _machine.CurrentActionElapsedMilliseconds % loopMilliseconds;
+                    long remaining = phase == 0L ? 0L : loopMilliseconds - phase;
+                    _safeStopAtMilliseconds = checked(_machine.ProcessedMilliseconds + remaining);
+                }
                 _machine.AdvanceTo(
                     _machine.ProcessedMilliseconds,
                     OfficeWorkMicroActionContext.StandUp);
@@ -169,6 +184,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
                 if (_disposed) return;
                 _disposed = true;
                 _stopRequested = true;
+                _safeStopAtMilliseconds = -1L;
                 _subMillisecondRemainder = 0d;
             }
         }

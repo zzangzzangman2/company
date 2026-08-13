@@ -278,7 +278,6 @@ namespace FamilyCompany.Simulation.Navigation
         public const float DefaultFacingStabilizationSeconds = 0.075f;
         public const float CollisionProjectionHoldSeconds = 0.15f;
         private const float MinimumMotionSquared = 0.0000001f;
-        private const float CosineFortyFiveDegrees = 0.70710678f;
 
         public static OfficeLocomotionFacingResult ResolveFacing(
             OfficeLocomotionFacingState state,
@@ -306,22 +305,39 @@ namespace FamilyCompany.Simulation.Navigation
                 : 0f;
             if (motionDisplacement.SqrMagnitude <= MinimumMotionSquared)
             {
+                bool hasSemantic = semanticDisplacement.SqrMagnitude > MinimumMotionSquared;
+                if (!hasSemantic)
+                {
+                    return new OfficeLocomotionFacingResult(
+                        new OfficeLocomotionFacingState(current, -1, 0f, projectedSeconds),
+                        semanticDirection,
+                        motionDirection,
+                        false);
+                }
+
+                // A blocked or deliberately stopped actor may still turn toward its requested
+                // heading. Commit the facing candidate immediately; the gait state owns the short
+                // contact-foot pivot before movement resumes.
+                int stationaryDirection = OfficeFacingHysteresisRules.ResolveDirection(
+                    semanticDisplacement.X,
+                    semanticDisplacement.Z,
+                    current,
+                    hysteresisDegrees);
                 return new OfficeLocomotionFacingResult(
-                    new OfficeLocomotionFacingState(current, -1, 0f, projectedSeconds),
+                    new OfficeLocomotionFacingState(
+                        stationaryDirection,
+                        -1,
+                        0f,
+                        projectedSeconds),
                     semanticDirection,
                     motionDirection,
-                    false);
+                    true);
             }
 
-            bool hasSemantic = semanticDisplacement.SqrMagnitude > MinimumMotionSquared;
-            bool aligned = !hasSemantic ||
-                           OfficeNavPoint.Dot(
-                               semanticDisplacement.Normalized,
-                               motionDisplacement.Normalized) >= CosineFortyFiveDegrees;
-            bool useSemantic = hasSemantic &&
-                               ((!aligned && !collisionProjected) ||
-                                (collisionProjected && projectedSeconds <= CollisionProjectionHoldSeconds));
-            OfficeNavPoint heading = useSemantic ? semanticDisplacement : motionDisplacement;
+            // Walking sprites follow actual displacement. Semantic intent can point across a
+            // collision slide or against residual velocity, which otherwise renders a visible
+            // backward/sideways walk even though the root is travelling elsewhere.
+            OfficeNavPoint heading = motionDisplacement;
             int proposed = OfficeFacingHysteresisRules.ResolveDirection(
                 heading.X,
                 heading.Z,
@@ -333,28 +349,21 @@ namespace FamilyCompany.Simulation.Navigation
                     new OfficeLocomotionFacingState(current, -1, 0f, projectedSeconds),
                     semanticDirection,
                     motionDirection,
-                    useSemantic);
+                    false);
             }
 
-            float candidateSeconds = state.CandidateDirection == proposed
-                ? state.CandidateSeconds + deltaTime
-                : deltaTime;
-            int candidateDirection = proposed;
-            if (candidateSeconds + 0.000001f >= stabilizationSeconds)
-            {
-                current = proposed;
-                candidateDirection = -1;
-                candidateSeconds = 0f;
-            }
+            // Motion is authoritative and cannot wait behind a presentation timer: even one
+            // delayed frame can be a backwards step during an abrupt change of direction.
+            current = proposed;
             return new OfficeLocomotionFacingResult(
                 new OfficeLocomotionFacingState(
                     current,
-                    candidateDirection,
-                    candidateSeconds,
+                    -1,
+                    0f,
                     projectedSeconds),
                 semanticDirection,
                 motionDirection,
-                useSemantic);
+                false);
         }
 
         public static int ResolveNearestDirection(OfficeNavPoint heading, int fallbackDirection)
@@ -474,46 +483,6 @@ namespace FamilyCompany.Simulation.Navigation
                 bool freshEpisode = state.Phase == OfficeLocomotionPhase.Idle;
                 float episode = freshEpisode ? actualDistance : state.EpisodeDistance + actualDistance;
                 float shuffleDistance = strideLength * ShortShuffleStrideFraction;
-                int directionDelta = CircularDirectionDistance(
-                    state.DisplayDirection,
-                    resolvedVisualDirection);
-
-                bool beginPivot = directionDelta >= 3 &&
-                                  (state.Phase != OfficeLocomotionPhase.Pivot ||
-                                   state.PivotTargetDirection != resolvedVisualDirection);
-                if (beginPivot)
-                {
-                    return new OfficeLocomotionGaitState(
-                        OfficeLocomotionPhase.Pivot,
-                        accumulated,
-                        episode,
-                        0f,
-                        deltaTime,
-                        NearestContactFrame(state.Frame, frameCount),
-                        state.DisplayDirection,
-                        resolvedVisualDirection);
-                }
-
-                if (state.Phase == OfficeLocomotionPhase.Pivot)
-                {
-                    float pivotSeconds = state.TransitionSeconds + deltaTime;
-                    if (pivotSeconds + 0.000001f < PivotSeconds)
-                    {
-                        return new OfficeLocomotionGaitState(
-                            OfficeLocomotionPhase.Pivot,
-                            accumulated,
-                            episode,
-                            0f,
-                            pivotSeconds,
-                            NearestContactFrame(state.Frame, frameCount),
-                            state.DisplayDirection,
-                            state.PivotTargetDirection);
-                    }
-                    resolvedVisualDirection = state.PivotTargetDirection >= 0
-                        ? state.PivotTargetDirection
-                        : resolvedVisualDirection;
-                }
-
                 OfficeLocomotionPhase movingPhase = episode < shuffleDistance
                     ? OfficeLocomotionPhase.StartStep
                     : OfficeLocomotionPhase.Walk;
@@ -533,6 +502,42 @@ namespace FamilyCompany.Simulation.Navigation
 
             if (motionRequested)
             {
+                int directionDelta = CircularDirectionDistance(
+                    state.DisplayDirection,
+                    resolvedVisualDirection);
+                // Moving frames never enter this branch, so actual displacement still owns facing.
+                // A planted 90-degree turn should use the authored pivot clip before committing.
+                if (directionDelta >= 2)
+                {
+                    bool beginPivot = state.Phase != OfficeLocomotionPhase.Pivot ||
+                                      state.PivotTargetDirection != resolvedVisualDirection;
+                    float pivotSeconds = beginPivot
+                        ? deltaTime
+                        : state.TransitionSeconds + deltaTime;
+                    if (pivotSeconds + 0.000001f < PivotSeconds)
+                    {
+                        return new OfficeLocomotionGaitState(
+                            OfficeLocomotionPhase.Pivot,
+                            state.AccumulatedDistance,
+                            state.EpisodeDistance,
+                            0f,
+                            pivotSeconds,
+                            NearestContactFrame(state.Frame, frameCount),
+                            state.DisplayDirection,
+                            resolvedVisualDirection);
+                    }
+
+                    return new OfficeLocomotionGaitState(
+                        OfficeLocomotionPhase.Idle,
+                        state.AccumulatedDistance,
+                        0f,
+                        0f,
+                        0f,
+                        NearestContactFrame(state.Frame, frameCount),
+                        resolvedVisualDirection,
+                        -1);
+                }
+
                 return new OfficeLocomotionGaitState(
                     state.Phase,
                     state.AccumulatedDistance,
@@ -540,8 +545,8 @@ namespace FamilyCompany.Simulation.Navigation
                     0f,
                     state.TransitionSeconds,
                     state.Frame,
-                    state.DisplayDirection,
-                    state.PivotTargetDirection);
+                    resolvedVisualDirection,
+                    -1);
             }
 
             float stopSeconds = state.StopSeconds + deltaTime;

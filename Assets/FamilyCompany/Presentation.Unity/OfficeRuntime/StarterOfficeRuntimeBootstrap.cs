@@ -5,6 +5,7 @@ using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
+using FamilyCompany.Presentation.Unity.OfficeWorkActions;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 
@@ -32,6 +33,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private string _layoutHash = string.Empty;
         private bool _building;
         private OfficeLocomotionTransitionCatalog _locomotionTransitionCatalog;
+        private readonly Dictionary<string, OfficeWorkActionFrameSet> _workActionFrameSets =
+            new Dictionary<string, OfficeWorkActionFrameSet>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeRuntimeAgentLayoutSnapshot> _layoutSnapshots =
+            new Dictionary<string, OfficeRuntimeAgentLayoutSnapshot>(StringComparer.Ordinal);
         private OfficeSeatingPresentationMode _seatingPresentationMode =
             OfficeSeatingPresentationMode.SafeStaticWork;
 
@@ -96,6 +101,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ApplyStarterDefinitionWhenStateUsesCodeDefault();
             _building = true;
             IsReady = false;
+            CacheWorkActionFrameSets();
             _assetSource.DestroyGeneratedPreview();
             if (_generated != null)
             {
@@ -131,15 +137,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 _locomotionTransitionCatalog.Validate();
             }
-
             var usedSpawns = new HashSet<OfficeGridCoordinate>();
             for (var index = 0; index < MemberIds.Length; index++)
             {
                 string memberId = MemberIds[index];
-                OfficeGridCoordinate spawn = FindSpawn(PreferredSpawns[index], usedSpawns);
+                OfficeGridCoordinate preferred = _layoutSnapshots.TryGetValue(
+                    memberId,
+                    out OfficeRuntimeAgentLayoutSnapshot snapshot)
+                    ? snapshot.Cell
+                    : PreferredSpawns[index];
+                OfficeGridCoordinate spawn = FindSpawn(preferred, usedSpawns);
                 usedSpawns.Add(spawn);
                 OfficeRuntimeAgent actor = CreateActor(memberId, memberId == "player", spawn);
                 _world.RegisterActor(actor);
+                if (_layoutSnapshots.TryGetValue(memberId, out snapshot) &&
+                    !actor.RestoreLayoutSnapshot(snapshot))
+                {
+                    Debug.LogError(
+                        "STARTER_OFFICE_LAYOUT_RESTORE_FAILED | member=" + memberId +
+                        " | task=" + snapshot.AssignedTaskId);
+                }
             }
             DisableLegacyRuntime();
             _world.ValidateCanonicalActors();
@@ -150,6 +167,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (renderer != null) renderer.enabled = false;
             IsReady = true;
             _building = false;
+            _layoutSnapshots.Clear();
             LogOwnershipPass();
         }
 
@@ -196,6 +214,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 seating.workFrames,
                 seating.standUpFrames,
                 presentationMode: _seatingPresentationMode);
+            if (_workActionFrameSets.TryGetValue(memberId, out OfficeWorkActionFrameSet frameSet))
+            {
+                var adapter = root.AddComponent<OfficeSeatedWorkMicroActionAdapter>();
+                adapter.Configure(_bootstrap, memberId, frameSet);
+                animator.ConfigureOfficeWorkAnimationHook(adapter);
+            }
             var actor = root.AddComponent<OfficeRuntimeAgent>();
             actor.Configure(
                 _bootstrap,
@@ -213,6 +237,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 controller.Configure(_bootstrap, actor);
             }
             return actor;
+        }
+
+        private void CacheWorkActionFrameSets()
+        {
+            _workActionFrameSets.Clear();
+            foreach (OfficeSeatedWorkMicroActionAdapter adapter in
+                     FindObjectsByType<OfficeSeatedWorkMicroActionAdapter>(
+                         FindObjectsInactive.Include,
+                         FindObjectsSortMode.None))
+            {
+                if (adapter == null || adapter.FrameSet == null) continue;
+                string memberId = adapter.MemberId;
+                if (memberId.Length == 0 ||
+                    !string.Equals(adapter.FrameSet.MemberId, memberId, StringComparison.Ordinal) ||
+                    _workActionFrameSets.ContainsKey(memberId)) continue;
+                _workActionFrameSets.Add(memberId, adapter.FrameSet);
+            }
         }
 
         private void ResolveSeatingPresentationMode()
@@ -239,6 +280,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeGridCoordinate preferred,
             ISet<OfficeGridCoordinate> used)
         {
+            // A layout snapshot can come from a larger editor/QA grid. Seed the search at the
+            // nearest cell inside the new layout; starting outside makes every in-bounds neighbor
+            // unreachable because the queue deliberately admits only contained cells.
+            preferred = new OfficeGridCoordinate(
+                Mathf.Clamp(preferred.X, 0, _world.Grid.Width - 1),
+                Mathf.Clamp(preferred.Y, 0, _world.Grid.Height - 1));
             var queue = new Queue<OfficeGridCoordinate>();
             var visited = new HashSet<OfficeGridCoordinate> { preferred };
             queue.Enqueue(preferred);
@@ -330,12 +377,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _building = true;
             IsReady = false;
+            CaptureLayoutSnapshots();
             if (_generated != null) Destroy(_generated);
             yield return null;
             _generated = null;
             _world = null;
             _building = false;
             BuildRuntime();
+        }
+
+        private void CaptureLayoutSnapshots()
+        {
+            _layoutSnapshots.Clear();
+            foreach (OfficeRuntimeAgent actor in Actors)
+            {
+                if (actor == null || string.IsNullOrWhiteSpace(actor.AgentId)) continue;
+                _layoutSnapshots[actor.AgentId] = actor.CaptureLayoutSnapshot();
+            }
         }
     }
 }

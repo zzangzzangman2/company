@@ -49,14 +49,36 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string permittedSeatId = "",
             float radius = OfficeRuntimeAgent.DefaultRadius)
         {
+            if (definition == null) throw new ArgumentNullException(nameof(definition));
+            OfficeSeatSlot assignedSeat = _assignedSeat(memberId);
+            if (definition.ApproachPolicy == OfficeInteractionApproachPolicy.CurrentPosition)
+            {
+                return OfficeInteractionOfferFactory.Resolve(
+                    definition,
+                    _grid,
+                    memberId,
+                    start,
+                    assignedSeat,
+                    cell => IsOpen(cell, radius),
+                    cell => cell.Equals(start));
+            }
+            if (definition.ApproachPolicy == OfficeInteractionApproachPolicy.AssignedSeatApproach &&
+                assignedSeat == null)
+                return Array.Empty<OfficeInteractionOffer>();
+
+            HashSet<OfficeGridCoordinate> reachable = _paths.FindStaticallyReachableCells(
+                memberId ?? string.Empty,
+                start,
+                permittedSeatId ?? string.Empty,
+                radius);
             return OfficeInteractionOfferFactory.Resolve(
                 definition,
                 _grid,
                 memberId,
                 start,
-                _assignedSeat(memberId),
+                assignedSeat,
                 cell => IsOpen(cell, radius),
-                cell => IsReachable(memberId, start, cell, permittedSeatId, radius));
+                cell => reachable.Contains(cell));
         }
 
         private bool IsOpen(OfficeGridCoordinate cell, float radius)
@@ -79,22 +101,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         string.Empty)) return true;
             }
             return false;
-        }
-
-        private bool IsReachable(
-            string memberId,
-            OfficeGridCoordinate start,
-            OfficeGridCoordinate goal,
-            string permittedSeatId,
-            float radius)
-        {
-            return _paths.FindPath(
-                memberId ?? string.Empty,
-                start,
-                goal,
-                permittedSeatId ?? string.Empty,
-                false,
-                radius).Count > 0;
         }
 
     }

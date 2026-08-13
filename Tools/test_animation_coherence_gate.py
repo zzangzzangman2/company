@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the strict locomotion asset gate."""
+"""Regression tests for locomotion and authored work-action asset gates."""
 
 from __future__ import annotations
 
@@ -67,6 +67,43 @@ class AnimationCoherenceGateTests(unittest.TestCase):
             loop = coherence.Loop("actor", "typing", "north", list(enumerate(paths)))
             coherence.measure(loop)
             self.assertNotIn("ratio-not-finite", loop.failure_codes)
+
+    def test_work_action_uses_structure_not_locomotion_change_thresholds(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = [
+                self.write_frame(root, f"actor_typing_{index}_north_v1.png", phase=index % 2)
+                for index in range(6)
+            ]
+            loop = coherence.Loop(
+                "actor",
+                "typing",
+                "north",
+                list(enumerate(paths)),
+                enforce_work_quality=True,
+            )
+            coherence.measure(loop)
+            self.assertNotIn("adjacent-median", loop.failure_codes)
+            self.assertNotIn("adjacent-worst", loop.failure_codes)
+            self.assertNotIn("work-indices", loop.failure_codes)
+
+    def test_work_action_rejects_missing_and_duplicate_frames(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = [
+                self.write_frame(root, f"actor_mouse_{index}_north_v1.png")
+                for index in range(5)
+            ]
+            loop = coherence.Loop(
+                "actor",
+                "mouse",
+                "north",
+                list(enumerate(paths)),
+                enforce_work_quality=True,
+            )
+            coherence.measure(loop)
+            self.assertIn("work-indices", loop.failure_codes)
+            self.assertIn("duplicate-work-frame", loop.failure_codes)
 
 
 if __name__ == "__main__":

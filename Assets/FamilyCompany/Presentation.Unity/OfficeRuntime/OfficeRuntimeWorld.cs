@@ -27,6 +27,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public OfficeRuntimeOccupancy Occupancy => _occupancy;
         public OfficeRuntimePathService Paths => _paths;
         public OfficeRuntimeWorkstationService Workstations => _workstations;
+        public OfficeRuntimeInteractionLifecycleService Interactions =>
+            _workstations?.InteractionLifecycle;
         public OfficeRuntimeDepthSorter DepthSorter => _depthSorter;
         public OfficeRuntimeActorRegistry Registry => _registry;
         public int ReplanCount { get; private set; }
@@ -37,6 +39,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeGridTilemapPresenter presenter,
             OfficeGridFurniturePresenter furniturePresenter)
         {
+            _workstations?.InteractionLifecycle.AbortAll();
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
             _furniturePresenter = furniturePresenter ?? throw new ArgumentNullException(nameof(furniturePresenter));
@@ -107,6 +110,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void RebuildOccupancy()
         {
+            _workstations?.InteractionLifecycle.AbortAll();
             _occupancy.Rebuild(_grid, _presenter);
             foreach (OfficeRuntimeAgent actor in _registry.Actors) actor.InvalidatePath();
         }
@@ -140,6 +144,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void OnDestroy()
         {
+            _workstations?.InteractionLifecycle.AbortAll();
             foreach (OfficeRuntimeAgent actor in _registry.Actors)
                 if (actor != null) _occupancy?.UnregisterActor(actor.AgentId);
         }

@@ -68,8 +68,7 @@ namespace FamilyCompany.Editor
                 animator.Configure(renderer, LoadWalkFrames(memberId));
                 animator.ConfigureLocomotionTransitions(catalog.CopyFrames(memberId));
                 animator.SetExternallyTicked(true);
-                TickMotion(animator, new Vector2(0f, 1f), new Vector2(0f, 0.03f), 0.04f);
-                TickMotion(animator, new Vector2(0f, 1f), new Vector2(0f, 0.03f), 0.04f);
+                TickMotion(animator, new Vector2(0f, 1f), Vector2.zero, 0.04f);
                 RequirePhase(animator, OfficeLocomotionPhase.Pivot, true, memberId);
             }
             finally

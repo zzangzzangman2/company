@@ -444,11 +444,9 @@ namespace FamilyCompany.Editor
             OfficeNavPoint heading27 = HeadingFromSouthAngle(27f);
             result = OfficeLocomotionPresentationRules.ResolveFacing(
                 result.State, heading27, heading27, 0.04f, false);
-            Require(result.State.VisualDirection == 0, "new facing waits for the stabilization window");
-            result = OfficeLocomotionPresentationRules.ResolveFacing(
-                result.State, heading27, heading27, 0.04f, false);
-            Require(result.State.VisualDirection == 1, "27 degree turn commits within 80ms");
-            checks += 2;
+            Require(result.State.VisualDirection == 1,
+                "actual walking direction commits without a backwards-facing stabilization frame");
+            checks++;
 
             OfficeNavPoint heading23 = HeadingFromSouthAngle(23f);
             result = OfficeLocomotionPresentationRules.ResolveFacing(
@@ -459,23 +457,11 @@ namespace FamilyCompany.Editor
             state = OfficeLocomotionFacingState.Initial(6);
             OfficeNavPoint semanticEast = new OfficeNavPoint(1f, 0f);
             OfficeNavPoint projectedNorth = new OfficeNavPoint(0f, 1f);
-            for (var sample = 0; sample < 3; sample++)
-            {
-                result = OfficeLocomotionPresentationRules.ResolveFacing(
-                    state, semanticEast, projectedNorth, 0.05f, true);
-                state = result.State;
-                Require(state.VisualDirection == 6 && result.UsedSemanticHeading,
-                    "short collision projection keeps semantic east facing");
-                checks++;
-            }
-            for (var sample = 0; sample < 2; sample++)
-            {
-                result = OfficeLocomotionPresentationRules.ResolveFacing(
-                    state, semanticEast, projectedNorth, 0.05f, true);
-                state = result.State;
-            }
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                state, semanticEast, projectedNorth, 0.05f, true);
+            state = result.State;
             Require(state.VisualDirection == 4 && !result.UsedSemanticHeading,
-                "sustained collision projection eventually follows north motion");
+                "a collision slide immediately faces its actual north motion");
             checks++;
 
             state = OfficeLocomotionFacingState.Initial(0);
@@ -483,11 +469,13 @@ namespace FamilyCompany.Editor
             OfficeNavPoint inertiaSouth = new OfficeNavPoint(0f, -1f);
             result = OfficeLocomotionPresentationRules.ResolveFacing(
                 state, semanticNorth, inertiaSouth, 0.04f, false);
+            Require(result.State.VisualDirection == 0 && !result.UsedSemanticHeading,
+                "residual south motion never renders as a north-facing backwards step");
             result = OfficeLocomotionPresentationRules.ResolveFacing(
-                result.State, semanticNorth, inertiaSouth, 0.04f, false);
+                result.State, semanticNorth, new OfficeNavPoint(0f, 0f), 0.04f, false);
             Require(result.State.VisualDirection == 4 && result.UsedSemanticHeading,
-                "reverse input commits semantic north instead of displaying backward travel");
-            checks++;
+                "a stopped actor can turn in place toward the requested north heading");
+            checks += 2;
             return checks;
         }
 
@@ -604,14 +592,24 @@ namespace FamilyCompany.Editor
             checks += 2;
 
             OfficeLocomotionGaitState forward = SimulateDistance(0.45f, 12, 0.30f, 0);
-            OfficeLocomotionGaitState pivot = OfficeLocomotionGaitRules.Resolve(
+            OfficeLocomotionGaitState movingReverse = OfficeLocomotionGaitRules.Resolve(
                 forward, 0.02f, 0.03f, true, 4, stride);
+            Require(movingReverse.Phase != OfficeLocomotionPhase.Pivot &&
+                    movingReverse.DisplayDirection == 4,
+                "actual reverse displacement never keeps the old forward-facing sprite");
+            OfficeLocomotionGaitState pivot = OfficeLocomotionGaitRules.Resolve(
+                forward, 0f, 0.03f, true, 4, stride);
             Require(pivot.Phase == OfficeLocomotionPhase.Pivot && pivot.DisplayDirection == 0,
-                "a 180-degree reversal enters pivot without displaying backward travel");
-            pivot = OfficeLocomotionGaitRules.Resolve(pivot, 0.03f, 0.05f, true, 4, stride);
+                "a stopped 180-degree reversal enters a planted-foot pivot");
+            pivot = OfficeLocomotionGaitRules.Resolve(pivot, 0f, 0.05f, true, 4, stride);
             Require(pivot.DisplayDirection == 4 && pivot.Phase != OfficeLocomotionPhase.Pivot,
                 "pivot commits the new direction after its short transition");
-            checks += 2;
+            OfficeLocomotionGaitState quarterTurn = OfficeLocomotionGaitRules.Resolve(
+                OfficeLocomotionGaitState.Initial(0), 0f, 0.02f, true, 2, stride);
+            Require(quarterTurn.Phase == OfficeLocomotionPhase.Pivot &&
+                    quarterTurn.DisplayDirection == 0,
+                "a stopped 90-degree turn enters a planted-foot pivot");
+            checks += 4;
             return checks;
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
+using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 
@@ -78,6 +79,48 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return path;
         }
 
+        /// <summary>
+        /// Computes the statically reachable component once for interaction-offer projection.
+        /// Calling FindPath once per candidate approach cell repeats the same flood fill hundreds
+        /// of times on an open QA layout and can stall runtime rebuilds for minutes.
+        /// </summary>
+        public HashSet<OfficeGridCoordinate> FindStaticallyReachableCells(
+            string agentId,
+            OfficeGridCoordinate start,
+            string permittedSeatId = "",
+            float radius = OfficeRuntimeAgent.DefaultRadius)
+        {
+            if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
+                throw new ArgumentOutOfRangeException(nameof(radius));
+            var visited = new HashSet<OfficeGridCoordinate>();
+            if (!_grid.Contains(start)) return visited;
+
+            var queue = new Queue<OfficeGridCoordinate>();
+            visited.Add(start);
+            queue.Enqueue(start);
+            while (queue.Count > 0)
+            {
+                OfficeGridCoordinate current = queue.Dequeue();
+                for (var index = 0; index < Neighbors.Length; index++)
+                {
+                    OfficeGridCoordinate offset = Neighbors[index];
+                    var next = new OfficeGridCoordinate(current.X + offset.X, current.Y + offset.Y);
+                    if (!_grid.Contains(next) || visited.Contains(next)) continue;
+                    if (!_occupancy.IsCellPassable(next, agentId, permittedSeatId, false)) continue;
+                    Vector3 currentCenter3 = _presenter.CellCenterWorld(current);
+                    Vector3 nextCenter3 = _presenter.CellCenterWorld(next);
+                    if (!_occupancy.CanTraverseStatic(
+                            new Vector2(currentCenter3.x, currentCenter3.y),
+                            new Vector2(nextCenter3.x, nextCenter3.y),
+                            radius,
+                            permittedSeatId)) continue;
+                    visited.Add(next);
+                    queue.Enqueue(next);
+                }
+            }
+            return visited;
+        }
+
         public int ResolvePresentationTargetIndex(
             IReadOnlyList<OfficeGridCoordinate> semanticPath,
             int semanticStartIndex,
@@ -95,7 +138,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             int furthest = Math.Min(semanticPath.Count - 1, semanticStartIndex + maximumLookAhead - 1);
             for (var index = furthest; index >= semanticStartIndex; index--)
             {
-                if (!IsStraightSemanticRun(semanticPath, semanticStartIndex, index)) continue;
+                if (!OfficeSemanticPathProgressRules.CanLookAheadWithoutSkippingTurn(
+                        semanticPath,
+                        semanticStartIndex,
+                        index)) continue;
                 Vector3 target3 = _presenter.CellCenterWorld(semanticPath[index]);
                 Vector2 target = new Vector2(target3.x, target3.y);
                 if (_occupancy.CanTraverseStatic(
@@ -110,23 +156,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         radius)) return index;
             }
             return semanticStartIndex;
-        }
-
-        private static bool IsStraightSemanticRun(
-            IReadOnlyList<OfficeGridCoordinate> path,
-            int startIndex,
-            int endIndex)
-        {
-            if (endIndex <= startIndex) return true;
-            OfficeGridCoordinate start = path[startIndex];
-            bool sameX = true;
-            bool sameY = true;
-            for (var index = startIndex + 1; index <= endIndex; index++)
-            {
-                sameX &= path[index].X == start.X;
-                sameY &= path[index].Y == start.Y;
-            }
-            return sameX || sameY;
         }
     }
 }

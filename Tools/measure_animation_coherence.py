@@ -44,8 +44,10 @@ MAX_ADJACENCY_RATIO = 0.70
 MAX_FOOT_DRIFT_PX = 1.0
 MAX_STABLE_ROOT_DRIFT_PX = 1.0
 MAX_LOOP_CLOSURE_PX = 2.0
+MAX_WORK_FOOT_DRIFT_PX = 1.0
 
 LOCOMOTION_MOTIONS = frozenset({"walk", "run"})
+WORK_FRAME_COUNTS = {"typing": 6, "mouse": 6, "drink": 8}
 
 WALK_RE = re.compile(
     r"^(?P<cid>[a-z0-9_]+?)_(?P<dir>[a-z]+)_walk_(?P<idx>\d+)\.png$"
@@ -102,6 +104,7 @@ class Loop:
     facing: str
     entries: list[tuple[int, Path]]
     enforce_walk_quality: bool = False
+    enforce_work_quality: bool = False
 
     frames_audit: list[FrameAudit] = field(default_factory=list)
     adjacent: list[float] = field(default_factory=list)
@@ -172,18 +175,34 @@ class Loop:
     def apply_metric_gates(self) -> None:
         median = self.adjacent_median
         worst = self.adjacent_worst
-        if not math.isfinite(median):
-            self.fail("coherence-not-measurable", "coherence is not measurable")
-        elif median > MAX_ADJACENT_MEDIAN:
-            self.fail("adjacent-median", f"median {median:.1f}% > {MAX_ADJACENT_MEDIAN:.0f}%")
-        if math.isfinite(worst) and worst > MAX_ADJACENT_WORST:
-            self.fail("adjacent-worst", f"worst {worst:.1f}% > {MAX_ADJACENT_WORST:.0f}%")
-
         if self.motion in LOCOMOTION_MOTIONS:
+            if not math.isfinite(median):
+                self.fail("coherence-not-measurable", "coherence is not measurable")
+            elif median > MAX_ADJACENT_MEDIAN:
+                self.fail("adjacent-median", f"median {median:.1f}% > {MAX_ADJACENT_MEDIAN:.0f}%")
+            if math.isfinite(worst) and worst > MAX_ADJACENT_WORST:
+                self.fail("adjacent-worst", f"worst {worst:.1f}% > {MAX_ADJACENT_WORST:.0f}%")
             if not math.isfinite(self.ratio):
                 self.fail("ratio-not-finite", "locomotion ratio is not finite")
             elif self.ratio > MAX_ADJACENCY_RATIO:
                 self.fail("adjacency-ratio", f"ratio {self.ratio:.2f} > {MAX_ADJACENCY_RATIO:.2f}")
+
+        if self.enforce_work_quality:
+            expected = WORK_FRAME_COUNTS[self.motion]
+            if self.indices != list(range(expected)):
+                self.fail("work-indices", f"indices {self.indices} != {list(range(expected))}")
+            if self.unique_pixel_frames != expected:
+                self.fail(
+                    "duplicate-work-frame",
+                    f"unique pixel frames {self.unique_pixel_frames} != {expected}",
+                )
+            if not math.isfinite(self.foot_drift):
+                self.fail("work-foot-not-measurable", "work-action seat contact is not measurable")
+            elif self.foot_drift > MAX_WORK_FOOT_DRIFT_PX + 0.01:
+                self.fail(
+                    "work-foot-drift",
+                    f"seat-contact drift {self.foot_drift:.1f}px > {MAX_WORK_FOOT_DRIFT_PX:.0f}px",
+                )
 
         if not self.enforce_walk_quality:
             return
@@ -296,6 +315,20 @@ def stable_root(
     return None if best is None else (float(best[1]), float(best[2]))
 
 
+def work_seat_anchor(frame: np.ndarray) -> tuple[float, float] | None:
+    """Measure the planted vertical seat contact without following limbs or props.
+
+    Horizontal silhouette medians are deliberately excluded: typing hands,
+    crossed legs, and a raised drink all change them while the sprite root stays
+    fixed.  Directional frame-major contact sheets remain the visual horizontal
+    registration review artifact.
+    """
+    box = subject_box(frame)
+    if box is None:
+        return None
+    return 0.0, float(box[3])
+
+
 def change_percent(a: np.ndarray, b: np.ndarray) -> float:
     delta = np.abs(a.astype(np.int16) - b.astype(np.int16))
     union_mask = (a[:, :, 3] >= ALPHA_MIN) | (b[:, :, 3] >= ALPHA_MIN)
@@ -354,7 +387,9 @@ def load_and_audit(index: int, path: Path, enforce_quality: bool) -> tuple[Frame
 def measure(loop: Loop) -> Loop:
     arrays: list[np.ndarray] = []
     for index, path in loop.entries:
-        audit, frame = load_and_audit(index, path, loop.enforce_walk_quality)
+        audit, frame = load_and_audit(
+            index, path, loop.enforce_walk_quality or loop.enforce_work_quality
+        )
         loop.frames_audit.append(audit)
         if audit.failures:
             loop.fail("frame-contract", f"{path.name}: {'; '.join(audit.failures)}")
@@ -378,7 +413,11 @@ def measure(loop: Loop) -> Loop:
             box = subject_box(frame)
             if box is not None:
                 loop.foot_bottoms.append(box[3])
-            if canonical_box is not None:
+            if loop.enforce_work_quality:
+                root = work_seat_anchor(frame)
+                if root is not None:
+                    loop.stable_roots.append(root)
+            elif canonical_box is not None:
                 root = stable_root(frame, canonical, canonical_box)
                 if root is not None:
                     loop.stable_roots.append(root)
@@ -512,10 +551,15 @@ def render_report(loops: list[Loop], contract: dict[str, Any], art_root: Path) -
         "ANIMATION COHERENCE / ASSET CONTRACT V2",
         f"artRoot: {art_root}",
         (
-            f"gates: median<={MAX_ADJACENT_MEDIAN:.0f}% worst<={MAX_ADJACENT_WORST:.0f}% "
+            f"locomotion gates: median<={MAX_ADJACENT_MEDIAN:.0f}% worst<={MAX_ADJACENT_WORST:.0f}% "
             f"ratio<={MAX_ADJACENCY_RATIO:.2f} unique={FRAME_COUNT} "
             f"footDrift<={MAX_FOOT_DRIFT_PX:.0f}px rootDrift<={MAX_STABLE_ROOT_DRIFT_PX:.0f}px "
             f"closure<={MAX_LOOP_CLOSURE_PX:.0f}px"
+        ),
+        (
+            f"work gates: structure=typing6/mouse6/drink8 unique=all "
+            f"seatContactDrift<={MAX_WORK_FOOT_DRIFT_PX:.0f}px "
+            f"full-frame motion is diagnostic; contact sheets review horizontal registration"
         ),
         "",
         (
@@ -589,6 +633,7 @@ def main() -> int:
 
     for loop in loops:
         loop.enforce_walk_quality = enforce_walk_contract and loop.motion == "walk"
+        loop.enforce_work_quality = loop.motion in WORK_FRAME_COUNTS
         measure(loop)
 
     report = render_report(loops, contract, art_root)
@@ -611,6 +656,7 @@ def main() -> int:
             "footDriftMaxPx": MAX_FOOT_DRIFT_PX,
             "stableRootDriftMaxPx": MAX_STABLE_ROOT_DRIFT_PX,
             "loopClosureMaxPx": MAX_LOOP_CLOSURE_PX,
+            "workSeatContactDriftMaxPx": MAX_WORK_FOOT_DRIFT_PX,
             "canvas": list(CANVAS_SIZE),
             "nativeMode": "RGBA",
             "alphaValues": [0, 255],

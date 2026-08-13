@@ -7,6 +7,7 @@ using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Navigation;
+using FamilyCompany.Simulation.OfficeInteractions;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 
@@ -49,10 +50,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeRuntimeDestination? _pendingDestination;
         private OfficeRuntimeDestination? _autonomyDestination;
         private string _autonomyIntentId = string.Empty;
+        private OfficeSemanticLocation _autonomyRequestedLocation;
+        private string _autonomyRequestedInteractionId = string.Empty;
         private int _autonomyLayoutRevision = -1;
         private string _autonomyStatus = string.Empty;
+        private OfficeRuntimeInteractionHandle _interactionHandle;
+        private OfficeRuntimeInteractionPhase _interactionPhase;
+        private string _activeInteractionId = string.Empty;
+        private string _activeInteractionOfferId = string.Empty;
+        private string _activeInteractionFurnitureId = string.Empty;
+        private int _interactionCompletedCount;
+        private int _interactionAbortedCount;
+        private OfficeRuntimeInteractionEndReason _lastInteractionEndReason;
+        private int _standingFacingDirection = -1;
         private string _assignedTaskId = string.Empty;
         private float _assignedWorkRemaining;
+        private long _assignedLastObservedMinute;
         private OfficeActivity _assignedActivity;
         private Vector2 _currentVelocity;
         private Vector2 _desiredVelocity;
@@ -82,6 +95,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _observedSitDownFrameMask;
         private int _observedWorkFrameMask;
         private int _observedStandUpFrameMask;
+        private readonly HashSet<string> _observedOfficeWorkHookSprites =
+            new HashSet<string>(StringComparer.Ordinal);
         private float _maxAnimatedAnchorErrorPx;
         private bool _hasTransitionPelvisSample;
         private OfficeSeatingAnimationClip _transitionPelvisClip;
@@ -106,16 +121,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         /// </summary>
         public bool IsOccupyingSeat =>
             _seat != null &&
-            Phase != OfficeRuntimeAgentPhase.LeavingSeat &&
             (Phase == OfficeRuntimeAgentPhase.SittingDown ||
              Phase == OfficeRuntimeAgentPhase.Working ||
              Phase == OfficeRuntimeAgentPhase.FinishingWork ||
-             Phase == OfficeRuntimeAgentPhase.StandingUp);
-        public bool IsBusy => HasAssignedTask || Phase != OfficeRuntimeAgentPhase.Idle;
+             Phase == OfficeRuntimeAgentPhase.StandingUp ||
+             Phase == OfficeRuntimeAgentPhase.LeavingSeat);
+        public bool IsBusy => HasAssignedTask ||
+                              Phase != OfficeRuntimeAgentPhase.Idle ||
+                              _interactionPhase != OfficeRuntimeInteractionPhase.None;
         public OfficeActivity CurrentActivity { get; private set; } = OfficeActivity.Break;
         public Vector2 Position => new Vector2(transform.position.x, transform.position.y);
         public float AgentRadius { get; private set; } = DefaultRadius;
         public OfficeRuntimeAgentPhase Phase { get; private set; }
+        public OfficeRuntimeInteractionPhase InteractionPhase => _interactionPhase;
+        public string ActiveInteractionId => _activeInteractionId;
+        public string ActiveInteractionOfferId => _activeInteractionOfferId;
+        public string ActiveInteractionFurnitureId => _activeInteractionFurnitureId;
+        public int InteractionCompletedCount => _interactionCompletedCount;
+        public int InteractionAbortedCount => _interactionAbortedCount;
+        public OfficeRuntimeInteractionEndReason LastInteractionEndReason => _lastInteractionEndReason;
+        public bool HasActiveInteractionClaim => _interactionHandle != null && _interactionHandle.IsActive;
         public Vector2 DesiredVelocity => _desiredVelocity;
         public float StuckSeconds => _stuckSeconds;
         public string ActiveSeatId => _seatClaim == null || _seatClaim.IsReleased ? string.Empty : _seatClaim.SeatId;
@@ -162,6 +187,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public int ObservedSitDownFrameCount => CountBits(_observedSitDownFrameMask);
         public int ObservedWorkFrameCount => CountBits(_observedWorkFrameMask);
         public int ObservedStandUpFrameCount => CountBits(_observedStandUpFrameMask);
+        public bool IsOfficeWorkAnimationHookActive =>
+            _animator != null && _animator.IsOfficeWorkAnimationHookActive;
+        public int ObservedOfficeWorkHookSpriteCount => _observedOfficeWorkHookSprites.Count;
         public float MaxAnimatedAnchorErrorPx => _maxAnimatedAnchorErrorPx;
         public float MaxTransitionPelvisStepPx => _maxTransitionPelvisStepPx;
         public int TransitionMonotonicViolationCount => _transitionMonotonicViolationCount;
@@ -243,32 +271,107 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _pathRevision = _world.Occupancy.Revision;
         }
 
-        public bool AssignOfficeTask(string taskId, OfficeActivity activity, float workSeconds)
+        public bool AssignOfficeTask(string taskId, OfficeActivity activity, float workMinutes)
         {
             if (string.IsNullOrWhiteSpace(taskId)) throw new ArgumentException("Task ID is required.", nameof(taskId));
-            if (workSeconds <= 0f) throw new ArgumentOutOfRangeException(nameof(workSeconds));
+            if (workMinutes <= 0f) throw new ArgumentOutOfRangeException(nameof(workMinutes));
             if (HasAssignedTask || _playerControlled || _qaControl) return false;
             if (!_world.Workstations.TryResolveActivityDestination(
                     activity,
                     _agentId,
                     taskId,
                     out OfficeRuntimeDestination destination)) return false;
+            EndInteraction(
+                OfficeRuntimeInteractionTermination.Aborted,
+                OfficeRuntimeInteractionEndReason.ContractOverride);
+            _autonomyDestination = null;
+            _autonomyLayoutRevision = -1;
             _assignedTaskId = taskId.Trim();
             _assignedActivity = activity;
-            _assignedWorkRemaining = workSeconds;
+            _assignedWorkRemaining = workMinutes;
+            _assignedLastObservedMinute = _bootstrap.State.Time.ElapsedMinutes;
             if (BeginDestination(destination)) return true;
             _assignedTaskId = string.Empty;
             _assignedWorkRemaining = 0f;
+            _assignedLastObservedMinute = 0L;
             _assignedActivity = OfficeActivity.Break;
             ReleaseSeatImmediately();
             Phase = OfficeRuntimeAgentPhase.Idle;
+            ResumeAutonomy();
             return false;
+        }
+
+        public OfficeRuntimeAgentLayoutSnapshot CaptureLayoutSnapshot()
+        {
+            if (_world == null) throw new InvalidOperationException("Runtime world is unavailable.");
+            return new OfficeRuntimeAgentLayoutSnapshot(
+                _agentId,
+                _world.Presenter.NearestCell(transform.position),
+                Phase == OfficeRuntimeAgentPhase.Outside || _presentationAway,
+                CurrentDirection,
+                _assignedTaskId,
+                _assignedActivity,
+                _assignedWorkRemaining,
+                _autonomyIntentId,
+                _autonomyRequestedLocation,
+                _autonomyRequestedInteractionId,
+                _autonomyStatus);
+        }
+
+        public bool RestoreLayoutSnapshot(OfficeRuntimeAgentLayoutSnapshot snapshot)
+        {
+            if (!string.Equals(snapshot.MemberId, _agentId, StringComparison.Ordinal))
+                throw new ArgumentException("Layout snapshot belongs to another actor.", nameof(snapshot));
+            if (_world == null || _bootstrap == null || _bootstrap.State == null) return false;
+
+            _autonomyIntentId = snapshot.AutonomyIntentId;
+            _autonomyRequestedLocation = snapshot.AutonomyLocation;
+            _autonomyRequestedInteractionId = snapshot.AutonomyInteractionId;
+            _autonomyStatus = snapshot.AutonomyStatus;
+            _autonomyLayoutRevision = -1;
+            _autonomyDestination = null;
+            _animator.RestoreStandingFacing(snapshot.Direction);
+
+            if (snapshot.HasAssignedTask)
+            {
+                if (!_world.Workstations.TryResolveActivityDestination(
+                        snapshot.AssignedActivity,
+                        _agentId,
+                        snapshot.AssignedTaskId,
+                        out OfficeRuntimeDestination destination)) return false;
+                _assignedTaskId = snapshot.AssignedTaskId;
+                _assignedActivity = snapshot.AssignedActivity;
+                _assignedWorkRemaining = snapshot.AssignedWorkRemainingMinutes;
+                _assignedLastObservedMinute = _bootstrap.State.Time.ElapsedMinutes;
+                if (!BeginDestination(destination))
+                {
+                    _assignedTaskId = string.Empty;
+                    _assignedActivity = OfficeActivity.Break;
+                    _assignedWorkRemaining = 0f;
+                    _assignedLastObservedMinute = 0L;
+                    return false;
+                }
+                return true;
+            }
+
+            if (snapshot.WasOutside)
+            {
+                Phase = OfficeRuntimeAgentPhase.Outside;
+                CurrentActivity = OfficeActivity.Outside;
+                SetPresentationAway(true);
+                return true;
+            }
+
+            if (snapshot.HasAutonomyRequest && !_playerControlled)
+                TryStartAutonomyRequest();
+            return true;
         }
 
         public void CancelAssignedTask()
         {
             _assignedTaskId = string.Empty;
             _assignedWorkRemaining = 0f;
+            _assignedLastObservedMinute = 0L;
             _assignedActivity = OfficeActivity.Break;
             ResumeAutonomy();
         }
@@ -293,53 +396,68 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 ClearAutonomousDestination();
                 return;
             }
-            if (_autonomyIntentId == intentId &&
-                _autonomyLayoutRevision == _world.Occupancy.Revision) return;
-            OfficeGridCoordinate start = _world.Presenter.NearestCell(transform.position);
-            OfficeRuntimeDestination destination;
-            bool resolved;
-            if (string.IsNullOrWhiteSpace(interactionId))
+            string normalizedIntentId = intentId.Trim();
+            string normalizedInteractionId = (interactionId ?? string.Empty).Trim();
+            bool sameRequest = string.Equals(
+                                   _autonomyIntentId,
+                                   normalizedIntentId,
+                                   StringComparison.Ordinal) &&
+                               _autonomyRequestedLocation == location &&
+                               string.Equals(
+                                   _autonomyRequestedInteractionId,
+                                   normalizedInteractionId,
+                                   StringComparison.Ordinal);
+            _autonomyStatus = string.IsNullOrWhiteSpace(statusLabel) ? "자율 행동" : statusLabel.Trim();
+            // Contract execution may last for many autonomy refreshes. Retain only the latest
+            // request here; acquiring furniture while the contract owns the actor would create an
+            // invisible, long-lived reservation.
+            if (sameRequest && HasAssignedTask)
             {
-                resolved = _world.Workstations.TryResolveDestination(
-                    location,
-                    _agentId,
-                    intentId,
-                    out destination);
-            }
-            else
-            {
-                resolved = _world.Workstations.TryResolveInteractionDestination(
-                    interactionId,
-                    _agentId,
-                    intentId,
-                    start,
-                    ActiveSeatId,
-                    AgentRadius,
-                    out destination);
-            }
-            if (!resolved)
-            {
-                ClearAutonomousDestination();
+                _autonomyLayoutRevision = -1;
                 return;
             }
-            _autonomyIntentId = intentId.Trim();
-            _autonomyLayoutRevision = _world.Occupancy.Revision;
-            _autonomyStatus = string.IsNullOrWhiteSpace(statusLabel) ? "자율 행동" : statusLabel.Trim();
-            _autonomyDestination = destination;
-            if (!HasAssignedTask && !BeginDestination(destination))
+            if (!sameRequest && HasAssignedTask)
             {
-                _autonomyIntentId = string.Empty;
+                _autonomyIntentId = normalizedIntentId;
+                _autonomyRequestedLocation = location;
+                _autonomyRequestedInteractionId = normalizedInteractionId;
                 _autonomyLayoutRevision = -1;
-                _autonomyStatus = string.Empty;
                 _autonomyDestination = null;
-                ReleaseSeatImmediately();
-                Phase = OfficeRuntimeAgentPhase.Idle;
+                return;
             }
+            if (sameRequest && _autonomyLayoutRevision == _world.Occupancy.Revision) return;
+
+            if (_interactionPhase != OfficeRuntimeInteractionPhase.None)
+            {
+                bool completed = !sameRequest &&
+                                 _interactionPhase == OfficeRuntimeInteractionPhase.Performing;
+                EndInteraction(
+                    completed
+                        ? OfficeRuntimeInteractionTermination.Completed
+                        : OfficeRuntimeInteractionTermination.Aborted,
+                    completed
+                        ? OfficeRuntimeInteractionEndReason.IntentAdvanced
+                        : sameRequest
+                            ? OfficeRuntimeInteractionEndReason.LayoutChanged
+                            : OfficeRuntimeInteractionEndReason.SupersededBeforeArrival);
+            }
+
+            _autonomyIntentId = normalizedIntentId;
+            _autonomyRequestedLocation = location;
+            _autonomyRequestedInteractionId = normalizedInteractionId;
+            _autonomyLayoutRevision = -1;
+            _autonomyDestination = null;
+            if (!HasAssignedTask) TryStartAutonomyRequest();
         }
 
         public void ClearAutonomousDestination()
         {
+            EndInteraction(
+                OfficeRuntimeInteractionTermination.Aborted,
+                OfficeRuntimeInteractionEndReason.Cleared);
             _autonomyIntentId = string.Empty;
+            _autonomyRequestedLocation = OfficeSemanticLocation.None;
+            _autonomyRequestedInteractionId = string.Empty;
             _autonomyLayoutRevision = -1;
             _autonomyStatus = string.Empty;
             _autonomyDestination = null;
@@ -348,12 +466,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void ResetRuntimeState()
         {
+            EndInteraction(
+                OfficeRuntimeInteractionTermination.Aborted,
+                OfficeRuntimeInteractionEndReason.RuntimeReset);
             _assignedTaskId = string.Empty;
             _assignedWorkRemaining = 0f;
             _autonomyIntentId = string.Empty;
+            _autonomyRequestedLocation = OfficeSemanticLocation.None;
+            _autonomyRequestedInteractionId = string.Empty;
             _autonomyLayoutRevision = -1;
             _autonomyStatus = string.Empty;
             _autonomyDestination = null;
+            _standingFacingDirection = -1;
             _destination = null;
             _pendingDestination = null;
             _path.Clear();
@@ -365,6 +489,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _observedSitDownFrameMask = 0;
             _observedWorkFrameMask = 0;
             _observedStandUpFrameMask = 0;
+            _observedOfficeWorkHookSprites.Clear();
             _maxAnimatedAnchorErrorPx = 0f;
             ResetTransitionMotionMetrics();
             _maxTransitionPelvisStepPx = 0f;
@@ -427,6 +552,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public bool QaBeginSeatedWork(string scenarioId)
         {
             if (!_qaControl) BeginQaControl();
+            ResetSeatingObservationMetrics();
             if (!_world.Workstations.TryResolveActivityDestination(
                     OfficeActivity.Work,
                     _agentId,
@@ -507,6 +633,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void InvalidatePath()
         {
+            if (_interactionPhase != OfficeRuntimeInteractionPhase.None)
+            {
+                AbortInteractionAttempt(OfficeRuntimeInteractionEndReason.LayoutChanged);
+                return;
+            }
             _pathRevision = -1;
         }
 
@@ -590,8 +721,130 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
         }
 
+        private bool TryStartAutonomyRequest()
+        {
+            if (_playerControlled || _qaControl || HasAssignedTask || _autonomyIntentId.Length == 0)
+                return false;
+
+            OfficeRuntimeDestination destination;
+            OfficeRuntimeInteractionHandle handle = null;
+            if (_autonomyRequestedInteractionId.Length == 0)
+            {
+                if (!_world.Workstations.TryResolveDestination(
+                        _autonomyRequestedLocation,
+                        _agentId,
+                        _autonomyIntentId,
+                        out destination))
+                {
+                    _autonomyDestination = null;
+                    _autonomyLayoutRevision = -1;
+                    RequestStopAndStand();
+                    return false;
+                }
+            }
+            else
+            {
+                _interactionPhase = OfficeRuntimeInteractionPhase.Reserving;
+                OfficeGridCoordinate start = _world.Presenter.NearestCell(transform.position);
+                if (!_world.Workstations.TryBeginInteraction(
+                        _autonomyRequestedInteractionId,
+                        _agentId,
+                        _autonomyIntentId,
+                        start,
+                        ActiveSeatId,
+                        AgentRadius,
+                        out destination,
+                        out handle,
+                        out OfficeRuntimeInteractionFailure failure))
+                {
+                    ClearInteractionExecutionState();
+                    _autonomyDestination = null;
+                    _autonomyLayoutRevision =
+                        failure.Code == OfficeRuntimeInteractionFailureCode.UnsupportedReservationPolicy ||
+                        failure.Code == OfficeRuntimeInteractionFailureCode.UnknownInteraction
+                            ? _world.Occupancy.Revision
+                            : -1;
+                    RequestStopAndStand();
+                    return false;
+                }
+
+                _interactionHandle = handle;
+                _interactionPhase = OfficeRuntimeInteractionPhase.Navigating;
+                _activeInteractionId = _autonomyRequestedInteractionId;
+                _activeInteractionOfferId = destination.InteractionOfferId;
+                _activeInteractionFurnitureId = destination.FurnitureId;
+            }
+
+            _autonomyDestination = destination;
+            _autonomyLayoutRevision = _world.Occupancy.Revision;
+            if (BeginDestination(destination)) return true;
+
+            if (_interactionPhase != OfficeRuntimeInteractionPhase.None)
+            {
+                AbortInteractionAttempt(OfficeRuntimeInteractionEndReason.PathUnavailable);
+            }
+            else
+            {
+                _world.Occupancy.ClearReservations(_agentId);
+                _destination = null;
+                _pendingDestination = null;
+                _autonomyDestination = null;
+                _autonomyLayoutRevision = -1;
+                _path.Clear();
+                _pathIndex = 0;
+                _arrived = false;
+                _yieldCell = null;
+            }
+            ReleaseSeatImmediately();
+            Phase = OfficeRuntimeAgentPhase.Idle;
+            CurrentActivity = OfficeActivity.Break;
+            StopMotion();
+            return false;
+        }
+
         private bool BeginDestination(OfficeRuntimeDestination destination)
         {
+            _standingFacingDirection = -1;
+            if (_presentationAway)
+            {
+                OfficeGridCoordinate returnCell = _world.Presenter.NearestCell(transform.position);
+                if (!_world.Occupancy.IsCellPassable(
+                        returnCell,
+                        _agentId,
+                        destination.SeatId,
+                        true)) return false;
+            }
+
+            bool canReuseCurrentSeat = destination.RequiresSeat &&
+                                       _seat != null &&
+                                       _seatClaim != null &&
+                                       !_seatClaim.IsReleased &&
+                                       string.Equals(
+                                           _seatClaim.SeatId,
+                                           destination.SeatId,
+                                           StringComparison.Ordinal) &&
+                                       (Phase == OfficeRuntimeAgentPhase.MovingToSit ||
+                                        Phase == OfficeRuntimeAgentPhase.SittingDown ||
+                                        Phase == OfficeRuntimeAgentPhase.Working);
+            if (canReuseCurrentSeat)
+            {
+                _destination = _world.Workstations.DestinationForSeat(_seat, destination);
+                _pendingDestination = null;
+                CurrentActivity = destination.Activity;
+                if (Phase == OfficeRuntimeAgentPhase.Working)
+                {
+                    _arrived = true;
+                    if (_interactionPhase == OfficeRuntimeInteractionPhase.Navigating ||
+                        _interactionPhase == OfficeRuntimeInteractionPhase.Aligning)
+                        _interactionPhase = OfficeRuntimeInteractionPhase.Performing;
+                }
+                else if (_interactionPhase == OfficeRuntimeInteractionPhase.Navigating)
+                {
+                    _interactionPhase = OfficeRuntimeInteractionPhase.Aligning;
+                }
+                return true;
+            }
+
             if (Phase == OfficeRuntimeAgentPhase.Working ||
                 Phase == OfficeRuntimeAgentPhase.SittingDown ||
                 Phase == OfficeRuntimeAgentPhase.MovingToSit ||
@@ -614,6 +867,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     ReleaseSeatImmediately();
                     if (!_world.Workstations.TryReserveSeat(
                             _agentId,
+                            destination.SeatId,
                             "starter-office-seat:" + _agentId + ":" + destination.DestinationId,
                             out _seat,
                             out _seatClaim)) return false;
@@ -662,6 +916,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 if (!RebuildPath())
                 {
+                    if (_interactionPhase != OfficeRuntimeInteractionPhase.None)
+                        AbortInteractionAttempt(OfficeRuntimeInteractionEndReason.PathUnavailable);
                     StopMotion();
                     return;
                 }
@@ -675,6 +931,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 Position,
                 AgentRadius,
                 _destination.Value.SeatId);
+            _pathIndex = OfficeSemanticPathProgressRules.AdvanceThroughOccupiedCell(
+                _path,
+                _pathIndex,
+                presentationTargetIndex,
+                currentCell);
             var upcoming = new List<OfficeGridCoordinate>();
             for (var index = _pathIndex; index < _path.Count && upcoming.Count < 2; index++)
                 upcoming.Add(_path[index]);
@@ -712,7 +973,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                             _agentId,
                             Position,
                             Position + candidate * CornerAnticipationDistance,
-                            AgentRadius)) presentationSemanticDirection = candidate;
+                            AgentRadius))
+                    {
+                        // Round the root trajectory itself.  Feeding this only to the animator is
+                        // ineffective now that moving sprites correctly follow actual displacement.
+                        desiredDirection = candidate;
+                        presentationSemanticDirection = candidate;
+                    }
                 }
             }
             float arrivalSpeedScale = presentationTargetIndex == _path.Count - 1
@@ -873,9 +1140,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _arrived = true;
             _world.Occupancy.ClearReservations(_agentId);
-            _world.NotifyArrival();
             StopMotion();
             if (!_destination.HasValue) return;
+
+            if (_interactionPhase == OfficeRuntimeInteractionPhase.Navigating)
+            {
+                OfficeGridCoordinate actualCell = _world.Presenter.NearestCell(transform.position);
+                if (_interactionHandle != null &&
+                    !_interactionHandle.TryValidateArrival(actualCell, out _))
+                {
+                    AbortInteractionAttempt(
+                        OfficeRuntimeInteractionEndReason.ArrivalRevalidationFailed);
+                    return;
+                }
+            }
+
+            bool hasStandingFacing = !_destination.Value.RequiresSeat &&
+                                     _world.Workstations.TryResolveStandingInteractionFacing(
+                                         _destination.Value,
+                                         out _standingFacingDirection);
+            if (_interactionPhase == OfficeRuntimeInteractionPhase.Navigating)
+                _interactionPhase = _destination.Value.RequiresSeat || hasStandingFacing
+                    ? OfficeRuntimeInteractionPhase.Aligning
+                    : OfficeRuntimeInteractionPhase.Performing;
+
+            _world.NotifyArrival();
             CurrentActivity = _destination.Value.Activity;
             if (_destination.Value.RequiresSeat)
             {
@@ -897,6 +1186,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (_seat == null || _seatClaim == null || _seatClaim.IsReleased)
             {
+                EndInteraction(
+                    OfficeRuntimeInteractionTermination.Aborted,
+                    OfficeRuntimeInteractionEndReason.SeatUnavailable);
                 ReleaseSeatImmediately();
                 ResumeAutonomy();
                 return;
@@ -916,6 +1208,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     }
                     transform.position = new Vector3(target.x, target.y, transform.position.z);
                     _seatDirection = FacingDirection(_seat.Facing);
+                    StopMotion();
+                    if (_animator.CurrentDirection != _seatDirection)
+                    {
+                        _animator.AccumulateStandingFacingRequest(_seatDirection, deltaTime);
+                        return;
+                    }
                     _sitTransitionInitialized = false;
                     _standTransitionInitialized = false;
                     _hasTransitionPelvisSample = false;
@@ -923,6 +1221,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         !_animator.PrepareOfficeSeatingFacing(_seatDirection) ||
                         !_animator.BeginSitDown(_seatDirection))
                     {
+                        EndInteraction(
+                            OfficeRuntimeInteractionTermination.Aborted,
+                            OfficeRuntimeInteractionEndReason.SeatUnavailable);
                         ReleaseSeatImmediately();
                         ResumeAutonomy();
                         return;
@@ -939,18 +1240,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         return;
                     if (!_animator.BeginSeatedWork())
                     {
+                        EndInteraction(
+                            OfficeRuntimeInteractionTermination.Aborted,
+                            OfficeRuntimeInteractionEndReason.SeatUnavailable);
                         ReleaseSeatImmediately();
                         ResumeAutonomy();
                         return;
                     }
                     Phase = OfficeRuntimeAgentPhase.Working;
                     _arrived = true;
+                    if (_interactionPhase == OfficeRuntimeInteractionPhase.Aligning)
+                        _interactionPhase = OfficeRuntimeInteractionPhase.Performing;
                     break;
                 case OfficeRuntimeAgentPhase.Working:
                     StopMotion();
                     TrackWorkstationMetrics();
                     if (HasAssignedTask && _assignedActivity == CurrentActivity)
-                        AdvanceAssignedWork(deltaTime);
+                        AdvanceAssignedWork();
                     if (_releaseSeatRequested) BeginSafeStand();
                     break;
                 case OfficeRuntimeAgentPhase.FinishingWork:
@@ -958,6 +1264,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (!_animator.IsOfficeWorkSafeToStand) return;
                     if (!_animator.BeginStandUp())
                     {
+                        EndInteraction(
+                            OfficeRuntimeInteractionTermination.Aborted,
+                            OfficeRuntimeInteractionEndReason.SeatUnavailable);
                         ReleaseSeatImmediately();
                         ResumeAutonomy();
                         return;
@@ -971,7 +1280,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (!_animator.IsOfficeSeatingTransitionComplete || _standPlacementProgress01 < 0.9999f)
                         return;
                     ResetVisualPose();
-                    _world.Workstations.ClearOcclusion(_seat);
                     _animator.ResumeWalkingAfterSeating();
                     Phase = OfficeRuntimeAgentPhase.LeavingSeat;
                     break;
@@ -995,7 +1303,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     {
                         OfficeRuntimeDestination pending = _pendingDestination.Value;
                         _pendingDestination = null;
-                        BeginDestination(pending);
+                        if (!BeginDestination(pending) &&
+                            _interactionPhase != OfficeRuntimeInteractionPhase.None)
+                            AbortInteractionAttempt(
+                                OfficeRuntimeInteractionEndReason.PathUnavailable);
                     }
                     else ResumeAutonomy();
                     break;
@@ -1005,23 +1316,46 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void TickArrivedWork(float deltaTime)
         {
-            if (!HasAssignedTask || !_arrived || _assignedActivity == OfficeActivity.Work) return;
-            AdvanceAssignedWork(deltaTime);
+            if (!_arrived) return;
+            if (TickStandingAlignment(deltaTime)) return;
+            if (!HasAssignedTask || _assignedActivity == OfficeActivity.Work) return;
+            AdvanceAssignedWork();
         }
 
-        private void AdvanceAssignedWork(float deltaTime)
+        private bool TickStandingAlignment(float deltaTime)
         {
-            _assignedWorkRemaining = Mathf.Max(0f, _assignedWorkRemaining - deltaTime);
+            if (_standingFacingDirection < 0) return false;
+            if (_animator.CurrentDirection == _standingFacingDirection)
+            {
+                _standingFacingDirection = -1;
+                if (_interactionPhase == OfficeRuntimeInteractionPhase.Aligning)
+                    _interactionPhase = OfficeRuntimeInteractionPhase.Performing;
+                return false;
+            }
+
+            _animator.AccumulateStandingFacingRequest(_standingFacingDirection, deltaTime);
+            return true;
+        }
+
+        private void AdvanceAssignedWork()
+        {
+            long currentMinute = _bootstrap.State.Time.ElapsedMinutes;
+            long elapsedMinutes = Math.Max(0L, currentMinute - _assignedLastObservedMinute);
+            _assignedLastObservedMinute = currentMinute;
+            if (elapsedMinutes <= 0L) return;
+            _assignedWorkRemaining = Mathf.Max(0f, _assignedWorkRemaining - elapsedMinutes);
             if (_assignedWorkRemaining > 0f) return;
             string completed = _assignedTaskId;
             _assignedTaskId = string.Empty;
             _assignedWorkRemaining = 0f;
+            _assignedLastObservedMinute = 0L;
             AssignedTaskCompleted?.Invoke(this, completed);
             ResumeAutonomy();
         }
 
         private void RequestStopAndStand()
         {
+            _standingFacingDirection = -1;
             _destination = null;
             _path.Clear();
             _arrived = false;
@@ -1050,9 +1384,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private void ResumeAutonomy()
         {
             if (HasAssignedTask) return;
-            if (_autonomyDestination.HasValue && !_playerControlled)
+            if (_autonomyIntentId.Length > 0 && !_playerControlled)
             {
-                BeginDestination(_autonomyDestination.Value);
+                // Resolve against the live layout and acquire capacity only now. A cached
+                // destination may refer to furniture removed while a contract was running.
+                TryStartAutonomyRequest();
                 return;
             }
             if (Phase != OfficeRuntimeAgentPhase.LeavingSeat && _seatClaim == null)
@@ -1083,14 +1419,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float maximumDistance = float.PositiveInfinity,
             Vector2? presentationSemanticVelocity = null)
         {
+            Vector2 integrationTargetVelocity = targetVelocity;
+            if (RequiresPivotBeforeMoving(targetVelocity)) integrationTargetVelocity = Vector2.zero;
             float changePerSecond = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
-                new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
+                new OfficeNavPoint(integrationTargetVelocity.x, integrationTargetVelocity.y),
                 7.5f,
                 _playerControlled);
             OfficeMotionIntegrationResult motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
-                new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
+                new OfficeNavPoint(integrationTargetVelocity.x, integrationTargetVelocity.y),
                 changePerSecond,
                 deltaTime);
             _currentVelocity = new Vector2(motion.Velocity.X, motion.Velocity.Z);
@@ -1106,7 +1444,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _agentId,
                 before,
                 intended,
-                targetVelocity,
+                integrationTargetVelocity,
                 _lastActualDisplacement,
                 AgentRadius,
                 permittedSeatId,
@@ -1140,6 +1478,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _seat?.SeatId ?? string.Empty);
         }
 
+        private bool RequiresPivotBeforeMoving(Vector2 targetVelocity)
+        {
+            if (_animator == null || targetVelocity.sqrMagnitude <= 0.000001f) return false;
+            int current = _animator.CurrentDirection;
+            int target = DirectionalSpriteAnimator.ResolveTileDirection(targetVelocity, current);
+            int delta = Mathf.Abs(current - target) % DirectionalSpriteAnimator.DirectionCount;
+            return Mathf.Min(delta, DirectionalSpriteAnimator.DirectionCount - delta) >= 3;
+        }
+
         private void StopMotion(bool keepStuck = false)
         {
             _currentVelocity = Vector2.zero;
@@ -1168,6 +1515,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 clip,
                 frame);
             RecordObservedSeatingFrame(clip, frame);
+            if (clip == OfficeSeatingAnimationClip.Work &&
+                _animator.IsOfficeWorkAnimationHookActive &&
+                !string.IsNullOrWhiteSpace(appliedSprite.name))
+            {
+                _observedOfficeWorkHookSprites.Add(appliedSprite.name);
+            }
             if (_animator.SeatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork)
             {
                 ApplySeatedContactPlacement(profile);
@@ -1273,6 +1626,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _observedStandUpFrameMask |= bit;
                     break;
             }
+        }
+
+        private void ResetSeatingObservationMetrics()
+        {
+            _observedSitDownFrameMask = 0;
+            _observedWorkFrameMask = 0;
+            _observedStandUpFrameMask = 0;
+            _observedOfficeWorkHookSprites.Clear();
+            _maxAnimatedAnchorErrorPx = 0f;
+            ResetTransitionMotionMetrics();
+            _maxTransitionPelvisStepPx = 0f;
+            _transitionMonotonicViolationCount = 0;
         }
 
         /// <summary>
@@ -1431,6 +1796,71 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
         }
 
+        private void AbortInteractionAttempt(OfficeRuntimeInteractionEndReason reason)
+        {
+            EndInteraction(OfficeRuntimeInteractionTermination.Aborted, reason);
+            _world?.Occupancy.ClearReservations(_agentId);
+            _destination = null;
+            _pendingDestination = null;
+            _autonomyDestination = null;
+            _autonomyLayoutRevision = -1;
+            _path.Clear();
+            _pathIndex = 0;
+            _arrived = false;
+            _yieldCell = null;
+            _standingFacingDirection = -1;
+            if (Phase != OfficeRuntimeAgentPhase.FinishingWork &&
+                Phase != OfficeRuntimeAgentPhase.StandingUp &&
+                Phase != OfficeRuntimeAgentPhase.LeavingSeat)
+            {
+                Phase = OfficeRuntimeAgentPhase.Idle;
+                CurrentActivity = OfficeActivity.Break;
+            }
+        }
+
+        private void EndInteraction(
+            OfficeRuntimeInteractionTermination termination,
+            OfficeRuntimeInteractionEndReason reason)
+        {
+            bool hadInteraction = _interactionPhase != OfficeRuntimeInteractionPhase.None ||
+                                  _interactionHandle != null ||
+                                  _activeInteractionId.Length > 0;
+            if (!hadInteraction) return;
+
+            _interactionPhase = OfficeRuntimeInteractionPhase.Finishing;
+            bool completed = termination == OfficeRuntimeInteractionTermination.Completed;
+            if (_interactionHandle != null)
+            {
+                if (completed)
+                {
+                    if (!_interactionHandle.TryComplete(out _))
+                    {
+                        completed = false;
+                        _interactionHandle.TryAbort(out _);
+                    }
+                }
+                else
+                {
+                    _interactionHandle.TryAbort(out _);
+                }
+                _interactionHandle.TryRelease(out _);
+            }
+
+            if (completed) _interactionCompletedCount++;
+            else if (termination != OfficeRuntimeInteractionTermination.None) _interactionAbortedCount++;
+            _lastInteractionEndReason = reason;
+            ClearInteractionExecutionState();
+        }
+
+        private void ClearInteractionExecutionState()
+        {
+            _interactionHandle = null;
+            _interactionPhase = OfficeRuntimeInteractionPhase.None;
+            _activeInteractionId = string.Empty;
+            _activeInteractionOfferId = string.Empty;
+            _activeInteractionFurnitureId = string.Empty;
+        }
+
         private void ResetVisualPose()
         {
             if (_visualRoot == null) return;
@@ -1443,6 +1873,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _presentationAway = away;
             if (_renderer != null) _renderer.enabled = !away;
+            if (_world != null &&
+                _world.Registry.TryGet(_agentId, out OfficeRuntimeAgent registered) &&
+                ReferenceEquals(registered, this))
+                _world.Occupancy.SetActorPresent(_agentId, !away);
         }
 
         private static int FacingDirection(OfficeFurnitureFacing facing)
@@ -1459,12 +1893,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void OnDisable()
         {
+            EndInteraction(
+                OfficeRuntimeInteractionTermination.Aborted,
+                OfficeRuntimeInteractionEndReason.Disabled);
             if (_world != null) _world.Occupancy.ClearReservations(_agentId);
             ReleaseSeatImmediately();
         }
 
         private void OnDestroy()
         {
+            EndInteraction(
+                OfficeRuntimeInteractionTermination.Aborted,
+                OfficeRuntimeInteractionEndReason.Destroyed);
             if (_animator != null)
             {
                 _animator.OfficeFrameApplied -= HandleOfficeFrameApplied;

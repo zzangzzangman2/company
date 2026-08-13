@@ -19,6 +19,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private readonly OfficeGridFurniturePresenter _furniturePresenter;
         private readonly OfficeRuntimeOccupancy _occupancy;
         private readonly OfficeRuntimeInteractionOfferResolver _offerResolver;
+        private readonly OfficeRuntimeInteractionLifecycleService _interactionLifecycle;
         private readonly OfficeSeatingState _seatingState;
         private readonly Dictionary<string, OfficeSeatSlot> _seats =
             new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
@@ -55,10 +56,32 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 occupancy,
                 paths,
                 AssignedSeat);
+            _interactionLifecycle = new OfficeRuntimeInteractionLifecycleService(_offerResolver);
         }
 
         public OfficeSeatingState SeatingState => _seatingState;
         public OfficeRuntimeInteractionOfferResolver InteractionOffers => _offerResolver;
+        public OfficeRuntimeInteractionLifecycleService InteractionLifecycle => _interactionLifecycle;
+
+        public bool TryResolveStandingInteractionFacing(
+            OfficeRuntimeDestination destination,
+            out int direction)
+        {
+            direction = -1;
+            if (destination.RequiresSeat || destination.FurnitureId.Length == 0) return false;
+            PlacedOfficeFurniture furniture = _grid.Furniture.FirstOrDefault(item =>
+                string.Equals(item.FurnitureId, destination.FurnitureId, StringComparison.Ordinal));
+            if (furniture == null) return false;
+
+            Vector3 actorWorld = _presenter.CellCenterWorld(destination.Cell);
+            Vector3 furnitureWorld = _presenter.SubcellAnchorWorld(furniture.PlacementAnchor);
+            Vector2 heading = new Vector2(
+                furnitureWorld.x - actorWorld.x,
+                furnitureWorld.y - actorWorld.y);
+            if (heading.sqrMagnitude <= 0.000001f) return false;
+            direction = DirectionalSpriteAnimator.ResolveTileDirection(heading);
+            return true;
+        }
 
         public bool TryResolveInteractionDestination(
             string interactionId,
@@ -107,6 +130,81 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        /// <summary>
+        /// Unified entry point for a future Agent integration. None and AssignedSeat definitions
+        /// keep their existing destination/seat owners. Concrete non-seat furniture definitions
+        /// receive a transient lifecycle handle, while pair/group policies fail closed.
+        /// </summary>
+        public bool TryBeginInteraction(
+            string interactionId,
+            string memberId,
+            string stableKey,
+            OfficeGridCoordinate start,
+            string permittedSeatId,
+            float radius,
+            out OfficeRuntimeDestination destination,
+            out OfficeRuntimeInteractionHandle interactionHandle,
+            out OfficeRuntimeInteractionFailure failure)
+        {
+            destination = default;
+            interactionHandle = null;
+            if (!OfficeInteractionCatalog.TryGetDefinition(
+                    interactionId,
+                    out OfficeInteractionDefinition definition))
+            {
+                failure = new OfficeRuntimeInteractionFailure(
+                    OfficeRuntimeInteractionFailureCode.UnknownInteraction);
+                return false;
+            }
+
+            if (definition.ReservationPolicy == OfficeInteractionReservationPolicy.None ||
+                definition.ReservationPolicy == OfficeInteractionReservationPolicy.AssignedSeat)
+            {
+                bool resolved = TryResolveInteractionDestination(
+                    interactionId,
+                    memberId,
+                    stableKey,
+                    start,
+                    permittedSeatId,
+                    radius,
+                    out destination);
+                failure = resolved
+                    ? OfficeRuntimeInteractionFailure.None
+                    : new OfficeRuntimeInteractionFailure(
+                        OfficeRuntimeInteractionFailureCode.NoReachableOffer);
+                return resolved;
+            }
+
+            if (definition.ReservationPolicy == OfficeInteractionReservationPolicy.PairedConversation ||
+                definition.ReservationPolicy == OfficeInteractionReservationPolicy.GroupMeeting)
+            {
+                failure = new OfficeRuntimeInteractionFailure(
+                    OfficeRuntimeInteractionFailureCode.UnsupportedReservationPolicy);
+                return false;
+            }
+
+            var request = new OfficeRuntimeInteractionRequest(
+                interactionId,
+                memberId,
+                stableKey,
+                start,
+                permittedSeatId,
+                radius);
+            if (!_interactionLifecycle.TryBegin(request, out interactionHandle, out failure)) return false;
+
+            OfficeInteractionOffer offer = interactionHandle.Offer;
+            OfficeGridCoordinate cell = interactionHandle.ApproachCell;
+            destination = new OfficeRuntimeDestination(
+                offer.OfferId + ":" + cell.X + ":" + cell.Y,
+                definition.SemanticLocation,
+                ActivityFor(definition.SemanticLocation),
+                cell,
+                string.Empty,
+                offer.OfferId,
+                offer.FurnitureId);
+            return true;
+        }
+
         public bool TryReserveSeat(
             string memberId,
             string token,
@@ -133,6 +231,33 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Reserves exactly the seat advertised by an interaction offer. There is deliberately no
+        /// fallback: changing seats here would make the destination/offer and physical claim differ.
+        /// </summary>
+        public bool TryReserveSeat(
+            string memberId,
+            string requestedSeatId,
+            string token,
+            out OfficeSeatSlot seat,
+            out OfficeSeatRuntimeClaim claim)
+        {
+            seat = null;
+            claim = null;
+            if (string.IsNullOrWhiteSpace(requestedSeatId) ||
+                !_seats.TryGetValue(requestedSeatId.Trim(), out OfficeSeatSlot requested)) return false;
+            if (!OfficeSeatRuntimeClaim.TryReserve(
+                    _seatingState,
+                    requested.SeatId,
+                    memberId,
+                    token + ":" + requested.SeatId,
+                    out OfficeSeatRuntimeClaim created,
+                    out _)) return false;
+            seat = requested;
+            claim = created;
+            return true;
         }
 
         public bool TryResolveDestination(
@@ -194,11 +319,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 "starter-office-destination:" + stableKey + ":" + memberId + ":" + location,
                 candidates.Count);
             OfficeGridCoordinate cell = candidates[index];
+            PlacedOfficeFurniture targetFurniture = NearestFurniture(kind, cell);
             destination = new OfficeRuntimeDestination(
                 location.ToString().ToLowerInvariant() + ":" + cell.X + ":" + cell.Y,
                 location,
                 activity,
-                cell);
+                cell,
+                string.Empty,
+                string.Empty,
+                targetFurniture?.FurnitureId ?? string.Empty);
             return true;
         }
 
@@ -370,6 +499,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
             return result.OrderBy(item => item.Y).ThenBy(item => item.X).ToList();
+        }
+
+        private PlacedOfficeFurniture NearestFurniture(
+            string kindId,
+            OfficeGridCoordinate cell)
+        {
+            if (string.IsNullOrWhiteSpace(kindId)) return null;
+            Vector3 cellWorld = _presenter.CellCenterWorld(cell);
+            return _grid.Furniture
+                .Where(item => string.Equals(item.KindId, kindId, StringComparison.Ordinal))
+                .OrderBy(item =>
+                    (_presenter.SubcellAnchorWorld(item.PlacementAnchor) - cellWorld).sqrMagnitude)
+                .ThenBy(item => item.FurnitureId, StringComparer.Ordinal)
+                .FirstOrDefault();
         }
 
         private List<OfficeGridCoordinate> ExitCandidates()

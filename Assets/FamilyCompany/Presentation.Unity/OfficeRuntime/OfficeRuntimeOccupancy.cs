@@ -73,6 +73,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public float Radius;
             public float StuckSeconds;
             public OfficeGridCoordinate CurrentCell;
+            public bool IsPresent = true;
             public readonly HashSet<OfficeGridCoordinate> Reservations =
                 new HashSet<OfficeGridCoordinate>();
         }
@@ -218,6 +219,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _actors.Remove(agentId ?? string.Empty);
         }
 
+        public bool IsActorPresent(string agentId) => RequiredActor(agentId).IsPresent;
+
+        public void SetActorPresent(string agentId, bool isPresent)
+        {
+            ActorState state = RequiredActor(agentId);
+            if (!isPresent)
+            {
+                state.IsPresent = false;
+                state.DesiredVelocity = Vector2.zero;
+                state.StuckSeconds = 0f;
+                state.Reservations.Clear();
+                ReleaseNarrowCorridors(state.AgentId);
+                return;
+            }
+
+            if (state.IsPresent) return;
+            // A returning actor keeps its registered identity and most recent position, but it
+            // must re-enter dynamic occupancy without any stale route or corridor ownership.
+            state.Reservations.Clear();
+            ReleaseNarrowCorridors(state.AgentId);
+            state.DesiredVelocity = Vector2.zero;
+            state.StuckSeconds = 0f;
+            state.IsPresent = true;
+        }
+
         public void UpdateActor(
             string agentId,
             Vector2 position,
@@ -226,6 +252,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string permittedSeatId = "")
         {
             ActorState state = RequiredActor(agentId);
+            if (!state.IsPresent)
+            {
+                state.Position = position;
+                state.DesiredVelocity = desiredVelocity;
+                state.StuckSeconds = Mathf.Max(0f, stuckSeconds);
+                state.CurrentCell = _presenter.NearestCell(new Vector3(position.x, position.y, 0f));
+                return;
+            }
             if (!PointClearsStatic(position, state.Radius, permittedSeatId, out OfficeRuntimeOccupancyLayer blockedLayer))
             {
                 if (blockedLayer == OfficeRuntimeOccupancyLayer.Interaction) InteractionViolationCount++;
@@ -238,7 +272,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ReleaseExitedNarrowCorridors(state);
             foreach (ActorState peer in _actors.Values)
             {
-                if (ReferenceEquals(peer, state)) continue;
+                if (ReferenceEquals(peer, state) || !peer.IsPresent) continue;
                 float margin = Vector2.Distance(position, peer.Position) - (state.Radius + peer.Radius);
                 MinimumAgentSeparationMargin = Mathf.Min(MinimumAgentSeparationMargin, margin);
                 if (margin < -0.01f) AgentPenetrationCount++;
@@ -251,6 +285,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             IReadOnlyList<OfficeGridCoordinate> upcoming)
         {
             ActorState self = RequiredActor(agentId);
+            if (!self.IsPresent)
+            {
+                self.Reservations.Clear();
+                ReleaseNarrowCorridors(self.AgentId);
+                return false;
+            }
             self.Reservations.Clear();
             // Reservations from the previous frame must not keep a corridor locked after
             // the owner has stepped into the destination room.
@@ -282,7 +322,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 bool blocked = false;
                 foreach (ActorState peer in _actors.Values)
                 {
-                    if (ReferenceEquals(peer, self)) continue;
+                    if (ReferenceEquals(peer, self) || !peer.IsPresent) continue;
                     if (!peer.CurrentCell.Equals(cell) && !peer.Reservations.Contains(cell)) continue;
                     blocked = true;
                     break;
@@ -329,7 +369,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!includeDynamic) return true;
             foreach (ActorState peer in _actors.Values)
             {
-                if (string.Equals(peer.AgentId, agentId, StringComparison.Ordinal)) continue;
+                if (!peer.IsPresent || string.Equals(peer.AgentId, agentId, StringComparison.Ordinal)) continue;
                 if (peer.CurrentCell.Equals(cell) || peer.Reservations.Contains(cell)) return false;
             }
             return true;
@@ -357,7 +397,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     new Vector3(point.x, point.y, 0f));
                 foreach (ActorState peer in _actors.Values)
                 {
-                    if (string.Equals(peer.AgentId, agentId, StringComparison.Ordinal)) continue;
+                    if (!peer.IsPresent || string.Equals(peer.AgentId, agentId, StringComparison.Ordinal)) continue;
                     if (peer.Reservations.Contains(pointCell) && !peer.CurrentCell.Equals(pointCell))
                     {
                         BlockedAgentMoveCount++;
@@ -380,6 +420,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
                 throw new ArgumentOutOfRangeException(nameof(radius));
+            // With no authored blockers, the radius-cleared grid footprint is convex. Checking
+            // both endpoints is therefore equivalent to sampling the whole segment and avoids
+            // thousands of repeated Tilemap conversions on large open QA/editor layouts.
+            if (_hardFloor.Count == 0 && _furnitureObstacles.Count == 0 && _interactionSeats.Count == 0)
+            {
+                return PointClearsStatic(start, radius, permittedSeatId, out _) &&
+                       PointClearsStatic(end, radius, permittedSeatId, out _);
+            }
             var delta = end - start;
             var samples = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.045f));
             for (var sample = 1; sample <= samples; sample++)
@@ -398,13 +446,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float extraClearance = 0.75f)
         {
             ActorState self = RequiredActor(agentId);
+            if (!self.IsPresent) return false;
             if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
                 throw new ArgumentOutOfRangeException(nameof(radius));
             if (extraClearance < 0f || float.IsNaN(extraClearance) || float.IsInfinity(extraClearance))
                 throw new ArgumentOutOfRangeException(nameof(extraClearance));
             foreach (ActorState peer in _actors.Values)
             {
-                if (ReferenceEquals(peer, self)) continue;
+                if (ReferenceEquals(peer, self) || !peer.IsPresent) continue;
                 float required = radius + peer.Radius + extraClearance;
                 if (DistanceToSegment(peer.Position, start, end) < required) return false;
             }
@@ -414,6 +463,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public IReadOnlyList<OfficeTrafficAgentState> TrafficSnapshot()
         {
             return _actors.Values
+                .Where(item => item.IsPresent)
                 .OrderBy(item => item.AgentId, StringComparer.Ordinal)
                 .Select(item => new OfficeTrafficAgentState(
                     item.AgentId,
