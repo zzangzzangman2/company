@@ -1060,7 +1060,9 @@ namespace FamilyCompany.Presentation.Unity
                     $"maxMismatchSeconds={mismatchedFacingSeconds:F3} replans=0 arrivals=0 | " +
                     OccupancyMetricSummary());
             }
+            foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
             Debug.Log("STARTER_OFFICE_PLAYER_COLLISION_QA_PASS | scenarios=3 | timeScale=4");
+            yield return null;
         }
 
         private IEnumerator RunReversalPivotQa()
