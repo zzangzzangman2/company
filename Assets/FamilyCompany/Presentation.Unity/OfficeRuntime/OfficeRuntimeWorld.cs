@@ -47,7 +47,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 grid,
                 presenter,
                 furniturePresenter,
-                _occupancy);
+                _occupancy,
+                _paths);
             _depthSorter = new OfficeRuntimeDepthSorter(grid, presenter, furniturePresenter);
             _configured = true;
         }

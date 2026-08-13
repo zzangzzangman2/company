@@ -13,7 +13,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeSemanticLocation semanticLocation,
             OfficeActivity activity,
             OfficeGridCoordinate cell,
-            string seatId = "")
+            string seatId = "",
+            string interactionOfferId = "",
+            string furnitureId = "")
         {
             DestinationId = string.IsNullOrWhiteSpace(destinationId)
                 ? throw new ArgumentException("Destination ID is required.", nameof(destinationId))
@@ -22,6 +24,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Activity = activity;
             Cell = cell;
             SeatId = (seatId ?? string.Empty).Trim();
+            InteractionOfferId = (interactionOfferId ?? string.Empty).Trim();
+            FurnitureId = (furnitureId ?? string.Empty).Trim();
         }
 
         public string DestinationId { get; }
@@ -29,6 +33,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public OfficeActivity Activity { get; }
         public OfficeGridCoordinate Cell { get; }
         public string SeatId { get; }
+        public string InteractionOfferId { get; }
+        public string FurnitureId { get; }
         public bool RequiresSeat => SeatId.Length > 0;
     }
 
@@ -50,6 +56,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         void SetAutonomousDestination(
             string intentId,
             OfficeSemanticLocation location,
+            string interactionId,
             string statusLabel);
         void ClearAutonomousDestination();
         void ResetRuntimeState();

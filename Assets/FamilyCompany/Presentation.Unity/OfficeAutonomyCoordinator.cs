@@ -8,6 +8,7 @@ using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
+using FamilyCompany.Simulation.OfficeInteractions;
 using FamilyCompany.Simulation.OfficeSeating;
 using UnityEngine;
 
@@ -311,7 +312,12 @@ namespace FamilyCompany.Presentation.Unity
                     $"{PresentationActionLabel(member)} · {member.Autonomy.MoodLabel(member.Energy, member.Stress)} · " +
                     $"체{member.Energy}/스{member.Stress}";
                 string intentId = PresentationIntentId(member, ((int)presentationLocation).ToString());
-                agent.SetAutonomousDestination(intentId, presentationLocation, status);
+                string interactionId = OfficeInteractionCatalog.TryResolveActiveDefinition(
+                    member,
+                    out OfficeInteractionDefinition interaction)
+                    ? interaction.InteractionId
+                    : string.Empty;
+                agent.SetAutonomousDestination(intentId, presentationLocation, interactionId, status);
             }
         }
 

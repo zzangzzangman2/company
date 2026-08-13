@@ -25,6 +25,51 @@ namespace FamilyCompany.Simulation.OfficeInteractions
 
         public static IReadOnlyList<OfficeInteractionDefinition> All => Definitions;
 
+        public static bool TryGetDefinition(
+            string interactionId,
+            out OfficeInteractionDefinition definition)
+        {
+            definition = Definitions.FirstOrDefault(item =>
+                string.Equals(item.InteractionId, interactionId ?? string.Empty, StringComparison.Ordinal));
+            return definition != null;
+        }
+
+        public static bool TryResolveActiveDefinition(
+            FamilyMemberState member,
+            out OfficeInteractionDefinition definition)
+        {
+            if (member == null) throw new ArgumentNullException(nameof(member));
+            OfficeMicroActionState active = member.Autonomy.MicroAction;
+            if (active.Action == OfficeMicroAction.None)
+            {
+                definition = null;
+                return false;
+            }
+
+            OfficeInteractionCandidate[] actionMatches = CandidatesFor(member)
+                .Where(candidate =>
+                    candidate.MicroAction == active.Action &&
+                    candidate.SemanticLocation == active.TargetLocation)
+                .ToArray();
+            OfficeInteractionCandidate[] exactMatches = actionMatches
+                .Where(candidate => string.Equals(
+                    candidate.TargetId,
+                    active.TargetId,
+                    StringComparison.Ordinal))
+                .ToArray();
+            OfficeInteractionCandidate[] matches = exactMatches.Length > 0
+                ? exactMatches
+                : actionMatches;
+            if (matches.Length != 1)
+            {
+                definition = null;
+                return false;
+            }
+
+            definition = matches[0].Definition;
+            return true;
+        }
+
         public static IReadOnlyList<OfficeInteractionCandidate> CandidatesFor(FamilyMemberState member)
         {
             if (member == null) throw new ArgumentNullException(nameof(member));

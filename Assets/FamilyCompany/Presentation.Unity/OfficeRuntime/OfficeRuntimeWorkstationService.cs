@@ -5,6 +5,7 @@ using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.OfficeInteractions;
 using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.OfficeSeating;
 using UnityEngine;
@@ -17,6 +18,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private readonly OfficeGridTilemapPresenter _presenter;
         private readonly OfficeGridFurniturePresenter _furniturePresenter;
         private readonly OfficeRuntimeOccupancy _occupancy;
+        private readonly OfficeRuntimeInteractionOfferResolver _offerResolver;
         private readonly OfficeSeatingState _seatingState;
         private readonly Dictionary<string, OfficeSeatSlot> _seats =
             new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
@@ -27,12 +29,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeGrid grid,
             OfficeGridTilemapPresenter presenter,
             OfficeGridFurniturePresenter furniturePresenter,
-            OfficeRuntimeOccupancy occupancy)
+            OfficeRuntimeOccupancy occupancy,
+            OfficeRuntimePathService paths)
         {
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
             _furniturePresenter = furniturePresenter ?? throw new ArgumentNullException(nameof(furniturePresenter));
             _occupancy = occupancy ?? throw new ArgumentNullException(nameof(occupancy));
+            if (paths == null) throw new ArgumentNullException(nameof(paths));
             _seatingState = new OfficeSeatingState(grid.SeatSlots.Select(item =>
                 new FamilyCompany.Simulation.OfficeSeating.OfficeSeatDefinition(
                     item.SeatId,
@@ -45,9 +49,63 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (_seatingState.TryAssign(seat.SeatId, memberId, out _))
                     _assignedSeats.Add(memberId, seat.SeatId);
             }
+            _offerResolver = new OfficeRuntimeInteractionOfferResolver(
+                grid,
+                presenter,
+                occupancy,
+                paths,
+                AssignedSeat);
         }
 
         public OfficeSeatingState SeatingState => _seatingState;
+        public OfficeRuntimeInteractionOfferResolver InteractionOffers => _offerResolver;
+
+        public bool TryResolveInteractionDestination(
+            string interactionId,
+            string memberId,
+            string stableKey,
+            OfficeGridCoordinate start,
+            string permittedSeatId,
+            float radius,
+            out OfficeRuntimeDestination destination)
+        {
+            if (!OfficeInteractionCatalog.TryGetDefinition(interactionId, out OfficeInteractionDefinition definition))
+            {
+                destination = default;
+                return false;
+            }
+
+            IReadOnlyList<OfficeInteractionOffer> offers = _offerResolver.ResolveReachableOffers(
+                definition,
+                memberId,
+                start,
+                permittedSeatId,
+                radius);
+            if (offers.Count == 0)
+            {
+                destination = default;
+                return false;
+            }
+
+            int offerIndex = StableRandom.StableRandomInt(
+                "starter-office-offer:" + stableKey + ":" + memberId + ":" + interactionId,
+                offers.Count);
+            OfficeInteractionOffer offer = offers[offerIndex];
+            int cellIndex = StableRandom.StableRandomInt(
+                "starter-office-offer-cell:" + stableKey + ":" + memberId + ":" + offer.OfferId,
+                offer.ApproachCells.Count);
+            OfficeGridCoordinate cell = offer.ApproachCells[cellIndex];
+            OfficeSeatSlot seat = definition.RequiresAssignedSeat ? AssignedSeat(memberId) : null;
+            destination = new OfficeRuntimeDestination(
+                offer.OfferId + ":" + cell.X + ":" + cell.Y,
+                definition.SemanticLocation,
+                ActivityFor(definition.SemanticLocation),
+                cell,
+                seat?.SeatId ?? string.Empty,
+                offer.OfferId,
+                offer.FurnitureId);
+            return true;
+        }
 
         public bool TryReserveSeat(
             string memberId,
@@ -108,17 +166,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
 
-            string kind = location switch
-            {
-                OfficeSemanticLocation.Reception => OfficeGridLayouts.ReceptionCounterKind,
-                OfficeSemanticLocation.Printer => OfficeGridLayouts.FaxCopierKind,
-                OfficeSemanticLocation.MeetingRoom => OfficeGridLayouts.MeetingTableKind,
-                OfficeSemanticLocation.Lounge => OfficeGridLayouts.SofaKind,
-                OfficeSemanticLocation.Filing => OfficeGridLayouts.DocumentBookcaseKind,
-                OfficeSemanticLocation.Water => OfficeGridLayouts.WaterDispenserKind,
-                OfficeSemanticLocation.Coffee => OfficeGridLayouts.CoffeeTableKind,
-                _ => string.Empty
-            };
+            string kind = LegacyFurnitureKindFor(location);
             OfficeActivity activity = location switch
             {
                 OfficeSemanticLocation.Reception => OfficeActivity.Reception,
@@ -189,7 +237,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 requestedDestination.SemanticLocation,
                 requestedDestination.Activity,
                 seat.ApproachCell,
-                seat.SeatId);
+                seat.SeatId,
+                requestedDestination.InteractionOfferId,
+                requestedDestination.FurnitureId);
         }
 
         /// <summary>
@@ -263,6 +313,41 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return _assignedSeats.TryGetValue(memberId ?? string.Empty, out string seatId)
                 ? RequiredSeat(seatId)
                 : null;
+        }
+
+        private static OfficeActivity ActivityFor(OfficeSemanticLocation location)
+        {
+            return location switch
+            {
+                OfficeSemanticLocation.Desk => OfficeActivity.Work,
+                OfficeSemanticLocation.Reception => OfficeActivity.Reception,
+                OfficeSemanticLocation.Printer => OfficeActivity.Printing,
+                OfficeSemanticLocation.MeetingRoom => OfficeActivity.Meeting,
+                OfficeSemanticLocation.Filing => OfficeActivity.Printing,
+                OfficeSemanticLocation.Exit => OfficeActivity.Outside,
+                OfficeSemanticLocation.Lounge => OfficeActivity.Break,
+                OfficeSemanticLocation.Water => OfficeActivity.Break,
+                OfficeSemanticLocation.Coffee => OfficeActivity.Break,
+                OfficeSemanticLocation.OpenArea => OfficeActivity.Break,
+                _ => OfficeActivity.Walking
+            };
+        }
+
+        private static string LegacyFurnitureKindFor(OfficeSemanticLocation location)
+        {
+            // The physical meeting table remains a direct player/contract destination until it has
+            // authored seats. Every Micro Action furniture mapping comes from the catalog.
+            if (location == OfficeSemanticLocation.MeetingRoom)
+                return OfficeGridLayouts.MeetingTableKind;
+            string[] kinds = OfficeInteractionCatalog.All
+                .Where(definition =>
+                    definition.SemanticLocation == location &&
+                    definition.RequiresFurniture &&
+                    definition.FurnitureKindId.Length > 0)
+                .Select(definition => definition.FurnitureKindId)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            return kinds.Length == 1 ? kinds[0] : string.Empty;
         }
 
         private List<OfficeGridCoordinate> InteractionCandidates(string kindId)

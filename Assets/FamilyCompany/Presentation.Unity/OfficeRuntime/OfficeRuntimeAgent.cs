@@ -49,6 +49,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeRuntimeDestination? _pendingDestination;
         private OfficeRuntimeDestination? _autonomyDestination;
         private string _autonomyIntentId = string.Empty;
+        private int _autonomyLayoutRevision = -1;
         private string _autonomyStatus = string.Empty;
         private string _assignedTaskId = string.Empty;
         private float _assignedWorkRemaining;
@@ -277,24 +278,58 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeSemanticLocation location,
             string statusLabel)
         {
+            SetAutonomousDestination(intentId, location, string.Empty, statusLabel);
+        }
+
+        public void SetAutonomousDestination(
+            string intentId,
+            OfficeSemanticLocation location,
+            string interactionId,
+            string statusLabel)
+        {
             if (_playerControlled || _qaControl) return;
             if (string.IsNullOrWhiteSpace(intentId))
             {
                 ClearAutonomousDestination();
                 return;
             }
-            if (_autonomyIntentId == intentId) return;
-            if (!_world.Workstations.TryResolveDestination(
+            if (_autonomyIntentId == intentId &&
+                _autonomyLayoutRevision == _world.Occupancy.Revision) return;
+            OfficeGridCoordinate start = _world.Presenter.NearestCell(transform.position);
+            OfficeRuntimeDestination destination;
+            bool resolved;
+            if (string.IsNullOrWhiteSpace(interactionId))
+            {
+                resolved = _world.Workstations.TryResolveDestination(
                     location,
                     _agentId,
                     intentId,
-                    out OfficeRuntimeDestination destination)) return;
+                    out destination);
+            }
+            else
+            {
+                resolved = _world.Workstations.TryResolveInteractionDestination(
+                    interactionId,
+                    _agentId,
+                    intentId,
+                    start,
+                    ActiveSeatId,
+                    AgentRadius,
+                    out destination);
+            }
+            if (!resolved)
+            {
+                ClearAutonomousDestination();
+                return;
+            }
             _autonomyIntentId = intentId.Trim();
+            _autonomyLayoutRevision = _world.Occupancy.Revision;
             _autonomyStatus = string.IsNullOrWhiteSpace(statusLabel) ? "자율 행동" : statusLabel.Trim();
             _autonomyDestination = destination;
             if (!HasAssignedTask && !BeginDestination(destination))
             {
                 _autonomyIntentId = string.Empty;
+                _autonomyLayoutRevision = -1;
                 _autonomyStatus = string.Empty;
                 _autonomyDestination = null;
                 ReleaseSeatImmediately();
@@ -305,6 +340,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public void ClearAutonomousDestination()
         {
             _autonomyIntentId = string.Empty;
+            _autonomyLayoutRevision = -1;
             _autonomyStatus = string.Empty;
             _autonomyDestination = null;
             if (!HasAssignedTask && !_playerControlled) RequestStopAndStand();
@@ -315,6 +351,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _assignedTaskId = string.Empty;
             _assignedWorkRemaining = 0f;
             _autonomyIntentId = string.Empty;
+            _autonomyLayoutRevision = -1;
             _autonomyStatus = string.Empty;
             _autonomyDestination = null;
             _destination = null;
