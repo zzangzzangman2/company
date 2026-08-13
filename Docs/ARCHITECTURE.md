@@ -92,7 +92,10 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - `OfficeInteractionCatalog`는 현재 13종 Micro Action의 표준·회의·fallback 후보 20개를 광고한다. 기존 후보 생성은 아직 정본이며 Editor QA가 action/location/target/weight 1:1 parity를 검사한다.
 - `OfficeInteractionScoring`은 기존 weight×20, macro compatibility, Energy/Stress 기반 need, 미방문 novelty, availability와 repetition을 정수로 합산한다. 후보는 OfferId 정렬 뒤 StableRandom top-band로 Shadow 선택하므로 입력 배열 순서에 독립적이다.
 - `OfficeInteractionSelectionTrace`는 legacy 선택, Shadow 선택, duration, resolved target, partner와 후보별 점수 분해를 진단 이벤트로 노출한다. 구독자가 없으면 retained state가 없으며 저장 스키마 v7은 그대로다.
-- 외부 Behavior Tree·Utility AI·GOAP 패키지는 설치하지 않는다. 런타임 가구 Offer Resolver, Utility 활성화, 명시적 실행/중단 lifecycle은 Shadow 관찰 결과를 검토한 뒤 별도 단계에서 진행한다.
+- `OfficeInteractionOfferFactory`는 Definition을 현재 `OfficeGrid.Furniture`에 투영해 실제 `FurnitureId`별 Offer를 만든다. 접근 칸과 capacity는 Definition에서 파생되며, passability/reachability는 호출자가 주입하므로 Simulation은 Unity를 참조하지 않는다.
+- `OfficeRuntimeInteractionOfferResolver`는 현재 Occupancy와 cardinal PathService로 열린 접근 칸·도달 가능한 접근 칸만 남긴다. 결과는 캐시하지 않으며 Occupancy revision이 바뀌면 동일 intent도 다시 해석해 이동·삭제된 가구의 예전 접근 칸을 사용하지 않는다.
+- Micro Action 목적지는 `OfficeInteractionCatalog`의 Interaction ID를 런타임까지 전달하고, OfferId/FurnitureId를 가진 목적지로 해석한다. 물리 회의 테이블을 사용하는 직접 플레이어/계약 경로만 작성 좌석이 생길 때까지 기존 계약을 유지한다.
+- 외부 Behavior Tree·Utility AI·GOAP 패키지는 설치하지 않는다. 기존 `WeightedPick`은 계속 정본이며 Shadow Utility 활성화와 명시적 실행/중단 lifecycle은 별도 단계다.
 
 ## 오디오 프레젠테이션
 

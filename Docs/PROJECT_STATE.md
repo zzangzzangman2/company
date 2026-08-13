@@ -1,5 +1,15 @@
 # PROJECT STATE
 
+## 2026-08-13 / P1.5 Placed Furniture Interaction Offer Resolver 완료
+
+- 순수 C# `OfficeInteractionOffer`와 `OfficeInteractionOfferFactory`를 추가했다. 한 Definition이 실제 배치된 가구 인스턴스마다 `interactionId@furnitureId` Offer 하나를 만들며 location, furniture kind, capacity, approach policy를 Definition에서 그대로 가져온다.
+- `OfficeRuntimeInteractionOfferResolver`가 현재 Occupancy와 기존 cardinal PathService를 사용해 열린 접근 칸과 실제 도달 가능한 접근 칸만 광고한다. 가구가 없거나 모든 접근 칸이 막혔거나 경로가 없으면 Offer는 0개다.
+- Runtime Coordinator가 활성 Micro Action을 Catalog의 Interaction ID로 해석해 Agent까지 전달한다. Agent 목적지는 선택된 OfferId/FurnitureId를 보존하며 Occupancy revision 변경 시 동일 intent도 재해석해 이동 전 접근 칸을 재사용하지 않는다.
+- `OfficeRuntimeWorkstationService`의 Micro Action 가구 종류·capacity·접근 정책은 Catalog Definition에서 파생된다. 작성 좌석이 없는 물리 회의 테이블의 직접 플레이어/계약 경로만 기존 예외를 유지한다.
+- 레이아웃 변화 QA를 추가했다: 정수기/복사기 삭제, 정수기/소파 이동, 서류장 접근점 전부 차단, 가구까지 경로 단절, 커피 테이블 2개와 인스턴스별 capacity. 엔진 독립 harness는 `OFFICE_INTERACTION_OFFER_EXTERNAL: PASS`; Simulation/Presentation/Editor 외부 컴파일은 오류 0이다.
+- Unity 6000.3.21f1 백그라운드 QA 메서드도 추가했지만, 이 세션에서는 로컬 Unity 라이선스가 `No valid Unity Editor license found`로 종료되어 실행되지 못했다. 라이선스 복구 후 `OfficeRuntimeInteractionOfferValidation.RunBatch`와 전체 P1/Player 회귀를 재실행해야 한다.
+- 기존 `WeightedPick`, Shadow Utility 결과, GameState, Save schema v7은 변경하지 않았다. 다음 단계는 Offer availability/distance를 Shadow Utility 점수에 관찰 항목으로 연결한 뒤 별도 승인으로 selector를 활성화하는 것이다.
+
 ## 2026-08-12 / P1.5 Native Deterministic Smart Interaction Shadow 기반 완료
 
 - 외부 NPC AI 패키지 없이 순수 C# `OfficeInteractionDefinition`, `OfficeInteractionCatalog`,

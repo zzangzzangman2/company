@@ -1,5 +1,15 @@
 # DECISIONS
 
+## 2026-08-13 / Micro Action 목적지는 실제 배치 가구별 Offer로 해석한다
+
+결정: `OfficeInteractionDefinition`을 `OfficeGrid.Furniture`에 투영해 실제 `FurnitureId`마다 Offer를 만들고, 기존 Occupancy/PathService로 열린 접근 칸과 도달 가능성을 검사한다. Offer는 레이아웃에서 매번 다시 만들고 Occupancy revision 변경 시 동일 intent도 재해석한다. Simulation에는 Unity 참조를 넣지 않으며 passability와 reachability를 delegate 경계로 주입한다.
+
+이유: 위치→가구 kind switch와 모든 동종 가구의 접근 칸을 한 목록으로 합치면 가구 삭제·이동·복수 배치에서 대상 소유권과 capacity를 구분할 수 없다. 실제 인스턴스 ID와 접근 칸을 묶은 Offer가 있어야 없는 가구, 막힌 가구, 도달 불가 가구를 선택 전에 제거하고 이후 예약 lifecycle을 인스턴스별로 확장할 수 있다.
+
+결정: 이번 단계에서는 기존 `WeightedPick`과 저장 스키마 v7을 유지한다. 물리 회의 테이블은 작성 좌석이 없으므로 직접 플레이어/계약 목적지 예외를 유지하고, NPC Micro Action 회의는 기존 assigned-PC 좌석 계약을 Offer로 해석한다.
+
+이유: 가구 Offer 연결, Utility selector 활성화, 예약·중단 cleanup lifecycle은 서로 다른 회귀 위험을 가진다. 레이아웃 가용성 계층을 먼저 검증해야 행동 분포 변화와 저장 변경을 분리해서 판단할 수 있다.
+
 ## 2026-08-10 / Flutter 투자 게임을 Unity 가족회사 게임으로 전환
 
 결정: 기존 Flutter 앱을 직접 덮어쓰지 않고 C:/Users/godho/Documents/Codex/family_company_unity에 새 Unity 프로젝트를 만든다.
