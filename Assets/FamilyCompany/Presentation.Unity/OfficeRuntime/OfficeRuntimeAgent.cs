@@ -33,8 +33,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public const float DefaultRadius = 0.22f;
         public const float DefaultMoveSpeed = 1.65f;
         private const float ArrivalDistance = 0.035f;
-        private const float CornerAnticipationDistance =
-            OfficeLocomotionGaitRules.DefaultStrideLength * 0.20f;
         // Translation-only least-squares placement. The keyboard receives a little more weight
         // because the chair foreground safely hides a small pelvis residual, while a floating
         // typing hand remains immediately visible.
@@ -597,6 +595,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 Debug.Log(
                     "STARTER_OFFICE_ATTENDANCE_ENTRY | member=" + _agentId +
                     " | routeCells=" + _preparedAttendancePath.Count +
+                    " | route=" + string.Join(">", _preparedAttendancePath) +
                     " | destination=" + _preparedAttendanceDestination.Value.DestinationId);
             }
         }
@@ -1117,37 +1116,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 ? delta.normalized
                 : Vector2.zero;
             Vector2 presentationSemanticDirection = desiredDirection;
-            if (presentationTargetIndex < _path.Count - 1 &&
-                delta.magnitude <= CornerAnticipationDistance)
-            {
-                Vector3 next3 = _world.Presenter.CellCenterWorld(_path[presentationTargetIndex + 1]);
-                Vector2 nextDelta = new Vector2(next3.x, next3.y) - target;
-                if (nextDelta.sqrMagnitude > 0.000001f)
-                {
-                    float anticipation = 1f - Mathf.Clamp01(delta.magnitude / CornerAnticipationDistance);
-                    Vector2 candidate = Vector2.Lerp(
-                        desiredDirection,
-                        nextDelta.normalized,
-                        anticipation * 0.45f).normalized;
-                    float probeDistance = Mathf.Min(0.12f, Mathf.Max(0.02f, delta.magnitude));
-                    if (_world.Occupancy.CanTraverseStatic(
-                            Position,
-                            Position + candidate * probeDistance,
-                            AgentRadius,
-                            _destination.Value.SeatId) &&
-                        _world.Occupancy.HasPresentationClearance(
-                            _agentId,
-                            Position,
-                            Position + candidate * CornerAnticipationDistance,
-                            AgentRadius))
-                    {
-                        // Round the root trajectory itself.  Feeding this only to the animator is
-                        // ineffective now that moving sprites correctly follow actual displacement.
-                        desiredDirection = candidate;
-                        presentationSemanticDirection = candidate;
-                    }
-                }
-            }
+            // Stay on the semantic segment until its exact cell-center arrival. Blending the root
+            // toward the next leg cuts the inside corner: a route that is valid center-to-center
+            // can then drift into a neighbouring furniture clearance mask and never recover.
+            // The gait state performs the visible stop/pivot before the next segment accelerates.
             float arrivalSpeedScale = presentationTargetIndex == _path.Count - 1
                 ? OfficeNavigationMotionIntegrator.ResolveArrivalSpeedScale(delta.magnitude)
                 : 1f;

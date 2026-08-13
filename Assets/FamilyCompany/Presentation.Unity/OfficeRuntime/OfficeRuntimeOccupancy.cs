@@ -455,7 +455,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 Vector2 point = Vector2.Lerp(start, end, sample / (float)samples);
                 if (!PointClearsStatic(point, radius, permittedSeatId, out OfficeRuntimeOccupancyLayer layer))
-                    return "static=" + layer;
+                    return "static=" + DescribeStaticBlocker(point, radius, permittedSeatId, layer);
                 OfficeGridCoordinate pointCell = _presenter.NearestCell(new Vector3(point.x, point.y, 0f));
                 foreach (ActorState peer in _actors.Values)
                 {
@@ -468,6 +468,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
             return "unknown";
+        }
+
+        private string DescribeStaticBlocker(
+            Vector2 point,
+            float radius,
+            string permittedSeatId,
+            OfficeRuntimeOccupancyLayer fallbackLayer)
+        {
+            string permitted = permittedSeatId ?? string.Empty;
+            foreach (Vector2 direction in CollisionDirections)
+            {
+                OfficeGridCoordinate cell = _presenter.NearestCell(
+                    new Vector3(point.x + direction.x * radius, point.y + direction.y * radius, 0f));
+                if (_hardFloor.Contains(cell)) return $"hard-floor:cell={cell}";
+            }
+            ContinuousGridTransform gridTransform = CaptureContinuousGridTransform();
+            foreach (FurnitureObstacle obstacle in _furnitureObstacles)
+            {
+                if (obstacle.IsPermitted(permitted)) continue;
+                float expandedRadius = radius + (obstacle.Profile?.ClearancePadding ?? 0f);
+                foreach (Vector2 direction in CollisionDirections)
+                {
+                    Vector2 samplePoint = point + direction * expandedRadius;
+                    if (PointInsideObstacle(samplePoint, obstacle, gridTransform))
+                        return $"{obstacle.Layer}:furniture={obstacle.Furniture.FurnitureId}:kind={obstacle.Furniture.KindId}";
+                }
+            }
+            return fallbackLayer.ToString();
         }
 
         public bool CanTraverseStatic(
