@@ -2,6 +2,7 @@ using System;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Simulation.Navigation;
+using FamilyCompany.Simulation.OfficeWorkActions;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -68,6 +69,8 @@ namespace FamilyCompany.Presentation.Unity
         public int CurrentDirection => _lastDirection;
         public int CurrentWalkFrame => _walkFrame;
         public bool IsOfficeWorkAnimationHookActive => _officeWorkSession != null;
+        public OfficeWorkMicroAction CurrentOfficeWorkMicroAction =>
+            _officeWorkSession?.CurrentAction ?? OfficeWorkMicroAction.None;
         public bool IsMoving => _tileDisplacementDirection
             ? _tileFrameDisplacement.sqrMagnitude > 0.0000001f
             : _worldVelocity.sqrMagnitude > 0.0025f;

@@ -80,6 +80,9 @@ namespace FamilyCompany.Presentation.Unity
         private void Start()
         {
             Debug.Log("[StarterOfficeTileRuntime] 처음하기/불러오기 = Starter 타일 사무실 · F2 = 배치 편집 · F9 = 단방향 복구");
+            // Warm the additive office while the full-screen title is still visible. New Game can
+            // then rebind an already-built runtime instead of exposing Prototype01 for a few seconds.
+            BeginShowStarterOffice();
             if (System.Array.IndexOf(
                     System.Environment.GetCommandLineArgs(),
                     "-familyCompanyTileRuntimeQa") >= 0)
@@ -93,11 +96,31 @@ namespace FamilyCompany.Presentation.Unity
 
         private void LateUpdate()
         {
-            if (!_tileOfficeActive) return;
+            if (!_loading && !_tileOfficeActive) return;
             foreach (var renderer in _legacyRenderers)
             {
                 if (renderer != null && renderer.enabled) renderer.enabled = false;
             }
+        }
+
+        private void OnGUI()
+        {
+            if (!_loading) return;
+            var gameBootstrap = Object.FindFirstObjectByType<PrototypeBootstrap>();
+            if (gameBootstrap == null || gameBootstrap.UiScreen != PrototypeUiScreen.Playing) return;
+
+            var previousColor = GUI.color;
+            GUI.color = new Color(0.055f, 0.11f, 0.12f, 1f);
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = new Color(1f, 0.95f, 0.84f, 1f);
+            var style = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = Mathf.Clamp(Screen.height / 36, 18, 32),
+                fontStyle = FontStyle.Bold
+            };
+            GUI.Label(new Rect(0f, 0f, Screen.width, Screen.height), "사무실을 준비하고 있습니다…", style);
+            GUI.color = previousColor;
         }
 
         private void BeginShowStarterOffice()
@@ -109,7 +132,16 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
             if (_loading) return;
+            CaptureAndHideLegacyRenderers();
             StartCoroutine(LoadStarterOffice());
+        }
+
+        private void CaptureAndHideLegacyRenderers()
+        {
+            if (_legacyRenderers.Length == 0 && SceneManager.sceneCount > 0)
+                _legacyRenderers = CollectRenderers(SceneManager.GetSceneAt(0));
+            foreach (var renderer in _legacyRenderers)
+                if (renderer != null) renderer.enabled = false;
         }
 
         private IEnumerator LoadStarterOffice()
@@ -162,10 +194,7 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
 
-            var legacyScene = SceneManager.GetSceneAt(0);
-            _legacyRenderers = CollectRenderers(legacyScene);
-            foreach (var renderer in _legacyRenderers)
-                if (renderer != null) renderer.enabled = false;
+            CaptureAndHideLegacyRenderers();
 
             foreach (var camera in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
@@ -260,6 +289,11 @@ namespace FamilyCompany.Presentation.Unity
                 Application.Quit(33);
                 yield break;
             }
+
+            yield return RunRealtimeAutonomyClockQa(bootstrap);
+            if (QuitIfPlayerQaFailed(Time.timeScale)) yield break;
+            yield return CaptureOfficeHudQa();
+            if (QuitIfPlayerQaFailed(Time.timeScale)) yield break;
 
             float previousTimeScale = Time.timeScale;
             Time.timeScale = 4f;
@@ -1016,10 +1050,13 @@ namespace FamilyCompany.Presentation.Unity
             }
             float workLoopStarted = Time.time;
             while (Time.time - workLoopStarted < 8f &&
-                   QaMemberIds.Any(memberId => !HasObservedWorkPresentation(actors[memberId])))
+                   QaMemberIds.Any(memberId =>
+                       !HasObservedWorkPresentation(actors[memberId]) ||
+                       actors[memberId].TypingContactSampleCount == 0))
                 yield return null;
             if (QaMemberIds.Any(memberId => actors[memberId].ObservedSitDownFrameCount < 4 ||
-                                                !HasObservedWorkPresentation(actors[memberId])))
+                                                !HasObservedWorkPresentation(actors[memberId]) ||
+                                                actors[memberId].TypingContactSampleCount == 0))
             {
                 FailPlayerQa(
                     56,
@@ -1058,6 +1095,9 @@ namespace FamilyCompany.Presentation.Unity
                 Debug.Log(
                     $"STARTER_OFFICE_WORKSTATION_ALIGNMENT_SAMPLE | member={memberId} " +
                     $"seatContact={actor.SeatContactErrorPx:F3}px chairDesk={actor.ChairDeskErrorPx:F3}px " +
+                    $"handWork={actor.HandWorkErrorPx:F3}px typingContact=" +
+                    $"{actor.TypingContactSampleCount}:seat{actor.MaxTypingSeatContactErrorPx:F3}px/" +
+                    $"hand{actor.MaxTypingHandWorkErrorPx:F3}px " +
                     $"rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                     $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
                     $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
@@ -1068,7 +1108,12 @@ namespace FamilyCompany.Presentation.Unity
                     $"pelvisStep={actor.MaxTransitionPelvisStepPx:F3}px " +
                     $"monotonicViolations={actor.TransitionMonotonicViolationCount} " +
                     $"sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
-                bool presentationMatches = actor.SeatContactErrorPx <= 1f &&
+                // A typing chair may be visually pulled out under its occupant. The authored
+                // semantic socket remains exact while flat pixel characters keep scale/rotation 1/0.
+                bool presentationMatches = actor.ChairDeskErrorPx <= 12f &&
+                    actor.TypingContactSampleCount > 0 &&
+                    actor.MaxTypingSeatContactErrorPx <= 6f &&
+                    actor.MaxTypingHandWorkErrorPx <= 4f &&
                     actor.VisualRotationErrorDegrees <= 0.01f &&
                     actor.VisualScaleDeviation <= 0.001f && actor.CurrentDirection == 3 &&
                     actor.SeatingPresentationMode == OfficeSeatingPresentationMode.Animated &&
@@ -1084,7 +1129,11 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(
                     57,
                     $"seated contact placement failed for {memberId}: " +
-                    $"seatContact={actor.SeatContactErrorPx:F2}px rotation={actor.VisualRotationErrorDegrees:F4}deg " +
+                    $"seatContact={actor.SeatContactErrorPx:F2}px handWork={actor.HandWorkErrorPx:F2}px " +
+                        $"chairDesk={actor.ChairDeskErrorPx:F2}px typingContact=" +
+                        $"{actor.TypingContactSampleCount}:seat{actor.MaxTypingSeatContactErrorPx:F2}px/" +
+                        $"hand{actor.MaxTypingHandWorkErrorPx:F2}px " +
+                        $"rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                         $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
                         $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
                         $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
@@ -1167,7 +1216,8 @@ namespace FamilyCompany.Presentation.Unity
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
                 " | animation=4x(SitDown4+WorkActionHook>=6+StandUp4) mode=Animated " +
                 "placement=continuous,maxPelvisStep<=2px,monotonic,anchorError<=1px," +
-                "seatContact<=1px,rotation=0,scale=canonical,sorting=chairFloor+1 | " +
+                "typingSeat<=6px,typingHand<=4px,chairPullout<=12px," +
+                "rotation=0,scale=canonical,sorting=chairFloor+1 | " +
                 OccupancyMetricSummary());
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
             yield return null;
@@ -1198,6 +1248,53 @@ namespace FamilyCompany.Presentation.Unity
                 if (!string.IsNullOrWhiteSpace(directory)) return Path.Combine(directory, fileName);
             }
             return Path.Combine(Application.persistentDataPath, fileName);
+        }
+
+        private IEnumerator CaptureOfficeHudQa()
+        {
+            string path = QaArtifactPath("starter-office-modern-hud.png");
+            yield return new WaitForEndOfFrame();
+            if (!TryCaptureQaCameraFrame(path, 1392, 699, true, out string failure))
+            {
+                FailPlayerQa(34, "office HUD capture failed: " + failure);
+                yield break;
+            }
+            Debug.Log(
+                $"STARTER_OFFICE_MODERN_HUD_QA_PASS | resolution=1392x699 " +
+                $"bytes={new FileInfo(path).Length} capture={path}");
+        }
+
+        private IEnumerator RunRealtimeAutonomyClockQa(PrototypeBootstrap bootstrap)
+        {
+            FamilyMemberState sister = bootstrap.State.Family.Get("older_sister");
+            long startedMinute = bootstrap.State.Time.ElapsedMinutes;
+            long initialSequence = sister.Autonomy.MicroAction.SequenceIndex;
+            OfficeMicroAction initialAction = sister.Autonomy.MicroAction.Action;
+            long initialEndsMinute = sister.Autonomy.MicroAction.EndsMinute;
+            long requiredMinute = Math.Max(startedMinute + 1L, initialEndsMinute + 1L);
+            float deadline = Time.unscaledTime + 7f;
+            while (bootstrap.State.Time.ElapsedMinutes < requiredMinute && Time.unscaledTime < deadline)
+                yield return null;
+
+            long actualMinute = bootstrap.State.Time.ElapsedMinutes;
+            long actualSequence = sister.Autonomy.MicroAction.SequenceIndex;
+            bool actionLifecycleAdvanced = initialAction == OfficeMicroAction.None ||
+                                           initialEndsMinute <= startedMinute ||
+                                           actualSequence > initialSequence;
+            if (actualMinute <= startedMinute || !actionLifecycleAdvanced)
+            {
+                FailPlayerQa(
+                    35,
+                    $"realtime autonomy clock did not advance: minute={startedMinute}->{actualMinute} " +
+                    $"sister={initialAction}/{initialSequence}->{sister.Autonomy.MicroAction.Action}/{actualSequence} " +
+                    $"initialEnds={initialEndsMinute}");
+                yield break;
+            }
+            Debug.Log(
+                $"STARTER_OFFICE_REALTIME_AUTONOMY_CLOCK_QA_PASS | " +
+                $"minute={startedMinute}->{actualMinute} sister=" +
+                $"{initialAction}/{initialSequence}->{sister.Autonomy.MicroAction.Action}/{actualSequence} " +
+                $"initialEnds={initialEndsMinute}");
         }
 
         private string RouteMetricSummary(int replansBefore, int arrivalsBefore)
@@ -1241,7 +1338,7 @@ namespace FamilyCompany.Presentation.Unity
             float previousSize = camera.orthographicSize;
             try
             {
-                camera.transform.position = new Vector3(bounds.center.x, bounds.center.y, previousPosition.z);
+                CenterCameraOnWorldPoint(camera, bounds.center);
                 camera.orthographicSize = Mathf.Max(1.1f, Mathf.Max(bounds.extents.x, bounds.extents.y) * 1.18f);
                 return TryCaptureQaCameraFrame(path, 1024, 1024, out failure);
             }
@@ -1291,7 +1388,7 @@ namespace FamilyCompany.Presentation.Unity
                 EncapsulateFurnitureRenderers(seat.ChairFurnitureId, ref bounds);
                 if (seat.HasWorkstationBinding)
                     EncapsulateFurnitureRenderers(seat.WorkSurfaceFurnitureId, ref bounds);
-                camera.transform.position = new Vector3(bounds.center.x, bounds.center.y, previousPosition.z);
+                CenterCameraOnWorldPoint(camera, bounds.center);
                 camera.orthographicSize = Mathf.Max(
                     1.1f,
                     Mathf.Max(bounds.extents.x, bounds.extents.y) * 1.18f);
@@ -1317,7 +1414,21 @@ namespace FamilyCompany.Presentation.Unity
             }
         }
 
-        private static bool TryCaptureQaCameraFrame(string path, int width, int height, out string failure)
+        private static bool TryCaptureQaCameraFrame(
+            string path,
+            int width,
+            int height,
+            out string failure)
+        {
+            return TryCaptureQaCameraFrame(path, width, height, false, out failure);
+        }
+
+        private static bool TryCaptureQaCameraFrame(
+            string path,
+            int width,
+            int height,
+            bool includeOfficeHud,
+            out string failure)
         {
             failure = string.Empty;
             Camera camera = Camera.main;
@@ -1327,14 +1438,54 @@ namespace FamilyCompany.Presentation.Unity
                 return false;
             }
 
-            RenderTexture previousTarget = camera.targetTexture;
             RenderTexture previousActive = RenderTexture.active;
             var target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
             var pixels = new Texture2D(width, height, TextureFormat.RGB24, false);
+            GameObject captureObject = null;
+            Canvas officeHudCanvas = null;
+            RenderMode previousCanvasMode = RenderMode.ScreenSpaceOverlay;
+            Camera previousCanvasCamera = null;
+            float previousCanvasPlaneDistance = 0f;
             try
             {
-                camera.targetTexture = target;
-                camera.Render();
+                // Rendering the live camera directly invokes its pixelation post-effect with a
+                // manually assigned destination and produced a uniform clear-colour PNG while the
+                // on-screen game was healthy. A component-free camera clone renders the exact same
+                // world view without that destination ownership conflict.
+                captureObject = new GameObject("StarterOfficeQaCaptureCamera")
+                {
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                Camera captureCamera = captureObject.AddComponent<Camera>();
+                captureCamera.CopyFrom(camera);
+                captureCamera.transform.SetPositionAndRotation(
+                    camera.transform.position,
+                    camera.transform.rotation);
+                captureCamera.enabled = false;
+                captureCamera.targetTexture = target;
+                if (includeOfficeHud)
+                {
+                    officeHudCanvas = Object.FindObjectsByType<Canvas>(
+                            FindObjectsInactive.Exclude,
+                            FindObjectsSortMode.None)
+                        .FirstOrDefault(item => item != null &&
+                            string.Equals(item.gameObject.name, "Office Observation HUD", StringComparison.Ordinal));
+                    if (officeHudCanvas == null)
+                    {
+                        failure = "Office Observation HUD canvas is missing or inactive";
+                        return false;
+                    }
+                    previousCanvasMode = officeHudCanvas.renderMode;
+                    previousCanvasCamera = officeHudCanvas.worldCamera;
+                    previousCanvasPlaneDistance = officeHudCanvas.planeDistance;
+                    officeHudCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+                    officeHudCanvas.worldCamera = captureCamera;
+                    officeHudCanvas.planeDistance = Mathf.Max(
+                        captureCamera.nearClipPlane + 0.1f,
+                        1f);
+                    Canvas.ForceUpdateCanvases();
+                }
+                captureCamera.Render();
                 RenderTexture.active = target;
                 pixels.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
                 pixels.Apply(false, false);
@@ -1346,6 +1497,25 @@ namespace FamilyCompany.Presentation.Unity
                     failure = "capture file is missing or empty";
                     return false;
                 }
+                Color32[] captured = pixels.GetPixels32();
+                byte minR = byte.MaxValue, minG = byte.MaxValue, minB = byte.MaxValue;
+                byte maxR = byte.MinValue, maxG = byte.MinValue, maxB = byte.MinValue;
+                for (int index = 0; index < captured.Length; index += 4)
+                {
+                    Color32 color = captured[index];
+                    minR = Math.Min(minR, color.r);
+                    minG = Math.Min(minG, color.g);
+                    minB = Math.Min(minB, color.b);
+                    maxR = Math.Max(maxR, color.r);
+                    maxG = Math.Max(maxG, color.g);
+                    maxB = Math.Max(maxB, color.b);
+                }
+                if (maxR - minR < 8 && maxG - minG < 8 && maxB - minB < 8)
+                {
+                    failure =
+                        $"capture is visually blank: rgb=({minR}-{maxR},{minG}-{maxG},{minB}-{maxB})";
+                    return false;
+                }
                 return true;
             }
             catch (Exception exception)
@@ -1355,12 +1525,29 @@ namespace FamilyCompany.Presentation.Unity
             }
             finally
             {
-                camera.targetTexture = previousTarget;
+                if (officeHudCanvas != null)
+                {
+                    officeHudCanvas.renderMode = previousCanvasMode;
+                    officeHudCanvas.worldCamera = previousCanvasCamera;
+                    officeHudCanvas.planeDistance = previousCanvasPlaneDistance;
+                    Canvas.ForceUpdateCanvases();
+                }
                 RenderTexture.active = previousActive;
                 target.Release();
+                if (captureObject != null) Object.Destroy(captureObject);
                 Object.Destroy(target);
                 Object.Destroy(pixels);
             }
+        }
+
+        private static void CenterCameraOnWorldPoint(Camera camera, Vector3 target)
+        {
+            float depth = Vector3.Dot(
+                target - camera.transform.position,
+                camera.transform.forward);
+            if (depth <= camera.nearClipPlane) depth = Mathf.Max(1f, camera.farClipPlane * 0.01f);
+            Vector3 currentViewCenter = camera.transform.position + camera.transform.forward * depth;
+            camera.transform.position += target - currentViewCenter;
         }
 
         private IEnumerator RunContractAndSaveLoadQa(PrototypeBootstrap bootstrap)

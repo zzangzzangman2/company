@@ -1,4 +1,5 @@
 using System;
+using FamilyCompany.Simulation.OfficeWorkActions;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.OfficeSeating
@@ -16,6 +17,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
     public interface IOfficeSeatedWorkAnimationSession : IDisposable
     {
         Sprite CurrentSprite { get; }
+        OfficeWorkMicroAction CurrentAction { get; }
         bool IsSafeToStand { get; }
         void Tick(float deltaTime);
         void RequestSafeStop();

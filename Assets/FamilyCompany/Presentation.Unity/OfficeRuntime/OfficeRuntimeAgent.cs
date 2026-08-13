@@ -9,6 +9,7 @@ using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeInteractions;
 using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Simulation.OfficeWorkActions;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.OfficeRuntime
@@ -34,6 +35,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private const float ArrivalDistance = 0.035f;
         private const float CornerAnticipationDistance =
             OfficeLocomotionGaitRules.DefaultStrideLength * 0.20f;
+        // Translation-only least-squares placement. The keyboard receives a little more weight
+        // because the chair foreground safely hides a small pelvis residual, while a floating
+        // typing hand remains immediately visible.
+        // Keep hands planted on the keyboard. The rendered chair absorbs the small remaining
+        // proportion difference, without scale/rotation or member-specific numbers.
+        private const float TypingWorkContactWeight = 0.90f;
 
         private PrototypeBootstrap _bootstrap;
         private OfficeRuntimeWorld _world;
@@ -81,6 +88,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _presentationAway;
         private float _chairDeskErrorPx;
         private float _seatContactErrorPx;
+        private float _handWorkErrorPx;
+        private float _maxTypingSeatContactErrorPx;
+        private float _maxTypingHandWorkErrorPx;
+        private int _typingContactSampleCount;
         private bool _qaControl;
         private Vector2 _lastActualDisplacement;
         private OfficeGridCoordinate? _yieldCell;
@@ -152,6 +163,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         /// SpriteRenderer - never hardcoded.
         /// </summary>
         public float SeatContactErrorPx => _seatContactErrorPx;
+        public float HandWorkErrorPx => _handWorkErrorPx;
+        public float MaxTypingSeatContactErrorPx => _maxTypingSeatContactErrorPx;
+        public float MaxTypingHandWorkErrorPx => _maxTypingHandWorkErrorPx;
+        public int TypingContactSampleCount => _typingContactSampleCount;
+        public OfficeWorkMicroAction CurrentOfficeWorkMicroAction => _animator == null
+            ? OfficeWorkMicroAction.None
+            : _animator.CurrentOfficeWorkMicroAction;
         public Vector2 LastActualDisplacement => _lastActualDisplacement;
         public Vector2 AccumulatedFrameDisplacement => _animator == null
             ? Vector2.zero
@@ -491,6 +509,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _observedStandUpFrameMask = 0;
             _observedOfficeWorkHookSprites.Clear();
             _maxAnimatedAnchorErrorPx = 0f;
+            _maxTypingSeatContactErrorPx = 0f;
+            _maxTypingHandWorkErrorPx = 0f;
+            _typingContactSampleCount = 0;
             ResetTransitionMotionMetrics();
             _maxTransitionPelvisStepPx = 0f;
             _transitionMonotonicViolationCount = 0;
@@ -1521,16 +1542,60 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 _observedOfficeWorkHookSprites.Add(appliedSprite.name);
             }
-            if (_animator.SeatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork)
+            bool alignTypingContact =
+                clip == OfficeSeatingAnimationClip.Work &&
+                _animator.SeatingPresentationMode == OfficeSeatingPresentationMode.Animated &&
+                _animator.IsOfficeWorkAnimationHookActive &&
+                _animator.CurrentOfficeWorkMicroAction == OfficeWorkMicroAction.Typing;
+            if (alignTypingContact)
             {
+                ApplyTypingWorkstationContactPlacement(profile);
+            }
+            else if (_animator.SeatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork)
+            {
+                _world.Workstations.RestoreChairPresentation(_seat);
                 ApplySeatedContactPlacement(profile);
             }
             else
             {
+                _world.Workstations.RestoreChairPresentation(_seat);
                 ApplyAnimatedSeatingPlacement(clip, frame, profile);
             }
             _alignedClip = clip;
             _alignedFrame = frame;
+        }
+
+        private void ApplyTypingWorkstationContactPlacement(
+            OfficeCharacterSeatPoseProfile profile)
+        {
+            if (_seat == null || profile == null || !_seat.HasWorkstationBinding) return;
+            if (Mathf.Abs(profile.RotationDegrees) > 0.01f)
+                throw new InvalidOperationException($"Seated pose rotation must be zero for {_agentId}.");
+            if (Mathf.Abs(profile.UniformScale - 1f) > 0.0001f)
+                throw new InvalidOperationException($"Seated pose scale must be 1 for {_agentId}.");
+
+            _world.Workstations.RestoreChairPresentation(_seat);
+            _visualRoot.localPosition = Vector3.zero;
+            _visualRoot.localRotation = Quaternion.identity;
+            _visualRoot.localScale = Vector3.one * OfficeGridCharacterMover.UniformVisualScale;
+            Vector3 pelvis = OfficeSeatedOccupantContract.OccupantSeatContactWorld(
+                _renderer,
+                profile.PelvisAnchorPx);
+            Vector3 hand = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                _renderer,
+                profile.HandAnchorPx);
+            Vector3 seatDelta = _world.Workstations.ChairSeatAnchorWorld(_seat) - pelvis;
+            Vector3 workDelta = _world.Workstations.DeskWorkSocketWorld(_seat) - hand;
+            Vector3 balancedDelta = Vector3.Lerp(
+                seatDelta,
+                workDelta,
+                TypingWorkContactWeight);
+            _visualRoot.localPosition = transform.InverseTransformVector(balancedDelta);
+            Vector3 alignedPelvis = OfficeSeatedOccupantContract.OccupantSeatContactWorld(
+                _renderer,
+                profile.PelvisAnchorPx);
+            _world.Workstations.AlignChairPresentationToOccupant(_seat, alignedPelvis);
+            _world.Workstations.ApplyPresentationStack(_seat, _renderer, transform.position);
         }
 
         private void ApplyAnimatedSeatingPlacement(
@@ -1635,6 +1700,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _observedStandUpFrameMask = 0;
             _observedOfficeWorkHookSprites.Clear();
             _maxAnimatedAnchorErrorPx = 0f;
+            _maxTypingSeatContactErrorPx = 0f;
+            _maxTypingHandWorkErrorPx = 0f;
+            _typingContactSampleCount = 0;
             ResetTransitionMotionMetrics();
             _maxTransitionPelvisStepPx = 0f;
             _transitionMonotonicViolationCount = 0;
@@ -1767,6 +1835,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 Camera.main,
                 OfficeSeatedOccupantContract.OccupantSeatContactWorld(_renderer, profile.PelvisAnchorPx),
                 _world.Workstations.ChairSeatAnchorWorld(_seat));
+            _handWorkErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
+                Camera.main,
+                OfficeGridAlignmentMetrics.SpriteAnchorWorld(_renderer, profile.HandAnchorPx),
+                _world.Workstations.DeskWorkSocketWorld(_seat));
+            if (_animator.CurrentOfficeWorkMicroAction == OfficeWorkMicroAction.Typing)
+            {
+                _typingContactSampleCount++;
+                _maxTypingSeatContactErrorPx = Mathf.Max(
+                    _maxTypingSeatContactErrorPx,
+                    _seatContactErrorPx);
+                _maxTypingHandWorkErrorPx = Mathf.Max(
+                    _maxTypingHandWorkErrorPx,
+                    _handWorkErrorPx);
+            }
         }
 
         private void ReleaseSeatImmediately()

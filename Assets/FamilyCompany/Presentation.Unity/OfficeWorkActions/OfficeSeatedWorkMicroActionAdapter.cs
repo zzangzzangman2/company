@@ -117,6 +117,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             }
 
             public bool IsDisposed => _disposed;
+            public OfficeWorkMicroAction CurrentAction =>
+                _disposed ? OfficeWorkMicroAction.None : _machine.CurrentAction;
 
             public Sprite CurrentSprite
             {

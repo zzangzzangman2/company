@@ -44,7 +44,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Vector2[] sourceForegroundExclusionPolygon = null,
                 Vector2? sourceOperatorSeatSocketPx = null,
                 int semanticFootprintWidth = 1,
-                int semanticFootprintHeight = 1)
+                int semanticFootprintHeight = 1,
+                Vector2? presentationOffsetPx = null)
             {
                 KindId = kindId;
                 Stem = stem;
@@ -62,6 +63,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 SourceOperatorSeatSocketPx = sourceOperatorSeatSocketPx;
                 SemanticFootprintWidth = semanticFootprintWidth;
                 SemanticFootprintHeight = semanticFootprintHeight;
+                PresentationOffsetPx = presentationOffsetPx ?? Vector2.zero;
             }
 
             public string KindId { get; }
@@ -80,6 +82,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             public Vector2? SourceOperatorSeatSocketPx { get; }
             public int SemanticFootprintWidth { get; }
             public int SemanticFootprintHeight { get; }
+            public Vector2 PresentationOffsetPx { get; }
             public string SourcePath => $"{SourceFolder}/{SourceStem}_alpha_{Version}.png";
             public string RuntimePath => $"{RuntimeFolder}/{Stem}_{Version}.png";
             public string FrontPath => $"{RuntimeFolder}/{Stem}_front_{Version}.png";
@@ -106,8 +109,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 new Vector2(760f, 200f),
                 new Vector2(705f, 125f),
                 "v4",
-                sourceWorkSurfaceAnchorPx: new Vector2(663f, 266f),
-                sourceOperatorSeatSocketPx: new Vector2(919.115f, 174.598f),
+                // Actual CRT-keyboard contact, not the former lower desk-edge proxy.
+                sourceWorkSurfaceAnchorPx: new Vector2(842.7f, 578.5f),
+                // Shares the same presentation correction as the paired chair.
+                sourceOperatorSeatSocketPx: new Vector2(1005.35f, 433.28f),
                 semanticFootprintWidth: 2,
                 sourceForegroundPolygon: new[]
                 {
@@ -132,7 +137,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 new Vector2(620f, 235f),
                 "v3",
                 "office_swivel_chair_northwest",
-                new Vector2(600f, 650f)),
+                new Vector2(600f, 650f),
+                presentationOffsetPx: new Vector2(40f, 120f)),
             new FurnitureSpec(OfficeGridLayouts.ReceptionCounterKind, "office_reception_counter", 500, 340,
                 OfficeFurnitureFacing.SouthEast, new Vector2(834f, 180f), new Vector2(834f, 162f),
                 semanticFootprintWidth: 2),
@@ -443,7 +449,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     spec.SemanticFootprintWidth,
                     spec.SemanticFootprintHeight,
                     spec.RuntimeOperatorSeatSocketPx,
-                    spec.SourceOperatorSeatSocketPx.HasValue)).ToArray();
+                    spec.SourceOperatorSeatSocketPx.HasValue,
+                    spec.PresentationOffsetPx)).ToArray();
             catalog.ReplaceDefinitions(definitions, OfficeFurnitureVisualCatalog.CurrentCalibrationVersion);
             EditorUtility.SetDirty(catalog);
         }

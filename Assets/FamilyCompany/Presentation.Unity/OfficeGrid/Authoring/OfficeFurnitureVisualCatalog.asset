@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c97eff97c1317643a3688681d7764bb, type: 3}
   m_Name: OfficeFurnitureVisualCatalog
   m_EditorClassIdentifier: FamilyCompany.Presentation.Unity::FamilyCompany.Presentation.Unity.OfficeGridView.Authoring.OfficeFurnitureVisualCatalog
-  calibrationVersion: 2
+  calibrationVersion: 3
   definitions:
   - kindId: desk_with_pc
     facing: 0
@@ -28,8 +28,8 @@ MonoBehaviour:
     semanticFootprintWidth: 2
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
-    workSurfaceAnchorPx: {x: 271.62888, y: 91.73196}
-    operatorSeatSocketPx: {x: 390.44513, y: 49.328968}
+    workSurfaceAnchorPx: {x: 355, y: 233}
+    operatorSeatSocketPx: {x: 430.44513, y: 169.32896}
     uniformScale: 1
     hasSeatAnchor: 0
     hasWorkSurfaceAnchor: 1
@@ -51,6 +51,7 @@ MonoBehaviour:
     seatAnchorPx: {x: 313.00708, y: 153.54948}
     workSurfaceAnchorPx: {x: 0, y: 0}
     operatorSeatSocketPx: {x: 0, y: 0}
+    presentationOffsetPx: {x: 40, y: 120}
     uniformScale: 1
     hasSeatAnchor: 1
     hasWorkSurfaceAnchor: 0

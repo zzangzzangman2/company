@@ -15,6 +15,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             public OfficeFurnitureVisualDefinition Definition;
             public Transform SemanticRoot;
             public Transform VisualRoot;
+            public Vector3 AuthoredVisualLocalPosition;
             public SpriteRenderer BaseRenderer;
             public SpriteRenderer FrontRenderer;
         }
@@ -64,7 +65,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
                 var visualRootObject = new GameObject("VisualRoot");
                 visualRootObject.transform.SetParent(root.transform, false);
-                visualRootObject.transform.localPosition = Vector3.zero;
+                Vector2 presentationOffset = definition.PresentationOffsetPx;
+                visualRootObject.transform.localPosition = new Vector3(
+                    (flipX ? -presentationOffset.x : presentationOffset.x) /
+                    OfficeGridTilemapPresenter.PixelsPerUnit,
+                    presentationOffset.y / OfficeGridTilemapPresenter.PixelsPerUnit,
+                    0f);
                 visualRootObject.transform.localRotation = Quaternion.identity;
                 visualRootObject.transform.localScale = Vector3.one * definition.UniformScale;
 
@@ -108,6 +114,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                     Definition = definition,
                     SemanticRoot = root.transform,
                     VisualRoot = visualRootObject.transform,
+                    AuthoredVisualLocalPosition = visualRootObject.transform.localPosition,
                     BaseRenderer = baseRenderer,
                     FrontRenderer = frontRenderer
                 };
@@ -181,6 +188,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (!visual.Definition.HasSeatAnchor)
                 throw new InvalidOperationException("Furniture has no seat anchor: " + furnitureId);
             return OfficeGridAlignmentMetrics.SpriteAnchorWorld(visual.BaseRenderer, visual.Definition.SeatAnchorPx);
+        }
+
+        /// <summary>
+        /// Pulls only the rendered chair under a planted occupant. Semantic seating, collision and
+        /// navigation stay immutable, so different body proportions need no member-specific offsets.
+        /// </summary>
+        public void AlignSeatPresentationToWorld(OfficeSeatSlot seat, Vector3 desiredSeatWorld)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
+            chair.VisualRoot.localPosition = chair.AuthoredVisualLocalPosition;
+            Vector3 currentSeatWorld = SeatAnchorWorld(seat.ChairFurnitureId);
+            chair.VisualRoot.position += desiredSeatWorld - currentSeatWorld;
+        }
+
+        public void RestoreSeatPresentation(OfficeSeatSlot seat)
+        {
+            if (seat == null) return;
+            FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
+            chair.VisualRoot.localPosition = chair.AuthoredVisualLocalPosition;
         }
 
         public Vector3 WorkSurfaceAnchorWorld(string furnitureId)
@@ -279,6 +306,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public void ClearSeatOcclusion(OfficeSeatSlot seat)
         {
             if (seat == null) return;
+            RestoreSeatPresentation(seat);
             RestoreVisualSorting(RequiredVisual(seat.ChairFurnitureId));
             if (seat.HasWorkstationBinding) RestoreVisualSorting(RequiredVisual(seat.WorkSurfaceFurnitureId));
         }

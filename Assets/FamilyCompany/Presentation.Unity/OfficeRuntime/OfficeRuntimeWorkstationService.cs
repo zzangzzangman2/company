@@ -412,6 +412,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public Vector3 DeskWorkSocketWorld(OfficeSeatSlot seat) =>
             _furniturePresenter.OperatorWorkSocketWorld(seat.WorkSurfaceFurnitureId);
 
+        public void AlignChairPresentationToOccupant(OfficeSeatSlot seat, Vector3 occupantPelvisWorld) =>
+            _furniturePresenter.AlignSeatPresentationToWorld(seat, occupantPelvisWorld);
+
+        public void RestoreChairPresentation(OfficeSeatSlot seat) =>
+            _furniturePresenter.RestoreSeatPresentation(seat);
+
         /// <summary>
         /// Kept as the seating hook, but sorting is no longer decided here.
         /// <see cref="OfficeRuntimeDepthSorter"/> orders the whole office from its footprints once

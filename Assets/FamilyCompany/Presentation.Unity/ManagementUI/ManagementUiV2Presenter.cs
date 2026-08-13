@@ -30,6 +30,11 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private static readonly Color BorderColor = Hex("9CAFAA");
         private static readonly Color DisabledColor = Hex(ManagementUiAccessibility.DisabledHex);
         private static readonly Color DisabledTextColor = Hex(ManagementUiAccessibility.DisabledTextHex);
+        private static readonly Color OfficeHudShellColor = Hex("142729");
+        private static readonly Color OfficeHudCardColor = Hex("203B3B");
+        private static readonly Color OfficeHudTextColor = Hex("FFF6E2");
+        private static readonly Color OfficeHudMutedColor = Hex("B7CBC4");
+        private static readonly Color OfficeHudAccentColor = Hex("EF7558");
         private static readonly string[] ContractClientIds = { "samsung-electronics", "lg-electronics", "sk-telecom" };
         private static readonly string[] ContractClientNames = { "삼성전자", "LG전자", "SK텔레콤" };
 
@@ -39,6 +44,8 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             new Dictionary<string, IOfficeObservationStatusSource>(StringComparer.Ordinal);
         private readonly Dictionary<string, OfficeWorkerAgent> _agents =
             new Dictionary<string, OfficeWorkerAgent>(StringComparer.Ordinal);
+        private readonly Dictionary<int, Button> _officeSpeedButtons =
+            new Dictionary<int, Button>();
 
         private PrototypeBootstrap _bootstrap;
         private GameObject _officeHudRoot;
@@ -186,52 +193,116 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private void BuildOfficeHud()
         {
             var layout = _officeSafeRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(24, 24, 24, 24), 16f);
+            ConfigureLayout(layout, new RectOffset(20, 20, 16, 16), 0f);
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
 
-            var top = CreatePanel("Office HUD Top", _officeSafeRoot, PanelColor, PanelSprite);
-            AddLayout(top, -1f, 88f, 88f, 0f);
+            var top = CreatePanel("Office HUD", _officeSafeRoot, OfficeHudShellColor, PanelSprite);
+            AddLayout(top, -1f, 172f, 172f, 0f);
             var topVertical = top.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(topVertical, new RectOffset(18, 18, 10, 10), 5f);
+            ConfigureLayout(topVertical, new RectOffset(18, 18, 14, 14), 8f);
             topVertical.childControlHeight = true;
             topVertical.childForceExpandHeight = false;
 
             var firstRow = CreateRect("Company Row", top);
-            AddLayout(firstRow, -1f, 28f, 28f, 0f);
+            AddLayout(firstRow, -1f, 42f, 42f, 0f);
             var firstLayout = firstRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(firstLayout, null, 12f);
-            _officeCompanyText = AddText(firstRow, string.Empty, 22f, true, TextAlignmentOptions.MidlineLeft, -1f, 28f);
-            _officeTimeText = AddText(firstRow, string.Empty, 19f, false, TextAlignmentOptions.Midline, 420f, 28f);
-            AddButton(firstRow, "관리 화면  ESC", _bootstrap.ShowManagementNow, true, 210f, 28f);
+            ConfigureLayout(firstLayout, null, 14f);
+            firstLayout.childAlignment = TextAnchor.MiddleLeft;
+            _officeCompanyText = AddText(
+                firstRow, string.Empty, 25f, true, TextAlignmentOptions.MidlineLeft, -1f, 42f, OfficeHudTextColor);
+            _officeTimeText = AddText(
+                firstRow, string.Empty, 19f, false, TextAlignmentOptions.Midline, 460f, 42f, OfficeHudMutedColor);
+            var managementButton = AddButton(
+                firstRow, "관리 화면   ESC", _bootstrap.ShowManagementNow, true, 210f, 42f);
+            StyleOfficeHudButton(managementButton, true);
 
             var secondRow = CreateRect("Status Row", top);
-            AddLayout(secondRow, -1f, 32f, 32f, 0f);
+            AddLayout(secondRow, -1f, 54f, 54f, 0f);
             var statusLayout = secondRow.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(statusLayout, null, 8f);
-            foreach (var memberId in new[] { "player", "older_sister", "father", "mother" })
-                _officeMemberStatus[memberId] = AddText(secondRow, string.Empty, 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 30f);
-            _officeSpeedText = AddText(secondRow, string.Empty, 16f, false, TextAlignmentOptions.MidlineRight, 92f, 30f);
-            AddButton(secondRow, "1×", () => _bootstrap.SetWorldTimeScaleNow(1f), false, 50f, 30f);
-            AddButton(secondRow, "2×", () => _bootstrap.SetWorldTimeScaleNow(2f), false, 50f, 30f);
-            AddButton(secondRow, "4×", () => _bootstrap.SetWorldTimeScaleNow(4f), false, 50f, 30f);
+            statusLayout.childAlignment = TextAnchor.MiddleLeft;
+            _officeMemberStatus.Clear();
+            if (_bootstrap.State != null)
+            {
+                foreach (var member in _bootstrap.State.Family.Members)
+                {
+                    var card = CreatePanel($"Member Status {member.MemberId}", secondRow, OfficeHudCardColor, CardSprite);
+                    AddLayout(card, -1f, 54f, 54f, 1f);
+                    _officeMemberStatus[member.MemberId] = AddText(
+                        card, string.Empty, 16f, false, TextAlignmentOptions.MidlineLeft, -1f, -1f, OfficeHudTextColor);
+                    var memberLabel = _officeMemberStatus[member.MemberId];
+                    memberLabel.margin = new Vector4(12f, 0f, 10f, 0f);
+                    memberLabel.textWrappingMode = TextWrappingModes.NoWrap;
+                    Stretch(memberLabel.rectTransform);
+                }
+            }
+
+            var speedCard = CreatePanel("Time Speed", secondRow, OfficeHudCardColor, CardSprite);
+            AddLayout(speedCard, 310f, 54f, 54f, 0f);
+            var speedLayout = speedCard.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(speedLayout, new RectOffset(10, 8, 7, 7), 6f);
+            speedLayout.childAlignment = TextAnchor.MiddleLeft;
+            _officeSpeedText = AddText(
+                speedCard, string.Empty, 15f, false, TextAlignmentOptions.MidlineLeft, 96f, 40f, OfficeHudMutedColor);
+            _officeSpeedButtons.Clear();
+            foreach (var speed in new[] { 1, 2, 4 })
+            {
+                var capturedSpeed = speed;
+                var button = AddButton(
+                    speedCard,
+                    $"{speed}×",
+                    () => _bootstrap.SetWorldTimeScaleNow(capturedSpeed),
+                    false,
+                    56f,
+                    40f);
+                StyleOfficeHudButton(button, false);
+                _officeSpeedButtons[speed] = button;
+            }
+
+            var noticeRow = CreateRect("Notice Row", top);
+            AddLayout(noticeRow, -1f, 26f, 26f, 0f);
+            var noticeLayout = noticeRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(noticeLayout, null, 16f);
+            noticeLayout.childAlignment = TextAnchor.MiddleLeft;
+            var live = AddText(
+                noticeRow, "●  LIVE", 14f, true, TextAlignmentOptions.MidlineLeft, 92f, 26f, OfficeHudAccentColor);
+            live.characterSpacing = 1.5f;
+            _officeNoticeText = AddText(
+                noticeRow, string.Empty, 15f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f, OfficeHudMutedColor);
+            AddText(
+                noticeRow,
+                "C  시점 전환     E  작업     F11  전체 화면",
+                14f,
+                false,
+                TextAlignmentOptions.MidlineRight,
+                430f,
+                26f,
+                OfficeHudMutedColor);
 
             var spacer = CreateRect("World Input Space", _officeSafeRoot);
             AddLayout(spacer, -1f, -1f, -1f, 1f);
+        }
 
-            var bottom = CreatePanel("Office HUD Bottom", _officeSafeRoot, PanelColor, PanelSprite);
-            AddLayout(bottom, -1f, 52f, 52f, 0f);
-            var bottomLayout = bottom.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(bottomLayout, new RectOffset(18, 18, 8, 8), 12f);
-            _officeNoticeText = AddText(bottom, string.Empty, 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 34f);
-            AddText(
-                bottom,
-                "카메라  C(사무실/플레이어)·휠 줌   ·   작업  E   ·   관리  ESC   ·   전체 화면  F11",
-                16f,
-                false,
-                TextAlignmentOptions.MidlineRight,
-                760f,
-                34f);
+        private void StyleOfficeHudButton(Button button, bool primary)
+        {
+            if (button == null) return;
+            var normal = primary ? OfficeHudAccentColor : Hex("2C4B49");
+            var highlighted = primary ? Hex("FA8C6D") : Hex("3A5E5A");
+            var pressed = primary ? Hex("C8553E") : Hex("173331");
+            if (button.image != null) button.image.color = normal;
+            button.colors = new ColorBlock
+            {
+                normalColor = normal,
+                highlightedColor = highlighted,
+                pressedColor = pressed,
+                selectedColor = highlighted,
+                disabledColor = Hex("253333"),
+                colorMultiplier = 1f,
+                fadeDuration = 0.08f
+            };
+            var label = button.GetComponentInChildren<TMP_Text>();
+            if (label != null) label.color = OfficeHudTextColor;
         }
 
         private void BuildManagementOverlay()
@@ -667,11 +738,29 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             SetText(_officeTimeText, state.Time.Now.ToString("yyyy년 MM월 dd일 ddd HH:mm"));
             SetText(_officeNoticeText, _bootstrap.WorldNotice);
             SetText(_officeSpeedText, $"시간배속 {_bootstrap.WorldTimeScale:0}×");
+            RefreshOfficeSpeedButtons();
             SetText(_managementCompanyText, $"{state.Company.CompanyName} · 관리 화면");
             SetText(_managementTimeText, state.Time.Now.ToString("yyyy년 MM월 dd일 ddd HH:mm"));
             SetText(_managementCashText, $"현금 {state.Company.CashWon:N0}원  ·  평판 {state.Company.Reputation}");
             SetText(_managementNoticeText, $"SLOT {_bootstrap.ActiveSlot}\n{_bootstrap.WorldNotice}");
             RefreshObservationStatuses();
+        }
+
+        private void RefreshOfficeSpeedButtons()
+        {
+            var selected = Mathf.RoundToInt(_bootstrap.WorldTimeScale);
+            foreach (var pair in _officeSpeedButtons)
+            {
+                var button = pair.Value;
+                if (button == null || button.image == null) continue;
+                var active = pair.Key == selected;
+                var normal = active ? OfficeHudAccentColor : Hex("2C4B49");
+                var colors = button.colors;
+                colors.normalColor = normal;
+                colors.selectedColor = active ? Hex("FA8C6D") : Hex("3A5E5A");
+                button.colors = colors;
+                button.image.color = normal;
+            }
         }
 
         private void RefreshObservationStatuses()
@@ -694,7 +783,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             {
                 if (!_officeMemberStatus.TryGetValue(member.MemberId, out var label)) continue;
                 var status = ResolveObservationStatus(member);
-                SetText(label, $"{member.DisplayName}  ·  {status}");
+                SetText(label, $"{member.DisplayName}\n{status}");
             }
         }
 

@@ -150,11 +150,11 @@
 - 제작: OpenAI 내장 imagegen. 기존 `simul` 타이틀 원화는 화면 에너지와 완성도 참고, 누나 정본 원화는 캐릭터 정체성 참고로 사용했다.
 - 프롬프트 핵심: 왼쪽 38%를 어두운 UI 안전 영역으로 비우고 오른쪽에 누나와 사무실을 배치하며, 이미지 안 글자·로고·버튼·워터마크를 금지했다.
 
-### Money Rain 무인 타이틀 대안
+### Money Rain 돈다발 레이어
 
-- 상태: **GENERATED TITLE ALTERNATIVE · 기존 hero 미교체**
+- 상태: **ACTIVE OVERLAY · 폐기된 무인 사무실 배경은 제거**
 - 루트: `Assets/Art/UI/Resources/Title/MoneyRain/`
-- 배경: `money_rain_office_background_v1.png`, 1920×1080 RGBA, SHA-256 `C0431E765D90A78016B59A50531999783CC40A333E69EEB57A86538219C1ECC2`
+- 정리: 새 게임 전환 중 노출되던 미사용 `money_rain_office_background_v1.png`와 `.meta`는 2026-08-13 삭제했다. 런타임·씬·빌드 참조는 0이다.
 - 투명 돈다발: `money_bundle_mint_v1.png`, `money_bundle_coral_v1.png`, `money_bundle_sky_v1.png`; 각 1024×1024 RGBA, 실제 알파 0~255
 - 돈다발 SHA-256: 민트 `DCF0F18332E94849C159CF50FB924441B894BCF0F5E992AAA5AEBCDF2CC05A79`, 코랄 `13FD656B1C4192D2E99A86A984DE4BC7CC7506DE1151B605662505F7D534880F`, 하늘 `A555448A25BA7E873E07E68E0BB625DF6F84BF2F11196B8031C29D3C647789EB`
 - 시각 확인 GIF: `family_company_title_money_rain_v1.gif`, 960×540, 28프레임×100ms, 2.8초 무한 루프, SHA-256 `3F4630BCBC51740368E62B67C5E5F10A00058AC92AA57FC8311657B6B96F4AF4`
@@ -166,7 +166,7 @@
 
 ### Money Rain Tycoon 타이틀 V2
 
-- 상태: **ACTIVE TITLE BACKGROUND · 기존 배경과 돈다발 원본 보존**
+- 상태: **ACTIVE TITLE BACKGROUND · 돈다발 원본 보존**
 - 경로: `Assets/Art/UI/Resources/Title/MoneyRain/money_rain_tycoon_background_v2.png`
 - 규격: 1672×941 RGB, 16:9
 - SHA-256: `3F65163581951FB92DB72C13CE0850AF37F7E2CC526B4390F3AC7A0BD82B9933`

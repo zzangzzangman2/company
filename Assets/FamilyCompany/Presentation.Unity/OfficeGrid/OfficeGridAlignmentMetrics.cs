@@ -14,6 +14,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 ? renderer.sprite
                 : throw new InvalidOperationException("Sprite renderer has no active frame.");
             Vector2 localPixels = spriteRectAnchorPx - sprite.pivot;
+            if (renderer.flipX) localPixels.x = -localPixels.x;
+            if (renderer.flipY) localPixels.y = -localPixels.y;
             var local = new Vector3(
                 localPixels.x / sprite.pixelsPerUnit,
                 localPixels.y / sprite.pixelsPerUnit,

@@ -90,7 +90,9 @@ namespace FamilyCompany.Presentation.Unity
         private int _reportedOfficeTaskCount;
         private ManagementUiV2Presenter _managementUiPresenter;
         private float _worldTimeScale = 1f;
+        private double _officeRealtimeAccumulatorSeconds;
         private bool _officeObservationCamera = true;
+        private const double OfficeSecondsPerGameMinute = 1d;
 
         public GameState State => _state;
         public PrototypeUiScreen UiScreen => _screen;
@@ -130,6 +132,7 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             if (_hasSession) SyncOfficeTaskNotice();
+            TickOfficeRealtimeClock();
 
             if (!Input.GetKeyDown(KeyCode.Escape)) return;
             switch (_screen)
@@ -425,6 +428,7 @@ namespace FamilyCompany.Presentation.Unity
 
                 _state = GameSaveMapper.FromDto(save);
                 _runner = new SimulationRunner(_state);
+                _officeRealtimeAccumulatorSeconds = 0d;
                 _contractTaskCoordinator?.ResetAssignments();
                 _officeAutonomyCoordinator?.RefreshNow();
                 _activeSlot = slot;
@@ -465,6 +469,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             _state = PrototypeStateFactory.Create();
             _runner = new SimulationRunner(_state);
+            _officeRealtimeAccumulatorSeconds = 0d;
             _contractTaskCoordinator?.ResetAssignments();
             _officeAutonomyCoordinator?.RefreshNow();
             _reportedOfficeTaskCount = 0;
@@ -794,6 +799,31 @@ namespace FamilyCompany.Presentation.Unity
 
         public void AdvanceTimeNow(long minutes)
         {
+            AdvanceTime(minutes, true);
+        }
+
+        private void TickOfficeRealtimeClock()
+        {
+            if (!_hasSession || _screen != PrototypeUiScreen.Playing || _state == null || _runner == null)
+                return;
+            double delta = Time.unscaledDeltaTime;
+            if (double.IsNaN(delta) || double.IsInfinity(delta) || delta <= 0d) return;
+
+            _officeRealtimeAccumulatorSeconds += delta * _worldTimeScale;
+            long minutes = (long)Math.Floor(
+                (_officeRealtimeAccumulatorSeconds + 0.000000001d) /
+                OfficeSecondsPerGameMinute);
+            if (minutes <= 0L) return;
+            _officeRealtimeAccumulatorSeconds -= minutes * OfficeSecondsPerGameMinute;
+            if (_officeRealtimeAccumulatorSeconds < 0d &&
+                _officeRealtimeAccumulatorSeconds > -0.00000001d)
+                _officeRealtimeAccumulatorSeconds = 0d;
+            AdvanceTime(minutes, false);
+        }
+
+        private void AdvanceTime(long minutes, bool announcePassage)
+        {
+            if (minutes <= 0L) throw new ArgumentOutOfRangeException(nameof(minutes));
             var previousMinute = _state.Time.ElapsedMinutes;
             var failedBefore = _state.Contracts.Contracts.Count(item => item.Status == SubcontractStatus.Failed);
             var productWasResolved = _state.Growth.ProductProject?.Resolved ?? false;
@@ -818,7 +848,7 @@ namespace FamilyCompany.Presentation.Unity
             {
                 _notice = latestIncident.Autonomy.LastIncidentSummary;
             }
-            else
+            else if (announcePassage)
             {
                 _notice = minutes >= 1440 ? "하루가 지났습니다." : "1시간이 지났습니다.";
             }
