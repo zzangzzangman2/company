@@ -1,9 +1,9 @@
 [CmdletBinding()]
 param(
-    [string]$CanonicalProjectPath = 'C:\Users\godho\Documents\Codex\family_company_unity',
-    [string]$UnityEditorPath = 'C:\Users\godho\Documents\Codex\UnityEditors\6000.3.21f1\Editor\Unity.exe',
-    [string]$FinalOutputPath = 'C:\Users\godho\Downloads\Family\FamilyCompany_Playtest',
-    [string]$AutomationRoot = 'C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation',
+    [string]$CanonicalProjectPath = '',
+    [string]$UnityEditorPath = '',
+    [string]$FinalOutputPath = '',
+    [string]$AutomationRoot = '',
     [int]$UnityWaitTimeoutMinutes = 120,
     [int]$UnityRetrySeconds = 15,
     [int]$MaximumLogFiles = 30
@@ -14,6 +14,10 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'FamilyCompanyBuild.Common.ps1')
 
 $defaults = Get-FamilyCompanyBuildDefaults
+if ([string]::IsNullOrWhiteSpace($CanonicalProjectPath)) { $CanonicalProjectPath = $defaults.CanonicalProjectPath }
+if ([string]::IsNullOrWhiteSpace($UnityEditorPath)) { $UnityEditorPath = $defaults.UnityEditorPath }
+if ([string]::IsNullOrWhiteSpace($FinalOutputPath)) { $FinalOutputPath = $defaults.FinalOutputPath }
+if ([string]::IsNullOrWhiteSpace($AutomationRoot)) { $AutomationRoot = $defaults.AutomationRoot }
 $automationPath = Get-NormalizedFullPath $AutomationRoot
 $logDirectory = Join-Path $automationPath 'logs'
 $statusPath = Join-Path $automationPath 'build-status.json'
@@ -71,7 +75,7 @@ try {
     }
 
     $stagingName = "FamilyCompany_Playtest.staging.$timestamp.$PID"
-    $stagingPath = Join-Path $defaults.DownloadsPath $stagingName
+    $stagingPath = Join-Path $defaults.BuildRoot $stagingName
     if (Test-Path -LiteralPath $stagingPath) {
         throw "Fresh staging path unexpectedly already exists: $stagingPath"
     }

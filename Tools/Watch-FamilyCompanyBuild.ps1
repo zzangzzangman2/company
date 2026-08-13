@@ -1,9 +1,9 @@
 [CmdletBinding()]
 param(
-    [string]$CanonicalProjectPath = 'C:\Users\godho\Documents\Codex\family_company_unity',
-    [string]$UnityEditorPath = 'C:\Users\godho\Documents\Codex\UnityEditors\6000.3.21f1\Editor\Unity.exe',
-    [string]$FinalOutputPath = 'C:\Users\godho\Downloads\Family\FamilyCompany_Playtest',
-    [string]$AutomationRoot = 'C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation',
+    [string]$CanonicalProjectPath = '',
+    [string]$UnityEditorPath = '',
+    [string]$FinalOutputPath = '',
+    [string]$AutomationRoot = '',
     [int]$PollSeconds = 3,
     [int]$DebounceSeconds = 12,
     [int]$FailureRetrySeconds = 90,
@@ -14,6 +14,12 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'FamilyCompanyBuild.Common.ps1')
+
+$defaults = Get-FamilyCompanyBuildDefaults
+if ([string]::IsNullOrWhiteSpace($CanonicalProjectPath)) { $CanonicalProjectPath = $defaults.CanonicalProjectPath }
+if ([string]::IsNullOrWhiteSpace($UnityEditorPath)) { $UnityEditorPath = $defaults.UnityEditorPath }
+if ([string]::IsNullOrWhiteSpace($FinalOutputPath)) { $FinalOutputPath = $defaults.FinalOutputPath }
+if ([string]::IsNullOrWhiteSpace($AutomationRoot)) { $AutomationRoot = $defaults.AutomationRoot }
 
 if ($PollSeconds -lt 1) { throw 'PollSeconds must be positive.' }
 if ($DebounceSeconds -lt 2) { throw 'DebounceSeconds must be at least 2.' }

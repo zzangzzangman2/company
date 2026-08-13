@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$AutomationRoot = 'C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation',
+    [string]$AutomationRoot = '',
     [int]$PollSeconds = 3,
     [int]$DebounceSeconds = 12,
     [int]$FailureRetrySeconds = 90
@@ -10,6 +10,9 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'FamilyCompanyBuild.Common.ps1')
 
+if ([string]::IsNullOrWhiteSpace($AutomationRoot)) {
+    $AutomationRoot = (Get-FamilyCompanyBuildDefaults).AutomationRoot
+}
 $automationPath = Get-NormalizedFullPath $AutomationRoot
 $watchStatusPath = Join-Path $automationPath 'watch-status.json'
 $workerScriptPath = Get-NormalizedFullPath (Join-Path $PSScriptRoot 'Watch-FamilyCompanyBuild.ps1')

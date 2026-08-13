@@ -1,5 +1,11 @@
 # PROJECT STATE
 
+## 2026-08-13 / Portable one-click Windows build entry complete
+
+- Added repository-root `BUILD_WINDOWS.cmd` and `RUN_WINDOWS.cmd`, so another Windows PC can clone/pull and build or launch the playtest without copying a user-specific Downloads command file.
+- Removed the signed-in user's absolute project, Unity, and Downloads defaults from the build pipeline. It now derives the repository root from `Tools`, discovers Unity `6000.3.21f1` from Unity Hub/Codex bundle paths (or `FAMILY_COMPANY_UNITY_EDITOR`), and writes ignored outputs beneath `Builds/Windows`.
+- The large Unity player output remains excluded from Git; the reproducible command, build safety checks, and Korean usage guide are versioned instead.
+
 ## 2026-08-13 / Starter Office furniture tile snap complete
 
 - Unified all 17 starter furniture placement anchors at the exact half-cell center of each hard footprint. Render root, collision footprint, and interaction reference now share one pivot, so moving or mirroring a prop cannot accumulate an unrelated visual offset.

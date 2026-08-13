@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$AutomationRoot = 'C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation',
+    [string]$AutomationRoot = '',
     [int]$WaitSeconds = 30,
     [switch]$Force
 )
@@ -9,6 +9,9 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'FamilyCompanyBuild.Common.ps1')
 
+if ([string]::IsNullOrWhiteSpace($AutomationRoot)) {
+    $AutomationRoot = (Get-FamilyCompanyBuildDefaults).AutomationRoot
+}
 if ($WaitSeconds -lt 1) { throw 'WaitSeconds must be positive.' }
 $automationPath = Get-NormalizedFullPath $AutomationRoot
 $watchStatusPath = Join-Path $automationPath 'watch-status.json'

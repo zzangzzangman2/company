@@ -1,16 +1,48 @@
 Set-StrictMode -Version 2.0
 
+$script:FamilyCompanyToolsRoot = [IO.Path]::GetFullPath($PSScriptRoot).TrimEnd([char]'\', [char]'/')
+$script:FamilyCompanyProjectRoot = [IO.Path]::GetFullPath(
+    (Split-Path -Parent $PSScriptRoot)).TrimEnd([char]'\', [char]'/')
+$script:FamilyCompanyUnityVersion = '6000.3.21f1'
+
+function Find-FamilyCompanyUnityEditor {
+    [CmdletBinding()]
+    param()
+
+    $candidates = New-Object Collections.Generic.List[string]
+    if (-not [string]::IsNullOrWhiteSpace($env:FAMILY_COMPANY_UNITY_EDITOR)) {
+        $candidates.Add($env:FAMILY_COMPANY_UNITY_EDITOR)
+    }
+    $workspaceParent = Split-Path -Parent $script:FamilyCompanyProjectRoot
+    $candidates.Add((Join-Path $workspaceParent "UnityEditors\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
+    if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+        $candidates.Add((Join-Path $env:ProgramFiles "Unity\Hub\Editor\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
+    }
+    if (-not [string]::IsNullOrWhiteSpace(${env:ProgramFiles(x86)})) {
+        $candidates.Add((Join-Path ${env:ProgramFiles(x86)} "Unity\Hub\Editor\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
+    }
+
+    foreach ($candidate in $candidates) {
+        if (-not [string]::IsNullOrWhiteSpace($candidate) -and
+            (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+            return Get-NormalizedFullPath $candidate
+        }
+    }
+    return ''
+}
+
 function Get-FamilyCompanyBuildDefaults {
     [CmdletBinding()]
     param()
 
+    $buildRoot = Join-Path $script:FamilyCompanyProjectRoot 'Builds\Windows'
     [pscustomobject]@{
-        CanonicalProjectPath = 'C:\Users\godho\Documents\Codex\family_company_unity'
-        UnityEditorPath      = 'C:\Users\godho\Documents\Codex\UnityEditors\6000.3.21f1\Editor\Unity.exe'
-        UnityVersion         = '6000.3.21f1'
-        DownloadsPath        = 'C:\Users\godho\Downloads\Family'
-        FinalOutputPath      = 'C:\Users\godho\Downloads\Family\FamilyCompany_Playtest'
-        AutomationRoot       = 'C:\Users\godho\Downloads\Family\FamilyCompany_BuildAutomation'
+        CanonicalProjectPath = $script:FamilyCompanyProjectRoot
+        UnityEditorPath      = Find-FamilyCompanyUnityEditor
+        UnityVersion         = $script:FamilyCompanyUnityVersion
+        BuildRoot            = $buildRoot
+        FinalOutputPath      = Join-Path $buildRoot 'FamilyCompany_Playtest'
+        AutomationRoot       = Join-Path $buildRoot 'Automation'
         ExecutableName       = 'FamilyCompany.exe'
         FirstScene           = 'Assets/FamilyCompany/Scenes/Prototype01.unity'
     }
@@ -27,14 +59,18 @@ function Assert-CanonicalProjectPath {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][string]$ProjectPath)
 
-    $defaults = Get-FamilyCompanyBuildDefaults
-    $expected = Get-NormalizedFullPath $defaults.CanonicalProjectPath
     $actual = Get-NormalizedFullPath $ProjectPath
-    if (-not [string]::Equals($expected, $actual, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Refusing to build a non-canonical worktree. Expected '$expected', got '$actual'."
-    }
     if (-not (Test-Path -LiteralPath $actual -PathType Container)) {
-        throw "Canonical project path does not exist: $actual"
+        throw "Unity project path does not exist: $actual"
+    }
+    $requiredPaths = @(
+        (Join-Path $actual 'Assets\FamilyCompany'),
+        (Join-Path $actual 'ProjectSettings\ProjectVersion.txt'),
+        (Join-Path $actual 'Tools\Build-FamilyCompanyWindows.ps1'))
+    foreach ($requiredPath in $requiredPaths) {
+        if (-not (Test-Path -LiteralPath $requiredPath)) {
+            throw "The selected folder is not a Family Company repository root: $actual"
+        }
     }
     $actual
 }
@@ -46,12 +82,12 @@ function Assert-ExactUnityEditor {
         [Parameter(Mandatory = $true)][string]$ProjectPath
     )
 
-    $defaults = Get-FamilyCompanyBuildDefaults
-    $expectedEditor = Get-NormalizedFullPath $defaults.UnityEditorPath
-    $actualEditor = Get-NormalizedFullPath $UnityEditorPath
-    if (-not [string]::Equals($expectedEditor, $actualEditor, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Unexpected Unity editor. Expected '$expectedEditor', got '$actualEditor'."
+    if ([string]::IsNullOrWhiteSpace($UnityEditorPath)) {
+        throw (
+            "Unity $script:FamilyCompanyUnityVersion was not found. Install it with Unity Hub, " +
+            'or set FAMILY_COMPANY_UNITY_EDITOR to the full Unity.exe path.')
     }
+    $actualEditor = Get-NormalizedFullPath $UnityEditorPath
     if (-not (Test-Path -LiteralPath $actualEditor -PathType Leaf)) {
         throw "Unity editor does not exist: $actualEditor"
     }
@@ -67,8 +103,8 @@ function Assert-ExactUnityEditor {
         throw "Could not read the Unity version from $versionPath"
     }
     $projectVersion = $Matches[1].Trim()
-    if (-not [string]::Equals($projectVersion, $defaults.UnityVersion, [StringComparison]::Ordinal)) {
-        throw "Unity version mismatch. Expected '$($defaults.UnityVersion)', project requires '$projectVersion'."
+    if (-not [string]::Equals($projectVersion, $script:FamilyCompanyUnityVersion, [StringComparison]::Ordinal)) {
+        throw "Unity version mismatch. Expected '$script:FamilyCompanyUnityVersion', project requires '$projectVersion'."
     }
     $actualEditor
 }
