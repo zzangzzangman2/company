@@ -1347,6 +1347,7 @@ namespace FamilyCompany.Presentation.Unity
                 Debug.Log(
                     $"STARTER_OFFICE_WORKSTATION_ALIGNMENT_SAMPLE | member={memberId} " +
                     $"seatContact={actor.SeatContactErrorPx:F3}px chairDesk={actor.ChairDeskErrorPx:F3}px " +
+                    $"chairDeskDelta=({actor.ChairDeskDeltaPx.x:F3},{actor.ChairDeskDeltaPx.y:F3})px " +
                     $"handWork={actor.HandWorkErrorPx:F3}px typingContact=" +
                     $"{actor.TypingContactSampleCount}:seat{actor.MaxTypingSeatContactErrorPx:F3}px/" +
                     $"hand{actor.MaxTypingHandWorkErrorPx:F3}px " +

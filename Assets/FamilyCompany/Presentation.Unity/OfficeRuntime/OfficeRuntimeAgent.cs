@@ -89,6 +89,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _alignedFrame = -1;
         private bool _presentationAway;
         private float _chairDeskErrorPx;
+        private Vector2 _chairDeskDeltaPx;
         private float _seatContactErrorPx;
         private float _handWorkErrorPx;
         private float _maxTypingSeatContactErrorPx;
@@ -158,6 +159,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public float StuckSeconds => _stuckSeconds;
         public string ActiveSeatId => _seatClaim == null || _seatClaim.IsReleased ? string.Empty : _seatClaim.SeatId;
         public float ChairDeskErrorPx => _chairDeskErrorPx;
+        public Vector2 ChairDeskDeltaPx => _chairDeskDeltaPx;
 
         /// <summary>
         /// Screen distance between the seat contact of the drawn sprite and the chair cushion
@@ -1966,10 +1968,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _seatDirection,
                 OfficeSeatingAnimationClip.Work,
                 _alignedFrame < 0 ? 0 : _alignedFrame);
-            _chairDeskErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
-                Camera.main,
-                _world.Workstations.ChairSeatAnchorWorld(_seat),
+            Vector3 chairScreen = Camera.main.WorldToScreenPoint(
+                _world.Workstations.ChairSeatAnchorWorld(_seat));
+            Vector3 deskScreen = Camera.main.WorldToScreenPoint(
                 _world.Workstations.DeskSeatSocketWorld(_seat));
+            _chairDeskDeltaPx = new Vector2(chairScreen.x - deskScreen.x, chairScreen.y - deskScreen.y);
+            _chairDeskErrorPx = _chairDeskDeltaPx.magnitude;
             _seatContactErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
                 Camera.main,
                 OfficeSeatedOccupantContract.OccupantSeatContactWorld(_renderer, profile.PelvisAnchorPx),
