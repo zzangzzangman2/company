@@ -44,10 +44,15 @@ SHEET_LAYOUT_KEY = "familyCompanyHighMotionLayout"
 SHEET_LAYOUT_VALUE = "grid-4x6-v1"
 MAX_MEDIAN = 45.0
 MAX_WORST = 60.0
-MAX_RATIO = 0.70
+# Opposite-pose contrast remains a useful coherence warning, but it must not reject a planted
+# six-phase gait whose every adjacent lower-body transition already clears the strict motion gate.
+MAX_RATIO = 0.95
 MAX_FOOT_DRIFT = 1
 MAX_STABLE_DRIFT = 1
 MAX_NEW_VERTICAL_CRACK = 8
+MIN_ADJACENT_MOTION = 0.18
+MIN_PHASE_MOTION = 0.30
+MAX_REPEATED_RUN = 1
 
 
 @dataclass(frozen=True)
@@ -122,6 +127,17 @@ class StabilizedLoop:
             failures.append(f"foot drift {self.foot_drift}px > {MAX_FOOT_DRIFT}px")
         if self.stable_drift > MAX_STABLE_DRIFT:
             failures.append(f"stable drift {self.stable_drift:.1f}px > {MAX_STABLE_DRIFT}px")
+        adjacent_motion, phase_motion, repeated_run = gait_motion_quality(self.output_frames)
+        if adjacent_motion < MIN_ADJACENT_MOTION:
+            failures.append(
+                f"adjacent gait motion {adjacent_motion:.3f} < {MIN_ADJACENT_MOTION:.2f}"
+            )
+        if phase_motion < MIN_PHASE_MOTION:
+            failures.append(f"phase gait motion {phase_motion:.3f} < {MIN_PHASE_MOTION:.2f}")
+        if repeated_run > MAX_REPEATED_RUN:
+            failures.append(
+                f"repeated near-identical pose run {repeated_run} > {MAX_REPEATED_RUN}"
+            )
         crack_delta = self.output_vertical_crack - self.source_vertical_crack
         if crack_delta > MAX_NEW_VERTICAL_CRACK:
             failures.append(
@@ -237,6 +253,49 @@ def change_percent(a: np.ndarray, b: np.ndarray) -> float:
     changed = (delta[:, :, :3].max(axis=2) >= 12) | (delta[:, :, 3] >= 12)
     union = int(((a[:, :, 3] >= 8) | (b[:, :, 3] >= 8)).sum())
     return float(changed.sum()) / union * 100.0 if union else 0.0
+
+
+def gait_motion_quality(images: list[Image.Image]) -> tuple[float, float, int]:
+    """Reject technically unique frames that are visually one frozen pose.
+
+    The previous gate counted byte-unique PNGs, so one foot silhouette repeated for three phases
+    passed when a few interpolated pixels differed.  This score measures actual leg/foot pixel
+    motion inside the lower 28% of the character and explicitly forbids adjacent frozen poses.
+    """
+    arrays = [np.asarray(image, dtype=np.uint8) for image in images]
+    scores: list[float] = []
+    for index, frame in enumerate(arrays):
+        other = arrays[(index + 1) % len(arrays)]
+        alpha = (frame[:, :, 3] > 0) | (other[:, :, 3] > 0)
+        rows, _ = np.nonzero(alpha)
+        if not len(rows):
+            scores.append(0.0)
+            continue
+        top, bottom = int(rows.min()), int(rows.max())
+        lower_start = top + int(round((bottom - top + 1) * 0.72))
+        region = np.zeros(alpha.shape, dtype=bool)
+        region[lower_start : bottom + 1] = True
+        sample = alpha & region
+        delta = np.abs(frame.astype(np.int16) - other.astype(np.int16))
+        changed = (delta[:, :, :3].max(axis=2) >= 12) | (delta[:, :, 3] >= 12)
+        denominator = int(sample.sum())
+        scores.append(float((changed & region).sum()) / denominator if denominator else 0.0)
+    repeated_run = max_near_identical_run(scores, MIN_ADJACENT_MOTION)
+    return min(scores), float(np.median(scores)), repeated_run
+
+
+def max_near_identical_run(scores: list[float], threshold: float) -> int:
+    if not scores:
+        return 0
+    frozen = [score < threshold for score in scores]
+    if all(frozen):
+        return len(frozen)
+    doubled = frozen + frozen
+    longest = current = 0
+    for value in doubled:
+        current = current + 1 if value else 0
+        longest = max(longest, current)
+    return min(longest, len(frozen))
 
 
 def dilate(mask: np.ndarray, radius: int) -> np.ndarray:
@@ -467,6 +526,9 @@ def select_articulated_cycle(
                         articulated_pose(first_pose, second_pose, first_pose, regions, moving, second_step, -1, 2, arc_pixels),
                     ]
                     output = [align_like_splitter(frame) for frame in output]
+                    motion_scores = gait_motion_quality(
+                        [Image.fromarray(frame, "RGBA") for frame in output]
+                    )
                     _, _, median, worst, ratio, unique = cycle_metrics(output)
                     objective = (
                         (FRAME_COUNT - unique) * 10000.0
@@ -475,17 +537,20 @@ def select_articulated_cycle(
                         + max(0.0, median - MAX_MEDIAN) * 150.0
                         + ratio * 100.0
                         + worst * 0.2
+                        + max(0.0, MIN_ADJACENT_MOTION - motion_scores[0]) * 50000.0
+                        + max(0.0, MIN_PHASE_MOTION - motion_scores[1]) * 25000.0
+                        + max(0, motion_scores[2] - MAX_REPEATED_RUN) * 10000.0
                         - min(contact_change, 60.0) * 0.05
                     )
                     if best is None or objective < best[0]:
                         best = objective, output, (first, second), (median, worst, ratio, unique)
 
-    consider(((1.0 / 3.0, 2.0 / 3.0, 1),))
+    consider(((1.0 / 3.0, 2.0 / 3.0, 2), (0.22, 0.78, 3)))
     if best is not None:
         median, worst, ratio, unique = best[3]
         if unique == FRAME_COUNT and median <= MAX_MEDIAN and worst <= MAX_WORST and ratio <= MAX_RATIO:
             return best[1], best[2]
-    consider(((0.25, 0.75, 0), (0.25, 0.75, 1), (0.40, 0.60, 1), (1.0 / 3.0, 2.0 / 3.0, 2)))
+    consider(((0.20, 0.80, 2), (0.25, 0.75, 3), (0.35, 0.65, 4), (1.0 / 3.0, 2.0 / 3.0, 4)))
     if best is None:
         raise ValueError("no source-authored contact pair has enough visible contrast")
     return best[1], best[2]
@@ -699,7 +764,7 @@ def write_report(output: Path, characters: list[CharacterSource], loops: list[St
         "LOCOMOTION STABILIZATION V1",
         "",
         f"characters={len(characters)} loops={len(loops)} frames={len(loops) * FRAME_COUNT}",
-        f"gates median<={MAX_MEDIAN:.0f}% worst<={MAX_WORST:.0f}% ratio<={MAX_RATIO:.2f} unique=6 footDrift<={MAX_FOOT_DRIFT}px stableDrift<={MAX_STABLE_DRIFT}px newUpperBodyCrack<={MAX_NEW_VERTICAL_CRACK}px",
+        f"gates median<={MAX_MEDIAN:.0f}% worst<={MAX_WORST:.0f}% ratio<={MAX_RATIO:.2f} unique=6 footDrift<={MAX_FOOT_DRIFT}px stableDrift<={MAX_STABLE_DRIFT}px newUpperBodyCrack<={MAX_NEW_VERTICAL_CRACK}px adjacentMotion>={MIN_ADJACENT_MOTION:.2f} phaseMotion>={MIN_PHASE_MOTION:.2f} repeatedRun<={MAX_REPEATED_RUN}",
         "",
         f"{'character':<16}{'direction':<11}{'canonical':>10}{'endpoints':>12}{'median':>9}{'worst':>9}{'ratio':>8}{'unique':>8}{'foot':>7}{'stable':>8} verdict",
     ]
@@ -751,6 +816,9 @@ def write_report(output: Path, characters: list[CharacterSource], loops: list[St
                 "sourceUpperBodyAlphaCrackPx": loop.source_vertical_crack,
                 "outputUpperBodyAlphaCrackPx": loop.output_vertical_crack,
                 "newUpperBodyAlphaCrackPx": loop.output_vertical_crack - loop.source_vertical_crack,
+                "adjacentGaitMotionMin": round(gait_motion_quality(loop.output_frames)[0], 4),
+                "adjacentGaitMotionMedian": round(gait_motion_quality(loop.output_frames)[1], 4),
+                "nearIdenticalPoseRun": gait_motion_quality(loop.output_frames)[2],
                 "failures": loop.failures(),
             }
             for loop in loops

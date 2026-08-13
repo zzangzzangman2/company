@@ -160,11 +160,14 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 semanticFootprintHeight: 2),
             new FurnitureSpec(OfficeGridLayouts.FilingCabinetKind, "office_filing_cabinet", 200, 370,
                 OfficeFurnitureFacing.SouthEast, new Vector2(884f, 100f), new Vector2(884f, 82f)),
-            new FurnitureSpec(OfficeGridLayouts.EntranceDoorKind, "office_entrance_door", 310, 410,
-                OfficeFurnitureFacing.SouthEast, new Vector2(604f, 108f), new Vector2(604f, 108f),
+            new FurnitureSpec(OfficeGridLayouts.EntranceDoorKind, "office_entrance_door", 200, 420,
+                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
                 "v1"),
-            new FurnitureSpec(OfficeGridLayouts.EntranceWallKind, "office_entrance_wall", 310, 410,
-                OfficeFurnitureFacing.SouthEast, new Vector2(776f, 28f), new Vector2(776f, 28f),
+            new FurnitureSpec(OfficeGridLayouts.EntranceWallKind, "office_perimeter_wall", 200, 420,
+                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
+                "v1"),
+            new FurnitureSpec(OfficeGridLayouts.PerimeterCutawayWallKind, "office_perimeter_cutaway_wall", 200, 300,
+                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
                 "v1")
         };
 
@@ -197,6 +200,20 @@ namespace FamilyCompany.Editor.OfficeGridQa
             AssetDatabase.SaveAssets();
             Validate();
             Debug.Log("FAMILY_COMPANY_OFFICE_FURNITURE_TYCOON_ALIGNMENT_V2_BUILD: PASS");
+        }
+
+        public static void RunBatch()
+        {
+            try
+            {
+                Build();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
         }
 
         public static OfficeFurnitureVisualCatalog LoadFurnitureVisualCatalog()
@@ -317,7 +334,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     throw new InvalidOperationException("Furniture ground anchor is outside the runtime canvas: " + spec.RuntimePath);
             }
 
-            if (seenKinds.Count != 14) throw new InvalidOperationException("Furniture catalog must contain exactly 14 kinds.");
+            if (seenKinds.Count != 15) throw new InvalidOperationException("Furniture catalog must contain exactly 15 kinds.");
             LoadFurnitureVisualCatalog().Validate();
             OfficeCharacterSeatPoseCatalog poseCatalog = LoadCharacterSeatPoseCatalog();
             string[] members = { "player", "older_sister", "father", "mother" };
@@ -428,10 +445,6 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 catalog = ScriptableObject.CreateInstance<OfficeFurnitureVisualCatalog>();
                 AssetDatabase.CreateAsset(catalog, FurnitureCatalogPath);
             }
-
-            if (catalog.CalibrationVersion == OfficeFurnitureVisualCatalog.CurrentCalibrationVersion &&
-                catalog.Definitions.Count == Specs.Length)
-                return;
 
             OfficeFurnitureVisualDefinition[] definitions = Specs.Select(spec =>
                 OfficeFurnitureVisualDefinition.Create(

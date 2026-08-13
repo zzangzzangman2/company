@@ -33,14 +33,41 @@ namespace FamilyCompany.Editor
                     OfficeGridLayouts.CreateStarterOfficeV1();
                 Require(office.IsWalkable(new OfficeGridCoordinate(8, 1)),
                     "The interior entrance cell must stay walkable.");
-                Require(office.FloorAt(new OfficeGridCoordinate(8, 0)) == OfficeFloorTileKind.Void,
-                    "The exterior side of the entrance must not render as interior floor.");
-                Require(office.Furniture.Count(item =>
-                            item.KindId == OfficeGridLayouts.EntranceWallKind) == 2 &&
+                Require(office.FloorAt(new OfficeGridCoordinate(8, 0)) != OfficeFloorTileKind.Void &&
+                        office.FloorAt(new OfficeGridCoordinate(0, 6)) != OfficeFloorTileKind.Void &&
+                        office.FloorAt(new OfficeGridCoordinate(12, 6)) != OfficeFloorTileKind.Void &&
+                        !office.IsWalkable(new OfficeGridCoordinate(8, 0)),
+                    "The complete perimeter floor must render under the walls but remain non-walkable.");
+                int fullWallCount = office.Furniture.Count(item =>
+                    item.KindId == OfficeGridLayouts.EntranceWallKind);
+                int cutawayWallCount = office.Furniture.Count(item =>
+                    item.KindId == OfficeGridLayouts.PerimeterCutawayWallKind);
+                Require(fullWallCount == 24 && cutawayWallCount == 23 &&
                         office.Furniture.Any(item =>
                             item.FurnitureId == "entrance_door" &&
                             item.Origin.Equals(new OfficeGridCoordinate(8, 0))),
-                    "Starter entrance must be one outer door between two wall bays.");
+                    $"Starter office must have four tile-aligned perimeter edges and one canonical door; " +
+                    $"full={fullWallCount} cutaway={cutawayWallCount} total={office.Furniture.Count}.");
+                for (var axis = 0; axis < 12; axis++)
+                {
+                    Require(office.Furniture.Any(item =>
+                            item.Origin.Equals(new OfficeGridCoordinate(axis, 0)) &&
+                            item.Facing == OfficeFurnitureFacing.SouthEast),
+                        $"Front wall is missing its tile bay at ({axis},0).");
+                    Require(office.Furniture.Any(item =>
+                            item.Origin.Equals(new OfficeGridCoordinate(axis, 12)) &&
+                            item.Facing == OfficeFurnitureFacing.SouthEast),
+                        $"Back wall is missing its tile bay at ({axis},12).");
+                    var sideY = axis;
+                    Require(office.Furniture.Any(item =>
+                            item.Origin.Equals(new OfficeGridCoordinate(0, sideY)) &&
+                            item.Facing == OfficeFurnitureFacing.SouthWest),
+                        $"Left wall is missing its tile bay at (0,{sideY}).");
+                    Require(office.Furniture.Any(item =>
+                            item.Origin.Equals(new OfficeGridCoordinate(12, sideY)) &&
+                            item.Facing == OfficeFurnitureFacing.SouthWest),
+                        $"Right wall is missing its tile bay at (12,{sideY}).");
+                }
                 Require(OfficeAttendanceRules.Resolve(day.AddHours(18)) ==
                         OfficeAttendancePhase.AfterWork, "18:00 must begin departure.");
                 Require(OfficeAttendanceRules.Resolve(day.AddDays(5).AddHours(10)) ==

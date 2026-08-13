@@ -24,6 +24,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public const string FilingCabinetKind = "filing_cabinet";
         public const string EntranceDoorKind = "entrance_door";
         public const string EntranceWallKind = "entrance_wall";
+        public const string PerimeterCutawayWallKind = "perimeter_cutaway_wall";
 
         public static OfficeGrid CreateMigrationPreview()
         {
@@ -48,11 +49,9 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 floor[index] = (OfficeFloorTileKind)(1 + PositiveModulo(x * 3 + y * 5, 3));
                 walkable[index] = x > 0 && x < width - 1 && y > 0 && y < height - 1;
             }
-            // Remove the floor directly outside the entrance facade. This leaves the first
-            // walkable interior cell at (8,1) and makes the wall/door read as the room boundary.
-            floor[7] = OfficeFloorTileKind.Void;
-            floor[8] = OfficeFloorTileKind.Void;
-            floor[9] = OfficeFloorTileKind.Void;
+            // Boundary cells keep their visible floor so the four one-tile wall runs meet the
+            // actual 13x13 floor diamond. They remain non-walkable; the first usable interior
+            // cell is (8,1), immediately behind the canonical front door at (8,0).
 
             var furniture = new List<PlacedOfficeFurniture>();
             var seats = new List<OfficeSeatSlot>();
@@ -72,7 +71,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
             if (includeMigrationPartition)
                 AddBlocking(furniture, "partition", PartitionKind, 6, 6, 1, 2, OfficeFurnitureFacing.NorthWest);
             AddBlocking(furniture, "filing", FilingCabinetKind, 11, 8, 1, 1, OfficeFurnitureFacing.SouthEast);
-            AddEntranceFacade(furniture);
+            AddPerimeterWalls(furniture, width, height);
 
             foreach (var item in furniture)
             {
@@ -85,34 +84,73 @@ namespace FamilyCompany.Simulation.OfficeLayout
             return new OfficeGrid(width, height, floor, walkable, furniture, seats);
         }
 
-        private static void AddEntranceFacade(ICollection<PlacedOfficeFurniture> furniture)
+        private static void AddPerimeterWalls(
+            ICollection<PlacedOfficeFurniture> furniture,
+            int width,
+            int height)
         {
-            // The visual facade sits on the non-walkable outer boundary. Actors appear on the
-            // first interior cell (8,1), directly behind the opening, so the doorway reads as an
-            // exterior entrance instead of an isolated prop standing in the middle of the floor.
+            const int entranceX = 8;
+            // Low cutaway walls close the two near edges without hiding the office. The two far
+            // edges use full-height bays. Every bay is one semantic tile long and the mirrored
+            // facing follows the second isometric grid axis; corners therefore form real L joins.
+            // A bay starts at its semantic anchor and ends at the next cell on that axis.  Four
+            // runs of width-1/height-1 bays meet at the same four corner anchors; using width bays
+            // would overshoot every far corner by one tile and make the walls cross.
+            for (var x = 0; x < width - 1; x++)
+            {
+                AddWallBay(
+                    furniture,
+                    x == entranceX ? "entrance_door" : $"wall_front_y0_x{x:D2}",
+                    x == entranceX ? EntranceDoorKind : PerimeterCutawayWallKind,
+                    x,
+                    0,
+                    OfficeFurnitureFacing.SouthEast);
+                AddWallBay(
+                    furniture,
+                    $"wall_back_y{height - 1:D2}_x{x:D2}",
+                    EntranceWallKind,
+                    x,
+                    height - 1,
+                    OfficeFurnitureFacing.SouthEast);
+            }
+
+            // Mirroring preserves the authored ground pivot and makes the visual grow along the
+            // positive Y basis. Semantic anchors 0..11 therefore meet the X-axis runs at both
+            // corner pivots; shifting this run to 1..12 projects one bay beyond each far corner.
+            for (var y = 0; y < height - 1; y++)
+            {
+                AddWallBay(
+                    furniture,
+                    $"wall_front_x0_y{y:D2}",
+                    PerimeterCutawayWallKind,
+                    0,
+                    y,
+                    OfficeFurnitureFacing.SouthWest);
+                AddWallBay(
+                    furniture,
+                    $"wall_back_x{width - 1:D2}_y{y:D2}",
+                    EntranceWallKind,
+                    width - 1,
+                    y,
+                    OfficeFurnitureFacing.SouthWest);
+            }
+        }
+
+        private static void AddWallBay(
+            ICollection<PlacedOfficeFurniture> furniture,
+            string furnitureId,
+            string kindId,
+            int x,
+            int y,
+            OfficeFurnitureFacing facing)
+        {
             furniture.Add(new PlacedOfficeFurniture(
-                "entrance_wall_left",
-                EntranceWallKind,
-                new OfficeGridCoordinate(7, 0),
+                furnitureId,
+                kindId,
+                new OfficeGridCoordinate(x, y),
                 1,
                 1,
-                OfficeFurnitureFacing.SouthEast,
-                false));
-            furniture.Add(new PlacedOfficeFurniture(
-                "entrance_door",
-                EntranceDoorKind,
-                new OfficeGridCoordinate(8, 0),
-                1,
-                1,
-                OfficeFurnitureFacing.SouthEast,
-                false));
-            furniture.Add(new PlacedOfficeFurniture(
-                "entrance_wall_right",
-                EntranceWallKind,
-                new OfficeGridCoordinate(9, 0),
-                1,
-                1,
-                OfficeFurnitureFacing.SouthEast,
+                facing,
                 false));
         }
 

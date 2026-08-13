@@ -146,7 +146,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
         internal static void BuildPreviewScene(
             bool includeT45,
-            OfficeTilePreviewLayout layout = OfficeTilePreviewLayout.MigrationPreview)
+            OfficeTilePreviewLayout layout = OfficeTilePreviewLayout.MigrationPreview,
+            string reviewCapturePath = null)
         {
             OfficeGridValidation.Run();
             OfficeTileAssetBuilder.Build();
@@ -186,6 +187,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
             ValidateT2(bootstrap, camera);
             if (includeT45) ValidateT4Static(bootstrap);
             OfficeGridCameraFitter.Fit(camera, bootstrap.CombinedRenderBounds, 16f / 9f);
+            if (!string.IsNullOrWhiteSpace(reviewCapturePath))
+            {
+                Capture(camera, reviewCapturePath, 1920, 1080);
+            }
 
             var generated = bootstrap.transform.Find("GeneratedOfficeTilePreview");
             if (generated != null) UnityEngine.Object.DestroyImmediate(generated.gameObject);
@@ -193,6 +198,26 @@ namespace FamilyCompany.Editor.OfficeGridQa
             if (!string.IsNullOrEmpty(sceneFolder)) Directory.CreateDirectory(sceneFolder);
             EditorSceneManager.SaveScene(scene, PreviewScenePath);
             AssetDatabase.SaveAssets();
+        }
+
+        [MenuItem("Tools/Family Company/Office Grid/Capture Starter Perimeter Walls")]
+        public static void CaptureStarterPerimeterWalls()
+        {
+            const string capturePath = "Artifacts/PerimeterWallQa/starter-perimeter-walls-1920x1080.png";
+            try
+            {
+                BuildPreviewScene(true, OfficeTilePreviewLayout.StarterOfficeV1, capturePath);
+                // Keep the checked-in preview scene on its canonical migration layout after review capture.
+                BuildPreviewScene(true, OfficeTilePreviewLayout.MigrationPreview);
+                Debug.Log("OFFICE_STARTER_PERIMETER_WALL_CAPTURE: PASS | " + capturePath);
+                if (Application.isBatchMode) EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                else throw;
+            }
         }
 
         private static void ValidateT2(OfficeTileMigrationPreviewBootstrap bootstrap, Camera camera)
@@ -206,7 +231,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
             {
                 if (presenter.FloorTilemap.HasTile(position)) renderedCellCount++;
             }
-            Require(renderedCellCount == 169, $"T2 rendered {renderedCellCount} cells instead of 169.");
+            int expectedRenderedCellCount = Enumerable.Range(0, presenter.SemanticGrid.Height)
+                .Sum(y => Enumerable.Range(0, presenter.SemanticGrid.Width)
+                    .Count(x => presenter.SemanticGrid.FloorAt(new OfficeGridCoordinate(x, y)) != OfficeFloorTileKind.Void));
+            Require(renderedCellCount == expectedRenderedCellCount,
+                $"T2 rendered {renderedCellCount} cells instead of {expectedRenderedCellCount} non-void cells.");
             Require(presenter.UnityGrid.cellLayout == GridLayout.CellLayout.Isometric,
                 "T2 Unity Grid is not Isometric.");
             Require(Mathf.Abs(presenter.UnityGrid.cellSize.x - OfficeGridTilemapPresenter.TileWorldWidth) < 0.0001f,
@@ -413,8 +442,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             var grid = bootstrap.Presenter.SemanticGrid;
             bool starter = bootstrap.Layout == OfficeTilePreviewLayout.StarterOfficeV1;
-            int expectedFurnitureCount = starter ? 20 : 21;
-            int expectedKindCount = starter ? 13 : 14;
+            int expectedFurnitureCount = starter ? 65 : 66;
+            int expectedKindCount = starter ? 14 : 15;
             Require(grid.Furniture.Count >= 8, "T4 furniture count is below eight.");
             Require(grid.Furniture.Select(item => item.KindId).Distinct(StringComparer.Ordinal).Count() >= 4,
                 "T4 furniture kind count is below four.");
@@ -426,15 +455,19 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     bootstrap.FurniturePresenter.Renderers.Count == grid.Furniture.Count,
                 "T4 furniture renderers do not match semantic furniture.");
             Require(bootstrap.FurniturePresenter.VisualCatalog != null &&
-                    bootstrap.FurniturePresenter.VisualCatalog.Definitions.Count == 14,
-                "T4 visual catalog must contain 14 definitions.");
+                    bootstrap.FurniturePresenter.VisualCatalog.Definitions.Count == 15,
+                "T4 visual catalog must contain 15 definitions.");
             bootstrap.FurniturePresenter.VisualCatalog.Validate();
             foreach (var item in grid.Furniture)
             {
                 Require(bootstrap.FurniturePresenter.TryGetDefinition(item.FurnitureId, out var definition),
                     "Missing visual definition for " + item.FurnitureId);
-                Require(definition.Facing == item.Facing && definition.UniformScale > 0f,
-                    "Furniture visual facing/scale is invalid: " + item.FurnitureId);
+                Require(definition.UniformScale > 0f,
+                    "Furniture visual scale is invalid: " + item.FurnitureId);
+                Require(definition.Facing == item.Facing ||
+                        bootstrap.FurniturePresenter.VisualCatalog.TryResolveWithMirror(
+                            item.KindId, item.Facing, out _, out bool mirrored) && mirrored,
+                    "Furniture visual facing/mirror is invalid: " + item.FurnitureId);
                 Require(bootstrap.FurniturePresenter.TryGetSemanticRoot(item.FurnitureId, out var root),
                     "Furniture semantic root is missing: " + item.FurnitureId);
                 Require(root.localScale == Vector3.one, "Furniture semantic root scale is not one: " + item.FurnitureId);

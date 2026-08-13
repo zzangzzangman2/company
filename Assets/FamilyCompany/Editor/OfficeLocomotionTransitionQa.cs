@@ -27,6 +27,21 @@ namespace FamilyCompany.Editor
                 "transitionSlots=256 uniqueTransitionArt=256");
         }
 
+        public static void RunBatch()
+        {
+            try
+            {
+                Run();
+                if (Application.isBatchMode) EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                else throw;
+            }
+        }
+
         private static void ValidateMember(
             OfficeLocomotionTransitionCatalog catalog,
             string memberId)

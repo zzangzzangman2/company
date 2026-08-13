@@ -15,6 +15,10 @@ namespace FamilyCompany.Editor
             { "south", "southwest", "west", "northwest", "north", "northeast", "east", "southeast" };
         private static readonly CharacterSource[] Sources =
         {
+            new CharacterSource("player", "Player"),
+            new CharacterSource("older_sister", "OlderSister"),
+            new CharacterSource("father", "Father"),
+            new CharacterSource("mother", "Mother"),
             new CharacterSource("kim_seoa", "Employees/KimSeoa"),
             new CharacterSource("lee_jian", "Employees/LeeJian"),
             new CharacterSource("choi_iseo", "Employees/ChoiIseo"),
@@ -57,7 +61,7 @@ namespace FamilyCompany.Editor
             catalog.Configure(entries.ToArray());
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
-            Debug.Log("OFFICE_RUNTIME_CHARACTER_ART_CATALOG: BUILT | employees=" + entries.Count);
+            Debug.Log("OFFICE_RUNTIME_CHARACTER_ART_CATALOG: BUILT | characters=" + entries.Count);
         }
 
         private readonly struct CharacterSource

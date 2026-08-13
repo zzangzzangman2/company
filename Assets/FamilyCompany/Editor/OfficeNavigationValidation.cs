@@ -25,6 +25,21 @@ namespace FamilyCompany.Editor
                 $"deadlockTicks={report.DeadlockTicks} | {sceneReport}");
         }
 
+        public static void RunBatch()
+        {
+            try
+            {
+                Run();
+                if (Application.isBatchMode) EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                else throw;
+            }
+        }
+
         private static string ValidateCanonicalScene()
         {
             const string scenePath = "Assets/FamilyCompany/Scenes/Prototype01.unity";

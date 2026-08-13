@@ -24,21 +24,21 @@ MonoBehaviour:
     - {x: 236.62888, y: -58.886597}
     - {x: 556.6289, y: 101.1134}
     - {x: 396.62888, y: 181.1134}
-    - {x: 76.62888, y: 21.113403}
+    - {x: 76.628876, y: 21.113403}
     semanticFootprintWidth: 2
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
-    workSurfaceAnchorPx: {x: 355, y: 233}
-    operatorSeatSocketPx: {x: 430.44513, y: 169.32896}
+    workSurfaceAnchorPx: {x: 354.99484, y: 236.70619}
+    operatorSeatSocketPx: {x: 430.45102, y: 169.33607}
     uniformScale: 1
     hasSeatAnchor: 0
     hasWorkSurfaceAnchor: 1
     hasOperatorSeatSocket: 1
-    frontOverlayWhenOccupied: 0
+    frontOverlayWhenOccupied: 1
   - kindId: swivel_chair
     facing: 2
     baseSprite: {fileID: 21300000, guid: 5d642bde97f1a844f9aefcc7c4c95a08, type: 3}
-    frontOverlaySprite: {fileID: 21300000, guid: 765e8e592ac1dbe46a89bf68ff564944, type: 3}
+    frontOverlaySprite: {fileID: 0}
     groundAnchorPx: {x: 319.19083, y: 45.333923}
     sortAnchorPx: {x: 319.19083, y: 25.23675}
     groundFootprintPolygonPx:
@@ -48,14 +48,14 @@ MonoBehaviour:
     - {x: 159.19083, y: 45.333923}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
-    seatAnchorPx: {x: 313.00708, y: 153.54948}
+    seatAnchorPx: {x: 313.00708, y: 153.54947}
     workSurfaceAnchorPx: {x: 0, y: 0}
     operatorSeatSocketPx: {x: 0, y: 0}
     uniformScale: 1
     hasSeatAnchor: 1
     hasWorkSurfaceAnchor: 0
     hasOperatorSeatSocket: 0
-    frontOverlayWhenOccupied: 1
+    frontOverlayWhenOccupied: 0
   - kindId: reception_counter
     facing: 0
     baseSprite: {fileID: 21300000, guid: 087c2dc2ef3118e4497bcd967e9ff5e4, type: 3}
@@ -84,10 +84,10 @@ MonoBehaviour:
     groundAnchorPx: {x: 319.4623, y: 39.07538}
     sortAnchorPx: {x: 319.4623, y: 24}
     groundFootprintPolygonPx:
-    - {x: 239.4623, y: -80.92462}
+    - {x: 239.46231, y: -80.92462}
     - {x: 559.4623, y: 79.07538}
     - {x: 399.4623, y: 159.07538}
-    - {x: 79.4623, y: -0.92462}
+    - {x: 79.46231, y: -0.9246216}
     semanticFootprintWidth: 2
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
@@ -127,7 +127,7 @@ MonoBehaviour:
     sortAnchorPx: {x: 320, y: 24}
     groundFootprintPolygonPx:
     - {x: 320, y: -47.06383}
-    - {x: 480, y: 32.93617}
+    - {x: 480, y: 32.936172}
     - {x: 320, y: 112.93617}
     - {x: 160, y: 32.93617}
     semanticFootprintWidth: 1
@@ -168,10 +168,10 @@ MonoBehaviour:
     groundAnchorPx: {x: 320.277, y: 37.42723}
     sortAnchorPx: {x: 320.277, y: 24}
     groundFootprintPolygonPx:
-    - {x: 240.277, y: -82.57277}
+    - {x: 240.27701, y: -82.57277}
     - {x: 560.277, y: 77.42723}
     - {x: 400.277, y: 157.42723}
-    - {x: 80.277, y: -2.57277}
+    - {x: 80.27701, y: -2.5727692}
     semanticFootprintWidth: 2
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
@@ -192,7 +192,7 @@ MonoBehaviour:
     - {x: 239.08255, y: -83.88991}
     - {x: 559.0825, y: 76.11009}
     - {x: 399.08255, y: 156.11009}
-    - {x: 79.08255, y: -3.889908}
+    - {x: 79.08255, y: -3.8899078}
     semanticFootprintWidth: 2
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
@@ -231,10 +231,10 @@ MonoBehaviour:
     groundAnchorPx: {x: 320.41858, y: 32.7214}
     sortAnchorPx: {x: 320.41858, y: 24}
     groundFootprintPolygonPx:
-    - {x: 400.41858, y: -87.2786}
-    - {x: 560.4186, y: -7.2786}
+    - {x: 400.41858, y: -87.278595}
+    - {x: 560.4186, y: -7.278595}
     - {x: 240.41858, y: 152.7214}
-    - {x: 80.41858, y: 72.7214}
+    - {x: 80.41858, y: 72.721405}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 2
     seatAnchorPx: {x: 0, y: 0}
@@ -270,13 +270,13 @@ MonoBehaviour:
     facing: 0
     baseSprite: {fileID: 21300000, guid: bdb0baaefb381c84abbbb6802479ee22, type: 3}
     frontOverlaySprite: {fileID: 0}
-    groundAnchorPx: {x: 323.75516, y: 24}
-    sortAnchorPx: {x: 323.75516, y: 24}
+    groundAnchorPx: {x: 233.75, y: 24}
+    sortAnchorPx: {x: 233.75, y: 24}
     groundFootprintPolygonPx:
-    - {x: 323.75516, y: -56}
-    - {x: 483.75516, y: 24}
-    - {x: 323.75516, y: 104}
-    - {x: 163.75516, y: 24}
+    - {x: 233.75, y: -56}
+    - {x: 393.75, y: 24}
+    - {x: 233.75, y: 104}
+    - {x: 73.75, y: 24}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
@@ -289,15 +289,36 @@ MonoBehaviour:
     frontOverlayWhenOccupied: 0
   - kindId: entrance_wall
     facing: 0
-    baseSprite: {fileID: 21300000, guid: a27e1a1d72d8ef94cbb6e2ef08d09fe9, type: 3}
+    baseSprite: {fileID: 21300000, guid: 95d951b2b1370524c886b2944a8828dc, type: 3}
     frontOverlaySprite: {fileID: 0}
-    groundAnchorPx: {x: 319.79633, y: 24}
-    sortAnchorPx: {x: 319.79633, y: 24}
+    groundAnchorPx: {x: 233.75, y: 24}
+    sortAnchorPx: {x: 233.75, y: 24}
     groundFootprintPolygonPx:
-    - {x: 319.79633, y: -56}
-    - {x: 479.79633, y: 24}
-    - {x: 319.79633, y: 104}
-    - {x: 159.79633, y: 24}
+    - {x: 233.75, y: -56}
+    - {x: 393.75, y: 24}
+    - {x: 233.75, y: 104}
+    - {x: 73.75, y: 24}
+    semanticFootprintWidth: 1
+    semanticFootprintHeight: 1
+    seatAnchorPx: {x: 0, y: 0}
+    workSurfaceAnchorPx: {x: 0, y: 0}
+    operatorSeatSocketPx: {x: 0, y: 0}
+    uniformScale: 1
+    hasSeatAnchor: 0
+    hasWorkSurfaceAnchor: 0
+    hasOperatorSeatSocket: 0
+    frontOverlayWhenOccupied: 0
+  - kindId: perimeter_cutaway_wall
+    facing: 0
+    baseSprite: {fileID: 21300000, guid: 01b50657111c72a46a58758231288e8f, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 233.75, y: 24}
+    sortAnchorPx: {x: 233.75, y: 24}
+    groundFootprintPolygonPx:
+    - {x: 233.75, y: -56}
+    - {x: 393.75, y: 24}
+    - {x: 233.75, y: 104}
+    - {x: 73.75, y: 24}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}

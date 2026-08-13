@@ -285,7 +285,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             renderer.sortingLayerName = "Default";
             var animator = root.AddComponent<DirectionalSpriteAnimator>();
             bool familyMember = Array.IndexOf(FamilyMemberIds, memberId) >= 0;
-            Sprite[] walkFrames = _assetSource.CopyWalkFrames(memberId);
+            Sprite[] walkFrames = ResolveWalkFrames(memberId);
             animator.Configure(renderer, walkFrames);
             if (familyMember && _locomotionTransitionCatalog != null)
                 animator.ConfigureLocomotionTransitions(
@@ -322,6 +322,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 controller.Configure(_bootstrap, actor);
             }
             return actor;
+        }
+
+        private Sprite[] ResolveWalkFrames(string memberId)
+        {
+            OfficeRuntimeCharacterArtCatalog runtimeCatalog =
+                OfficeRuntimeCharacterArtCatalog.LoadDefault();
+            if (runtimeCatalog != null && runtimeCatalog.TryCopyWalkFrames(memberId, out Sprite[] runtimeFrames))
+                return runtimeFrames;
+            return _assetSource.CopyWalkFrames(memberId);
         }
 
         private void CacheWorkActionFrameSets()

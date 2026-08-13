@@ -40,7 +40,11 @@ namespace FamilyCompany.Editor
             Directory.CreateDirectory(outputDirectory);
 
             OfficeFurnitureAssetBuilder.UpgradePoseCatalog();
+            OfficeRuntimeCharacterArtCatalogBuilder.Build();
             OfficeGridValidation.Run();
+            OfficeAttendanceValidation.Run();
+            OfficeFurnitureTileSnapValidation.Run();
+            OfficeLocomotionTransitionQa.Run();
             OfficeLayoutValidator.Run();
             OfficeCharacterDirectionQa.ValidateApprovedDirections();
 

@@ -49,6 +49,23 @@ class AnimationCoherenceGateTests(unittest.TestCase):
             self.assertNotIn("duplicate-frame", loop.failure_codes)
             self.assertNotIn("walk-indices", loop.failure_codes)
 
+    def test_three_plus_three_frozen_walk_poses_fail_gait_motion(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = [
+                self.write_frame(
+                    root,
+                    f"actor_south_walk_{index}.png",
+                    phase=0 if index < 3 else 8,
+                )
+                for index in range(6)
+            ]
+            loop = coherence.Loop(
+                "actor", "walk", "south", list(enumerate(paths)), enforce_walk_quality=True
+            )
+            coherence.measure(loop)
+            self.assertIn("frozen-gait-pose", loop.failure_codes)
+
     def test_missing_walk_direction_fails_contract(self) -> None:
         loops = [
             coherence.Loop("actor", "walk", direction, [])

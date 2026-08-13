@@ -53,10 +53,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
             for (var x = 0; x < grid.Width; x++)
             {
                 var cell = new OfficeGridCoordinate(x, y);
-                bool entranceFacadeVoid = y == 0 && x >= 7 && x <= 9;
-                if ((grid.FloorAt(cell) == OfficeFloorTileKind.Void) != entranceFacadeVoid)
-                    throw new InvalidOperationException($"Preview entrance boundary floor mismatch at {cell}.");
                 var boundary = x == 0 || y == 0 || x == grid.Width - 1 || y == grid.Height - 1;
+                if (grid.FloorAt(cell) == OfficeFloorTileKind.Void)
+                    throw new InvalidOperationException($"Preview floor must render beneath the perimeter wall at {cell}.");
                 if (boundary && grid.IsWalkable(cell))
                     throw new InvalidOperationException($"Boundary cell is unexpectedly walkable at {cell}.");
             }
@@ -64,12 +63,12 @@ namespace FamilyCompany.Editor.OfficeGridQa
             AssertEqual(false, grid.IsWalkable(new OfficeGridCoordinate(6, 6)), "blocked service cell");
             AssertEqual(false, grid.IsWalkable(new OfficeGridCoordinate(6, 7)), "blocked service cell 2");
             AssertEqual(true, grid.IsWalkable(new OfficeGridCoordinate(5, 6)), "walkable service neighbor");
-            AssertEqual(21, grid.Furniture.Count, "preview furniture count");
+            AssertEqual(66, grid.Furniture.Count, "preview furniture count");
             AssertEqual(4, grid.SeatSlots.Count, "preview seat count");
             AssertEqual(4, grid.Workstations.Count, "preview workstation count");
             var kindIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var item in grid.Furniture) kindIds.Add(item.KindId);
-            AssertEqual(14, kindIds.Count, "preview furniture kind count");
+            AssertEqual(15, kindIds.Count, "preview furniture kind count");
             foreach (var seat in grid.SeatSlots)
             {
                 AssertEqual(true, grid.IsWalkable(seat.Cell), seat.SeatId + " walkable");
@@ -96,7 +95,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             var grid = OfficeGridLayouts.CreateStarterOfficeV1();
             AssertEqual(13, grid.Width, "starter width");
             AssertEqual(13, grid.Height, "starter height");
-            AssertEqual(20, grid.Furniture.Count, "starter furniture count");
+            AssertEqual(65, grid.Furniture.Count, "starter furniture count");
             AssertEqual(4, grid.SeatSlots.Count, "starter seat count");
             AssertEqual(4, grid.Workstations.Count, "starter workstation count");
             foreach (var item in grid.Furniture)

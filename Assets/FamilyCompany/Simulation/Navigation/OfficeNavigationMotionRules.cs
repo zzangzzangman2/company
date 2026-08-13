@@ -451,7 +451,10 @@ namespace FamilyCompany.Simulation.Navigation
 
     public static class OfficeLocomotionGaitRules
     {
-        public const float DefaultStrideLength = 1.08f;
+        // One six-frame cycle now represents two planted steps across roughly three quarters of a
+        // semantic tile.  The former 1.08-world-unit cycle advanced the root almost a full tile
+        // while the foot art changed pose, which read as conveyor-belt sliding at normal speed.
+        public const float DefaultStrideLength = 0.78f;
         public const float StopSettleSeconds = 0.10f;
         public const float PivotSeconds = 0.075f;
         public const float ShortShuffleStrideFraction = 0.30f;

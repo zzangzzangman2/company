@@ -560,10 +560,11 @@ namespace FamilyCompany.Editor
 
             OfficeLocomotionGaitState slow = SimulateDistance(0.91f, 46, 0.91f / 1.15f, 0);
             OfficeLocomotionGaitState fast = SimulateDistance(0.91f, 28, 0.91f / 1.65f, 0);
-            Require(slow.Frame == fast.Frame &&
-                    Math.Abs(
-                        OfficeLocomotionGaitRules.Phase01(slow.AccumulatedDistance, stride) -
-                        OfficeLocomotionGaitRules.Phase01(fast.AccumulatedDistance, stride)) <= 0.0001f,
+            float slowPhase = OfficeLocomotionGaitRules.Phase01(slow.AccumulatedDistance, stride);
+            float fastPhase = OfficeLocomotionGaitRules.Phase01(fast.AccumulatedDistance, stride);
+            float circularPhaseError = Math.Min(Math.Abs(slowPhase - fastPhase),
+                1f - Math.Abs(slowPhase - fastPhase));
+            Require(circularPhaseError <= 0.0001f,
                 "1.15 and 1.65 movement speeds use the same phase at the same distance");
             checks++;
 

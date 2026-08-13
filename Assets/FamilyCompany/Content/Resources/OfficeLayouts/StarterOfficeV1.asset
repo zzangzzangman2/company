@@ -16,7 +16,7 @@ MonoBehaviour:
   version: 1
   width: 13
   height: 13
-  floorTiles: 01000000010000000100000001000000010000000100000001000000000000000000000000000000010000000100000001000000030000000300000003000000030000000300000003000000030000000300000003000000030000000300000003000000030000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000030000000300000003000000030000000300000003000000030000000300000003000000030000000300000003000000030000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000030000000300000003000000030000000300000003000000030000000300000003000000030000000300000003000000030000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000030000000300000003000000030000000300000003000000030000000300000003000000030000000300000003000000030000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  floorTiles: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000030000000300000003000000030000000300000003000000030000000300000003000000030000000300000003000000030000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000030000000300000003000000030000000300000003000000030000000300000003000000030000000300000003000000030000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000030000000300000003000000030000000300000003000000030000000300000003000000030000000300000003000000030000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000030000000300000003000000030000000300000003000000030000000300000003000000030000000300000003000000030000000200000002000000020000000200000002000000020000000200000002000000020000000200000002000000020000000200000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
   walkable: 00000000000000000000000000000101010000010101010101000001010101010101010100010000010101010101010101010100000100000101010000010101000001010101010101010101000000010101010101010101010100000101010101010101010101000001000001010100000000000000010101010101010101010100000001010000010101000000000001010101010101010101010000000000000000000000000000
   furniture:
   - furnitureId: desk_player
@@ -189,14 +189,164 @@ MonoBehaviour:
     placementY2: 16
     facing: 0
     blocksMovement: 1
-  - furnitureId: entrance_wall_left
+  - furnitureId: wall_front_y0_x00
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x00
     kindId: entrance_wall
+    originX: 0
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x01
+    kindId: perimeter_cutaway_wall
+    originX: 1
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 2
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x01
+    kindId: entrance_wall
+    originX: 1
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 2
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x02
+    kindId: perimeter_cutaway_wall
+    originX: 2
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 4
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x02
+    kindId: entrance_wall
+    originX: 2
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 4
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x03
+    kindId: perimeter_cutaway_wall
+    originX: 3
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 6
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x03
+    kindId: entrance_wall
+    originX: 3
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 6
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x04
+    kindId: perimeter_cutaway_wall
+    originX: 4
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 8
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x04
+    kindId: entrance_wall
+    originX: 4
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 8
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x05
+    kindId: perimeter_cutaway_wall
+    originX: 5
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 10
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x05
+    kindId: entrance_wall
+    originX: 5
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 10
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x06
+    kindId: perimeter_cutaway_wall
+    originX: 6
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 12
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x06
+    kindId: entrance_wall
+    originX: 6
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 12
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x07
+    kindId: perimeter_cutaway_wall
     originX: 7
     originY: 0
     width: 1
     height: 1
     placementX2: 14
     placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x07
+    kindId: entrance_wall
+    originX: 7
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 14
+    placementY2: 24
     facing: 0
     blocksMovement: 0
   - furnitureId: entrance_door
@@ -209,8 +359,18 @@ MonoBehaviour:
     placementY2: 0
     facing: 0
     blocksMovement: 0
-  - furnitureId: entrance_wall_right
+  - furnitureId: wall_back_y12_x08
     kindId: entrance_wall
+    originX: 8
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 16
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x09
+    kindId: perimeter_cutaway_wall
     originX: 9
     originY: 0
     width: 1
@@ -218,6 +378,296 @@ MonoBehaviour:
     placementX2: 18
     placementY2: 0
     facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x09
+    kindId: entrance_wall
+    originX: 9
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 18
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x10
+    kindId: perimeter_cutaway_wall
+    originX: 10
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 20
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x10
+    kindId: entrance_wall
+    originX: 10
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 20
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_y0_x11
+    kindId: perimeter_cutaway_wall
+    originX: 11
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 22
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x11
+    kindId: entrance_wall
+    originX: 11
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 22
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y00
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 0
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y00
+    kindId: entrance_wall
+    originX: 12
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 0
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y01
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 1
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 2
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y01
+    kindId: entrance_wall
+    originX: 12
+    originY: 1
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 2
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y02
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 2
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 4
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y02
+    kindId: entrance_wall
+    originX: 12
+    originY: 2
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 4
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y03
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 3
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 6
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y03
+    kindId: entrance_wall
+    originX: 12
+    originY: 3
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 6
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y04
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 4
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 8
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y04
+    kindId: entrance_wall
+    originX: 12
+    originY: 4
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 8
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y05
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 5
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 10
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y05
+    kindId: entrance_wall
+    originX: 12
+    originY: 5
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 10
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y06
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 6
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 12
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y06
+    kindId: entrance_wall
+    originX: 12
+    originY: 6
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 12
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y07
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 7
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 14
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y07
+    kindId: entrance_wall
+    originX: 12
+    originY: 7
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 14
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y08
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 8
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 16
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y08
+    kindId: entrance_wall
+    originX: 12
+    originY: 8
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 16
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y09
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 9
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 18
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y09
+    kindId: entrance_wall
+    originX: 12
+    originY: 9
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 18
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y10
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 10
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 20
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y10
+    kindId: entrance_wall
+    originX: 12
+    originY: 10
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 20
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y11
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 11
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 22
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y11
+    kindId: entrance_wall
+    originX: 12
+    originY: 11
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 22
+    facing: 1
     blocksMovement: 0
   seats:
   - seatId: seat_player

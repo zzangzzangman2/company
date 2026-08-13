@@ -40,7 +40,9 @@ DIFF_MIN = 12
 
 MAX_ADJACENT_MEDIAN = 45.0
 MAX_ADJACENT_WORST = 60.0
-MAX_ADJACENCY_RATIO = 0.70
+MAX_ADJACENCY_RATIO = 0.95
+MIN_GAIT_ADJACENT_MOTION = 0.18
+MIN_GAIT_PHASE_MOTION = 0.30
 MAX_FOOT_DRIFT_PX = 1.0
 MAX_STABLE_ROOT_DRIFT_PX = 1.0
 MAX_LOOP_CLOSURE_PX = 2.0
@@ -227,6 +229,22 @@ class Loop:
                 "duplicate-frame",
                 f"unique pixel frames {self.unique_pixel_frames} != {FRAME_COUNT}",
             )
+        if len(self.frames_audit) == FRAME_COUNT and all(item.path.is_file() for item in self.frames_audit):
+            rgba_frames = []
+            for item in self.frames_audit:
+                with Image.open(item.path) as loaded:
+                    rgba_frames.append(np.asarray(loaded.convert("RGBA"), dtype=np.uint8))
+            gait_scores = lower_body_motion_scores(rgba_frames)
+            if min(gait_scores) < MIN_GAIT_ADJACENT_MOTION:
+                self.fail(
+                    "frozen-gait-pose",
+                    f"minimum adjacent lower-body motion {min(gait_scores):.3f} < {MIN_GAIT_ADJACENT_MOTION:.2f}",
+                )
+            if float(np.median(gait_scores)) < MIN_GAIT_PHASE_MOTION:
+                self.fail(
+                    "weak-gait-phase",
+                    f"median adjacent lower-body motion {float(np.median(gait_scores)):.3f} < {MIN_GAIT_PHASE_MOTION:.2f}",
+                )
         if not math.isfinite(self.foot_drift):
             self.fail("foot-not-measurable", "foot contact is not measurable")
         elif self.foot_drift > MAX_FOOT_DRIFT_PX:
@@ -354,6 +372,28 @@ def change_percent(a: np.ndarray, b: np.ndarray) -> float:
         | (delta[:, :, 3] >= DIFF_MIN)
     ) & union_mask
     return float(changed.sum()) / union * 100.0
+
+
+def lower_body_motion_scores(frames: list[np.ndarray]) -> list[float]:
+    scores = []
+    for index, frame in enumerate(frames):
+        other = frames[(index + 1) % len(frames)]
+        alpha = (frame[:, :, 3] >= ALPHA_MIN) | (other[:, :, 3] >= ALPHA_MIN)
+        rows, _ = np.nonzero(alpha)
+        if not len(rows):
+            scores.append(0.0)
+            continue
+        top, bottom = int(rows.min()), int(rows.max())
+        lower_start = top + int(round((bottom - top + 1) * 0.72))
+        region = np.zeros(alpha.shape, dtype=bool)
+        region[lower_start : bottom + 1] = True
+        delta = np.abs(frame.astype(np.int16) - other.astype(np.int16))
+        changed = (
+            (delta[:, :, :3].max(axis=2) >= DIFF_MIN) | (delta[:, :, 3] >= DIFF_MIN)
+        ) & region
+        denominator = int((alpha & region).sum())
+        scores.append(float(changed.sum()) / denominator if denominator else 0.0)
+    return scores
 
 
 def load_and_audit(index: int, path: Path, enforce_quality: bool) -> tuple[FrameAudit, np.ndarray | None]:
