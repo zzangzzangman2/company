@@ -1813,6 +1813,17 @@ namespace FamilyCompany.Presentation.Unity
 
         private IEnumerator RunContractAndSaveLoadQa(PrototypeBootstrap bootstrap)
         {
+            Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
+            if (actors == null) yield break;
+            // The preceding collision scenario intentionally parks the sister on (7,6), which is
+            // the mother's assigned chair cell. Normalize positions before testing contract
+            // priority so one QA scenario cannot make the next task appear path-unreachable.
+            actors["mother"].QaTeleportToCell(new OfficeGridCoordinate(9, 6));
+            actors["older_sister"].QaTeleportToCell(new OfficeGridCoordinate(9, 2));
+            actors["father"].QaTeleportToCell(new OfficeGridCoordinate(1, 9));
+            actors["player"].QaTeleportToCell(new OfficeGridCoordinate(5, 6));
+            foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
+
             SubcontractOffer offer = BootstrapContractCatalog.CreateOffer(
                 bootstrap.State.WorldSeed,
                 "starter-runtime-qa-client",
