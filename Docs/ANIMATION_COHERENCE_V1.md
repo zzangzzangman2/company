@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-08-13 / P0-0 구현 완료
+
+- `Tools/stabilize_locomotion_cycles.py`가 캐릭터 폴더를 자동 발견하고 12명×8방향×6프레임을 일괄 재구성한다.
+- 방향별 frame 0의 얼굴·머리카락·몸통·옷·팔을 하나의 canonical upper body로 고정한다. 원본 6장의 가능한 접촉 포즈 15쌍을 평가하고, 선택한 두 원화의 다리·발만 정수 X 이동해 네 in-between을 만든다. 디졸브·보간 필터·회전·스케일은 사용하지 않는다.
+- 적용 전 24개 기존 canonical sheet를 `Assets/Art/Characters/BeforeCoherenceV1/`에 보존했다. 기존 576 frame `.meta`와 GUID는 변경하지 않았다.
+- 새 canonical sheet는 `familyCompanyHighMotionLayout=grid-4x6-v1` PNG 마커를 갖고, 자동발견 splitter가 24장→576장 byte-exact round trip을 검증한다.
+- 강화 strict gate는 정확한 방향/인덱스/수량, native RGBA 256², hard alpha, nonempty, 6개 고유 pose, finite ratio, 발·torso root·closure까지 검사한다.
+- 별도 upper-body alpha crack gate가 원본보다 길어진 투명 세로 틈을 검출한다. 최종본의 신규 상체 틈 증가는 전 루프 0px다.
+
+최종 전수 결과:
+
+| 계약 | 결과 |
+| --- | --- |
+| 캐릭터 / 루프 / 프레임 | 12 / 96 / 576 |
+| coherence strict | PASS 96/96 |
+| median의 중앙값 / 최대 worst | 6.545% / 22.477% |
+| ratio 중앙값 / 최대값 | 0.4607 / 0.6899 |
+| 6개 고유 pose | 96/96 |
+| foot drift / stable root drift / closure 최대 | 0px / 0px / 0px |
+| 신규 upper-body alpha crack 증가 | 최대 0px |
+| sheet→frame exact | PASS 576/576 |
+| runtime frame `.meta` manifest | 적용 전후 SHA-256 동일 |
+
+기존 가족 방향 수동 승인 192개는 픽셀 교체 뒤 stale 값이므로 모두 fail-closed로 무효화했다. Unity 승인 창에서 새 contact sheet를 보고 다시 승인해야 Windows build gate가 열린다.
+
+---
+
 ## 0. 한 줄 답
 
 > **프레임 수는 많은데 프레임 사이 연속성이 0이다. 그래서 프레임이 많은 게 오히려 해롭다.**

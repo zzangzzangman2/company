@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Split the approved 8-direction / 6-frame character sheets into Unity sprites."""
+"""Split discovered 8-direction / 6-frame character sheets into Unity sprites."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,28 +22,26 @@ PART_DIRECTIONS = {
     "a": ("south", "southwest", "west", "northwest"),
     "b": ("north", "northeast", "east", "southeast"),
 }
+LAYOUT_METADATA_KEY = "familyCompanyHighMotionLayout"
+GRID_LAYOUT_MARKER = "grid-4x6-v1"
+SHEET_RE = re.compile(
+    r"^(?P<character>[a-z0-9_]+?)_pixel_walk8dir6_(?P<part>[ab])_v1\.png$"
+)
 
 
 @dataclass(frozen=True)
 class CharacterSpec:
     character_id: str
-    asset_root: str
+    high_motion_root: Path
 
+    @property
+    def frame_folder(self) -> Path:
+        return self.high_motion_root / "Frames"
 
-CHARACTERS = (
-    CharacterSpec("player", "Assets/Art/Characters/Player"),
-    CharacterSpec("older_sister", "Assets/Art/Characters/OlderSister"),
-    CharacterSpec("father", "Assets/Art/Characters/Father"),
-    CharacterSpec("mother", "Assets/Art/Characters/Mother"),
-    CharacterSpec("kim_seoa", "Assets/Art/Characters/Employees/KimSeoa"),
-    CharacterSpec("lee_jian", "Assets/Art/Characters/Employees/LeeJian"),
-    CharacterSpec("choi_iseo", "Assets/Art/Characters/Employees/ChoiIseo"),
-    CharacterSpec("jung_arin", "Assets/Art/Characters/Employees/JungArin"),
-    CharacterSpec("park_haeun", "Assets/Art/Characters/Employees/ParkHaeun"),
-    CharacterSpec("han_sua", "Assets/Art/Characters/Employees/HanSua"),
-    CharacterSpec("oh_jiwoo", "Assets/Art/Characters/Employees/OhJiwoo"),
-    CharacterSpec("yoon_chaea", "Assets/Art/Characters/Employees/YoonChaea"),
-)
+    def sheet_path(self, part: str) -> Path:
+        return self.high_motion_root / (
+            f"{self.character_id}_pixel_walk8dir6_{part}_v1.png"
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,7 +50,7 @@ def parse_args() -> argparse.Namespace:
         "--repo-root",
         type=Path,
         default=Path(__file__).resolve().parents[1],
-        help="Unity project root (defaults to the parent of Tools).",
+        help="Unity project or candidate mirror root (defaults to the parent of Tools).",
     )
     parser.add_argument(
         "--verify-only",
@@ -61,7 +60,88 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def require_hard_alpha(image: Image.Image, path: Path) -> None:
+def discover_characters(repo_root: Path) -> list[CharacterSpec]:
+    """Discover complete sheet-pair + Frames contracts without a character registry."""
+    art_root = repo_root / "Assets" / "Art" / "Characters"
+    if not art_root.is_dir():
+        raise FileNotFoundError(f"Character art root not found: {art_root}")
+
+    result: list[CharacterSpec] = []
+    seen_ids: dict[str, Path] = {}
+    for high_motion_root in sorted(art_root.rglob("Pixel/HighMotion")):
+        if not high_motion_root.is_dir():
+            continue
+
+        discovered: dict[str, dict[str, Path]] = {}
+        for sheet_path in sorted(high_motion_root.glob("*_pixel_walk8dir6_?_v1.png")):
+            match = SHEET_RE.match(sheet_path.name)
+            if match is None:
+                raise ValueError(f"Unexpected HighMotion sheet name: {sheet_path}")
+            character_id = match["character"]
+            part = match["part"]
+            parts = discovered.setdefault(character_id, {})
+            if part in parts:
+                raise ValueError(
+                    f"Duplicate HighMotion sheet part {part} for {character_id}: "
+                    f"{parts[part]}, {sheet_path}"
+                )
+            parts[part] = sheet_path
+
+        if not discovered:
+            continue
+        if len(discovered) != 1:
+            raise ValueError(
+                f"{high_motion_root} must contain one character sheet pair; "
+                f"found {sorted(discovered)}"
+            )
+
+        character_id, parts = next(iter(discovered.items()))
+        if set(parts) != set(PART_DIRECTIONS):
+            raise FileNotFoundError(
+                f"{character_id} must have sheet parts a and b in {high_motion_root}; "
+                f"found {sorted(parts)}"
+            )
+        frame_folder = high_motion_root / "Frames"
+        if not frame_folder.is_dir():
+            raise FileNotFoundError(
+                f"Missing HighMotion Frames directory for {character_id}: {frame_folder}"
+            )
+        if character_id in seen_ids:
+            raise ValueError(
+                f"Duplicate HighMotion character ID {character_id}: "
+                f"{seen_ids[character_id]}, {high_motion_root}"
+            )
+        seen_ids[character_id] = high_motion_root
+        result.append(CharacterSpec(character_id, high_motion_root))
+
+    if not result:
+        raise ValueError(f"No complete HighMotion character sets found under {art_root}")
+    return result
+
+
+def expected_frame_names(character_id: str) -> set[str]:
+    return {
+        f"{character_id}_{direction}_walk_{phase}.png"
+        for directions in PART_DIRECTIONS.values()
+        for direction in directions
+        for phase in range(PHASE_COUNT)
+    }
+
+
+def validate_frame_contract(spec: CharacterSpec) -> None:
+    expected = expected_frame_names(spec.character_id)
+    actual = {path.name for path in spec.frame_folder.glob("*.png")}
+    if actual == expected:
+        return
+    missing = sorted(expected - actual)
+    unexpected = sorted(actual - expected)
+    raise ValueError(
+        f"{spec.character_id}: Frames must contain exactly 48 walk PNGs; "
+        f"missing={missing} unexpected={unexpected}"
+    )
+
+
+def require_hard_alpha(image: Image.Image, path: Path | str) -> None:
     histogram = image.getchannel("A").histogram()
     unexpected = [value for value, count in enumerate(histogram) if count and value not in (0, 255)]
     if unexpected:
@@ -145,34 +225,58 @@ def extract_aligned_frames(sheet: Image.Image, sheet_path: Path) -> list[list[Im
     return rows
 
 
-def split_character(repo_root: Path, spec: CharacterSpec, verify_only: bool) -> int:
-    high_motion = repo_root / spec.asset_root / "Pixel" / "HighMotion"
-    frame_folder = high_motion / "Frames"
-    if not verify_only:
-        frame_folder.mkdir(parents=True, exist_ok=True)
+def extract_grid_frames(sheet: Image.Image, sheet_path: Path) -> list[list[Image.Image]]:
+    """Crop a marker-authored 4x6 sheet without applying legacy realignment."""
+    rows: list[list[Image.Image]] = []
+    for row_index in range(4):
+        row_frames: list[Image.Image] = []
+        for phase in range(PHASE_COUNT):
+            left = phase * CELL_SIZE
+            top = row_index * CELL_SIZE
+            frame = sheet.crop(
+                (left, top, left + CELL_SIZE, top + CELL_SIZE)
+            )
+            label = f"{sheet_path} grid row={row_index} phase={phase}"
+            validate_frame(frame, label)
+            require_hard_alpha(frame, label)
+            row_frames.append(frame)
+        rows.append(row_frames)
+    return rows
 
+
+def split_character(repo_root: Path, spec: CharacterSpec, verify_only: bool) -> int:
+    if verify_only:
+        validate_frame_contract(spec)
+    else:
+        spec.frame_folder.mkdir(parents=True, exist_ok=True)
     written = 0
     for part, directions in PART_DIRECTIONS.items():
-        sheet_path = high_motion / f"{spec.character_id}_pixel_walk8dir6_{part}_v1.png"
+        sheet_path = spec.sheet_path(part)
         if not sheet_path.is_file():
             raise FileNotFoundError(sheet_path)
 
         with Image.open(sheet_path) as loaded:
+            layout_marker = loaded.info.get(LAYOUT_METADATA_KEY)
             sheet = loaded.convert("RGBA")
         if sheet.size != SHEET_SIZE:
             raise ValueError(f"{sheet_path} must be {SHEET_SIZE}, got {sheet.size}")
         require_hard_alpha(sheet, sheet_path)
-        aligned_frames = extract_aligned_frames(sheet, sheet_path)
+        if layout_marker is None:
+            aligned_frames = extract_aligned_frames(sheet, sheet_path)
+        elif layout_marker == GRID_LAYOUT_MARKER:
+            aligned_frames = extract_grid_frames(sheet, sheet_path)
+        else:
+            raise ValueError(
+                f"{sheet_path} has unsupported {LAYOUT_METADATA_KEY}={layout_marker!r}"
+            )
 
         for row, direction in enumerate(directions):
             for phase in range(PHASE_COUNT):
                 frame = aligned_frames[row][phase]
                 frame_name = f"{spec.character_id}_{direction}_walk_{phase}.png"
-                frame_path = frame_folder / frame_name
+                frame_path = spec.frame_folder / frame_name
                 validate_frame(frame, str(frame_path))
                 if verify_only:
-                    if not frame_path.is_file():
-                        raise FileNotFoundError(frame_path)
                     with Image.open(frame_path) as existing:
                         existing_rgba = existing.convert("RGBA")
                     validate_frame(existing_rgba, str(frame_path))
@@ -185,17 +289,27 @@ def split_character(repo_root: Path, spec: CharacterSpec, verify_only: bool) -> 
 
     if written != 48:
         raise AssertionError(f"{spec.character_id}: expected 48 frames, got {written}")
+    validate_frame_contract(spec)
     return written
 
 
 def main() -> None:
     args = parse_args()
     repo_root = args.repo_root.resolve()
-    total = sum(split_character(repo_root, spec, args.verify_only) for spec in CHARACTERS)
-    if total != 576:
-        raise AssertionError(f"Expected 576 frames, got {total}")
+    characters = discover_characters(repo_root)
+    total = sum(split_character(repo_root, spec, args.verify_only) for spec in characters)
+    expected_total = (
+        len(characters)
+        * sum(len(directions) for directions in PART_DIRECTIONS.values())
+        * PHASE_COUNT
+    )
+    if total != expected_total:
+        raise AssertionError(f"Expected {expected_total} frames, got {total}")
     action = "verified" if args.verify_only else "wrote"
-    print(f"HIGH_MOTION_SPLIT: PASS {action}=576 characters=12 directions=8 phases=6")
+    print(
+        f"HIGH_MOTION_SPLIT: PASS {action}={total} characters={len(characters)} "
+        f"directions=8 phases={PHASE_COUNT}"
+    )
 
 
 if __name__ == "__main__":
