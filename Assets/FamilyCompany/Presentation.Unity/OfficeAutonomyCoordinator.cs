@@ -35,6 +35,9 @@ namespace FamilyCompany.Presentation.Unity
         private OfficeAttendancePhase? _lastRuntimeAttendancePhase;
         private int _nextAttendanceArrivalIndex;
         private float _arrivalReleaseRemaining;
+        private IOfficeRuntimeAgent _lastAttendanceEntrant;
+        private Vector2 _lastAttendanceEntryPosition;
+        private const float MinimumAttendanceEntranceClearance = 0.72f;
 
         public OfficeSeatingState SeatingState => _seatingState;
         public bool IsSeatingRuntimeReady =>
@@ -56,6 +59,8 @@ namespace FamilyCompany.Presentation.Unity
             _lastRuntimeAttendancePhase = null;
             _nextAttendanceArrivalIndex = 0;
             _arrivalReleaseRemaining = 0f;
+            _lastAttendanceEntrant = null;
+            _lastAttendanceEntryPosition = Vector2.zero;
             _initialized = false;
         }
 
@@ -75,6 +80,8 @@ namespace FamilyCompany.Presentation.Unity
             _lastRuntimeAttendancePhase = null;
             _nextAttendanceArrivalIndex = 0;
             _arrivalReleaseRemaining = 0f;
+            _lastAttendanceEntrant = null;
+            _lastAttendanceEntryPosition = Vector2.zero;
             _initialized = false;
         }
 
@@ -313,6 +320,8 @@ namespace FamilyCompany.Presentation.Unity
             {
                 _nextAttendanceArrivalIndex = 0;
                 _arrivalReleaseRemaining = 0f;
+                _lastAttendanceEntrant = null;
+                _lastAttendanceEntryPosition = Vector2.zero;
             }
             else
             {
@@ -320,14 +329,23 @@ namespace FamilyCompany.Presentation.Unity
                 while (_nextAttendanceArrivalIndex < orderedAgents.Length &&
                        !orderedAgents[_nextAttendanceArrivalIndex].IsPresentationAway)
                     _nextAttendanceArrivalIndex++;
+                bool entranceIsClear = _lastAttendanceEntrant == null ||
+                                       _lastAttendanceEntrant.IsPresentationAway ||
+                                       Vector2.Distance(
+                                           _lastAttendanceEntrant.Position,
+                                           _lastAttendanceEntryPosition) >=
+                                       MinimumAttendanceEntranceClearance;
                 if (_nextAttendanceArrivalIndex < orderedAgents.Length &&
                     OfficeAttendanceRules.HasArrived(now, _nextAttendanceArrivalIndex) &&
-                    _arrivalReleaseRemaining <= 0f)
+                    _arrivalReleaseRemaining <= 0f &&
+                    entranceIsClear)
                 {
                     IOfficeRuntimeAgent entrant = orderedAgents[_nextAttendanceArrivalIndex];
                     entrant.SetAttendanceOutside(false, false);
                     if (!entrant.IsPresentationAway)
                     {
+                        _lastAttendanceEntrant = entrant;
+                        _lastAttendanceEntryPosition = entrant.Position;
                         _nextAttendanceArrivalIndex++;
                         _arrivalReleaseRemaining = 0.35f;
                     }
