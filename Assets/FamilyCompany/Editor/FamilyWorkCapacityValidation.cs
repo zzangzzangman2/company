@@ -32,35 +32,35 @@ namespace FamilyCompany.Editor
         private static void ValidateWeekdayScheduleBlocks()
         {
             var family = PrototypeStateFactory.Create(20260810).Family;
-            var monday08 = MinuteAt(0, 8, 0);
+            var monday0850 = 0L;
             var monday23 = MinuteAt(0, 23, 0);
-            var plan = FamilyWorkCapacityPlanner.Calculate(family, monday08, monday23);
+            var plan = FamilyWorkCapacityPlanner.Calculate(family, monday0850, monday23);
 
-            AssertEqual(30L, plan.CompanyAvailableBlockCount, "Monday company-open blocks");
-            AssertEqual(74L, plan.TotalAvailableMemberBlockCount, "Monday total member blocks");
-            AssertEqual(37m, plan.TotalAvailablePersonHours, "Monday total person-hours");
+            AssertEqual(18L, plan.CompanyAvailableBlockCount, "Monday company-open blocks");
+            AssertEqual(72L, plan.TotalAvailableMemberBlockCount, "Monday total member blocks");
+            AssertEqual(36m, plan.TotalAvailablePersonHours, "Monday total person-hours");
             AssertEqual(4, plan.PeakConcurrentMemberCount, "Monday peak concurrent members");
-            AssertEqual(12L, plan.GetMember("player").AvailableBlockCount, "player Monday blocks");
-            AssertEqual(20L, plan.GetMember("older_sister").AvailableBlockCount, "sister Monday blocks");
-            AssertEqual(16L, plan.GetMember("father").AvailableBlockCount, "father Monday blocks");
-            AssertEqual(26L, plan.GetMember("mother").AvailableBlockCount, "mother Monday blocks");
+            AssertEqual(18L, plan.GetMember("player").AvailableBlockCount, "player Monday blocks");
+            AssertEqual(18L, plan.GetMember("older_sister").AvailableBlockCount, "sister Monday blocks");
+            AssertEqual(18L, plan.GetMember("father").AvailableBlockCount, "father Monday blocks");
+            AssertEqual(18L, plan.GetMember("mother").AvailableBlockCount, "mother Monday blocks");
         }
 
         private static void ValidateRoleCommitmentWindows()
         {
             var family = PrototypeStateFactory.Create(20260810).Family;
 
-            AssertMemberBlocks(family, "player", 0, 9, 0, 18, 0, 0, "player weekday school");
-            AssertMemberBlocks(family, "player", 0, 18, 0, 19, 0, 2, "player after school");
+            AssertMemberBlocks(family, "player", 0, 9, 0, 18, 0, 18, "player office shift");
+            AssertMemberBlocks(family, "player", 0, 18, 0, 19, 0, 0, "player after shift");
 
-            AssertMemberBlocks(family, "older_sister", 0, 9, 0, 14, 0, 0, "sister outside commitment");
-            AssertMemberBlocks(family, "older_sister", 0, 14, 0, 15, 0, 2, "sister return from commitment");
+            AssertMemberBlocks(family, "older_sister", 0, 9, 0, 14, 0, 10, "sister office shift");
+            AssertMemberBlocks(family, "older_sister", 0, 14, 0, 15, 0, 2, "sister office shift continuation");
 
-            AssertMemberBlocks(family, "father", 0, 10, 0, 17, 0, 0, "father outside sales");
-            AssertMemberBlocks(family, "father", 0, 17, 0, 18, 0, 2, "father return from sales");
+            AssertMemberBlocks(family, "father", 0, 10, 0, 17, 0, 14, "father office shift");
+            AssertMemberBlocks(family, "father", 0, 17, 0, 18, 0, 2, "father office shift continuation");
 
             AssertMemberBlocks(family, "mother", 0, 18, 0, 20, 0, 0, "mother household duty");
-            AssertMemberBlocks(family, "mother", 0, 20, 0, 21, 0, 2, "mother after household duty");
+            AssertMemberBlocks(family, "mother", 0, 20, 0, 21, 0, 0, "mother after shift");
 
             AssertMemberBlocks(family, "older_sister", 5, 10, 0, 15, 0, 0, "sister Saturday part-time job");
             AssertMemberBlocks(family, "mother", 5, 8, 0, 11, 0, 0, "mother weekend household duty");
@@ -69,41 +69,41 @@ namespace FamilyCompany.Editor
         private static void ValidateEarliestCompletion()
         {
             var family = PrototypeStateFactory.Create(20260810).Family;
-            var monday08 = MinuteAt(0, 8, 0);
+            var monday0850 = 0L;
             var monday23 = MinuteAt(0, 23, 0);
 
             var tenHours = FamilyWorkCapacityPlanner.EstimateEarliestCompletion(
                 family,
-                monday08,
+                monday0850,
                 monday23,
                 10);
             AssertEqual(true, tenHours.CanComplete, "company ten-hour feasibility");
-            AssertEqual(MinuteAt(0, 14, 0), tenHours.EarliestCompletionMinute, "company ten-hour completion");
+            AssertEqual(MinuteAt(0, 11, 30), tenHours.EarliestCompletionMinute, "company ten-hour completion");
 
             var fullCapacity = FamilyWorkCapacityPlanner.EstimateEarliestCompletion(
                 family,
-                monday08,
+                monday0850,
                 monday23,
-                37);
+                36);
             AssertEqual(true, fullCapacity.CanComplete, "company full-day feasibility");
-            AssertEqual(monday23, fullCapacity.EarliestCompletionMinute, "company full-day completion");
+            AssertEqual(MinuteAt(0, 18, 0), fullCapacity.EarliestCompletionMinute, "company full-day completion");
 
             var overflow = FamilyWorkCapacityPlanner.EstimateEarliestCompletion(
                 family,
-                monday08,
+                monday0850,
                 monday23,
-                38);
+                37);
             AssertEqual(false, overflow.CanComplete, "company overflow infeasible");
-            AssertEqual(74L, overflow.AccumulatedMemberBlockCount, "company overflow accumulated blocks");
+            AssertEqual(72L, overflow.AccumulatedMemberBlockCount, "company overflow accumulated blocks");
 
             var player = family.Get("player");
             var playerTwoHours = FamilyWorkCapacityPlanner.EstimateEarliestCompletion(
                 player,
-                monday08,
+                monday0850,
                 MinuteAt(0, 19, 0),
                 2);
             AssertEqual(true, playerTwoHours.CanComplete, "player split-window feasibility");
-            AssertEqual(MinuteAt(0, 19, 0), playerTwoHours.EarliestCompletionMinute, "player split-window completion");
+            AssertEqual(MinuteAt(0, 11, 0), playerTwoHours.EarliestCompletionMinute, "player shift completion");
         }
 
         private static void ValidatePulseAlignment()

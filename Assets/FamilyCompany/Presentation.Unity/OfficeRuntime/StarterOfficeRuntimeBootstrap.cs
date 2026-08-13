@@ -14,8 +14,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     [DisallowMultipleComponent]
     public sealed class StarterOfficeRuntimeBootstrap : MonoBehaviour
     {
-        private static readonly string[] MemberIds =
+        private static readonly string[] FamilyMemberIds =
             { "player", "older_sister", "father", "mother" };
+        private static readonly string[] EmployeeMemberIds =
+        {
+            "kim_seoa", "lee_jian", "choi_iseo", "jung_arin",
+            "park_haeun", "han_sua", "oh_jiwoo", "yoon_chaea"
+        };
+        private static readonly string[] MemberIds = FamilyMemberIds.Concat(EmployeeMemberIds).ToArray();
         private static readonly OfficeGridCoordinate[] PreferredSpawns =
         {
             new OfficeGridCoordinate(1, 2),
@@ -30,9 +36,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private Renderer[] _legacyRenderers = Array.Empty<Renderer>();
         private GameObject _generated;
         private OfficeRuntimeWorld _world;
+        private static int _activeLayoutRebuilds;
         private string _layoutHash = string.Empty;
         private bool _building;
         private OfficeLocomotionTransitionCatalog _locomotionTransitionCatalog;
+        private OfficeRuntimeCharacterArtCatalog _runtimeCharacterArtCatalog;
         private readonly Dictionary<string, OfficeWorkActionFrameSet> _workActionFrameSets =
             new Dictionary<string, OfficeWorkActionFrameSet>(StringComparer.Ordinal);
         private readonly Dictionary<string, OfficeRuntimeAgentLayoutSnapshot> _layoutSnapshots =
@@ -42,6 +50,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public bool IsReady { get; private set; }
         public OfficeRuntimeWorld World => _world;
+        public static bool IsLayoutRebuilding => _activeLayoutRebuilds > 0;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            _activeLayoutRebuilds = 0;
+        }
         public IReadOnlyList<OfficeRuntimeAgent> Actors =>
             _world == null ? Array.Empty<OfficeRuntimeAgent>() : _world.Registry.Actors;
         public string LayoutHash => _layoutHash;
@@ -128,6 +143,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _world.Configure(grid, presenter, furniturePresenter);
             ResolveSeatingPresentationMode();
             _locomotionTransitionCatalog = OfficeLocomotionTransitionCatalog.LoadDefault();
+            _runtimeCharacterArtCatalog = OfficeRuntimeCharacterArtCatalog.LoadDefault();
             if (_locomotionTransitionCatalog == null)
             {
                 Debug.LogWarning(
@@ -145,7 +161,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     memberId,
                     out OfficeRuntimeAgentLayoutSnapshot snapshot)
                     ? snapshot.Cell
-                    : PreferredSpawns[index];
+                    : index < PreferredSpawns.Length
+                        ? PreferredSpawns[index]
+                        : new OfficeGridCoordinate(1 + (index - PreferredSpawns.Length) % 6, 1);
                 OfficeGridCoordinate spawn = FindSpawn(preferred, usedSpawns);
                 usedSpawns.Add(spawn);
                 OfficeRuntimeAgent actor = CreateActor(memberId, memberId == "player", spawn);
@@ -204,21 +222,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             var renderer = visual.AddComponent<SpriteRenderer>();
             renderer.sortingLayerName = "Default";
             var animator = root.AddComponent<DirectionalSpriteAnimator>();
-            animator.Configure(renderer, _assetSource.CopyWalkFrames(memberId));
-            if (_locomotionTransitionCatalog != null)
+            bool familyMember = Array.IndexOf(FamilyMemberIds, memberId) >= 0;
+            Sprite[] walkFrames;
+            if (familyMember)
+                walkFrames = _assetSource.CopyWalkFrames(memberId);
+            else if (_runtimeCharacterArtCatalog == null ||
+                     !_runtimeCharacterArtCatalog.TryCopyWalkFrames(memberId, out walkFrames))
+                throw new InvalidOperationException("Runtime character art is missing: " + memberId);
+            animator.Configure(renderer, walkFrames);
+            if (familyMember && _locomotionTransitionCatalog != null)
                 animator.ConfigureLocomotionTransitions(
                     _locomotionTransitionCatalog.CopyFrames(memberId));
-            OfficeGridSeatingFrameSet seating = _assetSource.CopySeatingFrameSet(memberId);
-            animator.ConfigureOfficeSeating(
-                seating.sitDownFrames,
-                seating.workFrames,
-                seating.standUpFrames,
-                presentationMode: _seatingPresentationMode);
-            if (_workActionFrameSets.TryGetValue(memberId, out OfficeWorkActionFrameSet frameSet))
+            if (familyMember)
             {
-                var adapter = root.AddComponent<OfficeSeatedWorkMicroActionAdapter>();
-                adapter.Configure(_bootstrap, memberId, frameSet);
-                animator.ConfigureOfficeWorkAnimationHook(adapter);
+                OfficeGridSeatingFrameSet seating = _assetSource.CopySeatingFrameSet(memberId);
+                animator.ConfigureOfficeSeating(
+                    seating.sitDownFrames,
+                    seating.workFrames,
+                    seating.standUpFrames,
+                    presentationMode: _seatingPresentationMode);
+                if (_workActionFrameSets.TryGetValue(memberId, out OfficeWorkActionFrameSet frameSet))
+                {
+                    var adapter = root.AddComponent<OfficeSeatedWorkMicroActionAdapter>();
+                    adapter.Configure(_bootstrap, memberId, frameSet);
+                    animator.ConfigureOfficeWorkAnimationHook(adapter);
+                }
             }
             var actor = root.AddComponent<OfficeRuntimeAgent>();
             actor.Configure(
@@ -262,13 +290,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             const int northwest = (int)OfficeSeatFacing8.Northwest;
             try
             {
-                catalog.ValidateAnimatedNorthwest(MemberIds, northwest);
+                catalog.ValidateAnimatedNorthwest(FamilyMemberIds, northwest);
                 _seatingPresentationMode = OfficeSeatingPresentationMode.Animated;
                 Debug.Log("STARTER_OFFICE_SEATING_PRESENTATION | mode=Animated profiles=56 facing=Northwest");
             }
             catch (Exception animatedFailure)
             {
-                catalog.ValidateSafeStaticWork(MemberIds, northwest);
+                catalog.ValidateSafeStaticWork(FamilyMemberIds, northwest);
                 _seatingPresentationMode = OfficeSeatingPresentationMode.SafeStaticWork;
                 Debug.LogWarning(
                     "STARTER_OFFICE_SEATING_PRESENTATION | mode=SafeStaticWork reason=" +
@@ -375,6 +403,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private IEnumerator RebuildForLayoutChange()
         {
+            _activeLayoutRebuilds++;
             _building = true;
             IsReady = false;
             CaptureLayoutSnapshots();
@@ -383,7 +412,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _generated = null;
             _world = null;
             _building = false;
-            BuildRuntime();
+            try
+            {
+                BuildRuntime();
+            }
+            finally
+            {
+                _activeLayoutRebuilds = Math.Max(0, _activeLayoutRebuilds - 1);
+            }
         }
 
         private void CaptureLayoutSnapshots()

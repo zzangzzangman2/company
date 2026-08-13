@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FamilyCompany.Infrastructure.Unity;
@@ -38,6 +39,8 @@ namespace FamilyCompany.Presentation.Unity
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
         private const int ReferenceHeight = 1080;
+        private static readonly string[] CanonicalFamilyIds =
+            { "player", "older_sister", "father", "mother" };
         private GameState _state;
         private SimulationRunner _runner;
         private UnityJsonSaveRepository[] _saveSlots;
@@ -235,10 +238,16 @@ namespace FamilyCompany.Presentation.Unity
         public void BindStarterOfficeRuntime(IOfficeRuntimeAgent[] runtimeAgents)
         {
             InitializeNow();
-            if (runtimeAgents == null || runtimeAgents.Length != 4)
-                throw new ArgumentException("Starter Office requires exactly four runtime actors.", nameof(runtimeAgents));
-            if (runtimeAgents.Select(item => item.AgentId).Distinct(StringComparer.Ordinal).Count() != 4)
+            if (runtimeAgents == null || runtimeAgents.Length < CanonicalFamilyIds.Length)
+                throw new ArgumentException("Starter Office requires the four canonical family actors.", nameof(runtimeAgents));
+            if (runtimeAgents.Any(item => item == null) ||
+                runtimeAgents.Select(item => item.AgentId).Distinct(StringComparer.Ordinal).Count() != runtimeAgents.Length)
                 throw new InvalidOperationException("Starter Office runtime actor IDs must be unique.");
+            var runtimeIds = new HashSet<string>(
+                runtimeAgents.Select(item => item.AgentId),
+                StringComparer.Ordinal);
+            if (CanonicalFamilyIds.Any(id => !runtimeIds.Contains(id)))
+                throw new InvalidOperationException("Starter Office runtime is missing a canonical family actor.");
 
             _contractTaskCoordinator = GetComponent<OfficeContractTaskCoordinator>();
             if (_contractTaskCoordinator == null)
@@ -806,6 +815,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!_hasSession || _screen != PrototypeUiScreen.Playing || _state == null || _runner == null)
                 return;
+            if (ScenePreviewJump.IsPresentationLoading) return;
             double delta = Time.unscaledDeltaTime;
             if (double.IsNaN(delta) || double.IsInfinity(delta) || delta <= 0d) return;
 
@@ -828,7 +838,8 @@ namespace FamilyCompany.Presentation.Unity
             var failedBefore = _state.Contracts.Contracts.Count(item => item.Status == SubcontractStatus.Failed);
             var productWasResolved = _state.Growth.ProductProject?.Resolved ?? false;
             _runner.AdvanceMinutes(minutes);
-            _officeAutonomyCoordinator?.RefreshNow();
+            if (!StarterOfficeRuntimeBootstrap.IsLayoutRebuilding)
+                _officeAutonomyCoordinator?.RefreshNow();
             var failedAfter = _state.Contracts.Contracts.Count(item => item.Status == SubcontractStatus.Failed);
             var latestIncident = _state.Family.Members
                 .Where(item => item.Autonomy.LastIncidentMinute > previousMinute)

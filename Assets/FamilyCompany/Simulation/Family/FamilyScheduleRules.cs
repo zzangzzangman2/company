@@ -31,6 +31,8 @@ namespace FamilyCompany.Simulation.Family
     {
         private static readonly FamilyScheduleSlot CompanyTime =
             new FamilyScheduleSlot(FamilyScheduleKind.CompanyTime, "회사 일 가능", true);
+        private static readonly FamilyScheduleSlot PersonalTime =
+            new FamilyScheduleSlot(FamilyScheduleKind.PersonalTime, "개인 시간", false);
 
         public static FamilyScheduleSlot Resolve(FamilyRole role, DateTime now)
         {
@@ -45,6 +47,12 @@ namespace FamilyCompany.Simulation.Family
             {
                 return new FamilyScheduleSlot(FamilyScheduleKind.PersonalTime, "출근 준비", false);
             }
+
+            int minuteOfDay = checked(now.Hour * 60 + now.Minute);
+            if (!weekend &&
+                minuteOfDay >= OfficeAttendanceRules.WorkStartsMinuteOfDay &&
+                minuteOfDay < OfficeAttendanceRules.WorkEndsMinuteOfDay)
+                return CompanyTime;
 
             switch (role)
             {
@@ -73,7 +81,9 @@ namespace FamilyCompany.Simulation.Family
                     break;
             }
 
-            return CompanyTime;
+            // The visible office has one authoritative shift. Outside that window actors are
+            // absent, so contract production must not remain available behind the presentation.
+            return PersonalTime;
         }
     }
 }

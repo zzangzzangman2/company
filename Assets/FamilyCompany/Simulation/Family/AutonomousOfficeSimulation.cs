@@ -100,6 +100,8 @@ namespace FamilyCompany.Simulation.Family
 
         private static bool ScheduleRequiresActionChange(FamilyMemberState member, long minute)
         {
+            OfficeAttendancePhase attendance = OfficeAttendanceRules.Resolve(
+                GameTime.CampaignStart.AddMinutes(minute));
             var schedule = FamilyScheduleRules.Resolve(
                 member.Role,
                 GameTime.CampaignStart.AddMinutes(minute));
@@ -110,7 +112,8 @@ namespace FamilyCompany.Simulation.Family
                                   action == AutonomousOfficeAction.OutsideCommitment ||
                                   action == AutonomousOfficeAction.Sleep ||
                                   action == AutonomousOfficeAction.OffDuty;
-            if (schedule.CanPerformCompanyWork) return scheduledAction;
+            if (attendance == OfficeAttendancePhase.Working && schedule.CanPerformCompanyWork)
+                return scheduledAction;
             if (action == AutonomousOfficeAction.BurnoutRecovery || action == AutonomousOfficeAction.DeepRest)
                 return false;
             return !scheduledAction;
@@ -206,6 +209,21 @@ namespace FamilyCompany.Simulation.Family
             }
 
             var now = GameTime.CampaignStart.AddMinutes(minute);
+            OfficeAttendancePhase attendance = OfficeAttendanceRules.Resolve(now);
+            if (attendance != OfficeAttendancePhase.Working)
+            {
+                int duration = attendance == OfficeAttendancePhase.BeforeWork
+                    ? Math.Max(
+                        1,
+                        OfficeAttendanceRules.WorkStartsMinuteOfDay -
+                        checked(now.Hour * 60 + now.Minute))
+                    : PulseMinutes;
+                // The first campaign action begins at 08:50 and must expire exactly at 09:00.
+                // Otherwise the presentation admits actors while stale OffDuty intent immediately
+                // sends NPCs back through the exit until the next generic 30-minute pulse.
+                autonomy.Begin(AutonomousOfficeAction.OffDuty, OfficeSemanticLocation.Exit, minute, duration);
+                return;
+            }
             var schedule = FamilyScheduleRules.Resolve(member.Role, now);
             if (!schedule.CanPerformCompanyWork)
             {

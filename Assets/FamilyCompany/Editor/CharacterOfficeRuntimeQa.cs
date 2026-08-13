@@ -386,17 +386,14 @@ namespace FamilyCompany.Editor
             Require(highStress.Family.Get("father").Autonomy.CurrentAction == AutonomousOfficeAction.BurnoutRecovery,
                 "Excess stress did not force burnout recovery.");
 
-            ValidateScheduledExit("older_sister", 60, AutonomousOfficeAction.OutsideCommitment);
-            ValidateScheduledExit("father", 120, AutonomousOfficeAction.OutsideSales);
-            ValidateScheduledExit("mother", 600, AutonomousOfficeAction.HouseholdDuty);
-            foreach (var id in NpcIds) ValidateScheduledExit(id, 900, AutonomousOfficeAction.Sleep);
+            foreach (var id in NpcIds) ValidateScheduledExit(id, 550, AutonomousOfficeAction.OffDuty);
 
             var returnState = PrototypeStateFactory.Create(20000105);
-            AutonomousOfficeSimulation.EnsureIntents(returnState.WorldSeed, returnState.Family, 720);
+            AutonomousOfficeSimulation.EnsureIntents(returnState.WorldSeed, returnState.Family, 10);
             foreach (var id in NpcIds)
             {
                 Require(returnState.Family.Get(id).Autonomy.TargetLocation != OfficeSemanticLocation.Exit,
-                    $"{id} did not resume an in-office intent at 20:00.");
+                    $"{id} did not resume an in-office intent at 09:00.");
             }
 
             Append("AUTONOMY_BRANCH_PASS | recovery=lounge | schedule=exit | return=in-office");

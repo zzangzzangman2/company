@@ -283,7 +283,12 @@ namespace FamilyCompany.Simulation.Family
 
         private static long AlignUpToBlock(long minute)
         {
-            var remainder = minute % WorkBlockMinutes;
+            // Work pulses are wall-clock half-hours. CampaignStart begins at 08:50 so the
+            // opening can show the 09:00 arrival; elapsed-zero anchoring would shift every
+            // work pulse to :20/:50.
+            long campaignMinuteOfDay = checked(
+                GameTime.CampaignStart.Hour * 60L + GameTime.CampaignStart.Minute);
+            var remainder = (campaignMinuteOfDay + minute) % WorkBlockMinutes;
             return remainder == 0
                 ? minute
                 : checked(minute + WorkBlockMinutes - remainder);

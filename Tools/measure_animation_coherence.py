@@ -45,6 +45,9 @@ MAX_FOOT_DRIFT_PX = 1.0
 MAX_STABLE_ROOT_DRIFT_PX = 1.0
 MAX_LOOP_CLOSURE_PX = 2.0
 MAX_WORK_FOOT_DRIFT_PX = 1.0
+MAX_TYPING_ADJACENT_MEDIAN = 8.0
+MAX_TYPING_ADJACENT_WORST = 12.0
+APPROVED_TYPING_DIRECTIONS = frozenset({"northwest"})
 
 LOCOMOTION_MOTIONS = frozenset({"walk", "run"})
 WORK_FRAME_COUNTS = {"typing": 6, "mouse": 6, "drink": 8}
@@ -203,6 +206,17 @@ class Loop:
                     "work-foot-drift",
                     f"seat-contact drift {self.foot_drift:.1f}px > {MAX_WORK_FOOT_DRIFT_PX:.0f}px",
                 )
+            if self.motion == "typing" and self.facing in APPROVED_TYPING_DIRECTIONS:
+                if not math.isfinite(median) or median > MAX_TYPING_ADJACENT_MEDIAN:
+                    self.fail(
+                        "typing-body-motion",
+                        f"typing adjacent median {median:.1f}% > {MAX_TYPING_ADJACENT_MEDIAN:.0f}%",
+                    )
+                if math.isfinite(worst) and worst > MAX_TYPING_ADJACENT_WORST:
+                    self.fail(
+                        "typing-body-worst",
+                        f"typing adjacent worst {worst:.1f}% > {MAX_TYPING_ADJACENT_WORST:.0f}%",
+                    )
 
         if not self.enforce_walk_quality:
             return
@@ -559,7 +573,9 @@ def render_report(loops: list[Loop], contract: dict[str, Any], art_root: Path) -
         (
             f"work gates: structure=typing6/mouse6/drink8 unique=all "
             f"seatContactDrift<={MAX_WORK_FOOT_DRIFT_PX:.0f}px "
-            f"full-frame motion is diagnostic; contact sheets review horizontal registration"
+            f"approvedTyping={','.join(sorted(APPROVED_TYPING_DIRECTIONS))} "
+            f"typingMedian<={MAX_TYPING_ADJACENT_MEDIAN:.0f}% "
+            f"typingWorst<={MAX_TYPING_ADJACENT_WORST:.0f}%"
         ),
         "",
         (
@@ -657,6 +673,9 @@ def main() -> int:
             "stableRootDriftMaxPx": MAX_STABLE_ROOT_DRIFT_PX,
             "loopClosureMaxPx": MAX_LOOP_CLOSURE_PX,
             "workSeatContactDriftMaxPx": MAX_WORK_FOOT_DRIFT_PX,
+            "typingAdjacentMedianMax": MAX_TYPING_ADJACENT_MEDIAN,
+            "typingAdjacentWorstMax": MAX_TYPING_ADJACENT_WORST,
+            "approvedTypingDirections": sorted(APPROVED_TYPING_DIRECTIONS),
             "canvas": list(CANVAS_SIZE),
             "nativeMode": "RGBA",
             "alphaValues": [0, 255],

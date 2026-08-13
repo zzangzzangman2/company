@@ -100,7 +100,7 @@ Unity: 6000.3.21f1
 - 누나: 20살, 긴 검은 양갈래와 검은 리본·청록색 눈, 나시티·돌핀팬츠·맨발
 - 아빠: 46살, 청록 셔츠·차콜 슬랙스·은색 사각 안경 정본
 - 엄마: 44살, 피치 카디건·크림 블라우스·청록 스커트 정본
-- 캠페인 시작: 2000-01-03 08:00
+- 캠페인 시작: 2000-01-03 08:50. 09:00~09:11 가족 4인·직원 8인 문 입장, 18:00 퇴근
 - 정본 누나 에셋: Assets/Art/Characters/OlderSister/older_sister_casual_neutral_v2.png
 - 런타임 누나 도트: Assets/Art/Characters/OlderSister/Pixel/HighMotion/ (8방향×6프레임)
 - 런타임 플레이어 도트: Assets/Art/Characters/Player/Pixel/HighMotion/ (무모자, 8방향×6프레임)

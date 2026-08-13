@@ -33,8 +33,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (!_actors.ContainsKey(memberId))
                     throw new InvalidOperationException("Missing Starter Office actor: " + memberId);
             }
-            if (_actors.Count != CanonicalFamilyIds.Length)
-                throw new InvalidOperationException($"Starter Office requires exactly four family actors, found {_actors.Count}.");
         }
     }
 }

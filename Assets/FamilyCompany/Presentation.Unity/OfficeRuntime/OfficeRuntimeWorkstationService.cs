@@ -5,6 +5,7 @@ using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeInteractions;
 using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.OfficeSeating;
@@ -347,6 +348,70 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _ => OfficeSemanticLocation.Lounge
             };
             return TryResolveDestination(location, memberId, stableKey, out destination);
+        }
+
+        public bool TryResolveAttendanceEntryDestination(
+            string memberId,
+            string stableKey,
+            out OfficeRuntimeDestination destination)
+        {
+            List<OfficeGridCoordinate> candidates = OpenAreaCandidates()
+                .Where(cell => cell.Y >= 2 && cell.Y <= Math.Min(_grid.Height - 2, 5))
+                .Where(cell => _occupancy.IsCellPassable(cell, memberId, string.Empty, true))
+                .OrderBy(cell => cell.Y)
+                .ThenBy(cell => cell.X)
+                .ToList();
+            if (candidates.Count == 0)
+            {
+                destination = default;
+                return false;
+            }
+            int index = StableRandom.StableRandomInt(
+                "starter-office-attendance-entry:" + stableKey + ":" + memberId,
+                candidates.Count);
+            OfficeGridCoordinate selected = candidates[index];
+            destination = new OfficeRuntimeDestination(
+                "attendance-open:" + selected.X + ":" + selected.Y,
+                OfficeSemanticLocation.OpenArea,
+                OfficeActivity.Break,
+                selected);
+            return true;
+        }
+
+        public bool TryResolveAttendanceEntrance(
+            string memberId,
+            string stableKey,
+            out OfficeRuntimeDestination destination)
+        {
+            IReadOnlyList<OfficeTrafficAgentState> traffic = _occupancy.TrafficSnapshot();
+            List<OfficeGridCoordinate> candidates = ExitCandidates()
+                .Where(cell =>
+                {
+                    Vector3 center3 = _presenter.CellCenterWorld(cell);
+                    var center = new Vector2(center3.x, center3.y);
+                    return traffic.All(peer =>
+                        Vector2.Distance(
+                            center,
+                            new Vector2(peer.Position.X, peer.Position.Z)) >= 0.55f);
+                })
+                .OrderBy(cell => cell.X)
+                .ThenBy(cell => cell.Y)
+                .ToList();
+            if (candidates.Count == 0)
+            {
+                destination = default;
+                return false;
+            }
+            int index = StableRandom.StableRandomInt(
+                "starter-office-attendance-door:" + stableKey + ":" + memberId,
+                candidates.Count);
+            OfficeGridCoordinate selected = candidates[index];
+            destination = new OfficeRuntimeDestination(
+                "attendance-door:" + selected.X + ":" + selected.Y,
+                OfficeSemanticLocation.Exit,
+                OfficeActivity.Outside,
+                selected);
+            return true;
         }
 
         public OfficeSeatSlot RequiredSeat(string seatId)

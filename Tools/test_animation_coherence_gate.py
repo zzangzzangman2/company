@@ -86,6 +86,26 @@ class AnimationCoherenceGateTests(unittest.TestCase):
             self.assertNotIn("adjacent-median", loop.failure_codes)
             self.assertNotIn("adjacent-worst", loop.failure_codes)
             self.assertNotIn("work-indices", loop.failure_codes)
+            self.assertNotIn("typing-body-motion", loop.failure_codes)
+
+    def test_typing_rejects_whole_body_shake(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = []
+            for index in range(6):
+                path = root / f"actor_typing_{index}_northwest_v1.png"
+                image = Image.new("RGBA", coherence.CANVAS_SIZE, (0, 0, 0, 0))
+                left = 74 if index % 2 == 0 else 114
+                for y in range(60, 248):
+                    for x in range(left, left + 64):
+                        image.putpixel((x, y), (80 + index, 120, 160, 255))
+                image.save(path)
+                paths.append(path)
+            loop = coherence.Loop(
+                "actor", "typing", "northwest", list(enumerate(paths)), enforce_work_quality=True
+            )
+            coherence.measure(loop)
+            self.assertIn("typing-body-motion", loop.failure_codes)
 
     def test_work_action_rejects_missing_and_duplicate_frames(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

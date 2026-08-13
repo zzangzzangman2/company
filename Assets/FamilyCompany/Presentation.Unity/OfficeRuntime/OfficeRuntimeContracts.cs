@@ -128,6 +128,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         string AssignedTaskId { get; }
         bool IsSeated { get; }
         bool IsBusy { get; }
+        bool IsPresentationAway { get; }
         OfficeActivity CurrentActivity { get; }
         Vector2 Position { get; }
         OfficeRuntimeInteractionPhase InteractionPhase { get; }
@@ -147,5 +148,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string statusLabel);
         void ClearAutonomousDestination();
         void ResetRuntimeState();
+        void SetAttendanceOutside(bool outside, bool walkToExit);
     }
 }

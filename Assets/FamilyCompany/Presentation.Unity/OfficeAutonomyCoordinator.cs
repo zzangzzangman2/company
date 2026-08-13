@@ -32,6 +32,9 @@ namespace FamilyCompany.Presentation.Unity
             new Dictionary<string, string>(StringComparer.Ordinal);
         private int _seatingRegistryRevision = -1;
         private GameState _boundGameState;
+        private OfficeAttendancePhase? _lastRuntimeAttendancePhase;
+        private int _nextAttendanceArrivalIndex;
+        private float _arrivalReleaseRemaining;
 
         public OfficeSeatingState SeatingState => _seatingState;
         public bool IsSeatingRuntimeReady =>
@@ -50,6 +53,9 @@ namespace FamilyCompany.Presentation.Unity
             waypoints = newWaypoints ?? Array.Empty<OfficeWaypoint>();
             _runtimeAgents = Array.Empty<IOfficeRuntimeAgent>();
             _boundGameState = null;
+            _lastRuntimeAttendancePhase = null;
+            _nextAttendanceArrivalIndex = 0;
+            _arrivalReleaseRemaining = 0f;
             _initialized = false;
         }
 
@@ -66,6 +72,9 @@ namespace FamilyCompany.Presentation.Unity
             seatPlacementPanel = null;
             _seatingState = null;
             _boundGameState = null;
+            _lastRuntimeAttendancePhase = null;
+            _nextAttendanceArrivalIndex = 0;
+            _arrivalReleaseRemaining = 0f;
             _initialized = false;
         }
 
@@ -291,15 +300,58 @@ namespace FamilyCompany.Presentation.Unity
 
         private void RefreshRuntimeAgents()
         {
-            foreach (IOfficeRuntimeAgent agent in _runtimeAgents
-                         .Where(item => item != null)
-                         .OrderBy(item => item.AgentId, StringComparer.Ordinal))
+            if (StarterOfficeRuntimeBootstrap.IsLayoutRebuilding) return;
+            DateTime now = bootstrap.State.Time.Now;
+            OfficeAttendancePhase attendance = OfficeAttendanceRules.Resolve(now);
+            IOfficeRuntimeAgent[] orderedAgents = _runtimeAgents
+                          .Where(item => item != null && item is Component component &&
+                                         component != null && component.gameObject.activeInHierarchy)
+                          .OrderBy(item => AttendanceOrder(item.AgentId))
+                          .ThenBy(item => item.AgentId, StringComparer.Ordinal)
+                          .ToArray();
+            if (attendance != OfficeAttendancePhase.Working)
             {
+                _nextAttendanceArrivalIndex = 0;
+                _arrivalReleaseRemaining = 0f;
+            }
+            else
+            {
+                _arrivalReleaseRemaining = Mathf.Max(0f, _arrivalReleaseRemaining - refreshIntervalSeconds);
+                while (_nextAttendanceArrivalIndex < orderedAgents.Length &&
+                       !orderedAgents[_nextAttendanceArrivalIndex].IsPresentationAway)
+                    _nextAttendanceArrivalIndex++;
+                if (_nextAttendanceArrivalIndex < orderedAgents.Length &&
+                    OfficeAttendanceRules.HasArrived(now, _nextAttendanceArrivalIndex) &&
+                    _arrivalReleaseRemaining <= 0f)
+                {
+                    IOfficeRuntimeAgent entrant = orderedAgents[_nextAttendanceArrivalIndex];
+                    entrant.SetAttendanceOutside(false, false);
+                    if (!entrant.IsPresentationAway)
+                    {
+                        _nextAttendanceArrivalIndex++;
+                        _arrivalReleaseRemaining = 0.35f;
+                    }
+                }
+            }
+            for (int index = 0; index < orderedAgents.Length; index++)
+            {
+                IOfficeRuntimeAgent agent = orderedAgents[index];
+                bool shouldBeOutside = attendance != OfficeAttendancePhase.Working ||
+                                       agent.IsPresentationAway;
+                agent.SetAttendanceOutside(
+                    shouldBeOutside,
+                    shouldBeOutside && attendance == OfficeAttendancePhase.AfterWork);
+                if (shouldBeOutside) continue;
                 FamilyMemberState member = bootstrap.State.Family.Members.FirstOrDefault(item =>
                     string.Equals(item.MemberId, agent.AgentId, StringComparison.Ordinal));
                 if (member == null)
                 {
-                    agent.ClearAutonomousDestination();
+                    long shiftBlock = bootstrap.State.Time.ElapsedMinutes / 20L;
+                    agent.SetAutonomousDestination(
+                        "employee-shift:" + agent.AgentId + ":" + shiftBlock,
+                        OfficeSemanticLocation.OpenArea,
+                        string.Empty,
+                        "사무실 업무 · 기분 좋음");
                     continue;
                 }
                 if (agent.IsPlayerControlled)
@@ -319,6 +371,26 @@ namespace FamilyCompany.Presentation.Unity
                     : string.Empty;
                 agent.SetAutonomousDestination(intentId, presentationLocation, interactionId, status);
             }
+            if (_lastRuntimeAttendancePhase != attendance)
+            {
+                Debug.Log(
+                    "STARTER_OFFICE_ATTENDANCE | phase=" + attendance +
+                    " time=" + now.ToString("HH:mm") +
+                    " actors=" + orderedAgents.Length);
+                _lastRuntimeAttendancePhase = attendance;
+            }
+        }
+
+        private static int AttendanceOrder(string memberId)
+        {
+            return memberId switch
+            {
+                "player" => 0,
+                "older_sister" => 1,
+                "father" => 2,
+                "mother" => 3,
+                _ => 100
+            };
         }
 
         private static OfficeSeatingState CreateSeatingState(

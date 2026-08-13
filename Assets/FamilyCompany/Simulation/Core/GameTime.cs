@@ -4,7 +4,7 @@ namespace FamilyCompany.Simulation.Core
 {
     public sealed class GameTime
     {
-        public static readonly DateTime CampaignStart = new DateTime(2000, 1, 3, 8, 0, 0, DateTimeKind.Unspecified);
+        public static readonly DateTime CampaignStart = new DateTime(2000, 1, 3, 8, 50, 0, DateTimeKind.Unspecified);
 
         public GameTime(long elapsedMinutes = 0)
         {
@@ -42,4 +42,3 @@ namespace FamilyCompany.Simulation.Core
         }
     }
 }
-

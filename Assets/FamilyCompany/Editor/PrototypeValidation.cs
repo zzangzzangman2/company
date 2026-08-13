@@ -549,6 +549,7 @@ namespace FamilyCompany.Editor
         private static void ValidateSaveRoundTrip()
         {
             var source = PrototypeStateFactory.Create(314159);
+            new SimulationRunner(source).AdvanceMinutes(10);
             var offer = BootstrapContractCatalog.CreateOffer(
                 source.WorldSeed,
                 "save-validation-client",
@@ -638,6 +639,7 @@ namespace FamilyCompany.Editor
         private static void ValidateContractLifecycle()
         {
             var state = PrototypeStateFactory.Create();
+            new SimulationRunner(state).AdvanceMinutes(10);
             var offer = new SubcontractOffer(
                 "lifecycle-contract",
                 "lifecycle-validation-client",
@@ -903,6 +905,7 @@ namespace FamilyCompany.Editor
             Presentation.Unity.OfficeWorkerAgent[] agents)
         {
             if (coordinator == null) throw new InvalidOperationException("Office contract task coordinator is missing.");
+            bootstrap.AdvanceTimeNow(10);
             var offer = new SubcontractOffer(
                 "physical-office-contract",
                 "physical-validation-client",

@@ -70,6 +70,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _interactionAbortedCount;
         private OfficeRuntimeInteractionEndReason _lastInteractionEndReason;
         private int _standingFacingDirection = -1;
+        private bool _attendanceDepartureActive;
+        private bool _attendanceArrivalActive;
         private string _assignedTaskId = string.Empty;
         private float _assignedWorkRemaining;
         private long _assignedLastObservedMinute;
@@ -224,6 +226,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public string CurrentSpriteName => _renderer == null || _renderer.sprite == null
             ? string.Empty
             : _renderer.sprite.name;
+        public bool IsPresentationAway => _presentationAway;
 
         public OfficeObservationStatusKind StatusKind
         {
@@ -495,6 +498,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _autonomyLayoutRevision = -1;
             _autonomyStatus = string.Empty;
             _autonomyDestination = null;
+            _attendanceDepartureActive = false;
+            _attendanceArrivalActive = false;
             _standingFacingDirection = -1;
             _destination = null;
             _pendingDestination = null;
@@ -524,6 +529,74 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Phase = OfficeRuntimeAgentPhase.Idle;
             CurrentActivity = OfficeActivity.Break;
             SetPresentationAway(false);
+        }
+
+        public void SetAttendanceOutside(bool outside, bool walkToExit)
+        {
+            if (_qaControl) return;
+            if (outside)
+            {
+                if (_presentationAway && Phase == OfficeRuntimeAgentPhase.Outside) return;
+                if (walkToExit)
+                {
+                    if (_attendanceDepartureActive) return;
+                    if (!_world.Workstations.TryResolveDestination(
+                            OfficeSemanticLocation.Exit,
+                            _agentId,
+                            "attendance-exit:" + _agentId,
+                            out OfficeRuntimeDestination departure)) return;
+                    _attendanceDepartureActive = BeginDestination(departure);
+                    return;
+                }
+                EndInteraction(
+                    OfficeRuntimeInteractionTermination.Aborted,
+                    OfficeRuntimeInteractionEndReason.Cleared);
+                _destination = null;
+                _pendingDestination = null;
+                _attendanceArrivalActive = false;
+                _path.Clear();
+                _pathIndex = 0;
+                _arrived = true;
+                ReleaseSeatImmediately();
+                ResetVisualPose();
+                _animator?.ResumeWalkingAfterSeating();
+                StopMotion();
+                Phase = OfficeRuntimeAgentPhase.Outside;
+                CurrentActivity = OfficeActivity.Outside;
+                SetPresentationAway(true);
+                return;
+            }
+
+            if (!_presentationAway && Phase != OfficeRuntimeAgentPhase.Outside) return;
+            _attendanceDepartureActive = false;
+            if (!_world.Workstations.TryResolveAttendanceEntrance(
+                    _agentId,
+                    "attendance-entry:" + _agentId,
+                    out OfficeRuntimeDestination entry)) return;
+            Vector3 entrance = _world.Presenter.CellCenterWorld(entry.Cell);
+            transform.position = new Vector3(entrance.x, entrance.y, transform.position.z);
+            Phase = OfficeRuntimeAgentPhase.Idle;
+            CurrentActivity = OfficeActivity.Break;
+            SetPresentationAway(false);
+            StopMotion();
+            OfficeRuntimeDestination entryTarget = default;
+            bool hasEntryTarget = false;
+            for (int attempt = 0; attempt < 12 && !hasEntryTarget; attempt++)
+            {
+                if (!_world.Workstations.TryResolveAttendanceEntryDestination(
+                        _agentId,
+                        "attendance-entry-target:" + _agentId + ":" + attempt,
+                        out OfficeRuntimeDestination candidate)) continue;
+                entryTarget = candidate;
+                hasEntryTarget = true;
+            }
+            if (hasEntryTarget && BeginDestination(entryTarget))
+            {
+                _attendanceArrivalActive = true;
+                Debug.Log("STARTER_OFFICE_ATTENDANCE_ENTRY | member=" + _agentId);
+            }
+            else
+                TryStartAutonomyRequest();
         }
 
         public void SetPlayerInput(Vector2 input)
@@ -672,7 +745,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _stuckSeconds,
                 _seat?.SeatId ?? string.Empty);
 
-            if (_playerControlled && _playerInput.sqrMagnitude > 0.0001f)
+            if (_playerControlled && !_attendanceDepartureActive && !_attendanceArrivalActive &&
+                _playerInput.sqrMagnitude > 0.0001f)
             {
                 if (Phase == OfficeRuntimeAgentPhase.Working ||
                     Phase == OfficeRuntimeAgentPhase.SittingDown ||
@@ -1200,6 +1274,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             else
             {
                 Phase = OfficeRuntimeAgentPhase.Idle;
+                _attendanceArrivalActive = false;
             }
         }
 
