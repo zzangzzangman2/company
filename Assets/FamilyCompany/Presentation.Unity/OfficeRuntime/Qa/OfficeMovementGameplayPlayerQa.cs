@@ -27,9 +27,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private const float DefaultQuitAfterSeconds = 195f;
         private const int FourTimesStartMinuteOfDay = 9 * 60 + 20;
         private const float MovingDistanceEpsilon = 0.000001f;
-        private const float TeleportDistance = 0.35f;
+        private const float TeleportDistance = 0.10f;
         private const float ActorOverlapTolerance = 0.01f;
         private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+        private static readonly string[] DirectionTokens =
+        {
+            "south", "southwest", "west", "northwest",
+            "north", "northeast", "east", "southeast"
+        };
         private static OfficeMovementGameplayPlayerQa _instance;
 
         private readonly Dictionary<string, DirectionHistory> _directionHistory =
@@ -50,11 +55,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private int _sampledFrames;
         private int _sampledActorFrames;
         private int _lateralFrames;
+        private int _lateralExactFrames;
+        private int _lateralHysteresisFrames;
+        private int _lateralFrontBackFrames;
         private int _collisionProjectedFrames;
         private int _staticPenetrationFrames;
         private int _actorOverlapFrames;
         private int _minimumMinuteOfDay = int.MaxValue;
         private int _maximumMinuteOfDay = int.MinValue;
+        private float _maximumMotionDebtSeconds;
 
         private sealed class DirectionHistory
         {
@@ -95,6 +104,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             _eventWriter = CreateWriter("movement-events.csv");
             _frameWriter.WriteLine(
                 "wall_seconds,frame,screen,game_date,game_time,elapsed_minute,world_scale," +
+                "frame_delta,unscaled_frame_delta,motion_delta,motion_debt," +
                 "member,agent_phase,x,y,dx,dy,actual_speed,desired_vx,desired_vy," +
                 "motion_direction,display_direction,sprite_direction,locomotion_phase," +
                 "gait_phase,walk_frame,clip,sprite,flip_x,is_moving,collision_projected," +
@@ -204,6 +214,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 now.ToString("HH:mm", Invariant),
                 _bootstrap.State.Time.ElapsedMinutes.ToString(Invariant),
                 F(_bootstrap.WorldTimeScale),
+                F(_runtime.World.LastFrameDeltaTime),
+                F(_runtime.World.LastUnscaledFrameDeltaTime),
+                F(_runtime.World.LastMotionDeltaTime),
+                F(_runtime.World.MotionTimeDebtSeconds),
                 actor.AgentId,
                 actor.Phase.ToString(),
                 F(actor.Position.x), F(actor.Position.y),
@@ -241,6 +255,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             bool staticClear)
         {
             Vector2 displacement = trace.ActualDisplacement;
+            _maximumMotionDebtSeconds = Mathf.Max(
+                _maximumMotionDebtSeconds,
+                _runtime.World.MotionTimeDebtSeconds);
             bool translated = displacement.sqrMagnitude > MovingDistanceEpsilon;
             if (actor.WasCollisionProjected) _collisionProjectedFrames++;
             if (!staticClear)
@@ -265,7 +282,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 _lateralFrames++;
                 int expectedDirection = displacementDirection;
-                string expectedToken = expectedDirection == 2 ? "west" : "east";
+                int displayDirection = trace.DisplayDirection;
+                int spriteDirection = actor.CurrentSpriteDirection;
+                bool exact = displayDirection == expectedDirection;
+                bool sameSideHysteresis = expectedDirection == 2
+                    ? displayDirection >= 1 && displayDirection <= 3
+                    : displayDirection >= 5 && displayDirection <= 7;
+                bool frontBack = displayDirection == 0 || displayDirection == 4 ||
+                                 spriteDirection == 0 || spriteDirection == 4;
+                if (exact) _lateralExactFrames++;
+                else if (sameSideHysteresis) _lateralHysteresisFrames++;
+                if (frontBack) _lateralFrontBackFrames++;
+                string expectedToken = displayDirection >= 0 &&
+                                       displayDirection < DirectionTokens.Length
+                    ? DirectionTokens[displayDirection]
+                    : string.Empty;
                 bool locomotionClip = (trace.Clip ?? string.Empty).StartsWith(
                                           "Walk",
                                           StringComparison.Ordinal) ||
@@ -273,8 +304,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                                           "Transition/",
                                           StringComparison.Ordinal);
                 bool valid = trace.MotionDirection == expectedDirection &&
-                             trace.DisplayDirection == expectedDirection &&
-                             actor.CurrentSpriteDirection == expectedDirection &&
+                             sameSideHysteresis &&
+                             spriteDirection == displayDirection &&
+                             !frontBack &&
                              (trace.SpriteName ?? string.Empty).IndexOf(
                                  expectedToken,
                                  StringComparison.OrdinalIgnoreCase) >= 0 &&
@@ -315,7 +347,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 stoppedHistory.BeforePrevious = -1;
             }
 
-            float stuckThreshold = 6f * Mathf.Max(1f, _bootstrap.WorldTimeScale);
+            const float stuckThreshold = 6f;
             if (actor.StuckSeconds >= stuckThreshold)
                 Violation("STUCK_REPATH", wallSeconds, now, actor.AgentId,
                     $"stuck={F(actor.StuckSeconds)} threshold={F(stuckThreshold)} " +
@@ -427,11 +459,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 "sampled_frames=" + _sampledFrames.ToString(Invariant),
                 "sampled_actor_frames=" + _sampledActorFrames.ToString(Invariant),
                 "lateral_frames=" + _lateralFrames.ToString(Invariant),
+                "lateral_exact_frames=" + _lateralExactFrames.ToString(Invariant),
+                "lateral_hysteresis_frames=" + _lateralHysteresisFrames.ToString(Invariant),
+                "lateral_front_back_frames=" + _lateralFrontBackFrames.ToString(Invariant),
                 "collision_projected_frames=" + _collisionProjectedFrames.ToString(Invariant),
                 "static_penetration_frames=" + _staticPenetrationFrames.ToString(Invariant),
                 "actor_overlap_frames=" + _actorOverlapFrames.ToString(Invariant),
                 "game_time_range=" + timeRange,
                 "world_speed_raised=" + _speedRaised,
+                "maximum_motion_debt_seconds=" + F(_maximumMotionDebtSeconds),
+                "final_motion_debt_seconds=" + F(
+                    _runtime == null || _runtime.World == null
+                        ? 0f
+                        : _runtime.World.MotionTimeDebtSeconds),
                 "violation_categories=" + _violationCounts.Count.ToString(Invariant)
             };
             foreach (KeyValuePair<string, int> item in _violationCounts.OrderBy(item => item.Key))

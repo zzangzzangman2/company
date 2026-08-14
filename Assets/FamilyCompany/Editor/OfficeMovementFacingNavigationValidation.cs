@@ -47,6 +47,7 @@ namespace FamilyCompany.Editor
             OfficeSharedLocomotionStrictReport strict = OfficeSharedLocomotionStrictValidation.Run();
             ValidateSameFrameLateralSpriteConsumption();
             ValidateEightDirectionsAndStoppedFacing();
+            ValidateVisibleMotionFrameCap();
             ValidateFourActorAttendanceIngressReservation();
             ValidateCanonicalFurniturePathDetours();
             Debug.Log(
@@ -302,6 +303,153 @@ namespace FamilyCompany.Editor
                     $"ATTENDANCE_LAYOUT_TRACE | layout={layout} entrants=4 " +
                     $"canonicalObstacles={harness.Occupancy.CanonicalGeometryObstacleCount} " +
                     "pathQueries=4 retries=0 penetrations=0");
+            }
+        }
+
+        private static void ValidateVisibleMotionFrameCap()
+        {
+            foreach (var worldScale in new[] { 1f, 4f })
+            using (var harness = new OccupancyHarness(CreateAttendanceFurnitureGrid(2)))
+            {
+                string actorId = "visible-budget-" + worldScale.ToString("F0");
+                var startCell = new OfficeGridCoordinate(1, 1);
+                var goalCell = new OfficeGridCoordinate(11, 11);
+                harness.Register(actorId, startCell);
+                var paths = new OfficeRuntimePathService(
+                    harness.Grid,
+                    harness.Occupancy,
+                    harness.Presenter);
+                IReadOnlyList<OfficeGridCoordinate> path = paths.FindPath(
+                    actorId,
+                    startCell,
+                    goalCell,
+                    string.Empty,
+                    false,
+                    OfficeRuntimeAgent.DefaultRadius);
+                Require(path.Count > 2, $"{worldScale:F0}x debt route was not found.");
+
+                float routeLength = 0f;
+                for (var index = 1; index < path.Count; index++)
+                    routeLength += Vector2.Distance(
+                        harness.Position(path[index - 1]),
+                        harness.Position(path[index]));
+
+                Vector2 position = harness.Position(path[0]);
+                Vector2 previousActual = Vector2.zero;
+                int pathIndex = 1;
+                float debt = 0f;
+                float totalIncoming = 0f;
+                float totalConsumed = 0f;
+                float totalMoved = 0f;
+                float maximumRenderMove = 0f;
+                int multiStepRenderCount = 0;
+                int drainedAtFrame = -1;
+                for (var frame = 0; frame < 900; frame++)
+                {
+                    float unscaledFrameDelta = frame == 4
+                        ? 0.200f
+                        : frame == 11
+                            ? 0.500f
+                            : 1f / 60f;
+                    // A 4x world clock produces a larger scaled simulation delta, but visible
+                    // navigation owns an unscaled debt so normal 60 Hz frames cannot accumulate it.
+                    float scaledSimulationDelta = unscaledFrameDelta * worldScale;
+                    Require(scaledSimulationDelta >= unscaledFrameDelta,
+                        "World-scale test input was invalid.");
+                    OfficeVisibleMotionBudget budget =
+                        OfficeRuntimeWorld.ConsumeVisibleMotionBudget(
+                            debt,
+                            unscaledFrameDelta);
+                    debt = budget.RemainingDebtSeconds;
+                    totalIncoming += unscaledFrameDelta;
+                    totalConsumed += budget.ConsumedSeconds;
+                    float renderMoved = 0f;
+                    int stepCount = OfficeNavigationMotionIntegrator.CalculateStepCount(
+                        budget.ConsumedSeconds);
+                    if (stepCount > 1) multiStepRenderCount++;
+                    for (var step = 0; step < stepCount; step++)
+                    {
+                        float stepDelta = OfficeNavigationMotionIntegrator.ResolveStepDelta(
+                            budget.ConsumedSeconds,
+                            step,
+                            stepCount);
+                        float remainingBudget = OfficeRuntimeAgent.DefaultMoveSpeed * stepDelta;
+                        while (remainingBudget > 0.0000001f && pathIndex < path.Count)
+                        {
+                            Vector2 target = harness.Position(path[pathIndex]);
+                            Vector2 delta = target - position;
+                            if (delta.magnitude <= 0.000001f)
+                            {
+                                position = target;
+                                pathIndex++;
+                                continue;
+                            }
+                            Vector2 intended = delta.normalized *
+                                               Mathf.Min(delta.magnitude, remainingBudget);
+                            Vector2 actual = OfficeRuntimeCollisionMotion.Resolve(
+                                harness.Occupancy,
+                                actorId,
+                                position,
+                                intended,
+                                intended.normalized * OfficeRuntimeAgent.DefaultMoveSpeed,
+                                previousActual,
+                                OfficeRuntimeAgent.DefaultRadius,
+                                string.Empty,
+                                out bool collisionProjected);
+                            Require(!collisionProjected &&
+                                    Vector2.Distance(actual, intended) <= 0.00001f,
+                                $"{worldScale:F0}x debt substep crossed canonical geometry.");
+                            position += actual;
+                            previousActual = actual;
+                            renderMoved += actual.magnitude;
+                            totalMoved += actual.magnitude;
+                            remainingBudget -= actual.magnitude;
+                            harness.Occupancy.UpdateActor(
+                                actorId,
+                                position,
+                                intended.normalized,
+                                0f);
+                            if (Vector2.Distance(position, target) <= 0.00001f)
+                            {
+                                position = target;
+                                pathIndex++;
+                            }
+                        }
+                    }
+                    maximumRenderMove = Mathf.Max(maximumRenderMove, renderMoved);
+                    Require(renderMoved <= 0.099001f,
+                        $"{worldScale:F0}x rendered root step {renderMoved:F6} exceeded 0.099.");
+                    if (pathIndex >= path.Count && debt <= 0.0000001f)
+                    {
+                        drainedAtFrame = frame;
+                        break;
+                    }
+                }
+
+                Require(drainedAtFrame >= 0 && drainedAtFrame < 900,
+                    $"{worldScale:F0}x motion debt did not drain or route did not arrive.");
+                Require(multiStepRenderCount >= 2,
+                    $"{worldScale:F0}x hitch did not exercise multiple fixed updates/render.");
+                Require(debt <= 0.0000001f,
+                    $"{worldScale:F0}x retained a final motion backlog of {debt:F8}s.");
+                Require(Mathf.Abs(totalIncoming - totalConsumed) <= 0.00001f,
+                    $"{worldScale:F0}x discarded motion time: " +
+                    $"incoming={totalIncoming:F6} consumed={totalConsumed:F6}.");
+                Require(Mathf.Abs(totalMoved - routeLength) <= 0.0001f &&
+                        Vector2.Distance(position, harness.Position(goalCell)) <= 0.00001f,
+                    $"{worldScale:F0}x failed exact endpoint/distance preservation: " +
+                    $"moved={totalMoved:F6} route={routeLength:F6} position={position}.");
+                Require(harness.Occupancy.CurrentCell(actorId).Equals(goalCell) &&
+                        harness.Occupancy.StaticViolationCount == 0 &&
+                        harness.Occupancy.InteractionViolationCount == 0 &&
+                        harness.Occupancy.AgentPenetrationCount == 0,
+                    $"{worldScale:F0}x visual root and canonical occupancy diverged.");
+                Debug.Log(
+                    $"VISIBLE_MOTION_DEBT_TRACE | scale={worldScale:F0}x " +
+                    $"hitches=0.200,0.500 maxRenderMove={maximumRenderMove:F6} " +
+                    $"distanceError={Mathf.Abs(totalMoved - routeLength):F8} " +
+                    $"drainedFrame={drainedAtFrame} multiStepRenders={multiStepRenderCount} " +
+                    "finalDebt=0 penetrations=0");
             }
         }
 
