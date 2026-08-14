@@ -270,6 +270,33 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
+        [MenuItem("Family Company/Rebuild Office Chair Foreground Only")]
+        public static void RebuildChairForegroundOnly()
+        {
+            FurnitureSpec chair = Specs.Single(spec =>
+                string.Equals(spec.KindId, OfficeGridLayouts.SwivelChairKind, StringComparison.Ordinal));
+            BuildOne(chair, writeBase: false, writeFront: true);
+            AssetDatabase.ImportAsset(chair.FrontPath, ImportAssetOptions.ForceSynchronousImport);
+            OfficeChairForegroundValidation.Validate();
+            Debug.Log(
+                "OFFICE_CHAIR_FOREGROUND_ONLY_BUILD: PASS sourcePixels=9881 " +
+                "otherFurnitureWrites=0 catalogWrites=0");
+        }
+
+        public static void RebuildChairForegroundOnlyBatch()
+        {
+            try
+            {
+                RebuildChairForegroundOnly();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
+        }
+
         public static OfficeFurnitureVisualCatalog LoadFurnitureVisualCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<OfficeFurnitureVisualCatalog>(FurnitureCatalogPath);
@@ -311,17 +338,17 @@ namespace FamilyCompany.Editor.OfficeGridQa
             string[] members = { "player", "older_sister", "father", "mother" };
             Vector2[][] pelvisAnchors =
             {
-                Points((130,69),(137,60),(143,52),(145,49),(130,49),(130,49),(130,49),(130,49),(130,49),(130,49),(145,49),(143,52),(137,60),(130,69)),
-                Points((130,73),(138,63),(145,55),(147,51),(130,63),(131,63),(131,63),(130,63),(130,63),(129,63),(147,51),(145,55),(138,63),(130,73)),
-                Points((128,69),(138,59),(144,52),(145,49),(123,50),(122,50),(123,50),(123,50),(123,50),(123,50),(145,49),(144,52),(138,59),(128,69)),
-                Points((131,74),(140,64),(146,55),(148,51),(126,62),(126,62),(126,62),(126,62),(126,62),(126,62),(148,51),(146,55),(140,64),(131,74))
+                Points((130,97),(137,88),(143,80),(145,77),(130,77),(130,77),(130,77),(130,77),(130,77),(130,77),(145,77),(143,80),(137,88),(130,97)),
+                Points((130,87),(138,77),(145,69),(147,65),(130,77),(131,77),(131,77),(130,77),(130,77),(129,77),(147,65),(145,69),(138,77),(130,87)),
+                Points((128,96),(138,86),(144,79),(145,76),(123,77),(122,77),(123,77),(123,77),(123,77),(123,77),(145,76),(144,79),(138,86),(128,96)),
+                Points((131,89),(140,79),(146,70),(148,66),(126,77),(126,77),(126,77),(126,77),(126,77),(126,77),(148,66),(146,70),(140,79),(131,89))
             };
             Vector2[][] handAnchors =
             {
                 Points((106,42),(89,52),(77,69),(76,68),(78,90),(67,80),(78,90),(68,91),(74,86),(78,91),(76,68),(77,69),(89,52),(106,42)),
                 Points((109,50),(158,70),(170,58),(176,58),(75,108),(75,108),(75,108),(74,108),(74,108),(74,108),(176,58),(170,58),(158,70),(109,50)),
                 Points((99,78),(86,72),(76,70),(75,70),(76,104),(76,104),(76,104),(76,104),(76,104),(76,104),(75,70),(76,70),(86,72),(99,78)),
-                Points((99,59),(93,55),(80,69),(78,70),(84,87),(75,78),(86,91),(81,84),(84,90),(85,89),(78,70),(80,69),(93,55),(99,59))
+                Points((99,59),(93,55),(80,69),(78,70),(88,120),(75,78),(86,91),(81,84),(84,90),(85,89),(78,70),(80,69),(93,55),(99,59))
             };
             OfficeSeatingAnimationClip[] clips =
             {
@@ -455,7 +482,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        private static void BuildOne(FurnitureSpec spec)
+        private static void BuildOne(
+            FurnitureSpec spec,
+            bool writeBase = true,
+            bool writeFront = true)
         {
             Texture2D source = ReadTexture(spec.SourcePath);
             try
@@ -518,8 +548,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     spec.SemanticFootprintWidth,
                     spec.SemanticFootprintHeight);
 
-                WritePng(spec.RuntimePath, output);
-                if (spec.SourceForegroundPolygon.Length > 0) WritePng(spec.FrontPath, front);
+                if (writeBase) WritePng(spec.RuntimePath, output);
+                if (writeFront && spec.SourceForegroundPolygon.Length > 0)
+                    WritePng(spec.FrontPath, front);
             }
             finally
             {

@@ -38,8 +38,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             "north", "northeast", "east", "southeast"
         };
 
-        private const float LowerBodyRegionAbovePelvisPx = 12f;
         private const float UpperBodyRegionAbovePelvisPx = 32f;
+        private const float EntryLowerBodyRegionAbovePelvisPx = 12f;
         private const float HandProtectionRadiusPx = 7f;
         private const int ColorDifferenceThreshold = 6;
         private const float MaximumOpaqueCoreActorResidualRatio = 0.05f;
@@ -161,6 +161,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 FinishFailure(92, "The runtime character seat-pose catalog is missing.");
                 yield break;
             }
+            if (!ValidateEgressCandidateMatrix(out string egressMatrixFailure))
+            {
+                FinishFailure(92, "Seat egress candidate matrix failed: " + egressMatrixFailure);
+                yield break;
+            }
 
             Dictionary<string, OfficeRuntimeAgent> actors = _runtime.Actors
                 .Where(actor => actor != null)
@@ -244,6 +249,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
+            yield return new WaitForEndOfFrame();
+            if (!CaptureOverview(
+                    "seating-transition-egress-after-overview-1920x1080.png",
+                    out string egressOverviewFailure))
+            {
+                FinishFailure(95, "Safe-egress overview capture failed: " + egressOverviewFailure);
+                yield break;
+            }
+            foreach (string memberId in MemberIds)
+            {
+                if (CaptureSafeEgressEvidence(
+                        actors[memberId],
+                        _traces[memberId],
+                        out string egressCaptureFailure)) continue;
+                FinishFailure(95, memberId + " safe-egress evidence failed: " + egressCaptureFailure);
+                yield break;
+            }
+
             foreach (string memberId in MemberIds)
             {
                 if (!ValidateFinalActor(actors[memberId], _traces[memberId], out string finalFailure))
@@ -273,7 +296,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 "maxOctantDelta=0 facingLocked=SitDown..LeavingSeat depth=perFrame " +
                 "pelvisStep<=2px anchor<=1px handKeyboard<=4px " +
                 "primaryCloseups=56/56 continuous=4/6/4 penetration=0 " +
-                "invalidUpperHandForegroundOverlap=0 captures=1920x1080+1024x1024");
+                "invalidUpperForegroundOverlap=0 typingHandForegroundOverlap=0 " +
+                "chairForeground=canonical-continuous upperBody=pose-split " +
+                "egress=reserved-before-stand/safe-anchor/overlap0/maxStep<=0.9px " +
+                "transitionHand=diagnostic captures=1920x1080+1024x1024");
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
             RestoreTimingOverride();
             yield return null;
@@ -286,6 +312,63 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 if (SampleActor(actors[memberId], _traces[memberId])) continue;
                 return false;
+            }
+            return true;
+        }
+
+        private static bool ValidateEgressCandidateMatrix(out string failure)
+        {
+            failure = string.Empty;
+            var seatCell = new OfficeGridCoordinate(20, 20);
+            var rotations = new[]
+            {
+                new Vector2Int(0, -1), new Vector2Int(-1, 0),
+                new Vector2Int(0, 1), new Vector2Int(1, 0)
+            };
+            OfficeFurnitureFacing[] facings =
+            {
+                OfficeFurnitureFacing.NorthWest, OfficeFurnitureFacing.NorthEast,
+                OfficeFurnitureFacing.SouthEast, OfficeFurnitureFacing.SouthWest
+            };
+            for (var memberIndex = 0; memberIndex < MemberIds.Length; memberIndex++)
+            for (var rotationIndex = 0; rotationIndex < rotations.Length; rotationIndex++)
+            {
+                Vector2Int front = rotations[rotationIndex];
+                var seat = new OfficeSeatSlot(
+                    "player-qa-egress-" + memberIndex + "-" + rotationIndex,
+                    "player-qa-chair",
+                    "player-qa-desk",
+                    seatCell,
+                    new OfficeGridCoordinate(seatCell.X + front.x, seatCell.Y + front.y),
+                    facings[rotationIndex]);
+                for (var scenario = 0; scenario < 4; scenario++)
+                {
+                    bool selected = OfficeSeatEgressRules.TrySelectCandidate(
+                        seat,
+                        candidate => candidate.Kind switch
+                        {
+                            OfficeSeatEgressKind.Front => scenario < 1,
+                            OfficeSeatEgressKind.Left => scenario < 2,
+                            OfficeSeatEgressKind.Right => scenario < 3,
+                            _ => false
+                        },
+                        out OfficeSeatEgressCandidate candidate);
+                    OfficeSeatEgressKind expected = scenario switch
+                    {
+                        0 => OfficeSeatEgressKind.Front,
+                        1 => OfficeSeatEgressKind.Left,
+                        2 => OfficeSeatEgressKind.Right,
+                        _ => OfficeSeatEgressKind.None
+                    };
+                    if (selected != (scenario < 3) ||
+                        (selected ? candidate.Kind : OfficeSeatEgressKind.None) != expected)
+                    {
+                        failure = $"member={MemberIds[memberIndex]} rotation={rotationIndex * 90} " +
+                                  $"scenario={scenario} selected={selected}:{candidate.Kind} " +
+                                  "expected=" + expected;
+                        return false;
+                    }
+                }
             }
             return true;
         }
@@ -307,6 +390,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                            phase == OfficeRuntimeAgentPhase.FinishingWork ||
                            phase == OfficeRuntimeAgentPhase.StandingUp ||
                            phase == OfficeRuntimeAgentPhase.LeavingSeat;
+            if (trace.SawLeavingSeat && !actor.HasCompletedSeatEgress &&
+                phase != OfficeRuntimeAgentPhase.LeavingSeat)
+                return Fail(
+                    93,
+                    trace.MemberId + " entered " + phase +
+                    " before the reserved safe egress anchor was completed.");
             if (!engaged) return true;
 
             if (!TryResolveClaimedSeatDirection(actor, out int expectedDirection))
@@ -321,10 +410,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (trace.ExpectedDirection < 0) trace.ExpectedDirection = expectedDirection;
             if (trace.ExpectedDirection != expectedDirection)
                 return Fail(93, trace.MemberId + " changed expected seat direction while engaged.");
+            if (trace.SeatId.Length == 0) trace.SeatId = actor.ActiveSeatId;
+            if (!string.Equals(trace.SeatId, actor.ActiveSeatId, StringComparison.Ordinal))
+                return Fail(93, trace.MemberId + " changed seat claim during the transition.");
 
             trace.DirectionSampleCount++;
             trace.Phases.Add(phase);
             if (phase == OfficeRuntimeAgentPhase.FinishingWork) trace.SawFinishingWork = true;
+            if ((phase == OfficeRuntimeAgentPhase.StandingUp ||
+                 phase == OfficeRuntimeAgentPhase.LeavingSeat) &&
+                !actor.HasSeatEgressReservation)
+                return Fail(93, trace.MemberId + " lost its pre-StandUp egress reservation.");
+            if (phase == OfficeRuntimeAgentPhase.StandingUp)
+                trace.SawReservedBeforeStandUp = true;
             if (phase == OfficeRuntimeAgentPhase.LeavingSeat)
             {
                 trace.SawLeavingSeat = true;
@@ -348,10 +446,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             OfficeSeatingDepthSnapshot depth = actor.LastSeatingDepthSample;
             trace.DepthSampleCount++;
-            bool mustEngageForeground = phase != OfficeRuntimeAgentPhase.LeavingSeat;
+            OfficeSeatingAnimationClip? clip = actor.CurrentSeatingClip;
+            int frame = actor.CurrentSeatingFrame;
+            bool plantedSitEntry = phase == OfficeRuntimeAgentPhase.SittingDown &&
+                                   clip == OfficeSeatingAnimationClip.SitDown &&
+                                   frame == 0;
+            bool mustEngageForeground = !plantedSitEntry;
             if (!depth.IsValid || depth.Phase != phase || depth.Clip != actor.CurrentSeatingClip ||
                 depth.Frame != actor.CurrentSeatingFrame ||
-                (mustEngageForeground && !depth.OcclusionEngaged) || !depth.HasChairFront ||
+                (mustEngageForeground && !depth.OcclusionEngaged) ||
+                (plantedSitEntry && depth.OcclusionEngaged) || !depth.HasChairFront ||
                 !depth.HasDeskFront || !depth.IsValidStack)
             {
                 return Fail(
@@ -364,9 +468,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     $"orders=desk{depth.DeskBaseOrder}<chair{depth.ChairBaseOrder}<" +
                     $"actor{depth.ActorOrder}<deskFront{depth.DeskFrontOrder}<chairFront{depth.ChairFrontOrder}");
             }
+            if ((mustEngageForeground && !actor.IsSeatedUpperBodyProtectionVisible) ||
+                (plantedSitEntry && actor.IsSeatedUpperBodyProtectionVisible))
+            {
+                return Fail(
+                    93,
+                    $"{trace.MemberId} upper-body protection mismatch in {phase}: " +
+                    $"required={mustEngageForeground} visible=" +
+                    actor.IsSeatedUpperBodyProtectionVisible);
+            }
 
-            OfficeSeatingAnimationClip? clip = actor.CurrentSeatingClip;
-            int frame = actor.CurrentSeatingFrame;
             if (clip == OfficeSeatingAnimationClip.SitDown && frame >= 0 && frame < 4)
             {
                 int bit = 1 << frame;
@@ -531,6 +642,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private static bool CompletedSeatExit(OfficeRuntimeAgent actor, ActorTrace trace)
         {
             return actor != null && trace.SawLeavingSeat && !actor.IsOccupyingSeat &&
+                   actor.HasCompletedSeatEgress &&
+                   actor.LastCompletedSeatEgressClearanceValid &&
+                   actor.Phase == OfficeRuntimeAgentPhase.Idle &&
                    trace.StandUpFrameMask == 0x0f && trace.DepthStandUpFrameMask == 0x0f &&
                    trace.StandEvidenceFrameMask == 0x0f;
         }
@@ -565,6 +679,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (!trace.SawFinishingWork) failures.Add("FinishingWork was not sampled");
             if (!trace.SawLeavingSeat || trace.LeavingSeatSampleCount == 0)
                 failures.Add("LeavingSeat was not sampled");
+            if (!trace.SawReservedBeforeStandUp)
+                failures.Add("egress anchor was not observed reserved before StandUp");
+            if (!actor.HasCompletedSeatEgress || !actor.LastCompletedSeatEgressClearanceValid)
+                failures.Add("safe egress was not completed with clearance");
+            if (actor.LastCompletedSeatEgressKind == OfficeSeatEgressKind.None)
+                failures.Add("completed egress kind is missing");
+            if (actor.MaximumSeatEgressRootStepPx > 0.95f)
+                failures.Add($"egressStep={actor.MaximumSeatEgressRootStepPx:F3}px");
+            if (actor.SeatEgressCollisionViolationCount != 0 ||
+                actor.SeatEgressUnsafePhaseTransitionCount != 0)
+                failures.Add(
+                    $"egressViolations={actor.SeatEgressCollisionViolationCount}/" +
+                    actor.SeatEgressUnsafePhaseTransitionCount);
+            if (!trace.SafeEgressCloseupCaptured || trace.SafeEgressEmbeddedOverlapPixels != 0)
+                failures.Add(
+                    $"safeEgressCapture={trace.SafeEgressCloseupCaptured} " +
+                    $"embeddedOverlap={trace.SafeEgressEmbeddedOverlapPixels}px");
             if (trace.DirectionSampleCount == 0) failures.Add("no engaged direction samples");
             if (actor.SeatingFacingViolationCount != 0)
                 failures.Add("facingViolations=" + actor.SeatingFacingViolationCount);
@@ -605,6 +736,48 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     $"continuousCapture={trace.NextExpectedSitEvidenceFrame}/" +
                     $"{trace.NextExpectedTypingEvidenceFrame}/" +
                     $"{trace.NextExpectedStandEvidenceFrame}");
+            foreach (FrameEvidenceRecord record in _frameEvidenceRecords.Where(
+                         item => string.Equals(item.MemberId, trace.MemberId, StringComparison.Ordinal)))
+            {
+                OcclusionEvidence evidence = record.Evidence;
+                string frameLabel = record.Kind + "[" + record.EvidenceFrame + "]";
+                if (evidence.LowerBodyActorPixels <= 0)
+                    failures.Add(frameLabel + " lower-body region has no actor pixels");
+                if (evidence.LowerBodyOverlapCandidatePixels > 0 &&
+                    evidence.LowerBodyOccludedPixels != evidence.LowerBodyOverlapCandidatePixels)
+                    failures.Add(
+                        $"{frameLabel} lowerOccluded={evidence.LowerBodyOccludedPixels}/" +
+                        evidence.LowerBodyOverlapCandidatePixels);
+                if (record.Kind == FrameEvidenceKind.Typing &&
+                    evidence.LowerBodyOverlapCandidatePixels == 0)
+                    failures.Add(frameLabel + " has no lower-body/chair foreground overlap");
+                if (evidence.ForegroundPenetrationPixels != 0)
+                    failures.Add(frameLabel + " penetration=" + evidence.ForegroundPenetrationPixels);
+                if (evidence.UpperBodyActorPixels <= 0 ||
+                    evidence.UpperBodyRetention < MinimumUpperBodyRetention ||
+                    evidence.UpperBodyInvalidForegroundOverlapPixels != 0)
+                    failures.Add(
+                        $"{frameLabel} upper={evidence.UpperBodyVisiblePixels}/" +
+                        $"{evidence.UpperBodyActorPixels} retention={evidence.UpperBodyRetention:F3} " +
+                        $"invalidOverlap={evidence.UpperBodyInvalidForegroundOverlapPixels}");
+                // Only Work profiles define a hand-to-keyboard contract. Sit/Stand serialize the
+                // same field for pose continuity, but it can point at a transparent pixel or a
+                // naturally chair-hidden near edge and is therefore diagnostic rather than a hand
+                // segmentation ground truth.
+                if (record.Kind == FrameEvidenceKind.Typing &&
+                    (evidence.HandActorPixels <= 0 || evidence.HandVisiblePixels <= 0 ||
+                     evidence.HandRetention < MinimumHandRetention ||
+                     evidence.HandInvalidForegroundOverlapPixels != 0))
+                    failures.Add(
+                        $"{frameLabel} hand={evidence.HandVisiblePixels}/{evidence.HandActorPixels} " +
+                        $"retention={evidence.HandRetention:F3} " +
+                        $"invalidOverlap={evidence.HandInvalidForegroundOverlapPixels}");
+                if (record.Kind == FrameEvidenceKind.Typing &&
+                    (evidence.PelvisSeatErrorPx > 1.05f || evidence.HandWorkErrorPx > 4.05f))
+                    failures.Add(
+                        $"{frameLabel} sockets={evidence.PelvisSeatErrorPx:F3}/" +
+                        $"{evidence.HandWorkErrorPx:F3}px");
+            }
             if (trace.SitLowerBodyOccludedPixels <= 0 ||
                 trace.TypingLowerBodyOccludedPixels <= 0 ||
                 trace.StandLowerBodyOccludedPixels <= 0)
@@ -612,16 +785,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     $"phaseLowerOcclusion={trace.SitLowerBodyOccludedPixels}/" +
                     $"{trace.TypingLowerBodyOccludedPixels}/" +
                     $"{trace.StandLowerBodyOccludedPixels}");
-            if (trace.ForegroundPenetrationPixels != 0)
-                failures.Add("foregroundPenetration=" + trace.ForegroundPenetrationPixels);
-            if (trace.UpperBodyInvalidForegroundOverlapPixels != 0)
-                failures.Add(
-                    "invalidUpperForegroundOverlap=" +
-                    trace.UpperBodyInvalidForegroundOverlapPixels);
-            if (trace.HandInvalidForegroundOverlapPixels != 0)
-                failures.Add(
-                    "invalidHandForegroundOverlap=" +
-                    trace.HandInvalidForegroundOverlapPixels);
 
             failure = string.Join("; ", failures);
             return failures.Count == 0;
@@ -641,6 +804,168 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (captured)
                 Debug.Log("SEATING_TRANSITION_OVERVIEW_CAPTURE | resolution=1920x1080 path=" + path);
             return captured;
+        }
+
+        private bool CaptureSafeEgressEvidence(
+            OfficeRuntimeAgent actor,
+            ActorTrace trace,
+            out string failure)
+        {
+            failure = string.Empty;
+            if (actor == null || actor.PresentationRenderer == null ||
+                actor.Phase != OfficeRuntimeAgentPhase.Idle || actor.IsOccupyingSeat ||
+                !actor.HasCompletedSeatEgress || !actor.LastCompletedSeatEgressClearanceValid)
+            {
+                failure = "actor is not stationary at a completed safe egress anchor";
+                return false;
+            }
+            if (trace == null || trace.SeatId.Length == 0)
+            {
+                failure = "captured seat id is missing";
+                return false;
+            }
+
+            OfficeSeatSlot seat = _runtime.World.Workstations.RequiredSeat(trace.SeatId);
+            if (!_runtime.World.FurniturePresenter.TryGetSemanticRoot(
+                    seat.ChairFurnitureId,
+                    out Transform chairRoot) || chairRoot == null)
+            {
+                failure = "chair semantic root is missing";
+                return false;
+            }
+            SpriteRenderer[] chairRenderers = chairRoot
+                .GetComponentsInChildren<SpriteRenderer>(true)
+                .Where(renderer => renderer != null)
+                .ToArray();
+            if (chairRenderers.Length == 0)
+            {
+                failure = "chair renderers are missing";
+                return false;
+            }
+
+            SpriteRenderer actorRenderer = actor.PresentationRenderer;
+            SpriteRenderer upperBodyRenderer = actor.SeatedUpperBodyProtectionRenderer;
+            bool actorEnabled = actorRenderer.enabled;
+            bool upperBodyEnabled = upperBodyRenderer != null && upperBodyRenderer.enabled;
+            bool[] chairEnabled = chairRenderers.Select(renderer => renderer.enabled).ToArray();
+            Bounds actorBounds = actorRenderer.bounds;
+            Bounds framing = actorBounds;
+            foreach (SpriteRenderer renderer in chairRenderers)
+                if (renderer.enabled && renderer.gameObject.activeInHierarchy)
+                    framing.Encapsulate(renderer.bounds);
+            Vector3 chairAnchor = _runtime.World.Workstations.ChairSeatAnchorWorld(seat);
+            Vector3[] evidencePoints = { actor.transform.position, chairAnchor };
+            string path = ArtifactPath(
+                "seating-transition-egress-after-" + trace.MemberId + "-1024x1024.png");
+            try
+            {
+                if (!TryCaptureFrame(
+                        path, 1024, 1024, framing, actorBounds, evidencePoints,
+                        out CapturedFrame normal, out failure)) return false;
+
+                for (var index = 0; index < chairRenderers.Length; index++)
+                    chairRenderers[index].enabled = false;
+                if (!TryCaptureFrame(
+                        string.Empty, 1024, 1024, framing, actorBounds, evidencePoints,
+                        out CapturedFrame actorOnly, out failure)) return false;
+
+                for (var index = 0; index < chairRenderers.Length; index++)
+                    chairRenderers[index].enabled = chairEnabled[index];
+                actorRenderer.enabled = false;
+                if (upperBodyRenderer != null) upperBodyRenderer.enabled = false;
+                if (!TryCaptureFrame(
+                        string.Empty, 1024, 1024, framing, actorBounds, evidencePoints,
+                        out CapturedFrame chairOnly, out failure)) return false;
+
+                for (var index = 0; index < chairRenderers.Length; index++)
+                    chairRenderers[index].enabled = false;
+                if (!TryCaptureFrame(
+                        string.Empty, 1024, 1024, framing, actorBounds, evidencePoints,
+                        out CapturedFrame background, out failure)) return false;
+
+                if (!TryMeasureSafeEgressOverlap(
+                        normal,
+                        actorOnly,
+                        chairOnly,
+                        background,
+                        out int actorPixels,
+                        out int chairPixels,
+                        out int embeddedOverlapPixels,
+                        out failure)) return false;
+                trace.SafeEgressCloseupCaptured = true;
+                trace.SafeEgressActorPixels = actorPixels;
+                trace.SafeEgressChairPixels = chairPixels;
+                trace.SafeEgressEmbeddedOverlapPixels = embeddedOverlapPixels;
+                if (embeddedOverlapPixels != 0)
+                {
+                    failure = "stationary lower-body/chair-center overlap=" +
+                              embeddedOverlapPixels + "px";
+                    return false;
+                }
+                Debug.Log(
+                    "SEATING_TRANSITION_SAFE_EGRESS_EVIDENCE | member=" + trace.MemberId +
+                    " kind=" + actor.LastCompletedSeatEgressKind +
+                    " cell=" + actor.LastCompletedSeatEgressCell +
+                    " maxStepPx=" + actor.MaximumSeatEgressRootStepPx.ToString("F3") +
+                    " actorPixels=" + actorPixels + " chairPixels=" + chairPixels +
+                    " embeddedOverlapPixels=0 path=" + path);
+                return true;
+            }
+            finally
+            {
+                actorRenderer.enabled = actorEnabled;
+                if (upperBodyRenderer != null) upperBodyRenderer.enabled = upperBodyEnabled;
+                for (var index = 0; index < chairRenderers.Length; index++)
+                    chairRenderers[index].enabled = chairEnabled[index];
+            }
+        }
+
+        private static bool TryMeasureSafeEgressOverlap(
+            CapturedFrame normal,
+            CapturedFrame actorOnly,
+            CapturedFrame chairOnly,
+            CapturedFrame background,
+            out int actorPixels,
+            out int chairPixels,
+            out int embeddedOverlapPixels,
+            out string failure)
+        {
+            actorPixels = 0;
+            chairPixels = 0;
+            embeddedOverlapPixels = 0;
+            failure = string.Empty;
+            if (!HaveMatchingPixels(normal, actorOnly, chairOnly, background) ||
+                normal.EvidencePixels.Length < 2)
+            {
+                failure = "safe-egress four-way frames or projected anchors are inconsistent";
+                return false;
+            }
+
+            RectInt actorRect = normal.FocusRect;
+            int lowerBodyTop = actorRect.yMin + Mathf.CeilToInt(actorRect.height * 0.58f);
+            Vector2 chairCenter = normal.EvidencePixels[1];
+            float chairCoreRadius = Mathf.Max(8f, actorRect.width * 0.22f);
+            float chairCoreRadiusSquared = chairCoreRadius * chairCoreRadius;
+            for (var y = 0; y < normal.Height; y++)
+            for (var x = 0; x < normal.Width; x++)
+            {
+                int index = y * normal.Width + x;
+                bool actorContributes = PixelsDiffer(actorOnly.Pixels[index], background.Pixels[index]);
+                bool chairContributes = PixelsDiffer(chairOnly.Pixels[index], background.Pixels[index]);
+                if (actorContributes) actorPixels++;
+                if (chairContributes) chairPixels++;
+                if (!actorContributes || !chairContributes || !actorRect.Contains(new Vector2Int(x, y)) ||
+                    y > lowerBodyTop) continue;
+                float dx = x - chairCenter.x;
+                float dy = y - chairCenter.y;
+                if (dx * dx + dy * dy <= chairCoreRadiusSquared) embeddedOverlapPixels++;
+            }
+            if (actorPixels <= 0 || chairPixels <= 0)
+            {
+                failure = $"non-vacuous silhouettes missing actor={actorPixels} chair={chairPixels}";
+                return false;
+            }
+            return true;
         }
 
         private bool CaptureSeatingFrameEvidence(
@@ -665,6 +990,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     out SpriteRenderer overlay) || overlay == null || !overlay.enabled)
             {
                 failure = "required chair foreground overlay is missing or disabled";
+                return false;
+            }
+            _runtime.World.FurniturePresenter.OccupiedChairLowerBodyRenderers.TryGetValue(
+                seat.ChairFurnitureId,
+                out SpriteRenderer lowerBodyOverlay);
+            if (depth.OcclusionEngaged &&
+                (lowerBodyOverlay == null || !lowerBodyOverlay.enabled))
+            {
+                failure = "required lower-body chair occluder is missing or disabled";
                 return false;
             }
 
@@ -701,6 +1035,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             Bounds actorBounds = actorRenderer.bounds;
             Vector2 pelvisAnchorPx = pose.PelvisAnchorPx;
             Vector2 handAnchorPx = pose.HandAnchorPx;
+            int upperBodyCutoffPx = OfficeSeatedUpperBodyProtectionRules.ResolveCutoffSourceY(
+                actorRenderer.sprite,
+                pelvisAnchorPx);
+            float lowerBodyTopY = actor.IsSeatForegroundOcclusionEngaged
+                ? Mathf.Max(1f, upperBodyCutoffPx - 1f)
+                : pelvisAnchorPx.y + EntryLowerBodyRegionAbovePelvisPx;
             float protectedUpperY = Mathf.Max(
                 pelvisAnchorPx.y + UpperBodyRegionAbovePelvisPx,
                 handAnchorPx.y);
@@ -712,7 +1052,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 _runtime.World.Workstations.DeskWorkSocketWorld(seat),
                 OfficeGridAlignmentMetrics.SpriteAnchorWorld(
                     actorRenderer,
-                    pelvisAnchorPx + Vector2.up * LowerBodyRegionAbovePelvisPx),
+                    new Vector2(pelvisAnchorPx.x, lowerBodyTopY)),
                 OfficeGridAlignmentMetrics.SpriteAnchorWorld(
                     actorRenderer,
                     new Vector2(pelvisAnchorPx.x, protectedUpperY)),
@@ -723,6 +1063,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     actorRenderer,
                     handAnchorPx + Vector2.up * HandProtectionRadiusPx)
             };
+            Camera mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                failure = "Camera.main is missing while resolving 1920x1080 socket errors";
+                return false;
+            }
+            float pelvisSeatErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
+                mainCamera,
+                evidenceWorldPoints[0],
+                evidenceWorldPoints[1]);
+            float handWorkErrorPx = OfficeGridAlignmentMetrics.ScreenDistance(
+                mainCamera,
+                evidenceWorldPoints[2],
+                evidenceWorldPoints[3]);
             string stem = trace.MemberId.Replace('_', '-');
             string phaseToken = kind switch
             {
@@ -751,13 +1105,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     out failure)) return false;
 
             bool previousEnabled = overlay.enabled;
+            bool previousLowerBodyEnabled =
+                lowerBodyOverlay != null && lowerBodyOverlay.enabled;
             bool previousActorEnabled = actorRenderer.enabled;
+            SpriteRenderer upperBodyRenderer = actor.SeatedUpperBodyProtectionRenderer;
+            bool previousUpperBodyEnabled =
+                upperBodyRenderer != null && upperBodyRenderer.enabled;
             CapturedFrame overlayOff = default;
             CapturedFrame actorHiddenOverlayOff = default;
             CapturedFrame actorHiddenOverlayOn = default;
             try
             {
                 overlay.enabled = false;
+                if (lowerBodyOverlay != null) lowerBodyOverlay.enabled = false;
                 if (!TryCaptureFrame(
                         string.Empty,
                         1024,
@@ -768,6 +1128,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         out failure)) return false;
 
                 actorRenderer.enabled = false;
+                if (upperBodyRenderer != null) upperBodyRenderer.enabled = false;
                 if (!TryCaptureFrame(
                         string.Empty,
                         1024,
@@ -778,6 +1139,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         out failure)) return false;
 
                 overlay.enabled = true;
+                if (lowerBodyOverlay != null) lowerBodyOverlay.enabled = previousLowerBodyEnabled;
                 if (!TryCaptureFrame(
                         string.Empty,
                         1024,
@@ -790,7 +1152,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             finally
             {
                 overlay.enabled = previousEnabled;
+                if (lowerBodyOverlay != null)
+                    lowerBodyOverlay.enabled = previousLowerBodyEnabled;
                 actorRenderer.enabled = previousActorEnabled;
+                if (upperBodyRenderer != null)
+                    upperBodyRenderer.enabled = previousUpperBodyEnabled;
             }
 
             if (!TryMeasureOcclusionEvidence(
@@ -798,7 +1164,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     overlayOff,
                     actorHiddenOverlayOn,
                     actorHiddenOverlayOff,
-                    kind == FrameEvidenceKind.Typing,
+                    pelvisSeatErrorPx,
+                    handWorkErrorPx,
                     out OcclusionEvidence evidence,
                     out failure)) return false;
 
@@ -1069,7 +1436,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             CapturedFrame overlayOff,
             CapturedFrame actorHiddenOverlayOn,
             CapturedFrame actorHiddenOverlayOff,
-            bool requireWorkSocketContact,
+            float pelvisSeatErrorPx,
+            float handWorkErrorPx,
             out OcclusionEvidence evidence,
             out string failure)
         {
@@ -1109,8 +1477,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 return false;
             }
 
-            float pelvisSeatErrorPx = Vector2.Distance(pelvis, chairSeat);
-            float handWorkErrorPx = Vector2.Distance(hand, deskWork);
             Vector2 spriteUp = upperBoundary - pelvis;
             if (spriteUp.sqrMagnitude <= 0.0001f)
             {
@@ -1123,8 +1489,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             float handRadius = Mathf.Max(
                 Vector2.Distance(hand, handRadiusX),
                 Vector2.Distance(hand, handRadiusY));
-            if (lowerBoundaryDistance <= 0f ||
-                upperBoundaryDistance <= lowerBoundaryDistance ||
+            if (upperBoundaryDistance - lowerBoundaryDistance < 0.5f ||
                 handRadius < 0.5f)
             {
                 failure = "occlusion evidence regions collapsed after projection";
@@ -1163,15 +1528,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     actorDeltaWithoutForeground >= ColorDifferenceThreshold;
                 bool actorWithForeground =
                     actorDeltaWithForeground >= ColorDifferenceThreshold;
-                bool foregroundPresent = PixelsDiffer(
-                    actorHiddenOverlayOn.Pixels[index],
-                    actorHiddenOverlayOff.Pixels[index]);
-                bool filteredForegroundCore = foregroundPresent && IsFilteredForegroundCore(
+                // The chair foreground is an exact RGBA subset of the chair base. With the actor
+                // hidden, toggling that duplicate layer is intentionally pixel-identical (C == D),
+                // so C-D cannot reveal its mask. A-B is the runtime-visible foreground effect on
+                // the actor; C and D remain the matching backgrounds needed to isolate actor
+                // contribution before and after that effect.
+                bool foregroundAffectsActor = PixelsDiffer(
+                    overlayOn.Pixels[index],
+                    overlayOff.Pixels[index]);
+                bool filteredForegroundCore = foregroundAffectsActor && IsFilteredForegroundCore(
                     x,
                     y,
-                    actorHiddenOverlayOn,
-                    actorHiddenOverlayOff);
-                bool foregroundOverlap = actorWithoutForeground && foregroundPresent;
+                    overlayOn,
+                    overlayOff);
+                bool foregroundOverlap = actorWithoutForeground && foregroundAffectsActor;
                 bool coreOverlap = actorWithoutForeground && filteredForegroundCore;
                 float actorResidualRatio = actorDeltaWithoutForeground <= 0
                     ? 0f
@@ -1236,61 +1606,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 pelvisSeatErrorPx,
                 handWorkErrorPx);
 
-            if (lowerBodyActorPixels <= 0)
-            {
-                failure = "pose-derived lower-body region contains no rendered actor pixels";
-                return false;
-            }
-            if (lowerBodyOverlapCandidatePixels > 0 &&
-                lowerBodyOccludedPixels != lowerBodyOverlapCandidatePixels)
-            {
-                failure =
-                    $"filtered chair foreground core did not overwrite every lower-body overlap candidate: " +
-                    $"occluded={lowerBodyOccludedPixels}/" +
-                    $"{lowerBodyOverlapCandidatePixels}";
-                return false;
-            }
-            if (requireWorkSocketContact && lowerBodyOverlapCandidatePixels == 0)
-            {
-                failure = "planted typing pose has no lower-body/chair foreground overlap";
-                return false;
-            }
-            if (foregroundPenetrationPixels != 0)
-            {
-                failure =
-                    $"filtered chair foreground core penetration is non-zero: " +
-                    $"penetration={foregroundPenetrationPixels}/" +
-                    $"{foregroundOverlapCandidatePixels}";
-                return false;
-            }
-            if (upperBodyActorPixels <= 0 || upperBodyRetention < MinimumUpperBodyRetention ||
-                upperBodyInvalidForegroundOverlapPixels != 0)
-            {
-                failure =
-                    $"chair foreground touches the protected upper body: " +
-                    $"visible={upperBodyVisiblePixels}/{upperBodyActorPixels} " +
-                    $"retention={upperBodyRetention:F3} invalidOverlap=" +
-                    $"{upperBodyInvalidForegroundOverlapPixels}";
-                return false;
-            }
-            if (handActorPixels <= 0 || handVisiblePixels <= 0 ||
-                handRetention < MinimumHandRetention ||
-                handInvalidForegroundOverlapPixels != 0)
-            {
-                failure =
-                    $"chair foreground does not preserve the pose-derived hand/keyboard region: " +
-                    $"visible={handVisiblePixels}/{handActorPixels} retention={handRetention:F3} " +
-                    $"invalidOverlap={handInvalidForegroundOverlapPixels}";
-                return false;
-            }
-            if (requireWorkSocketContact &&
-                (pelvisSeatErrorPx > 1.05f || handWorkErrorPx > 4.05f))
-            {
-                failure =
-                    $"occlusion evidence anchors are outside their sockets: " +
-                    $"pelvisSeat={pelvisSeatErrorPx:F3}px handWork={handWorkErrorPx:F3}px";
-                return false;
-            }
+            // Policy failures are evaluated after all 56 primary frames have been captured. This
+            // keeps a failed run fail-closed while still producing a complete per-frame diagnostic
+            // manifest instead of stopping at the first bad pixel.
             return true;
         }
 
@@ -1324,8 +1642,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private static bool IsFilteredForegroundCore(
             int x,
             int y,
-            CapturedFrame actorHiddenOverlayOn,
-            CapturedFrame actorHiddenOverlayOff)
+            CapturedFrame overlayOn,
+            CapturedFrame overlayOff)
         {
             // One-pixel erosion removes the outer bilinear-filtered silhouette. Opacity is not
             // assumed from source metadata: the separate actor residual measurement below proves
@@ -1336,12 +1654,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 int sampleX = x + offsetX;
                 int sampleY = y + offsetY;
                 if (sampleX < 0 || sampleY < 0 ||
-                    sampleX >= actorHiddenOverlayOn.Width ||
-                    sampleY >= actorHiddenOverlayOn.Height) return false;
-                int sampleIndex = sampleY * actorHiddenOverlayOn.Width + sampleX;
+                    sampleX >= overlayOn.Width ||
+                    sampleY >= overlayOn.Height) return false;
+                int sampleIndex = sampleY * overlayOn.Width + sampleX;
                 if (!PixelsDiffer(
-                        actorHiddenOverlayOn.Pixels[sampleIndex],
-                        actorHiddenOverlayOff.Pixels[sampleIndex])) return false;
+                        overlayOn.Pixels[sampleIndex],
+                        overlayOff.Pixels[sampleIndex])) return false;
             }
             return true;
         }
@@ -1501,9 +1819,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 builder.AppendLine(
                     "upperProtectedRegion=all actor-bound pixels above max(pelvis+32 source px, hand-anchor height)");
                 builder.AppendLine(
-                    "handProtectedRegion=7 source-px radius around the approved pose hand anchor");
+                    "handProtectedRegion=7 source-px radius around the approved Work pose hand anchor; strict for Typing 6/6, diagnostic for SitDown/StandUp");
                 builder.AppendLine(
-                    "filteredCoreCandidate=foreground-present pixels eroded by a 3x3 neighborhood to exclude bilinear-filtered edges");
+                    "filteredCoreCandidate=runtime-visible chair-foreground effect on actor (A-B) eroded by a 3x3 neighborhood to exclude bilinear-filtered edges");
                 builder.AppendLine(
                     "overlapCandidate=actor contributes with foreground off AND filteredCoreCandidate is present");
                 builder.AppendLine(
@@ -1519,9 +1837,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 builder.AppendLine(
                     "phaseAggregate=each member SitDown/Typing/StandUp lowerOccluded sum must be >0");
                 builder.AppendLine(
-                    "invalidOcclusion=any foreground overlap in protected upper/hand regions must be 0");
+                    "invalidOcclusion=upper foreground overlap must be 0 in all 56 frames; hand overlap must be 0 in Typing 6/6");
                 builder.AppendLine(
-                    "typingSockets=pelvis-to-chair<=1.05 capture px and hand-to-desk-work<=4.05 capture px");
+                    "typingSockets=1920x1080 main-camera pelvis-to-chair<=1.05px and hand-to-desk-work<=4.05px");
                 builder.AppendLine(
                     "depthOrder=deskBase/chairBase/actor/deskFront/chairFront");
                 foreach (FrameEvidenceRecord record in _frameEvidenceRecords
@@ -1565,7 +1883,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             builder.AppendLine("closeupResolution=1024x1024");
             builder.AppendLine("primaryCloseups=" + _frameEvidenceRecords.Count + "/56");
             builder.AppendLine("primaryUniqueKeys=" + _frameEvidenceKeys.Count + "/56");
+            builder.AppendLine("safeEgressCloseups=" +
+                               _traces.Values.Count(trace => trace.SafeEgressCloseupCaptured) + "/4");
+            builder.AppendLine("egressMatrix=families4*rotations4*scenarios4=64");
             builder.AppendLine("captureManifest=seating-transition-frame-capture-manifest.txt");
+            builder.AppendLine(
+                "chairForeground=canonical-9881px-continuous; upperBodyProtection=pose-pelvis-split");
             builder.AppendLine(
                 "penetrationContract=filtered-core actor residual >5%=FAIL; <=5% allowed only for D3D11 bilinear/sRGB readback");
             foreach (string memberId in MemberIds)
@@ -1615,7 +1938,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         .Append(" anchorErrorPx=").Append(actor.MaxAnimatedAnchorErrorPx.ToString("F3"))
                         .Append(" typingSeatPx=").Append(actor.MaxTypingSeatContactErrorPx.ToString("F3"))
                         .Append(" handKeyboardPx=").Append(actor.MaxTypingHandWorkErrorPx.ToString("F3"))
-                        .Append(" chairStepPx=").Append(actor.MaxChairPresentationStepPx.ToString("F3"));
+                        .Append(" chairStepPx=").Append(actor.MaxChairPresentationStepPx.ToString("F3"))
+                        .Append(" egressKind=").Append(actor.LastCompletedSeatEgressKind)
+                        .Append(" egressCell=").Append(actor.LastCompletedSeatEgressCell)
+                        .Append(" egressStepPx=").Append(actor.MaximumSeatEgressRootStepPx.ToString("F3"))
+                        .Append(" egressAttempts=").Append(actor.SeatEgressReservationAttemptCount)
+                        .Append(" egressBlocked=").Append(actor.SeatEgressBlockedAttemptCount)
+                        .Append(" egressViolations=").Append(actor.SeatEgressCollisionViolationCount)
+                        .Append('/').Append(actor.SeatEgressUnsafePhaseTransitionCount)
+                        .Append(" stationaryActorPixels=").Append(trace.SafeEgressActorPixels)
+                        .Append(" stationaryChairPixels=").Append(trace.SafeEgressChairPixels)
+                        .Append(" stationaryEmbeddedOverlap=")
+                        .Append(trace.SafeEgressEmbeddedOverlapPixels);
                 }
                 builder.AppendLine();
             }
@@ -1632,7 +1966,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     OfficeRuntimeAgent actor = actors[memberId];
                     return $"{memberId}=phase:{actor.Phase}/clip:{actor.CurrentSeatingClip}/" +
                            $"frame:{actor.CurrentSeatingFrame}/sprite:{actor.CurrentSpriteName}/" +
-                           $"direction:{actor.CurrentDirection}/seat:{actor.ActiveSeatId}";
+                           $"direction:{actor.CurrentDirection}/seat:{actor.ActiveSeatId}/" +
+                           $"egress:{actor.ActiveSeatEgressKind}/{actor.HasSeatEgressReservation}/" +
+                           $"{actor.HasReachedSeatEgressSafeAnchor}/{actor.LastSeatEgressBlocker}";
                 }));
         }
 
@@ -1781,7 +2117,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public string ManifestLine()
             {
                 string noOverlapReason = Evidence.NoLowerBodyOverlapExpected
-                    ? "4-way projected pose/mask geometry yielded zero eroded runtime-core lower-body intersection"
+                    ? "4-way projected pose plus runtime A-B foreground effect yielded zero eroded lower-body intersection"
                     : "none";
                 return Key +
                        " phase=" + Phase +
@@ -1825,6 +2161,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             }
 
             public string MemberId { get; }
+            public string SeatId { get; set; } = string.Empty;
             public int ExpectedDirection { get; set; } = -1;
             public int SitDownFrameMask { get; set; }
             public int StandUpFrameMask { get; set; }
@@ -1865,6 +2202,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public bool SawWorkHookActive { get; set; }
             public bool SawFinishingWork { get; set; }
             public bool SawLeavingSeat { get; set; }
+            public bool SawReservedBeforeStandUp { get; set; }
+            public bool SafeEgressCloseupCaptured { get; set; }
+            public int SafeEgressActorPixels { get; set; }
+            public int SafeEgressChairPixels { get; set; }
+            public int SafeEgressEmbeddedOverlapPixels { get; set; }
             public bool SitCloseupCaptured { get; set; }
             public bool WorkCloseupCaptured { get; set; }
             public bool StandCloseupCaptured { get; set; }

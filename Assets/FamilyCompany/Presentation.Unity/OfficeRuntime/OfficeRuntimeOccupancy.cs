@@ -353,6 +353,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ReleaseNarrowCorridors(agentId ?? string.Empty);
         }
 
+        public bool HasReservation(string agentId, OfficeGridCoordinate cell) =>
+            RequiredActor(agentId).Reservations.Contains(cell);
+
         public string DescribePathReservationBlocker(
             string agentId,
             OfficeGridCoordinate current,

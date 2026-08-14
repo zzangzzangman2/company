@@ -18,7 +18,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 0
-    pelvisAnchorPx: {x: 130, y: 69}
+    pelvisAnchorPx: {x: 130, y: 97}
     deskInteractionAnchorPx: {x: 106, y: 42}
     uniformScale: 1
     rotationDegrees: 0
@@ -28,7 +28,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 1
-    pelvisAnchorPx: {x: 137, y: 60}
+    pelvisAnchorPx: {x: 137, y: 88}
     deskInteractionAnchorPx: {x: 89, y: 52}
     uniformScale: 1
     rotationDegrees: 0
@@ -38,7 +38,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 2
-    pelvisAnchorPx: {x: 143, y: 52}
+    pelvisAnchorPx: {x: 143, y: 80}
     deskInteractionAnchorPx: {x: 77, y: 69}
     uniformScale: 1
     rotationDegrees: 0
@@ -48,7 +48,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 3
-    pelvisAnchorPx: {x: 145, y: 49}
+    pelvisAnchorPx: {x: 145, y: 77}
     deskInteractionAnchorPx: {x: 76, y: 68}
     uniformScale: 1
     rotationDegrees: 0
@@ -58,7 +58,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 130, y: 49}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 78, y: 90}
     uniformScale: 1
     rotationDegrees: 0
@@ -68,7 +68,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 1
-    pelvisAnchorPx: {x: 130, y: 49}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 67, y: 80}
     uniformScale: 1
     rotationDegrees: 0
@@ -78,7 +78,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 2
-    pelvisAnchorPx: {x: 130, y: 49}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 78, y: 90}
     uniformScale: 1
     rotationDegrees: 0
@@ -88,7 +88,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 3
-    pelvisAnchorPx: {x: 130, y: 49}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 68, y: 91}
     uniformScale: 1
     rotationDegrees: 0
@@ -98,7 +98,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 4
-    pelvisAnchorPx: {x: 130, y: 49}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 74, y: 86}
     uniformScale: 1
     rotationDegrees: 0
@@ -108,7 +108,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 5
-    pelvisAnchorPx: {x: 130, y: 49}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 78, y: 91}
     uniformScale: 1
     rotationDegrees: 0
@@ -118,7 +118,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 0
-    pelvisAnchorPx: {x: 145, y: 49}
+    pelvisAnchorPx: {x: 145, y: 77}
     deskInteractionAnchorPx: {x: 76, y: 68}
     uniformScale: 1
     rotationDegrees: 0
@@ -128,7 +128,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 1
-    pelvisAnchorPx: {x: 143, y: 52}
+    pelvisAnchorPx: {x: 143, y: 80}
     deskInteractionAnchorPx: {x: 77, y: 69}
     uniformScale: 1
     rotationDegrees: 0
@@ -138,7 +138,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 2
-    pelvisAnchorPx: {x: 137, y: 60}
+    pelvisAnchorPx: {x: 137, y: 88}
     deskInteractionAnchorPx: {x: 89, y: 52}
     uniformScale: 1
     rotationDegrees: 0
@@ -148,7 +148,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 3
-    pelvisAnchorPx: {x: 130, y: 69}
+    pelvisAnchorPx: {x: 130, y: 97}
     deskInteractionAnchorPx: {x: 106, y: 42}
     uniformScale: 1
     rotationDegrees: 0
@@ -158,7 +158,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 0
-    pelvisAnchorPx: {x: 130, y: 73}
+    pelvisAnchorPx: {x: 130, y: 87}
     deskInteractionAnchorPx: {x: 109, y: 50}
     uniformScale: 1
     rotationDegrees: 0
@@ -168,7 +168,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 1
-    pelvisAnchorPx: {x: 138, y: 63}
+    pelvisAnchorPx: {x: 138, y: 77}
     deskInteractionAnchorPx: {x: 158, y: 70}
     uniformScale: 1
     rotationDegrees: 0
@@ -178,7 +178,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 2
-    pelvisAnchorPx: {x: 145, y: 55}
+    pelvisAnchorPx: {x: 145, y: 69}
     deskInteractionAnchorPx: {x: 170, y: 58}
     uniformScale: 1
     rotationDegrees: 0
@@ -188,7 +188,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 3
-    pelvisAnchorPx: {x: 147, y: 51}
+    pelvisAnchorPx: {x: 147, y: 65}
     deskInteractionAnchorPx: {x: 176, y: 58}
     uniformScale: 1
     rotationDegrees: 0
@@ -198,7 +198,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 130, y: 63}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 75, y: 108}
     uniformScale: 1
     rotationDegrees: 0
@@ -208,7 +208,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 1
-    pelvisAnchorPx: {x: 131, y: 63}
+    pelvisAnchorPx: {x: 131, y: 77}
     deskInteractionAnchorPx: {x: 75, y: 108}
     uniformScale: 1
     rotationDegrees: 0
@@ -218,7 +218,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 2
-    pelvisAnchorPx: {x: 131, y: 63}
+    pelvisAnchorPx: {x: 131, y: 77}
     deskInteractionAnchorPx: {x: 75, y: 108}
     uniformScale: 1
     rotationDegrees: 0
@@ -228,7 +228,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 3
-    pelvisAnchorPx: {x: 130, y: 63}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 74, y: 108}
     uniformScale: 1
     rotationDegrees: 0
@@ -238,7 +238,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 4
-    pelvisAnchorPx: {x: 130, y: 63}
+    pelvisAnchorPx: {x: 130, y: 77}
     deskInteractionAnchorPx: {x: 74, y: 108}
     uniformScale: 1
     rotationDegrees: 0
@@ -248,7 +248,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 5
-    pelvisAnchorPx: {x: 129, y: 63}
+    pelvisAnchorPx: {x: 129, y: 77}
     deskInteractionAnchorPx: {x: 74, y: 108}
     uniformScale: 1
     rotationDegrees: 0
@@ -258,7 +258,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 0
-    pelvisAnchorPx: {x: 147, y: 51}
+    pelvisAnchorPx: {x: 147, y: 65}
     deskInteractionAnchorPx: {x: 176, y: 58}
     uniformScale: 1
     rotationDegrees: 0
@@ -268,7 +268,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 1
-    pelvisAnchorPx: {x: 145, y: 55}
+    pelvisAnchorPx: {x: 145, y: 69}
     deskInteractionAnchorPx: {x: 170, y: 58}
     uniformScale: 1
     rotationDegrees: 0
@@ -278,7 +278,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 2
-    pelvisAnchorPx: {x: 138, y: 63}
+    pelvisAnchorPx: {x: 138, y: 77}
     deskInteractionAnchorPx: {x: 158, y: 70}
     uniformScale: 1
     rotationDegrees: 0
@@ -288,7 +288,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 3
-    pelvisAnchorPx: {x: 130, y: 73}
+    pelvisAnchorPx: {x: 130, y: 87}
     deskInteractionAnchorPx: {x: 109, y: 50}
     uniformScale: 1
     rotationDegrees: 0
@@ -298,7 +298,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 0
-    pelvisAnchorPx: {x: 128, y: 69}
+    pelvisAnchorPx: {x: 128, y: 96}
     deskInteractionAnchorPx: {x: 99, y: 78}
     uniformScale: 1
     rotationDegrees: 0
@@ -308,7 +308,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 1
-    pelvisAnchorPx: {x: 138, y: 59}
+    pelvisAnchorPx: {x: 138, y: 86}
     deskInteractionAnchorPx: {x: 86, y: 72}
     uniformScale: 1
     rotationDegrees: 0
@@ -318,7 +318,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 2
-    pelvisAnchorPx: {x: 144, y: 52}
+    pelvisAnchorPx: {x: 144, y: 79}
     deskInteractionAnchorPx: {x: 76, y: 70}
     uniformScale: 1
     rotationDegrees: 0
@@ -328,7 +328,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 3
-    pelvisAnchorPx: {x: 145, y: 49}
+    pelvisAnchorPx: {x: 145, y: 76}
     deskInteractionAnchorPx: {x: 75, y: 70}
     uniformScale: 1
     rotationDegrees: 0
@@ -338,7 +338,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 123, y: 50}
+    pelvisAnchorPx: {x: 123, y: 77}
     deskInteractionAnchorPx: {x: 76, y: 104}
     uniformScale: 1
     rotationDegrees: 0
@@ -348,7 +348,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 1
-    pelvisAnchorPx: {x: 122, y: 50}
+    pelvisAnchorPx: {x: 122, y: 77}
     deskInteractionAnchorPx: {x: 76, y: 104}
     uniformScale: 1
     rotationDegrees: 0
@@ -358,7 +358,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 2
-    pelvisAnchorPx: {x: 123, y: 50}
+    pelvisAnchorPx: {x: 123, y: 77}
     deskInteractionAnchorPx: {x: 76, y: 104}
     uniformScale: 1
     rotationDegrees: 0
@@ -368,7 +368,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 3
-    pelvisAnchorPx: {x: 123, y: 50}
+    pelvisAnchorPx: {x: 123, y: 77}
     deskInteractionAnchorPx: {x: 76, y: 104}
     uniformScale: 1
     rotationDegrees: 0
@@ -378,7 +378,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 4
-    pelvisAnchorPx: {x: 123, y: 50}
+    pelvisAnchorPx: {x: 123, y: 77}
     deskInteractionAnchorPx: {x: 76, y: 104}
     uniformScale: 1
     rotationDegrees: 0
@@ -388,7 +388,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 5
-    pelvisAnchorPx: {x: 123, y: 50}
+    pelvisAnchorPx: {x: 123, y: 77}
     deskInteractionAnchorPx: {x: 76, y: 104}
     uniformScale: 1
     rotationDegrees: 0
@@ -398,7 +398,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 0
-    pelvisAnchorPx: {x: 145, y: 49}
+    pelvisAnchorPx: {x: 145, y: 76}
     deskInteractionAnchorPx: {x: 75, y: 70}
     uniformScale: 1
     rotationDegrees: 0
@@ -408,7 +408,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 1
-    pelvisAnchorPx: {x: 144, y: 52}
+    pelvisAnchorPx: {x: 144, y: 79}
     deskInteractionAnchorPx: {x: 76, y: 70}
     uniformScale: 1
     rotationDegrees: 0
@@ -418,7 +418,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 2
-    pelvisAnchorPx: {x: 138, y: 59}
+    pelvisAnchorPx: {x: 138, y: 86}
     deskInteractionAnchorPx: {x: 86, y: 72}
     uniformScale: 1
     rotationDegrees: 0
@@ -428,7 +428,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 3
-    pelvisAnchorPx: {x: 128, y: 69}
+    pelvisAnchorPx: {x: 128, y: 96}
     deskInteractionAnchorPx: {x: 99, y: 78}
     uniformScale: 1
     rotationDegrees: 0
@@ -438,7 +438,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 0
-    pelvisAnchorPx: {x: 131, y: 74}
+    pelvisAnchorPx: {x: 131, y: 89}
     deskInteractionAnchorPx: {x: 99, y: 59}
     uniformScale: 1
     rotationDegrees: 0
@@ -448,7 +448,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 1
-    pelvisAnchorPx: {x: 140, y: 64}
+    pelvisAnchorPx: {x: 140, y: 79}
     deskInteractionAnchorPx: {x: 93, y: 55}
     uniformScale: 1
     rotationDegrees: 0
@@ -458,7 +458,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 2
-    pelvisAnchorPx: {x: 146, y: 55}
+    pelvisAnchorPx: {x: 146, y: 70}
     deskInteractionAnchorPx: {x: 80, y: 69}
     uniformScale: 1
     rotationDegrees: 0
@@ -468,7 +468,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 0
     frameIndex: 3
-    pelvisAnchorPx: {x: 148, y: 51}
+    pelvisAnchorPx: {x: 148, y: 66}
     deskInteractionAnchorPx: {x: 78, y: 70}
     uniformScale: 1
     rotationDegrees: 0
@@ -478,8 +478,8 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 0
-    pelvisAnchorPx: {x: 126, y: 62}
-    deskInteractionAnchorPx: {x: 84, y: 87}
+    pelvisAnchorPx: {x: 126, y: 77}
+    deskInteractionAnchorPx: {x: 88, y: 120}
     uniformScale: 1
     rotationDegrees: 0
     humanApproved: 1
@@ -488,7 +488,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 1
-    pelvisAnchorPx: {x: 126, y: 62}
+    pelvisAnchorPx: {x: 126, y: 77}
     deskInteractionAnchorPx: {x: 75, y: 78}
     uniformScale: 1
     rotationDegrees: 0
@@ -498,7 +498,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 2
-    pelvisAnchorPx: {x: 126, y: 62}
+    pelvisAnchorPx: {x: 126, y: 77}
     deskInteractionAnchorPx: {x: 86, y: 91}
     uniformScale: 1
     rotationDegrees: 0
@@ -508,7 +508,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 3
-    pelvisAnchorPx: {x: 126, y: 62}
+    pelvisAnchorPx: {x: 126, y: 77}
     deskInteractionAnchorPx: {x: 81, y: 84}
     uniformScale: 1
     rotationDegrees: 0
@@ -518,7 +518,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 4
-    pelvisAnchorPx: {x: 126, y: 62}
+    pelvisAnchorPx: {x: 126, y: 77}
     deskInteractionAnchorPx: {x: 84, y: 90}
     uniformScale: 1
     rotationDegrees: 0
@@ -528,7 +528,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 1
     frameIndex: 5
-    pelvisAnchorPx: {x: 126, y: 62}
+    pelvisAnchorPx: {x: 126, y: 77}
     deskInteractionAnchorPx: {x: 85, y: 89}
     uniformScale: 1
     rotationDegrees: 0
@@ -538,7 +538,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 0
-    pelvisAnchorPx: {x: 148, y: 51}
+    pelvisAnchorPx: {x: 148, y: 66}
     deskInteractionAnchorPx: {x: 78, y: 70}
     uniformScale: 1
     rotationDegrees: 0
@@ -548,7 +548,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 1
-    pelvisAnchorPx: {x: 146, y: 55}
+    pelvisAnchorPx: {x: 146, y: 70}
     deskInteractionAnchorPx: {x: 80, y: 69}
     uniformScale: 1
     rotationDegrees: 0
@@ -558,7 +558,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 2
-    pelvisAnchorPx: {x: 140, y: 64}
+    pelvisAnchorPx: {x: 140, y: 79}
     deskInteractionAnchorPx: {x: 93, y: 55}
     uniformScale: 1
     rotationDegrees: 0
@@ -568,7 +568,7 @@ MonoBehaviour:
     directionIndex: 3
     clip: 2
     frameIndex: 3
-    pelvisAnchorPx: {x: 131, y: 74}
+    pelvisAnchorPx: {x: 131, y: 89}
     deskInteractionAnchorPx: {x: 99, y: 59}
     uniformScale: 1
     rotationDegrees: 0

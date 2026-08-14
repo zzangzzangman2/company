@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEditor;
 using UnityEngine;
@@ -20,10 +22,19 @@ namespace FamilyCompany.Editor.OfficeGridQa
             "FamilyCompany/Presentation.Unity/OfficeRuntime/OfficeRuntimeAgent.cs";
         private const string DepthSorterSourcePath =
             "FamilyCompany/Presentation.Unity/OfficeRuntime/OfficeRuntimeDepthSorter.cs";
+        private const string FurniturePresenterSourcePath =
+            "FamilyCompany/Presentation.Unity/OfficeGrid/OfficeGridFurniturePresenter.cs";
         private const int BasePriority = 0;
-        private const int OccupantPriority = 1;
         private const int FrontPriority = 2;
         private const int ChairFrontPriority = 3;
+        private const int SeatDeskBasePlane = 0;
+        private const int SeatChairBasePlane = 1;
+        private const int SeatActorEngagedPlane = 2;
+        private const int SeatDeskFrontEngagedPlane = 3;
+        private const int SeatChairFrontEngagedPlane = 4;
+        private const int SeatDeskFrontReleasedPlane = 2;
+        private const int SeatChairFrontReleasedPlane = 3;
+        private const int SeatActorReleasedPlane = 4;
 
         private static readonly OfficeRuntimeAgentPhase[] ForegroundPhases =
         {
@@ -49,13 +60,51 @@ namespace FamilyCompany.Editor.OfficeGridQa
         public static void Validate()
         {
             ValidateEveryRuntimePhase();
+            ValidatePlantedSitEntryGate();
             ValidateLeavingSeatBoundaryInEightDirections();
             ValidateReservationAndOcclusionAreIndependent();
             ValidateSyntheticSeatBoundDepth();
             ValidateRuntimeDepthSorterBindings();
             Debug.Log(
                 "OFFICE_SEAT_OCCLUSION_DEPTH_VALIDATION: PASS phases=9 exitDirections=8 " +
-                "releaseProgress=0.35 depthStacks=engaged+disengaged sourceBindings=present");
+                "safeAnchorRelease=atomic depthStacks=engaged+sitEntryReleased hybridQ=256 " +
+                "sitEntryGate=frame0-released chairForeground=canonical-continuous " +
+                $"lowerOccluder={OfficeOccupiedChairForegroundRules.ExpectedOpaquePixelCount} " +
+                "upperBodyPlane=pose-split " +
+                "semanticFrontFootprints=preserved sourceBindings=present");
+        }
+
+        private static void ValidatePlantedSitEntryGate()
+        {
+            var operatorWorld = new Vector2(7.25f, -3.5f);
+            var approachWorld = new Vector2(10.75f, -1.25f);
+            Require(
+                !OfficeSeatOcclusionRules.Evaluate(
+                    OfficeRuntimeAgentPhase.SittingDown,
+                    operatorWorld,
+                    operatorWorld,
+                    approachWorld,
+                    OfficeSeatingAnimationClip.SitDown,
+                    0).ForegroundEngaged,
+                "Planted SitDown[0] must keep the chair foreground released.");
+            Require(
+                OfficeSeatOcclusionRules.Evaluate(
+                    OfficeRuntimeAgentPhase.SittingDown,
+                    operatorWorld,
+                    operatorWorld,
+                    approachWorld,
+                    OfficeSeatingAnimationClip.SitDown,
+                    1).ForegroundEngaged,
+                "SitDown[1] must engage the occupied chair foreground.");
+            Require(
+                OfficeSeatOcclusionRules.Evaluate(
+                    OfficeRuntimeAgentPhase.Working,
+                    operatorWorld,
+                    operatorWorld,
+                    approachWorld,
+                    OfficeSeatingAnimationClip.Work,
+                    0).ForegroundEngaged,
+                "Work[0] must engage the occupied chair foreground.");
         }
 
         public static void RunBatch()
@@ -92,10 +141,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 RequireApproximately(state.ExitProgress01, 0f, $"{phase} operator progress");
             }
 
-            Vector2 releasedActor = Vector2.LerpUnclamped(
-                operatorWorld,
-                approachWorld,
-                OfficeSeatOcclusionRules.LeavingSeatReleaseProgress01 + 0.1f);
+            Vector2 releasedActor = Vector2.LerpUnclamped(operatorWorld, approachWorld, 0.8f);
             foreach (OfficeRuntimeAgentPhase phase in ForegroundPhases)
             {
                 Require(
@@ -110,8 +156,6 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
         private static void ValidateLeavingSeatBoundaryInEightDirections()
         {
-            float release = OfficeSeatOcclusionRules.LeavingSeatReleaseProgress01;
-            RequireApproximately(release, 0.35f, "LeavingSeat release threshold");
             for (var index = 0; index < ExitVectors.Length; index++)
             {
                 Vector2 exit = ExitVectors[index];
@@ -121,21 +165,21 @@ namespace FamilyCompany.Editor.OfficeGridQa
                                         (0.07f + index * 0.013f);
 
                 AssertLeavingState(
-                    operatorWorld + exit * (release - 0.001f) + perpendicular,
+                    operatorWorld + exit * 0.001f + perpendicular,
                     operatorWorld,
                     approachWorld,
                     true,
-                    release - 0.001f,
+                    0.001f,
                     index,
-                    "before");
+                    "at-start");
                 AssertLeavingState(
-                    operatorWorld + exit * (release + 0.001f) + perpendicular,
+                    operatorWorld + exit * 0.999f + perpendicular,
                     operatorWorld,
                     approachWorld,
-                    false,
-                    release + 0.001f,
+                    true,
+                    0.999f,
                     index,
-                    "after");
+                    "at-safe-anchor");
 
                 float beforeStart = OfficeSeatOcclusionRules.ResolveExitProgress01(
                     operatorWorld - exit * 0.5f,
@@ -155,7 +199,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 degenerate,
                 degenerate,
                 degenerate);
-            Require(!noExit.ForegroundEngaged, "A zero-length exit must not retain foreground occlusion.");
+            Require(noExit.ForegroundEngaged,
+                "A claimed LeavingSeat phase must retain foreground occlusion even for a degenerate exit.");
             RequireApproximately(noExit.ExitProgress01, 1f, "zero-length exit progress");
         }
 
@@ -192,8 +237,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 actorWorld,
                 operatorWorld,
                 approachWorld);
-            Require(!state.ForegroundEngaged,
-                "Foreground occlusion must be released before the LeavingSeat reservation ends.");
+            Require(state.ForegroundEngaged,
+                "Foreground occlusion must remain engaged until the LeavingSeat reservation ends.");
 
             string agent = Compact(ReadAssetSource(AgentSourcePath));
             string occupancy = Section(agent, "publicboolIsOccupyingSeat=>", ";publicboolIsBusy");
@@ -205,68 +250,170 @@ namespace FamilyCompany.Editor.OfficeGridQa
             int leavingCase = agent.IndexOf(
                 "caseOfficeRuntimeAgentPhase.LeavingSeat:",
                 StringComparison.Ordinal);
-            int snapToApproach = agent.IndexOf(
-                "transform.position=newVector3(target.x,target.y,transform.position.z);",
+            int validateSafeAnchor = agent.IndexOf(
+                "TryValidateSeatEgressCompletion(outstringblocker)",
                 leavingCase,
+                StringComparison.Ordinal);
+            int reachedSafeAnchor = agent.IndexOf(
+                "_seatEgressReachedSafeAnchor=true;",
+                validateSafeAnchor,
                 StringComparison.Ordinal);
             int releaseClaim = agent.IndexOf(
                 "ReleaseSeatImmediately();",
-                snapToApproach,
+                reachedSafeAnchor,
                 StringComparison.Ordinal);
             Require(
-                leavingCase >= 0 && snapToApproach > leavingCase && releaseClaim > snapToApproach,
-                "The seat claim must release only after LeavingSeat reaches the approach point.");
+                leavingCase >= 0 && validateSafeAnchor > leavingCase &&
+                reachedSafeAnchor > validateSafeAnchor && releaseClaim > reachedSafeAnchor,
+                "The seat claim must release only after LeavingSeat validates a safe anchor.");
+            RequireContains(
+                agent,
+                "Phase!=OfficeRuntimeAgentPhase.LeavingSeat||!_seatEgressReachedSafeAnchor",
+                "Chair presentation must not return before the reserved safe anchor is reached.");
         }
 
         private static void ValidateSyntheticSeatBoundDepth()
         {
+            const int seatX = 4;
+            const int seatY = 7;
+            var operatorGrid = new Vector2(seatX + 0.5f, seatY + 0.5f);
+            var approachGrid = new Vector2(seatX, seatY - 1f);
+            Vector2 earlyDismount = Vector2.LerpUnclamped(operatorGrid, approachGrid, 0.001f);
+            Vector2 safeAnchor = Vector2.LerpUnclamped(operatorGrid, approachGrid, 0.999f);
             foreach (OfficeRuntimeAgentPhase phase in ForegroundPhases)
-                ValidateSyntheticStack(phase, true, (int)phase);
-            ValidateSyntheticStack(OfficeRuntimeAgentPhase.LeavingSeat, true, 0);
-            ValidateSyntheticStack(OfficeRuntimeAgentPhase.LeavingSeat, false, 1);
+                ValidateSyntheticStack(
+                    phase,
+                    true,
+                    (int)phase,
+                    operatorGrid,
+                    $"{phase} operator");
+            ValidateSyntheticStack(
+                OfficeRuntimeAgentPhase.LeavingSeat,
+                true,
+                0,
+                earlyDismount,
+                "LeavingSeat canonical p=.001");
+            ValidateSyntheticStack(
+                OfficeRuntimeAgentPhase.LeavingSeat,
+                true,
+                1,
+                safeAnchor,
+                "LeavingSeat canonical p=.999");
+            ValidateSyntheticStack(
+                OfficeRuntimeAgentPhase.SittingDown,
+                false,
+                0,
+                approachGrid,
+                "SitDown planted frame0 released");
+
+            for (var index = 0; index < ExitVectors.Length; index++)
+            {
+                Vector2 directionalApproach = operatorGrid + ExitVectors[index];
+                ValidateSyntheticStack(
+                    OfficeRuntimeAgentPhase.LeavingSeat,
+                    true,
+                    index * 2,
+                    Vector2.LerpUnclamped(operatorGrid, directionalApproach, 0.001f),
+                    $"LeavingSeat direction {index} p=.001");
+                ValidateSyntheticStack(
+                    OfficeRuntimeAgentPhase.LeavingSeat,
+                    true,
+                    index * 2 + 1,
+                    Vector2.LerpUnclamped(operatorGrid, directionalApproach, 0.999f),
+                    $"LeavingSeat direction {index} p=.999");
+            }
         }
 
         private static void ValidateSyntheticStack(
             OfficeRuntimeAgentPhase phase,
             bool foregroundEngaged,
-            int frame)
+            int frame,
+            Vector2 actorGrid,
+            string label)
         {
             const int seatX = 4;
             const int seatY = 7;
-            var chairBase = OfficeDepthItem.Cell("chair-base", seatX, seatY, BasePriority);
-            var deskBase = new OfficeDepthItem(
+            const string seatStackId = "synthetic-seat";
+            OfficeDepthItem chairFootprint = OfficeDepthItem.Cell(
+                "chair-base",
+                seatX,
+                seatY,
+                BasePriority);
+            var deskFootprint = new OfficeDepthItem(
                 "desk-base",
                 seatX,
                 seatY + 1,
                 seatX + 1,
                 seatY + 1,
                 BasePriority);
-            var actor = OfficeDepthItem.Cell("actor", seatX, seatY, OccupantPriority);
-            OfficeDepthItem chairFront = OfficeDepthItem.Cell(
-                "chair-front",
-                seatX,
-                seatY,
-                foregroundEngaged ? ChairFrontPriority : BasePriority);
-            OfficeDepthItem deskFront = foregroundEngaged
-                ? OfficeDepthItem.Cell("desk-front", seatX, seatY, FrontPriority)
-                : new OfficeDepthItem(
+            OfficeHybridDepthItem chairBase = OfficeHybridDepthItem.Furniture(
+                chairFootprint,
+                OfficeHybridDepthRole.ChairBase,
+                "swivel-chair:base",
+                "chair",
+                seatStackId,
+                SeatChairBasePlane);
+            OfficeHybridDepthItem deskBase = OfficeHybridDepthItem.Furniture(
+                deskFootprint,
+                OfficeHybridDepthRole.FurnitureBase,
+                "desk:base",
+                "desk",
+                seatStackId,
+                SeatDeskBasePlane);
+            OfficeHybridDepthItem actor = OfficeHybridDepthItem.ActorAtGridPosition(
+                "actor",
+                actorGrid.x,
+                actorGrid.y,
+                "office-runtime-actor",
+                "family-member",
+                seatStackId,
+                foregroundEngaged ? SeatActorEngagedPlane : SeatActorReleasedPlane);
+            OfficeHybridDepthItem chairFront = OfficeHybridDepthItem.Furniture(
+                OfficeDepthItem.Cell(
+                    "chair-front",
+                    seatX,
+                    seatY,
+                    foregroundEngaged ? ChairFrontPriority : FrontPriority),
+                foregroundEngaged
+                    ? OfficeHybridDepthRole.ChairFront
+                    : OfficeHybridDepthRole.FurnitureFront,
+                "swivel-chair:front",
+                "chair",
+                seatStackId,
+                foregroundEngaged
+                    ? SeatChairFrontEngagedPlane
+                    : SeatChairFrontReleasedPlane);
+            OfficeHybridDepthItem deskFront = OfficeHybridDepthItem.Furniture(
+                new OfficeDepthItem(
                     "desk-front",
-                    deskBase.MinX,
-                    deskBase.MinY,
-                    deskBase.MaxX,
-                    deskBase.MaxY,
-                    BasePriority);
+                    deskFootprint.MinX,
+                    deskFootprint.MinY,
+                    deskFootprint.MaxX,
+                    deskFootprint.MaxY,
+                    FrontPriority),
+                foregroundEngaged
+                    ? OfficeHybridDepthRole.DeskFront
+                    : OfficeHybridDepthRole.FurnitureFront,
+                "desk:front",
+                "desk",
+                seatStackId,
+                foregroundEngaged
+                    ? SeatDeskFrontEngagedPlane
+                    : SeatDeskFrontReleasedPlane);
 
-            if (foregroundEngaged)
-            {
-                Require(IsCell(chairFront, seatX, seatY), "Engaged chair front is not seat-bound.");
-                Require(IsCell(deskFront, seatX, seatY), "Engaged desk front is not seat-bound.");
-            }
+            Require(
+                SameFootprint(chairFront.FurnitureFootprint, chairBase.FurnitureFootprint),
+                label + " rebound the chair foreground away from its semantic footprint.");
+            Require(
+                SameFootprint(deskFront.FurnitureFootprint, deskBase.FurnitureFootprint),
+                label + " rebound the desk foreground away from its semantic footprint.");
 
-            IReadOnlyDictionary<string, int> orders = OfficeIsometricDepth.ResolveSortingOrders(
-                new[] { chairBase, deskBase, actor, chairFront, deskFront });
+            IReadOnlyDictionary<string, int> orders =
+                OfficeHybridContinuousDepth.ResolveSortingOrders(
+                    new[] { chairBase, deskBase, actor, chairFront, deskFront });
             RequireLess(orders, chairBase.Id, actor.Id, $"{phase} chair base/actor");
             RequireLess(orders, deskBase.Id, actor.Id, $"{phase} desk base/actor");
+            RequireLess(orders, deskBase.Id, chairBase.Id, $"{phase} desk/chair base");
             if (foregroundEngaged)
             {
                 RequireLess(orders, actor.Id, chairFront.Id, $"{phase} actor/chair front");
@@ -275,6 +422,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
             else
             {
+                RequireLess(orders, chairBase.Id, deskFront.Id, $"{phase} chair base/desk front");
+                RequireLess(orders, deskFront.Id, chairFront.Id, $"{phase} desk/chair released front");
                 RequireLess(orders, chairFront.Id, actor.Id, $"{phase} released chair front/actor");
                 RequireLess(orders, deskFront.Id, actor.Id, $"{phase} released desk front/actor");
             }
@@ -292,7 +441,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 orders[deskBase.Id],
                 true,
                 orders[deskFront.Id]);
-            Require(snapshot.IsValidStack, $"{phase} synthetic depth snapshot rejected a valid stack.");
+            Require(snapshot.IsValidStack, label + " synthetic depth snapshot rejected a valid stack.");
 
             var missingEngagedFront = new OfficeSeatingDepthSnapshot(
                 phase,
@@ -314,6 +463,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private static void ValidateRuntimeDepthSorterBindings()
         {
             string sorter = Compact(ReadAssetSource(DepthSorterSourcePath));
+            string presenter = Compact(ReadAssetSource(FurniturePresenterSourcePath));
             RequireContains(
                 sorter,
                 "_seatsByFurnitureId[seat.ChairFurnitureId]=seat;",
@@ -328,16 +478,72 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "Depth sorter does not resolve the active occupant by seat id.");
             RequireContains(
                 sorter,
-                "if(occupant.IsSeatForegroundOcclusionEngaged)",
+                "foregroundEngaged=occupant.IsSeatForegroundOcclusionEngaged;",
                 "Foreground depth is not controlled separately from seat occupancy.");
             RequireContains(
                 sorter,
-                "minX=maxX=seat.Cell.X;",
-                "Active foreground x depth is not bound to the seat cell.");
+                "ApplyOccupiedChairForeground(furniture.FurnitureId,isChair&&foregroundEngaged);",
+                "Engaged chairs do not apply their canonical occupied foreground.");
+            RequireContains(
+                presenter,
+                "visual.FrontRenderer.sprite=visual.Definition.FrontOverlaySprite;",
+                "Occupied chairs do not retain the canonical 9,881-pixel foreground Sprite.");
             RequireContains(
                 sorter,
+                "UpperActorPrefix+actor.AgentId",
+                "Depth sorter does not emit a seated upper-body protection layer.");
+            RequireContains(
+                sorter,
+                "SeatActorUpperBodyEngagedPlane",
+                "Seated upper-body protection has no explicit semantic plane.");
+            RequireContains(
+                presenter,
+                "OccupiedLowerBodyRenderer",
+                "Furniture presenter has no dedicated lower-body chair occluder.");
+            RequireNotContains(
+                presenter,
+                "visual.FrontRenderer.sprite=occupiedForeground.Sprite;",
+                "The canonical chair foreground is still replaced by a cropped Sprite.");
+            RequireNotContains(
+                sorter,
+                "minX=maxX=seat.Cell.X;",
+                "Foreground depth must retain its semantic furniture x footprint.");
+            RequireNotContains(
+                sorter,
                 "minY=maxY=seat.Cell.Y;",
-                "Active foreground y depth is not bound to the seat cell.");
+                "Foreground depth must retain its semantic furniture y footprint.");
+            RequireContains(
+                sorter,
+                "ResolveActorGridContact(actor.Position,",
+                "Actor feet are not inverse-projected from their continuous runtime position.");
+            RequireContains(
+                sorter,
+                "pointXQ=OfficeHybridContinuousDepth.Quantize(gridX);",
+                "Actor x contact is not quantized by the pure hybrid-depth rule.");
+            RequireContains(
+                sorter,
+                "pointYQ=OfficeHybridContinuousDepth.Quantize(gridY);",
+                "Actor y contact is not quantized by the pure hybrid-depth rule.");
+            RequireNotContains(
+                sorter,
+                "_presenter.NearestCell(actor.transform.position)",
+                "Actor runtime depth still snaps to a nearest cell.");
+            RequireContains(
+                sorter,
+                "?actor.IsSeatForegroundOcclusionEngaged?SeatActorEngagedPlane:SeatActorReleasedPlane",
+                "Live seat actors do not switch between engaged and released seat planes.");
+            RequireContains(
+                sorter,
+                "?SeatChairFrontEngagedPlane:SeatDeskFrontEngagedPlane",
+                "Engaged chair/desk foreground planes are not explicit.");
+            RequireContains(
+                sorter,
+                "?SeatChairFrontReleasedPlane:SeatDeskFrontReleasedPlane",
+                "Released chair/desk foreground planes are not explicit.");
+            RequireContains(
+                sorter,
+                "OfficeHybridDepthRole.FurnitureFront",
+                "Normal/released foregrounds do not use the generic foreground role.");
             RequireContains(
                 sorter,
                 "RecordSeatingDepthSamples(actors,orders);",
@@ -346,13 +552,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 sorter,
                 "actor.RecordSeatingDepthSample(newOfficeSeatingDepthSnapshot(",
                 "Per-actor seating depth evidence is not recorded.");
-            RequireContains(
-                sorter,
-                "if(actor.IsSeatForegroundOcclusionEngaged&&actor.ActiveSeatId.Length>0)",
-                "Released occupants remain incorrectly pinned to the seat depth cell.");
-
             int resolveOrders = sorter.IndexOf(
-                "OfficeIsometricDepth.ResolveSortingOrders(_items);",
+                "OfficeHybridContinuousDepth.ResolveSortingOrders(_items);",
                 StringComparison.Ordinal);
             int recordSamples = sorter.IndexOf(
                 "RecordSeatingDepthSamples(actors,orders);",
@@ -369,9 +570,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
             return false;
         }
 
-        private static bool IsCell(OfficeDepthItem item, int x, int y)
+        private static bool SameFootprint(OfficeDepthItem first, OfficeDepthItem second)
         {
-            return item.MinX == x && item.MaxX == x && item.MinY == y && item.MaxY == y;
+            return first.MinX == second.MinX && first.MinY == second.MinY &&
+                   first.MaxX == second.MaxX && first.MaxY == second.MaxY;
         }
 
         private static void RequireLess(
@@ -421,6 +623,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private static void RequireContains(string source, string token, string message)
         {
             Require(source.Contains(token), message);
+        }
+
+        private static void RequireNotContains(string source, string token, string message)
+        {
+            Require(!source.Contains(token), message);
         }
 
         private static void RequireApproximately(float actual, float expected, string label)

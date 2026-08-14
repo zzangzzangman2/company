@@ -37,13 +37,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         // on the workstation. The remaining translation is derived only from pose anchors and
         // furniture sockets; member IDs never participate in the placement rule.
         private const float TypingHandContactBudgetPx = 3.5f;
+        // The occupant may lead the pulled-out chair by less than one rendered pixel. This keeps
+        // both the hand/contact calibration and chair-to-desk presentation inside their contracts
+        // without making the rule depend on the active camera zoom or the member identity.
+        private const float TypingSeatContactBudgetPx = 0.9f;
         private const float MaximumChairPresentationStepPx = 0.9f;
+        private const float MaximumSeatEgressStepPx = 0.9f;
+        private const float SeatEgressCompletionTolerancePx = 0.25f;
 
         private PrototypeBootstrap _bootstrap;
         private OfficeRuntimeWorld _world;
         private string _agentId;
         private bool _playerControlled;
         private SpriteRenderer _renderer;
+        private SpriteRenderer _seatedUpperBodyRenderer;
         private Transform _visualRoot;
         private DirectionalSpriteAnimator _animator;
         private OfficeCharacterSeatPoseCatalog _poseCatalog;
@@ -88,6 +95,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _seatDirection;
         private OfficeSeatingAnimationClip? _alignedClip;
         private int _alignedFrame = -1;
+        private float _seatedUpperBodyCutoffPx = float.NaN;
+        private readonly Dictionary<long, Sprite> _seatedUpperBodySprites =
+            new Dictionary<long, Sprite>();
         private bool _presentationAway;
         private float _chairDeskErrorPx;
         private Vector2 _chairDeskDeltaPx;
@@ -112,6 +122,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _chairPresentationMoveComplete;
         private Vector3 _chairPresentationAuthoredPelvisWorld;
         private Vector3 _chairPresentationTargetPelvisWorld;
+        private Vector3 _workPresentationTargetPelvisWorld;
         private bool _finishingWorkPresentationObserved;
         private int _observedSitDownFrameMask;
         private int _observedWorkFrameMask;
@@ -134,6 +145,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _seatFacingAlignedBeforeSitDown;
         private OfficeSeatingDepthSnapshot _lastSeatingDepthSample;
         private int _seatingDepthViolationCount;
+        private bool _seatEgressReservationActive;
+        private bool _seatEgressWaiting;
+        private bool _seatEgressReachedSafeAnchor;
+        private OfficeSeatEgressCandidate _seatEgressCandidate;
+        private Vector2 _seatEgressTargetWorld;
+        private float _seatEgressFrameMovementBudgetWorld;
+        private float _seatEgressFrameMovementWorld;
+        private float _maximumSeatEgressStepPx;
+        private int _seatEgressReservationAttemptCount;
+        private int _seatEgressBlockedAttemptCount;
+        private int _seatEgressCollisionViolationCount;
+        private int _seatEgressUnsafePhaseTransitionCount;
+        private bool _hasCompletedSeatEgress;
+        private OfficeSeatEgressKind _lastCompletedSeatEgressKind;
+        private OfficeGridCoordinate _lastCompletedSeatEgressCell;
+        private Vector2 _lastCompletedSeatEgressWorld;
+        private bool _lastCompletedSeatEgressClearanceValid;
+        private string _lastSeatEgressBlocker = string.Empty;
 
         public event Action<IOfficeRuntimeAgent, string> AssignedTaskCompleted;
 
@@ -232,6 +261,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ? 0
             : _animator.MaximumOfficeSeatingDirectionOctantDelta;
         public SpriteRenderer PresentationRenderer => _renderer;
+        public SpriteRenderer SeatedUpperBodyProtectionRenderer => _seatedUpperBodyRenderer;
+        public bool IsSeatedUpperBodyProtectionVisible =>
+            _seatedUpperBodyRenderer != null && _seatedUpperBodyRenderer.enabled;
         public int SemanticPathLength => _path.Count;
         public int PresentationPathIndex => _presentationPathIndex;
         public int PresentationWaypointChanges => _presentationWaypointChanges;
@@ -253,6 +285,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public float MaxChairPresentationStepPx => _maxChairPresentationStepPx;
         public OfficeSeatingDepthSnapshot LastSeatingDepthSample => _lastSeatingDepthSample;
         public int SeatingDepthViolationCount => _seatingDepthViolationCount;
+        public bool IsWaitingForSeatEgress =>
+            Phase == OfficeRuntimeAgentPhase.FinishingWork && _seatEgressWaiting;
+        public bool HasSeatEgressReservation => _seatEgressReservationActive;
+        public bool HasReachedSeatEgressSafeAnchor => _seatEgressReachedSafeAnchor;
+        public OfficeSeatEgressKind ActiveSeatEgressKind => _seatEgressReservationActive
+            ? _seatEgressCandidate.Kind
+            : OfficeSeatEgressKind.None;
+        public OfficeGridCoordinate ActiveSeatEgressTargetCell => _seatEgressCandidate.TargetCell;
+        public Vector2 ActiveSeatEgressTargetWorld => _seatEgressTargetWorld;
+        public float MaximumSeatEgressRootStepPx => _maximumSeatEgressStepPx;
+        public int SeatEgressReservationAttemptCount => _seatEgressReservationAttemptCount;
+        public int SeatEgressBlockedAttemptCount => _seatEgressBlockedAttemptCount;
+        public int SeatEgressCollisionViolationCount => _seatEgressCollisionViolationCount;
+        public int SeatEgressUnsafePhaseTransitionCount => _seatEgressUnsafePhaseTransitionCount;
+        public bool HasCompletedSeatEgress => _hasCompletedSeatEgress;
+        public OfficeSeatEgressKind LastCompletedSeatEgressKind => _lastCompletedSeatEgressKind;
+        public OfficeGridCoordinate LastCompletedSeatEgressCell => _lastCompletedSeatEgressCell;
+        public Vector2 LastCompletedSeatEgressWorld => _lastCompletedSeatEgressWorld;
+        public bool LastCompletedSeatEgressClearanceValid => _lastCompletedSeatEgressClearanceValid;
+        public string LastSeatEgressBlocker => _lastSeatEgressBlocker;
         public bool IsSeatForegroundOcclusionEngaged
         {
             get
@@ -262,7 +314,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Phase,
                     Position,
                     _world.Workstations.SeatOperatorWorld(_seat),
-                    _world.Workstations.SeatApproachWorld(_seat)).ForegroundEngaged;
+                    _world.Workstations.SeatApproachWorld(_seat),
+                    _animator?.CurrentOfficeSeatingClip,
+                    _animator == null ? -1 : _animator.CurrentOfficeSeatingFrame).ForegroundEngaged;
             }
         }
         public float VisualRotationErrorDegrees => _visualRoot == null
@@ -577,6 +631,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _maxTypingSeatContactErrorPx = 0f;
             _maxTypingHandWorkErrorPx = 0f;
             _typingContactSampleCount = 0;
+            ResetSeatEgressMetrics();
             ResetTransitionMotionMetrics();
             _maxTransitionPelvisStepPx = 0f;
             _transitionMonotonicViolationCount = 0;
@@ -877,6 +932,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void BeginPresentationFrame()
         {
+            _seatEgressFrameMovementBudgetWorld =
+                MaximumSeatEgressStepPx / OfficeGridTilemapPresenter.PixelsPerUnit;
+            _seatEgressFrameMovementWorld = 0f;
             _animator?.BeginTilePresentationFrame();
         }
 
@@ -885,10 +943,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (_animator == null || deltaTime < 0f) return;
             // Office time can run at 2x/4x, but a human sit/stand gesture should keep its real
             // 0.62s/0.56s presentation duration instead of dropping into the chair in a few ticks.
+            // Unity's capture clock is deterministic even when synchronous ReadPixels/PNG work
+            // takes much longer than one rendered frame. Prefer it while a capture is active so
+            // seating and typing cannot skip approved frames because of capture wall-clock time.
+            float seatingPresentationDeltaTime = Time.captureDeltaTime > 0f
+                ? Time.captureDeltaTime
+                : Time.unscaledDeltaTime;
             float presentationDeltaTime = _animator.IsOfficeSeatingPoseActive
-                ? Mathf.Max(0f, Time.unscaledDeltaTime)
+                ? Mathf.Max(0f, seatingPresentationDeltaTime)
                 : deltaTime;
-            BeginChairPresentationReturnAfterExitPlane();
+            BeginChairPresentationReturnAfterSafeAnchor();
             AdvanceChairPresentation();
             RecordChairPresentationMotion();
             _animator.Tick(presentationDeltaTime);
@@ -1488,14 +1552,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     StopMotion();
                     if (!_finishingWorkPresentationObserved) return;
                     if (!_animator.IsOfficeWorkSafeToStand) return;
+                    if (!TryPrepareSeatEgressReservation())
+                    {
+                        _seatEgressWaiting = true;
+                        return;
+                    }
+                    _seatEgressWaiting = false;
                     if (!_animator.BeginStandUp())
                     {
-                        EndInteraction(
-                            OfficeRuntimeInteractionTermination.Aborted,
-                            OfficeRuntimeInteractionEndReason.SeatUnavailable);
-                        Phase = OfficeRuntimeAgentPhase.Idle;
-                        ReleaseSeatImmediately();
-                        ResumeAutonomy();
+                        _seatEgressUnsafePhaseTransitionCount++;
+                        ClearSeatEgressReservation();
+                        _seatEgressWaiting = true;
                         return;
                     }
                     _standTransitionInitialized = false;
@@ -1504,38 +1571,52 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     break;
                 case OfficeRuntimeAgentPhase.StandingUp:
                     StopMotion();
+                    if (!_seatEgressReservationActive ||
+                        !_world.Occupancy.HasReservation(
+                            _agentId,
+                            _seatEgressCandidate.TargetCell))
+                    {
+                        _seatEgressUnsafePhaseTransitionCount++;
+                        return;
+                    }
                     if (!_animator.IsOfficeSeatingTransitionComplete || _standPlacementProgress01 < 0.9999f)
                         return;
                     ResetVisualPose();
                     if (!_animator.FinishOfficeSeatingPoseForLeavingSeat())
                     {
-                        Phase = OfficeRuntimeAgentPhase.Idle;
-                        ReleaseSeatImmediately();
-                        ResumeAutonomy();
+                        _seatEgressUnsafePhaseTransitionCount++;
                         return;
                     }
                     Phase = OfficeRuntimeAgentPhase.LeavingSeat;
                     break;
                 case OfficeRuntimeAgentPhase.LeavingSeat:
                 {
-                    Vector3 target3 = _world.Workstations.SeatApproachWorld(_seat);
-                    Vector2 target = new Vector2(target3.x, target3.y);
-                    Vector2 delta = target - Position;
-                    if (delta.magnitude > ArrivalDistance)
+                    if (!_seatEgressReservationActive)
                     {
-                        MoveWithCollision(
-                            delta.normalized * 1.15f,
-                            deltaTime,
-                            _seat.SeatId,
-                            delta.magnitude);
-                        BeginChairPresentationReturnAfterExitPlane();
+                        _seatEgressUnsafePhaseTransitionCount++;
+                        StopMotion();
                         return;
                     }
-                    transform.position = new Vector3(target.x, target.y, transform.position.z);
-                    BeginChairPresentationReturnAfterExitPlane();
+
+                    if (!_seatEgressReachedSafeAnchor)
+                    {
+                        TickSeatEgressDismount(deltaTime);
+                        return;
+                    }
+
                     StopMotion();
+                    BeginChairPresentationReturnAfterSafeAnchor();
                     if (!_chairPresentationMoveComplete) return;
+                    _hasCompletedSeatEgress = true;
+                    _lastCompletedSeatEgressKind = _seatEgressCandidate.Kind;
+                    _lastCompletedSeatEgressCell = _seatEgressCandidate.TargetCell;
+                    _lastCompletedSeatEgressWorld = _seatEgressTargetWorld;
+                    _lastCompletedSeatEgressClearanceValid = true;
                     ReleaseSeatImmediately();
+                    // Releasing the claim also releases the seat-facing lock, so LeavingSeat has
+                    // ended at this exact point. Do not expose a one-frame unlocked LeavingSeat
+                    // state to presentation/depth consumers before the next simulation tick.
+                    Phase = OfficeRuntimeAgentPhase.Idle;
                     if (_pendingDestination.HasValue)
                     {
                         OfficeRuntimeDestination pending = _pendingDestination.Value;
@@ -1620,10 +1701,253 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (Phase == OfficeRuntimeAgentPhase.FinishingWork ||
                 Phase == OfficeRuntimeAgentPhase.StandingUp) return;
+            ClearSeatEgressReservation();
+            _seatEgressWaiting = false;
+            _seatEgressReachedSafeAnchor = false;
+            _lastSeatEgressBlocker = string.Empty;
             _releaseSeatRequested = true;
             _finishingWorkPresentationObserved = false;
             _animator.RequestOfficeWorkSafeStop();
             Phase = OfficeRuntimeAgentPhase.FinishingWork;
+        }
+
+        private bool TryPrepareSeatEgressReservation()
+        {
+            if (_seatEgressReservationActive)
+            {
+                bool retained = _world != null &&
+                                _world.Occupancy.HasReservation(
+                                    _agentId,
+                                    _seatEgressCandidate.TargetCell);
+                if (retained) return true;
+                ClearSeatEgressReservation();
+            }
+            if (_seat == null || _world == null) return false;
+
+            _seatEgressReservationAttemptCount++;
+            _world.Occupancy.ClearReservations(_agentId);
+            if (!_world.Occupancy.IsActorPresent(_agentId))
+            {
+                _seatEgressBlockedAttemptCount++;
+                _lastSeatEgressBlocker = "actor-not-present";
+                return false;
+            }
+
+            Vector2 start = Position;
+            IReadOnlyList<OfficeSeatEgressCandidate> candidates =
+                OfficeSeatEgressRules.ResolveCandidates(_seat);
+            for (var index = 0; index < candidates.Count; index++)
+            {
+                OfficeSeatEgressCandidate candidate = candidates[index];
+                OfficeGridCoordinate cell = candidate.TargetCell;
+                if (!_world.Grid.Contains(cell) || !_world.Grid.IsWalkable(cell))
+                {
+                    _lastSeatEgressBlocker = candidate.Kind + ":floor-not-walkable:" + cell;
+                    continue;
+                }
+
+                Vector3 target3 = _world.Presenter.CellCenterWorld(cell);
+                var target = new Vector2(target3.x, target3.y);
+                if (!_world.Occupancy.CanTraverseStatic(
+                        target,
+                        target,
+                        AgentRadius,
+                        string.Empty))
+                {
+                    _lastSeatEgressBlocker = candidate.Kind + ":target-static-clearance:" + cell;
+                    continue;
+                }
+                if (!_world.Occupancy.CanTraverseStatic(
+                        start,
+                        target,
+                        AgentRadius,
+                        _seat.SeatId))
+                {
+                    _lastSeatEgressBlocker = candidate.Kind + ":segment-static-clearance:" + cell;
+                    continue;
+                }
+                if (!_world.Occupancy.IsCellPassable(
+                        cell,
+                        _agentId,
+                        string.Empty,
+                        true) ||
+                    !_world.Occupancy.HasPresentationClearance(
+                        _agentId,
+                        start,
+                        target,
+                        AgentRadius,
+                        0f))
+                {
+                    _lastSeatEgressBlocker = candidate.Kind + ":dynamic-clearance:" + cell;
+                    continue;
+                }
+                if (!_world.Occupancy.TryReservePath(
+                        _agentId,
+                        _seat.Cell,
+                        new[] { cell }))
+                {
+                    _lastSeatEgressBlocker = candidate.Kind + ":reservation:" + cell;
+                    continue;
+                }
+                if (!_world.Occupancy.CanMove(
+                        _agentId,
+                        start,
+                        target,
+                        AgentRadius,
+                        _seat.SeatId))
+                {
+                    _world.Occupancy.ClearReservations(_agentId);
+                    _lastSeatEgressBlocker = candidate.Kind + ":segment-dynamic-clearance:" + cell;
+                    continue;
+                }
+
+                _seatEgressReservationActive = true;
+                _seatEgressCandidate = candidate;
+                _seatEgressTargetWorld = target;
+                _seatEgressReachedSafeAnchor = false;
+                _lastSeatEgressBlocker = string.Empty;
+                return true;
+            }
+
+            _world.Occupancy.ClearReservations(_agentId);
+            _seatEgressBlockedAttemptCount++;
+            return false;
+        }
+
+        private void TickSeatEgressDismount(float deltaTime)
+        {
+            if (_seat == null || _world == null || !_seatEgressReservationActive ||
+                !_world.Occupancy.HasReservation(_agentId, _seatEgressCandidate.TargetCell))
+            {
+                _seatEgressUnsafePhaseTransitionCount++;
+                StopMotion();
+                return;
+            }
+
+            Vector2 delta = _seatEgressTargetWorld - Position;
+            float toleranceWorld =
+                SeatEgressCompletionTolerancePx / OfficeGridTilemapPresenter.PixelsPerUnit;
+            if (delta.magnitude > toleranceWorld)
+            {
+                float budget = Mathf.Max(0f, _seatEgressFrameMovementBudgetWorld);
+                if (budget <= 0.0000001f)
+                {
+                    StopMotion();
+                    return;
+                }
+                Vector2 before = Position;
+                MoveWithCollision(
+                    delta.normalized * 1.15f,
+                    deltaTime,
+                    _seat.SeatId,
+                    Mathf.Min(delta.magnitude, budget));
+                float moved = Vector2.Distance(before, Position);
+                _seatEgressFrameMovementBudgetWorld = Mathf.Max(0f, budget - moved);
+                _seatEgressFrameMovementWorld += moved;
+                _maximumSeatEgressStepPx = Mathf.Max(
+                    _maximumSeatEgressStepPx,
+                    _seatEgressFrameMovementWorld * OfficeGridTilemapPresenter.PixelsPerUnit);
+                if (moved <= 0.0000001f && LastMovementBlocker.Length > 0)
+                {
+                    _seatEgressCollisionViolationCount++;
+                    _lastSeatEgressBlocker = LastMovementBlocker;
+                }
+                return;
+            }
+
+            if (delta.sqrMagnitude > 0.00000001f)
+            {
+                float moved = delta.magnitude;
+                if (moved > _seatEgressFrameMovementBudgetWorld + 0.0000001f) return;
+                transform.position = new Vector3(
+                    _seatEgressTargetWorld.x,
+                    _seatEgressTargetWorld.y,
+                    transform.position.z);
+                _seatEgressFrameMovementBudgetWorld =
+                    Mathf.Max(0f, _seatEgressFrameMovementBudgetWorld - moved);
+                _seatEgressFrameMovementWorld += moved;
+                _maximumSeatEgressStepPx = Mathf.Max(
+                    _maximumSeatEgressStepPx,
+                    _seatEgressFrameMovementWorld * OfficeGridTilemapPresenter.PixelsPerUnit);
+            }
+            StopMotion();
+            if (!TryValidateSeatEgressCompletion(out string blocker))
+            {
+                _seatEgressCollisionViolationCount++;
+                _lastSeatEgressBlocker = blocker;
+                return;
+            }
+            _seatEgressReachedSafeAnchor = true;
+            _lastSeatEgressBlocker = string.Empty;
+        }
+
+        private bool TryValidateSeatEgressCompletion(out string blocker)
+        {
+            blocker = string.Empty;
+            if (_seat == null || _world == null || !_seatEgressReservationActive)
+            {
+                blocker = "missing-seat-egress-state";
+                return false;
+            }
+            if (!_world.Registry.TryGet(_agentId, out OfficeRuntimeAgent registered) ||
+                !ReferenceEquals(registered, this) ||
+                !_world.Occupancy.IsActorPresent(_agentId))
+            {
+                blocker = "actor-not-registered-present";
+                return false;
+            }
+            if (!_world.Occupancy.HasReservation(_agentId, _seatEgressCandidate.TargetCell))
+            {
+                blocker = "egress-reservation-lost";
+                return false;
+            }
+            if (!_world.Grid.Contains(_seatEgressCandidate.TargetCell) ||
+                !_world.Grid.IsWalkable(_seatEgressCandidate.TargetCell) ||
+                !_world.Presenter.NearestCell(transform.position).Equals(
+                    _seatEgressCandidate.TargetCell) ||
+                _seatEgressCandidate.TargetCell.Equals(_seat.Cell))
+            {
+                blocker = "root-not-on-walkable-egress-cell";
+                return false;
+            }
+            if (!_world.Occupancy.CanTraverseStatic(
+                    _seatEgressTargetWorld,
+                    _seatEgressTargetWorld,
+                    AgentRadius,
+                    string.Empty))
+            {
+                blocker = "root-inside-chair-or-static-footprint";
+                return false;
+            }
+            if (!_world.Occupancy.CanTraverseStatic(
+                    (Vector2)_world.Workstations.SeatOperatorWorld(_seat),
+                    _seatEgressTargetWorld,
+                    AgentRadius,
+                    _seat.SeatId) ||
+                !_world.Occupancy.CanMove(
+                    _agentId,
+                    _seatEgressTargetWorld,
+                    _seatEgressTargetWorld,
+                    AgentRadius,
+                    string.Empty))
+            {
+                blocker = "egress-segment-or-body-clearance-invalid";
+                return false;
+            }
+            return true;
+        }
+
+        private void ClearSeatEgressReservation()
+        {
+            if (_seatEgressReservationActive && _world != null)
+                _world.Occupancy.ClearReservations(_agentId);
+            _seatEgressReservationActive = false;
+            _seatEgressWaiting = false;
+            _seatEgressReachedSafeAnchor = false;
+            _seatEgressCandidate = default;
+            _seatEgressTargetWorld = Vector2.zero;
+            _seatEgressFrameMovementBudgetWorld = 0f;
+            _seatEgressFrameMovementWorld = 0f;
         }
 
         private void ResumeAutonomy()
@@ -1777,6 +2101,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _seatDirection,
                 clip,
                 frame);
+            _seatedUpperBodyCutoffPx = profile.PelvisAnchorPx.y;
             RecordObservedSeatingFrame(clip, frame);
             if (clip == OfficeSeatingAnimationClip.Work &&
                 _animator.IsOfficeWorkAnimationHookActive &&
@@ -1807,6 +2132,75 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _alignedFrame = frame;
         }
 
+        /// <summary>
+        /// Redraws the pose-defined upper body above the complete chair foreground. The main actor
+        /// renderer remains below the chair foreground, so only pelvis/legs can be occluded while
+        /// the chair Sprite itself stays continuous rather than being horizontally cropped.
+        /// </summary>
+        public void ApplySeatedUpperBodyProtection(int sortingOrder)
+        {
+            if (!IsOccupyingSeat || !IsSeatForegroundOcclusionEngaged ||
+                _renderer == null || !_renderer.enabled || _renderer.sprite == null ||
+                float.IsNaN(_seatedUpperBodyCutoffPx))
+            {
+                ClearSeatedUpperBodyProtection();
+                return;
+            }
+
+            Sprite source = _renderer.sprite;
+            int cutoff = OfficeSeatedUpperBodyProtectionRules.ResolveCutoffSourceY(
+                source,
+                new Vector2(0f, _seatedUpperBodyCutoffPx));
+            long key = ((long)(uint)source.GetInstanceID() << 32) | (uint)cutoff;
+            if (!_seatedUpperBodySprites.TryGetValue(key, out Sprite upperBody))
+            {
+                upperBody = OfficeSeatedUpperBodyProtectionRules.CreateUpperBodySprite(source, cutoff);
+                _seatedUpperBodySprites.Add(key, upperBody);
+            }
+
+            EnsureSeatedUpperBodyRenderer();
+            _seatedUpperBodyRenderer.sprite = upperBody;
+            _seatedUpperBodyRenderer.transform.localPosition =
+                OfficeSeatedUpperBodyProtectionRules.LocalPosition(source, cutoff);
+            _seatedUpperBodyRenderer.sharedMaterial = _renderer.sharedMaterial;
+            _seatedUpperBodyRenderer.color = _renderer.color;
+            _seatedUpperBodyRenderer.flipX = _renderer.flipX;
+            _seatedUpperBodyRenderer.flipY = _renderer.flipY;
+            _seatedUpperBodyRenderer.sortingLayerID = _renderer.sortingLayerID;
+            _seatedUpperBodyRenderer.sortingOrder = sortingOrder;
+            _seatedUpperBodyRenderer.maskInteraction = _renderer.maskInteraction;
+            _seatedUpperBodyRenderer.spriteSortPoint = _renderer.spriteSortPoint;
+            _seatedUpperBodyRenderer.enabled = !_presentationAway;
+        }
+
+        public void ClearSeatedUpperBodyProtection()
+        {
+            if (_seatedUpperBodyRenderer != null) _seatedUpperBodyRenderer.enabled = false;
+        }
+
+        private void EnsureSeatedUpperBodyRenderer()
+        {
+            if (_seatedUpperBodyRenderer != null) return;
+            var upperBody = new GameObject("SeatedUpperBodyProtection");
+            upperBody.transform.SetParent(_renderer.transform, false);
+            upperBody.transform.localPosition = Vector3.zero;
+            upperBody.transform.localRotation = Quaternion.identity;
+            upperBody.transform.localScale = Vector3.one;
+            _seatedUpperBodyRenderer = upperBody.AddComponent<SpriteRenderer>();
+        }
+
+        private void DestroySeatedUpperBodyProtection()
+        {
+            foreach (Sprite sprite in _seatedUpperBodySprites.Values)
+            {
+                if (sprite == null) continue;
+                if (Application.isPlaying) Destroy(sprite);
+                else DestroyImmediate(sprite);
+            }
+            _seatedUpperBodySprites.Clear();
+            _seatedUpperBodyRenderer = null;
+        }
+
         private bool PrepareChairPresentationForWork()
         {
             if (_seatPresentationPrepared) return true;
@@ -1817,6 +2211,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _chairPresentationAuthoredPelvisWorld =
                 _world.Workstations.ChairSeatAnchorWorld(_seat);
             _chairPresentationTargetPelvisWorld = _chairPresentationAuthoredPelvisWorld;
+            _workPresentationTargetPelvisWorld = _chairPresentationAuthoredPelvisWorld;
             _chairPresentationReturning = false;
             if (!_seat.HasWorkstationBinding)
             {
@@ -1852,20 +2247,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float shiftFraction = !finiteShift || requiredShiftPx <= 0.0001f
                 ? 1f
                 : Mathf.Clamp01(1f - (TypingHandContactBudgetPx / requiredShiftPx));
-            _chairPresentationTargetPelvisWorld =
+            _workPresentationTargetPelvisWorld =
                 _chairPresentationAuthoredPelvisWorld + (requiredShift * shiftFraction);
+            Vector3 requestedChairShift =
+                _workPresentationTargetPelvisWorld - _chairPresentationAuthoredPelvisWorld;
+            float requestedChairShiftPx = Camera.main == null
+                ? 0f
+                : OfficeGridAlignmentMetrics.WorldDisplacementScreenPx(
+                    Camera.main,
+                    _chairPresentationAuthoredPelvisWorld,
+                    requestedChairShift);
+            float chairShiftFraction = requestedChairShiftPx <= 0.0001f
+                ? 1f
+                : Mathf.Clamp01(1f - (TypingSeatContactBudgetPx / requestedChairShiftPx));
+            _chairPresentationTargetPelvisWorld =
+                _chairPresentationAuthoredPelvisWorld + requestedChairShift * chairShiftFraction;
             _seatPresentationPrepared = true;
-            _chairPresentationMoveComplete = requiredShift.sqrMagnitude <= 0.0000001f ||
-                                             shiftFraction <= 0.0001f;
+            _chairPresentationMoveComplete =
+                (_chairPresentationTargetPelvisWorld - _chairPresentationAuthoredPelvisWorld)
+                .sqrMagnitude <= 0.0000001f;
             SeedChairPresentationMotionSample();
             return true;
         }
 
-        private void BeginChairPresentationReturnAfterExitPlane()
+        private void BeginChairPresentationReturnAfterSafeAnchor()
         {
             if (!_seatPresentationPrepared || _chairPresentationReturning || _seat == null ||
                 Phase != OfficeRuntimeAgentPhase.LeavingSeat ||
-                IsSeatForegroundOcclusionEngaged) return;
+                !_seatEgressReachedSafeAnchor) return;
             _chairPresentationReturning = true;
             _chairPresentationTargetPelvisWorld = _chairPresentationAuthoredPelvisWorld;
             _chairPresentationMoveComplete = ChairPresentationDistancePxToTarget() <= 0.01f;
@@ -1934,7 +2343,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             ApplySeatAnchorPlacement(
                 profile,
-                _world.Workstations.ChairSeatAnchorWorld(_seat));
+                _workPresentationTargetPelvisWorld);
         }
 
         private void ApplyAnimatedSeatingPlacement(
@@ -1942,7 +2351,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             int frame,
             OfficeCharacterSeatPoseProfile profile)
         {
-            Vector3 cushion = _world.Workstations.ChairSeatAnchorWorld(_seat);
+            Vector3 cushion = _seatPresentationPrepared
+                ? _workPresentationTargetPelvisWorld
+                : _world.Workstations.ChairSeatAnchorWorld(_seat);
             Vector3 desiredPelvis;
             switch (clip)
             {
@@ -2055,6 +2466,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ResetTransitionMotionMetrics();
             _maxTransitionPelvisStepPx = 0f;
             _transitionMonotonicViolationCount = 0;
+            ResetSeatEgressMetrics();
+        }
+
+        private void ResetSeatEgressMetrics()
+        {
+            ClearSeatEgressReservation();
+            _maximumSeatEgressStepPx = 0f;
+            _seatEgressReservationAttemptCount = 0;
+            _seatEgressBlockedAttemptCount = 0;
+            _seatEgressCollisionViolationCount = 0;
+            _seatEgressUnsafePhaseTransitionCount = 0;
+            _hasCompletedSeatEgress = false;
+            _lastCompletedSeatEgressKind = OfficeSeatEgressKind.None;
+            _lastCompletedSeatEgressCell = default;
+            _lastCompletedSeatEgressWorld = Vector2.zero;
+            _lastCompletedSeatEgressClearanceValid = false;
+            _lastSeatEgressBlocker = string.Empty;
         }
 
         /// <summary>
@@ -2255,6 +2683,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void ReleaseSeatImmediately()
         {
+            ClearSeatEgressReservation();
             OfficeSeatSlot seat = _seat;
             OfficeSeatRuntimeClaim claim = _seatClaim;
             _seat = null;
@@ -2269,6 +2698,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _releaseSeatRequested = false;
                 _alignedClip = null;
                 _alignedFrame = -1;
+                _seatedUpperBodyCutoffPx = float.NaN;
+                ClearSeatedUpperBodyProtection();
                 _sitTransitionInitialized = false;
                 _standTransitionInitialized = false;
                 _sitPlacementProgress01 = 0f;
@@ -2278,6 +2709,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _chairPresentationMoveComplete = false;
                 _chairPresentationAuthoredPelvisWorld = Vector3.zero;
                 _chairPresentationTargetPelvisWorld = Vector3.zero;
+                _workPresentationTargetPelvisWorld = Vector3.zero;
                 _finishingWorkPresentationObserved = false;
                 ResetTransitionMotionMetrics();
                 if (_animator != null)
@@ -2368,6 +2800,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _presentationAway = away;
             if (_renderer != null) _renderer.enabled = !away;
+            if (_seatedUpperBodyRenderer != null)
+                _seatedUpperBodyRenderer.enabled =
+                    !away && IsOccupyingSeat && IsSeatForegroundOcclusionEngaged;
             if (_world != null &&
                 _world.Registry.TryGet(_agentId, out OfficeRuntimeAgent registered) &&
                 ReferenceEquals(registered, this))
@@ -2407,6 +2842,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             if (_world != null) _world.Occupancy.UnregisterActor(_agentId);
             ReleaseSeatImmediately();
+            DestroySeatedUpperBodyProtection();
         }
     }
 }
