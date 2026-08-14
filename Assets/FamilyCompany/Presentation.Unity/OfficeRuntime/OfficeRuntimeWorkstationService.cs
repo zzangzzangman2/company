@@ -296,7 +296,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
 
-            string kind = LegacyFurnitureKindFor(location);
+            string[] kinds = LegacyFurnitureKindsFor(location);
             OfficeActivity activity = location switch
             {
                 OfficeSemanticLocation.Reception => OfficeActivity.Reception,
@@ -314,7 +314,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 ? ExitCandidates()
                 : location == OfficeSemanticLocation.OpenArea
                     ? OpenAreaCandidates()
-                    : InteractionCandidates(kind);
+                    : kinds
+                        .SelectMany(InteractionCandidates)
+                        .Distinct()
+                        .OrderBy(item => item.Y)
+                        .ThenBy(item => item.X)
+                        .ToList();
             if (candidates.Count == 0)
             {
                 destination = default;
@@ -324,7 +329,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 "starter-office-destination:" + stableKey + ":" + memberId + ":" + location,
                 candidates.Count);
             OfficeGridCoordinate cell = candidates[index];
-            PlacedOfficeFurniture targetFurniture = NearestFurniture(kind, cell);
+            PlacedOfficeFurniture targetFurniture = NearestFurniture(kinds, cell);
             destination = new OfficeRuntimeDestination(
                 location.ToString().ToLowerInvariant() + ":" + cell.X + ":" + cell.Y,
                 location,
@@ -493,21 +498,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             };
         }
 
-        private static string LegacyFurnitureKindFor(OfficeSemanticLocation location)
+        private static string[] LegacyFurnitureKindsFor(OfficeSemanticLocation location)
         {
             // The physical meeting table remains a direct player/contract destination until it has
             // authored seats. Every Micro Action furniture mapping comes from the catalog.
             if (location == OfficeSemanticLocation.MeetingRoom)
-                return OfficeGridLayouts.MeetingTableKind;
-            string[] kinds = OfficeInteractionCatalog.All
+                return new[] { OfficeGridLayouts.MeetingTableKind };
+            return OfficeInteractionCatalog.All
                 .Where(definition =>
                     definition.SemanticLocation == location &&
                     definition.RequiresFurniture &&
                     definition.FurnitureKindId.Length > 0)
                 .Select(definition => definition.FurnitureKindId)
                 .Distinct(StringComparer.Ordinal)
+                .OrderBy(kindId => kindId, StringComparer.Ordinal)
                 .ToArray();
-            return kinds.Length == 1 ? kinds[0] : string.Empty;
         }
 
         private List<OfficeGridCoordinate> InteractionCandidates(string kindId)
@@ -533,13 +538,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         }
 
         private PlacedOfficeFurniture NearestFurniture(
-            string kindId,
+            IReadOnlyCollection<string> kindIds,
             OfficeGridCoordinate cell)
         {
-            if (string.IsNullOrWhiteSpace(kindId)) return null;
+            if (kindIds == null || kindIds.Count == 0) return null;
             Vector3 cellWorld = _presenter.CellCenterWorld(cell);
             return _grid.Furniture
-                .Where(item => string.Equals(item.KindId, kindId, StringComparison.Ordinal))
+                .Where(item => kindIds.Contains(item.KindId, StringComparer.Ordinal))
                 .OrderBy(item =>
                     (_presenter.SubcellAnchorWorld(item.PlacementAnchor) - cellWorld).sqrMagnitude)
                 .ThenBy(item => item.FurnitureId, StringComparer.Ordinal)
