@@ -343,6 +343,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public string CurrentSpriteName => _renderer == null || _renderer.sprite == null
             ? string.Empty
             : _renderer.sprite.name;
+        public DirectionalLocomotionFrameTrace CaptureLocomotionFrameTrace() =>
+            _animator == null ? default : _animator.CaptureLocomotionFrameTrace();
         public bool IsPresentationAway => _presentationAway;
         public int AttendanceSeatArrivalCount => _attendanceSeatArrivalCount;
         public bool IsAttendanceIngressActive => _attendanceIngressActive;
