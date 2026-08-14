@@ -112,19 +112,23 @@ namespace FamilyCompany.Presentation.Unity
 
         private void Start()
         {
+            string[] commandLine = Environment.GetCommandLineArgs();
+            bool extendedPlayerQa = Array.IndexOf(
+                commandLine,
+                "-familyCompanyTileRuntimeQa") >= 0;
+            bool movementLayoutPlayerQa = Array.IndexOf(
+                commandLine,
+                "-familyCompanyMovementLayoutQa") >= 0;
             // The QA player is intentionally hosted in a hidden/background window. Keep normal
             // release focus behavior unchanged while allowing that capture route to render.
-            if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(),
-                    "-familyCompanyTileRuntimeQa") >= 0)
+            if (extendedPlayerQa || movementLayoutPlayerQa)
                 Application.runInBackground = true;
             Debug.Log("[StarterOfficeTileRuntime] 처음하기/불러오기 = Starter 타일 사무실 · F2 = 배치 편집 · F9 = 단방향 복구");
             // Warm the additive office while the full-screen title is still visible. New Game can
             // then rebind an already-built runtime instead of exposing Prototype01 for a few seconds.
             BeginShowStarterOffice();
-            if (System.Array.IndexOf(
-                    System.Environment.GetCommandLineArgs(),
-                    "-familyCompanyTileRuntimeQa") >= 0)
-                StartCoroutine(RunExtendedPlayerQa());
+            if (movementLayoutPlayerQa) StartCoroutine(RunMovementLayoutPlayerQa());
+            else if (extendedPlayerQa) StartCoroutine(RunExtendedPlayerQa());
         }
 
         private void Update()
@@ -677,6 +681,95 @@ namespace FamilyCompany.Presentation.Unity
             Application.Quit(0);
         }
 
+        private IEnumerator RunMovementLayoutPlayerQa()
+        {
+            yield return null;
+            PrototypeBootstrap bootstrap = Object.FindFirstObjectByType<PrototypeBootstrap>();
+            if (bootstrap == null)
+            {
+                Debug.LogError("FAMILY_COMPANY_MOVEMENT_LAYOUT_QA: FAIL | PrototypeBootstrap missing");
+                Application.Quit(61);
+                yield break;
+            }
+            bootstrap.StartNewGameNow(1, false);
+            float activationDeadline = Time.unscaledTime + 15f;
+            while (!_tileOfficeActive && Time.unscaledTime < activationDeadline) yield return null;
+            if (!_tileOfficeActive || _starterRuntime == null || !_starterRuntime.IsReady ||
+                _starterRuntime.World == null || _starterRuntime.Actors.Count != RuntimeActorCount)
+            {
+                Debug.LogError("FAMILY_COMPANY_MOVEMENT_LAYOUT_QA: FAIL | runtime activation timeout");
+                Application.Quit(62);
+                yield break;
+            }
+
+            BeginMovementProfile();
+            float previousTimeScale = Time.timeScale;
+            Time.timeScale = 4f;
+
+            yield return RunFourWayIntersectionQa();
+            if (QuitIfMovementLayoutQaFailed(previousTimeScale)) yield break;
+            if (!CaptureMovementLayoutQa("default-four-way", 63))
+            {
+                if (QuitIfMovementLayoutQaFailed(previousTimeScale)) yield break;
+            }
+
+            yield return RunRuntimeDeskPlacementQa();
+            if (QuitIfMovementLayoutQaFailed(previousTimeScale)) yield break;
+
+            yield return RunNarrowCorridorQa();
+            if (QuitIfMovementLayoutQaFailed(previousTimeScale)) yield break;
+            if (!CaptureMovementLayoutQa("narrow-corridor", 64))
+            {
+                if (QuitIfMovementLayoutQaFailed(previousTimeScale)) yield break;
+            }
+
+            yield return RunEightDirectionMovementQa();
+            if (QuitIfMovementLayoutQaFailed(previousTimeScale)) yield break;
+            if (!CaptureMovementLayoutQa("open-direction", 65))
+            {
+                if (QuitIfMovementLayoutQaFailed(previousTimeScale)) yield break;
+            }
+
+            OfficeRuntimeOccupancy occupancy = _starterRuntime.World.Occupancy;
+            string movementProfile = EndMovementProfile();
+            Debug.Log(
+                "FAMILY_COMPANY_MOVEMENT_LAYOUT_QA: PASS | layouts=default-four-way," +
+                "runtime-desk,narrow-corridor,open-direction captures=4 " +
+                $"replans={_starterRuntime.World.ReplanCount} " +
+                $"arrivals={_starterRuntime.World.ArrivalCount} " +
+                $"blockedStaticAttempts={occupancy.StaticViolationCount} " +
+                $"blockedInteractionAttempts={occupancy.InteractionViolationCount} " +
+                $"agentPenetrations={occupancy.AgentPenetrationCount} | {movementProfile}");
+            Time.timeScale = previousTimeScale;
+            yield return null;
+            Application.Quit(0);
+        }
+
+        private bool CaptureMovementLayoutQa(string layoutName, int exitCode)
+        {
+            string path = QaArtifactPath("movement-layout-" + layoutName + ".png");
+            if (TryCaptureQaCameraFrame(path, out string failure))
+            {
+                Debug.Log("STARTER_OFFICE_MOVEMENT_LAYOUT_CAPTURE_QA_PASS | layout=" +
+                          layoutName + " | capture=" + path);
+                return true;
+            }
+            FailPlayerQa(exitCode, layoutName + " capture failed: " + failure);
+            return false;
+        }
+
+        private bool QuitIfMovementLayoutQaFailed(float previousTimeScale)
+        {
+            if (_playerQaFailure.Length == 0) return false;
+            string movementProfile = EndMovementProfile();
+            Debug.LogError(
+                "FAMILY_COMPANY_MOVEMENT_LAYOUT_QA: FAIL | code=" + _playerQaExitCode +
+                " | " + _playerQaFailure + " | " + movementProfile);
+            Time.timeScale = previousTimeScale;
+            Application.Quit(_playerQaExitCode == 0 ? 60 : _playerQaExitCode);
+            return true;
+        }
+
         private IEnumerator RunAutonomousMeetingSeatingQa(PrototypeBootstrap bootstrap)
         {
             Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
@@ -981,8 +1074,8 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
 
-            float started = Time.time;
-            while (Time.time - started < 60f &&
+            float started = Time.unscaledTime;
+            while (Time.unscaledTime - started < 60f &&
                    QaMemberIds.Any(memberId => !actors[memberId].QaReachedCell(goals[memberId])))
                 yield return null;
             if (QaMemberIds.Any(memberId => !actors[memberId].QaReachedCell(goals[memberId])))
@@ -995,7 +1088,7 @@ namespace FamilyCompany.Presentation.Unity
             }
             if (!RequireZeroActualViolations("four-way", 42)) yield break;
             Debug.Log(
-                "STARTER_OFFICE_FOUR_WAY_QA_PASS | duration=" + (Time.time - started).ToString("F2") +
+                "STARTER_OFFICE_FOUR_WAY_QA_PASS | duration=" + (Time.unscaledTime - started).ToString("F2") +
                 " | " + RouteMetricSummary(replansBefore, arrivalsBefore) + " | " + OccupancyMetricSummary());
         }
 
@@ -1012,8 +1105,8 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(43, "pre-placement route could not be created");
                 yield break;
             }
-            float motionStart = Time.time;
-            while (Time.time - motionStart < 0.35f) yield return null;
+            float motionStart = Time.unscaledTime;
+            while (Time.unscaledTime - motionStart < 0.35f) yield return null;
             OfficeGridCoordinate preservedPlayerCell =
                 _starterRuntime.World.Presenter.NearestCell(actors["player"].transform.position);
 
@@ -1055,8 +1148,8 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(44, "post-placement detour route could not be created");
                 yield break;
             }
-            float started = Time.time;
-            while (Time.time - started < 30f &&
+            float started = Time.unscaledTime;
+            while (Time.unscaledTime - started < 30f &&
                    !actors["player"].QaReachedCell(new OfficeGridCoordinate(7, 6)))
                 yield return null;
             if (!actors["player"].QaReachedCell(new OfficeGridCoordinate(7, 6)))
@@ -1065,6 +1158,7 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
             if (!RequireZeroActualViolations("runtime-desk-placement", 44)) yield break;
+            if (!CaptureMovementLayoutQa("runtime-desk", 44)) yield break;
             Debug.Log(
                 "STARTER_OFFICE_RUNTIME_DESK_PLACEMENT_QA_PASS | previousHash=" + previousHash +
                 " | revisedHash=" + _starterRuntime.LayoutHash + " | " +
@@ -1093,8 +1187,8 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(45, "desk removal did not reopen the direct center path");
                 yield break;
             }
-            started = Time.time;
-            while (Time.time - started < 15f && !actors["player"].QaReachedCell(reopenedGoal))
+            started = Time.unscaledTime;
+            while (Time.unscaledTime - started < 15f && !actors["player"].QaReachedCell(reopenedGoal))
                 yield return null;
             if (!actors["player"].QaReachedCell(reopenedGoal))
             {
@@ -1129,8 +1223,8 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(48, "narrow corridor routes could not be created");
                 yield break;
             }
-            float started = Time.time;
-            while (Time.time - started < 60f &&
+            float started = Time.unscaledTime;
+            while (Time.unscaledTime - started < 60f &&
                    (!actors["player"].QaReachedCell(sisterStart) ||
                     !actors["older_sister"].QaReachedCell(sisterGoal)))
                 yield return null;
@@ -1152,7 +1246,7 @@ namespace FamilyCompany.Presentation.Unity
             }
             if (!RequireZeroActualViolations("narrow-corridor", 50)) yield break;
             Debug.Log(
-                "STARTER_OFFICE_NARROW_CORRIDOR_QA_PASS | duration=" + (Time.time - started).ToString("F2") +
+                "STARTER_OFFICE_NARROW_CORRIDOR_QA_PASS | duration=" + (Time.unscaledTime - started).ToString("F2") +
                 " | " + RouteMetricSummary(replansBefore, arrivalsBefore) + " | " + OccupancyMetricSummary());
         }
 
@@ -2440,14 +2534,16 @@ namespace FamilyCompany.Presentation.Unity
             bool[] walkable = source.CopyWalkable();
             var blockedCell = new OfficeGridCoordinate(6, 6);
             walkable[blockedCell.Y * source.Width + blockedCell.X] = false;
+            var secondBlockedCell = new OfficeGridCoordinate(6, 7);
+            walkable[secondBlockedCell.Y * source.Width + secondBlockedCell.X] = false;
             List<PlacedOfficeFurniture> furniture = source.Furniture.ToList();
             furniture.Add(new PlacedOfficeFurniture(
                 "qa_runtime_desk",
                 OfficeGridLayouts.DeskWithPcKind,
                 blockedCell,
                 1,
-                1,
-                OfficeFurnitureFacing.SouthEast,
+                2,
+                OfficeFurnitureFacing.NorthEast,
                 true));
             return new OfficeGrid(
                 source.Width,
