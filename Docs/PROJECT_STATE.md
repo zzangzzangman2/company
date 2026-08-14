@@ -456,3 +456,18 @@ Unity: 6000.3.21f1
 - `OfficeFurnitureAssetBuilder.BuildPerimeterWalls`는 벽 3종 runtime PNG/importer/catalog entry만 갱신한다. 나머지 definition 객체, 특히 `swivel_chair`의 `frontOverlaySprite`와 `frontOverlayWhenOccupied`, pose catalog는 보존하고 변경 시 fail한다.
 - 가족의 기존 08:50 시작과 09:00~09:03 순차 출근은 그대로다. 해당 shift의 첫 입장 성공 시 `door_open`만 한 번 재생하며, 같은 `GameState`의 08:50→09:50 시간 점프와 비근무일 10:00→다음 근무일 10:00 날짜 점프에서도 첫 release cue를 놓치지 않는다. 이미 근무 중인 저장본을 bind하는 경우에는 cue를 arm하지 않고, 같은 shift의 후속 가족·layout rebuild·save/load rebind도 중복 재생하지 않는다. `door_close`는 이 출근 경로에서 호출하지 않는다.
 - Unity 6000.3.21f1 정적 QA는 perimeter 52/open threshold 1, furniture 69/definitions 15, navigation 128 seeds·1,152 paths, Prototype 전체 검증을 통과했다. 1920×1080 D3D11 캡처에서 inner-edge 최대 오차 `0.0002px`, corner 최대 `0.0001px`, base opaque sample 27,088개 중 floor 침범 0px, 수직 occlusion mask 1,015,582px, 입구 gap screen span `79.260px`, 네 entrance-to-seat route `12/9/3/8` steps를 기록했다.
+
+## 2026-08-14 / 월드 렌더 선명도·픽셀 안정성 준비
+
+- 월드 카메라의 고정 `960×540` 중간 버퍼 후 Point 확대가 1920×1080에서 바닥·가구·얼굴을
+  2×2 블록으로 합친 주원인임을 재현했다. Win32 실측은 1920×1080 borderless, DPI 96,
+  PerMonitorV2라 Windows DPI 이중 확대는 원인이 아니다.
+- 새 `PixelClarityDefault` 프로파일은 native scale 1.0, legacy half-height off, dynamic resolution off,
+  AA 0, camera/비착석 actor presentation snap을 선언한다. simulation/world transform은 보존한다.
+- 활성 도트 1,560개는 기존 Point/no mip/uncompressed/180 PPU를 유지하고 painted UI 대표 4개는
+  Bilinear를 유지한다. Sprite Atlas는 없다.
+- Unity 6000.3.21f1 Editor render validation, PrototypeValidation, warning 0 Windows x64 Release build와
+  D3D11 `1920×1080`, `1600×900`, `1600×1000`, offscreen `2560×1440` 비교 QA가 PASS했다.
+  Starter Main Flow도 8방향·충돌·좌석·계약·저장 회귀를 통과했다.
+- 상세 감사는 `Docs/RENDER_CLARITY_AUDIT_2026-08-14.md`다. canonical main이 작업 중 전진했으므로
+  아직 commit/push/deploy하지 않았고 commander 신호 후 최신 main에서 재적용·최종 빌드한다.
