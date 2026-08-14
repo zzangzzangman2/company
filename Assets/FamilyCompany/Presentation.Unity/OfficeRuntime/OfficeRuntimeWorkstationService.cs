@@ -442,11 +442,30 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public Vector3 DeskWorkSocketWorld(OfficeSeatSlot seat) =>
             _furniturePresenter.OperatorWorkSocketWorld(seat.WorkSurfaceFurnitureId);
 
-        public void AlignChairPresentationToOccupant(OfficeSeatSlot seat, Vector3 occupantPelvisWorld) =>
-            _furniturePresenter.AlignSeatPresentationToWorld(seat, occupantPelvisWorld);
-
-        public void RestoreChairPresentation(OfficeSeatSlot seat) =>
-            _furniturePresenter.RestoreSeatPresentation(seat);
+        public OfficeSeatInteractionAnchors ResolveInteractionAnchors(OfficeSeatSlot seat)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            IReadOnlyList<OfficeSeatEgressCandidate> candidates =
+                OfficeSeatEgressRules.ResolveCandidates(seat);
+            var egress = new OfficeSeatEgressAnchor[candidates.Count];
+            for (var index = 0; index < candidates.Count; index++)
+            {
+                OfficeSeatEgressCandidate candidate = candidates[index];
+                egress[index] = new OfficeSeatEgressAnchor(
+                    candidate.Kind,
+                    candidate.TargetCell,
+                    _presenter.CellCenterWorld(candidate.TargetCell));
+            }
+            Vector3 pelvis = ChairSeatAnchorWorld(seat);
+            return new OfficeSeatInteractionAnchors(
+                seat.SeatId,
+                SeatApproachWorld(seat),
+                SeatOperatorWorld(seat),
+                pelvis,
+                seat.HasWorkstationBinding,
+                seat.HasWorkstationBinding ? DeskWorkSocketWorld(seat) : pelvis,
+                egress);
+        }
 
         /// <summary>
         /// Kept as the seating hook, but sorting is no longer decided here.

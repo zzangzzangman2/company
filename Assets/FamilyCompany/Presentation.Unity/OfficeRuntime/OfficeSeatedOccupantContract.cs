@@ -12,10 +12,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     /// only 52..76 canvas px above their own feet, so a floor-anchored occupant sinks 5..38px
     /// through the seat. Contact-to-cushion is the only pinning that reads as sitting.
     ///
-    /// DEPTH - every object keeps the sorting order of its own ground anchor and the occupant sorts
-    /// one step in front of the chair it sits on. No furniture order is ever rewritten around a
-    /// person. The previous stack (desk = character-2, deskFront = character+1) is what drew desk
-    /// legs and drawers across a body sitting a full cell away from the desk.
+        /// DEPTH - the depth sorter owns renderer order only; it never changes furniture Transform
+        /// state. The complete chair base stays behind the occupant, the generated lower seat rim
+        /// stays in front, and the seated upper-body protection plane prevents a rectangular chair
+        /// overlay from cutting through hair, torso or feet.
     ///
     /// What is forbidden either way: rotation, per-pose scale, per-member scale, and moving an
     /// anatomy anchor until some furniture number passes.

@@ -2,6 +2,20 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-15 / 의자·좌석 상태 안정화 후보 (`codex/chair-seat-stability`)
+
+- 착석은 의자 Transform을 쓰지 않는다. 가구 semantic root와 `VisualRoot`는 배치 때 기록한 parent,
+  local/world position·rotation·scale을 유지하며 런타임 불변식 감시가 무단 변경을 검출·복구한다.
+- 좌석은 approach, alignment, pelvis, hand, egress anchor를 명시적으로 제공하고 예약 claim을 통해 한 좌석의
+  동시 점유를 거부한다. 진입은 Approach→Align→Rotate→Sit, 퇴장은 Finish→Stand→Leave로 분리한다.
+- Windows D3D11 4명 동시 검증에서 furniture world position `0.000000px`, rotation `0.000000°`, scale
+  `0.000000000`, character logical root `0.000000px`, pelvis-seat `0.000px`, seat-cell mismatch `0`, chair step
+  `0.000px`, foreground penetration `0`을 기록했다. `(2,4)/(2,3)` 워크스테이션을 `(4,4)/(4,3)`으로 옮긴
+  뒤 anchor와 occupancy 재구축도 통과했다.
+- 기존 Northwest 타이핑 아트의 hand-keyboard 간격은 player `91.534px`, older_sister `78.188px`, father
+  `79.401px`, mother `64.989px`로 3.5px 계약을 통과하지 못한다. 좌석 안정화와 분리된 필수 후속이며 현재
+  전환 QA는 이를 `KNOWN_FAIL`/exit 97로 보존한다.
+
 ## 2026-08-14 / 공용 업무 능력과 인사 roster
 
 - 가족과 향후 채용 완료 직원은 기술개발·기획·창작·사업·운영·협업 6능력과 잠재력을 같은

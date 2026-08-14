@@ -16,7 +16,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             public OfficeFurnitureVisualDefinition Definition;
             public Transform SemanticRoot;
             public Transform VisualRoot;
+            public Transform SemanticParent;
+            public Vector3 AuthoredSemanticLocalPosition;
+            public Quaternion AuthoredSemanticLocalRotation;
+            public Vector3 AuthoredSemanticLocalScale;
+            public Vector3 AuthoredSemanticWorldPosition;
+            public Quaternion AuthoredSemanticWorldRotation;
+            public Vector3 AuthoredSemanticWorldScale;
+            public Transform VisualParent;
             public Vector3 AuthoredVisualLocalPosition;
+            public Quaternion AuthoredVisualLocalRotation;
+            public Vector3 AuthoredVisualLocalScale;
+            public Vector3 AuthoredVisualWorldPosition;
+            public Quaternion AuthoredVisualWorldRotation;
+            public Vector3 AuthoredVisualWorldScale;
             public SpriteRenderer BaseRenderer;
             public SpriteRenderer FrontRenderer;
             public SpriteRenderer OccupiedLowerBodyRenderer;
@@ -45,12 +58,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private OfficeFurnitureVisualCatalog _visualCatalog;
         private Bounds _renderBounds;
 
+        private const float TransformPositionTolerance = 0.000001f;
+        private const float TransformRotationToleranceDegrees = 0.0001f;
+        private const float TransformScaleTolerance = 0.000001f;
+
         public IReadOnlyDictionary<string, SpriteRenderer> Renderers => _renderers;
         public IReadOnlyDictionary<string, SpriteRenderer> FrontOverlayRenderers => _frontOverlays;
         public IReadOnlyDictionary<string, SpriteRenderer> OccupiedChairLowerBodyRenderers =>
             _occupiedChairLowerBodyOverlays;
         public Bounds RenderBounds => _renderBounds;
         public OfficeFurnitureVisualCatalog VisualCatalog => _visualCatalog;
+        public int TransformInvariantViolationCount { get; private set; }
 
         public void Configure(
             OfficeGrid semanticGrid,
@@ -63,6 +81,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             visualCatalog.Validate();
 
             ClearGenerated();
+            TransformInvariantViolationCount = 0;
             bool hasBounds = false;
             foreach (PlacedOfficeFurniture item in semanticGrid.Furniture)
             {
@@ -128,7 +147,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                     Definition = definition,
                     SemanticRoot = root.transform,
                     VisualRoot = visualRootObject.transform,
+                    SemanticParent = root.transform.parent,
+                    AuthoredSemanticLocalPosition = root.transform.localPosition,
+                    AuthoredSemanticLocalRotation = root.transform.localRotation,
+                    AuthoredSemanticLocalScale = root.transform.localScale,
+                    AuthoredSemanticWorldPosition = root.transform.position,
+                    AuthoredSemanticWorldRotation = root.transform.rotation,
+                    AuthoredSemanticWorldScale = root.transform.lossyScale,
+                    VisualParent = visualRootObject.transform.parent,
                     AuthoredVisualLocalPosition = visualRootObject.transform.localPosition,
+                    AuthoredVisualLocalRotation = visualRootObject.transform.localRotation,
+                    AuthoredVisualLocalScale = visualRootObject.transform.localScale,
+                    AuthoredVisualWorldPosition = visualRootObject.transform.position,
+                    AuthoredVisualWorldRotation = visualRootObject.transform.rotation,
+                    AuthoredVisualWorldScale = visualRootObject.transform.lossyScale,
                     BaseRenderer = baseRenderer,
                     FrontRenderer = frontRenderer
                 };
@@ -149,6 +181,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             RecalculateRenderBounds();
 
             if (!hasBounds) _renderBounds = new Bounds(transform.position, Vector3.zero);
+            if (!ValidateTransformInvariants(out string failure))
+                throw new InvalidOperationException(failure);
         }
 
         public bool TryGetRenderer(string furnitureId, out SpriteRenderer renderer) =>
@@ -204,26 +238,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return OfficeGridAlignmentMetrics.SpriteAnchorWorld(visual.BaseRenderer, visual.Definition.SeatAnchorPx);
         }
 
-        /// <summary>
-        /// Pulls only the rendered chair under a planted occupant. Semantic seating, collision and
-        /// navigation stay immutable, so different body proportions need no member-specific offsets.
-        /// </summary>
-        public void AlignSeatPresentationToWorld(OfficeSeatSlot seat, Vector3 desiredSeatWorld)
-        {
-            if (seat == null) throw new ArgumentNullException(nameof(seat));
-            FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
-            chair.VisualRoot.localPosition = chair.AuthoredVisualLocalPosition;
-            Vector3 currentSeatWorld = SeatAnchorWorld(seat.ChairFurnitureId);
-            chair.VisualRoot.position += desiredSeatWorld - currentSeatWorld;
-        }
-
-        public void RestoreSeatPresentation(OfficeSeatSlot seat)
-        {
-            if (seat == null) return;
-            FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
-            chair.VisualRoot.localPosition = chair.AuthoredVisualLocalPosition;
-        }
-
         public Vector3 WorkSurfaceAnchorWorld(string furnitureId)
         {
             return OperatorWorkSocketWorld(furnitureId);
@@ -267,8 +281,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public bool HasEnabledFrontOverlay(string furnitureId)
         {
             return _visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual) &&
-                   visual.FrontRenderer != null &&
-                   visual.FrontRenderer.enabled;
+                   ((visual.FrontRenderer != null && visual.FrontRenderer.enabled) ||
+                    (visual.OccupiedLowerBodyRenderer != null &&
+                     visual.OccupiedLowerBodyRenderer.enabled));
         }
 
         /// <summary>
@@ -292,16 +307,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             if (!_visuals.TryGetValue(furnitureId ?? string.Empty, out FurnitureVisual visual)) return;
             if (visual.FrontRenderer == null) return;
-            visual.FrontRenderer.enabled = true;
+            bool lowerBodyOnly = visual.OccupiedLowerBodyRenderer != null &&
+                                 visual.OccupiedLowerBodyRenderer.enabled;
+            visual.FrontRenderer.enabled = !lowerBodyOnly;
             visual.FrontRenderer.sortingOrder = sortingOrder;
-            if (visual.OccupiedLowerBodyRenderer != null &&
-                visual.OccupiedLowerBodyRenderer.enabled)
+            if (lowerBodyOnly)
                 visual.OccupiedLowerBodyRenderer.sortingOrder = sortingOrder;
         }
 
         /// <summary>
-        /// Keeps the complete authored foreground assigned and adds the canonical seat-rim crop
-        /// only while the pose upper-body protection plane is engaged.
+        /// Keeps the authored foreground assigned for released/empty presentation and uses only the
+        /// canonical seat-rim crop in front while the pose upper-body protection plane is engaged.
         /// </summary>
         public void ApplyOccupiedChairForeground(string furnitureId, bool foregroundEngaged)
         {
@@ -318,12 +334,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             {
                 if (visual.OccupiedLowerBodyRenderer != null)
                     visual.OccupiedLowerBodyRenderer.enabled = false;
+                visual.FrontRenderer.enabled = visual.Definition.FrontOverlayWhenOccupied;
                 return;
             }
 
             EnsureOccupiedLowerBodyRenderer(visual);
             visual.OccupiedLowerBodyRenderer.enabled = true;
             visual.OccupiedLowerBodyRenderer.sortingOrder = visual.FrontRenderer.sortingOrder;
+            // The authored chair foreground is a rectangular crop of the base Sprite. Drawing it
+            // over an occupant creates a ruler-straight seam through hair, torso and feet. The
+            // complete chair remains on the immutable base plane behind the actor; only the
+            // authored seat-rim crop is allowed in front while occupied.
+            visual.FrontRenderer.enabled = false;
         }
 
         public void ApplySeatOcclusion(OfficeSeatSlot seat, int characterSortingOrder)
@@ -334,7 +356,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             chair.BaseRenderer.sortingOrder = characterSortingOrder - 1;
             if (chair.FrontRenderer != null)
             {
-                chair.FrontRenderer.enabled = chair.Definition.FrontOverlayWhenOccupied;
+                chair.FrontRenderer.enabled = false;
                 chair.FrontRenderer.sortingOrder = characterSortingOrder + 2;
                 if (chair.OccupiedLowerBodyRenderer != null)
                     chair.OccupiedLowerBodyRenderer.sortingOrder = characterSortingOrder + 2;
@@ -354,7 +376,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         {
             if (seat == null) return;
             ApplyOccupiedChairForeground(seat.ChairFurnitureId, false);
-            RestoreSeatPresentation(seat);
             RestoreVisualSorting(RequiredVisual(seat.ChairFurnitureId));
             if (seat.HasWorkstationBinding) RestoreVisualSorting(RequiredVisual(seat.WorkSurfaceFurnitureId));
         }
@@ -364,9 +385,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (seat == null) return false;
             FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
             if (chair.BaseRenderer.sortingOrder != characterSortingOrder - 1) return false;
-            if (chair.FrontRenderer != null &&
-                (chair.FrontRenderer.enabled != chair.Definition.FrontOverlayWhenOccupied ||
-                 chair.FrontRenderer.sortingOrder != characterSortingOrder + 2)) return false;
+            if (chair.FrontRenderer != null && chair.FrontRenderer.enabled) return false;
             if (chair.OccupiedLowerBodyRenderer == null ||
                 !chair.OccupiedLowerBodyRenderer.enabled ||
                 chair.OccupiedLowerBodyRenderer.sortingOrder != characterSortingOrder + 2)
@@ -377,6 +396,143 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return desk.FrontRenderer == null ||
                    (desk.FrontRenderer.enabled == desk.Definition.FrontOverlayWhenOccupied &&
                     desk.FrontRenderer.sortingOrder == characterSortingOrder + 1);
+        }
+
+        /// <summary>
+        /// Verifies that semantic placement and the rendered visual hierarchy still match the
+        /// authored layout. Seating may change renderer order/visibility, never Transform state.
+        /// </summary>
+        public bool ValidateTransformInvariants(out string failure)
+        {
+            foreach (FurnitureVisual visual in _visuals.Values)
+            {
+                if (!Matches(
+                        visual.SemanticRoot,
+                        visual.SemanticParent,
+                        visual.AuthoredSemanticLocalPosition,
+                        visual.AuthoredSemanticLocalRotation,
+                        visual.AuthoredSemanticLocalScale,
+                        visual.AuthoredSemanticWorldPosition,
+                        visual.AuthoredSemanticWorldRotation,
+                        visual.AuthoredSemanticWorldScale))
+                {
+                    failure = "Furniture semantic Transform changed: " +
+                              visual.Furniture.FurnitureId;
+                    return false;
+                }
+                if (!Matches(
+                        visual.VisualRoot,
+                        visual.VisualParent,
+                        visual.AuthoredVisualLocalPosition,
+                        visual.AuthoredVisualLocalRotation,
+                        visual.AuthoredVisualLocalScale,
+                        visual.AuthoredVisualWorldPosition,
+                        visual.AuthoredVisualWorldRotation,
+                        visual.AuthoredVisualWorldScale))
+                {
+                    failure = "Furniture VisualRoot changed: " +
+                              visual.Furniture.FurnitureId;
+                    return false;
+                }
+                if (visual.SemanticRoot.GetComponent<Rigidbody>() != null ||
+                    visual.SemanticRoot.GetComponent<Rigidbody2D>() != null ||
+                    visual.SemanticRoot.GetComponent<Collider>() != null ||
+                    visual.SemanticRoot.GetComponent<Collider2D>() != null ||
+                    visual.SemanticRoot.GetComponent<Animator>() != null ||
+                    visual.VisualRoot.GetComponent<Rigidbody>() != null ||
+                    visual.VisualRoot.GetComponent<Rigidbody2D>() != null ||
+                    visual.VisualRoot.GetComponent<Collider>() != null ||
+                    visual.VisualRoot.GetComponent<Collider2D>() != null ||
+                    visual.VisualRoot.GetComponent<Animator>() != null)
+                {
+                    failure = "Furniture Transform has a physics/Animator owner: " +
+                              visual.Furniture.FurnitureId;
+                    return false;
+                }
+            }
+            failure = string.Empty;
+            return true;
+        }
+
+        private void LateUpdate()
+        {
+            foreach (FurnitureVisual visual in _visuals.Values)
+            {
+                bool semanticValid = Matches(
+                    visual.SemanticRoot,
+                    visual.SemanticParent,
+                    visual.AuthoredSemanticLocalPosition,
+                    visual.AuthoredSemanticLocalRotation,
+                    visual.AuthoredSemanticLocalScale,
+                    visual.AuthoredSemanticWorldPosition,
+                    visual.AuthoredSemanticWorldRotation,
+                    visual.AuthoredSemanticWorldScale);
+                bool presentationValid = Matches(
+                    visual.VisualRoot,
+                    visual.VisualParent,
+                    visual.AuthoredVisualLocalPosition,
+                    visual.AuthoredVisualLocalRotation,
+                    visual.AuthoredVisualLocalScale,
+                    visual.AuthoredVisualWorldPosition,
+                    visual.AuthoredVisualWorldRotation,
+                    visual.AuthoredVisualWorldScale);
+                if (semanticValid && presentationValid) continue;
+                TransformInvariantViolationCount++;
+                RestoreTransform(
+                    visual.SemanticRoot,
+                    visual.SemanticParent,
+                    visual.AuthoredSemanticLocalPosition,
+                    visual.AuthoredSemanticLocalRotation,
+                    visual.AuthoredSemanticLocalScale);
+                RestoreTransform(
+                    visual.VisualRoot,
+                    visual.VisualParent,
+                    visual.AuthoredVisualLocalPosition,
+                    visual.AuthoredVisualLocalRotation,
+                    visual.AuthoredVisualLocalScale);
+                Debug.LogError(
+                    "OFFICE_FURNITURE_TRANSFORM_INVARIANT_REPAIRED | furniture=" +
+                    visual.Furniture.FurnitureId);
+            }
+        }
+
+        private static bool Matches(
+            Transform candidate,
+            Transform expectedParent,
+            Vector3 expectedLocalPosition,
+            Quaternion expectedLocalRotation,
+            Vector3 expectedLocalScale,
+            Vector3 expectedWorldPosition,
+            Quaternion expectedWorldRotation,
+            Vector3 expectedWorldScale)
+        {
+            return candidate != null && candidate.parent == expectedParent &&
+                   Vector3.Distance(candidate.localPosition, expectedLocalPosition) <=
+                   TransformPositionTolerance &&
+                   Quaternion.Angle(candidate.localRotation, expectedLocalRotation) <=
+                   TransformRotationToleranceDegrees &&
+                   Vector3.Distance(candidate.localScale, expectedLocalScale) <=
+                   TransformScaleTolerance &&
+                   Vector3.Distance(candidate.position, expectedWorldPosition) <=
+                   TransformPositionTolerance &&
+                   Quaternion.Angle(candidate.rotation, expectedWorldRotation) <=
+                   TransformRotationToleranceDegrees &&
+                   Vector3.Distance(candidate.lossyScale, expectedWorldScale) <=
+                   TransformScaleTolerance;
+        }
+
+        private static void RestoreTransform(
+            Transform target,
+            Transform expectedParent,
+            Vector3 expectedLocalPosition,
+            Quaternion expectedLocalRotation,
+            Vector3 expectedLocalScale)
+        {
+            if (target == null) return;
+            if (target.parent != expectedParent) target.SetParent(expectedParent, false);
+            target.localPosition = expectedLocalPosition;
+            target.localRotation = expectedLocalRotation;
+            target.localScale = expectedLocalScale;
         }
 
         private Vector3 ResolveAnchorWorld(string furnitureId, Func<FurnitureVisual, Vector2> anchor)

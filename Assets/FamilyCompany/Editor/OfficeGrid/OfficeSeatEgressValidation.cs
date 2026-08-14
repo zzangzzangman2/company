@@ -159,9 +159,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "The egress presentation step cap is not strictly below 0.9 pixels.");
             RequireContains(agent, "_seatEgressReachedSafeAnchor=true;",
                 "Runtime never records validated safe-anchor arrival.");
-            RequireContains(agent,
-                "Phase!=OfficeRuntimeAgentPhase.LeavingSeat||!_seatEgressReachedSafeAnchor",
-                "Chair alignment can return before safe-anchor arrival.");
+            RequireNotContains(agent, "RestoreChairPresentation",
+                "Seat egress must never restore or otherwise move chair presentation.");
             RequireContains(agent, "_hasCompletedSeatEgress=true;",
                 "Runtime does not record egress completion before release.");
             RequireContains(occupancy,
@@ -213,6 +212,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
         private static void RequireContains(string source, string token, string message)
         {
             Require(source.IndexOf(token, StringComparison.Ordinal) >= 0, message);
+        }
+
+        private static void RequireNotContains(string source, string token, string message)
+        {
+            Require(source.IndexOf(token, StringComparison.Ordinal) < 0, message);
         }
 
         private static void Require(bool condition, string message)

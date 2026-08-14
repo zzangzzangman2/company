@@ -68,7 +68,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Debug.Log(
                 "OFFICE_SEAT_OCCLUSION_DEPTH_VALIDATION: PASS phases=9 exitDirections=8 " +
                 "safeAnchorRelease=atomic depthStacks=engaged+sitEntryReleased hybridQ=256 " +
-                "sitEntryGate=frame0-released chairForeground=canonical-continuous " +
+                "sitEntryGate=frame0-released chairForeground=lower-rim-only " +
                 $"lowerOccluder=" +
                 $"{OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount} " +
                 "upperBodyPlane=pose-split " +
@@ -267,10 +267,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 leavingCase >= 0 && validateSafeAnchor > leavingCase &&
                 reachedSafeAnchor > validateSafeAnchor && releaseClaim > reachedSafeAnchor,
                 "The seat claim must release only after LeavingSeat validates a safe anchor.");
-            RequireContains(
+            RequireNotContains(
                 agent,
-                "Phase!=OfficeRuntimeAgentPhase.LeavingSeat||!_seatEgressReachedSafeAnchor",
-                "Chair presentation must not return before the reserved safe anchor is reached.");
+                "RestoreChairPresentation",
+                "Seat occlusion lifecycle must never restore or move chair presentation.");
         }
 
         private static void ValidateSyntheticSeatBoundDepth()
@@ -484,11 +484,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
             RequireContains(
                 sorter,
                 "ApplyOccupiedChairForeground(furniture.FurnitureId,isChair&&foregroundEngaged);",
-                "Engaged chairs do not apply their canonical occupied foreground stack.");
+                "Engaged chairs do not apply their occupied foreground stack.");
             RequireContains(
                 presenter,
                 "frontRenderer.sprite=definition.FrontOverlaySprite;",
-                "Chairs do not retain the canonical 9,881-pixel foreground Sprite.");
+                "Chairs do not retain the authored foreground Sprite for released/empty states.");
             RequireContains(
                 sorter,
                 "UpperActorPrefix+actor.AgentId",
@@ -505,6 +505,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 presenter,
                 "OccupiedLowerBodyRenderer",
                 "Furniture presenter has no dedicated lower-body seat-rim occluder.");
+            RequireContains(
+                presenter,
+                "visual.FrontRenderer.enabled=false;",
+                "Occupied chairs do not suppress the rectangular authored foreground seam.");
             RequireNotContains(
                 sorter,
                 "minX=maxX=seat.Cell.X;",

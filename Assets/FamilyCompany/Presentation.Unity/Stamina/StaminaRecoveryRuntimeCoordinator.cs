@@ -106,7 +106,7 @@ namespace FamilyCompany.Presentation.Unity.Stamina
                 return StaminaActivityKind.OffDuty;
 
             if (actor.Phase == OfficeRuntimeAgentPhase.Navigating ||
-                actor.Phase == OfficeRuntimeAgentPhase.MovingToSit ||
+                actor.IsEnteringSeat ||
                 actor.Phase == OfficeRuntimeAgentPhase.LeavingSeat)
                 return StaminaActivityKind.Walking;
             switch (actor.CurrentActivity)

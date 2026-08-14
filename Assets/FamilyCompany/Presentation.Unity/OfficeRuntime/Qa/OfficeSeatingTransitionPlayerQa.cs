@@ -57,6 +57,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             new List<FrameEvidenceRecord>();
         private readonly HashSet<string> _frameEvidenceKeys =
             new HashSet<string>(StringComparer.Ordinal);
+        private readonly Dictionary<string, FurnitureTransformBaseline> _furnitureBaselines =
+            new Dictionary<string, FurnitureTransformBaseline>(StringComparer.Ordinal);
 
         private StarterOfficeRuntimeBootstrap _runtime;
         private OfficeCharacterSeatPoseCatalog _poseCatalog;
@@ -65,6 +67,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private int _failureCode;
         private bool _sitOverviewCaptured;
         private bool _standOverviewCaptured;
+        private float _maximumFurnitureWorldPositionErrorPx;
+        private float _maximumFurnitureWorldRotationErrorDegrees;
+        private float _maximumFurnitureWorldScaleError;
         private float _previousTimeScale = 1f;
         private float _previousCaptureDeltaTime;
         private bool _timingOverrideActive;
@@ -169,6 +174,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 FinishFailure(92, "Seat egress candidate matrix failed: " + egressMatrixFailure);
                 yield break;
             }
+            if (!CaptureFurnitureTransformBaselines(out string furnitureBaselineFailure))
+            {
+                FinishFailure(92, "Furniture baseline failed: " + furnitureBaselineFailure);
+                yield break;
+            }
 
             Dictionary<string, OfficeRuntimeAgent> actors = _runtime.Actors
                 .Where(actor => actor != null)
@@ -179,10 +189,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
+            foreach (string memberId in MemberIds) actors[memberId].BeginQaControl();
+            if (!ValidateExclusiveSeatReservation(out string reservationFailure))
+            {
+                FinishFailure(92, "Exclusive seat reservation failed: " + reservationFailure);
+                yield break;
+            }
+
             foreach (string memberId in MemberIds)
             {
                 OfficeRuntimeAgent actor = actors[memberId];
-                actor.BeginQaControl();
                 if (!actor.QaBeginSeatedWork("seating-transition-player-qa"))
                 {
                     FinishFailure(93, "Could not resolve assigned workstation route for " + memberId + ".");
@@ -290,30 +306,251 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
-            string result = BuildResult(actors, true, string.Empty);
+            string handAlignmentFailure = BuildTypingHandAlignmentFailure(actors);
+            bool handAlignmentPass = handAlignmentFailure.Length == 0;
+            string result = BuildResult(actors, handAlignmentPass, handAlignmentFailure);
+            foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
+            if (!TryCreateRelocatedWorkstationLayout(
+                    _runtime.World.Grid,
+                    out OfficeGrid relocated,
+                    out OfficeGridCoordinate oldDeskCell,
+                    out OfficeGridCoordinate oldSeatCell,
+                    out OfficeGridCoordinate newDeskCell,
+                    out OfficeGridCoordinate newSeatCell))
+            {
+                FinishFailure(98, "Could not create the arbitrary workstation layout fixture.");
+                yield break;
+            }
+            string relocatedHash = relocated.ComputeLayoutHash();
+            _runtime.ApplyLayoutForQa(relocated);
+            float rebuildDeadline = Time.realtimeSinceStartup + 25f;
+            while (Time.realtimeSinceStartup < rebuildDeadline && !_runtime.IsReady)
+                yield return null;
+            if (!_runtime.IsReady || _runtime.World == null ||
+                !string.Equals(_runtime.LayoutHash, relocatedHash, StringComparison.Ordinal))
+            {
+                FinishFailure(98, "Arbitrary workstation layout did not rebuild to the requested hash.");
+                yield break;
+            }
+            yield return new WaitForEndOfFrame();
+            if (!ValidateRelocatedWorkstationLayout(
+                    oldDeskCell,
+                    oldSeatCell,
+                    newDeskCell,
+                    newSeatCell,
+                    out string relocatedFailure))
+            {
+                FinishFailure(98, "Arbitrary workstation layout failed: " + relocatedFailure);
+                yield break;
+            }
+            result += Environment.NewLine +
+                      "chairSeatStability=PASS chairInvariance=PASS seatExclusivity=PASS " +
+                      "bodySeatStability=PASS" + Environment.NewLine +
+                      "arbitraryLayoutRefresh=PASS oldDesk=" + oldDeskCell +
+                      " oldSeat=" + oldSeatCell + " newDesk=" + newDeskCell +
+                      " newSeat=" + newSeatCell + " hash=" + relocatedHash;
             WriteResult(result);
             WriteFrameEvidenceManifest();
             Debug.Log(
-                "FAMILY_COMPANY_SEATING_TRANSITION_QA: PASS | " +
+                "FAMILY_COMPANY_CHAIR_SEAT_STABILITY_QA: PASS | " +
                 "family=4 sit=4/4 workHook=6/6 stand=4/4 directionMismatch=0 " +
                 "maxOctantDelta=0 facingLocked=SitDown..LeavingSeat depth=perFrame " +
-                "pelvisStep<=2px seatResidual<=0.9px handKeyboard<=3.5px " +
+                "pelvisStep<=2px seatResidual<=0.9px logicalRoot<=0.001px " +
                 "primaryCloseups=56/56 continuous=4/6/4 penetration=0 " +
                 "invalidUpperForegroundOverlap=0 typingHandForegroundOverlap=0 " +
-                "chairForeground=canonical-continuous upperBody=pose-split " +
+                "chairTransform=semantic+visual+parent immutable chairForeground=seat-rim-only " +
                 "egress=reserved-before-stand/safe-anchor/overlap0/maxStep<=0.9px " +
-                "transitionHand=diagnostic captures=1920x1080+1024x1024");
-            foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
+                "arbitraryLayoutRefresh=PASS " +
+                "captures=1920x1080+1024x1024");
+            if (handAlignmentPass)
+            {
+                Debug.Log(
+                    "FAMILY_COMPANY_SEATING_TRANSITION_QA: PASS | " +
+                    "typingHandAlignment<=3.5px");
+            }
+            else
+            {
+                Debug.LogError(
+                    "FAMILY_COMPANY_SEATING_TRANSITION_QA: KNOWN_FAIL | " +
+                    handAlignmentFailure);
+            }
             RestoreTimingOverride();
             yield return null;
-            Application.Quit(0);
+            Application.Quit(handAlignmentPass ? 0 : 97);
         }
 
         private bool SampleAll(IReadOnlyDictionary<string, OfficeRuntimeAgent> actors)
         {
+            if (!ValidateFurnitureTransformBaselines(out string furnitureFailure))
+                return Fail(93, furnitureFailure);
+            string[] claimedSeats = actors.Values
+                .Where(actor => actor != null && actor.ActiveSeatId.Length > 0)
+                .Select(actor => actor.ActiveSeatId)
+                .ToArray();
+            if (claimedSeats.Distinct(StringComparer.Ordinal).Count() != claimedSeats.Length)
+                return Fail(93, "Two runtime actors hold the same seat: " +
+                                string.Join(",", claimedSeats));
             foreach (string memberId in MemberIds)
             {
                 if (SampleActor(actors[memberId], _traces[memberId])) continue;
+                return false;
+            }
+            return true;
+        }
+
+        private bool CaptureFurnitureTransformBaselines(out string failure)
+        {
+            failure = string.Empty;
+            _furnitureBaselines.Clear();
+            OfficeGridFurniturePresenter presenter = _runtime?.World?.FurniturePresenter;
+            if (presenter == null)
+            {
+                failure = "furniture presenter is missing";
+                return false;
+            }
+            foreach (PlacedOfficeFurniture furniture in _runtime.World.Grid.Furniture)
+            {
+                if (!presenter.TryGetSemanticRoot(furniture.FurnitureId, out Transform semantic) ||
+                    semantic == null ||
+                    !presenter.TryGetVisualRoot(furniture.FurnitureId, out Transform visual) ||
+                    visual == null)
+                {
+                    failure = "missing Transform for " + furniture.FurnitureId;
+                    return false;
+                }
+                _furnitureBaselines.Add(
+                    furniture.FurnitureId,
+                    new FurnitureTransformBaseline(furniture.KindId, semantic, visual));
+            }
+            return ValidateFurnitureTransformBaselines(out failure);
+        }
+
+        private static bool TryCreateRelocatedWorkstationLayout(
+            OfficeGrid source,
+            out OfficeGrid relocated,
+            out OfficeGridCoordinate oldDeskCell,
+            out OfficeGridCoordinate oldSeatCell,
+            out OfficeGridCoordinate newDeskCell,
+            out OfficeGridCoordinate newSeatCell)
+        {
+            relocated = null;
+            oldDeskCell = default;
+            oldSeatCell = default;
+            newDeskCell = default;
+            newSeatCell = default;
+            if (source == null) return false;
+            PlacedOfficeFurniture oldDesk = source.Furniture.FirstOrDefault(item =>
+                string.Equals(item.FurnitureId, "desk_player", StringComparison.Ordinal));
+            OfficeSeatSlot oldSeat = source.SeatSlots.FirstOrDefault(item =>
+                string.Equals(item.SeatId, "seat_player", StringComparison.Ordinal));
+            if (oldDesk == null || oldSeat == null) return false;
+            oldDeskCell = oldDesk.Origin;
+            oldSeatCell = oldSeat.Cell;
+
+            // Exercise the same atomic layout transaction used by arbitrary player furniture
+            // placement. The starter layout contract guarantees this two-cell move and the edit
+            // rule moves the desk, chair, seat, approach and operator anchor as one unit.
+            OfficeLayoutEditResult move =
+                OfficeLayoutEditRules.MoveWorkstation(source, oldSeat.SeatId, 2, 0);
+            if (!move.Success || move.Grid == null) return false;
+            relocated = move.Grid;
+            PlacedOfficeFurniture newDesk = relocated.Furniture.FirstOrDefault(item =>
+                string.Equals(item.FurnitureId, oldDesk.FurnitureId, StringComparison.Ordinal));
+            OfficeSeatSlot movedSeat = relocated.SeatSlots.FirstOrDefault(item =>
+                string.Equals(item.SeatId, oldSeat.SeatId, StringComparison.Ordinal));
+            if (newDesk == null || movedSeat == null) return false;
+            newDeskCell = newDesk.Origin;
+            newSeatCell = movedSeat.Cell;
+            return !newDeskCell.Equals(oldDeskCell) && !newSeatCell.Equals(oldSeatCell);
+        }
+
+        private bool ValidateRelocatedWorkstationLayout(
+            OfficeGridCoordinate oldDeskCell,
+            OfficeGridCoordinate oldSeatCell,
+            OfficeGridCoordinate newDeskCell,
+            OfficeGridCoordinate newSeatCell,
+            out string failure)
+        {
+            failure = string.Empty;
+            if (_runtime.Actors.Count != MemberIds.Length ||
+                _runtime.World.Grid.SeatSlots.Count != MemberIds.Length)
+            {
+                failure = "canonical actor/seat count changed";
+                return false;
+            }
+            OfficeSeatSlot seat = _runtime.World.Workstations.RequiredSeat("seat_player");
+            if (!seat.Cell.Equals(newSeatCell) ||
+                !seat.ApproachCell.Equals(new OfficeGridCoordinate(newSeatCell.X, newSeatCell.Y - 1)))
+            {
+                failure = "seat registry retained old cells";
+                return false;
+            }
+            OfficeSeatInteractionAnchors anchors =
+                _runtime.World.Workstations.ResolveInteractionAnchors(seat);
+            if (anchors.Egress.Count != OfficeSeatEgressRules.CandidateCount ||
+                Vector3.Distance(
+                    anchors.ApproachWorld,
+                    _runtime.World.Presenter.CellCenterWorld(seat.ApproachCell)) > 0.000001f ||
+                Vector3.Distance(
+                    anchors.AlignmentWorld,
+                    _runtime.World.Presenter.SubcellAnchorWorld(seat.OperatorAnchor)) > 0.000001f ||
+                Vector3.Distance(
+                    anchors.PelvisWorld,
+                    _runtime.World.Workstations.ChairSeatAnchorWorld(seat)) > 0.000001f ||
+                !anchors.HasHandWorld)
+            {
+                failure = "explicit seat anchors were not rebuilt";
+                return false;
+            }
+            if (_runtime.World.Occupancy.IsCellPassable(
+                    newDeskCell, string.Empty, string.Empty, false) ||
+                _runtime.World.Occupancy.IsCellPassable(
+                    newSeatCell, string.Empty, string.Empty, false) ||
+                !_runtime.World.Occupancy.IsCellPassable(
+                    oldDeskCell, string.Empty, string.Empty, false) ||
+                !_runtime.World.Occupancy.IsCellPassable(
+                    oldSeatCell, string.Empty, string.Empty, false))
+            {
+                failure = "static/interaction occupancy retained the previous placement";
+                return false;
+            }
+            return CaptureFurnitureTransformBaselines(out failure);
+        }
+
+        private bool ValidateFurnitureTransformBaselines(out string failure)
+        {
+            failure = string.Empty;
+            OfficeGridFurniturePresenter presenter = _runtime?.World?.FurniturePresenter;
+            if (presenter == null)
+            {
+                failure = "furniture presenter was destroyed";
+                return false;
+            }
+            if (presenter.TransformInvariantViolationCount != 0)
+            {
+                failure = "furniture invariant guard observed mutations=" +
+                          presenter.TransformInvariantViolationCount;
+                return false;
+            }
+            if (!presenter.ValidateTransformInvariants(out string presenterFailure))
+            {
+                failure = presenterFailure;
+                return false;
+            }
+            foreach (KeyValuePair<string, FurnitureTransformBaseline> pair in _furnitureBaselines)
+            {
+                _maximumFurnitureWorldPositionErrorPx = Mathf.Max(
+                    _maximumFurnitureWorldPositionErrorPx,
+                    pair.Value.WorldPositionErrorPx(Camera.main));
+                _maximumFurnitureWorldRotationErrorDegrees = Mathf.Max(
+                    _maximumFurnitureWorldRotationErrorDegrees,
+                    pair.Value.WorldRotationErrorDegrees());
+                _maximumFurnitureWorldScaleError = Mathf.Max(
+                    _maximumFurnitureWorldScaleError,
+                    pair.Value.WorldScaleError());
+                if (pair.Value.MatchesExactly()) continue;
+                failure = "Furniture Transform changed during simultaneous seating: " +
+                          pair.Key + "/" + pair.Value.KindId;
                 return false;
             }
             return true;
@@ -376,17 +613,66 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             return true;
         }
 
+        private bool ValidateExclusiveSeatReservation(out string failure)
+        {
+            failure = string.Empty;
+            OfficeRuntimeWorkstationService workstations = _runtime?.World?.Workstations;
+            if (workstations == null)
+            {
+                failure = "workstation service is missing";
+                return false;
+            }
+
+            OfficeSeatRuntimeClaim firstClaim = null;
+            OfficeSeatRuntimeClaim secondClaim = null;
+            try
+            {
+                if (!workstations.TryReserveSeat(
+                        "player",
+                        "seat_player",
+                        "exclusive-seat-qa-a",
+                        out OfficeSeatSlot firstSeat,
+                        out firstClaim) || firstSeat == null || firstClaim == null)
+                {
+                    failure = "first claimant could not reserve seat_player";
+                    return false;
+                }
+                if (workstations.TryReserveSeat(
+                        "older_sister",
+                        "seat_player",
+                        "exclusive-seat-qa-b",
+                        out _,
+                        out secondClaim))
+                {
+                    failure = "second claimant reserved seat_player while first claim was active";
+                    return false;
+                }
+                return true;
+            }
+            finally
+            {
+                secondClaim?.TryRelease(out _);
+                firstClaim?.TryRelease(out _);
+            }
+        }
+
         private bool SampleActor(OfficeRuntimeAgent actor, ActorTrace trace)
         {
             if (actor == null) return Fail(93, trace.MemberId + " actor was destroyed.");
 
             OfficeRuntimeAgentPhase phase = actor.Phase;
-            if (phase == OfficeRuntimeAgentPhase.MovingToSit &&
+            if (phase == OfficeRuntimeAgentPhase.ApproachingSeat)
+                trace.SawApproachingSeat = true;
+            if (phase == OfficeRuntimeAgentPhase.AligningSeat)
+                trace.SawAligningSeat = true;
+            if (phase == OfficeRuntimeAgentPhase.RotatingToSeat)
+                trace.SawRotatingToSeat = true;
+            if (phase == OfficeRuntimeAgentPhase.RotatingToSeat &&
                 TryResolveClaimedSeatDirection(actor, out int movingSeatDirection) &&
                 actor.ExpectedSeatDirection == movingSeatDirection &&
                 actor.CurrentDirection == movingSeatDirection &&
                 actor.IsSeatEntryPresentationPlanted)
-                trace.SawAlignedMovingToSit = true;
+                trace.SawAlignedBeforeSitDown = true;
 
             bool engaged = phase == OfficeRuntimeAgentPhase.SittingDown ||
                            phase == OfficeRuntimeAgentPhase.Working ||
@@ -416,6 +702,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (trace.SeatId.Length == 0) trace.SeatId = actor.ActiveSeatId;
             if (!string.Equals(trace.SeatId, actor.ActiveSeatId, StringComparison.Ordinal))
                 return Fail(93, trace.MemberId + " changed seat claim during the transition.");
+
+            if (phase != OfficeRuntimeAgentPhase.LeavingSeat)
+            {
+                OfficeSeatSlot fixedSeat =
+                    _runtime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
+                OfficeSeatInteractionAnchors anchors =
+                    _runtime.World.Workstations.ResolveInteractionAnchors(fixedSeat);
+                Camera camera = Camera.main;
+                if (camera == null)
+                    return Fail(93, trace.MemberId + " has no camera for logical-root validation.");
+                trace.MaximumLogicalRootErrorPx = Mathf.Max(
+                    trace.MaximumLogicalRootErrorPx,
+                    OfficeGridAlignmentMetrics.ScreenDistance(
+                        camera,
+                        actor.transform.position,
+                        anchors.AlignmentWorld));
+                if (!_runtime.World.Presenter.NearestCell(actor.transform.position)
+                        .Equals(fixedSeat.Cell))
+                    trace.SeatCellMismatchCount++;
+            }
 
             trace.DirectionSampleCount++;
             trace.Phases.Add(phase);
@@ -658,6 +964,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             out string failure)
         {
             var failures = new List<string>();
+            if (!trace.SawApproachingSeat || !trace.SawAligningSeat ||
+                !trace.SawRotatingToSeat || !trace.SawAlignedBeforeSitDown)
+                failures.Add(
+                    $"seatEntry={trace.SawApproachingSeat}/" +
+                    $"{trace.SawAligningSeat}/{trace.SawRotatingToSeat}/" +
+                    trace.SawAlignedBeforeSitDown);
             if (!actor.WasSeatFacingAlignedBeforeSitDown)
                 failures.Add("seat-facing rotation was not confirmed before SitDown");
             if (trace.SitDownFrameMask != 0x0f || trace.SitEvidenceFrameMask != 0x0f ||
@@ -716,9 +1028,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 failures.Add($"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px");
             if (actor.MaxTypingSeatContactErrorPx > MaximumSeatResidualPx)
                 failures.Add($"typingSeat={actor.MaxTypingSeatContactErrorPx:F3}px");
-            if (actor.MaxTypingHandWorkErrorPx > MaximumHandKeyboardResidualPx)
-                failures.Add($"handKeyboard={actor.MaxTypingHandWorkErrorPx:F3}px");
-            if (actor.MaxChairPresentationStepPx > MaximumSeatResidualPx)
+            if (trace.MaximumLogicalRootErrorPx > 0.001f)
+                failures.Add($"logicalRoot={trace.MaximumLogicalRootErrorPx:F6}px");
+            if (trace.SeatCellMismatchCount != 0)
+                failures.Add("seatCellMismatches=" + trace.SeatCellMismatchCount);
+            if (Mathf.Abs(actor.AgentRadius - OfficeRuntimeAgent.DefaultRadius) > 0.000001f)
+                failures.Add($"collisionRadius={actor.AgentRadius:F6}");
+            if (actor.MaxChairPresentationStepPx > 0.001f)
                 failures.Add($"chairPresentationStep={actor.MaxChairPresentationStepPx:F3}px");
             if (actor.VisualRotationErrorDegrees > 0.01f)
                 failures.Add($"rotation={actor.VisualRotationErrorDegrees:F4}deg");
@@ -776,11 +1092,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         $"retention={evidence.HandRetention:F3} " +
                         $"invalidOverlap={evidence.HandInvalidForegroundOverlapPixels}");
                 if (record.Kind == FrameEvidenceKind.Typing &&
-                    (evidence.PelvisSeatErrorPx > MaximumSeatResidualPx ||
-                     evidence.HandWorkErrorPx > MaximumHandKeyboardResidualPx))
+                    evidence.PelvisSeatErrorPx > MaximumSeatResidualPx)
                     failures.Add(
-                        $"{frameLabel} sockets={evidence.PelvisSeatErrorPx:F3}/" +
-                        $"{evidence.HandWorkErrorPx:F3}px");
+                        $"{frameLabel} pelvisSeat={evidence.PelvisSeatErrorPx:F3}px");
             }
             if (trace.SitLowerBodyOccludedPixels <= 0 ||
                 trace.TypingLowerBodyOccludedPixels <= 0 ||
@@ -792,6 +1106,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             failure = string.Join("; ", failures);
             return failures.Count == 0;
+        }
+
+        private static string BuildTypingHandAlignmentFailure(
+            IReadOnlyDictionary<string, OfficeRuntimeAgent> actors)
+        {
+            if (actors == null) return "typingHandAlignment=not-sampled";
+            string[] failures = MemberIds
+                .Select(memberId =>
+                {
+                    actors.TryGetValue(memberId, out OfficeRuntimeAgent actor);
+                    return actor != null &&
+                           actor.MaxTypingHandWorkErrorPx > MaximumHandKeyboardResidualPx
+                        ? memberId + "=" +
+                          actor.MaxTypingHandWorkErrorPx.ToString("F3", CultureInfo.InvariantCulture) +
+                          "px"
+                        : string.Empty;
+                })
+                .Where(value => value.Length > 0)
+                .ToArray();
+            return failures.Length == 0
+                ? string.Empty
+                : "typingHandAlignment=KNOWN_FAIL threshold=" +
+                  MaximumHandKeyboardResidualPx.ToString("F1", CultureInfo.InvariantCulture) +
+                  "px measured[" + string.Join(",", failures) +
+                  "] existing typing-art contact requires follow-up";
         }
 
         private bool CaptureOverview(string fileName, out string failure)
@@ -991,20 +1330,28 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             OfficeSeatSlot seat = _runtime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
             if (!_runtime.World.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
                     seat.ChairFurnitureId,
-                    out SpriteRenderer overlay) || overlay == null || !overlay.enabled)
+                    out SpriteRenderer authoredOverlay) || authoredOverlay == null)
             {
-                failure = "required chair foreground overlay is missing or disabled";
+                failure = "required authored chair foreground is missing";
                 return false;
             }
             _runtime.World.FurniturePresenter.OccupiedChairLowerBodyRenderers.TryGetValue(
                 seat.ChairFurnitureId,
                 out SpriteRenderer lowerBodyOverlay);
             if (depth.OcclusionEngaged &&
-                (lowerBodyOverlay == null || !lowerBodyOverlay.enabled))
+                (lowerBodyOverlay == null || !lowerBodyOverlay.enabled || authoredOverlay.enabled))
             {
-                failure = "required lower-body chair occluder is missing or disabled";
+                failure = "occupied chair must use only the lower-body rim foreground";
                 return false;
             }
+            if (!depth.OcclusionEngaged && !authoredOverlay.enabled)
+            {
+                failure = "released chair authored foreground is disabled";
+                return false;
+            }
+            SpriteRenderer overlay = depth.OcclusionEngaged
+                ? lowerBodyOverlay
+                : authoredOverlay;
             SpriteRenderer actorRenderer = actor.PresentationRenderer;
             if (actorRenderer == null || actorRenderer.sprite == null || !actorRenderer.enabled)
             {
@@ -1889,9 +2236,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             builder.AppendLine("safeEgressCloseups=" +
                                _traces.Values.Count(trace => trace.SafeEgressCloseupCaptured) + "/4");
             builder.AppendLine("egressMatrix=families4*rotations4*scenarios4=64");
+            builder.AppendLine("seatReservationExclusive=PASS simultaneousActors=4");
             builder.AppendLine("captureManifest=seating-transition-frame-capture-manifest.txt");
             builder.AppendLine(
-                "chairForeground=canonical-9881px-continuous; upperBodyProtection=pose-pelvis-split");
+                "chairForeground=seat-rim-only; upperBodyProtection=pose-pelvis-split");
+            builder.AppendLine(
+                "furnitureTransformExact=true worldPositionPx=" +
+                _maximumFurnitureWorldPositionErrorPx.ToString("F6", CultureInfo.InvariantCulture) +
+                " worldRotationDegrees=" +
+                _maximumFurnitureWorldRotationErrorDegrees.ToString("F6", CultureInfo.InvariantCulture) +
+                " worldScale=" +
+                _maximumFurnitureWorldScaleError.ToString("F9", CultureInfo.InvariantCulture));
             builder.AppendLine(
                 "penetrationContract=filtered-core actor residual >5%=FAIL; <=5% allowed only for D3D11 bilinear/sRGB readback");
             foreach (string memberId in MemberIds)
@@ -1930,6 +2285,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     .Append(trace.MinimumUpperBodyRetention.ToString("F3", CultureInfo.InvariantCulture))
                     .Append(" minHandRetention=")
                     .Append(trace.MinimumHandRetention.ToString("F3", CultureInfo.InvariantCulture))
+                    .Append(" handResidualRangePx=")
+                    .Append((trace.MaximumHandWorkErrorPx - trace.MinimumHandWorkErrorPx)
+                        .ToString("F3", CultureInfo.InvariantCulture))
                     .Append(" noOverlapExpectedFrames=").Append(trace.NoLowerBodyOverlapFrameCount);
                 if (actor != null)
                 {
@@ -1942,6 +2300,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         .Append(" typingSeatPx=").Append(actor.MaxTypingSeatContactErrorPx.ToString("F3"))
                         .Append(" handKeyboardPx=").Append(actor.MaxTypingHandWorkErrorPx.ToString("F3"))
                         .Append(" chairStepPx=").Append(actor.MaxChairPresentationStepPx.ToString("F3"))
+                        .Append(" logicalRootPx=")
+                        .Append(trace.MaximumLogicalRootErrorPx.ToString("F6"))
+                        .Append(" seatCellMismatches=").Append(trace.SeatCellMismatchCount)
+                        .Append(" collisionRadius=").Append(actor.AgentRadius.ToString("F3"))
                         .Append(" egressKind=").Append(actor.LastCompletedSeatEgressKind)
                         .Append(" egressCell=").Append(actor.LastCompletedSeatEgressCell)
                         .Append(" egressStepPx=").Append(actor.MaximumSeatEgressRootStepPx.ToString("F3"))
@@ -2197,11 +2559,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public float MinimumHandRetention { get; private set; } = 1f;
             public float MaximumPelvisSeatErrorPx { get; private set; }
             public float MaximumHandWorkErrorPx { get; private set; }
+            public float MinimumHandWorkErrorPx { get; private set; } = float.PositiveInfinity;
+            public float MaximumLogicalRootErrorPx { get; set; }
+            public int SeatCellMismatchCount { get; set; }
             public int NoLowerBodyOverlapFrameCount { get; private set; }
             public int SitLowerBodyOccludedPixels { get; private set; }
             public int TypingLowerBodyOccludedPixels { get; private set; }
             public int StandLowerBodyOccludedPixels { get; private set; }
-            public bool SawAlignedMovingToSit { get; set; }
+            public bool SawApproachingSeat { get; set; }
+            public bool SawAligningSeat { get; set; }
+            public bool SawRotatingToSeat { get; set; }
+            public bool SawAlignedBeforeSitDown { get; set; }
             public bool SawWorkHookActive { get; set; }
             public bool SawFinishingWork { get; set; }
             public bool SawLeavingSeat { get; set; }
@@ -2251,6 +2619,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 MaximumHandWorkErrorPx = Mathf.Max(
                     MaximumHandWorkErrorPx,
                     evidence.HandWorkErrorPx);
+                MinimumHandWorkErrorPx = Mathf.Min(
+                    MinimumHandWorkErrorPx,
+                    evidence.HandWorkErrorPx);
                 if (evidence.NoLowerBodyOverlapExpected) NoLowerBodyOverlapFrameCount++;
                 switch (kind)
                 {
@@ -2264,6 +2635,102 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         StandLowerBodyOccludedPixels += evidence.LowerBodyOccludedPixels;
                         break;
                 }
+            }
+        }
+
+        private sealed class FurnitureTransformBaseline
+        {
+            private readonly Transform _semantic;
+            private readonly Transform _semanticParent;
+            private readonly Vector3 _semanticLocalPosition;
+            private readonly Quaternion _semanticLocalRotation;
+            private readonly Vector3 _semanticLocalScale;
+            private readonly Vector3 _semanticWorldPosition;
+            private readonly Quaternion _semanticWorldRotation;
+            private readonly Vector3 _semanticWorldScale;
+            private readonly Transform _visual;
+            private readonly Transform _visualParent;
+            private readonly Vector3 _visualLocalPosition;
+            private readonly Quaternion _visualLocalRotation;
+            private readonly Vector3 _visualLocalScale;
+            private readonly Vector3 _visualWorldPosition;
+            private readonly Quaternion _visualWorldRotation;
+            private readonly Vector3 _visualWorldScale;
+
+            public FurnitureTransformBaseline(
+                string kindId,
+                Transform semantic,
+                Transform visual)
+            {
+                KindId = kindId ?? string.Empty;
+                _semantic = semantic;
+                _semanticParent = semantic.parent;
+                _semanticLocalPosition = semantic.localPosition;
+                _semanticLocalRotation = semantic.localRotation;
+                _semanticLocalScale = semantic.localScale;
+                _semanticWorldPosition = semantic.position;
+                _semanticWorldRotation = semantic.rotation;
+                _semanticWorldScale = semantic.lossyScale;
+                _visual = visual;
+                _visualParent = visual.parent;
+                _visualLocalPosition = visual.localPosition;
+                _visualLocalRotation = visual.localRotation;
+                _visualLocalScale = visual.localScale;
+                _visualWorldPosition = visual.position;
+                _visualWorldRotation = visual.rotation;
+                _visualWorldScale = visual.lossyScale;
+            }
+
+            public string KindId { get; }
+
+            public float WorldPositionErrorPx(Camera camera)
+            {
+                if (_semantic == null || _visual == null) return float.PositiveInfinity;
+                if (camera == null)
+                    return Mathf.Max(
+                        Vector3.Distance(_semantic.position, _semanticWorldPosition),
+                        Vector3.Distance(_visual.position, _visualWorldPosition)) *
+                           OfficeGridTilemapPresenter.PixelsPerUnit;
+                return Mathf.Max(
+                    OfficeGridAlignmentMetrics.ScreenDistance(
+                        camera, _semantic.position, _semanticWorldPosition),
+                    OfficeGridAlignmentMetrics.ScreenDistance(
+                        camera, _visual.position, _visualWorldPosition));
+            }
+
+            public float WorldRotationErrorDegrees()
+            {
+                if (_semantic == null || _visual == null) return float.PositiveInfinity;
+                return Mathf.Max(
+                    Quaternion.Angle(_semantic.rotation, _semanticWorldRotation),
+                    Quaternion.Angle(_visual.rotation, _visualWorldRotation));
+            }
+
+            public float WorldScaleError()
+            {
+                if (_semantic == null || _visual == null) return float.PositiveInfinity;
+                return Mathf.Max(
+                    Vector3.Distance(_semantic.lossyScale, _semanticWorldScale),
+                    Vector3.Distance(_visual.lossyScale, _visualWorldScale));
+            }
+
+            public bool MatchesExactly()
+            {
+                return _semantic != null && _visual != null &&
+                       _semantic.parent == _semanticParent &&
+                       _visual.parent == _visualParent &&
+                       _semantic.localPosition.Equals(_semanticLocalPosition) &&
+                       _semantic.localRotation.Equals(_semanticLocalRotation) &&
+                       _semantic.localScale.Equals(_semanticLocalScale) &&
+                       _semantic.position.Equals(_semanticWorldPosition) &&
+                       _semantic.rotation.Equals(_semanticWorldRotation) &&
+                       _semantic.lossyScale.Equals(_semanticWorldScale) &&
+                       _visual.localPosition.Equals(_visualLocalPosition) &&
+                       _visual.localRotation.Equals(_visualLocalRotation) &&
+                       _visual.localScale.Equals(_visualLocalScale) &&
+                       _visual.position.Equals(_visualWorldPosition) &&
+                       _visual.rotation.Equals(_visualWorldRotation) &&
+                       _visual.lossyScale.Equals(_visualWorldScale);
             }
         }
     }

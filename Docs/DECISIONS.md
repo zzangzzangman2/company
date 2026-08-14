@@ -1,5 +1,23 @@
 # DECISIONS
 
+## 2026-08-15 / 착석은 가구를 움직이지 않고 명시적 좌석 계약에 캐릭터만 정렬한다
+
+결정: chair semantic root와 `VisualRoot`의 parent, local/world position·rotation·scale은 가구 배치가
+소유하며 착석·업무·기립 코드는 절대 쓰지 않는다. Rigidbody 2D/3D, Collider 2D/3D, Animator도 이 두
+Transform의 소유자가 될 수 없다. occupied chair는 전체 사각 front crop 대신 기존 base와 좌판 하단 rim만
+사용해 머리·몸·발을 가르는 직선 겹침을 막는다.
+
+결정: 좌석 서비스는 approach, alignment, pelvis, hand, egress anchor와 배타적 reservation claim을 제공한다.
+캐릭터 logical root, 점유 셀, 충돌 반경은 좌석 alignment 계약을 유지하고 pose의 연속 이동은 캐릭터 표현에만
+적용한다. 상태는 Navigating→ApproachingSeat→AligningSeat→RotatingToSeat→SittingDown→Working→
+FinishingWork→StandingUp→LeavingSeat로 분리하며 release는 safe egress 도착 뒤 수행한다.
+
+이유: 기존 `OfficeRuntimeAgent.AdvanceChairPresentation`→`OfficeRuntimeWorkstationService.
+AlignChairPresentationToOccupant`→`OfficeGridFurniturePresenter.AlignSeatPresentationToWorld` 경로가 매 프레임
+의자 `VisualRoot.position`을 캐릭터 골반으로 당기고 기립 뒤 되돌려 의자 비행을 직접 만들었다. 의자를
+불변으로 바꾼 D3D11 4명 동시 검증은 가구 Transform 전 항목과 logical root·pelvis-seat를 실질 0으로 유지했다.
+손–키보드 64.989~91.534px는 기존 타이핑 아트의 별도 `KNOWN_FAIL`이며 좌석 안정화 PASS로 완화하지 않는다.
+
 ## 2026-08-14 / UI Remaster V3와 MapleStory typography를 전체 화면의 공용 정본으로 사용
 
 결정: Title, New Game/Load, Loading, HUD, 회사·인사·사업·연구·투자, People 상세는 프로젝트에 포함된

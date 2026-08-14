@@ -10,8 +10,9 @@ using UnityEngine;
 namespace FamilyCompany.Editor.OfficeGridQa
 {
     /// <summary>
-    /// Guards the canonical NorthWest chair foreground independently of wall/door validation.
-    /// The mask is a strict subset of the complete chair Sprite and must survive a furniture rebuild.
+    /// Guards the authored NorthWest chair foreground asset and the generated lower seat-rim mask
+    /// independently of wall/door validation. Occupied runtime presentation uses only the lower
+    /// mask in front of the actor; the rectangular authored subset remains available for empty state.
     /// </summary>
     public static class OfficeChairForegroundValidation
     {
@@ -55,7 +56,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 $"lowerOccluderPixels=" +
                 $"{OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount} " +
                 $"cutoff=({ForegroundMinimumRuntimeX},{ForegroundMinimumRuntimeY}) " +
-                "pivotAlignment=exact catalog=linked occupiedMode=canonical-continuous " +
+                "pivotAlignment=exact catalog=linked occupiedMode=lower-rim-only " +
                 "upperBodyProtection=pose-pelvis-split");
         }
 
