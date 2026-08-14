@@ -131,6 +131,24 @@ PrototypeBootstrap / GameState.OfficeGrid
 - Starter Runtime의 착석 표현은 `OfficeSeatingV1`의 사람 승인 `NorthWest` 14프레임과 `OfficeCharacterSeatPoseCatalog` v5를 사용한다. Work는 pelvis를 cushion에 고정하고 SitDown/StandUp은 서 있는 pelvis와 cushion 사이를 승인 프레임 순서대로 보간한다. 회전·pose 확대·member별 scale은 없으며 렌더 틱당 한 프레임만 전진해 장시간 프레임이나 배속에서도 원화를 건너뛰지 않는다.
 - Windows player 빌드 전 OfficeGrid schema/migration, semantic layout hash/save round-trip, 8방향 수학, 방향 승인 32개와 개별 보행 프레임 승인 192개를 검증한다. 숨김 player QA는 4명 각각 SitDown 4 + Work 6 + StandUp 4의 실제 적용, 접점 오차, 정렬과 그래픽 합성을 확인한다.
 
+## Pixel clarity presentation layer
+
+```text
+PixelClarityDefault (ScriptableObject policy)
+    └─ PixelClarityRuntime (persistent presentation-only coordinator)
+        ├─ native buffer / DPI / mip / MSAA policy
+        ├─ legacy PixelatedCameraEffect disable
+        ├─ aspect-safe OfficeGridCameraFitter reframe
+        ├─ camera physical-pixel snap
+        └─ OfficeRuntimeAgent.PresentationRenderer pre-cull snap / post-render restore
+```
+
+- 이 계층은 Simulation, occupancy, semantic layout, save state를 소유하지 않는다.
+- 움직이는 actor의 `PresentationRenderer`만 렌더 callback 안에서 일시적으로 보정하며 actor root는 렌더 뒤
+  원래 위치로 돌아간다. 착석 actor는 좌석 pose/anchor 소유권과 충돌하지 않도록 제외한다.
+- `RenderClarityValidation`은 프로파일과 importer 범주 경계를 정적 검증하고,
+  `RenderClarityRuntimeQa`는 실제 D3D11 player에서 동일 프레임 비교와 이동 grid residual을 검증한다.
+
 ## Semantic Office Layout Authoring
 
 - `StarterOfficeLayoutAsset`은 floor, walkability, furniture footprint/anchor/facing/blocking, seat/approach/workstation binding을 직렬화한다.

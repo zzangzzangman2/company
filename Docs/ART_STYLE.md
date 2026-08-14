@@ -153,3 +153,15 @@
 - 각 bay는 투명 배경의 정확한 한 타일 `(+160,+80)` screen span이며, SouthEast/SouthWest mirror가 네 L corner에서 틈이나 한 타일 overshoot 없이 만난다.
 - 출입구는 한 bay 전체가 열린 negative space다. 두 slim jamb와 얇은 isometric threshold는 허용하지만 door leaf, header/lintel, 손잡이, swing arc, 닫힌 문 silhouette는 금지한다.
 - runtime 규격은 640×512 RGBA, hard alpha, 180 PPU, Point/nearest, mipmap 없음, uncompressed다. 기존 source/runtime GUID와 `.meta`를 유지한다.
+
+## 월드 도트 샘플링과 화면 선명도 (2026-08-14)
+
+- 월드 도트는 최종 backbuffer의 native resolution에서 그린다. 고정 360/540p 중간 버퍼를 Point로
+  확대하거나 전체 화면 sharpening으로 외곽을 인위적으로 키우지 않는다.
+- 바닥·가구·벽·캐릭터는 Point, mipmap off, Standalone uncompressed, 원본 크기 보존, 180 PPU다.
+  Painted/high-resolution UI와 키아트는 이 규칙의 대상이 아니며 Bilinear를 유지한다.
+- 카메라와 이동 캐릭터는 presentation 단계에서 물리 픽셀 grid에 맞춘다. 같은 선이 이동 중 번갈아
+  굵어지거나 얼굴·발이 반 픽셀에서 녹는 것이 실패 기준이다.
+- 전체 사무실 fit에서는 1920×1080의 source pixel 대비 화면 비율이 약 0.426이므로 눈·전화선·키보드
+  키처럼 원래 1 화면 픽셀 미만인 세부에는 소스/구도 한계가 남는다. 이를 이유로 PNG를 자동 업스케일·
+  재생성하지 않고 필요한 경우 영향 자산을 별도 아트 작업으로 승인한다.

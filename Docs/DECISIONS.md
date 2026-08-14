@@ -341,3 +341,19 @@ Shadow 선택만 기록하며 GameState·Save DTO·OfficeRuntimeAgent·패키지
 결정: 벽 아트 갱신은 `BuildPerimeterWalls`로만 수행한다. 전체 가구 builder를 캡처 경로에서 호출하지 않고 catalog의 세 perimeter definition만 교체한다. 비벽 definition identity와 swivel-chair overlay link/occupied flag를 변경하면 즉시 실패한다.
 
 결정: 출근 표현은 시각적 문 열림 없이 해당 shift의 첫 입장 성공(정상 진행에서는 09:00, 같은 `GameState`의 시간/날짜 점프 시 그 직후)의 `door_open` 한 번만 사용한다. gate는 BeforeWork 또는 관측된 비근무일→다음 근무일 Working 전환에서 날짜 shift를 arm하고 성공 재생 뒤 잠긴다. 이미 근무 중인 저장본을 새 `GameState`로 bind하면 그 날짜는 소리 없이 소비한다. 실제 전체 audio counter로 open 1/close 0 및 same-shift load delta 0을 Windows player QA에서 검증한다.
+
+## 2026-08-14 / 도트 월드는 네이티브 출력과 presentation pixel grid를 사용한다
+
+결정: 1920×1080을 기준으로 월드 카메라는 render scale 1.0을 사용하며 고정 360/540p 중간 버퍼와
+전체 화면 sharpening을 사용하지 않는다. Dynamic Resolution은 끄고 DPI factor는 1.0을 유지한다.
+
+결정: 카메라와 움직이는 비착석 캐릭터의 화면 표현만 물리 픽셀 grid에 맞춘다. 시뮬레이션 root,
+semantic cell, occupancy, save 좌표는 바꾸지 않으며 렌더 직전 임시 보정은 렌더 직후 복원한다.
+
+결정: 바닥·가구·벽·캐릭터 도트는 Point, mipmap off, Standalone uncompressed, 원본보다 작은 max size
+금지, 180 PPU를 사용한다. Painted/고해상도 UI는 Bilinear를 유지한다. Sprite Atlas를 도입하면 Point,
+compression, padding을 별도 승인하기 전에는 검증을 실패시킨다.
+
+이유: 기존 540p downsample은 월드만 2×2 출력 블록으로 만들었고 UI와 DPI는 정상이라 sharpening이나
+원본 재생성으로 해결할 문제가 아니었다. native sampling과 presentation snap이 같은 프레임의 얇은 경계
+에너지를 2.20배 보존하면서 world state와 병렬 이동/착석 코드를 건드리지 않는다.
