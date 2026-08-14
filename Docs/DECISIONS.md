@@ -40,6 +40,24 @@
 
 이유: semantic heading이나 presentation timer가 actual motion을 덮으면 벽 slide, 코너, 급반전에서 정면을 보며 옆·뒤로 미끄러지는 프레임이 생긴다. 실제 변위와 화면 방향을 같은 사실로 만들고 정지 회전과 거리 기반 발 위상을 공용 규칙으로 분리해야 가족 4명과 향후 직원 8명이 동일한 결정론·접지 품질을 유지한다.
 
+## 2026-08-14 / 착석 가림은 단일 3-layer 규칙으로 소유한다
+
+결정: `OfficeSeatedUpperBodyProtectionRules`를 점유 의자의 유일한 합성 규칙 소유자로 사용한다. 이 규칙은 (1) 기존 의자 전체 foreground, (2) 좌석 테두리만 포함하는 1,816 opaque-pixel 하체 crop, (3) pose pelvis에서 12px 아래를 경계로 만든 상체 redraw를 함께 정의한다. 별도 `OfficeOccupiedChairForegroundRules` 클래스는 만들지 않으며 validator와 runtime은 모두 같은 정본을 참조한다.
+
+이유: 전체 foreground만 사용하면 의자가 엄마의 상체까지 가리고, 상체 redraw만 남기고 하체 crop을 제거하면 실제 Windows D3D11 아빠 Typing 6프레임에서 하체와 의자 foreground의 겹침이 0이 되어 앉은 깊이가 사라졌다. 세 plane은 서로 대체하는 구현이 아니라 `chair base < actor < lower seat rim < upper-body redraw`를 만드는 한 알고리즘의 구성요소다. 정본을 한 클래스로 모으면 과거 validator `CS0103`처럼 경쟁 타입 중 하나가 누락되는 실패도 제거된다.
+
+## 2026-08-14 / 착석 종료는 safe-anchor 도달 뒤 원자적으로 해제한다
+
+결정: 일어서기 전에 front/left/right 순서로 충돌 없는 egress cell과 구간을 예약한다. `LeavingSeat` 동안 facing/depth/foreground/seat ownership을 유지하고, actor가 safe anchor에 도착했을 때만 seat claim, chair foreground, egress reservation을 한 lifecycle 경계에서 해제한다. rear 후보는 사용하지 않는다.
+
+이유: 애니메이션 진행률만으로 chair depth를 먼저 해제하면 의자·책상 사이를 빠져나오는 동안 상체가 다시 잘리거나 가구 안으로 들어갈 수 있다. 반대로 예약을 먼저 확보하고 safe anchor를 release 조건으로 사용하면 다양한 좌석 방향에서도 기립 전 경로 안정성, 하체 가림, 충돌 무결성을 같은 조건으로 증명할 수 있다.
+
+## 2026-08-14 / 공개 착석 오차 경계보다 생성 예산을 0.001px 작게 둔다
+
+결정: QA 계약은 seat/egress `<=0.9px`, typing hand-to-keyboard `<=3.5px`를 그대로 사용한다. 런타임이 생성하는 최대 step/contact 예산만 각각 `0.899px`, `3.499px`로 둔다.
+
+이유: 카메라 world-to-screen 투영의 부동소수점 반올림으로 정확히 `0.900px`를 목표한 값이 내부적으로 경계를 아주 조금 넘을 수 있다. validator의 허용치를 늘리는 대신 생성값에 0.001px의 결정론적 여유를 두면 사용자 계약을 완화하지 않고 모든 프레임에서 같은 엄격한 비교를 유지할 수 있다.
+
 ## 2026-08-13 / compact 타이틀은 세로 확장 배경으로 레터박스를 제거
 
 결정: 1.35 미만 화면에서는 16:9 V2를 scale-to-fit하지 않고, V2의 위아래를 확장한 10:11 세로 V3를 aspect-fill한다. 가로 화면은 기존 V2를 그대로 사용하며 메뉴·돈다발 애니메이션 로직은 공유한다.

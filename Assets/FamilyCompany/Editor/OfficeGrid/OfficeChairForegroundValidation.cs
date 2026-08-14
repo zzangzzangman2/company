@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEditor;
 using UnityEngine;
@@ -47,10 +49,14 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Require(Vector2.Distance(expectedFront.pivot, expectedBase.pivot) <= 0.01f,
                 "Chair foreground pivot differs from the chair base.");
 
-            ValidateLimitedSubset();
+            ValidateLimitedSubset(expectedBase);
             Debug.Log(
-                $"OFFICE_CHAIR_FOREGROUND_VALIDATION: PASS pixels={ExpectedForegroundPixelCount} " +
-                $"cutoff=({ForegroundMinimumRuntimeX},{ForegroundMinimumRuntimeY}) catalog=linked");
+                $"OFFICE_CHAIR_FOREGROUND_VALIDATION: PASS sourcePixels={ExpectedForegroundPixelCount} " +
+                $"lowerOccluderPixels=" +
+                $"{OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount} " +
+                $"cutoff=({ForegroundMinimumRuntimeX},{ForegroundMinimumRuntimeY}) " +
+                "pivotAlignment=exact catalog=linked occupiedMode=canonical-continuous " +
+                "upperBodyProtection=pose-pelvis-split");
         }
 
         public static void RunBatch()
@@ -67,7 +73,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        private static void ValidateLimitedSubset()
+        private static void ValidateLimitedSubset(Sprite expectedBase)
         {
             Texture2D chairBase = ReadTexture(ChairBasePath);
             Texture2D chairFront = ReadTexture(ChairFrontPath);
@@ -89,8 +95,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     Color32 basePixel = basePixels[index];
                     Color32 frontPixel = frontPixels[index];
                     bool expectedForeground = basePixel.a > 0 &&
-                                              x >= ForegroundMinimumRuntimeX &&
-                                              y >= ForegroundMinimumRuntimeY;
+                                               x >= ForegroundMinimumRuntimeX &&
+                                               y >= ForegroundMinimumRuntimeY;
                     bool actualForeground = frontPixel.a > 0;
                     if (actualForeground != expectedForeground)
                     {
@@ -110,13 +116,64 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
                 Require(visibleForegroundPixels == ExpectedForegroundPixelCount,
                     $"Chair foreground pixel count {visibleForegroundPixels} != {ExpectedForegroundPixelCount}.");
-                Require(frontPixels[153 * chairFront.width + 313].a == 0,
-                    "Chair foreground covers the approved cushion center.");
+                var lowerOccluderPixels = 0;
+                for (var y = 0; y < chairBase.height; y++)
+                for (var x = 0; x < chairBase.width; x++)
+                {
+                    int index = y * chairBase.width + x;
+                    if (basePixels[index].a > 0 &&
+                        OfficeSeatedUpperBodyProtectionRules.IncludesChairLowerSourcePixel(x, y))
+                        lowerOccluderPixels++;
+                }
+                Require(
+                    lowerOccluderPixels ==
+                    OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount,
+                    $"Chair lower occluder pixel count {lowerOccluderPixels} != " +
+                    $"{OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount}.");
+                ValidateLowerOccluderAlignment(expectedBase);
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(chairBase);
                 UnityEngine.Object.DestroyImmediate(chairFront);
+            }
+        }
+
+        private static void ValidateLowerOccluderAlignment(Sprite baseSprite)
+        {
+            Rect crop = OfficeSeatedUpperBodyProtectionRules.ChairLowerTextureRect(baseSprite);
+            Vector2 normalizedPivot =
+                OfficeSeatedUpperBodyProtectionRules.ChairLowerNormalizedPivot(baseSprite);
+            Vector3 localPosition =
+                OfficeSeatedUpperBodyProtectionRules.ChairLowerLocalPosition(baseSprite);
+            var croppedPivotPx = new Vector2(
+                normalizedPivot.x * crop.width,
+                normalizedPivot.y * crop.height);
+            Vector2[] samples =
+            {
+                new Vector2(
+                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceX,
+                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceY),
+                new Vector2(
+                    baseSprite.rect.width - 1f,
+                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMaximumSourceY),
+                new Vector2(
+                    baseSprite.pivot.x,
+                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceY)
+            };
+            foreach (Vector2 sourcePixel in samples)
+            {
+                Vector2 canonicalLocal =
+                    (sourcePixel - baseSprite.pivot) / baseSprite.pixelsPerUnit;
+                Vector2 croppedPixel = sourcePixel - new Vector2(
+                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceX,
+                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceY);
+                Vector2 croppedLocal =
+                    (croppedPixel - croppedPivotPx) / baseSprite.pixelsPerUnit +
+                    new Vector2(localPosition.x, localPosition.y);
+                Require(
+                    Vector2.Distance(canonicalLocal, croppedLocal) <= 0.000001f,
+                    $"Chair lower occluder pivot drifted at source pixel {sourcePixel}.");
             }
         }
 

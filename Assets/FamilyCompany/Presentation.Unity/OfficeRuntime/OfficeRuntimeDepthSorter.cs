@@ -19,29 +19,38 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private const string FurniturePrefix = "f:";
         private const string FrontPrefix = "n:";
         private const string ActorPrefix = "a:";
+        private const string UpperActorPrefix = "u:";
 
-        /// <summary>Chair base under the occupant.</summary>
+        /// <summary>Legacy stack priority for a furniture body.</summary>
         private const int BasePriority = 0;
 
-        /// <summary>The person on the seat.</summary>
-        private const int OccupantPriority = 1;
-
-        /// <summary>
-        /// Backrest and near armrest. The camera looks at the occupant's back, so the parts of the
-        /// chair their back rests against are between them and the camera and have to be painted
-        /// over the body - otherwise the hips read as poking through the seat.
-        /// </summary>
+        /// <summary>Legacy stack priority for a real authored foreground sprite.</summary>
         private const int FrontPriority = 2;
 
-        /// <summary>The chair's near back/arm redraws after the desk lip.</summary>
+        /// <summary>Legacy stack priority for the chair's authored foreground sprite.</summary>
         private const int ChairFrontPriority = 3;
+
+        // A live seat owns an explicit semantic stack. The engaged planes remain in force through
+        // the complete reserved dismount. Released planes are used only by the planted SitDown[0]
+        // entry gate; the seat claim itself is released atomically at the safe egress anchor.
+        private const int SeatDeskBasePlane = 0;
+        private const int SeatChairBasePlane = 1;
+        private const int SeatActorEngagedPlane = 2;
+        private const int SeatDeskFrontEngagedPlane = 3;
+        private const int SeatChairFrontEngagedPlane = 4;
+        private const int SeatActorUpperBodyEngagedPlane = 5;
+        private const int SeatDeskFrontReleasedPlane = 2;
+        private const int SeatChairFrontReleasedPlane = 3;
+        private const int SeatActorReleasedPlane = 4;
 
         private readonly OfficeGrid _grid;
         private readonly OfficeGridTilemapPresenter _presenter;
         private readonly OfficeGridFurniturePresenter _furniturePresenter;
-        private readonly List<OfficeDepthItem> _items = new List<OfficeDepthItem>();
+        private readonly List<OfficeHybridDepthItem> _items = new List<OfficeHybridDepthItem>();
         private readonly Dictionary<string, SpriteRenderer> _actorRenderers =
             new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeRuntimeAgent> _actorAgents =
+            new Dictionary<string, OfficeRuntimeAgent>(StringComparer.Ordinal);
         private readonly Dictionary<string, OfficeSeatSlot> _seatsById =
             new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
         private readonly Dictionary<string, OfficeSeatSlot> _seatsByFurnitureId =
@@ -72,6 +81,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _items.Clear();
             _actorRenderers.Clear();
+            _actorAgents.Clear();
             _activeSeatOccupants.Clear();
 
             if (actors != null)
@@ -88,52 +98,125 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 int maxX = furniture.Origin.X + furniture.Width - 1;
                 int maxY = furniture.Origin.Y + furniture.Height - 1;
-                _items.Add(new OfficeDepthItem(
-                    FurniturePrefix + furniture.FurnitureId,
-                    furniture.Origin.X,
-                    furniture.Origin.Y,
-                    maxX,
-                    maxY,
-                    BasePriority));
+                bool hasSeatStack = TryResolveSeatStack(
+                    furniture,
+                    out OfficeSeatSlot seat,
+                    out bool foregroundEngaged);
+                bool isChair = hasSeatStack && string.Equals(
+                    furniture.FurnitureId,
+                    seat.ChairFurnitureId,
+                    StringComparison.Ordinal);
+                if (string.Equals(
+                        furniture.KindId,
+                        OfficeGridLayouts.SwivelChairKind,
+                        StringComparison.Ordinal))
+                    _furniturePresenter.ApplyOccupiedChairForeground(
+                        furniture.FurnitureId,
+                        isChair && foregroundEngaged);
+                string seatStackId = hasSeatStack ? seat.SeatId : string.Empty;
+                _items.Add(OfficeHybridDepthItem.Furniture(
+                    new OfficeDepthItem(
+                        FurniturePrefix + furniture.FurnitureId,
+                        furniture.Origin.X,
+                        furniture.Origin.Y,
+                        maxX,
+                        maxY,
+                        BasePriority),
+                    isChair
+                        ? OfficeHybridDepthRole.ChairBase
+                        : OfficeHybridDepthRole.FurnitureBase,
+                    furniture.KindId + ":base",
+                    furniture.FurnitureId,
+                    seatStackId,
+                    isChair ? SeatChairBasePlane : SeatDeskBasePlane));
                 if (_furniturePresenter.HasEnabledFrontOverlay(furniture.FurnitureId))
                 {
-                    ResolveForegroundDepth(
-                        furniture,
-                        out int frontMinX,
-                        out int frontMinY,
-                        out int frontMaxX,
-                        out int frontMaxY,
-                        out int frontPriority);
-                    _items.Add(new OfficeDepthItem(
-                        FrontPrefix + furniture.FurnitureId,
-                        frontMinX,
-                        frontMinY,
-                        frontMaxX,
-                        frontMaxY,
-                        frontPriority));
+                    OfficeHybridDepthRole frontRole = !hasSeatStack || !foregroundEngaged
+                        ? OfficeHybridDepthRole.FurnitureFront
+                        : isChair
+                            ? OfficeHybridDepthRole.ChairFront
+                            : OfficeHybridDepthRole.DeskFront;
+                    int frontPlane = !hasSeatStack
+                        ? 0
+                        : foregroundEngaged
+                            ? isChair
+                                ? SeatChairFrontEngagedPlane
+                                : SeatDeskFrontEngagedPlane
+                            : isChair
+                                ? SeatChairFrontReleasedPlane
+                                : SeatDeskFrontReleasedPlane;
+                    _items.Add(OfficeHybridDepthItem.Furniture(
+                        new OfficeDepthItem(
+                            FrontPrefix + furniture.FurnitureId,
+                            furniture.Origin.X,
+                            furniture.Origin.Y,
+                            maxX,
+                            maxY,
+                            isChair && foregroundEngaged
+                                ? ChairFrontPriority
+                                : FrontPriority),
+                        frontRole,
+                        furniture.KindId + ":front",
+                        furniture.FurnitureId,
+                        seatStackId,
+                        frontPlane));
                 }
             }
 
             if (actors != null)
             {
+                ResolveGridBasis(
+                    out Vector2 gridOriginWorld,
+                    out Vector2 basisXWorld,
+                    out Vector2 basisYWorld,
+                    out double basisDeterminant);
                 foreach (OfficeRuntimeAgent actor in actors)
                 {
                     if (actor == null || !actor.isActiveAndEnabled) continue;
                     SpriteRenderer renderer = actor.PresentationRenderer;
                     if (renderer == null || !renderer.enabled) continue;
-                    OfficeGridCoordinate cell = ResolveActorCell(actor);
-                    // A seated actor shares the chair's cell and must draw in front of it.
-                    _items.Add(OfficeDepthItem.Cell(
+                    ResolveActorGridContact(
+                        actor.Position,
+                        gridOriginWorld,
+                        basisXWorld,
+                        basisYWorld,
+                        basisDeterminant,
+                        out int pointXQ,
+                        out int pointYQ);
+                    bool hasSeatStack = actor.IsOccupyingSeat &&
+                                        actor.ActiveSeatId.Length > 0 &&
+                                        _seatsById.ContainsKey(actor.ActiveSeatId);
+                    _items.Add(OfficeHybridDepthItem.Actor(
                         ActorPrefix + actor.AgentId,
-                        cell.X,
-                        cell.Y,
-                        actor.IsOccupyingSeat ? OccupantPriority : BasePriority));
+                        pointXQ,
+                        pointYQ,
+                        "office-runtime-actor",
+                        actor.AgentId,
+                        hasSeatStack ? actor.ActiveSeatId : string.Empty,
+                        hasSeatStack
+                            ? actor.IsSeatForegroundOcclusionEngaged
+                                ? SeatActorEngagedPlane
+                                : SeatActorReleasedPlane
+                            : 0));
                     _actorRenderers[actor.AgentId] = renderer;
+                    _actorAgents[actor.AgentId] = actor;
+                    if (hasSeatStack && actor.IsSeatForegroundOcclusionEngaged)
+                    {
+                        _items.Add(OfficeHybridDepthItem.Actor(
+                            UpperActorPrefix + actor.AgentId,
+                            pointXQ,
+                            pointYQ,
+                            "office-runtime-seated-upper-body",
+                            actor.AgentId + ":upper-body",
+                            actor.ActiveSeatId,
+                            SeatActorUpperBodyEngagedPlane));
+                    }
                 }
             }
 
             LastItemCount = _items.Count;
-            IReadOnlyDictionary<string, int> orders = OfficeIsometricDepth.ResolveSortingOrders(_items);
+            IReadOnlyDictionary<string, int> orders =
+                OfficeHybridContinuousDepth.ResolveSortingOrders(_items);
             foreach (KeyValuePair<string, int> entry in orders)
             {
                 if (entry.Key.StartsWith(FurniturePrefix, StringComparison.Ordinal))
@@ -150,49 +233,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         entry.Value);
                     continue;
                 }
+                if (entry.Key.StartsWith(UpperActorPrefix, StringComparison.Ordinal)) continue;
                 string agentId = entry.Key.Substring(ActorPrefix.Length);
                 if (_actorRenderers.TryGetValue(agentId, out SpriteRenderer renderer) && renderer != null)
                     renderer.sortingOrder = entry.Value;
             }
+            foreach (KeyValuePair<string, OfficeRuntimeAgent> entry in _actorAgents)
+            {
+                if (orders.TryGetValue(UpperActorPrefix + entry.Key, out int upperBodyOrder))
+                    entry.Value.ApplySeatedUpperBodyProtection(upperBodyOrder);
+                else
+                    entry.Value.ClearSeatedUpperBodyProtection();
+            }
             RecordSeatingDepthSamples(actors, orders);
         }
 
-        private void ResolveForegroundDepth(
+        private bool TryResolveSeatStack(
             PlacedOfficeFurniture furniture,
-            out int minX,
-            out int minY,
-            out int maxX,
-            out int maxY,
-            out int priority)
+            out OfficeSeatSlot seat,
+            out bool foregroundEngaged)
         {
-            minX = furniture.Origin.X;
-            minY = furniture.Origin.Y;
-            maxX = furniture.Origin.X + furniture.Width - 1;
-            maxY = furniture.Origin.Y + furniture.Height - 1;
-            priority = FrontPriority;
-            if (!_seatsByFurnitureId.TryGetValue(furniture.FurnitureId, out OfficeSeatSlot seat) ||
-                !_activeSeatOccupants.TryGetValue(seat.SeatId, out OfficeRuntimeAgent occupant)) return;
-
-            if (occupant.IsSeatForegroundOcclusionEngaged)
+            foregroundEngaged = false;
+            if (!_seatsByFurnitureId.TryGetValue(furniture.FurnitureId, out seat) ||
+                !_activeSeatOccupants.TryGetValue(seat.SeatId, out OfficeRuntimeAgent occupant))
             {
-                // Both redraw masks bind to the interaction socket while the body is behind their
-                // foreground planes. This lets a 2x1 desk front share depth with its operator even
-                // though the desk base keeps its full semantic footprint.
-                minX = maxX = seat.Cell.X;
-                minY = maxY = seat.Cell.Y;
-                priority = string.Equals(
-                    furniture.FurnitureId,
-                    seat.ChairFurnitureId,
-                    StringComparison.Ordinal)
-                    ? ChairFrontPriority
-                    : FrontPriority;
-                return;
+                seat = null;
+                return false;
             }
-
-            // The reservation remains active during the exit. Once the actor crosses the chair
-            // plane, keep the redraw mask with the furniture base so it cannot slice the departing
-            // body merely because the seat claim has not yet been released.
-            priority = BasePriority;
+            foregroundEngaged = occupant.IsSeatForegroundOcclusionEngaged;
+            return true;
         }
 
         private void RecordSeatingDepthSamples(
@@ -236,17 +305,49 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
         }
 
-        private OfficeGridCoordinate ResolveActorCell(OfficeRuntimeAgent actor)
+        private void ResolveGridBasis(
+            out Vector2 originWorld,
+            out Vector2 basisXWorld,
+            out Vector2 basisYWorld,
+            out double determinant)
         {
-            if (actor.IsSeatForegroundOcclusionEngaged && actor.ActiveSeatId.Length > 0)
-            {
-                foreach (OfficeSeatSlot seat in _grid.SeatSlots)
-                {
-                    if (string.Equals(seat.SeatId, actor.ActiveSeatId, StringComparison.Ordinal))
-                        return seat.Cell;
-                }
-            }
-            return _presenter.NearestCell(actor.transform.position);
+            Vector3 origin = _presenter.CellCenterWorld(new OfficeGridCoordinate(0, 0));
+            Vector3 basisX = _grid.Width > 1
+                ? _presenter.CellCenterWorld(new OfficeGridCoordinate(1, 0)) - origin
+                : new Vector3(
+                    OfficeGridTilemapPresenter.TileWorldWidth * 0.5f,
+                    OfficeGridTilemapPresenter.TileWorldHeight * 0.5f,
+                    0f);
+            Vector3 basisY = _grid.Height > 1
+                ? _presenter.CellCenterWorld(new OfficeGridCoordinate(0, 1)) - origin
+                : new Vector3(
+                    -OfficeGridTilemapPresenter.TileWorldWidth * 0.5f,
+                    OfficeGridTilemapPresenter.TileWorldHeight * 0.5f,
+                    0f);
+            originWorld = new Vector2(origin.x, origin.y);
+            basisXWorld = new Vector2(basisX.x, basisX.y);
+            basisYWorld = new Vector2(basisY.x, basisY.y);
+            determinant = (double)basisXWorld.x * basisYWorld.y -
+                          (double)basisXWorld.y * basisYWorld.x;
+            if (Math.Abs(determinant) <= 0.000000001d)
+                throw new InvalidOperationException("Office grid basis is singular.");
+        }
+
+        private static void ResolveActorGridContact(
+            Vector2 actorWorld,
+            Vector2 originWorld,
+            Vector2 basisXWorld,
+            Vector2 basisYWorld,
+            double determinant,
+            out int pointXQ,
+            out int pointYQ)
+        {
+            double deltaX = actorWorld.x - originWorld.x;
+            double deltaY = actorWorld.y - originWorld.y;
+            double gridX = (deltaX * basisYWorld.y - deltaY * basisYWorld.x) / determinant;
+            double gridY = (basisXWorld.x * deltaY - basisXWorld.y * deltaX) / determinant;
+            pointXQ = OfficeHybridContinuousDepth.Quantize(gridX);
+            pointYQ = OfficeHybridContinuousDepth.Quantize(gridY);
         }
     }
 }
