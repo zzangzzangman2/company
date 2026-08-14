@@ -128,6 +128,9 @@ namespace FamilyCompany.Presentation.Unity
 
         public bool IsOpen => _open;
         public bool WorldInteractionSuppressed => _worldInteractionSuppressed;
+        public GameState BoundGameStateForQa => _boundGameState;
+        public StockMarketRuntimeSession RuntimeSessionForQa => _runtimeSession;
+        public int RuntimeSessionCreationCountForQa { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallAfterSceneLoad()
@@ -170,7 +173,7 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
 
-            if (Input.GetKeyDown(KeyCode.F3)) ToggleNow();
+            if (_open && Input.GetKeyDown(KeyCode.F3)) CloseNow();
             if (!_open)
             {
                 FlushRuntimeToGameState();
@@ -561,9 +564,8 @@ namespace FamilyCompany.Presentation.Unity
 
             if (!_open)
             {
-                var entry = new Rect(Screen.width - 190f, 18f, 172f, 46f);
-                DrawSolid(entry, new Color(0.08f, 0.16f, 0.28f, 0.96f));
-                if (GUI.Button(entry, "F3  주식시장", _buttonStyle)) OpenNow();
+                // MainNavigationHudPresenter owns the only office-to-market route:
+                // Investment hub -> Stock Market. F3 remains a close shortcut only while open.
                 return;
             }
 
@@ -1457,6 +1459,7 @@ namespace FamilyCompany.Presentation.Unity
                         _marketMinute,
                         _knownBrokerageAssetIds);
                     _runtimeSession = binding.Session;
+                    RuntimeSessionCreationCountForQa++;
                     _playbackIndex = Mathf.Clamp(binding.PlaybackIndex, 0, PlaybackLabels.Length - 1);
                     _realtimeClock.Restore(binding.RealtimeResidualSeconds);
                 }
@@ -1473,6 +1476,7 @@ namespace FamilyCompany.Presentation.Unity
                     if (!nextSession.TryApplyBrokerageState(accountState, out var error))
                         throw new InvalidOperationException($"Trading-date brokerage carry failed: {error}");
                     _runtimeSession = nextSession;
+                    RuntimeSessionCreationCountForQa++;
                     _realtimeClock.Reset();
                 }
 

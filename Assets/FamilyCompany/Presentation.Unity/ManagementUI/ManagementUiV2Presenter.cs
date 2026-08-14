@@ -118,7 +118,9 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             RefreshSafeAreaIfNeeded();
 
             var screen = _bootstrap.UiScreen;
-            var officeVisible = screen == PrototypeUiScreen.Playing;
+            // The compact top/bottom main navigation HUD owns the normal office screen.
+            // Keep this legacy observation HUD built for regression compatibility, but hidden.
+            var officeVisible = false;
             var managementVisible = screen == PrototypeUiScreen.Management;
             if (_officeHudRoot.activeSelf != officeVisible) _officeHudRoot.SetActive(officeVisible);
             if (_managementRoot.activeSelf != managementVisible) _managementRoot.SetActive(managementVisible);
@@ -129,6 +131,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
                 _nextLiveRefresh = 0f;
             }
 
+            if (!officeVisible && !managementVisible) return;
             if (Time.unscaledTime < _nextLiveRefresh) return;
             _nextLiveRefresh = Time.unscaledTime + 0.2f;
             RefreshLiveLabels();

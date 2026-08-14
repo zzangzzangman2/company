@@ -1,0 +1,328 @@
+{
+  "contractVersion": "family-company-main-navigation-imagegen-v2",
+  "generator": "OpenAI built-in image_gen",
+  "fallbackUsed": false,
+  "threadGenerationRoot": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf",
+  "exactPromptReconstruction": "For prefixRef records, concatenate promptPrefixes[prefixRef], join, and suffix exactly. For templateRef records, replace {label} once with label. Records with prompt contain the complete exact prompt.",
+  "references": {
+    "rejectedFailureReference": "C:/Users/godho/AppData/Local/Temp/codex-clipboard-25d23518-c4f6-4074-97fb-aea9b5a76e4a.png",
+    "visualTargetProjectPath": "Assets/Art/UI/Resources/MainNavigationV2/Reference/main_navigation_v2_visual_target.png"
+  },
+  "promptPrefixes": {
+    "frameSurface": "Use case: stylized-concept\nAsset type: shippable game UI frame\nInput images: Image 1 is the approved Main Navigation V2 visual target and style reference only.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral accent #F27662, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4\nConstraints: genuinely transparent background; no text; no letters; no numbers; no icons; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; no baked game world; clean alpha with no halo.",
+    "speedState": "Use case: stylized-concept\nAsset type: shippable game UI frame — segmented speed control state\nInput images: Image 1 is the approved Main Navigation V2 visual target and style reference only.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges\nComposition/framing: one single centered front-facing rounded rectangular segment only; identical practical silhouette across states; completely empty center for live TMP speed text; symmetrical corners and uniform stretch-safe edges; generous genuinely transparent padding; designed for Unity 9-slice and a rendered size around 92x48px.\nConstraints: genuinely transparent background; no text; no letters; no numbers; no play/pause arrows; no icons; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; clean alpha with no halo.",
+    "tabState": "Use case: stylized-concept\nAsset type: shippable game UI frame — bottom navigation tab state\nInput images: Image 1 is the approved Main Navigation V2 visual target and style reference only.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges\nComposition/framing: one single centered front-facing wide rounded tab plate only; identical practical silhouette across states; empty left icon-safe area and empty right TMP label-safe area; symmetrical corners, uniform stretch-safe edges, restrained close shadow, generous genuinely transparent padding; designed for Unity 9-slice at about 202x76px.\nConstraints: genuinely transparent background; no text; no letters; no numbers; no icons; no logo; no watermark; no black rectangular bar; no table cell or gray wireframe; no casino/neon/glass/SF metal; clean alpha with no halo.",
+    "bottomIcon": "Use case: stylized-concept\nAsset type: shippable game UI icon — bottom navigation\nInput images: Image 1 is the approved Main Navigation V2 visual target and style reference only.\nStyle/medium: polished casual management tycoon 2D painted icon with pixel-friendly crisp edges; original friendly design; no coarse black outline\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4\nComposition/framing: one compact centered icon cluster only; gentle three-quarter isometric view; strong near-square silhouette; generous transparent padding; readable at 36–44px; clean alpha edge with no halo\nConstraints: genuinely transparent background with alpha zero outside the icon; no text; no letters; no numbers; no logo; no watermark; no badge plate; no baked game world; no casino/neon/glass/SF metal; no photorealism.",
+    "contentSurface": "Use case: stylized-concept\nAsset type: shippable game UI frame\nInput images: Image 1 is the approved Main Navigation V2 visual target and style reference only.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4\nConstraints: genuinely transparent background with alpha zero outside the object; no text; no letters; no numbers; no icons; no logo; no watermark; no black rectangular bar; no flat gray wireframe; no casino/neon/glass/SF metal; no baked game world; clean alpha with no halo.",
+    "compactFrame": "Use case: stylized-concept. Asset type: shippable game UI frame. Style/medium: polished modern casual management tycoon 2D painted UI with pixel-friendly crisp edges. Color palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662 accent, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4. Composition/framing: one centered standalone asset, generous genuinely transparent padding, clean symmetric geometry, strong silhouette, stretch-safe empty center where applicable. Constraints: genuinely transparent background with clean alpha; no text; no letters; no numbers; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino styling; no neon; no glass; no sci-fi metal; no baked game world; no extra icon or pictogram; no cast shadow extending beyond the transparent padding.",
+    "investmentIcon": "Use case: stylized-concept. Asset type: shippable game UI icon. Style/medium: polished modern casual management tycoon 2D painted icon with pixel-friendly crisp edges and restrained volume. Color palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662 accent, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4. Composition/framing: exactly one centered standalone icon, generous genuinely transparent padding, strong compact silhouette, orthographic front or gentle three-quarter view, readable at 48 to 64 pixels. Constraints: genuinely transparent background with clean alpha; no frame; no card; no text; no letters; no numbers; no logo; no watermark; no real company branding; no black rectangular bar; no gray wireframe; no casino styling; no neon; no glass; no sci-fi metal; no baked game world; no detached decorative particles."
+  },
+  "promptTemplates": {
+    "alphaCleanup": "Use case: stylized-concept. Asset type: shippable game UI frame. Primary request: alpha-cleanup edit of the provided {label}. Preserve the exact existing painted asset shape, palette, proportions, empty center, highlights, and border. Remove the entire baked black or dark background and replace it with genuine transparent alpha, including all four corners and outer padding. Reconstruct clean anti-aliased edge pixels without dark fringe or alpha halo. Do not redesign, add, remove, crop, stretch, or distort the asset. Keep generous transparent padding. Constraints: genuinely transparent background; no text; no logo; no watermark; no black canvas; no gray canvas; no extra symbol; no baked world."
+  },
+  "assets": [
+    {
+      "id": "visual-target",
+      "outputId": "exec-47144389-6997-4e41-8dd5-a40d25e3018a",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Reference/main_navigation_v2_visual_target.png",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable 1920x1080 game UI visual target / high-fidelity implementation mockup\nInput images: Image 1 is a REJECTED current Family Company Unity screenshot and a failure reference only. Preserve the recognizable isometric pixel office as the world context, but do not reuse its black top bar, black bottom table, thick double modal frame, flat gray cards, small type, or weak selected state.\nPrimary request: design a fully implementable modern casual management-tycoon HUD and Investment hub for a 1920x1080 desktop game. Show a light floating top HUD with only three blank live-text regions (company badge left, date/time badge centered, three-segment speed control right), a single floating bottom navigation dock with five spacious tabs, and an open central Investment modal. Make the stock-market card clearly featured and clickable; arrange bank/loan, property, angel investment, and M&A as four smaller supporting cards. Keep the office visible outside the modal with only a soft 20–30% warm dim.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges; shippable product UI, not concept art; original design with friendly notebook/folder/coin/chart motifs.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4; high contrast dark body-copy regions, no light-gray body text.\nComposition/framing: exact practical desktop proportions. Top HUD 24–32px side margins and 62–72px tall. Bottom dock floats 18–28px above the edge and is 88–104px tall, with five large icon-and-label tabs; selected tab uses a coral/gold plate and restrained elevation. Central modal approximately 1120x660 with thin border under 5% of content size, large header icon, title/description-safe blank region, close control, generous 20–28px card padding and 14–20px gaps. Featured stock card has the strongest teal/coral hierarchy. Other cards form a clean responsive grid.\nText handling: render no letters, no words, no numbers, no fake glyphs. Leave intentional clean blank areas for Unity TextMeshPro company name, Korean date/time, speed labels, tab labels, modal title, descriptions, prices, and status text.\nConstraints: implementable rectangles and 9-slice-friendly surfaces; clear hit targets; genuinely polished; no logos; no watermark; no baked UI text; no black rectangular bar; no flat gray wireframe; no casino/neon/glass/SF metal; no giant empty strip; no thick double frame; no baked game-world replacement.\nAvoid: copying a specific commercial game's assets; mobile casino gloss; neon glow; glassmorphism; coarse black outlines; cramped table cells; tiny body copy; excessive ornaments; distorted perspective UI."
+    },
+    {
+      "id": "top-hud",
+      "outputId": "exec-f66c5671-ea0a-4c8d-a2a6-197636d2c081",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/top_hud_backplate_v2.png",
+      "prompt": { "prefixRef": "frameSurface", "join": "\n", "suffix": "Primary request: one single floating top HUD backplate for a 1920x1080 desktop management game, a long shallow warm-cream rounded panel with a fine clear-teal inner keyline, tiny restrained soft-gold corner details, and a very subtle warm painted shadow contained close to the object.\nComposition/framing: one centered extra-wide horizontal object only; perfectly front-facing and symmetrical; uniform straight edges; large completely empty stretch-safe center; consistent 18–24px visual edge thickness; generous transparent padding; designed for Unity 9-slice and a rendered height of 68px.\nAvoid: compartments, badges, buttons, black fill, thick double frame, perspective, long cast shadow, ornaments crossing the center." },
+      "spriteBorder": [80, 52, 80, 52]
+    },
+    {
+      "id": "company-badge",
+      "outputId": "exec-e1109f6a-ea0f-4ed9-ade4-d490ee3f82d9",
+      "parentOutputId": "exec-c5c988df-2645-421e-a85e-2dfece557133",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/company_badge_v2.png",
+      "prompt": { "templateRef": "alphaCleanup", "label": "company name badge/crest background" },
+      "spriteBorder": [250, 80, 120, 80]
+    },
+    {
+      "id": "time-badge",
+      "outputId": "exec-32435064-3fe0-4e58-aefe-6bc2d4d72e7d",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/time_badge_v2.png",
+      "prompt": { "prefixRef": "frameSurface", "join": "\n", "suffix": "Primary request: one single date-and-time badge background for the center of a desktop game HUD, compact warm ivory pill with a small clear-teal calendar socket on the left, a fine soft-gold underline accent, and an empty high-contrast cream text field for live Korean date/time.\nComposition/framing: one centered wide pill object only; front-facing; symmetric corners; uniform stretch-safe edges; blank center; generous transparent padding; designed for Unity 9-slice at about 390x54px.\nAvoid: calendar icon details, text, numbers, black fill, thick bevel, perspective." },
+      "spriteBorder": [170, 82, 116, 82]
+    },
+    {
+      "id": "speed-normal",
+      "outputId": "exec-7ffbe945-6924-4262-8769-28b6388927e4",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/speed_normal_v2.png",
+      "prompt": { "prefixRef": "speedState", "join": "\n", "suffix": "Primary request: NORMAL state. Warm cream face with a pale-mint inset, thin clear-teal keyline, restrained soft-gold lower edge, and soft close shadow; calm but clearly interactive.\nColor palette: warm cream #FFF4D8, pale mint #DCECE4, clear teal #2F7771, soft gold #F2C35B, deep ink #203B3A.\nAvoid: selected coral fill, bright glow, pressed depression, black fill, thick outline." },
+      "spriteBorder": [70, 44, 70, 44]
+    },
+    {
+      "id": "speed-hover",
+      "outputId": "exec-ed00e072-8169-406e-aa9b-71dec96d6bfa",
+      "parentOutputId": "exec-5970bf52-fef7-441a-97a6-5e3ae5150e87",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/speed_hover_v2.png",
+      "prompt": { "templateRef": "alphaCleanup", "label": "hover-state speed segment frame" },
+      "spriteBorder": [70, 46, 70, 46]
+    },
+    {
+      "id": "speed-selected",
+      "outputId": "exec-70a8f00f-275a-4fb6-a032-880255e28d92",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/speed_selected_v2.png",
+      "prompt": { "prefixRef": "speedState", "join": "\n", "suffix": "Primary request: SELECTED state. Same silhouette as normal with a confident coral #F27662 face, warm cream inner highlight, soft-gold #F2C35B selected rim and a small restrained lifted base; unmistakably active at a glance while remaining tasteful.\nColor palette: coral #F27662, warm cream #FFF4D8, soft gold #F2C35B, deep green ink #203B3A.\nAvoid: neon glow, casino gloss, black fill, giant border, arrows or symbols." },
+      "spriteBorder": [70, 36, 70, 36]
+    },
+    {
+      "id": "speed-pressed",
+      "outputId": "exec-575fada8-5787-4393-8b2d-bdf7d500abfb",
+      "parentOutputId": "exec-18f147a4-c84b-40c0-94ba-43e0aac10de2",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/speed_pressed_v2.png",
+      "prompt": { "templateRef": "alphaCleanup", "label": "pressed-state speed segment frame" },
+      "spriteBorder": [70, 46, 70, 46]
+    },
+    {
+      "id": "bottom-dock",
+      "outputId": "exec-a4421d1e-b051-437e-8f36-c7ec0a1c027a",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/bottom_dock_v2.png",
+      "prompt": { "prefixRef": "frameSurface", "join": "\n", "suffix": "Primary request: one single floating bottom navigation dock backplate for five management tabs, a long warm-cream rounded dock with pale-mint inner surface, thin clear-teal base shadow, soft-gold corner pins, and five tabs worth of calm negative space; modern friendly desktop tycoon UI.\nComposition/framing: one centered extra-wide horizontal object only; front-facing and symmetrical; uniform stretch-safe straight edges and empty center; restrained close shadow; generous transparent padding; designed for Unity 9-slice and rendered around 1120x100px.\nAvoid: pre-drawn tab separators, icons, text, black cells, table-grid look, thick frame, perspective, giant ornaments." },
+      "spriteBorder": [120, 82, 120, 82]
+    },
+    {
+      "id": "tab-normal",
+      "outputId": "exec-3b5510e9-07c7-4236-a796-df020de99c1f",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/tab_normal_v2.png",
+      "prompt": { "prefixRef": "tabState", "join": "\n", "suffix": "Primary request: NORMAL state. Warm ivory face, subtle pale-mint lower wash, thin clear-teal keyline, tiny soft-gold corner pin details; calm, friendly and clearly clickable.\nColor palette: warm cream #FFF4D8, pale mint #DCECE4, clear teal #2F7771, soft gold #F2C35B, deep ink #203B3A.\nAvoid: selected coral face, glow, black fill, thick dark outline, pressed depression." },
+      "spriteBorder": [104, 70, 104, 70]
+    },
+    {
+      "id": "tab-hover",
+      "outputId": "exec-0fcb2743-2676-4521-893c-88bc1a168480",
+      "referencedProjectAsset": "Assets/Art/UI/Resources/MainNavigationV2/Frames/tab_normal_v2.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/tab_hover_v2.png",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI frame. Primary request: create the HOVER state of the provided bottom navigation tab frame while preserving its exact outer silhouette, rounded-corner geometry, proportions, corner ornaments, blank center, and padding. Change only the interactive paint treatment: slightly brighter warm cream center, clearer teal keyline, restrained coral lower-edge accent, and a tiny soft-gold top highlight. Keep all four corners and every edge in precisely the same location so Unity SpriteSwap does not visibly change shape. Style/medium: polished modern casual management tycoon 2D painted UI with pixel-friendly crisp edges. Color palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4. Composition/framing: one centered standalone front-facing horizontal tab, same canvas and generous genuinely transparent padding as the input, empty uniform center, 9-slice safe. Constraints: genuinely transparent background with clean alpha; no redesign; no text; no letters; no numbers; no icon; no logo; no watermark; no black bar; no gray wireframe; no neon; no glass; no casino; no cast shadow beyond existing padding.",
+      "spriteBorder": [104, 92, 104, 92]
+    },
+    {
+      "id": "tab-selected",
+      "outputId": "exec-93e5a917-1a2c-4aa3-82a3-3c8c006357f7",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/tab_selected_v2.png",
+      "prompt": { "prefixRef": "tabState", "join": "\n", "suffix": "Primary request: SELECTED state. Same silhouette with coral #F27662 selected face, warm-cream inset label area, clear soft-gold corner caps and a restrained raised base; unmistakably active without glow.\nColor palette: coral #F27662, warm cream #FFF4D8, soft gold #F2C35B, clear teal #2F7771, deep ink #203B3A.\nAvoid: casino gloss, neon, black fill, giant border, excessive bevel." },
+      "spriteBorder": [104, 70, 104, 70]
+    },
+    {
+      "id": "tab-pressed",
+      "outputId": "exec-cfe9b455-d291-4a7f-af7a-4c7246182571",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/tab_pressed_v2.png",
+      "prompt": { "prefixRef": "tabState", "join": "\n", "suffix": "Primary request: PRESSED state. Same silhouette, gently depressed with deeper teal face, coral lower accent, warm cream inner rim, reduced shadow; tactile feedback and still high contrast.\nColor palette: deeper clear teal #286862, coral #F27662, warm cream #FFF4D8, deep green ink #203B3A.\nAvoid: black fill, neon, selected gold elevation, exaggerated 3D extrusion." },
+      "spriteBorder": [104, 66, 104, 66]
+    },
+    {
+      "id": "modal-frame",
+      "outputId": "exec-5756e741-3981-4f91-b876-b8ca3aae55de",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/modal_frame_v2.png",
+      "prompt": { "prefixRef": "contentSurface", "join": "\n", "suffix": "Primary request: one single management/content modal frame for a 1920x1080 desktop tycoon UI, warm cream surface with an extremely thin clear-teal keyline, tiny soft-gold corner pins, very restrained coral corner accents, and a subtle close shadow; the entire center is calm and empty for live UI.\nComposition/framing: one centered front-facing wide rounded rectangle only; approximately 1120:660 aspect; border thickness under 5% of the content area; no inner nested frame; symmetric corners and uniform stretch-safe edges; generous transparent padding; designed for Unity 9-slice.\nAvoid: thick double frame, picture-frame look, giant decorative corner, dark fill, perspective." },
+      "spriteBorder": [132, 132, 132, 132]
+    },
+    {
+      "id": "modal-header",
+      "outputId": "exec-b4755cc0-f7e5-4cd0-8285-858754c72b5b",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/modal_header_v2.png",
+      "prompt": { "prefixRef": "contentSurface", "join": "\n", "suffix": "Primary request: one single modal header strip, warm ivory with a pale-mint lower wash, a clear-teal left accent rail and a short soft-gold underline; large empty left/center regions for a 32px TMP title and 17px description, with empty right space for a separate close button.\nComposition/framing: one centered front-facing wide shallow rounded strip only; symmetric stretch-safe edges; blank center; restrained decoration; generous transparent padding; Unity 9-slice at about 1040x94px.\nAvoid: icons, close symbol, text, thick border, dark bar, perspective." },
+      "spriteBorder": [150, 92, 150, 92]
+    },
+    {
+      "id": "card-normal",
+      "outputId": "exec-ab574d2b-8de8-4734-a523-4d4a737bed5e",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/card_normal_v2.png",
+      "prompt": { "prefixRef": "contentSurface", "join": "\n", "suffix": "Primary request: reusable CARD NORMAL frame for management categories, warm ivory face with pale-mint inset wash, thin clear-teal keyline, small soft-gold corner pin, minimal close shadow; friendly and readable without looking like a gray rectangle.\nComposition/framing: one centered front-facing rounded rectangle only; empty icon/title/description/status-safe center; symmetric stretch-safe edges; generous transparent padding; Unity 9-slice around 480x176px.\nAvoid: featured dark teal fill, selected coral border, gray fill, thick outline, perspective." },
+      "spriteBorder": [142, 112, 142, 112]
+    },
+    {
+      "id": "card-hover",
+      "outputId": "exec-b9ebc205-74e3-4174-945c-7b2f4f9e830e",
+      "referencedProjectAsset": "Assets/Art/UI/Resources/MainNavigationV2/Frames/card_normal_v2.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/card_hover_v2.png",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI frame. Primary request: create the HOVER state of the provided normal management card frame while preserving its exact outer silhouette, rounded-corner geometry, proportions, four corner pins, inset blank panel, and padding. Change only the interaction treatment: brighter pale-mint inner wash, clearer teal keyline, restrained coral edge tick and soft-gold top highlight. Keep all corners and edges in precisely the same location for seamless Unity SpriteSwap. Style/medium: polished modern casual management tycoon 2D painted UI with pixel-friendly crisp edges. Color palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4. Composition/framing: one centered standalone front-facing wide card, same canvas and genuinely transparent padding as input, blank uniform center, 9-slice safe. Constraints: genuinely transparent background with clean alpha; no redesign; no text; no icon; no arrow; no badge; no logo; no watermark; no black bar; no gray wireframe; no neon; no glass; no casino.",
+      "spriteBorder": [142, 112, 142, 112]
+    },
+    {
+      "id": "card-disabled",
+      "outputId": "exec-ab6d4d2a-bce8-461b-ab72-26158ccdbf8e",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/card_disabled_v2.png",
+      "prompt": { "prefixRef": "contentSurface", "join": "\n", "suffix": "Primary request: reusable CARD DISABLED frame, warm desaturated cream and very pale mint face, muted teal keyline and a small soft-gold edge marker; dignified prepared/locked state with full readability, never gray.\nComposition/framing: one centered front-facing rounded rectangle only; empty center for TMP text; symmetric stretch-safe edges; minimal shadow; Unity 9-slice around 480x176px.\nAvoid: gray slab, low-contrast white-on-gray, lock icon, ribbon, black fill, opacity haze over the whole asset." },
+      "spriteBorder": [142, 112, 142, 112]
+    },
+    {
+      "id": "card-featured",
+      "outputId": "exec-36f2824b-d873-4af7-8f47-47da6785cf6f",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/card_featured_v2.png",
+      "prompt": { "prefixRef": "contentSurface", "join": "\n", "suffix": "Primary request: reusable CARD FEATURED frame for the live Stock Market route, confident clear-teal face with warm-cream inner text-safe panel, coral folded-corner accent and soft-gold selected keyline; unmistakably actionable and premium, with restrained elevation.\nComposition/framing: one centered front-facing wide rounded rectangle only; large empty center for 56px icon plus title, summary and status; symmetric stretch-safe edges except the small top-right accent kept inside the border; generous transparent padding; Unity 9-slice around 1040x190px.\nAvoid: stock chart icon, text, giant diagonal ribbon, black fill, neon glow, casino gloss, thick double frame." },
+      "spriteBorder": [188, 132, 188, 132]
+    },
+    {
+      "id": "card-featured-hover",
+      "outputId": "exec-b2f1521f-8a18-46fd-bb45-4119d5ce1fcf",
+      "referencedProjectAsset": "Assets/Art/UI/Resources/MainNavigationV2/Frames/card_featured_v2.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/card_featured_hover_v2.png",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI frame. Primary request: create a HOVER state of the provided featured Stock Market management card frame while preserving its exact outer silhouette, proportions, clear-teal face, warm-cream inner text-safe panel, coral folded-corner accent, soft-gold selected keyline, blank center, and padding. Change only the interaction treatment: slightly brighter teal, a restrained gold top-edge highlight and subtle coral emphasis contained inside the existing folded corner. Keep all corners, inner-panel boundaries and edges in precisely the same location for seamless Unity SpriteSwap. Style/medium: polished modern casual management tycoon 2D painted UI with pixel-friendly crisp edges. Color palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4. Composition/framing: one centered standalone front-facing wide featured card, same canvas and genuinely transparent padding as input, 9-slice safe empty center. Constraints: genuinely transparent background with clean alpha; no redesign; no text; no stock chart; no arrow; no badge; no logo; no watermark; no black bar; no gray wireframe; no neon; no glass; no casino.",
+      "spriteBorder": [188, 132, 188, 132]
+    },
+    {
+      "id": "close-normal",
+      "outputId": "exec-5b234e77-6c0a-47f2-a0cc-cec8139dfc0c",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/close_normal_v2.png",
+      "prompt": { "prefixRef": "compactFrame", "join": " ", "suffix": "Primary request: normal-state compact close/back button frame, rounded square warm-cream plate with slim teal border and tiny soft-gold corner accent. Empty center for a runtime TMP glyph. Symmetric, 9-slice friendly, readable at 52 by 52 pixels." },
+      "spriteBorder": [110, 110, 110, 110]
+    },
+    {
+      "id": "close-hover",
+      "outputId": "exec-108c4e93-c11b-4fab-9f87-3c4e9d0499ea",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/close_hover_v2.png",
+      "prompt": { "prefixRef": "compactFrame", "join": " ", "suffix": "Primary request: hover-state compact close/back button frame, rounded square pale-mint plate with brighter teal border and a restrained coral edge accent. Empty center for a runtime TMP glyph. Symmetric, 9-slice friendly, readable at 52 by 52 pixels." },
+      "spriteBorder": [110, 110, 110, 110]
+    },
+    {
+      "id": "close-pressed",
+      "outputId": "exec-cf69776a-1e5c-4e9c-8016-1bcb8677751c",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Frames/close_pressed_v2.png",
+      "prompt": { "prefixRef": "compactFrame", "join": " ", "suffix": "Primary request: pressed-state compact close/back button frame, rounded square light-teal plate with coral inset edge and subtle downward visual compression. Empty center for a runtime TMP glyph. Symmetric, 9-slice friendly, readable at 52 by 52 pixels." },
+      "spriteBorder": [110, 110, 110, 110]
+    },
+    {
+      "id": "bottom-company",
+      "outputId": "exec-dd181c5d-6716-4c78-bb5c-7ab6189a11d1",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Bottom/company_v2.png",
+      "prompt": { "prefixRef": "bottomIcon", "join": "\n", "suffix": "Primary request: COMPANY icon — a compact friendly early-2000s office building with a clear entrance, a few large windows, tiny awning, subtle upward-growth leaf detail; instantly reads as company/office.\nAvoid: written sign, people, city scene, tiny windows, real brand architecture." }
+    },
+    {
+      "id": "bottom-people",
+      "outputId": "exec-431c5959-f91f-45b8-842c-cf4b8acd604e",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Bottom/people_v2.png",
+      "prompt": { "prefixRef": "bottomIcon", "join": "\n", "suffix": "Primary request: PEOPLE icon — three friendly simplified office-worker bust silhouettes grouped clearly, center figure slightly forward, approachable professional clothing, diverse but non-identifiable.\nAvoid: anime portrait detail, real people, desk scene, crowded faces, text." }
+    },
+    {
+      "id": "bottom-business",
+      "outputId": "exec-ddccf432-687f-478d-b45f-46e0ce7445ff",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Bottom/projects_v2.png",
+      "prompt": { "prefixRef": "bottomIcon", "join": "\n", "suffix": "Primary request: BUSINESS icon — a sturdy project folder with one small gear and an upward report card without writing, practical and energetic, instantly reads as contracts/projects/business.\nAvoid: logos, document text, wrench clutter, many tiny parts." }
+    },
+    {
+      "id": "bottom-research",
+      "outputId": "exec-58304c13-9ba3-4385-aaed-5375fe11ece1",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Bottom/research_v2.png",
+      "prompt": { "prefixRef": "bottomIcon", "join": "\n", "suffix": "Primary request: RESEARCH icon — a round laboratory flask with teal liquid, three simple bubbles and one small soft-gold gear, instantly reads as research/technology.\nAvoid: formula text, neon liquid, lab scene, glass glare, excessive bubbles." }
+    },
+    {
+      "id": "bottom-investment",
+      "outputId": "exec-203ba296-6ca1-4ce4-b8ed-709bce686969",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Bottom/investment_v2.png",
+      "prompt": { "prefixRef": "bottomIcon", "join": "\n", "suffix": "Primary request: INVESTMENT icon — three chunky soft-gold coins beside a clear teal upward bar chart with a coral arrow, instantly reads as finance/investment/assets without currency symbols.\nAvoid: gambling, casino chips, currency letters, stock ticker text, excessive coins." }
+    },
+    {
+      "id": "investment-stock",
+      "outputId": "exec-e4cf4833-2953-4411-bbdf-d4f63e730dae",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Investment/stock_market_v2.png",
+      "prompt": { "prefixRef": "investmentIcon", "join": " ", "suffix": "Primary request: stock market icon, a friendly teal upward line chart on a small warm-cream ledger board paired with two soft-gold coins and one restrained coral point marker. Neutral industry symbolism only." }
+    },
+    {
+      "id": "investment-bank",
+      "outputId": "exec-96c8e489-d832-4866-92dd-edc0e626d74f",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Investment/bank_loan_v2.png",
+      "prompt": { "prefixRef": "investmentIcon", "join": " ", "suffix": "Primary request: bank and loan icon, a compact warm-cream bank building with teal roof and columns paired with one soft-gold coin, friendly and trustworthy, no currency letters or symbols." }
+    },
+    {
+      "id": "investment-real-estate",
+      "outputId": "exec-b926ed17-326b-45fc-b06d-6ac623df1c39",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Investment/real_estate_v2.png",
+      "prompt": { "prefixRef": "investmentIcon", "join": " ", "suffix": "Primary request: real estate icon, a small warm-cream office building and teal house key silhouette with one coral roof accent, simple and clearly readable." }
+    },
+    {
+      "id": "investment-angel",
+      "outputId": "exec-b5569dab-7ee2-46c9-b137-d3fc96f5da80",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Investment/angel_v2.png",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI icon. Primary request: angel investment icon represented by one plain unmarked soft-gold coin cradled by two small pale-mint wings, with one tiny coral four-point accent attached to the upper edge. Style/medium: polished modern casual management tycoon 2D painted icon with pixel-friendly crisp edges and restrained volume. Color palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4. Composition/framing: exactly one centered compact silhouette, generous genuinely transparent padding, readable at 48 to 64 pixels. Constraints: genuinely transparent background with clean alpha; the coin face must be completely blank and unmarked; no currency sign; no dollar sign; no text; no letter; no number; no glow; no dark vignette; no shadow field; no frame; no card; no logo; no watermark; no casino; no neon; no glass; no baked world; no detached particles."
+    },
+    {
+      "id": "investment-mergers",
+      "outputId": "exec-d9303c84-7ed9-4a8a-bb11-39fca718b2ff",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Icons/Investment/mergers_v2.png",
+      "prompt": { "prefixRef": "investmentIcon", "join": " ", "suffix": "Primary request: mergers and acquisitions icon, two interlocking warm-cream office buildings joined by a clear teal handshake shape with a restrained coral link accent, one cohesive compact silhouette." }
+    },
+    {
+      "id": "notification-badge",
+      "outputId": "exec-88a7de1b-49b7-47e0-a76f-6b1b33d9005a",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Markers/notification_badge_v2.png",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI marker background. Primary request: a tiny notification badge background for a casual management tycoon interface, compact rounded coral pill with a slim soft-gold rim and subtle cream inner highlight, center empty for runtime TMP text or a number. Style/medium: polished 2D painted UI with pixel-friendly crisp edges. Composition/framing: exactly one centered standalone marker, generous genuinely transparent padding, readable at 24 to 34 pixels, symmetric and stretch-safe. Constraints: genuinely transparent background; no text; no number; no symbol; no logo; no watermark; no black rectangle; no gray; no casino; no neon; no glass; no extra decoration.",
+      "spriteBorder": [82, 54, 82, 54]
+    },
+    {
+      "id": "coming-soon-ribbon",
+      "outputId": "exec-5a80c8dd-4c37-421f-8f78-181b932b6e04",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigationV2/Markers/coming_soon_ribbon_v2.png",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI ribbon marker background. Primary request: a compact locked-or-coming-soon status ribbon for a casual management tycoon feature card, pale-mint rounded horizontal tag with clear-teal border, small folded coral tail accents only at the far ends, blank center for runtime Korean TMP text. Style/medium: polished 2D painted UI with pixel-friendly crisp edges. Composition/framing: exactly one centered standalone marker, generous genuinely transparent padding, wide 3.2:1 aspect ratio, stretch-safe blank center, readable at 92 by 30 pixels. Constraints: genuinely transparent background; no lock icon; no text; no letters; no logo; no watermark; no black rectangle; no gray; no casino; no neon; no glass; no extra symbols.",
+      "spriteBorder": [102, 54, 102, 54]
+    }
+  ],
+  "discardedOrParentCalls": [
+    {
+      "outputId": "exec-c5c988df-2645-421e-a85e-2dfece557133",
+      "status": "parent input for accepted alpha-cleanup edit",
+      "prompt": { "prefixRef": "frameSurface", "join": "\n", "suffix": "Primary request: one single company-name badge background for the left side of a desktop game HUD, warm cream with a small clear-teal circular crest socket fused into the left edge, subtle coral pin accent and soft-gold keyline; the right two-thirds must be calm and empty for a live TextMeshPro company name.\nComposition/framing: one centered wide pill-shaped object only; perfectly front-facing; symmetrical stretch-safe top/bottom edges; empty text-safe center/right; generous transparent padding; designed for Unity 9-slice and a rendered size around 360x58px.\nAvoid: actual crest icon, building, text, letters, dark black backing, oversized decoration, perspective." }
+    },
+    {
+      "outputId": "exec-5970bf52-fef7-441a-97a6-5e3ae5150e87",
+      "status": "parent input for accepted alpha-cleanup edit",
+      "prompt": { "prefixRef": "speedState", "join": "\n", "suffix": "Primary request: HOVER state. Same silhouette as normal but with a brighter pale-mint face, slightly clearer teal rim, one subtle soft-gold highlight along the top edge, and a tiny restrained elevation; visibly hovered without glow.\nColor palette: bright ivory, pale mint #DCECE4, clear teal #2F7771, soft gold #F2C35B.\nAvoid: coral selected fill, neon glow, large shadow, black fill, thick outline." }
+    },
+    {
+      "outputId": "exec-18f147a4-c84b-40c0-94ba-43e0aac10de2",
+      "status": "parent input for accepted alpha-cleanup edit",
+      "prompt": { "prefixRef": "speedState", "join": "\n", "suffix": "Primary request: PRESSED state. Same silhouette as normal in a slightly depressed state: deeper clear-teal face, coral lower-edge accent, reduced shadow and a subtle inner dark-green-ink rim; strong tactile feedback without becoming black.\nColor palette: deeper teal #286862, coral #F27662, warm cream, deep green ink #203B3A.\nAvoid: selected gold elevation, neon, black fill, exaggerated 3D bevel, arrows or symbols." }
+    },
+    {
+      "outputId": "exec-0b5b53bc-8dc0-4fc7-b3a9-297bbc3f6c39",
+      "status": "discarded; hover silhouette drift",
+      "prompt": { "prefixRef": "tabState", "join": "\n", "suffix": "Primary request: HOVER state. Same silhouette with brighter pale mint, stronger clear-teal keyline, soft-gold top highlight and subtle two-pixel-friendly elevation; hovered but restrained.\nColor palette: bright cream, pale mint #DCECE4, clear teal #2F7771, soft gold #F2C35B.\nAvoid: selected coral fill, neon glow, huge shadow, black fill." }
+    },
+    {
+      "outputId": "exec-0e3271d9-a69b-446c-805f-5f86e825958d",
+      "status": "discarded; hover silhouette drift",
+      "prompt": { "prefixRef": "contentSurface", "join": "\n", "suffix": "Primary request: reusable CARD HOVER frame, same practical silhouette as normal but brighter pale mint, clearer teal edge, restrained coral top-right tick and soft-gold top highlight, subtle elevation; visibly hoverable without glow.\nComposition/framing: one centered front-facing rounded rectangle only; empty center; symmetric stretch-safe edges; shadow contained within close padding; Unity 9-slice around 480x176px.\nAvoid: black backdrop, neon glow, giant shadow, text, featured full teal fill." }
+    },
+    {
+      "outputId": "exec-09ea58ca-f577-4622-9d60-e2306f7d0f5e",
+      "status": "discarded after target-size 9-slice inspection; oval silhouette",
+      "prompt": { "prefixRef": "compactFrame", "join": " ", "suffix": "Primary request: hover-state frame for one compact bottom navigation tab, softly rounded horizontal plate, warm cream center, clear teal outline with a very restrained coral highlight along the lower edge, readable at 164 by 76 pixels. Keep the center fully empty and uniform, corners symmetric and suitable for 9-slice. Absolutely no dark backdrop, no gradient canvas, no arrow, no symbol." }
+    },
+    {
+      "outputId": "exec-4cbdda28-5b57-42a7-91c8-87deb9675ed4",
+      "status": "discarded after target-size 9-slice inspection; silhouette mismatch",
+      "prompt": { "prefixRef": "compactFrame", "join": " ", "suffix": "Primary request: hover-state reusable rectangular management feature card frame, warm cream empty center, slim clear-teal border, a restrained coral-and-gold highlight confined to the border only. Wide 2.1:1 aspect ratio. Keep the entire center blank and uniform for runtime text and icons, corners symmetric and suitable for 9-slice. Absolutely no arrow, chart, badge, folded corner, symbol, or decoration inside the center." }
+    },
+    {
+      "outputId": "exec-4e79b39a-0dfe-4951-a12b-d3e1acfbc51a",
+      "status": "discarded; generated currency mark",
+      "prompt": { "prefixRef": "investmentIcon", "join": " ", "suffix": "Primary request: angel investment icon, a soft-gold coin cradled by two small pale-mint wings with a tiny coral sparkle shape integrated into the silhouette, friendly rather than religious, no halo text." }
+    },
+    {
+      "outputId": "exec-21b006ea-fbe0-4160-be01-d4476606c08b",
+      "status": "discarded; original top HUD alpha was already preferable",
+      "prompt": { "templateRef": "alphaCleanup", "label": "top HUD frame/backplate" }
+    },
+    {
+      "outputId": "exec-ff9fa08e-efbf-4709-b720-b57ffce7e8a5",
+      "status": "discarded; original time badge alpha was already preferable",
+      "prompt": { "templateRef": "alphaCleanup", "label": "date and time central badge background" }
+    },
+    {
+      "outputId": "exec-e082d874-028c-48d2-aab9-410b869bf88b",
+      "status": "discarded; original dock alpha was already preferable",
+      "prompt": { "templateRef": "alphaCleanup", "label": "bottom navigation dock/backplate" }
+    }
+  ],
+  "postprocess": {
+    "script": "Tools/Prepare-MainNavigationV2Assets.ps1",
+    "framesAndMarkers": "Generated output is normalized to RGBA, invisible RGB is zeroed, connected neutral fallback backgrounds are removed only when no usable alpha exists, and external transparent padding is deterministically trimmed to an 8px gutter before Unity import.",
+    "icons": "Generated output is normalized to RGBA with clean invisible RGB and retained generous padding.",
+    "audit": "Every runtime PNG must report alpha 0..255, transparent corner alpha 0, at least one transparent pixel, and halo=0."
+  }
+}

@@ -12,6 +12,7 @@ using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.Prototype;
 using FamilyCompany.Presentation.Unity.ManagementUI;
+using FamilyCompany.Presentation.Unity.MainNavigation;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEngine;
 
@@ -92,6 +93,7 @@ namespace FamilyCompany.Presentation.Unity
         private PlayerOfficeWorkInteractor _playerWorkInteractor;
         private int _reportedOfficeTaskCount;
         private ManagementUiV2Presenter _managementUiPresenter;
+        private MainNavigationHudPresenter _mainNavigationHudPresenter;
         private float _worldTimeScale = 1f;
         private double _officeRealtimeAccumulatorSeconds;
         private bool _officePresentationWasLoading;
@@ -112,6 +114,7 @@ namespace FamilyCompany.Presentation.Unity
             InitializeNow();
             EnsureTitleMoneyRainRenderer();
             EnsureManagementUiPresenter();
+            EnsureMainNavigationHudPresenter();
             if (!Application.isPlaying) return;
             ConfigureDisplayDefaults();
             ShowMainMenuNow();
@@ -139,6 +142,7 @@ namespace FamilyCompany.Presentation.Unity
             TickOfficeRealtimeClock();
 
             if (!Input.GetKeyDown(KeyCode.Escape)) return;
+            if (_mainNavigationHudPresenter != null && _mainNavigationHudPresenter.TryHandleEscape()) return;
             switch (_screen)
             {
                 case PrototypeUiScreen.Playing:
@@ -186,6 +190,15 @@ namespace FamilyCompany.Presentation.Unity
             if (_managementUiPresenter == null) _managementUiPresenter = GetComponent<ManagementUiV2Presenter>();
             if (_managementUiPresenter == null) _managementUiPresenter = gameObject.AddComponent<ManagementUiV2Presenter>();
             _managementUiPresenter.Configure(this);
+        }
+
+        private void EnsureMainNavigationHudPresenter()
+        {
+            if (_mainNavigationHudPresenter == null)
+                _mainNavigationHudPresenter = GetComponent<MainNavigationHudPresenter>();
+            if (_mainNavigationHudPresenter == null)
+                _mainNavigationHudPresenter = gameObject.AddComponent<MainNavigationHudPresenter>();
+            _mainNavigationHudPresenter.Configure(this);
         }
 
         public void InitializeNow()
@@ -379,6 +392,7 @@ namespace FamilyCompany.Presentation.Unity
             _hasSession = true;
             _screen = PrototypeUiScreen.Playing;
             _managementUiPresenter?.ResetSessionView();
+            _mainNavigationHudPresenter?.ResetSessionView();
             _officeObservationCamera = true;
             ApplyOfficeObservationCamera(true);
             SetSimulationPaused(false);
@@ -444,6 +458,7 @@ namespace FamilyCompany.Presentation.Unity
                 _activeSlot = slot;
                 _hasSession = true;
                 _screen = PrototypeUiScreen.Playing;
+                _mainNavigationHudPresenter?.ResetSessionView();
                 _officeObservationCamera = true;
                 ApplyOfficeObservationCamera(true);
                 SetSimulationPaused(false);

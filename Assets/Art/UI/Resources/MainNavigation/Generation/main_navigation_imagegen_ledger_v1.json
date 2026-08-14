@@ -1,0 +1,108 @@
+{
+  "contractVersion": "family-company-main-navigation-imagegen-v1",
+  "tool": "OpenAI built-in image_gen",
+  "fallbackUsed": false,
+  "referenceImages": [
+    "Artifacts/FurnitureTileSnapQa/PlayerBuildGraphicsFinal/starter-office-modern-hud.png",
+    "Assets/Art/UI/Resources/ContractBoardV2/QA/contract_board_skin_kit_contact_v2.png"
+  ],
+  "assets": [
+    {
+      "id": "frame",
+      "generatedSource": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-04f541e5-e3cb-4c18-a3bd-0129d85b308b.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigation/main_nav_frame_v1.png",
+      "sha256": "5CFFBEEDDF36A650ACE0CC5949EDFE13E81D85BC66C566513B7434552A8933B2",
+      "postprocess": "Deterministic transparent-padding crop from generated 1672x941 source to (30,168)-(1642,745), final 1612x577 RGBA; artwork pixels otherwise unchanged.",
+      "promptLines": [
+        "Use case: stylized-concept",
+        "Asset type: game UI icon/frame — reusable 9-slice panel and tab frame",
+        "Input images: Image 1 is the current Family Company office HUD and warm isometric office color context; Image 2 is the approved contract-board UI skin contact sheet and is the primary UI material/style reference.",
+        "Primary request: create one single blank rounded rectangular frame for a casual family-company management tycoon game, suitable for a reusable 9-slice Unity UI panel or tab. The center must remain calm and empty for live TextMeshPro labels.",
+        "Style/medium: clean 2D painted / pixel-friendly hybrid; friendly warm silhouette; restrained early-2000s office charm; cream inner surface, deep charcoal-teal outer edge, dusty mint secondary rim, tiny restrained coral and honey-gold accents; crisp edges that remain readable over an isometric pixel office.",
+        "Composition/framing: one front-facing wide rounded rectangle only, centered, symmetrical corners, uniform straight edges, generous transparent padding on all sides, no perspective, no cast shadow extending far beyond the frame, no neighboring objects.",
+        "Constraints: genuinely transparent background outside the frame; no text; no letters; no numbers; no logo; no watermark; no icons; no characters; no decorative scene; do not create a sprite sheet; keep corner decoration minimal and edge thickness consistent so the frame can be 9-sliced; clear silhouette at small UI scale.",
+        "Avoid: neon, glassmorphism, sci-fi HUD, mobile casino styling, glossy gem buttons, excessive bevels, illegible micro-detail."
+      ]
+    },
+    {
+      "id": "company",
+      "generatedSource": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-85d4c89f-5ce6-4f84-82e9-ae80f6ca45e2.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigation/main_nav_icon_company_v1.png",
+      "sha256": "05DD7DB0B432E1AB576F2C810E86581F7F1CF88DF5C0A28DD4BAA792DB82C2EC",
+      "promptLines": [
+        "Use case: stylized-concept",
+        "Asset type: game UI icon/frame — main navigation icon for Company / Office",
+        "Input images: Image 1 is the current Family Company office HUD and warm isometric office color context; Image 2 is the approved contract-board UI skin contact sheet and is the primary UI material/style reference.",
+        "Primary request: one friendly small early-2000s Korean office-company building icon for a casual management tycoon navigation button, with a clear entrance, a few simple windows, and a tiny awning; it must read instantly as ‘company / office’ without any written sign.",
+        "Style/medium: clean 2D painted / pixel-friendly hybrid; warm and bright; crisp dark charcoal-teal colored outline; cream walls, dusty mint trim, honey wood and restrained coral accent; compatible with the existing isometric pixel office but not a pixel-art screenshot.",
+        "Composition/framing: one centered building only, gentle three-quarter isometric view, compact near-square silhouette, generous transparent padding, balanced weight, readable at 48–64 px.",
+        "Constraints: genuinely transparent background; no text; no letters; no numbers; no sign text; no logo; no watermark; no people; no ground scene; no circular badge or button background; no neighboring objects; no sprite sheet; clear silhouette and clean alpha edges.",
+        "Avoid: neon, glass, sci-fi, mobile casino gloss, photorealism, excessive micro-detail."
+      ]
+    },
+    {
+      "id": "people",
+      "generatedSource": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-9e1d6d63-8648-4bf7-8399-d0269acfe122.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigation/main_nav_icon_people_v1.png",
+      "sha256": "4745ADDDA70D43A533FBCD2894450166E8B05D3EFD8385B7006B258F49C32F88",
+      "promptLines": [
+        "Use case: stylized-concept",
+        "Asset type: game UI icon/frame — main navigation icon for Human Resources / Employees",
+        "Input images: Image 1 is the current Family Company office HUD and warm isometric office color context; Image 2 is the approved contract-board UI skin contact sheet and is the primary UI material/style reference.",
+        "Primary request: one friendly employees icon for a casual family-company management tycoon navigation button: three simplified office-worker bust silhouettes grouped clearly, with the center person slightly forward; professional but warm and approachable; no identifiable real person.",
+        "Style/medium: clean 2D painted / pixel-friendly hybrid; warm bright palette; crisp dark charcoal-teal colored outline; dusty mint, cream, coral and honey-gold clothing accents; compatible with the existing isometric pixel office.",
+        "Composition/framing: one centered compact group, strong near-square silhouette, front three-quarter character-icon view, generous transparent padding, clear facial silhouettes without tiny detail, readable at 48–64 px.",
+        "Constraints: genuinely transparent background; no text; no letters; no numbers; no logo; no watermark; no desk or scene; no circular badge or button background; no extra props; no sprite sheet; clean alpha edges.",
+        "Avoid: neon, glass, sci-fi, mobile casino gloss, photorealism, anime portrait detail, crowded composition."
+      ]
+    },
+    {
+      "id": "projects",
+      "generatedSource": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-667e357f-40d7-4be0-a819-3d9abce6a31e.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigation/main_nav_icon_projects_v1.png",
+      "sha256": "43CFCEBD7DF42CB7BFA5DB54D6AB4E85F86E19F942C7621C060F8C183DE817FD",
+      "promptLines": [
+        "Use case: stylized-concept",
+        "Asset type: game UI icon/frame — main navigation icon for Business / Projects",
+        "Input images: Image 1 is the current Family Company office HUD and warm isometric office color context; Image 2 is the approved contract-board UI skin contact sheet and is the primary UI material/style reference.",
+        "Primary request: one compact business-project icon for a casual family-company management tycoon navigation button: a sturdy open project folder with one small gear and a practical wrench crossing in front, clearly suggesting product development, client projects, outsourcing, operations and maintenance.",
+        "Style/medium: clean 2D painted / pixel-friendly hybrid; warm and bright; crisp dark charcoal-teal colored outline; dusty mint folder, cream paper shapes without writing, honey-gold gear, restrained coral detail; compatible with the existing isometric pixel office.",
+        "Composition/framing: one centered object cluster only, gentle three-quarter view, near-square silhouette, generous transparent padding, readable at 48–64 px, simple large shapes.",
+        "Constraints: genuinely transparent background; no text; no letters; no numbers; no writing on paper; no logo; no watermark; no people; no desk or scene; no circular badge or button background; no sprite sheet; clean alpha edges.",
+        "Avoid: neon, glass, sci-fi, mobile casino gloss, photorealism, excessive tiny parts."
+      ]
+    },
+    {
+      "id": "research",
+      "generatedSource": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-4c20b7d9-f0d1-4065-9494-15de16de3a5a.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigation/main_nav_icon_research_v1.png",
+      "sha256": "32A6FB368DB59FBBB467AF784145BC238166CD2B371F027F0AF25BDC041E34F0",
+      "promptLines": [
+        "Use case: stylized-concept",
+        "Asset type: game UI icon/frame — main navigation icon for Research / Technology",
+        "Input images: Image 1 is the current Family Company office HUD and warm isometric office color context; Image 2 is the approved contract-board UI skin contact sheet and is the primary UI material/style reference.",
+        "Primary request: one friendly research-and-technology icon for a casual family-company management tycoon navigation button: a sturdy round laboratory flask with a few simple bubbles, paired with one small gear behind it, clearly suggesting tech tree, efficiency upgrades and new methods.",
+        "Style/medium: clean 2D painted / pixel-friendly hybrid; warm and bright; crisp dark charcoal-teal colored outline; dusty mint / teal liquid, cream highlights, honey-gold gear and restrained coral accent; compatible with the existing isometric pixel office.",
+        "Composition/framing: one centered object cluster only, gentle three-quarter view, near-square silhouette, generous transparent padding, readable at 48–64 px, simple large shapes.",
+        "Constraints: genuinely transparent background; no text; no letters; no numbers; no formulas; no logo; no watermark; no people; no lab scene; no circular badge or button background; no sprite sheet; clean alpha edges.",
+        "Avoid: neon glow, glassmorphism, sci-fi holograms, mobile casino gloss, photorealism, excessive tiny bubbles."
+      ]
+    },
+    {
+      "id": "investment",
+      "generatedSource": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-dae5c052-23cc-4af2-9467-8344d09e3638.png",
+      "projectPath": "Assets/Art/UI/Resources/MainNavigation/main_nav_icon_investment_v1.png",
+      "sha256": "4C1E28AD174333DAEDF41CFE8D727B20DD2C33A819198962B49327171892EEF3",
+      "promptLines": [
+        "Use case: stylized-concept",
+        "Asset type: game UI icon/frame — main navigation icon for Investment / Finance / Assets",
+        "Input images: Image 1 is the current Family Company office HUD and warm isometric office color context; Image 2 is the approved contract-board UI skin contact sheet and is the primary UI material/style reference.",
+        "Primary request: one clear investment-and-assets icon for a casual family-company management tycoon navigation button: three chunky stacked coins in front of a simple upward bar chart with an arrow, clearly suggesting loans, stocks, property, angel investment and M&A without any currency letters.",
+        "Style/medium: clean 2D painted / pixel-friendly hybrid; warm and bright; crisp dark charcoal-teal colored outline; honey-gold coins, dusty mint chart, cream highlights and restrained coral accent; compatible with the existing isometric pixel office.",
+        "Composition/framing: one centered compact object cluster only, gentle three-quarter view, near-square silhouette, generous transparent padding, readable at 48–64 px, simple large shapes.",
+        "Constraints: genuinely transparent background; no text; no letters; no numbers; no currency symbols; no logo; no watermark; no people; no office scene; no circular badge or button background; no sprite sheet; clean alpha edges.",
+        "Avoid: neon, glass, sci-fi, mobile casino styling, slot-machine or gambling cues, photorealism, excessive micro-detail."
+      ]
+    }
+  ]
+}
