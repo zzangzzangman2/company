@@ -50,7 +50,7 @@ namespace FamilyCompany.Editor
                     totalBreaks = checked(totalBreaks + seedBreaks);
                     var capacity = ValidateCapacity(hourlySteps, seed);
                     utilizationSignatures.Add(BuildUtilizationSignature(hourlySteps, capacity));
-                    ValidateSaveV5RoundTrip(hourlySteps, seed);
+                    ValidateCurrentSaveRoundTrip(hourlySteps, seed);
                 }
 
                 var minimumDistinctSignatures = Math.Max(2, SeedCount / 4);
@@ -139,12 +139,12 @@ namespace FamilyCompany.Editor
                     }));
         }
 
-        private static void ValidateSaveV5RoundTrip(GameState source, int seed)
+        private static void ValidateCurrentSaveRoundTrip(GameState source, int seed)
         {
             var dto = GameSaveMapper.ToDto(source);
-            AssertEqual(7, dto.schemaVersion, $"seed {seed} save schema");
+            AssertEqual(8, dto.schemaVersion, $"seed {seed} save schema");
             var restored = GameSaveMapper.FromDto(dto);
-            AssertStateEqual(source, restored, $"seed {seed} save v5 round trip");
+            AssertStateEqual(source, restored, $"seed {seed} save v8 round trip");
         }
 
         private static void AssertStateEqual(GameState expected, GameState actual, string label)

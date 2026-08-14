@@ -71,6 +71,61 @@ namespace FamilyCompany.Simulation.Company
             }));
         }
 
+        public bool HasTransaction(string transactionId) =>
+            !string.IsNullOrWhiteSpace(transactionId) &&
+            _ledger.Any(item => string.Equals(item.TransactionId, transactionId, StringComparison.Ordinal));
+
+        /// <summary>Posts a capitalized office-furniture purchase. Call only after layout validation.</summary>
+        public void PurchaseOfficeFurniture(
+            string transactionId,
+            long elapsedMinute,
+            long amountWon,
+            string memo)
+        {
+            RequirePositive(amountWon);
+            if (amountWon > CashWon) throw new InvalidOperationException("회사 자금이 부족합니다.");
+            Post(new LedgerTransaction(transactionId, elapsedMinute, memo, new[]
+            {
+                new LedgerLine(AccountCode.OfficeFurnitureAssets, amountWon, 0),
+                new LedgerLine(AccountCode.Cash, 0, amountWon)
+            }));
+        }
+
+        /// <summary>
+        /// Disposes of a furniture asset at its configured resale value while preserving the
+        /// original purchase basis in the ledger. The difference is an explicit disposal loss.
+        /// </summary>
+        public void SellOfficeFurniture(
+            string transactionId,
+            long elapsedMinute,
+            long purchaseBasisWon,
+            long refundWon,
+            string memo,
+            bool capitalizedPurchase = true)
+        {
+            RequirePositive(purchaseBasisWon);
+            if (refundWon <= 0 || refundWon > purchaseBasisWon)
+                throw new ArgumentOutOfRangeException(nameof(refundWon));
+            checked { _ = CashWon + refundWon; }
+            if (!capitalizedPurchase)
+            {
+                Post(new LedgerTransaction(transactionId, elapsedMinute, memo, new[]
+                {
+                    new LedgerLine(AccountCode.Cash, refundWon, 0),
+                    new LedgerLine(AccountCode.OfficeFurnitureSaleIncome, 0, refundWon)
+                }));
+                return;
+            }
+            var lines = new List<LedgerLine>
+            {
+                new LedgerLine(AccountCode.Cash, refundWon, 0),
+                new LedgerLine(AccountCode.OfficeFurnitureAssets, 0, purchaseBasisWon)
+            };
+            long lossWon = purchaseBasisWon - refundWon;
+            if (lossWon > 0) lines.Insert(1, new LedgerLine(AccountCode.AssetDisposalLoss, lossWon, 0));
+            Post(new LedgerTransaction(transactionId, elapsedMinute, memo, lines));
+        }
+
         public void ChangeReputation(int delta)
         {
             Reputation = Math.Max(0, Math.Min(100, Reputation + delta));

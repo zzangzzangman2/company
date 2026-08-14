@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.OfficeGridView
@@ -53,7 +54,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             bool hasBounds = false;
             foreach (PlacedOfficeFurniture item in semanticGrid.Furniture)
             {
-                if (!visualCatalog.TryResolveWithMirror(
+                if (!OfficeBuildFurnitureVisualLibrary.TryResolve(
+                        visualCatalog,
                         item.KindId, item.Facing, out OfficeFurnitureVisualDefinition definition, out bool flipX))
                     throw new InvalidOperationException(
                         $"Furniture visual '{item.KindId}/{item.Facing}' has neither authored nor mirrored art.");
