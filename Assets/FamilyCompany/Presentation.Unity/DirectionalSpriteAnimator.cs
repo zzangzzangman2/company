@@ -118,6 +118,7 @@ namespace FamilyCompany.Presentation.Unity
             : _worldVelocity.sqrMagnitude > 0.0025f;
         public bool IsOfficeSeatingEntryPlanted =>
             !IsMoving &&
+            !HasPendingTileRootMovement &&
             (!_tileGaitStateInitialized || _tileGaitState.Phase == OfficeLocomotionPhase.Idle);
         public int ConfiguredFrameCount => walkFrames?.Length ?? 0;
         public int ConfiguredLocomotionTransitionFrameCount =>
@@ -182,6 +183,11 @@ namespace FamilyCompany.Presentation.Unity
             GaitDistance,
             OfficeLocomotionGaitRules.DefaultStrideLength);
         public float StrideLength => OfficeLocomotionGaitRules.DefaultStrideLength;
+
+        private bool HasPendingTileRootMovement =>
+            _tileDisplacementDirection &&
+            _tileFrameDisplacement.magnitude > OfficeSharedLocomotionRules.MinimumRootDisplacement &&
+            _tileFrameTravelDistance > OfficeSharedLocomotionRules.MinimumRootDisplacement;
 
         public void Configure(SpriteRenderer renderer, Sprite[] frames, float secondsPerFrame = 0.11f)
         {

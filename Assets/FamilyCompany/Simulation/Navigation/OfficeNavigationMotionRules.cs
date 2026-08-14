@@ -695,7 +695,7 @@ namespace FamilyCompany.Simulation.Navigation
         public const float MaximumFacingErrorDegrees = 22.5f;
         public const float MinimumFacingAlignmentDot = 0.9238795325f;
         private const float MinimumVectorSquared = 0.0000001f;
-        private const float MinimumRootDisplacement = 0.00001f;
+        public const float MinimumRootDisplacement = 0.00001f;
 
         public static OfficeSharedLocomotionFrameResult ResolveFrame(
             OfficeLocomotionFacingState facingState,
