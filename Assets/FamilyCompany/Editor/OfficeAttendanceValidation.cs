@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Presentation.Unity;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEditor;
@@ -26,6 +27,38 @@ namespace FamilyCompany.Editor
                     "Second actor must retain the stagger at 09:00.");
                 Require(OfficeAttendanceRules.HasArrived(day.AddHours(9).AddMinutes(3), 3),
                     "Fourth actor must arrive by 09:03.");
+                Require(!OfficeAutonomyCoordinator.IsAttendanceDoorSfxEligibleAt(
+                        day.AddHours(8).AddMinutes(59)),
+                    "Attendance door audio must remain gated before the shift.");
+                Require(OfficeAutonomyCoordinator.IsAttendanceDoorSfxEligibleAt(day.AddHours(9)),
+                    "The canonical 09:00 attendance start must allow the door-open cue.");
+                Require(OfficeAutonomyCoordinator.IsAttendanceDoorSfxEligibleAt(
+                        day.AddHours(9).AddMinutes(50)),
+                    "A normal 08:50 to 09:50 +1 hour clock jump must still allow the first-entry cue.");
+                Require(!OfficeAutonomyCoordinator.IsAttendanceDoorSfxEligibleAt(day.AddHours(18)),
+                    "Attendance door audio must remain gated after the shift.");
+                Require(!OfficeAutonomyCoordinator.IsAttendanceDoorSfxEligibleAt(
+                        day.AddDays(5).AddHours(10)),
+                    "Attendance door audio must remain gated on weekends.");
+                Require(OfficeAutonomyCoordinator.ShouldArmAttendanceDoorSfxOnStateBind(
+                        day.AddHours(8).AddMinutes(59)),
+                    "A before-work state must arm its upcoming attendance cue.");
+                Require(!OfficeAutonomyCoordinator.ShouldArmAttendanceDoorSfxOnStateBind(
+                        day.AddHours(9).AddMinutes(50)),
+                    "Loading a mid-shift state must not arm an attendance cue.");
+                Require(!OfficeAutonomyCoordinator.ShouldArmAttendanceDoorSfxOnStateBind(
+                        day.AddDays(5).AddHours(8).AddMinutes(50)),
+                    "A weekend state must not arm an attendance cue.");
+                DateTime sundayAtTen = day.AddDays(6).AddHours(10);
+                DateTime mondayAtTen = sundayAtTen.AddDays(1);
+                Require(OfficeAutonomyCoordinator.ShouldArmAttendanceDoorSfxAfterObservedTransition(
+                        sundayAtTen,
+                        mondayAtTen),
+                    "A same-state Sunday-to-Monday +1 day jump must arm Monday's first entry cue.");
+                Require(!OfficeAutonomyCoordinator.ShouldArmAttendanceDoorSfxAfterObservedTransition(
+                        day.AddHours(10),
+                        day.AddDays(1).AddHours(10)),
+                    "A working-to-working date jump must not invent a shift-start cue.");
                 Require(OfficeRuntimeWorkstationService.StarterEntranceCell.Equals(
                         new OfficeGridCoordinate(8, 1)),
                     "Starter attendance must use the one canonical open passage.");
@@ -91,7 +124,9 @@ namespace FamilyCompany.Editor
                     "09:00 office intents must not send newly arrived family back to the exit.");
                 Debug.Log(
                     "OFFICE_ATTENDANCE_VALIDATION: PASS | start=08:50 entry=09:00..09:03 " +
-                    "family=4 perimeterBays=48 openPassage=(8,0) oneTile=true nonBlocking=true exit=18:00");
+                    "family=4 perimeterBays=48 openPassage=(8,0) oneTile=true nonBlocking=true " +
+                    "doorSfxWindow=09:00..17:59 clockJump=09:50 dayJump=Sunday10:00..Monday10:00 " +
+                    "midShiftLoadArmed=false exit=18:00");
             }
             catch (Exception exception)
             {

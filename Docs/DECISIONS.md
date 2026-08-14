@@ -338,4 +338,4 @@ Shadow 선택만 기록하며 GameState·Save DTO·OfficeRuntimeAgent·패키지
 
 결정: 벽 아트 갱신은 `BuildPerimeterWalls`로만 수행한다. 전체 가구 builder를 캡처 경로에서 호출하지 않고 catalog의 세 perimeter definition만 교체한다. 비벽 definition identity와 swivel-chair overlay link/occupied flag를 변경하면 즉시 실패한다.
 
-결정: 출근 표현은 시각적 문 열림 없이 09:00 첫 입장 성공의 `door_open` 한 번만 사용한다. gate는 날짜 shift와 현재 `GameState` rebind를 추적하고 성공 재생 뒤 잠긴다. 실제 전체 audio counter로 open 1/close 0을 Windows player QA에서 검증한다.
+결정: 출근 표현은 시각적 문 열림 없이 해당 shift의 첫 입장 성공(정상 진행에서는 09:00, 같은 `GameState`의 시간/날짜 점프 시 그 직후)의 `door_open` 한 번만 사용한다. gate는 BeforeWork 또는 관측된 비근무일→다음 근무일 Working 전환에서 날짜 shift를 arm하고 성공 재생 뒤 잠긴다. 이미 근무 중인 저장본을 새 `GameState`로 bind하면 그 날짜는 소리 없이 소비한다. 실제 전체 audio counter로 open 1/close 0 및 same-shift load delta 0을 Windows player QA에서 검증한다.

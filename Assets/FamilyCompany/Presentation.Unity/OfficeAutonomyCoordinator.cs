@@ -39,6 +39,8 @@ namespace FamilyCompany.Presentation.Unity
         private Vector2 _lastAttendanceEntryPosition;
         private GameState _attendanceAudioState;
         private long _attendanceDoorSfxShiftKey = long.MinValue;
+        private long _attendanceDoorSfxArmedShiftKey = long.MinValue;
+        private DateTime? _attendanceAudioObservedAt;
         private int _attendanceDoorSfxPlayCount;
         private const float MinimumAttendanceEntranceClearance = 0.72f;
 
@@ -48,6 +50,28 @@ namespace FamilyCompany.Presentation.Unity
             seatRegistry != null && seatRegistry.isActiveAndEnabled &&
             seatRegistry.SeatCount > 0 && seatRegistry.RuntimeRevision == _seatingRegistryRevision;
         public int AttendanceDoorSfxPlayCount => _attendanceDoorSfxPlayCount;
+
+        public static bool IsAttendanceDoorSfxEligibleAt(DateTime now)
+        {
+            int minuteOfDay = checked(now.Hour * 60 + now.Minute);
+            return OfficeAttendanceRules.Resolve(now) == OfficeAttendancePhase.Working &&
+                   minuteOfDay >= OfficeAttendanceRules.WorkStartsMinuteOfDay &&
+                   minuteOfDay < OfficeAttendanceRules.WorkEndsMinuteOfDay;
+        }
+
+        public static bool ShouldArmAttendanceDoorSfxOnStateBind(DateTime now)
+        {
+            return OfficeAttendanceRules.Resolve(now) == OfficeAttendancePhase.BeforeWork;
+        }
+
+        public static bool ShouldArmAttendanceDoorSfxAfterObservedTransition(
+            DateTime previous,
+            DateTime current)
+        {
+            return previous.Date != current.Date &&
+                   OfficeAttendanceRules.Resolve(previous) != OfficeAttendancePhase.Working &&
+                   OfficeAttendanceRules.Resolve(current) == OfficeAttendancePhase.Working;
+        }
 
         public void Configure(
             PrototypeBootstrap newBootstrap,
@@ -317,6 +341,7 @@ namespace FamilyCompany.Presentation.Unity
             if (StarterOfficeRuntimeBootstrap.IsLayoutRebuilding) return;
             DateTime now = bootstrap.State.Time.Now;
             OfficeAttendancePhase attendance = OfficeAttendanceRules.Resolve(now);
+            RefreshAttendanceDoorSfxArm(now, attendance);
             IOfficeRuntimeAgent[] orderedAgents = _runtimeAgents
                           .Where(item => item != null && item is Component component &&
                                          component != null && component.gameObject.activeInHierarchy)
@@ -415,35 +440,78 @@ namespace FamilyCompany.Presentation.Unity
             if (state == null)
             {
                 _attendanceDoorSfxShiftKey = long.MinValue;
+                _attendanceDoorSfxArmedShiftKey = long.MinValue;
+                _attendanceAudioObservedAt = null;
                 _attendanceDoorSfxPlayCount = 0;
                 return;
             }
 
             DateTime now = state.Time.Now;
-            int minuteOfDay = checked(now.Hour * 60 + now.Minute);
+            _attendanceAudioObservedAt = now;
             bool preservesCurrentShift = previousShiftKey == now.Date.Ticks &&
-                                         minuteOfDay >= OfficeAttendanceRules.WorkStartsMinuteOfDay &&
-                                         minuteOfDay < OfficeAttendanceRules.WorkEndsMinuteOfDay;
-            if (preservesCurrentShift) return;
-            _attendanceDoorSfxShiftKey = long.MinValue;
+                                         IsAttendanceDoorSfxEligibleAt(now);
+            if (preservesCurrentShift)
+            {
+                _attendanceDoorSfxArmedShiftKey = long.MinValue;
+                return;
+            }
+
             _attendanceDoorSfxPlayCount = 0;
+            if (ShouldArmAttendanceDoorSfxOnStateBind(now))
+            {
+                _attendanceDoorSfxShiftKey = long.MinValue;
+                _attendanceDoorSfxArmedShiftKey = now.Date.Ticks;
+                return;
+            }
+
+            // A newly loaded state that is already inside the work window is not a shift-start
+            // event. Consume that date without emitting a cue when its actors are rebound.
+            _attendanceDoorSfxShiftKey = IsAttendanceDoorSfxEligibleAt(now)
+                ? now.Date.Ticks
+                : long.MinValue;
+            _attendanceDoorSfxArmedShiftKey = long.MinValue;
+        }
+
+        private void RefreshAttendanceDoorSfxArm(
+            DateTime now,
+            OfficeAttendancePhase attendance)
+        {
+            bool crossedFromObservedNonWorkDay = _attendanceAudioObservedAt.HasValue &&
+                                                 ShouldArmAttendanceDoorSfxAfterObservedTransition(
+                                                     _attendanceAudioObservedAt.Value,
+                                                     now);
+            if (attendance == OfficeAttendancePhase.BeforeWork || crossedFromObservedNonWorkDay)
+                ArmAttendanceDoorSfxForUpcomingShift(now);
+            _attendanceAudioObservedAt = now;
+        }
+
+        private void ArmAttendanceDoorSfxForUpcomingShift(DateTime now)
+        {
+            long shiftKey = now.Date.Ticks;
+            if (_attendanceDoorSfxShiftKey != shiftKey)
+                _attendanceDoorSfxArmedShiftKey = shiftKey;
         }
 
         private void TryPlayAttendanceDoorSfx(DateTime now)
         {
-            int minuteOfDay = checked(now.Hour * 60 + now.Minute);
-            if (minuteOfDay != OfficeAttendanceRules.WorkStartsMinuteOfDay) return;
+            // This method is called only after an entrant was successfully released. Keep the
+            // cue valid across normal clock jumps (for example 08:50 -> 09:50 via +1 hour), then
+            // let the per-shift key debounce every later family member and runtime rebind.
+            if (!IsAttendanceDoorSfxEligibleAt(now)) return;
             long shiftKey = now.Date.Ticks;
-            if (_attendanceDoorSfxShiftKey == shiftKey) return;
+            if (_attendanceDoorSfxShiftKey == shiftKey ||
+                _attendanceDoorSfxArmedShiftKey != shiftKey) return;
             bool played = GameAudioCoordinator.Instance.PlaySfx("door_open", 0.28f);
             if (played)
             {
                 _attendanceDoorSfxShiftKey = shiftKey;
+                _attendanceDoorSfxArmedShiftKey = long.MinValue;
                 _attendanceDoorSfxPlayCount++;
             }
             Debug.Log(
                 "STARTER_OFFICE_ATTENDANCE_DOOR_SFX | cue=door_open " +
                 "visualAnimation=false closeCue=false shift=" + now.ToString("yyyy-MM-dd") +
+                " trigger=first-successful-entrant-release" +
                 " playCount=" + _attendanceDoorSfxPlayCount +
                 " played=" + played);
         }

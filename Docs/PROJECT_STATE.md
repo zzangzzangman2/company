@@ -454,5 +454,5 @@ Unity: 6000.3.21f1
 - 네 직선과 네 L 코너는 동일 모듈의 SouthEast/SouthWest mirror로 이어진다. 굵은 갈색 기둥·슬랫·울타리 문법은 제거했고 얇은 panel seam만 남겼다.
 - `(8,0)`의 저장 호환 키 `entrance_door`/`EntranceDoorKind`는 유지하지만 그래픽은 두 jamb와 얇은 threshold만 가진 상시 열린 한 타일 통로다. 문짝·lintel·열림 애니메이션은 없고 `(8,1)` interior entrance는 기존처럼 walkable이다.
 - `OfficeFurnitureAssetBuilder.BuildPerimeterWalls`는 벽 3종 runtime PNG/importer/catalog entry만 갱신한다. 나머지 definition 객체, 특히 `swivel_chair`의 `frontOverlaySprite`와 `frontOverlayWhenOccupied`, pose catalog는 보존하고 변경 시 fail한다.
-- 가족의 기존 08:50 시작과 09:00~09:03 순차 출근은 그대로다. 첫 09:00 입장 성공 시 `door_open`만 한 번 재생하며 같은 shift의 후속 가족·layout rebuild·save/load rebind는 중복 재생하지 않는다. `door_close`는 이 출근 경로에서 호출하지 않는다.
+- 가족의 기존 08:50 시작과 09:00~09:03 순차 출근은 그대로다. 해당 shift의 첫 입장 성공 시 `door_open`만 한 번 재생하며, 같은 `GameState`의 08:50→09:50 시간 점프와 비근무일 10:00→다음 근무일 10:00 날짜 점프에서도 첫 release cue를 놓치지 않는다. 이미 근무 중인 저장본을 bind하는 경우에는 cue를 arm하지 않고, 같은 shift의 후속 가족·layout rebuild·save/load rebind도 중복 재생하지 않는다. `door_close`는 이 출근 경로에서 호출하지 않는다.
 - Unity 6000.3.21f1 정적 QA는 perimeter 48/open passage 1, furniture 65/definitions 15, navigation 128 seeds·1,152 paths, depth 200 trials, Prototype 전체 검증을 통과했다. 1920×1080 D3D11 캡처에서 네 변·네 코너·열린 입구·낮은 전면 가림을 육안 확인했다.

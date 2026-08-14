@@ -142,4 +142,4 @@ PrototypeBootstrap / GameState.OfficeGrid
 
 - `OfficeGridLayouts` owns the 48 semantic perimeter placements. The three source/runtime PNG pairs and their pivots are presentation assets; `OfficeFurnitureAssetBuilder.BuildPerimeterWalls` may update only their catalog definitions.
 - `EntranceDoorKind` is a legacy persistence/catalog key for an always-open frame. Navigation continues to own the canonical interior entrance `(8,1)`; no door state or animation is added to `OfficeRuntimeAgent`.
-- `OfficeAutonomyCoordinator` observes the successful first 09:00 attendance release and requests one `door_open` SFX. `GameAudioCoordinator` owns playback and QA counters. Later staggered entrants and `door_close` are outside this attendance cue path.
+- `OfficeAutonomyCoordinator` observes the shift's first successful attendance release (normally 09:00, including same-state clock/day jumps into a newly observed work shift) and requests one `door_open` SFX. A newly bound save that is already mid-shift consumes the date without replaying the cue. `GameAudioCoordinator` owns playback and QA counters; later staggered entrants and `door_close` are outside this path.
