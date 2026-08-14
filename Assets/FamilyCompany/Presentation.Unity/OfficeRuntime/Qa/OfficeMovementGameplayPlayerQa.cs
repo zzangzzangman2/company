@@ -27,7 +27,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private const float DefaultQuitAfterSeconds = 195f;
         private const int FourTimesStartMinuteOfDay = 9 * 60 + 20;
         private const float MovingDistanceEpsilon = 0.000001f;
-        private const float LateralDominance = 1.25f;
         private const float TeleportDistance = 0.35f;
         private const float ActorOverlapTolerance = 0.01f;
         private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
@@ -81,6 +80,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private void Start()
         {
             Application.runInBackground = true;
+            // Keep the evidence stream aligned with a normal 60 Hz presentation instead of
+            // letting an uncapped Release player emit hundreds of duplicate rendered samples.
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 60;
             _artifactDirectory = ResolveArgument(
                 ArtifactDirectoryArgument,
                 Path.Combine(Application.persistentDataPath, "MovementGameplayQa"));
@@ -250,13 +253,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 Violation("TELEPORT", wallSeconds, now, actor.AgentId,
                     $"distance={F(displacement.magnitude)} phase={actor.Phase}");
 
-            bool lateral = translated &&
-                           Mathf.Abs(displacement.x) >= Mathf.Abs(displacement.y) * LateralDominance;
+            // The runtime grid is rendered through a 2:1 isometric transform: a semantic
+            // southwest step can therefore have |screen dx| == 2 * |screen dy|. Classify the
+            // lateral contract from the direction resolved from this frame's actual displacement,
+            // rather than treating raw screen-axis dominance as west/east.
+            int displacementDirection = translated
+                ? DirectionalSpriteAnimator.ResolveTileDirection(displacement)
+                : -1;
+            bool lateral = displacementDirection == 2 || displacementDirection == 6;
             if (lateral)
             {
                 _lateralFrames++;
-                int expectedDirection = displacement.x < 0f ? 2 : 6;
-                string expectedToken = displacement.x < 0f ? "west" : "east";
+                int expectedDirection = displacementDirection;
+                string expectedToken = expectedDirection == 2 ? "west" : "east";
                 bool locomotionClip = (trace.Clip ?? string.Empty).StartsWith(
                                           "Walk",
                                           StringComparison.Ordinal) ||
@@ -306,9 +315,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 stoppedHistory.BeforePrevious = -1;
             }
 
-            if (actor.StuckSeconds >= 6f)
+            float stuckThreshold = 6f * Mathf.Max(1f, _bootstrap.WorldTimeScale);
+            if (actor.StuckSeconds >= stuckThreshold)
                 Violation("STUCK_REPATH", wallSeconds, now, actor.AgentId,
-                    $"stuck={F(actor.StuckSeconds)} blocker={actor.LastMovementBlocker}");
+                    $"stuck={F(actor.StuckSeconds)} threshold={F(stuckThreshold)} " +
+                    $"blocker={actor.LastMovementBlocker}");
 
             if (!_lastPhase.TryGetValue(actor.AgentId, out OfficeRuntimeAgentPhase previousPhase) ||
                 previousPhase != actor.Phase)
