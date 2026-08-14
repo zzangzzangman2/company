@@ -77,7 +77,7 @@
 
 ## 초기 타일 사무실 정본
 
-- 실제 새 게임과 전체 저장 스키마 v1~v7 이관은 `OfficeGridLayouts.CreateStarterOfficeV1()`을 사용한다. 현재 저장 스키마는 v8이다. 기본 사무실은 13×13, 실내 가구 17개 + 외곽 52 bay(총 69), 가족 workstation 4개이며 QA용 중앙 파티션은 없다.
+- 실제 새 게임과 전체 저장 스키마 v1~v8 이관은 `OfficeGridLayouts.CreateStarterOfficeV1()`을 사용한다. 현재 저장 스키마는 v9이다. 기본 사무실은 13×13, 실내 가구 17개 + 외곽 52 bay(총 69), 가족 workstation 4개이며 QA용 중앙 파티션은 없다.
 - 플레이테스트 런타임은 새 게임/불러오기 직후 StarterOfficeV1 타일 씬을 기본 월드로 렌더한다. 폐기된 OfficeVisualV2 통짜 PNG는 저장소와 빌드에 존재하지 않으며 `F9`로도 되돌리지 않는다.
 - `CreateMigrationPreview()`의 가구 18개·12종·파티션 구성은 T1~T5 회귀 fixture 전용이다. 실제 게임 기본 사무실로 사용하지 않는다.
 - workstation은 desk/chair/seat binding, seat/approach cell, NorthWest facing, 반 셀 operator anchor를 가진다. 네 가족의 의미 root는 좌석 셀 중심·scale 1이다.

@@ -53,7 +53,7 @@
 
 ## Save v8과 자체 제품
 
-- 전체 Save v8은 v1~v7을 읽어 이관한다. 첫 계약 수락 여부는 저장된 계약 존재 여부로, 실적 ledger는 resolved 계약의 stable offer ID/status/contributions/resolved minute에서 재구성하므로 별도 중복 진행도 payload를 만들지 않는다.
+- 전체 Save v9은 v1~v8을 읽어 이관한다. 첫 계약 수락 여부는 저장된 계약 존재 여부로, 실적 ledger는 resolved 계약의 stable offer ID/status/contributions/resolved minute에서 재구성하므로 별도 중복 진행도 payload를 만들지 않는다.
 - 과도 상태인 게시판·route·작업 command session은 저장하지 않는다. 저장/로드 후 동일 seed/달력 날짜/실적이면 동일 제안이 나온다.
 - 자체 제품 후보는 기존 `CompanyGrowthState`의 연구, 시장 보고서, 자체 사업, 제품 프로젝트를 사용한다. 현금·전체 완료 건수·관련 업종 인시·평판·필요 연구·해당 시장 보고서를 실제 진행도로 보여 준다.
 

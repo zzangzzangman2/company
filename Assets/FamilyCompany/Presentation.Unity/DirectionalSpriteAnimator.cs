@@ -299,7 +299,11 @@ namespace FamilyCompany.Presentation.Unity
             _tileSemanticDisplacement = actualDisplacement;
             _tileFrameDeltaTime = 1f;
             _tileActualSpeed = actualDisplacement.magnitude;
-            _tileIsMoving = false;
+            // The legacy one-shot API represents a complete presentation sample. Its motion
+            // state must therefore be authoritative immediately, before Tick resolves the next
+            // shared gait frame; otherwise a translating actor can acquire the planted seating
+            // lock during this one-frame window.
+            _tileIsMoving = actualDisplacement.magnitude > 0.00001f;
             _tileFrameCollisionProjected = false;
             _worldVelocity = new Vector3(actualDisplacement.x, 0f, actualDisplacement.y);
         }

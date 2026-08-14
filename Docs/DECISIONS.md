@@ -111,7 +111,7 @@ Performing 성공과 claim release 뒤에만 회복을 반영하고, 정확한 �
 
 이유: 위치→가구 kind switch와 모든 동종 가구의 접근 칸을 한 목록으로 합치면 가구 삭제·이동·복수 배치에서 대상 소유권과 capacity를 구분할 수 없다. 실제 인스턴스 ID와 접근 칸을 묶은 Offer가 있어야 없는 가구, 막힌 가구, 도달 불가 가구를 선택 전에 제거하고 이후 예약 lifecycle을 인스턴스별로 확장할 수 있다.
 
-결정: 당시 단계에서는 기존 `WeightedPick`을 유지하고 Micro Action 변경만으로 전체 저장 schema를 올리지 않았다. 당시 전체 schema는 v7이었고 현재는 office build editor/재고를 포함한 v8이다. 물리 회의 테이블은 작성 좌석이 없으므로 직접 플레이어/계약 목적지 예외를 유지하고, NPC Micro Action 회의는 기존 assigned-PC 좌석 계약을 Offer로 해석한다.
+결정: 당시 단계에서는 기존 `WeightedPick`을 유지하고 Micro Action 변경만으로 전체 저장 schema를 올리지 않았다. 당시 전체 schema는 v7이었고 office build editor/재고는 v8에서 도입되었으며, 현재는 semantic stamina를 포함한 v9이다. 물리 회의 테이블은 작성 좌석이 없으므로 직접 플레이어/계약 목적지 예외를 유지하고, NPC Micro Action 회의는 기존 assigned-PC 좌석 계약을 Offer로 해석한다.
 
 이유: 가구 Offer 연결, Utility selector 활성화, 예약·중단 cleanup lifecycle은 서로 다른 회귀 위험을 가진다. 레이아웃 가용성 계층을 먼저 검증해야 행동 분포 변화와 저장 변경을 분리해서 판단할 수 있다.
 

@@ -1,4 +1,6 @@
-# Seating Transitions and Depth Candidate — 2026-08-14
+# Seating Transitions and Depth — 2026-08-14
+
+> 통합 상태: `ff434e2`와 `c73c612`로 main에 반영되었고, movement 통합 충돌은 `9ac0c4b`에서 수동 해소했다. 아래 candidate SHA와 개별 로그는 통합 전 증거이며 현재 상태 정본은 `PROJECT_STATE.md`다.
 
 ## Candidate scope
 

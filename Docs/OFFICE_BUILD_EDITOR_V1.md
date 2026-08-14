@@ -3,7 +3,7 @@
 ## Current integration status
 
 - Local main 기준선 `4cf6e50`에 build editor 구현 `7baac22`와 MainNavigation route `bc19d0c`가 통합되어 있다.
-- 전체 저장 스키마는 v8이며 v1~v7을 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
+- 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v9이며 v1~v8을 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
 - 진입점은 `사무실 → 회사 → 건축·편집`이다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
 - 배치 geometry를 movement가 직접 소비하는 hand-off는 아직 열려 있다. 최종 seating/stamina 결합과 portable build 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
 
