@@ -558,7 +558,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "actor.RecordSeatingDepthSample(newOfficeSeatingDepthSnapshot(",
                 "Per-actor seating depth evidence is not recorded.");
             int resolveOrders = sorter.IndexOf(
-                "OfficeHybridContinuousDepth.ResolveSortingOrders(_items);",
+                "OfficeHybridContinuousDepth.ResolveSortingOrders(_items,_sortWorkspace);",
                 StringComparison.Ordinal);
             int recordSamples = sorter.IndexOf(
                 "RecordSeatingDepthSamples(actors,orders);",

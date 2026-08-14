@@ -18,12 +18,14 @@ namespace FamilyCompany.Editor.OfficeGrid
         private const int Q = OfficeHybridContinuousDepth.Quantization;
         private static int _legacyItemCount;
         private static int _mixedItemCount;
+        private static long _workspaceAllocatedBytes;
 
         [MenuItem("Family Company/Validate/Office Hybrid Continuous Depth")]
         public static void Run()
         {
             _legacyItemCount = 0;
             _mixedItemCount = 0;
+            _workspaceAllocatedBytes = 0L;
             ValidateSignedQuantizationAndFramePartitioning();
             ValidateLegacyFurniturePermutations();
             ValidateLegacyFurnitureRandomEquivalence();
@@ -34,12 +36,14 @@ namespace FamilyCompany.Editor.OfficeGrid
             ValidateSeatStackPlanesAndRelease();
             ValidateTallFurnitureIgnoresVisualHeight();
             ValidateRandomMixedShuffleAndCycleUniqueness();
+            ValidateReusableWorkspace();
             Debug.Log(
                 "OFFICE_HYBRID_CONTINUOUS_DEPTH_VALIDATION: PASS " +
                 $"Q={Q} legacyItems={_legacyItemCount} mixedItems={_mixedItemCount} " +
                 "permutations=120 directions=8 footprints=4 frameRates=30/60/144 " +
                 "normalFrontCases=48 normalFront=base<front<actor " +
-                "seatPlanes=0<1<2<3<4 tallHeightIgnored=true");
+                "seatPlanes=0<1<2<3<4 tallHeightIgnored=true " +
+                $"workspaceAlloc100={_workspaceAllocatedBytes}B");
         }
 
         public static void RunBatch()
@@ -605,6 +609,46 @@ namespace FamilyCompany.Editor.OfficeGrid
             string actual = JoinHybridIds(sorted);
             Require(actual == expected, $"{label}: {actual} != {expected}.");
             AssertUniqueAndSequential(sorted, label);
+        }
+
+        private static void ValidateReusableWorkspace()
+        {
+            var items = new List<OfficeHybridDepthItem>();
+            for (var y = 0; y < 7; y++)
+            for (var x = 0; x < 10; x++)
+                items.Add(Furniture(
+                    $"workspace-{x}-{y}",
+                    x,
+                    y,
+                    x,
+                    y,
+                    OfficeHybridDepthRole.FurnitureBase));
+            items.Add(Actor("workspace-actor-a", 2.25d, 3.50d));
+            items.Add(Actor("workspace-actor-b", 7.75d, 4.25d));
+
+            var workspace = new OfficeHybridDepthSortWorkspace(items.Count);
+            IReadOnlyDictionary<string, int> first =
+                OfficeHybridContinuousDepth.ResolveSortingOrders(items, workspace);
+            string expected = string.Join(
+                ",",
+                first.OrderBy(pair => pair.Value).Select(pair => pair.Key));
+            IReadOnlyDictionary<string, int> second =
+                OfficeHybridContinuousDepth.ResolveSortingOrders(items, workspace);
+            string actual = string.Join(
+                ",",
+                second.OrderBy(pair => pair.Value).Select(pair => pair.Key));
+            Require(ReferenceEquals(first, second), "workspace result dictionary was replaced");
+            Require(actual == expected, "workspace reuse changed depth order");
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (var iteration = 0; iteration < 100; iteration++)
+                OfficeHybridContinuousDepth.ResolveSortingOrders(items, workspace);
+            _workspaceAllocatedBytes = Math.Max(
+                0L,
+                GC.GetAllocatedBytesForCurrentThread() - before);
+            Require(
+                _workspaceAllocatedBytes <= 1024L,
+                $"workspace allocated {_workspaceAllocatedBytes} bytes over 100 warmed sorts");
         }
 
         private static void AssertUniqueAndSequential(

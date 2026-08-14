@@ -148,6 +148,8 @@ namespace FamilyCompany.Presentation.Unity
 
         public void RefreshNow()
         {
+            using var measurement = OfficePerformanceTelemetry.Measure(
+                OfficePerformancePath.AutonomyRefresh);
             if (bootstrap == null || bootstrap.State == null) return;
             BindAttendanceAudioState(bootstrap.State);
             if (!_initialized) _initialized = true;

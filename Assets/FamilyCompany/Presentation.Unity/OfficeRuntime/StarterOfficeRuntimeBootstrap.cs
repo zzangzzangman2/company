@@ -46,6 +46,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeSeatingPresentationMode.SafeStaticWork;
 
         public bool IsReady { get; private set; }
+        public bool IsPreparing => _building;
+        public float NavigationPrewarmProgress { get; private set; }
         public OfficeRuntimeWorld World => _world;
         public static bool IsLayoutRebuilding => _activeLayoutRebuilds > 0;
 
@@ -176,15 +178,65 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             DisableLegacyRuntime();
             _world.ValidateCanonicalActors();
             ValidateSingleRuntimeOwnership();
-            PrepareAttendanceArrivals();
-            BindCoordinators();
             FitCamera(presenter, furniturePresenter);
             foreach (Renderer renderer in _legacyRenderers)
                 if (renderer != null) renderer.enabled = false;
-            IsReady = true;
-            _building = false;
-            _layoutSnapshots.Clear();
-            LogOwnershipPass();
+            NavigationPrewarmProgress = 0f;
+            StartCoroutine(CompleteRuntimePreparation());
+        }
+
+        private IEnumerator CompleteRuntimePreparation()
+        {
+            var permittedSeatIds = new List<string> { string.Empty };
+            permittedSeatIds.AddRange(_world.Grid.SeatSlots
+                .Select(seat => seat.SeatId)
+                .Distinct(StringComparer.Ordinal));
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            IEnumerator prewarm = _world.Paths.PrewarmAllStaticTraversalGraphs(
+                permittedSeatIds,
+                4,
+                progress => NavigationPrewarmProgress = progress);
+            while (true)
+            {
+                bool hasNext;
+                object current;
+                try
+                {
+                    hasNext = prewarm.MoveNext();
+                    current = hasNext ? prewarm.Current : null;
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                    _building = false;
+                    IsReady = false;
+                    yield break;
+                }
+                if (!hasNext) break;
+                yield return current;
+            }
+            timer.Stop();
+            try
+            {
+                PrepareAttendanceArrivals();
+                BindCoordinators();
+                IsReady = true;
+                _building = false;
+                _layoutSnapshots.Clear();
+                Debug.Log(
+                    "STARTER_OFFICE_NAVIGATION_PREWARM_PASS | " +
+                    "keys=" + permittedSeatIds.Count +
+                    " nodes=" + _world.Paths.StaticGraphNodeCheckCount +
+                    " edges=" + _world.Paths.StaticGraphEdgeCheckCount +
+                    " elapsed=" + timer.Elapsed.TotalSeconds.ToString("F2") + "s");
+                LogOwnershipPass();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                _building = false;
+                IsReady = false;
+            }
         }
 
         private void PrepareAttendanceArrivals()
@@ -481,6 +533,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             try
             {
                 BuildRuntime();
+                while (_building) yield return null;
             }
             finally
             {

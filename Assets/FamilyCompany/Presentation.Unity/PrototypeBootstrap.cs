@@ -846,6 +846,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!_hasSession || _screen != PrototypeUiScreen.Playing || _state == null || _runner == null)
                 return;
+            if (OfficeRuntimePerformanceProbe.IsDrivingClock) return;
             if (ScenePreviewJump.IsPresentationLoading)
             {
                 _officePresentationWasLoading = true;
@@ -877,6 +878,8 @@ namespace FamilyCompany.Presentation.Unity
 
         private void AdvanceTime(long minutes, bool announcePassage)
         {
+            using var measurement = OfficePerformanceTelemetry.Measure(
+                OfficePerformancePath.SimulationAdvance);
             if (minutes <= 0L) throw new ArgumentOutOfRangeException(nameof(minutes));
             var previousMinute = _state.Time.ElapsedMinutes;
             var failedBefore = _state.Contracts.Contracts.Count(item => item.Status == SubcontractStatus.Failed);

@@ -180,6 +180,68 @@ namespace FamilyCompany.Simulation.OfficeLayout
     }
 
     /// <summary>
+    /// Reusable storage for the per-frame runtime depth sort. Results remain valid until the next
+    /// call that uses the same workspace. Tests and one-shot callers can keep using the allocating
+    /// overloads below.
+    /// </summary>
+    public sealed class OfficeHybridDepthSortWorkspace
+    {
+        internal readonly HashSet<string> Ids = new HashSet<string>(StringComparer.Ordinal);
+        internal readonly List<int> Pending;
+        internal readonly List<OfficeHybridDepthItem> Ordered;
+        internal readonly Dictionary<string, int> Orders;
+        internal int[] BehindCount;
+        internal List<int>[] InFrontOf;
+        internal bool[] Emitted;
+        private IReadOnlyList<OfficeHybridDepthItem> _items;
+        private readonly Comparison<int> _pendingComparison;
+
+        public OfficeHybridDepthSortWorkspace(int capacity = 0)
+        {
+            if (capacity < 0) throw new ArgumentOutOfRangeException(nameof(capacity));
+            Pending = new List<int>(capacity);
+            Ordered = new List<OfficeHybridDepthItem>(capacity);
+            Orders = new Dictionary<string, int>(capacity, StringComparer.Ordinal);
+            BehindCount = new int[capacity];
+            InFrontOf = new List<int>[capacity];
+            Emitted = new bool[capacity];
+            for (var index = 0; index < capacity; index++) InFrontOf[index] = new List<int>();
+            _pendingComparison = ComparePending;
+        }
+
+        internal void Prepare(IReadOnlyList<OfficeHybridDepthItem> items)
+        {
+            _items = items;
+            int count = items.Count;
+            if (BehindCount.Length < count)
+            {
+                int previous = BehindCount.Length;
+                int capacity = Math.Max(count, Math.Max(4, previous * 2));
+                Array.Resize(ref BehindCount, capacity);
+                Array.Resize(ref InFrontOf, capacity);
+                Array.Resize(ref Emitted, capacity);
+                for (var index = previous; index < capacity; index++)
+                    InFrontOf[index] = new List<int>();
+                if (Pending.Capacity < capacity) Pending.Capacity = capacity;
+                if (Ordered.Capacity < capacity) Ordered.Capacity = capacity;
+                Orders.EnsureCapacity(capacity);
+            }
+            Ids.Clear();
+            Pending.Clear();
+            Ordered.Clear();
+            Orders.Clear();
+            Array.Clear(BehindCount, 0, count);
+            Array.Clear(Emitted, 0, count);
+            for (var index = 0; index < count; index++) InFrontOf[index].Clear();
+        }
+
+        internal void SortPending() => Pending.Sort(_pendingComparison);
+
+        private int ComparePending(int left, int right) =>
+            OfficeHybridContinuousDepth.CompareFallback(_items[left], _items[right]);
+    }
+
+    /// <summary>
     /// Stable hybrid painter ordering. Integer furniture-only input is exactly compatible with
     /// <see cref="OfficeIsometricDepth"/>. Continuous actor contacts use two isometric grid axes,
     /// because a scalar x+y key cannot correctly classify both sides of a multi-cell footprint.
@@ -234,47 +296,54 @@ namespace FamilyCompany.Simulation.OfficeLayout
             IReadOnlyList<OfficeHybridDepthItem> items)
         {
             if (items == null) throw new ArgumentNullException(nameof(items));
-            int count = items.Count;
-            var result = new List<OfficeHybridDepthItem>(count);
-            if (count == 0) return result;
+            return Sort(items, new OfficeHybridDepthSortWorkspace(items.Count));
+        }
 
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (OfficeHybridDepthItem item in items)
+        public static IReadOnlyList<OfficeHybridDepthItem> Sort(
+            IReadOnlyList<OfficeHybridDepthItem> items,
+            OfficeHybridDepthSortWorkspace workspace)
+        {
+            if (items == null) throw new ArgumentNullException(nameof(items));
+            if (workspace == null) throw new ArgumentNullException(nameof(workspace));
+            int count = items.Count;
+            workspace.Prepare(items);
+            if (count == 0) return workspace.Ordered;
+
+            for (var index = 0; index < count; index++)
             {
-                if (!ids.Add(item.Id))
-                    throw new ArgumentException("Duplicate depth item id: " + item.Id, nameof(items));
+                OfficeHybridDepthItem item = items[index];
+                if (!workspace.Ids.Add(item.Id))
+                    throw new ArgumentException(
+                        "Duplicate depth item id: " + item.Id,
+                        nameof(items));
             }
 
-            var pending = new List<int>(count);
-            for (var index = 0; index < count; index++) pending.Add(index);
-            pending.Sort((left, right) => CompareFallback(items[left], items[right]));
+            for (var index = 0; index < count; index++) workspace.Pending.Add(index);
+            workspace.SortPending();
 
-            var behindCount = new int[count];
-            var inFrontOf = new List<int>[count];
-            for (var index = 0; index < count; index++) inFrontOf[index] = new List<int>();
             for (var firstIndex = 0; firstIndex < count; firstIndex++)
             for (var secondIndex = firstIndex + 1; secondIndex < count; secondIndex++)
             {
                 switch (Compare(items[firstIndex], items[secondIndex]))
                 {
                     case OfficeDepthRelation.FirstBehindSecond:
-                        inFrontOf[firstIndex].Add(secondIndex);
-                        behindCount[secondIndex]++;
+                        workspace.InFrontOf[firstIndex].Add(secondIndex);
+                        workspace.BehindCount[secondIndex]++;
                         break;
                     case OfficeDepthRelation.SecondBehindFirst:
-                        inFrontOf[secondIndex].Add(firstIndex);
-                        behindCount[firstIndex]++;
+                        workspace.InFrontOf[secondIndex].Add(firstIndex);
+                        workspace.BehindCount[firstIndex]++;
                         break;
                 }
             }
 
-            var emitted = new bool[count];
-            while (result.Count < count)
+            while (workspace.Ordered.Count < count)
             {
                 var chosen = -1;
-                foreach (int index in pending)
+                for (var pendingIndex = 0; pendingIndex < workspace.Pending.Count; pendingIndex++)
                 {
-                    if (emitted[index] || behindCount[index] != 0) continue;
+                    int index = workspace.Pending[pendingIndex];
+                    if (workspace.Emitted[index] || workspace.BehindCount[index] != 0) continue;
                     chosen = index;
                     break;
                 }
@@ -282,31 +351,49 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 {
                     // Invalid spatial input can form a cycle. Break it by the same stable fallback
                     // rather than making output depend on caller insertion order.
-                    foreach (int index in pending)
+                    for (var pendingIndex = 0;
+                         pendingIndex < workspace.Pending.Count;
+                         pendingIndex++)
                     {
-                        if (emitted[index]) continue;
+                        int index = workspace.Pending[pendingIndex];
+                        if (workspace.Emitted[index]) continue;
                         chosen = index;
                         break;
                     }
                 }
 
-                emitted[chosen] = true;
-                behindCount[chosen] = -1;
-                result.Add(items[chosen]);
-                foreach (int ahead in inFrontOf[chosen])
-                    if (behindCount[ahead] > 0) behindCount[ahead]--;
+                workspace.Emitted[chosen] = true;
+                workspace.BehindCount[chosen] = -1;
+                workspace.Ordered.Add(items[chosen]);
+                List<int> aheadItems = workspace.InFrontOf[chosen];
+                for (var index = 0; index < aheadItems.Count; index++)
+                {
+                    int ahead = aheadItems[index];
+                    if (workspace.BehindCount[ahead] > 0) workspace.BehindCount[ahead]--;
+                }
             }
-            return result;
+            return workspace.Ordered;
         }
 
         public static IReadOnlyDictionary<string, int> ResolveSortingOrders(
             IReadOnlyList<OfficeHybridDepthItem> items)
         {
-            IReadOnlyList<OfficeHybridDepthItem> ordered = Sort(items);
-            var result = new Dictionary<string, int>(ordered.Count, StringComparer.Ordinal);
+            if (items == null) throw new ArgumentNullException(nameof(items));
+            return ResolveSortingOrders(
+                items,
+                new OfficeHybridDepthSortWorkspace(items.Count));
+        }
+
+        public static IReadOnlyDictionary<string, int> ResolveSortingOrders(
+            IReadOnlyList<OfficeHybridDepthItem> items,
+            OfficeHybridDepthSortWorkspace workspace)
+        {
+            IReadOnlyList<OfficeHybridDepthItem> ordered = Sort(items, workspace);
             for (var index = 0; index < ordered.Count; index++)
-                result.Add(ordered[index].Id, OfficeIsometricDepth.BaseSortingOrder + index);
-            return result;
+                workspace.Orders.Add(
+                    ordered[index].Id,
+                    OfficeIsometricDepth.BaseSortingOrder + index);
+            return workspace.Orders;
         }
 
         private static OfficeDepthRelation CompareRectangles(
@@ -330,7 +417,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
             return OfficeDepthRelation.Unrelated;
         }
 
-        private static int CompareFallback(
+        internal static int CompareFallback(
             OfficeHybridDepthItem left,
             OfficeHybridDepthItem right)
         {

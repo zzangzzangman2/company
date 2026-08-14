@@ -976,7 +976,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 ? Mathf.Max(0f, seatingPresentationDeltaTime)
                 : deltaTime;
             RecordChairPresentationMotion();
-            _animator.Tick(presentationDeltaTime);
+            using (OfficePerformanceTelemetry.Measure(OfficePerformancePath.AnimatorTick))
+                _animator.Tick(presentationDeltaTime);
             _animator.EndTilePresentationFrame();
             if (Phase == OfficeRuntimeAgentPhase.FinishingWork)
                 _finishingWorkPresentationObserved = true;

@@ -448,6 +448,15 @@ namespace FamilyCompany.Presentation.Unity
             _loadingStage = "가족 네 명의 출근 동선을 미리 계산하는 중";
             yield return null;
             _starterRuntime.Configure(gameBootstrap, bootstrap, previewCamera, _legacyRenderers);
+            while (_starterRuntime.IsPreparing)
+            {
+                _loadingProgress = Mathf.Lerp(
+                    0.76f,
+                    0.93f,
+                    _starterRuntime.NavigationPrewarmProgress);
+                _loadingStage = "이동 경로를 안전하게 사전 계산하는 중";
+                yield return null;
+            }
             _loadingProgress = 0.93f;
             _loadingStage = "09:00 출근 준비를 마무리하는 중";
             yield return null;

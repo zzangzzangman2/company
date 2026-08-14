@@ -117,29 +117,32 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void Update()
         {
-            if (!_configured) return;
-            float deltaTime = Time.deltaTime;
-            if (deltaTime <= 0f) return;
-            foreach (OfficeRuntimeAgent actor in _registry.Actors)
+            using (OfficePerformanceTelemetry.Measure(OfficePerformancePath.RuntimeWorldUpdate))
             {
-                if (actor != null && actor.isActiveAndEnabled) actor.BeginPresentationFrame();
-            }
-            int stepCount = OfficeNavigationMotionIntegrator.CalculateStepCount(deltaTime);
-            for (var step = 0; step < stepCount; step++)
-            {
-                float stepDelta = OfficeNavigationMotionIntegrator.ResolveStepDelta(deltaTime, step, stepCount);
+                if (!_configured) return;
+                float deltaTime = Time.deltaTime;
+                if (deltaTime <= 0f) return;
                 foreach (OfficeRuntimeAgent actor in _registry.Actors)
                 {
-                    if (actor != null && actor.isActiveAndEnabled) actor.TickRuntime(stepDelta);
+                    if (actor != null && actor.isActiveAndEnabled) actor.BeginPresentationFrame();
                 }
+                int stepCount = OfficeNavigationMotionIntegrator.CalculateStepCount(deltaTime);
+                for (var step = 0; step < stepCount; step++)
+                {
+                    float stepDelta = OfficeNavigationMotionIntegrator.ResolveStepDelta(deltaTime, step, stepCount);
+                    foreach (OfficeRuntimeAgent actor in _registry.Actors)
+                    {
+                        if (actor != null && actor.isActiveAndEnabled) actor.TickRuntime(stepDelta);
+                    }
+                }
+                foreach (OfficeRuntimeAgent actor in _registry.Actors)
+                {
+                    if (actor != null && actor.isActiveAndEnabled) actor.TickPresentation(deltaTime);
+                }
+                // One footprint sort owns every sorting order in the office, applied last so nothing
+                // can leave a stale per-sprite order behind.
+                _depthSorter.Apply(_registry.Actors);
             }
-            foreach (OfficeRuntimeAgent actor in _registry.Actors)
-            {
-                if (actor != null && actor.isActiveAndEnabled) actor.TickPresentation(deltaTime);
-            }
-            // One footprint sort owns every sorting order in the office, applied last so nothing
-            // can leave a stale per-sprite order behind.
-            _depthSorter.Apply(_registry.Actors);
         }
 
         private void OnDestroy()

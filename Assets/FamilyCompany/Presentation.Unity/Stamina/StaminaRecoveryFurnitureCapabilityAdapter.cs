@@ -30,6 +30,8 @@ namespace FamilyCompany.Presentation.Unity.Stamina
         public StaminaRecoveryCapabilityQueryResult Query(
             StaminaRecoveryCapabilityQuery query)
         {
+            using var measurement = OfficePerformanceTelemetry.Measure(
+                OfficePerformancePath.StaminaCapabilityQuery);
             if (!_runtime.IsReady || _runtime.World == null ||
                 !_runtime.World.Registry.TryGet(query.CharacterId, out OfficeRuntimeAgent actor) ||
                 actor == null || actor.IsPresentationAway)

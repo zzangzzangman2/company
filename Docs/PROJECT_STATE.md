@@ -26,6 +26,24 @@
   재사용하지 않고 전체 셀 차단으로 fail-closed한다.
 - 출근자는 첫 live route segment의 문 밖 2.5배 지점에서 나타나 단일 ingress gate를 예약한 뒤 입장한다.
   4인이 동시에 요청해도 한 명씩 진입하며, 기존 workstation seat claim/socket 소유권은 변경하지 않는다.
+## 2026-08-15 / 플레이 중 내비게이션 정지 제거 (통합 대기 브랜치)
+
+- `codex/perf-lag-rootcause`는 `OfficeRuntimeOccupancy.Revision`에 종속된 정적 이동 그래프를
+  `(permittedSeatId, agentRadius)`별로 소유한다. 이 revision은 가구 배치·회전·회수처럼 정적 layout을
+  다시 구성할 때만 바뀌며 actor 이동·reservation 같은 동적 점유는 캐시를 폐기하지 않는다.
+- Starter Office의 빈 seat 권한과 가족 seat 4개, 169셀/키, 4방향 간선은 플레이 진입 전 Loading에서
+  coroutine으로 전부 사전 계산한다. 진행률을 `ScenePreviewJump` Loading UI에 반영하고 매 4노드마다
+  프레임을 양보한다. layout rebuild도 같은 준비가 끝나기 전에는 runtime ready를 열지 않는다.
+- 동일 1배속 Development 시나리오에서 정적 reachability flood는 `90회/8,733 방문 노드`에서
+  `0회/0 방문 노드`로, main-thread p99는 `184.631ms`에서 `22.468ms`로 줄었다. Release/D3D11 정상
+  구간 wall max는 1배속 `23.424ms`, 4배속 `36.165ms`이며, 두 배속 모두 플레이 중 50ms 이상 프레임은 없다.
+- `OfficeHybridContinuousDepth`는 재사용 workspace를 사용하며 warmed 100회 정렬의 managed allocation은
+  0B다. 의자 presentation 정렬은 수정하지 않았고 계측상 최대 `0.166ms`로 정지 원인이 아니다.
+- 정적 캐시 invalidation, first/warm call, 이동·충돌·상호작용·depth, Windows Release build 검증을
+  통과했다. 기존 `StaminaRuntimeIntegrationValidation` 전체 시나리오는 exact baseline에서도
+  `Actor departed before the 25% threshold`로 실패한다. 현재 브랜치는 병목 제거 뒤 저장 단계까지
+  진행하지만 다른 가족의 transient Performing 상태를 byte-for-byte 비교하는 기존 가정으로 실패한다.
+  순수 stamina runtime-loss normalization과 GameState save 검증은 각각 통과한다.
 
 ## 2026-08-14 / 공용 업무 능력과 인사 roster
 

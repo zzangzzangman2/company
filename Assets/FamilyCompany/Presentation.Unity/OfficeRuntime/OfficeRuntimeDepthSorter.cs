@@ -47,6 +47,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private readonly OfficeGridTilemapPresenter _presenter;
         private readonly OfficeGridFurniturePresenter _furniturePresenter;
         private readonly List<OfficeHybridDepthItem> _items = new List<OfficeHybridDepthItem>();
+        private readonly OfficeHybridDepthSortWorkspace _sortWorkspace =
+            new OfficeHybridDepthSortWorkspace(96);
         private readonly Dictionary<string, SpriteRenderer> _actorRenderers =
             new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
         private readonly Dictionary<string, OfficeRuntimeAgent> _actorAgents =
@@ -79,6 +81,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void Apply(IReadOnlyList<OfficeRuntimeAgent> actors)
         {
+            using var applyMeasurement = OfficePerformanceTelemetry.Measure(
+                OfficePerformancePath.DepthSortApply);
             _items.Clear();
             _actorRenderers.Clear();
             _actorAgents.Clear();
@@ -215,8 +219,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
 
             LastItemCount = _items.Count;
-            IReadOnlyDictionary<string, int> orders =
-                OfficeHybridContinuousDepth.ResolveSortingOrders(_items);
+            IReadOnlyDictionary<string, int> orders;
+            using (OfficePerformanceTelemetry.Measure(OfficePerformancePath.DepthSortResolve))
+                orders = OfficeHybridContinuousDepth.ResolveSortingOrders(_items, _sortWorkspace);
             foreach (KeyValuePair<string, int> entry in orders)
             {
                 if (entry.Key.StartsWith(FurniturePrefix, StringComparison.Ordinal))

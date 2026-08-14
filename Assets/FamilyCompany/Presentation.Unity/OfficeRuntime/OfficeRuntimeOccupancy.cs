@@ -72,6 +72,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return true;
             }
 
+            public void GridRadiusExtents(float worldRadius, out float gridX, out float gridY)
+            {
+                float inverse = 1f / Mathf.Abs(Determinant);
+                gridX = worldRadius * Mathf.Sqrt(
+                    BasisY.y * BasisY.y + BasisY.x * BasisY.x) * inverse;
+                gridY = worldRadius * Mathf.Sqrt(
+                    BasisX.y * BasisX.y + BasisX.x * BasisX.x) * inverse;
+            }
+
         }
 
         private sealed class ActorState
@@ -132,6 +141,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private Vector2 _attendanceIngressExterior;
         private Vector2 _attendanceIngressInterior;
         private float _attendanceIngressRadius;
+        private ContinuousGridTransform _gridTransform;
 
         public int Revision { get; private set; }
         public int StaticViolationCount { get; private set; }
@@ -161,6 +171,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
+            _gridTransform = CaptureContinuousGridTransform();
             _hardFloor.Clear();
             _furnitureObstacles.Clear();
             _interactionSeats.Clear();
@@ -600,7 +611,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     new Vector3(point.x + direction.x * radius, point.y + direction.y * radius, 0f));
                 if (_hardFloor.Contains(cell)) return $"hard-floor:cell={cell}";
             }
-            ContinuousGridTransform gridTransform = CaptureContinuousGridTransform();
+            ContinuousGridTransform gridTransform = _gridTransform;
             foreach (FurnitureObstacle obstacle in _furnitureObstacles)
             {
                 if (obstacle.IsPermitted(permitted)) continue;
@@ -843,11 +854,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
 
-            ContinuousGridTransform gridTransform = CaptureContinuousGridTransform();
+            ContinuousGridTransform gridTransform = _gridTransform;
+            if (!gridTransform.TryConvert(point, out float pointGridX, out float pointGridY))
+            {
+                blockedLayer = OfficeRuntimeOccupancyLayer.StaticHard;
+                return false;
+            }
             foreach (FurnitureObstacle obstacle in _furnitureObstacles)
             {
                 if (obstacle.IsPermitted(permitted)) continue;
                 float expandedRadius = radius + obstacle.ClearancePadding;
+                gridTransform.GridRadiusExtents(
+                    expandedRadius,
+                    out float gridRadiusX,
+                    out float gridRadiusY);
+                if (!CouldIntersectObstacle(
+                        pointGridX,
+                        pointGridY,
+                        gridRadiusX,
+                        gridRadiusY,
+                        obstacle)) continue;
                 foreach (Vector2 direction in CollisionDirections)
                 {
                     Vector2 samplePoint = point + direction * expandedRadius;
@@ -858,6 +884,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             blockedLayer = default;
             return true;
+        }
+
+        private static bool CouldIntersectObstacle(
+            float pointGridX,
+            float pointGridY,
+            float gridRadiusX,
+            float gridRadiusY,
+            FurnitureObstacle obstacle)
+        {
+            PlacedOfficeFurniture furniture = obstacle.Furniture;
+            float minimumX = furniture.Origin.X - 0.5f;
+            float minimumY = furniture.Origin.Y - 0.5f;
+            float maximumX = minimumX + furniture.Width;
+            float maximumY = minimumY + furniture.Height;
+            return pointGridX + gridRadiusX >= minimumX &&
+                   pointGridX - gridRadiusX <= maximumX &&
+                   pointGridY + gridRadiusY >= minimumY &&
+                   pointGridY - gridRadiusY <= maximumY;
         }
 
         private FurnitureObstacle CreateObstacle(

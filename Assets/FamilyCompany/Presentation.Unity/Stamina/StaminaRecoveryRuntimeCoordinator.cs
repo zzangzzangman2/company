@@ -131,6 +131,8 @@ namespace FamilyCompany.Presentation.Unity.Stamina
 
         public void ProcessPendingDecisions(CharacterStaminaRoster roster, long gameTimeMinute)
         {
+            using var measurement = OfficePerformanceTelemetry.Measure(
+                OfficePerformancePath.StaminaDecision);
             if (roster == null) throw new ArgumentNullException(nameof(roster));
             if (_state == null || !ReferenceEquals(roster, _state.Stamina))
                 throw new InvalidOperationException("Stamina runtime bridge is bound to another roster.");

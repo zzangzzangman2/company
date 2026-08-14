@@ -236,7 +236,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             }
             if (!visible || Time.unscaledTime < _nextLabelRefresh) return;
             _nextLabelRefresh = Time.unscaledTime + 0.2f;
-            RefreshLiveLabels();
+            using (OfficePerformanceTelemetry.Measure(OfficePerformancePath.HudRefresh))
+                RefreshLiveLabels();
         }
 
         private void OnDestroy()

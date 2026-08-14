@@ -42,6 +42,25 @@ zero-length collision query도 통과해야 한다. 두 판정 중 하나가 실
 횡이동할 수 있다. 또한 편집 geometry와 runtime collision의 이중 정본, 화면 안 spawn, 공동 입구 무예약은
 가구 관통·NPC 중첩을 만든다. 같은 frame trace, exact endpoint 검증, fail-closed 이관, 단일 ingress gate가
 각각 이 경계를 관측 가능하고 결정론적으로 만든다.
+## 2026-08-15 / 정적 이동 그래프는 layout revision별로 Loading에서 완전 사전 계산한다
+
+결정: `OfficeRuntimePathService`는 정적 통과 가능성을 `OfficeRuntimeOccupancy.Revision`, 허용 좌석 ID,
+agent radius로 분리한다. revision은 의미 layout/furniture occupancy를 `Rebuild`할 때만 바뀐다. actor 위치,
+동적 충돌 회피, interaction reservation은 정적 그래프 키나 invalidation 원인이 아니며 경로 탐색 시 별도 검사한다.
+
+결정: Starter Office의 현재 runtime key 전체는 플레이 화면 진입 전에 neighbor graph와 connected component를
+완전 계산한다. Loading UI는 진행률을 갱신하고 4노드 단위로 프레임을 양보한다. 가구 편집으로 revision이
+바뀌면 runtime을 준비 상태로 닫고 같은 prewarm을 다시 끝낸 뒤 연다. 최초 출근·착석·업무·상호작용에서
+lazy flood-fill을 허용하지 않는다.
+
+결정: 후보 접근점 검사는 같은 prewarmed graph의 neighbor를 재사용한다. 경로 BFS는 재사용 queue/set/parent를,
+연속 depth 정렬은 재사용 workspace를 사용한다. `OfficeGridTilemapPresenter.NearestCell`은 전체 격자 탐색 대신
+각 x열의 정확한 투영 후보만 비교하며 dense oracle 검증으로 기존 결과와 같음을 보장한다.
+
+이유: 09:00과 반복 스케줄에서 capability/offer query가 같은 13×13 layout을 90번 동기 flood-fill하고
+8,733노드를 다시 방문해 4.7초 main-thread 정지를 만들었다. 분산 lazy 안은 첫 상호작용으로 작업을 옮겨
+최대 2.4초 프레임을 남겼다. 완전 prewarm과 명시적 revision 경계는 Loading 2.20초를 쓰는 대신 Release
+플레이 정상 구간을 1배속 23.424ms, 4배속 36.165ms wall max로 제한하며 stale graph도 막는다.
 
 ## 2026-08-14 / UI Remaster V3와 MapleStory typography를 전체 화면의 공용 정본으로 사용
 

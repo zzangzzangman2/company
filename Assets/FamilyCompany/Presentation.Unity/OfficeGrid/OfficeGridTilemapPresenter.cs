@@ -20,6 +20,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private Tilemap _floorTilemap;
         private TilemapRenderer _floorRenderer;
         private OfficeGrid _semanticGrid;
+        private Vector3 _nearestOrigin;
+        private Vector3 _nearestBasisX;
+        private Vector3 _nearestBasisY;
+        private float _nearestDeterminant;
 
         public Grid UnityGrid => _unityGrid;
         public Tilemap FloorTilemap => _floorTilemap;
@@ -43,6 +47,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _unityGrid.cellLayout = GridLayout.CellLayout.Isometric;
             _unityGrid.cellSwizzle = GridLayout.CellSwizzle.XYZ;
             _unityGrid.cellSize = new Vector3(TileWorldWidth, TileWorldHeight, 1f);
+            _nearestOrigin = _unityGrid.GetCellCenterWorld(Vector3Int.zero);
+            _nearestBasisX = _unityGrid.GetCellCenterWorld(Vector3Int.right) - _nearestOrigin;
+            _nearestBasisY = _unityGrid.GetCellCenterWorld(Vector3Int.up) - _nearestOrigin;
+            _nearestDeterminant = _nearestBasisX.x * _nearestBasisY.y -
+                                  _nearestBasisX.y * _nearestBasisY.x;
+            if (Mathf.Abs(_nearestDeterminant) <= 0.000001f)
+                throw new InvalidOperationException("Office grid basis is singular.");
 
             EnsureTilemap();
             _floorTilemap.ClearAllTiles();
@@ -133,16 +144,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");
             var best = new OfficeGridCoordinate(0, 0);
             var bestDistance = float.PositiveInfinity;
-            for (var y = 0; y < _semanticGrid.Height; y++)
+            float basisYSquared = _nearestBasisY.sqrMagnitude;
             for (var x = 0; x < _semanticGrid.Width; x++)
             {
-                var cell = new OfficeGridCoordinate(x, y);
-                var distance = (CellCenterWorld(cell) - worldPosition).sqrMagnitude;
-                if (distance >= bestDistance) continue;
-                bestDistance = distance;
-                best = cell;
+                Vector3 remaining = worldPosition - (_nearestOrigin + _nearestBasisX * x);
+                float projectedY = Vector3.Dot(remaining, _nearestBasisY) / basisYSquared;
+                int lowerY = Mathf.Clamp(Mathf.FloorToInt(projectedY), 0, _semanticGrid.Height - 1);
+                int upperY = Mathf.Clamp(Mathf.CeilToInt(projectedY), 0, _semanticGrid.Height - 1);
+                ConsiderNearestCandidate(x, lowerY, worldPosition, ref best, ref bestDistance);
+                if (upperY != lowerY)
+                    ConsiderNearestCandidate(x, upperY, worldPosition, ref best, ref bestDistance);
             }
             return best;
+        }
+
+        private void ConsiderNearestCandidate(
+            int x,
+            int y,
+            Vector3 worldPosition,
+            ref OfficeGridCoordinate best,
+            ref float bestDistance)
+        {
+            Vector3 center = _unityGrid.GetCellCenterWorld(new Vector3Int(x, y, 0));
+            float distance = (center - worldPosition).sqrMagnitude;
+            if (distance > bestDistance) return;
+            if (distance == bestDistance &&
+                (y > best.Y || y == best.Y && x >= best.X)) return;
+            bestDistance = distance;
+            best = new OfficeGridCoordinate(x, y);
         }
 
         private void EnsureTilemap()
