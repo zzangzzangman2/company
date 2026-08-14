@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 
@@ -20,6 +21,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             public SpriteRenderer BaseRenderer;
             public SpriteRenderer FrontRenderer;
             public SpriteRenderer OccupiedLowerBodyRenderer;
+            public SpriteRenderer OccupiedBackFrameRenderer;
         }
 
         private sealed class RuntimeForegroundSprite
@@ -39,6 +41,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         private readonly Dictionary<string, SpriteRenderer> _occupiedChairLowerBodyOverlays =
             new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
         private readonly Dictionary<Sprite, RuntimeForegroundSprite> _occupiedChairForegrounds =
+            new Dictionary<Sprite, RuntimeForegroundSprite>();
+        private readonly Dictionary<Sprite, RuntimeForegroundSprite> _occupiedChairBackFrames =
             new Dictionary<Sprite, RuntimeForegroundSprite>();
         private OfficeGrid _semanticGrid;
         private OfficeGridTilemapPresenter _gridPresenter;
@@ -146,6 +150,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 }
             }
 
+            ApplyAuthoredWorkstationChairBindings(semanticGrid);
             RecalculateRenderBounds();
 
             if (!hasBounds) _renderBounds = new Bounds(transform.position, Vector3.zero);
@@ -205,16 +210,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         }
 
         /// <summary>
-        /// Pulls only the rendered chair under a planted occupant. Semantic seating, collision and
-        /// navigation stay immutable, so different body proportions need no member-specific offsets.
+        /// Compatibility hook for seating callers. Chairs are authored world furniture and must
+        /// stay on their semantic root; occupant motion can never translate their presentation.
         /// </summary>
         public void AlignSeatPresentationToWorld(OfficeSeatSlot seat, Vector3 desiredSeatWorld)
         {
             if (seat == null) throw new ArgumentNullException(nameof(seat));
             FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
             chair.VisualRoot.localPosition = chair.AuthoredVisualLocalPosition;
-            Vector3 currentSeatWorld = SeatAnchorWorld(seat.ChairFurnitureId);
-            chair.VisualRoot.position += desiredSeatWorld - currentSeatWorld;
+            _ = desiredSeatWorld;
         }
 
         public void RestoreSeatPresentation(OfficeSeatSlot seat)
@@ -222,6 +226,106 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (seat == null) return;
             FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
             chair.VisualRoot.localPosition = chair.AuthoredVisualLocalPosition;
+        }
+
+        /// <summary>
+        /// Applies the approved Starter Office member-to-seat calibration once, before the first
+        /// actor is created or rendered. The resulting chair transform becomes its authored fixed
+        /// position and is never updated from occupant motion.
+        /// </summary>
+        public void CalibrateFixedWorkstationChairs(OfficeCharacterSeatPoseCatalog poseCatalog)
+        {
+            if (poseCatalog == null) throw new ArgumentNullException(nameof(poseCatalog));
+            foreach (OfficeSeatSlot seat in _semanticGrid.SeatSlots)
+            {
+                if (!seat.HasWorkstationBinding) continue;
+                string memberId = MemberIdFromSeat(seat.SeatId);
+                if (memberId.Length == 0) continue;
+
+                OfficeCharacterSeatPoseProfile profile = poseCatalog.ResolveApproved(
+                    memberId,
+                    FacingDirection(seat.Facing),
+                    OfficeSeatingAnimationClip.Work,
+                    0);
+                if (Mathf.Abs(profile.RotationDegrees) > 0.01f ||
+                    Mathf.Abs(profile.UniformScale - 1f) > 0.0001f)
+                    throw new InvalidOperationException(
+                        "Fixed chair calibration requires an unrotated unit-scale pose: " + memberId);
+
+                FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
+                FurnitureVisual desk = RequiredVisual(seat.WorkSurfaceFurnitureId);
+                Vector2 pelvisToHandPx = profile.HandAnchorPx - profile.PelvisAnchorPx;
+                float actorScale = OfficeGridCharacterMover.UniformVisualScale;
+                Vector3 pelvisToHandWorld = new Vector3(
+                    pelvisToHandPx.x * actorScale / OfficeGridTilemapPresenter.PixelsPerUnit,
+                    pelvisToHandPx.y * actorScale / OfficeGridTilemapPresenter.PixelsPerUnit,
+                    0f);
+                Vector3 fixedSeatWorld = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    desk.BaseRenderer,
+                    desk.Definition.OperatorWorkSocketPx) - pelvisToHandWorld;
+                Vector3 currentSeatWorld = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    chair.BaseRenderer,
+                    chair.Definition.SeatAnchorPx);
+                chair.VisualRoot.position += fixedSeatWorld - currentSeatWorld;
+                chair.AuthoredVisualLocalPosition = chair.VisualRoot.localPosition;
+                UpdateChairAuthoredSorting(chair);
+            }
+
+            RecalculateRenderBounds();
+        }
+
+        private void ApplyAuthoredWorkstationChairBindings(OfficeGrid semanticGrid)
+        {
+            foreach (OfficeSeatSlot seat in semanticGrid.SeatSlots)
+            {
+                if (!seat.HasWorkstationBinding) continue;
+                FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
+                FurnitureVisual desk = RequiredVisual(seat.WorkSurfaceFurnitureId);
+                if (!chair.Definition.HasSeatAnchor || !desk.Definition.HasOperatorSeatSocket)
+                    throw new InvalidOperationException(
+                        "Bound workstation is missing its authored chair/desk seat sockets: " + seat.SeatId);
+
+                Vector3 chairSeatWorld = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    chair.BaseRenderer,
+                    chair.Definition.SeatAnchorPx);
+                Vector3 deskSeatWorld = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    desk.BaseRenderer,
+                    desk.Definition.OperatorSeatSocketPx);
+                chair.VisualRoot.position += deskSeatWorld - chairSeatWorld;
+                chair.AuthoredVisualLocalPosition = chair.VisualRoot.localPosition;
+
+                UpdateChairAuthoredSorting(chair);
+            }
+        }
+
+        private static void UpdateChairAuthoredSorting(FurnitureVisual chair)
+        {
+            chair.BaseRenderer.sortingOrder = OfficeGridCharacterMover.ResolveDynamicSortingOrder(
+                OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                    chair.BaseRenderer,
+                    chair.Definition.SortAnchorPx));
+            if (chair.FrontRenderer != null)
+                chair.FrontRenderer.sortingOrder = chair.BaseRenderer.sortingOrder + 1;
+        }
+
+        private static string MemberIdFromSeat(string seatId)
+        {
+            const string prefix = "seat_";
+            return seatId != null && seatId.StartsWith(prefix, StringComparison.Ordinal)
+                ? seatId.Substring(prefix.Length)
+                : string.Empty;
+        }
+
+        private static int FacingDirection(OfficeFurnitureFacing facing)
+        {
+            return facing switch
+            {
+                OfficeFurnitureFacing.SouthEast => 7,
+                OfficeFurnitureFacing.SouthWest => 1,
+                OfficeFurnitureFacing.NorthWest => 3,
+                OfficeFurnitureFacing.NorthEast => 5,
+                _ => 4
+            };
         }
 
         public Vector3 WorkSurfaceAnchorWorld(string furnitureId)
@@ -297,6 +401,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (visual.OccupiedLowerBodyRenderer != null &&
                 visual.OccupiedLowerBodyRenderer.enabled)
                 visual.OccupiedLowerBodyRenderer.sortingOrder = sortingOrder;
+            if (visual.OccupiedBackFrameRenderer != null &&
+                visual.OccupiedBackFrameRenderer.enabled)
+                visual.OccupiedBackFrameRenderer.sortingOrder = sortingOrder + 2;
         }
 
         /// <summary>
@@ -318,12 +425,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             {
                 if (visual.OccupiedLowerBodyRenderer != null)
                     visual.OccupiedLowerBodyRenderer.enabled = false;
+                if (visual.OccupiedBackFrameRenderer != null)
+                    visual.OccupiedBackFrameRenderer.enabled = false;
                 return;
             }
 
             EnsureOccupiedLowerBodyRenderer(visual);
+            EnsureOccupiedBackFrameRenderer(visual);
             visual.OccupiedLowerBodyRenderer.enabled = true;
             visual.OccupiedLowerBodyRenderer.sortingOrder = visual.FrontRenderer.sortingOrder;
+            visual.OccupiedBackFrameRenderer.enabled = true;
+            visual.OccupiedBackFrameRenderer.sortingOrder = visual.FrontRenderer.sortingOrder + 2;
         }
 
         public void ApplySeatOcclusion(OfficeSeatSlot seat, int characterSortingOrder)
@@ -338,6 +450,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 chair.FrontRenderer.sortingOrder = characterSortingOrder + 2;
                 if (chair.OccupiedLowerBodyRenderer != null)
                     chair.OccupiedLowerBodyRenderer.sortingOrder = characterSortingOrder + 2;
+                if (chair.OccupiedBackFrameRenderer != null)
+                    chair.OccupiedBackFrameRenderer.sortingOrder = characterSortingOrder + 4;
             }
 
             if (!seat.HasWorkstationBinding) return;
@@ -370,6 +484,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (chair.OccupiedLowerBodyRenderer == null ||
                 !chair.OccupiedLowerBodyRenderer.enabled ||
                 chair.OccupiedLowerBodyRenderer.sortingOrder != characterSortingOrder + 2)
+                return false;
+            if (chair.OccupiedBackFrameRenderer == null ||
+                !chair.OccupiedBackFrameRenderer.enabled ||
+                chair.OccupiedBackFrameRenderer.sortingOrder != characterSortingOrder + 4)
                 return false;
             if (!seat.HasWorkstationBinding) return true;
             FurnitureVisual desk = RequiredVisual(seat.WorkSurfaceFurnitureId);
@@ -405,6 +523,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             }
             if (visual.OccupiedLowerBodyRenderer != null)
                 visual.OccupiedLowerBodyRenderer.enabled = false;
+            if (visual.OccupiedBackFrameRenderer != null)
+                visual.OccupiedBackFrameRenderer.enabled = false;
         }
 
         private void EnsureOccupiedLowerBodyRenderer(FurnitureVisual visual)
@@ -448,6 +568,48 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             renderer.enabled = false;
             visual.OccupiedLowerBodyRenderer = renderer;
             _occupiedChairLowerBodyOverlays[visual.Furniture.FurnitureId] = renderer;
+        }
+
+        private void EnsureOccupiedBackFrameRenderer(FurnitureVisual visual)
+        {
+            if (visual.OccupiedBackFrameRenderer != null) return;
+            Sprite baseSprite = visual.Definition.BaseSprite;
+            if (!_occupiedChairBackFrames.TryGetValue(
+                    baseSprite,
+                    out RuntimeForegroundSprite occupiedForeground))
+            {
+                Rect textureRect =
+                    OfficeSeatedUpperBodyProtectionRules.ChairBackFrameTextureRect(baseSprite);
+                Sprite sprite = Sprite.Create(
+                    baseSprite.texture,
+                    textureRect,
+                    OfficeSeatedUpperBodyProtectionRules.ChairBackFrameNormalizedPivot(baseSprite),
+                    baseSprite.pixelsPerUnit,
+                    0u,
+                    SpriteMeshType.FullRect,
+                    Vector4.zero);
+                sprite.name = baseSprite.name + "_occupied_back_frame_runtime";
+                sprite.hideFlags = HideFlags.HideAndDontSave;
+                occupiedForeground = new RuntimeForegroundSprite
+                {
+                    Sprite = sprite,
+                    LocalPosition =
+                        OfficeSeatedUpperBodyProtectionRules.ChairBackFrameLocalPosition(baseSprite)
+                };
+                _occupiedChairBackFrames.Add(baseSprite, occupiedForeground);
+            }
+
+            var backFrameRoot = new GameObject("OccupiedBackFrameOverlay");
+            backFrameRoot.transform.SetParent(visual.VisualRoot, false);
+            backFrameRoot.transform.localPosition = occupiedForeground.LocalPosition;
+            backFrameRoot.transform.localRotation = Quaternion.identity;
+            backFrameRoot.transform.localScale = Vector3.one;
+            SpriteRenderer renderer = backFrameRoot.AddComponent<SpriteRenderer>();
+            renderer.sprite = occupiedForeground.Sprite;
+            renderer.flipX = visual.BaseRenderer.flipX;
+            renderer.sortingLayerID = visual.FrontRenderer.sortingLayerID;
+            renderer.enabled = false;
+            visual.OccupiedBackFrameRenderer = renderer;
         }
 
         private void RecalculateRenderBounds()
@@ -498,6 +660,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 else DestroyImmediate(runtime.Sprite);
             }
             _occupiedChairForegrounds.Clear();
+            foreach (RuntimeForegroundSprite runtime in _occupiedChairBackFrames.Values)
+            {
+                if (runtime?.Sprite == null) continue;
+                if (Application.isPlaying) Destroy(runtime.Sprite);
+                else DestroyImmediate(runtime.Sprite);
+            }
+            _occupiedChairBackFrames.Clear();
         }
     }
 }

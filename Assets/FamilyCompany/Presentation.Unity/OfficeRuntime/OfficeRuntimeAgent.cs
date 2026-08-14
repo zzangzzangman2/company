@@ -33,17 +33,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public const float DefaultRadius = 0.22f;
         public const float DefaultMoveSpeed = 1.65f;
         private const float ArrivalDistance = 0.035f;
-        // One shared tolerance minimizes chair pull-out while keeping every approved typing hand
-        // on the workstation. The remaining translation is derived only from pose anchors and
-        // furniture sockets; member IDs never participate in the placement rule.
-        private const float TypingHandContactBudgetPx = 3.499f;
-        // The occupant may lead the pulled-out chair by less than one rendered pixel. This keeps
-        // both the hand/contact calibration and chair-to-desk presentation inside their contracts
-        // without making the rule depend on the active camera zoom or the member identity.
-        private const float TypingSeatContactBudgetPx = 0.899f;
-        // Keep the generated displacement strictly below the public 0.9 px contract so camera
-        // projection roundoff can never turn an exactly-on-boundary step into a false violation.
-        private const float MaximumChairPresentationStepPx = 0.899f;
         private const float MaximumSeatEgressStepPx = 0.899f;
         private const float SeatEgressCompletionTolerancePx = 0.25f;
 
@@ -2245,46 +2234,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _seatDirection,
                 OfficeSeatingAnimationClip.Work,
                 0);
-            Vector2 pelvisToHandPx = profile.HandAnchorPx - profile.PelvisAnchorPx;
-            if (_renderer.flipX) pelvisToHandPx.x = -pelvisToHandPx.x;
-            if (_renderer.flipY) pelvisToHandPx.y = -pelvisToHandPx.y;
-            Vector3 pelvisToHandWorld = _renderer.transform.TransformVector(new Vector3(
-                pelvisToHandPx.x / _renderer.sprite.pixelsPerUnit,
-                pelvisToHandPx.y / _renderer.sprite.pixelsPerUnit,
-                0f));
-            Vector3 exactHandContactPelvis =
-                _world.Workstations.DeskWorkSocketWorld(_seat) - pelvisToHandWorld;
-            Vector3 requiredShift =
-                exactHandContactPelvis - _chairPresentationAuthoredPelvisWorld;
-            float requiredShiftPx = Camera.main == null
-                ? float.PositiveInfinity
-                : OfficeGridAlignmentMetrics.WorldDisplacementScreenPx(
-                    Camera.main,
-                    _chairPresentationAuthoredPelvisWorld,
-                    requiredShift);
-            bool finiteShift = !float.IsNaN(requiredShiftPx) && !float.IsInfinity(requiredShiftPx);
-            float shiftFraction = !finiteShift || requiredShiftPx <= 0.0001f
-                ? 1f
-                : Mathf.Clamp01(1f - (TypingHandContactBudgetPx / requiredShiftPx));
-            _workPresentationTargetPelvisWorld =
-                _chairPresentationAuthoredPelvisWorld + (requiredShift * shiftFraction);
-            Vector3 requestedChairShift =
-                _workPresentationTargetPelvisWorld - _chairPresentationAuthoredPelvisWorld;
-            float requestedChairShiftPx = Camera.main == null
-                ? 0f
-                : OfficeGridAlignmentMetrics.WorldDisplacementScreenPx(
-                    Camera.main,
-                    _chairPresentationAuthoredPelvisWorld,
-                    requestedChairShift);
-            float chairShiftFraction = requestedChairShiftPx <= 0.0001f
-                ? 1f
-                : Mathf.Clamp01(1f - (TypingSeatContactBudgetPx / requestedChairShiftPx));
-            _chairPresentationTargetPelvisWorld =
-                _chairPresentationAuthoredPelvisWorld + requestedChairShift * chairShiftFraction;
+            if (Mathf.Abs(profile.RotationDegrees) > 0.01f ||
+                Mathf.Abs(profile.UniformScale - 1f) > 0.0001f)
+                throw new InvalidOperationException(
+                    $"Seated work pose must keep authored rotation/scale for {_agentId}.");
+
+            // Furniture is world-authored scenery, never an attachment to its occupant. Keep both
+            // the chair and the seated pelvis on the catalogued seat anchor; pose/catalog art owns
+            // any remaining keyboard-contact calibration.
+            _workPresentationTargetPelvisWorld = _chairPresentationAuthoredPelvisWorld;
+            _chairPresentationTargetPelvisWorld = _chairPresentationAuthoredPelvisWorld;
             _seatPresentationPrepared = true;
-            _chairPresentationMoveComplete =
-                (_chairPresentationTargetPelvisWorld - _chairPresentationAuthoredPelvisWorld)
-                .sqrMagnitude <= 0.0000001f;
+            _chairPresentationMoveComplete = true;
             SeedChairPresentationMotionSample();
             return true;
         }
@@ -2301,35 +2262,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void AdvanceChairPresentation()
         {
-            if (!_seatPresentationPrepared || _chairPresentationMoveComplete || _seat == null) return;
-            Vector3 current = _world.Workstations.ChairSeatAnchorWorld(_seat);
-            if (Camera.main == null)
-            {
-                _world.Workstations.AlignChairPresentationToOccupant(
-                    _seat,
-                    _chairPresentationTargetPelvisWorld);
-                _chairPresentationMoveComplete = true;
-                return;
-            }
-
-            float remainingPx = OfficeGridAlignmentMetrics.ScreenDistance(
-                Camera.main,
-                current,
-                _chairPresentationTargetPelvisWorld);
-            if (remainingPx <= 0.01f)
-            {
-                _world.Workstations.AlignChairPresentationToOccupant(
-                    _seat,
-                    _chairPresentationTargetPelvisWorld);
-                _chairPresentationMoveComplete = true;
-                return;
-            }
-
-            float fraction = Mathf.Clamp01(MaximumChairPresentationStepPx / remainingPx);
-            _world.Workstations.AlignChairPresentationToOccupant(
-                _seat,
-                Vector3.Lerp(current, _chairPresentationTargetPelvisWorld, fraction));
-            _chairPresentationMoveComplete = fraction >= 0.9999f;
+            if (!_seatPresentationPrepared || _seat == null) return;
+            _world.Workstations.RestoreChairPresentation(_seat);
+            _chairPresentationMoveComplete = true;
         }
 
         private float ChairPresentationDistancePxToTarget()

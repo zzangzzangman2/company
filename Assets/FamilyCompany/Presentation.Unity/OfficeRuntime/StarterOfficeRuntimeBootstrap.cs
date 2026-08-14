@@ -137,6 +137,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 grid,
                 presenter,
                 _assetSource.FurnitureVisualCatalog);
+            furniturePresenter.CalibrateFixedWorkstationChairs(
+                _assetSource.CharacterSeatPoseCatalog);
             _world = _generated.AddComponent<OfficeRuntimeWorld>();
             _world.Configure(grid, presenter, furniturePresenter);
             ResolveSeatingPresentationMode();

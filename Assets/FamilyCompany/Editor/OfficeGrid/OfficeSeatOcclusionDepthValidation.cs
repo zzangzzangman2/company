@@ -488,7 +488,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             RequireContains(
                 presenter,
                 "frontRenderer.sprite=definition.FrontOverlaySprite;",
-                "Chairs do not retain the canonical 9,881-pixel foreground Sprite.");
+                "Chairs do not retain their authored lower foreground Sprite.");
             RequireContains(
                 sorter,
                 "UpperActorPrefix+actor.AgentId",
@@ -500,7 +500,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             RequireNotContains(
                 presenter,
                 "visual.FrontRenderer.sprite=occupiedForeground.Sprite;",
-                "The canonical chair foreground is still replaced by a cropped Sprite.");
+                "The authored chair foreground is still replaced by a cropped Sprite.");
             RequireContains(
                 presenter,
                 "OccupiedLowerBodyRenderer",

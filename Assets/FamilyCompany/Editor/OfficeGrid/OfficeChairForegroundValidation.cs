@@ -10,19 +10,25 @@ using UnityEngine;
 namespace FamilyCompany.Editor.OfficeGridQa
 {
     /// <summary>
-    /// Guards the canonical NorthWest chair foreground independently of wall/door validation.
-    /// The mask is a strict subset of the complete chair Sprite and must survive a furniture rebuild.
+    /// Guards the open-back NorthWest chair independently of wall/door validation. The foreground
+    /// is a strict lower-body subset; the back-post gap must remain visibly open after every rebuild.
     /// </summary>
     public static class OfficeChairForegroundValidation
     {
         private const string ChairBasePath =
-            "Assets/Art/Office/Tiles/Furniture/Runtime/office_swivel_chair_v3.png";
+            "Assets/Art/Office/Tiles/Furniture/Runtime/office_swivel_chair_v4.png";
         private const string ChairFrontPath =
-            "Assets/Art/Office/Tiles/Furniture/Runtime/office_swivel_chair_front_v3.png";
-        private const string ChairFrontGuid = "765e8e592ac1dbe46a89bf68ff564944";
-        private const int ForegroundMinimumRuntimeX = 317;
-        private const int ForegroundMinimumRuntimeY = 98;
-        private const int ExpectedForegroundPixelCount = 9881;
+            "Assets/Art/Office/Tiles/Furniture/Runtime/office_swivel_chair_front_v4.png";
+        private const string ChairFrontGuid = "ce3ae497c54a66742a5f58cbd32522ac";
+        private const int ForegroundMinimumRuntimeX = 267;
+        private const int ForegroundMaximumRuntimeX = 371;
+        private const int ForegroundMinimumRuntimeY = 25;
+        private const int ForegroundMaximumRuntimeY = 93;
+        private const int ExpectedForegroundPixelCount = 4161;
+        private const int OpenGapMinimumRuntimeX = 326;
+        private const int OpenGapMaximumRuntimeX = 356;
+        private const int OpenGapMinimumRuntimeY = 140;
+        private const int OpenGapMaximumRuntimeY = 195;
 
         [MenuItem("Family Company/Validate Office Chair Foreground Integrity")]
         public static void Validate()
@@ -49,13 +55,14 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Require(Vector2.Distance(expectedFront.pivot, expectedBase.pivot) <= 0.01f,
                 "Chair foreground pivot differs from the chair base.");
 
-            ValidateLimitedSubset(expectedBase);
+            ValidateOpenBackSubset(expectedBase);
             Debug.Log(
                 $"OFFICE_CHAIR_FOREGROUND_VALIDATION: PASS sourcePixels={ExpectedForegroundPixelCount} " +
                 $"lowerOccluderPixels=" +
                 $"{OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount} " +
-                $"cutoff=({ForegroundMinimumRuntimeX},{ForegroundMinimumRuntimeY}) " +
-                "pivotAlignment=exact catalog=linked occupiedMode=canonical-continuous " +
+                $"frontBounds=({ForegroundMinimumRuntimeX},{ForegroundMinimumRuntimeY})-" +
+                $"({ForegroundMaximumRuntimeX},{ForegroundMaximumRuntimeY}) " +
+                "openGap=31x56 pivotAlignment=exact catalog=linked occupiedMode=lower-only " +
                 "upperBodyProtection=pose-pelvis-split");
         }
 
@@ -73,7 +80,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        private static void ValidateLimitedSubset(Sprite expectedBase)
+        private static void ValidateOpenBackSubset(Sprite expectedBase)
         {
             Texture2D chairBase = ReadTexture(ChairBasePath);
             Texture2D chairFront = ReadTexture(ChairFrontPath);
@@ -88,24 +95,23 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Color32[] basePixels = chairBase.GetPixels32();
                 Color32[] frontPixels = chairFront.GetPixels32();
                 var visibleForegroundPixels = 0;
+                var foregroundMinX = chairBase.width;
+                var foregroundMaxX = -1;
+                var foregroundMinY = chairBase.height;
+                var foregroundMaxY = -1;
                 for (var y = 0; y < chairBase.height; y++)
                 for (var x = 0; x < chairBase.width; x++)
                 {
                     int index = y * chairBase.width + x;
                     Color32 basePixel = basePixels[index];
                     Color32 frontPixel = frontPixels[index];
-                    bool expectedForeground = basePixel.a > 0 &&
-                                               x >= ForegroundMinimumRuntimeX &&
-                                               y >= ForegroundMinimumRuntimeY;
                     bool actualForeground = frontPixel.a > 0;
-                    if (actualForeground != expectedForeground)
-                    {
-                        throw new InvalidOperationException(
-                            $"Chair foreground mask mismatch at runtime pixel ({x},{y}).");
-                    }
-
                     if (!actualForeground) continue;
                     visibleForegroundPixels++;
+                    foregroundMinX = Mathf.Min(foregroundMinX, x);
+                    foregroundMaxX = Mathf.Max(foregroundMaxX, x);
+                    foregroundMinY = Mathf.Min(foregroundMinY, y);
+                    foregroundMaxY = Mathf.Max(foregroundMaxY, y);
                     if (frontPixel.r != basePixel.r || frontPixel.g != basePixel.g ||
                         frontPixel.b != basePixel.b || frontPixel.a != basePixel.a)
                     {
@@ -116,6 +122,20 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
                 Require(visibleForegroundPixels == ExpectedForegroundPixelCount,
                     $"Chair foreground pixel count {visibleForegroundPixels} != {ExpectedForegroundPixelCount}.");
+                Require(
+                    foregroundMinX == ForegroundMinimumRuntimeX &&
+                    foregroundMaxX == ForegroundMaximumRuntimeX &&
+                    foregroundMinY == ForegroundMinimumRuntimeY &&
+                    foregroundMaxY == ForegroundMaximumRuntimeY,
+                    $"Chair foreground bounds changed: ({foregroundMinX},{foregroundMinY})-" +
+                    $"({foregroundMaxX},{foregroundMaxY}).");
+                for (var y = OpenGapMinimumRuntimeY; y <= OpenGapMaximumRuntimeY; y++)
+                for (var x = OpenGapMinimumRuntimeX; x <= OpenGapMaximumRuntimeX; x++)
+                {
+                    Require(
+                        basePixels[y * chairBase.width + x].a == 0,
+                        $"Open chair back was filled at runtime pixel ({x},{y}).");
+                }
                 var lowerOccluderPixels = 0;
                 for (var y = 0; y < chairBase.height; y++)
                 for (var x = 0; x < chairBase.width; x++)

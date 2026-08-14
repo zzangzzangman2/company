@@ -37,18 +37,18 @@ MonoBehaviour:
     frontOverlayWhenOccupied: 1
   - kindId: swivel_chair
     facing: 2
-    baseSprite: {fileID: 21300000, guid: 5d642bde97f1a844f9aefcc7c4c95a08, type: 3}
-    frontOverlaySprite: {fileID: 21300000, guid: 765e8e592ac1dbe46a89bf68ff564944, type: 3}
-    groundAnchorPx: {x: 319.19083, y: 45.333923}
-    sortAnchorPx: {x: 319.19083, y: 25.23675}
+    baseSprite: {fileID: 21300000, guid: 1a0124165cde8714c9b01a9494a31fd0, type: 3}
+    frontOverlaySprite: {fileID: 21300000, guid: ce3ae497c54a66742a5f58cbd32522ac, type: 3}
+    groundAnchorPx: {x: 315.78165, y: 25.335188}
+    sortAnchorPx: {x: 315.78165, y: 24}
     groundFootprintPolygonPx:
-    - {x: 319.19083, y: -34.666077}
-    - {x: 479.19083, y: 45.333923}
-    - {x: 319.19083, y: 125.33392}
-    - {x: 159.19083, y: 45.333923}
+    - {x: 315.78165, y: -54.66481}
+    - {x: 475.78165, y: 25.33519}
+    - {x: 315.78165, y: 105.33519}
+    - {x: 155.78165, y: 25.335188}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
-    seatAnchorPx: {x: 313.00708, y: 153.54947}
+    seatAnchorPx: {x: 306.43533, y: 145.83589}
     workSurfaceAnchorPx: {x: 0, y: 0}
     operatorSeatSocketPx: {x: 0, y: 0}
     uniformScale: 1

@@ -128,20 +128,25 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 OfficeGridLayouts.SwivelChairKind,
                 "office_swivel_chair",
                 175,
-                260,
+                240,
                 OfficeFurnitureFacing.NorthWest,
-                new Vector2(620f, 300f),
-                new Vector2(620f, 235f),
-                "v3",
-                "office_swivel_chair_northwest",
-                new Vector2(600f, 650f),
-                // Preserve the limited foreground introduced with the canonical V3 chair.
-                // In the baked 640x512 Sprite this is exactly base alpha where x >= 317
-                // and y >= 98: the right/backrest edge and near armrest, not the cushion.
+                new Vector2(647f, 227f),
+                new Vector2(647f, 223f),
+                "v4",
+                "office_open_back_chair_northwest",
+                new Vector2(619f, 588f),
+                // Keep the complete open back frame and the near seat/leg outline visible in
+                // front of an occupant. The exclusion leaves the cushion centre behind the body,
+                // so the character reads as seated rather than pasted behind a solid chair.
                 sourceForegroundPolygon: new[]
                 {
-                    new Vector2(610f, 468f), new Vector2(904f, 468f),
-                    new Vector2(904f, 934f), new Vector2(610f, 934f)
+                    new Vector2(390f, 210f), new Vector2(930f, 210f),
+                    new Vector2(930f, 950f), new Vector2(390f, 950f)
+                },
+                sourceForegroundExclusionPolygon: new[]
+                {
+                    new Vector2(430f, 500f), new Vector2(840f, 500f),
+                    new Vector2(840f, 690f), new Vector2(430f, 690f)
                 }),
             new FurnitureSpec(OfficeGridLayouts.ReceptionCounterKind, "office_reception_counter", 500, 340,
                 OfficeFurnitureFacing.SouthEast, new Vector2(834f, 180f), new Vector2(834f, 162f),
@@ -279,7 +284,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             AssetDatabase.ImportAsset(chair.FrontPath, ImportAssetOptions.ForceSynchronousImport);
             OfficeChairForegroundValidation.Validate();
             Debug.Log(
-                "OFFICE_CHAIR_FOREGROUND_ONLY_BUILD: PASS sourcePixels=9881 " +
+                "OFFICE_CHAIR_FOREGROUND_ONLY_BUILD: PASS sourcePixels=4161 openBack=31x56 " +
                 "otherFurnitureWrites=0 catalogWrites=0");
         }
 

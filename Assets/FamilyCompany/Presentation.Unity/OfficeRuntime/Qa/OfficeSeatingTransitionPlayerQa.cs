@@ -718,7 +718,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 failures.Add($"typingSeat={actor.MaxTypingSeatContactErrorPx:F3}px");
             if (actor.MaxTypingHandWorkErrorPx > MaximumHandKeyboardResidualPx)
                 failures.Add($"handKeyboard={actor.MaxTypingHandWorkErrorPx:F3}px");
-            if (actor.MaxChairPresentationStepPx > MaximumSeatResidualPx)
+            if (actor.MaxChairPresentationStepPx > 0.01f)
                 failures.Add($"chairPresentationStep={actor.MaxChairPresentationStepPx:F3}px");
             if (actor.VisualRotationErrorDegrees > 0.01f)
                 failures.Add($"rotation={actor.VisualRotationErrorDegrees:F4}deg");
@@ -1891,7 +1891,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             builder.AppendLine("egressMatrix=families4*rotations4*scenarios4=64");
             builder.AppendLine("captureManifest=seating-transition-frame-capture-manifest.txt");
             builder.AppendLine(
-                "chairForeground=canonical-9881px-continuous; upperBodyProtection=pose-pelvis-split");
+                "chairForeground=open-back-lower-4161px-continuous; upperBodyProtection=pose-pelvis-split");
+            builder.AppendLine("chairMotion=world-authored-fixed; maximumAllowedStepPx=0.01");
             builder.AppendLine(
                 "penetrationContract=filtered-core actor residual >5%=FAIL; <=5% allowed only for D3D11 bilinear/sRGB readback");
             foreach (string memberId in MemberIds)
