@@ -1,10 +1,24 @@
 param(
-    [string]$SimulRoot = 'C:\Users\godho\Documents\Codex\simul',
+    [string]$SimulRoot = '',
     [string]$OutputPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+if ([string]::IsNullOrWhiteSpace($SimulRoot)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:FAMILYCOMPANY_SIMUL_ROOT)) {
+        $SimulRoot = $env:FAMILYCOMPANY_SIMUL_ROOT
+    }
+    else {
+        $siblingCandidate = Join-Path (Split-Path -Parent $projectRoot) 'simul'
+        if (Test-Path -LiteralPath $siblingCandidate -PathType Container) {
+            $SimulRoot = $siblingCandidate
+        }
+        else {
+            throw 'SIMUL source was not found. Pass -SimulRoot or set FAMILYCOMPANY_SIMUL_ROOT.'
+        }
+    }
+}
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = Join-Path $projectRoot 'Assets\FamilyCompany\Simulation\Market\MarketTradingCalendarCorpus.g.cs'
 }

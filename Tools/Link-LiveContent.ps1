@@ -34,7 +34,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$LinkPath = 'C:\Users\godho\Downloads\FamilyCompany_LiveData',
+    [string]$LinkPath = '',
     [string]$TargetPath = '',
     [switch]$Remove
 )
@@ -68,6 +68,14 @@ function Test-IsReparsePoint {
 }
 
 # ---------------------------------------------------------------- 경로 결정
+
+if ([string]::IsNullOrWhiteSpace($LinkPath)) {
+    $userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+    if ([string]::IsNullOrWhiteSpace($userProfile)) {
+        throw 'User profile path is unavailable. Pass -LinkPath explicitly.'
+    }
+    $LinkPath = Join-Path $userProfile 'Downloads\FamilyCompany_LiveData'
+}
 
 if ([string]::IsNullOrWhiteSpace($TargetPath)) {
     $repositoryRoot = Split-Path -Parent $PSScriptRoot

@@ -13,8 +13,16 @@ function Find-FamilyCompanyUnityEditor {
     if (-not [string]::IsNullOrWhiteSpace($env:FAMILY_COMPANY_UNITY_EDITOR)) {
         $candidates.Add($env:FAMILY_COMPANY_UNITY_EDITOR)
     }
+    # Codex normally places bundled editors beside the saved project, but release worktrees can
+    # live a few levels deeper. Probe only deterministic ancestor-relative locations; do not
+    # recursively scan an entire drive.
     $workspaceParent = Split-Path -Parent $script:FamilyCompanyProjectRoot
-    $candidates.Add((Join-Path $workspaceParent "UnityEditors\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
+    for ($level = 0; $level -lt 6 -and -not [string]::IsNullOrWhiteSpace($workspaceParent); $level++) {
+        $candidates.Add((Join-Path $workspaceParent "UnityEditors\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
+        $nextParent = Split-Path -Parent $workspaceParent
+        if ([string]::Equals($nextParent, $workspaceParent, [StringComparison]::OrdinalIgnoreCase)) { break }
+        $workspaceParent = $nextParent
+    }
     if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
         $candidates.Add((Join-Path $env:ProgramFiles "Unity\Hub\Editor\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
     }
@@ -55,6 +63,81 @@ function Get-NormalizedFullPath {
     [IO.Path]::GetFullPath($Path).TrimEnd([char]'\', [char]'/')
 }
 
+function Test-FamilyCompanyPathWithin {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$CandidatePath,
+        [Parameter(Mandatory = $true)][string]$ParentPath
+    )
+
+    $candidate = Get-NormalizedFullPath $CandidatePath
+    $parent = Get-NormalizedFullPath $ParentPath
+    if ([string]::Equals($candidate, $parent, [StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+    $prefix = $parent + [IO.Path]::DirectorySeparatorChar
+    $candidate.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Assert-SafeFamilyCompanyBuildPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$ProjectPath,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Purpose
+    )
+
+    $project = Get-NormalizedFullPath $ProjectPath
+    $actual = Get-NormalizedFullPath $Path
+    $volumeRoot = [IO.Path]::GetPathRoot($actual).TrimEnd([char]'\', [char]'/')
+    if ([string]::Equals($actual, $volumeRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "$Purpose cannot be a filesystem root: $actual"
+    }
+    if (Test-Path -LiteralPath $actual -PathType Leaf) {
+        throw "$Purpose points to a file instead of a directory: $actual"
+    }
+
+    if (Test-FamilyCompanyPathWithin $project $actual) {
+        throw "$Purpose must not target the repository root or one of its ancestors: $actual"
+    }
+    $protectedPaths = @(
+        (Join-Path $project '.git'),
+        (Join-Path $project 'Assets'),
+        (Join-Path $project 'Packages'),
+        (Join-Path $project 'ProjectSettings'),
+        (Join-Path $project 'Tools'))
+    foreach ($protectedPath in $protectedPaths) {
+        if (Test-FamilyCompanyPathWithin $actual $protectedPath) {
+            throw "$Purpose must not target the repository root or a protected source directory: $actual"
+        }
+    }
+    $actual
+}
+
+function Assert-FamilyCompanyReplaceableBuildDirectory {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$ExecutableName
+    )
+
+    $actual = Get-NormalizedFullPath $Path
+    if (-not (Test-Path -LiteralPath $actual -PathType Container)) { return }
+    $entries = @(Get-ChildItem -LiteralPath $actual -Force)
+    if ($entries.Count -eq 0) { return }
+    $requiredPaths = @(
+        (Join-Path $actual $ExecutableName),
+        (Join-Path $actual 'FamilyCompany_Data'),
+        (Join-Path $actual 'UnityPlayer.dll'))
+    foreach ($requiredPath in $requiredPaths) {
+        if (-not (Test-Path -LiteralPath $requiredPath)) {
+            throw (
+                'Refusing to replace a non-empty directory that is not a recognizable ' +
+                "Family Company player build: $actual")
+        }
+    }
+}
+
 function Assert-CanonicalProjectPath {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][string]$ProjectPath)
@@ -78,7 +161,7 @@ function Assert-CanonicalProjectPath {
 function Assert-ExactUnityEditor {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)][string]$UnityEditorPath,
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$UnityEditorPath,
         [Parameter(Mandatory = $true)][string]$ProjectPath
     )
 

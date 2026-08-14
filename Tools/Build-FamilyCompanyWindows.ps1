@@ -2,11 +2,14 @@
 param(
     [string]$CanonicalProjectPath = '',
     [string]$UnityEditorPath = '',
+    [string]$DeploymentRoot = '',
     [string]$FinalOutputPath = '',
+    [string]$StagingRoot = '',
     [string]$AutomationRoot = '',
     [int]$UnityWaitTimeoutMinutes = 120,
     [int]$UnityRetrySeconds = 15,
-    [int]$MaximumLogFiles = 30
+    [int]$MaximumLogFiles = 30,
+    [switch]$DryRun
 )
 
 Set-StrictMode -Version 2.0
@@ -16,9 +19,55 @@ $ErrorActionPreference = 'Stop'
 $defaults = Get-FamilyCompanyBuildDefaults
 if ([string]::IsNullOrWhiteSpace($CanonicalProjectPath)) { $CanonicalProjectPath = $defaults.CanonicalProjectPath }
 if ([string]::IsNullOrWhiteSpace($UnityEditorPath)) { $UnityEditorPath = $defaults.UnityEditorPath }
-if ([string]::IsNullOrWhiteSpace($FinalOutputPath)) { $FinalOutputPath = $defaults.FinalOutputPath }
-if ([string]::IsNullOrWhiteSpace($AutomationRoot)) { $AutomationRoot = $defaults.AutomationRoot }
+if (-not [string]::IsNullOrWhiteSpace($DeploymentRoot) -and
+    -not [string]::IsNullOrWhiteSpace($FinalOutputPath)) {
+    throw 'Use either DeploymentRoot or FinalOutputPath, not both.'
+}
+$projectPath = Assert-CanonicalProjectPath $CanonicalProjectPath
+$unityEditor = Assert-ExactUnityEditor $UnityEditorPath $projectPath
+$deploymentRootPath = ''
+if (-not [string]::IsNullOrWhiteSpace($DeploymentRoot)) {
+    $deploymentRootPath = Assert-SafeFamilyCompanyBuildPath $projectPath $DeploymentRoot 'Deployment root'
+    $FinalOutputPath = Join-Path $deploymentRootPath 'FamilyCompany_Playtest'
+    if ([string]::IsNullOrWhiteSpace($StagingRoot)) {
+        $StagingRoot = Join-Path $deploymentRootPath 'FamilyCompany_BuildAutomation\staging'
+    }
+    if ([string]::IsNullOrWhiteSpace($AutomationRoot)) {
+        $AutomationRoot = Join-Path $deploymentRootPath 'FamilyCompany_BuildAutomation'
+    }
+}
+else {
+    if ([string]::IsNullOrWhiteSpace($FinalOutputPath)) { $FinalOutputPath = $defaults.FinalOutputPath }
+    if ([string]::IsNullOrWhiteSpace($StagingRoot)) { $StagingRoot = $defaults.BuildRoot }
+    if ([string]::IsNullOrWhiteSpace($AutomationRoot)) { $AutomationRoot = $defaults.AutomationRoot }
+}
+$finalPath = Assert-SafeFamilyCompanyBuildPath $projectPath $FinalOutputPath 'Final output path'
+Assert-FamilyCompanyReplaceableBuildDirectory $finalPath $defaults.ExecutableName
+$stagingRootPath = Assert-SafeFamilyCompanyBuildPath $projectPath $StagingRoot 'Staging root'
 $automationPath = Get-NormalizedFullPath $AutomationRoot
+$automationPath = Assert-SafeFamilyCompanyBuildPath $projectPath $automationPath 'Automation root'
+if ([string]::Equals($finalPath, $stagingRootPath, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Final output path and staging root must be different: $finalPath"
+}
+if ($UnityWaitTimeoutMinutes -lt 1) { throw 'UnityWaitTimeoutMinutes must be positive.' }
+if ($UnityRetrySeconds -lt 2) { throw 'UnityRetrySeconds must be at least 2.' }
+if ($MaximumLogFiles -lt 2) { throw 'MaximumLogFiles must be at least 2.' }
+
+if ($DryRun) {
+    Write-Output 'Family Company Windows build path validation: PASS'
+    Write-Output "Project: $projectPath"
+    Write-Output "Unity: $unityEditor"
+    if (-not [string]::IsNullOrWhiteSpace($deploymentRootPath)) {
+        Write-Output "DeploymentRoot: $deploymentRootPath"
+    }
+    Write-Output "StagingRoot: $stagingRootPath"
+    Write-Output "Output: $finalPath"
+    Write-Output "Automation: $automationPath"
+    Write-Output 'Target: StandaloneWindows64 / D3D11'
+    Write-Output 'ExecuteMethod: FamilyCompany.Editor.WindowsPlayerBuild.BuildWindowsX64'
+    exit 0
+}
+
 $logDirectory = Join-Path $automationPath 'logs'
 $statusPath = Join-Path $automationPath 'build-status.json'
 $lockPath = Join-Path $automationPath 'build.lock'
@@ -40,21 +89,8 @@ if ($null -eq $buildLock) {
 $stagingPath = $null
 $backupPath = $null
 $snapshot = $null
-$projectPath = $null
-$unityEditor = $null
-$finalPath = Get-NormalizedFullPath $FinalOutputPath
 $startedUtc = [DateTime]::UtcNow
 try {
-    $projectPath = Assert-CanonicalProjectPath $CanonicalProjectPath
-    $unityEditor = Assert-ExactUnityEditor $UnityEditorPath $projectPath
-    $expectedFinalPath = Get-NormalizedFullPath $defaults.FinalOutputPath
-    if (-not [string]::Equals($finalPath, $expectedFinalPath, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Unexpected final output path. Expected '$expectedFinalPath', got '$finalPath'."
-    }
-    if ($UnityWaitTimeoutMinutes -lt 1) { throw 'UnityWaitTimeoutMinutes must be positive.' }
-    if ($UnityRetrySeconds -lt 2) { throw 'UnityRetrySeconds must be at least 2.' }
-    if ($MaximumLogFiles -lt 2) { throw 'MaximumLogFiles must be at least 2.' }
-
     $snapshot = Get-CanonicalBuildSnapshot $projectPath
     Add-BuildLogLine $automationLogPath (
         "START head=$($snapshot.Head) branch=$($snapshot.Branch) dirty=$($snapshot.IsDirty) " +
@@ -75,7 +111,8 @@ try {
     }
 
     $stagingName = "FamilyCompany_Playtest.staging.$timestamp.$PID"
-    $stagingPath = Join-Path $defaults.BuildRoot $stagingName
+    New-Item -ItemType Directory -Path $stagingRootPath -Force | Out-Null
+    $stagingPath = Join-Path $stagingRootPath $stagingName
     if (Test-Path -LiteralPath $stagingPath) {
         throw "Fresh staging path unexpectedly already exists: $stagingPath"
     }
@@ -90,20 +127,18 @@ try {
     Add-BuildLogLine $automationLogPath "Launching exact Unity editor: $unityEditor"
     $unityArguments = @(
         '-batchmode', '-nographics', '-quit',
-        '-projectPath', $projectPath,
+        '-projectPath', ('"' + $projectPath + '"'),
         '-buildTarget', 'Win64',
         '-executeMethod', 'FamilyCompany.Editor.WindowsPlayerBuild.BuildWindowsX64',
-        '-familyCompanyBuildOutput', $executablePath,
-        '-logFile', $unityLogPath)
-    $previousErrorActionPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        & $unityEditor @unityArguments 2>&1 | Out-Null
-        $unityExitCode = $LASTEXITCODE
-    }
-    finally {
-        $ErrorActionPreference = $previousErrorActionPreference
-    }
+        '-familyCompanyBuildOutput', ('"' + $executablePath + '"'),
+        '-logFile', ('"' + $unityLogPath + '"'))
+    $unityProcess = Start-Process `
+        -FilePath $unityEditor `
+        -ArgumentList $unityArguments `
+        -WindowStyle Hidden `
+        -Wait `
+        -PassThru
+    $unityExitCode = $unityProcess.ExitCode
     Add-BuildLogLine $automationLogPath "Unity exited with code $unityExitCode."
     if ($unityExitCode -ne 0) {
         throw "Unity Windows player build failed with exit code $unityExitCode. See $unityLogPath"
@@ -157,6 +192,8 @@ try {
         automationLog = $automationLogPath; unityLog = $unityLogPath
     })
 
+    $finalParent = Split-Path -Parent $finalPath
+    New-Item -ItemType Directory -Path $finalParent -Force | Out-Null
     $backupPath = "$finalPath.previous.$timestamp.$PID"
     if (Test-Path -LiteralPath $backupPath) {
         throw "Promotion backup path unexpectedly exists: $backupPath"

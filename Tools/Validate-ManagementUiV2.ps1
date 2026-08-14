@@ -1,10 +1,22 @@
 [CmdletBinding()]
 param(
-    [string]$UnityEditorRoot = 'C:\Users\godho\Documents\Codex\UnityEditors\6000.3.21f1\Editor'
+    [string]$UnityEditorPath = '',
+    [string]$UnityEditorRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+. (Join-Path $PSScriptRoot 'FamilyCompanyBuild.Common.ps1')
+if ([string]::IsNullOrWhiteSpace($UnityEditorPath)) {
+    if (-not [string]::IsNullOrWhiteSpace($UnityEditorRoot)) {
+        $UnityEditorPath = Join-Path $UnityEditorRoot 'Unity.exe'
+    }
+    else {
+        $UnityEditorPath = Find-FamilyCompanyUnityEditor
+    }
+}
+$UnityEditorPath = Assert-ExactUnityEditor $UnityEditorPath $projectRoot
+$UnityEditorRoot = Split-Path -Parent $UnityEditorPath
 $dataRoot = Join-Path $UnityEditorRoot 'Data'
 $dotnet = Join-Path $dataRoot 'NetCoreRuntime\dotnet.exe'
 $csc = Join-Path $dataRoot 'DotNetSdkRoslyn\csc.dll'
