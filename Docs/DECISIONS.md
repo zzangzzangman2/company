@@ -1,5 +1,22 @@
 # DECISIONS
 
+## 2026-08-15 / Windows 자동 배포는 clean integration HEAD와 검증된 candidate만 승격한다
+
+결정: 자동 watcher는 `codex/integration-p0-qa`의 committed HEAD가 배포 manifest와 다르고 debounce 동안
+안정됐을 때만 기존 Release builder를 한 번 호출한다. untracked를 포함한 dirty 상태, merge conflict, 다른
+branch는 빌드하지 않는다. Unity project version뿐 아니라 실제 editor binary ProductVersion/revision도
+`6000.3.21f1_c02631ffc030`과 같아야 한다.
+
+결정: Unity/build는 사용자별 machine-wide file lock으로 직렬화하고 이미 실행 중인 다른 작업방 Unity가
+끝날 때까지 기다린다. candidate의 EXE, Data, UnityPlayer.dll, build/deploy manifest와 runner가 완전할 때만
+Downloads target을 같은 볼륨 rename으로 승격한다. 기존 target은 이전 SHA와 UTC가 붙은 LKG 한 개로
+보존하며 승격 실패 시 복구한다. target player가 실행 중이면 종료하지 않고 candidate를 유지해 watcher가
+종료 뒤 재사용한다. watcher는 서비스나 시작 프로그램으로 등록하지 않는다.
+
+이유: clean commit 단위의 재현성과 실제 실행본 SHA를 일치시키면서도 빌드 실패, 부분 staging, 동시 Unity,
+플레이 중 파일 잠금이 현재 정상 실행본이나 AppData 저장 데이터를 손상시키지 않아야 한다. 디렉터리 교체 전
+완전 검증과 old-build rollback은 copy-in-place보다 실패 경계가 작고 자동 테스트할 수 있다.
+
 ## 2026-08-15 / 착석은 가구를 움직이지 않고 명시적 좌석 계약에 캐릭터만 정렬한다
 
 결정: chair semantic root와 `VisualRoot`의 parent, local/world position·rotation·scale은 가구 배치가

@@ -17,6 +17,10 @@ Builds\Windows\FamilyCompany_Playtest\FamilyCompany.exe
 
 `Builds/`는 `.gitignore` 대상이므로 빌드 결과가 실수로 커밋되지 않는다.
 
+clean integration HEAD를 Downloads의 자동 플레이테스트 실행본으로 안전하게 교체하는 별도 절차는
+[WINDOWS_AUTO_DEPLOY.md](WINDOWS_AUTO_DEPLOY.md)를 따른다. 이 절차는 로컬 `BUILD_WINDOWS.cmd`와 같은
+Release 빌더를 재사용하지만, staging 검증·last-known-good·실행 중 배포 대기 계약을 추가한다.
+
 ## 다른 PC에서 자동으로 찾는 항목
 
 - 프로젝트 경로: `BUILD_WINDOWS.cmd`가 있는 현재 저장소 루트
@@ -40,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File .\Tools\Build-FamilyCompanyWindows.ps1
 
 - `BUILD_WINDOWS.cmd`: 저장소 루트에서 실행하는 원클릭 빌드 진입점
 - `RUN_WINDOWS.cmd`: 마지막으로 성공한 로컬 빌드를 실행
-- `Tools/Build-FamilyCompanyWindows.ps1`: 잠금, 스테이징, 이전 빌드 복구, 상태 기록
+- `Tools/Build-FamilyCompanyWindows.ps1`: machine-wide 잠금, 스테이징, 이전 빌드 복구, 상태 기록
 - `Tools/FamilyCompanyBuild.Common.ps1`: 프로젝트·Unity 버전 검증과 빌드 지문 계산
 - `Assets/FamilyCompany/Editor/WindowsPlayerBuild.cs`: Unity의 Windows x64 실제 빌드 함수
 

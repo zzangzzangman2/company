@@ -2,6 +2,22 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-15 / clean integration HEAD Windows 자동 배포 준비
+
+- 기존 `BUILD_WINDOWS.cmd` → `Build-FamilyCompanyWindows.ps1` → `WindowsPlayerBuild.BuildWindowsX64`의
+  비-Development Windows x64 경로를 재사용하고, clean `codex/integration-p0-qa` HEAD 변경만 debounce해
+  Downloads로 승격하는 명시적 start/stop watcher를 추가했다. 서비스·재부팅 자동 시작은 등록하지 않는다.
+- 실제 `Unity.exe` ProductVersion과 project revision을 `6000.3.21f1_c02631ffc030`으로 함께 검사한다.
+  machine-wide build lock을 소유한 뒤 다른 작업방 Unity/QA player가 유휴가 될 때까지 기다리며 강제 종료하지 않는다.
+- candidate의 EXE/Data/UnityPlayer.dll/BUILD_INFO/deploy manifest/runner를 먼저 검증한다. Downloads target은
+  같은 볼륨 rename으로만 교체하고 기존 실행본은 timestamp와 이전 commit이 붙은 LKG 한 개로 남긴다.
+  실행 중 player는 종료하지 않고 `AwaitingPlayerExit` candidate를 재사용한다. AppData 저장 데이터는 범위 밖이다.
+- 격리 dry-run 15건은 공백·한글, dirty exit 31, conflict exit 32, unchanged skip, debounce, duplicate watcher
+  exit 24, CMD exit code, 불완전 candidate, 승격 전·후 실패 복구, LKG, 실행 중 EXE 감지를 통과했다.
+  `downloadsTouched=false`, `unityLaunched=false`이며 실제 최종 player build/Downloads 배포는 아직 수행하지 않았다.
+- 후속 애니메이션·이동 hitch 커밋을 통합하고 최종 QA를 통과한 clean HEAD에서
+  `START_WINDOWS_DEPLOY_WATCH.cmd` 또는 `DEPLOY_WINDOWS.cmd`를 명시적으로 실행한다.
+
 ## 2026-08-15 / P0 의자·이동·성능 1단계 통합 후보
 
 - 기준 `9109a8c1`에서 전용 `codex/integration-p0-qa`를 만들고 의자 `0c6e8983`, 이동 `b692d24a`,

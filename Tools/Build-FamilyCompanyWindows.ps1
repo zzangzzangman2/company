@@ -4,6 +4,12 @@ param(
     [string]$UnityEditorPath = '',
     [string]$FinalOutputPath = '',
     [string]$AutomationRoot = '',
+    [string]$StagingRoot = '',
+    [string]$GlobalBuildLockPath = '',
+    [string]$ExpectedHead = '',
+    [string]$IgnoredPlayerExecutablePath = '',
+    [switch]$RequireClean,
+    [switch]$AllowCustomOutput,
     [int]$UnityWaitTimeoutMinutes = 120,
     [int]$UnityRetrySeconds = 15,
     [int]$MaximumLogFiles = 30
@@ -18,10 +24,13 @@ if ([string]::IsNullOrWhiteSpace($CanonicalProjectPath)) { $CanonicalProjectPath
 if ([string]::IsNullOrWhiteSpace($UnityEditorPath)) { $UnityEditorPath = $defaults.UnityEditorPath }
 if ([string]::IsNullOrWhiteSpace($FinalOutputPath)) { $FinalOutputPath = $defaults.FinalOutputPath }
 if ([string]::IsNullOrWhiteSpace($AutomationRoot)) { $AutomationRoot = $defaults.AutomationRoot }
+if ([string]::IsNullOrWhiteSpace($StagingRoot)) { $StagingRoot = $defaults.BuildRoot }
+if ([string]::IsNullOrWhiteSpace($GlobalBuildLockPath)) { $GlobalBuildLockPath = $defaults.GlobalBuildLockPath }
 $automationPath = Get-NormalizedFullPath $AutomationRoot
+$stagingRootPath = Get-NormalizedFullPath $StagingRoot
 $logDirectory = Join-Path $automationPath 'logs'
 $statusPath = Join-Path $automationPath 'build-status.json'
-$lockPath = Join-Path $automationPath 'build.lock'
+$lockPath = Get-NormalizedFullPath $GlobalBuildLockPath
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 
 $timestamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
@@ -48,34 +57,49 @@ try {
     $projectPath = Assert-CanonicalProjectPath $CanonicalProjectPath
     $unityEditor = Assert-ExactUnityEditor $UnityEditorPath $projectPath
     $expectedFinalPath = Get-NormalizedFullPath $defaults.FinalOutputPath
-    if (-not [string]::Equals($finalPath, $expectedFinalPath, [StringComparison]::OrdinalIgnoreCase)) {
+    if (-not $AllowCustomOutput -and
+        -not [string]::Equals($finalPath, $expectedFinalPath, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Unexpected final output path. Expected '$expectedFinalPath', got '$finalPath'."
+    }
+    if ($AllowCustomOutput -and -not (Test-PathDescendsFrom $finalPath $stagingRootPath)) {
+        throw "Custom output must remain below its staging root. Output '$finalPath', root '$stagingRootPath'."
     }
     if ($UnityWaitTimeoutMinutes -lt 1) { throw 'UnityWaitTimeoutMinutes must be positive.' }
     if ($UnityRetrySeconds -lt 2) { throw 'UnityRetrySeconds must be at least 2.' }
     if ($MaximumLogFiles -lt 2) { throw 'MaximumLogFiles must be at least 2.' }
 
     $snapshot = Get-CanonicalBuildSnapshot $projectPath
+    if ($RequireClean) {
+        [void](Assert-FamilyCompanyDeployableHead $projectPath $snapshot.Branch $ExpectedHead)
+    }
     Add-BuildLogLine $automationLogPath (
         "START head=$($snapshot.Head) branch=$($snapshot.Branch) dirty=$($snapshot.IsDirty) " +
-        "fingerprint=$($snapshot.Fingerprint)")
+        "fingerprint=$($snapshot.Fingerprint) globalLock=$lockPath")
     Write-JsonAtomically $statusPath ([pscustomobject]@{
-        state = 'WaitingForUnity'; updatedUtc = [DateTime]::UtcNow.ToString('o'); processId = $PID
+        state = 'WaitingForBuildIdle'; updatedUtc = [DateTime]::UtcNow.ToString('o'); processId = $PID
         head = $snapshot.Head; branch = $snapshot.Branch; fingerprint = $snapshot.Fingerprint
         automationLog = $automationLogPath; unityLog = $unityLogPath
     })
 
     $waitDeadline = [DateTime]::UtcNow.AddMinutes($UnityWaitTimeoutMinutes)
-    while (Test-AnyUnityEditorRunning) {
+    $blockingProcesses = @(Get-FamilyCompanyBlockingBuildProcesses $IgnoredPlayerExecutablePath)
+    while ($blockingProcesses.Count -gt 0) {
         if ([DateTime]::UtcNow -ge $waitDeadline) {
-            throw "Timed out after $UnityWaitTimeoutMinutes minute(s) waiting for all Unity.exe processes to exit."
+            throw "Timed out after $UnityWaitTimeoutMinutes minute(s) waiting for Unity and Family Company QA processes to exit."
         }
-        Add-BuildLogLine $automationLogPath "Unity.exe is already running; retrying in $UnityRetrySeconds second(s)."
+        $processSummary = @($blockingProcesses | ForEach-Object {
+            "PID=$($_.ProcessId) name=$($_.Name) path=$($_.ExecutablePath)"
+        }) -join '; '
+        Add-BuildLogLine $automationLogPath (
+            "Build idle wait: $processSummary; retrying in $UnityRetrySeconds second(s). " +
+            'No external process will be terminated.')
         Start-Sleep -Seconds $UnityRetrySeconds
+        $blockingProcesses = @(Get-FamilyCompanyBlockingBuildProcesses $IgnoredPlayerExecutablePath)
     }
 
     $stagingName = "FamilyCompany_Playtest.staging.$timestamp.$PID"
-    $stagingPath = Join-Path $defaults.BuildRoot $stagingName
+    New-Item -ItemType Directory -Path $stagingRootPath -Force | Out-Null
+    $stagingPath = Join-Path $stagingRootPath $stagingName
     if (Test-Path -LiteralPath $stagingPath) {
         throw "Fresh staging path unexpectedly already exists: $stagingPath"
     }
@@ -120,6 +144,9 @@ try {
     }
 
     $completedSnapshot = Get-CanonicalBuildSnapshot $projectPath
+    if ($RequireClean) {
+        [void](Assert-FamilyCompanyDeployableHead $projectPath $snapshot.Branch $snapshot.Head)
+    }
     if (-not [string]::Equals(
             $snapshot.Fingerprint,
             $completedSnapshot.Fingerprint,

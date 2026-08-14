@@ -13,8 +13,13 @@ function Find-FamilyCompanyUnityEditor {
     if (-not [string]::IsNullOrWhiteSpace($env:FAMILY_COMPANY_UNITY_EDITOR)) {
         $candidates.Add($env:FAMILY_COMPANY_UNITY_EDITOR)
     }
-    $workspaceParent = Split-Path -Parent $script:FamilyCompanyProjectRoot
-    $candidates.Add((Join-Path $workspaceParent "UnityEditors\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
+    $searchRoot = $script:FamilyCompanyProjectRoot
+    for ($depth = 0; $depth -lt 5 -and -not [string]::IsNullOrWhiteSpace($searchRoot); $depth++) {
+        $candidates.Add((Join-Path $searchRoot "UnityEditors\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
+        $parent = Split-Path -Parent $searchRoot
+        if ([string]::Equals($parent, $searchRoot, [StringComparison]::OrdinalIgnoreCase)) { break }
+        $searchRoot = $parent
+    }
     if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
         $candidates.Add((Join-Path $env:ProgramFiles "Unity\Hub\Editor\$script:FamilyCompanyUnityVersion\Editor\Unity.exe"))
     }
@@ -36,6 +41,10 @@ function Get-FamilyCompanyBuildDefaults {
     param()
 
     $buildRoot = Join-Path $script:FamilyCompanyProjectRoot 'Builds\Windows'
+    $localAppData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+    if ([string]::IsNullOrWhiteSpace($localAppData)) {
+        $localAppData = Join-Path $buildRoot 'Automation'
+    }
     [pscustomobject]@{
         CanonicalProjectPath = $script:FamilyCompanyProjectRoot
         UnityEditorPath      = Find-FamilyCompanyUnityEditor
@@ -45,6 +54,28 @@ function Get-FamilyCompanyBuildDefaults {
         AutomationRoot       = Join-Path $buildRoot 'Automation'
         ExecutableName       = 'FamilyCompany.exe'
         FirstScene           = 'Assets/FamilyCompany/Scenes/Prototype01.unity'
+        GlobalBuildLockPath  = Join-Path $localAppData 'FamilyCompany\BuildAutomation\unity-build.lock'
+    }
+}
+
+function Get-FamilyCompanyDeployDefaults {
+    [CmdletBinding()]
+    param()
+
+    $buildDefaults = Get-FamilyCompanyBuildDefaults
+    $userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+    if ([string]::IsNullOrWhiteSpace($userProfile)) { throw 'Could not resolve the Windows user profile.' }
+    $downloads = Join-Path $userProfile 'Downloads'
+    [pscustomobject]@{
+        CanonicalProjectPath = $buildDefaults.CanonicalProjectPath
+        UnityEditorPath      = $buildDefaults.UnityEditorPath
+        UnityVersion         = $buildDefaults.UnityVersion
+        TargetPath           = Join-Path $downloads 'FamilyCompany_Playtest'
+        DeploymentRoot       = Join-Path $downloads '.FamilyCompany_Playtest.deploy-staging'
+        AutomationRoot       = Join-Path $buildDefaults.AutomationRoot 'Deploy'
+        GlobalBuildLockPath  = $buildDefaults.GlobalBuildLockPath
+        ExecutableName       = $buildDefaults.ExecutableName
+        RequiredBranch       = 'codex/integration-p0-qa'
     }
 }
 
@@ -96,7 +127,8 @@ function Assert-ExactUnityEditor {
     if (-not (Test-Path -LiteralPath $versionPath -PathType Leaf)) {
         throw "ProjectVersion.txt is missing: $versionPath"
     }
-    $versionLine = Get-Content -LiteralPath $versionPath -Encoding UTF8 |
+    $versionLines = @(Get-Content -LiteralPath $versionPath -Encoding UTF8)
+    $versionLine = $versionLines |
         Where-Object { $_ -match '^m_EditorVersion:\s*(.+)$' } |
         Select-Object -First 1
     if (-not $versionLine -or $versionLine -notmatch '^m_EditorVersion:\s*(.+)$') {
@@ -106,7 +138,40 @@ function Assert-ExactUnityEditor {
     if (-not [string]::Equals($projectVersion, $script:FamilyCompanyUnityVersion, [StringComparison]::Ordinal)) {
         throw "Unity version mismatch. Expected '$script:FamilyCompanyUnityVersion', project requires '$projectVersion'."
     }
+
+    $revisionLine = $versionLines |
+        Where-Object { $_ -match '^m_EditorVersionWithRevision:\s*.+\s+\(([^)]+)\)$' } |
+        Select-Object -First 1
+    if (-not $revisionLine -or $revisionLine -notmatch '^m_EditorVersionWithRevision:\s*.+\s+\(([^)]+)\)$') {
+        throw "Could not read the Unity revision from $versionPath"
+    }
+    $projectRevision = $Matches[1].Trim()
+    $productVersion = [string](Get-Item -LiteralPath $actualEditor).VersionInfo.ProductVersion
+    $expectedProductVersion = "${projectVersion}_${projectRevision}"
+    if (-not [string]::Equals($productVersion, $expectedProductVersion, [StringComparison]::OrdinalIgnoreCase)) {
+        throw (
+            "Unity executable version mismatch. Expected '$expectedProductVersion', " +
+            "found '$productVersion' at '$actualEditor'.")
+    }
     $actualEditor
+}
+
+function Get-FamilyCompanyPowerShellHost {
+    [CmdletBinding()]
+    param()
+
+    $candidates = @(
+        (Join-Path $PSHOME 'powershell.exe'),
+        (Join-Path $PSHOME 'pwsh.exe'))
+    if (-not [string]::IsNullOrWhiteSpace($env:SystemRoot)) {
+        $candidates += Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    }
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return Get-NormalizedFullPath $candidate
+        }
+    }
+    throw 'Could not locate powershell.exe or pwsh.exe for the child automation process.'
 }
 
 function Invoke-CanonicalGitText {
@@ -163,8 +228,9 @@ function Get-CanonicalBuildSnapshot {
     param([Parameter(Mandatory = $true)][string]$ProjectPath)
 
     $project = Assert-CanonicalProjectPath $ProjectPath
-    $head = Invoke-CanonicalGitText $project @('rev-parse', 'HEAD')
-    $branch = Invoke-CanonicalGitText $project @('branch', '--show-current')
+    $repositoryState = Get-FamilyCompanyRepositoryState $project
+    $head = $repositoryState.Head
+    $branch = $repositoryState.Branch
     $diff = Invoke-CanonicalGitText $project @(
         'diff', '--no-ext-diff', '--binary', '--ignore-space-at-eol', 'HEAD', '--',
         'Assets', 'Packages', 'ProjectSettings')
@@ -192,10 +258,258 @@ function Get-CanonicalBuildSnapshot {
     [pscustomobject]@{
         Head        = $head
         Branch      = $branch
-        IsDirty     = (-not [string]::IsNullOrEmpty($diff)) -or $untracked.Count -gt 0
+        IsDirty     = $repositoryState.IsDirty
+        HasConflicts = $repositoryState.HasConflicts
         Fingerprint = Get-Sha256ForText $builder.ToString()
         CapturedUtc = [DateTime]::UtcNow.ToString('o')
     }
+}
+
+function Get-FamilyCompanyRepositoryState {
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][string]$ProjectPath)
+
+    $project = Assert-CanonicalProjectPath $ProjectPath
+    $head = Invoke-CanonicalGitText $project @('rev-parse', 'HEAD')
+    $branch = Invoke-CanonicalGitText $project @('branch', '--show-current')
+    $status = Invoke-CanonicalGitText $project @('status', '--porcelain=v2', '--untracked-files=all')
+    $conflicts = Invoke-CanonicalGitText $project @('diff', '--name-only', '--diff-filter=U')
+    [pscustomobject]@{
+        Head         = $head
+        Branch       = $branch
+        IsDirty      = -not [string]::IsNullOrWhiteSpace($status)
+        HasConflicts = -not [string]::IsNullOrWhiteSpace($conflicts)
+        StatusText   = $status
+        Conflicts    = $conflicts
+        CapturedUtc  = [DateTime]::UtcNow.ToString('o')
+    }
+}
+
+function Assert-FamilyCompanyDeployableHead {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$ProjectPath,
+        [Parameter(Mandatory = $true)][string]$RequiredBranch,
+        [string]$ExpectedHead = ''
+    )
+
+    $state = Get-FamilyCompanyRepositoryState $ProjectPath
+    if ($state.HasConflicts) {
+        throw "MERGE_CONFLICT: deployment is held because unresolved paths exist: $($state.Conflicts)"
+    }
+    if ($state.IsDirty) {
+        throw 'DIRTY_WORKTREE: deployment is held until every tracked and untracked change is committed or removed.'
+    }
+    if (-not [string]::Equals($state.Branch, $RequiredBranch, [StringComparison]::Ordinal)) {
+        throw "WRONG_BRANCH: expected '$RequiredBranch', found '$($state.Branch)'."
+    }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedHead) -and
+        -not [string]::Equals($state.Head, $ExpectedHead, [StringComparison]::Ordinal)) {
+        throw "HEAD_CHANGED: expected '$ExpectedHead', found '$($state.Head)'."
+    }
+    $state
+}
+
+function Test-PathDescendsFrom {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$ParentPath
+    )
+
+    $child = (Get-NormalizedFullPath $Path) + [IO.Path]::DirectorySeparatorChar
+    $parent = (Get-NormalizedFullPath $ParentPath) + [IO.Path]::DirectorySeparatorChar
+    $child.StartsWith($parent, [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Write-FamilyCompanyDeployManifest {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$BuildDirectory,
+        [Parameter(Mandatory = $true)]$RepositoryState,
+        [Parameter(Mandatory = $true)][DateTime]$BuildStartedUtc,
+        [Parameter(Mandatory = $true)][DateTime]$BuildCompletedUtc,
+        [Parameter(Mandatory = $true)][string]$UnityVersion,
+        [Parameter(Mandatory = $true)][string]$TestStatus
+    )
+
+    $directory = Get-NormalizedFullPath $BuildDirectory
+    $durationSeconds = [Math]::Round(($BuildCompletedUtc - $BuildStartedUtc).TotalSeconds, 3)
+    $manifest = [ordered]@{
+        schemaVersion       = 1
+        product             = 'Family Company Windows x64 Playtest'
+        sourceBranch        = [string]$RepositoryState.Branch
+        commitSha           = [string]$RepositoryState.Head
+        buildStartedUtc     = $BuildStartedUtc.ToString('o')
+        buildCompletedUtc   = $BuildCompletedUtc.ToString('o')
+        buildDurationSeconds = $durationSeconds
+        unityVersion        = $UnityVersion
+        buildType           = 'Release (non-Development)'
+        testStatus          = $TestStatus
+    }
+    Write-JsonAtomically (Join-Path $directory 'DEPLOY_MANIFEST.json') ([pscustomobject]$manifest)
+    $text = @(
+        $manifest.product,
+        "Source branch: $($manifest.sourceBranch)",
+        "Commit SHA: $($manifest.commitSha)",
+        "Build started UTC: $($manifest.buildStartedUtc)",
+        "Build completed UTC: $($manifest.buildCompletedUtc)",
+        "Build duration seconds: $($manifest.buildDurationSeconds)",
+        "Unity version: $($manifest.unityVersion)",
+        "Build type: $($manifest.buildType)",
+        "Test status: $($manifest.testStatus)") -join [Environment]::NewLine
+    [IO.File]::WriteAllText(
+        (Join-Path $directory 'DEPLOY_MANIFEST.txt'),
+        $text + [Environment]::NewLine,
+        (New-Object Text.UTF8Encoding($false)))
+    [pscustomobject]$manifest
+}
+
+function Install-FamilyCompanyDeployRunner {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$BuildDirectory,
+        [Parameter(Mandatory = $true)][string]$TemplatePath
+    )
+
+    if (-not (Test-Path -LiteralPath $TemplatePath -PathType Leaf)) {
+        throw "Deployment RUN_WINDOWS.cmd template is missing: $TemplatePath"
+    }
+    Copy-Item -LiteralPath $TemplatePath -Destination (Join-Path $BuildDirectory 'RUN_WINDOWS.cmd') -Force
+}
+
+function Assert-FamilyCompanyDeployCandidate {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$BuildDirectory,
+        [Parameter(Mandatory = $true)][string]$ExpectedCommit,
+        [Parameter(Mandatory = $true)][string]$ExpectedBranch,
+        [Parameter(Mandatory = $true)][string]$ExpectedUnityVersion
+    )
+
+    $directory = Get-NormalizedFullPath $BuildDirectory
+    $required = @(
+        (Join-Path $directory 'FamilyCompany.exe'),
+        (Join-Path $directory 'FamilyCompany_Data'),
+        (Join-Path $directory 'UnityPlayer.dll'),
+        (Join-Path $directory 'BUILD_INFO.txt'),
+        (Join-Path $directory 'DEPLOY_MANIFEST.json'),
+        (Join-Path $directory 'DEPLOY_MANIFEST.txt'),
+        (Join-Path $directory 'RUN_WINDOWS.cmd'))
+    foreach ($path in $required) {
+        if (-not (Test-Path -LiteralPath $path)) {
+            throw "Deployment candidate is incomplete; required output is missing: $path"
+        }
+    }
+    $manifest = Read-JsonIfPresent (Join-Path $directory 'DEPLOY_MANIFEST.json')
+    if ($null -eq $manifest) { throw 'DEPLOY_MANIFEST.json is not valid JSON.' }
+    if (-not [string]::Equals([string]$manifest.commitSha, $ExpectedCommit, [StringComparison]::Ordinal)) {
+        throw "Deployment manifest commit mismatch. Expected '$ExpectedCommit', found '$($manifest.commitSha)'."
+    }
+    if (-not [string]::Equals([string]$manifest.sourceBranch, $ExpectedBranch, [StringComparison]::Ordinal)) {
+        throw "Deployment manifest branch mismatch. Expected '$ExpectedBranch', found '$($manifest.sourceBranch)'."
+    }
+    if (-not [string]::Equals([string]$manifest.unityVersion, $ExpectedUnityVersion, [StringComparison]::Ordinal)) {
+        throw "Deployment manifest Unity mismatch. Expected '$ExpectedUnityVersion', found '$($manifest.unityVersion)'."
+    }
+    $manifest
+}
+
+function Get-FamilyCompanyDeployedCommit {
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][string]$TargetPath)
+
+    $manifest = Read-JsonIfPresent (Join-Path $TargetPath 'DEPLOY_MANIFEST.json')
+    if ($null -eq $manifest -or -not ($manifest.PSObject.Properties.Name -contains 'commitSha')) { return '' }
+    [string]$manifest.commitSha
+}
+
+function Test-FamilyCompanyPlayerRunning {
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][string]$TargetExecutablePath)
+
+    $expected = Get-NormalizedFullPath $TargetExecutablePath
+    try {
+        $processes = @(Get-CimInstance Win32_Process -Filter "Name = 'FamilyCompany.exe'" -ErrorAction Stop)
+        foreach ($process in $processes) {
+            $path = [string]$process.ExecutablePath
+            if ([string]::IsNullOrWhiteSpace($path)) { return $true }
+            if ([string]::Equals((Get-NormalizedFullPath $path), $expected, [StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        }
+        return $false
+    }
+    catch {
+        foreach ($process in @(Get-Process -Name FamilyCompany -ErrorAction SilentlyContinue)) {
+            try {
+                if ([string]::Equals((Get-NormalizedFullPath $process.Path), $expected, [StringComparison]::OrdinalIgnoreCase)) {
+                    return $true
+                }
+            }
+            catch { return $true }
+        }
+        return $false
+    }
+}
+
+function Publish-FamilyCompanyDeployCandidate {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$CandidatePath,
+        [Parameter(Mandatory = $true)][string]$TargetPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedCommit,
+        [Parameter(Mandatory = $true)][string]$ExpectedBranch,
+        [Parameter(Mandatory = $true)][string]$ExpectedUnityVersion,
+        [switch]$TestFailureAfterBackup,
+        [switch]$TestFailureAfterCandidateMove
+    )
+
+    $candidate = Get-NormalizedFullPath $CandidatePath
+    $target = Get-NormalizedFullPath $TargetPath
+    [void](Assert-FamilyCompanyDeployCandidate $candidate $ExpectedCommit $ExpectedBranch $ExpectedUnityVersion)
+    $targetParent = Split-Path -Parent $target
+    if (-not (Test-Path -LiteralPath $targetParent -PathType Container)) {
+        New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
+    }
+    if (-not [string]::Equals([IO.Path]::GetPathRoot($candidate), [IO.Path]::GetPathRoot($target), [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Candidate and target must be on the same volume for atomic directory promotion.'
+    }
+
+    $targetLeaf = Split-Path -Leaf $target
+    $existingLkg = @(Get-ChildItem -LiteralPath $targetParent -Directory -Filter "$targetLeaf.last-known-good.*" -ErrorAction SilentlyContinue)
+    foreach ($old in $existingLkg) {
+        Remove-Item -LiteralPath $old.FullName -Recurse -Force
+    }
+
+    $backupPath = $null
+    if (Test-Path -LiteralPath $target) {
+        $timestamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
+        $previousCommit = Get-FamilyCompanyDeployedCommit $target
+        if ([string]::IsNullOrWhiteSpace($previousCommit)) { $previousCommit = 'unknown-commit' }
+        $shortCommit = if ($previousCommit.Length -gt 12) { $previousCommit.Substring(0, 12) } else { $previousCommit }
+        $backupPath = Join-Path $targetParent "$targetLeaf.last-known-good.$timestamp.$shortCommit"
+        Move-Item -LiteralPath $target -Destination $backupPath
+    }
+    try {
+        if ($TestFailureAfterBackup) { throw 'TEST_INJECTED_PROMOTION_FAILURE' }
+        Move-Item -LiteralPath $candidate -Destination $target
+        if ($TestFailureAfterCandidateMove) { throw 'TEST_INJECTED_POST_MOVE_FAILURE' }
+        [void](Assert-FamilyCompanyDeployCandidate $target $ExpectedCommit $ExpectedBranch $ExpectedUnityVersion)
+    }
+    catch {
+        if ($null -ne $backupPath -and (Test-Path -LiteralPath $backupPath)) {
+            if ((Test-Path -LiteralPath $target) -and -not (Test-Path -LiteralPath $candidate)) {
+                Move-Item -LiteralPath $target -Destination $candidate
+            }
+            if (-not (Test-Path -LiteralPath $target)) {
+                Move-Item -LiteralPath $backupPath -Destination $target
+                $backupPath = $null
+            }
+        }
+        throw
+    }
+    [pscustomobject]@{ TargetPath = $target; LastKnownGoodPath = $backupPath }
 }
 
 function Write-JsonAtomically {
@@ -278,6 +592,55 @@ function Test-AnyUnityEditorRunning {
         $processes = @(Get-Process -Name Unity -ErrorAction SilentlyContinue)
         return $processes.Count -gt 0
     }
+}
+
+function Get-FamilyCompanyBlockingBuildProcesses {
+    [CmdletBinding()]
+    param([string]$IgnoredPlayerExecutablePath = '')
+
+    $ignoredPath = ''
+    if (-not [string]::IsNullOrWhiteSpace($IgnoredPlayerExecutablePath)) {
+        $ignoredPath = Get-NormalizedFullPath $IgnoredPlayerExecutablePath
+    }
+    $result = New-Object Collections.Generic.List[object]
+    try {
+        $processes = @(Get-CimInstance Win32_Process -ErrorAction Stop |
+            Where-Object { $_.Name -in @('Unity.exe', 'FamilyCompany.exe') })
+        foreach ($process in $processes) {
+            $executablePath = [string]$process.ExecutablePath
+            if ($process.Name -eq 'FamilyCompany.exe' -and
+                -not [string]::IsNullOrWhiteSpace($ignoredPath) -and
+                -not [string]::IsNullOrWhiteSpace($executablePath) -and
+                [string]::Equals((Get-NormalizedFullPath $executablePath), $ignoredPath, [StringComparison]::OrdinalIgnoreCase)) {
+                continue
+            }
+            $result.Add([pscustomobject]@{
+                ProcessId = [int]$process.ProcessId
+                Name = [string]$process.Name
+                ExecutablePath = $executablePath
+                CommandLine = [string]$process.CommandLine
+            })
+        }
+    }
+    catch {
+        foreach ($process in @(Get-Process -Name Unity, FamilyCompany -ErrorAction SilentlyContinue)) {
+            $executablePath = ''
+            try { $executablePath = [string]$process.Path } catch { }
+            if ($process.ProcessName -eq 'FamilyCompany' -and
+                -not [string]::IsNullOrWhiteSpace($ignoredPath) -and
+                -not [string]::IsNullOrWhiteSpace($executablePath) -and
+                [string]::Equals((Get-NormalizedFullPath $executablePath), $ignoredPath, [StringComparison]::OrdinalIgnoreCase)) {
+                continue
+            }
+            $result.Add([pscustomobject]@{
+                ProcessId = [int]$process.Id
+                Name = [string]$process.ProcessName
+                ExecutablePath = $executablePath
+                CommandLine = ''
+            })
+        }
+    }
+    $result | ForEach-Object { $_ }
 }
 
 function Rotate-FamilyCompanyLogs {
