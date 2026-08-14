@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.Workforce;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEngine;
 
@@ -163,7 +165,9 @@ namespace FamilyCompany.Presentation.Unity
             _taskSequence++;
             var appliedHours = Math.Min(personHours, contract.RemainingPersonHours);
             _pending.Add(taskId, new PendingWork(offerId, memberId, appliedHours));
-            if (agent.AssignOfficeTask(taskId, candidates[waypointIndex], appliedHours * secondsPerPersonHour))
+            var requiredMinutes = RequiredGameMinutesPerPersonHour(contract, member);
+            var visualSeconds = appliedHours * secondsPerPersonHour * requiredMinutes / 60f;
+            if (agent.AssignOfficeTask(taskId, candidates[waypointIndex], visualSeconds))
             {
                 ClearAssignmentFailure();
                 return true;
@@ -242,9 +246,11 @@ namespace FamilyCompany.Presentation.Unity
             _taskSequence++;
             int appliedHours = Math.Min(personHours, contract.RemainingPersonHours);
             _pending.Add(taskId, new PendingWork(offerId, memberId, appliedHours));
-            // Runtime contract production is governed by the authoritative GameTime.  Real frames
-            // only animate travel and work; one person-hour always consumes sixty game minutes.
-            if (agent.AssignOfficeTask(taskId, activity, appliedHours * 60f))
+            // Runtime contract production is governed by authoritative GameTime. Real frames only
+            // animate travel and work; the task-weighted capability score sets the required minutes.
+            var member = bootstrap.State.Family.Get(memberId);
+            var requiredMinutes = RequiredGameMinutesPerPersonHour(contract, member);
+            if (agent.AssignOfficeTask(taskId, activity, appliedHours * requiredMinutes))
             {
                 ClearAssignmentFailure();
                 return true;
@@ -329,6 +335,12 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             return OfficeActivity.Work;
+        }
+
+        private static int RequiredGameMinutesPerPersonHour(SubcontractState contract, FamilyMemberState member)
+        {
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
+            return WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(member.Capability, task);
         }
     }
 }

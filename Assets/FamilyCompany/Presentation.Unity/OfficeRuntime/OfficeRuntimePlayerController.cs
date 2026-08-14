@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
+using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.Workforce;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.OfficeRuntime
@@ -11,14 +13,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     public sealed class OfficeRuntimePlayerController : MonoBehaviour
     {
         [SerializeField] private KeyCode workKey = KeyCode.E;
-        [SerializeField] private float secondsPerPersonHour = 0.8f;
         private PrototypeBootstrap _bootstrap;
         private OfficeRuntimeAgent _actor;
         private float _workProgress;
         private string _workingOfferId = string.Empty;
+        private long _creditedThroughMinute;
+        private int _requiredGameMinutesPerPersonHour = 60;
 
-        public bool IsWorking => _workProgress > 0f;
-        public float WorkProgress01 => Mathf.Clamp01(_workProgress / Mathf.Max(0.05f, secondsPerPersonHour));
+        public bool IsWorking => _workingOfferId.Length > 0;
+        public float WorkProgress01 => Mathf.Clamp01(_workProgress / Mathf.Max(1f, _requiredGameMinutesPerPersonHour));
 
         public void Configure(PrototypeBootstrap bootstrap, OfficeRuntimeAgent actor)
         {
@@ -75,7 +78,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 if (Input.GetKeyDown(workKey))
                     _bootstrap.SetWorldNotice(ActivityPrompt(activity));
-                _workProgress = 0f;
+                ResetWork(false);
                 return;
             }
 
@@ -83,36 +86,56 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 _workingOfferId = contract.Offer.OfferId;
                 _workProgress = 0f;
+                _creditedThroughMinute = _bootstrap.State.Time.ElapsedMinutes;
+                _requiredGameMinutesPerPersonHour = RequiredGameMinutesPerPersonHour(contract, player);
                 _bootstrap.SetWorldNotice($"{contract.Offer.Title} 직접 작업 중 · E를 계속 누르세요.");
             }
-            _workProgress += Time.deltaTime;
-            if (_workProgress < secondsPerPersonHour) return;
-            _workProgress = 0f;
-            ContractWorkResult result = _bootstrap.State.Contracts.RecordWork(
-                contract.Offer.OfferId,
-                "player",
-                1,
-                _bootstrap.State.Time.ElapsedMinutes,
-                _bootstrap.State.Family,
-                _bootstrap.State.Company);
-            if (!result.Applied)
+            var currentMinute = _bootstrap.State.Time.ElapsedMinutes;
+            _workProgress = Math.Max(0L, currentMinute - _creditedThroughMinute);
+            while (_workProgress >= _requiredGameMinutesPerPersonHour)
             {
-                _bootstrap.SetWorldNotice("직접 작업을 반영하지 못했습니다.");
-                ResetWork(true);
-                return;
-            }
+                var creditMinute = checked(_creditedThroughMinute + _requiredGameMinutesPerPersonHour);
+                ContractWorkResult result = _bootstrap.State.Contracts.RecordWork(
+                    contract.Offer.OfferId,
+                    "player",
+                    1,
+                    creditMinute,
+                    _bootstrap.State.Family,
+                    _bootstrap.State.Company);
+                if (!result.Applied)
+                {
+                    _bootstrap.SetWorldNotice("직접 작업을 반영하지 못했습니다.");
+                    ResetWork(true);
+                    return;
+                }
 
-            _bootstrap.SetWorldNotice(result.Completed
-                ? $"직접 작업으로 계약 완료 · 보상 {result.RewardWon:N0}원"
-                : $"직접 작업 1시간 반영 · 남은 작업 {contract.RemainingPersonHours}시간");
-            if (result.Completed) ResetWork(true);
+                _creditedThroughMinute = creditMinute;
+                _bootstrap.SetWorldNotice(result.Completed
+                    ? $"직접 작업으로 계약 완료 · 보상 {result.RewardWon:N0}원"
+                    : $"직접 작업 1시간 반영 · 남은 작업 {contract.RemainingPersonHours}시간");
+                if (result.Completed)
+                {
+                    ResetWork(true);
+                    return;
+                }
+                _requiredGameMinutesPerPersonHour = RequiredGameMinutesPerPersonHour(contract, player);
+                _workProgress = Math.Max(0L, currentMinute - _creditedThroughMinute);
+            }
         }
 
         private void ResetWork(bool leaveSeat)
         {
             _workProgress = 0f;
             _workingOfferId = string.Empty;
+            _creditedThroughMinute = 0L;
+            _requiredGameMinutesPerPersonHour = 60;
             if (leaveSeat) _actor?.EndPlayerWork();
+        }
+
+        private static int RequiredGameMinutesPerPersonHour(SubcontractState contract, FamilyMemberState member)
+        {
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
+            return WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(member.Capability, task);
         }
 
         private static OfficeActivity ResolveActivity(SubcontractState contract)

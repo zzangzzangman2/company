@@ -435,7 +435,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
                 cardLayout.childForceExpandHeight = false;
                 AddText(card, $"{member.DisplayName} · {member.AgeAt(_bootstrap.State.Time)}살", 21f, true, TextAlignmentOptions.MidlineLeft, -1f, 30f);
                 AddText(card, member.CompanyDuty, 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
-                AddText(card, $"개발 {member.Stats.Development}   속도 {member.Stats.Speed}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
+                AddText(card, $"기술개발 {member.Capability.Skills.Engineering}   운영 {member.Capability.Skills.Operations}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
                 AddText(card, $"체력 {member.Energy}   스트레스 {member.Stress}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
                 AddText(card, AutonomyPresentationLabel(member), 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
             }
@@ -497,7 +497,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             AddText(card, offer.ExactClientDisplayName, 26f, true, TextAlignmentOptions.MidlineLeft, -1f, 38f);
             AddText(card, BusinessIndustryCatalog.Get(offer.Industry).DisplayName, 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
             AddText(card, offer.Title, 20f, false, TextAlignmentOptions.TopLeft, -1f, 58f);
-            AddText(card, $"요구  개발 {offer.RequiredDevelopment} · 속도 {offer.RequiredSpeed}", 18f, false, TextAlignmentOptions.MidlineLeft, -1f, 30f);
+            AddText(card, $"요구  업무 적합도 {offer.RequiredCapability}", 18f, false, TextAlignmentOptions.MidlineLeft, -1f, 30f);
             AddText(card, $"마감 {offer.DeadlineDays}일 · 작업 {offer.EstimatedPersonHours}시간\n착수비 {offer.UpfrontCostWon:N0}원 · 보상 {offer.RewardWon:N0}원", 18f, false, TextAlignmentOptions.TopLeft, -1f, 62f);
             AddText(card, offer.PenaltyWon == 0 ? "위약금 없음" : $"실패 위약금 {offer.PenaltyWon:N0}원", 18f, false, TextAlignmentOptions.MidlineLeft, -1f, 30f, offer.PenaltyWon == 0 ? AccentColor : PeachColor);
             if (!string.IsNullOrEmpty(offer.RequiredTechnologyId))
@@ -573,7 +573,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             foreach (var member in _bootstrap.State.Family.Members)
             {
                 var relationship = member.MemberId == "player" ? string.Empty : $" · 나와 {_bootstrap.State.Family.RelationshipLabel("player", member.MemberId)}";
-                AddText(_progressHost, $"{member.DisplayName} · 기획 {member.Stats.Planning}  아트 {member.Stats.Art}  영업 {member.Stats.Sales}  멘탈 {member.Stats.Mental}  팀 {member.Stats.Teamwork} · 기억 {member.CareerMemories.Count}{relationship}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 30f);
+                AddText(_progressHost, $"{member.DisplayName} · 기획 {member.Capability.Skills.Planning}  창작 {member.Capability.Skills.Creative}  사업 {member.Capability.Skills.Business}  협업 {member.Capability.Skills.Collaboration} · 기억 {member.CareerMemories.Count}{relationship}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 30f);
             }
         }
 

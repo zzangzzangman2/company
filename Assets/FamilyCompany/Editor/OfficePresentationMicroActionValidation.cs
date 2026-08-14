@@ -182,7 +182,7 @@ namespace FamilyCompany.Editor
             var sourceRunner = new SimulationRunner(saveSource);
             for (var minute = 0; minute < ValidationMinutes / 2; minute++) sourceRunner.AdvanceMinutes(1);
             GameSaveDto save = GameSaveMapper.ToDto(saveSource);
-            Require(save.schemaVersion == 9, "micro-action save must use schema v9");
+            Require(save.schemaVersion == 10, "micro-action save must use schema v10");
             GameState restored = GameSaveMapper.FromDto(save);
             var restoredRunner = new SimulationRunner(restored);
             for (var minute = ValidationMinutes / 2; minute < ValidationMinutes; minute++)

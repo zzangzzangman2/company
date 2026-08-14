@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Simulation.Family
 {
@@ -18,7 +19,8 @@ namespace FamilyCompany.Simulation.Family
             int stress = 0,
             EmployeeStats stats = null,
             IEnumerable<CareerMemoryState> careerMemories = null,
-            OfficeAutonomyState autonomy = null)
+            OfficeAutonomyState autonomy = null,
+            WorkforceCapabilityState capability = null)
         {
             if (string.IsNullOrWhiteSpace(memberId))
             {
@@ -34,6 +36,9 @@ namespace FamilyCompany.Simulation.Family
             Trust = Clamp100(trust);
             Stress = Clamp100(stress);
             Stats = stats ?? EmployeeStats.StarterFor(role);
+            Capability = capability ?? WorkforceStarterCapabilityCatalog.Create(memberId, role);
+            if (!string.Equals(Capability.MemberId, memberId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Capability owner does not match the family member.");
             Autonomy = autonomy ?? new OfficeAutonomyState();
             _careerMemories = careerMemories == null
                 ? new List<CareerMemoryState>()
@@ -53,6 +58,7 @@ namespace FamilyCompany.Simulation.Family
         public int Trust { get; private set; }
         public int Stress { get; private set; }
         public EmployeeStats Stats { get; }
+        public WorkforceCapabilityState Capability { get; }
         public OfficeAutonomyState Autonomy { get; }
         private readonly List<CareerMemoryState> _careerMemories;
         public IReadOnlyList<CareerMemoryState> CareerMemories => _careerMemories;

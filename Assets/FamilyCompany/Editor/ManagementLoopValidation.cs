@@ -1,9 +1,11 @@
 using System;
 using FamilyCompany.Save;
 using FamilyCompany.Simulation.Company;
+using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.ManagementUi;
 using FamilyCompany.Simulation.Prototype;
+using FamilyCompany.Simulation.Workforce;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,8 +26,11 @@ namespace FamilyCompany.Editor
 
                 var starter = BootstrapContractCatalog.CreateOffer(20260810, "starter-client", "초기 고객사", 0);
                 AssertEqual(0L, starter.PenaltyWon, "starter penalty");
-                AssertEqual(true, state.Contracts.Accept(starter, state.Company, state.Family, state.Growth, 0).Accepted, "starter accepted");
-                AssertEqual(true, state.Contracts.RecordWork(starter.OfferId, "player", starter.EstimatedPersonHours, 0, state.Family, state.Company).Completed, "starter completed");
+                var starterAcceptance = state.Contracts.Accept(starter, state.Company, state.Family, state.Growth, 0);
+                AssertEqual(true, starterAcceptance.Accepted, "starter accepted");
+                var starterSession = new AuthoritativeContractWorkSession(starter.OfferId, "player", 0);
+                AssertEqual(true, starterSession.AdvanceTo(starterAcceptance.Contract.DueMinute,
+                    state.Contracts, state.Family, state.Company).Completed, "starter completed");
 
                 var gateState = PrototypeStateFactory.Create(20260810);
                 gateState.Company.ChangeReputation(10);
@@ -52,8 +57,14 @@ namespace FamilyCompany.Editor
                     20,
                     20);
                 AssertEqual(true, state.Contracts.Accept(penaltyOffer, state.Company, state.Family, state.Growth, 0).Accepted, "penalty contract accepted");
-                state.Contracts.RecordWork(penaltyOffer.OfferId, "player", 4, 0, state.Family, state.Company);
-                state.Contracts.RecordWork(penaltyOffer.OfferId, "older_sister", 4, 0, state.Family, state.Company);
+                var penaltyTask = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(penaltyOffer));
+                var penaltyWorkMinute = checked(4L * Math.Max(
+                    WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
+                        state.Family.Get("player").Capability, penaltyTask),
+                    WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
+                        state.Family.Get("older_sister").Capability, penaltyTask)));
+                state.Contracts.RecordWork(penaltyOffer.OfferId, "player", 4, penaltyWorkMinute, state.Family, state.Company);
+                state.Contracts.RecordWork(penaltyOffer.OfferId, "older_sister", 4, penaltyWorkMinute, state.Family, state.Company);
                 var cashBeforePenalty = state.Company.CashWon;
                 state.Contracts.FailOverdue(penaltyOffer.DeadlineDays * 1440L + 1, state.Company, state.Family);
                 AssertEqual(cashBeforePenalty - 300_000, state.Company.CashWon, "penalty charged");
@@ -75,7 +86,7 @@ namespace FamilyCompany.Editor
                 AssertEqual(true, state.Growth.ProductProject.Resolved, "product resolved");
 
                 var dto = GameSaveMapper.ToDto(state);
-                AssertEqual(9, dto.schemaVersion, "save schema");
+                AssertEqual(10, dto.schemaVersion, "save schema");
                 var restored = GameSaveMapper.FromDto(dto);
                 AssertEqual(true, restored.Growth.ResearchCenterUnlocked, "research center round trip");
                 AssertEqual(true, restored.Growth.HasTechnology(ResearchTechnologyIds.MarketAnalysis), "research round trip");

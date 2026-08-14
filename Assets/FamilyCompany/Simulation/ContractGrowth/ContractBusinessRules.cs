@@ -6,6 +6,7 @@ using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
+using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Simulation.ContractGrowth
 {
@@ -166,11 +167,12 @@ namespace FamilyCompany.Simulation.ContractGrowth
             DateTime now)
         {
             var offer = definition.Offer;
+            var task = ContractWorkTaskProfiles.Resolve(definition.Specialty);
             var choices = family.Members.Select(member =>
             {
                 var schedule = FamilyScheduleRules.Resolve(member.Role, now);
-                var capable = member.Stats.Development >= offer.RequiredDevelopment &&
-                              member.Stats.Speed >= offer.RequiredSpeed;
+                var taskScore = WorkforcePerformanceRules.CalculateScore(member.Capability.Skills, task.ProgressWeights);
+                var capable = taskScore >= offer.RequiredCapability;
                 var available = schedule.CanPerformCompanyWork && member.Energy >= 2 && capable;
                 var label = !schedule.CanPerformCompanyWork ? schedule.Label : !capable ? "요구 역량 부족" : member.Energy < 2 ? "체력 부족" : "배정 가능";
                 return new ContractMemberChoiceViewModel(member.MemberId, member.DisplayName, available, label);
@@ -181,7 +183,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 $"보상 {Won(offer.RewardWon)}",
                 $"마감 {offer.DeadlineDays}일",
                 $"작업 {offer.EstimatedPersonHours}인시 · {offer.RequiredWorkers}명 권장",
-                $"개발 {offer.RequiredDevelopment} · 속도 {offer.RequiredSpeed} · 품질 {definition.QualityStandard}",
+                $"업무 적합도 {offer.RequiredCapability} · 품질 기준 {definition.QualityStandard}",
                 $"예상 위험 {RiskLabel(definition.RiskLevel)}",
                 $"완료 평판 +{definition.ReputationReward} · 실패 위험 -{definition.ReputationRisk}",
                 choices);
@@ -336,23 +338,33 @@ namespace FamilyCompany.Simulation.ContractGrowth
         {
             if (authoritativeElapsedMinute < _consumedThroughMinute) throw new ArgumentOutOfRangeException(nameof(authoritativeElapsedMinute));
             if (portfolio == null) throw new ArgumentNullException(nameof(portfolio));
-            var hours = (int)((authoritativeElapsedMinute - _consumedThroughMinute) / 60L);
+            if (family == null) throw new ArgumentNullException(nameof(family));
+            if (company == null) throw new ArgumentNullException(nameof(company));
+            var contract = portfolio.Get(_offerId);
+            var member = family.Get(_memberId);
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
+            var attempted = 0;
             var applied = 0;
             var completed = false;
             long reward = 0;
             var lastRejection = ContractWorkRejectionReason.None;
-            for (var index = 0; index < hours; index++)
+            while (!completed)
             {
-                var creditMinute = checked(_consumedThroughMinute + 60L);
+                var minutesPerPersonHour = WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
+                    member.Capability,
+                    task);
+                if (authoritativeElapsedMinute - _consumedThroughMinute < minutesPerPersonHour) break;
+                var creditMinute = checked(_consumedThroughMinute + minutesPerPersonHour);
                 var result = portfolio.RecordWork(_offerId, _memberId, 1, creditMinute, family, company);
                 _consumedThroughMinute = creditMinute;
+                attempted++;
                 applied += result.AppliedPersonHours;
                 completed |= result.Completed;
                 reward = checked(reward + result.RewardWon);
                 lastRejection = result.RejectionReason;
                 if (completed || result.RejectionReason == ContractWorkRejectionReason.ContractNotActive) break;
             }
-            return new AuthoritativeContractWorkAdvanceResult(hours, applied, completed, reward, lastRejection);
+            return new AuthoritativeContractWorkAdvanceResult(attempted, applied, completed, reward, lastRejection);
         }
     }
 }

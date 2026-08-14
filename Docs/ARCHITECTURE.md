@@ -6,6 +6,7 @@
 - FamilyCompany.Simulation.Contracts: 실제 고객 회사 ID, 소형 하청 제안, 4인 팀 수락 용량 정책
 - FamilyCompany.Simulation.Banking: 연도별 금리, 예금·대출·어음 할인 순수 계산 규칙
 - FamilyCompany.Simulation.Organization: 업종별 채용 직군, S~F 후보 제안과 인사 순수 규칙
+- FamilyCompany.Simulation.Workforce: 가족·채용 직원 공용 6능력, 잠재력 등급, 업무 프로필·성장·스트레스 저항 규칙
 - FamilyCompany.Simulation.Progression: 은행·R&D·채용·법인계좌·인수합병 의미 접근 조건
 - FamilyCompany.Simulation.Leisure: 시대·요일·참가자 조건을 가진 회복 활동 카탈로그, 결정론적 추천·실행·오디오 큐와 완료 활동 추억 의미 데이터
 - FamilyCompany.Save: 저장 DTO와 저장소 인터페이스
@@ -24,7 +25,8 @@
 - 저장 대상은 의미 상태다. Transform, 렌더러 캐시, UI 선택 상태는 저장하지 않는다.
 - 가족 자율 행동은 30분 절대 경계에서 진행하며 현재 행동·의미 목적지·처리 시각·누적 업무/휴식·사건만 저장한다. 같은 seed와 목표 시각이면 시간 진행 호출을 나눠도 결과가 같다.
 - P1.5 `OfficeInteractions`는 Unity 참조가 없는 Interaction Definition/Catalog와 정수 Utility 점수 추적을 소유한다. 현재 선택 정본은 기존 `WeightedPick`이며 Shadow 선택과 score trace는 저장 상태나 행동 결과를 변경하지 않는다.
-- 전체 저장 스키마는 `GameSaveDto v9`이며 v1~v8을 읽어 결정론적으로 이관한다. 계약 페이로드는 v2에서 도입되었고 제안 원본, 수락·납기·해결 시각, 상태, 완료 인시와 가족별 기여 인시를 보존한다. 계약 이전 v1 저장은 빈 계약 목록으로 이관한다. v9는 저장 시점의 정수 게임 분을 기준으로 가족별 semantic stamina를 보존한다.
+- 전체 저장 스키마는 `GameSaveDto v10`이며 v1~v9를 읽어 결정론적으로 이관한다. 계약 페이로드는 v2에서 도입되었고 제안 원본, 수락·납기·해결 시각, 상태, 완료 인시와 가족별 기여 인시를 보존한다. 계약 이전 v1 저장은 빈 계약 목록으로 이관한다. v9에서 도입한 semantic stamina를 유지하고 v10은 공용 업무 능력·XP remainder·스트레스 증가 배율을 추가한다.
+- 별도 Speed 능력은 없다. 업무 진행률은 `WorkTaskProfile`의 6능력 가중 점수로 계산하고 1인시마다 필요한 정수 GameTime 분을 확정한 뒤에만 계약 기여·XP를 기록한다. E키 유지 실시간이나 프레임 시간은 입력이 아니다. legacy Speed/Stamina/Mental은 v1~v9 이관 경계 밖에서 읽지 않는다. Mental은 계약 품질이 아니라 GameTime 스트레스 증가량을 보정하는 스트레스 저항으로만 이관한다.
 - 주식시장 session·호가·체결 계산은 순수 C#이며 `companyId + date + minute + pulse`를 안정 키로 사용한다.
 - 플레이어 지정가 대기주문은 가격우선·시간우선 FIFO와 queue-ahead를 순수 C#으로 유지하고, Unity UI·저장·원장은 이 코어의 결과만 투영한다.
 - 호가 프레젠테이션은 내부 10단계를 유지하고 화면에 최우선 7매도+7매수를 표시한다.
@@ -51,7 +53,7 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - `FamilyCompany.Simulation.OfficeLayout.OfficeGrid`가 폭·높이·바닥·통행 가능 셀·배치 가구·좌석 슬롯을 의미 상태로 소유한다. Unity Transform과 화면 픽셀은 저장 정본이 아니다.
 - `StarterOfficeV1`은 13×13, 실내 가구 17개와 외곽 bay 52개, 가족 workstation 4개를 가진 실제 새 게임 레이아웃이다. `CreateMigrationPreview()`는 회귀 fixture일 뿐 게임 기본값이 아니다.
 - `OfficeGridTilemapPresenter`는 320×160, 180 PPU 등각 Tile을 투영하고 `OfficeGridFurniturePresenter`는 같은 placement anchor/footprint를 렌더한다.
-- 전체 저장은 v9이며 `officeGrid` 하위 스키마 v4와 가구 재고 하위 스키마 v1을 보존한다. v1~v8 이관 뒤 `ComputeLayoutHash()`가 같아야 한다.
+- 전체 저장은 v10이며 `officeGrid` 하위 스키마 v4와 가구 재고 하위 스키마 v1을 보존한다. v1~v9 이관 뒤 `ComputeLayoutHash()`가 같아야 한다.
 - 가구 시각 정본은 `OfficeFurnitureVisualCatalog` calibration v3, 착석 정본은 `OfficeCharacterSeatPoseCatalog` v5다. 의미 root는 scale 1이며 가구 보정은 승인된 균등 scale/socket, 착석 보정은 실제 pelvis/hand 기반 translation만 허용한다.
 - `OfficeGridCharacterMover`의 SpriteRenderer는 균등 scale 1.55를 사용한다. 1.69는 화면을 과도하게 점유해 폐기된 값이다.
 - 16:9가 아닌 화면에서도 타일·캐릭터를 비균등하게 늘리지 않는다. `OfficeGridCameraFitter`가 aspect-safe하게 균등 직교 크기를 조정한다.
@@ -72,7 +74,7 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - `OfficeInteractionDefinition`은 행동, 의미 위치, target template, 가구 kind, 지속 시간, capacity, cooldown, 접근·예약 정책과 역할별 기존 weight를 순수 C# 데이터로 묶는다.
 - `OfficeInteractionCatalog`는 현재 13종 Micro Action의 표준·회의·fallback 후보 20개를 광고한다. 기존 후보 생성은 아직 정본이며 Editor QA가 action/location/target/weight 1:1 parity를 검사한다.
 - `OfficeInteractionScoring`은 기존 weight×20, macro compatibility, Energy/Stress 기반 need, 미방문 novelty, availability와 repetition을 정수로 합산한다. 후보는 OfferId 정렬 뒤 StableRandom top-band로 Shadow 선택하므로 입력 배열 순서에 독립적이다.
-- `OfficeInteractionSelectionTrace`는 legacy 선택, Shadow 선택, duration, resolved target, partner와 후보별 점수 분해를 진단 이벤트로 노출한다. 구독자가 없으면 retained state가 없으며 이 진단은 전체 저장 스키마 v9에 별도 상태를 추가하지 않는다.
+- `OfficeInteractionSelectionTrace`는 legacy 선택, Shadow 선택, duration, resolved target, partner와 후보별 점수 분해를 진단 이벤트로 노출한다. 구독자가 없으면 retained state가 없으며 이 진단은 전체 저장 스키마 v10에 별도 상태를 추가하지 않는다.
 - `OfficeInteractionOfferFactory`는 Definition을 현재 `OfficeGrid.Furniture`에 투영해 실제 `FurnitureId`별 Offer를 만든다. 접근 칸과 capacity는 Definition에서 파생되며, passability/reachability는 호출자가 주입하므로 Simulation은 Unity를 참조하지 않는다.
 - `OfficeRuntimeInteractionOfferResolver`는 현재 Occupancy와 cardinal PathService로 열린 접근 칸·도달 가능한 접근 칸만 남긴다. 결과는 캐시하지 않으며 Occupancy revision이 바뀌면 동일 intent도 다시 해석해 이동·삭제된 가구의 예전 접근 칸을 사용하지 않는다.
 - Micro Action 목적지는 `OfficeInteractionCatalog`의 Interaction ID를 런타임까지 전달하고, OfferId/FurnitureId를 가진 목적지로 해석한다. 물리 회의 테이블을 사용하는 직접 플레이어/계약 경로만 작성 좌석이 생길 때까지 기존 계약을 유지한다.

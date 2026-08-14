@@ -119,7 +119,7 @@ namespace FamilyCompany.Editor.OfficeGrid
             GameSaveDto dto = GameSaveMapper.ToDto(state);
             string json = JsonUtility.ToJson(dto);
             GameState restored = GameSaveMapper.FromDto(JsonUtility.FromJson<GameSaveDto>(json));
-            Require(failures, dto.schemaVersion == 9, "top-level schema v9");
+            Require(failures, dto.schemaVersion == 10, "top-level schema v10");
             Require(failures, restored.Company.CashWon == state.Company.CashWon, "money round trip");
             Require(failures,
                 restored.OfficeGrid.ComputeLayoutHash() == state.OfficeGrid.ComputeLayoutHash(),

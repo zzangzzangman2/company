@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using FamilyCompany.Save.OfficeGrid;
 using FamilyCompany.Save.OfficeFurniture;
 using FamilyCompany.Simulation.Stamina;
+using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Save
 {
     [Serializable]
     public sealed class GameSaveDto
     {
-        public int schemaVersion = 9;
+        public int schemaVersion = 10;
         public int worldSeed;
         public long elapsedMinutes;
         public CompanySaveDto company = new CompanySaveDto();
@@ -55,6 +56,7 @@ namespace FamilyCompany.Save
         public int teamwork;
         public int loyalty;
         public int potential;
+        public WorkforceCapabilitySnapshotDto capability;
         public List<CareerMemorySaveDto> careerMemories = new List<CareerMemorySaveDto>();
         public OfficeAutonomySaveDto autonomy = new OfficeAutonomySaveDto();
     }
@@ -154,6 +156,7 @@ namespace FamilyCompany.Save
         public long penaltyWon;
         public int requiredDevelopment;
         public int requiredSpeed;
+        public int requiredCapability;
         public string requiredTechnologyId = string.Empty;
         public int industry;
         public long acceptedMinute;

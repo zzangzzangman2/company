@@ -162,7 +162,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
             var workers = Math.Min(4, Math.Max(1, baseline.RequiredWorkers + (tier >= 3 ? 1 : 0)));
             var qualityStandard = Math.Min(92, 52 + tier * 8 + Math.Max(0, variation));
             var development = Math.Min(88, Math.Max(baseline.RequiredDevelopment, 18 + tier * 12));
-            var speed = Math.Min(88, Math.Max(baseline.RequiredSpeed, 22 + tier * 11));
+            var requiredCapability = Math.Min(88, Math.Max(baseline.RequiredDevelopment, 18 + tier * 12));
             var reward = CalculateReward(baseline, client.Tier, hours, qualityStandard, deadlineDays);
             if (onboarding)
             {
@@ -170,7 +170,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 deadlineDays = baseline.DeadlineDays;
                 workers = baseline.RequiredWorkers;
                 development = baseline.RequiredDevelopment;
-                speed = baseline.RequiredSpeed;
+                requiredCapability = baseline.RequiredDevelopment;
                 reward = baseline.RewardWon;
                 qualityStandard = slot == 0 ? 52 : slot == 1 ? 58 : 62;
             }
@@ -194,9 +194,10 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 reputationRequired,
                 penalty,
                 development,
-                speed,
+                0,
                 tier >= 3 ? baseline.RequiredTechnologyId : string.Empty,
-                baseline.Industry);
+                baseline.Industry,
+                requiredCapability);
             var risk = onboarding
                 ? slot == 0 ? ContractRiskLevel.Low : ContractRiskLevel.Moderate
                 : ResolveRisk(hours, deadlineDays, qualityStandard, tier);
@@ -210,7 +211,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 2,
                 2,
                 risk,
-                BuildPrerequisiteLabels(client.Tier, qualityStandard, development, speed),
+                BuildPrerequisiteLabels(client.Tier, qualityStandard, requiredCapability),
                 onboarding);
         }
 
@@ -224,7 +225,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
             var tierIndex = (int)tier;
             var hourlyRate = 24_000L + tierIndex * 7_000L;
             var labor = hours * hourlyRate;
-            var skillRisk = (baseline.RequiredDevelopment + baseline.RequiredSpeed) * 2_200L;
+            var skillRisk = baseline.RequiredCapability * 4_400L;
             var qualityRisk = qualityStandard * 1_500L;
             var deadlineRisk = Math.Max(0, hours * 4 - deadlineDays * 10) * 2_000L;
             var legacyAnchor = baseline.RewardWon / 4;
@@ -245,12 +246,11 @@ namespace FamilyCompany.Simulation.ContractGrowth
         private static IEnumerable<string> BuildPrerequisiteLabels(
             ContractClientTier tier,
             int quality,
-            int development,
-            int speed)
+            int requiredCapability)
         {
             yield return $"고객 단계 {TierLabel(tier)}";
             yield return $"품질 기준 {quality}";
-            yield return $"개발 {development} · 속도 {speed}";
+            yield return $"업무 적합도 {requiredCapability}";
         }
 
         public static string TierLabel(ContractClientTier tier)

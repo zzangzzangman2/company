@@ -38,6 +38,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private readonly Dictionary<int, TMP_Text> _speedLabels = new Dictionary<int, TMP_Text>();
         private readonly Dictionary<string, Button> _featureButtons =
             new Dictionary<string, Button>(StringComparer.Ordinal);
+        private readonly Dictionary<string, Button> _workforceButtons =
+            new Dictionary<string, Button>(StringComparer.Ordinal);
 
         private PrototypeBootstrap _bootstrap;
         private StockMarketNavigationAdapter _stockMarketNavigation;
@@ -66,6 +68,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private float _nextLabelRefresh;
         private bool _built;
         private string _featureRouteFailureKo = string.Empty;
+        private string _selectedWorkforceMemberId = string.Empty;
 
         private Sprite _topBackplate;
         private Sprite _companyBadge;
@@ -196,6 +199,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             _officeBuildController != null
                 ? _officeBuildController
                 : _officeBuildController = FindFirstObjectByType<OfficeLayoutEditModeController>();
+        public Button GetWorkforceButtonForQa(string memberId) =>
+            !string.IsNullOrEmpty(memberId) && _workforceButtons.TryGetValue(memberId, out var button) ? button : null;
+        public string SelectedWorkforceMemberIdForQa => _selectedWorkforceMemberId;
 
         private void Awake()
         {
@@ -482,6 +488,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             if (!_built) return;
             _featureButtons.Clear();
+            _workforceButtons.Clear();
             var open = _session.HasActiveTab;
             if (_worldDim.gameObject.activeSelf != open) _worldDim.gameObject.SetActive(open);
             if (_contentPanel.gameObject.activeSelf != open) _contentPanel.gameObject.SetActive(open);
@@ -504,7 +511,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     SetText(_panelTitle, definition.DisplayNameKo);
                     SetText(_panelDescription, definition.DescriptionKo);
                     SetText(_officeReturnLabel, "← 사무실");
-                    if (definition.TabId == MainNavigationTabId.Investment)
+                    if (definition.TabId == MainNavigationTabId.People)
+                        BuildWorkforceRoster();
+                    else if (definition.TabId == MainNavigationTabId.Investment)
                         BuildInvestmentCards(definition);
                     else
                         BuildStandardCards(definition);
@@ -559,6 +568,202 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             grid.constraintCount = 2;
             foreach (var feature in definition.Features)
                 BuildFeatureCard(feature, gridHost, definition, false, 232f);
+        }
+
+        private void BuildWorkforceRoster()
+        {
+            if (_bootstrap?.State == null)
+            {
+                var unavailable = AddText(_featureHost, "직원 정보를 불러오는 중입니다.", 18f, true,
+                    TextAlignmentOptions.Midline, DeepInk);
+                Stretch(unavailable.rectTransform);
+                return;
+            }
+
+            var roster = WorkforceRosterViewModelRules.Create(_bootstrap.State);
+            if (roster.Count == 0) return;
+            if (string.IsNullOrEmpty(_selectedWorkforceMemberId) || roster.All(item => item.MemberId != _selectedWorkforceMemberId))
+                _selectedWorkforceMemberId = roster[0].MemberId;
+            var selected = roster.First(item => item.MemberId == _selectedWorkforceMemberId);
+
+            var root = CreateRect("Workforce Roster", _featureHost);
+            Stretch(root);
+            var rosterBacking = root.gameObject.AddComponent<Image>();
+            rosterBacking.sprite = _cardDisabled;
+            rosterBacking.type = Image.Type.Sliced;
+            rosterBacking.color = Color.white;
+            rosterBacking.raycastTarget = false;
+            var horizontal = root.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(horizontal, null, 14f);
+            horizontal.childAlignment = TextAnchor.UpperLeft;
+
+            var list = CreateRect("Employee Card List", root);
+            AddLayout(list, 350f, -1f, 350f, 0f);
+            var listLayout = list.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(listLayout, null, 8f);
+            listLayout.childAlignment = TextAnchor.UpperCenter;
+            foreach (var member in roster)
+                BuildWorkforceMemberCard(list, member, member.MemberId == selected.MemberId);
+
+            var detail = CreateSpritePanel("Employee Capability Detail", root, _cardNormal, true);
+            AddLayout(detail, -1f, -1f, 700f, 1f);
+            var detailLayout = detail.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(detailLayout, new RectOffset(20, 20, 12, 10), 5f);
+            detailLayout.childAlignment = TextAnchor.UpperLeft;
+
+            var identity = AddText(detail,
+                $"{selected.DisplayName}  ·  {selected.RoleKo}   {selected.EmploymentTypeKo}",
+                WorkforceFont(24f, 24f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            identity.gameObject.name = "Workforce Panel Title";
+            AddLayout(identity.rectTransform, -1f, WorkforceHeight(32f, 30f), 0f, 0f);
+            var potential = AddText(detail,
+                $"잠재력  {selected.PotentialGrade}등급   ·   현재 XP와 다음 성장",
+                WorkforceFont(17f, 14f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            potential.gameObject.name = "Workforce Body Potential";
+            AddLayout(potential.rectTransform, -1f, WorkforceHeight(24f, 20f), 0f, 0f);
+
+            var compactSkills = WorkforceCanvasScale() < 0.8f;
+            var skillGrid = CreateRect("Six Work Skills", detail);
+            AddLayout(skillGrid, -1f, compactSkills ? 168f : 256f, 0f, 1f);
+            var grid = skillGrid.gameObject.AddComponent<GridLayoutGroup>();
+            grid.padding = new RectOffset();
+            grid.spacing = compactSkills ? new Vector2(8f, 8f) : new Vector2(10f, 8f);
+            grid.cellSize = compactSkills ? new Vector2(174f, 80f) : new Vector2(351f, 80f);
+            grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            grid.startAxis = GridLayoutGroup.Axis.Horizontal;
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = compactSkills ? 3 : 2;
+            foreach (var skill in selected.Skills) BuildWorkforceSkillCard(skillGrid, skill);
+
+            var state = CreateSpritePanel("Current State Separate", detail, _cardFeatured, true);
+            AddLayout(state, -1f, WorkforceHeight(68f, 48f), 0f, 0f);
+            var stateLayout = state.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(stateLayout, new RectOffset(14, 14, 7, 6), 1f);
+            stateLayout.childAlignment = TextAnchor.MiddleLeft;
+            var stateHeading = AddText(state, "현재 상태 · 업무 능력과 별도", WorkforceFont(14f, 14f), true,
+                TextAlignmentOptions.MidlineLeft, DeepInk);
+            stateHeading.gameObject.name = "Workforce Body State Heading";
+            AddLayout(stateHeading.rectTransform, -1f, WorkforceHeight(20f, 18f), 0f, 0f);
+            var stateMetrics = CreateRect("Current State Metrics", state);
+            AddLayout(stateMetrics, -1f, WorkforceHeight(28f, 20f), 0f, 0f);
+            var metricsLayout = stateMetrics.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(metricsLayout, null, 12f);
+            metricsLayout.childAlignment = TextAnchor.MiddleLeft;
+            var primaryState = AddText(stateMetrics,
+                $"체력 {selected.StaminaBasisPoints / 100}% · 스트레스 {selected.Stress}",
+                WorkforceFont(15f, 14f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            primaryState.gameObject.name = "Workforce Body State Primary";
+            AddLayout(primaryState.rectTransform, -1f, WorkforceHeight(28f, 20f), 260f, 1f);
+            var relationshipState = AddText(stateMetrics,
+                $"신뢰 {selected.Trust} · 스트레스 저항 {selected.StressResistancePercent}%",
+                WorkforceFont(15f, 14f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            relationshipState.gameObject.name = "Workforce Body State Relationship";
+            AddLayout(relationshipState.rectTransform, -1f, WorkforceHeight(28f, 20f), 360f, 1f);
+            var education = AddText(detail, "교육 준비 중 · 현재 XP는 실제 업무 기여 시간으로만 오릅니다.",
+                WorkforceFont(14f, 14f), false, TextAlignmentOptions.MidlineLeft, DeepInk);
+            education.gameObject.name = "Workforce Body Education";
+            var educationHeight = WorkforceHeight(20f, 18f);
+            var educationElement = AddLayout(education.rectTransform, -1f, educationHeight, 0f, 0f);
+            educationElement.minHeight = educationHeight;
+        }
+
+        private void BuildWorkforceMemberCard(RectTransform parent, WorkforceRosterMemberViewModel member, bool selected)
+        {
+            var card = CreateSpritePanel("Employee " + member.MemberId, parent,
+                selected ? _cardFeatured : _cardNormal, true);
+            var cardHeight = WorkforceHeight(104f, 76f);
+            var cardElement = AddLayout(card, -1f, cardHeight, 0f, 0f);
+            cardElement.minHeight = cardHeight;
+            var button = card.gameObject.AddComponent<Button>();
+            button.targetGraphic = card.GetComponent<Image>();
+            var capturedId = member.MemberId;
+            button.onClick.AddListener(() =>
+            {
+                _selectedWorkforceMemberId = capturedId;
+                RefreshOpenPanel();
+            });
+            ConfigureSpriteSwap(button, selected ? _cardFeatured : _cardNormal, _cardHover,
+                selected ? _cardFeatured : _cardNormal, _cardHover);
+            _workforceButtons[member.MemberId] = button;
+
+            var layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(layout, new RectOffset(10, 10, 9, 9), 10f);
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            var portraitSize = WorkforcePortraitSize();
+            var portrait = AddIcon(card, ResolveWorkforcePortrait(member.MemberId), portraitSize);
+            AddLayout(portrait.rectTransform, portraitSize, portraitSize, portraitSize, 0f);
+            var copy = CreateRect("Employee Summary", card);
+            var copyHeight = WorkforceHeight(82f, 64f);
+            var copyElement = AddLayout(copy, -1f, copyHeight, 150f, 1f);
+            copyElement.minHeight = copyHeight;
+            var copyLayout = copy.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(copyLayout, null, 1f);
+            copyLayout.childAlignment = TextAnchor.MiddleLeft;
+            var name = AddText(copy,
+                member.DisplayName + " <size=78%>· " + member.EmploymentTypeKo + "</size>",
+                WorkforceFont(18f, 18f), true,
+                TextAlignmentOptions.MidlineLeft, DeepInk);
+            name.gameObject.name = "Workforce Employee Name";
+            var nameHeight = WorkforceHeight(26f, 26f);
+            var nameElement = AddLayout(name.rectTransform, -1f, nameHeight, 0f, 0f);
+            nameElement.minHeight = nameHeight;
+            var role = AddText(copy, member.RoleKo, WorkforceFont(15f, 14f), false,
+                TextAlignmentOptions.MidlineLeft, DeepInk);
+            role.gameObject.name = "Workforce Body Role";
+            var roleHeight = WorkforceHeight(22f, 17f);
+            var roleElement = AddLayout(role.rectTransform, -1f, roleHeight, 0f, 0f);
+            roleElement.minHeight = roleHeight;
+            var stamina = AddText(copy, $"체력 {member.StaminaBasisPoints / 100}%",
+                WorkforceFont(15f, 14f), true,
+                TextAlignmentOptions.MidlineLeft, DeepInk);
+            stamina.gameObject.name = "Workforce Body Stamina";
+            var staminaHeight = WorkforceHeight(22f, 17f);
+            var staminaElement = AddLayout(stamina.rectTransform, -1f, staminaHeight, 0f, 0f);
+            staminaElement.minHeight = staminaHeight;
+        }
+
+        private void BuildWorkforceSkillCard(RectTransform parent, WorkforceSkillViewModel skill)
+        {
+            var card = CreateSpritePanel("Skill " + skill.SkillId, parent, _cardDisabled, true);
+            var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(layout, new RectOffset(12, 12, 6, 5), 1f);
+            var heading = AddText(card, $"{skill.LabelKo}  {skill.Value}", WorkforceFont(16f, 14f), true,
+                TextAlignmentOptions.MidlineLeft, DeepInk);
+            heading.gameObject.name = "Workforce Body Skill";
+            AddLayout(heading.rectTransform, -1f, WorkforceHeight(21f, 18f), 0f, 0f);
+            var bar = CreateRect("Skill Value Bar", card);
+            AddLayout(bar, -1f, 12f, 0f, 0f);
+            var back = bar.gameObject.AddComponent<Image>();
+            back.sprite = _cardNormal;
+            back.type = Image.Type.Sliced;
+            back.raycastTarget = false;
+            var fill = CreateRect("Skill Value Fill", bar);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = new Vector2(skill.Value / 100f, 1f);
+            fill.offsetMin = new Vector2(2f, 2f);
+            fill.offsetMax = new Vector2(-2f, -2f);
+            var fillImage = fill.gameObject.AddComponent<Image>();
+            fillImage.sprite = _notificationBadge;
+            fillImage.type = Image.Type.Sliced;
+            fillImage.color = Color.white;
+            fillImage.raycastTarget = false;
+            var next = skill.NextExperience <= 0
+                ? "최대 숙련"
+                : $"XP {skill.Experience:N0} / {skill.NextExperience:N0}";
+            var xp = AddText(card, next, WorkforceFont(15f, 14f), false,
+                TextAlignmentOptions.MidlineLeft, DeepInk);
+            xp.gameObject.name = "Workforce Body Experience";
+            AddLayout(xp.rectTransform, -1f, WorkforceHeight(19f, 18f), 0f, 0f);
+        }
+
+        private Sprite ResolveWorkforcePortrait(string memberId)
+        {
+            var runtime = FindFirstObjectByType<StarterOfficeRuntimeBootstrap>();
+            var actor = runtime?.Actors.FirstOrDefault(item =>
+                string.Equals(item.AgentId, memberId, StringComparison.Ordinal));
+            return actor?.PresentationRenderer != null && actor.PresentationRenderer.sprite != null
+                ? actor.PresentationRenderer.sprite
+                : LoadRequiredSprite(MainNavigationCatalog.Get(MainNavigationTabId.People).IconResourcePath);
         }
 
         private void BuildFeatureDetail(
@@ -1043,6 +1248,28 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             return icon;
         }
 
+        private static float WorkforceFont(float preferredCanvasSize, float minimumPixelSize)
+        {
+            return Mathf.Max(preferredCanvasSize, minimumPixelSize / WorkforceCanvasScale());
+        }
+
+        private static float WorkforceHeight(float preferredCanvasSize, float minimumPixelSize)
+        {
+            return Mathf.Max(preferredCanvasSize, minimumPixelSize / WorkforceCanvasScale());
+        }
+
+        private static float WorkforcePortraitSize()
+        {
+            return WorkforceCanvasScale() < 0.8f ? 56f : 74f;
+        }
+
+        private static float WorkforceCanvasScale()
+        {
+            var widthScale = Mathf.Max(1f, Screen.width) / ReferenceResolution.x;
+            var heightScale = Mathf.Max(1f, Screen.height) / ReferenceResolution.y;
+            return Mathf.Max(0.01f, Mathf.Sqrt(widthScale * heightScale));
+        }
+
         private TMP_Text AddText(
             RectTransform parent,
             string value,
@@ -1056,6 +1283,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             text.font = heading ? _headingFont : _bodyFont;
             text.fontSize = Mathf.Max(MinimumBodyFontSize, fontSize);
             text.fontStyle = heading ? FontStyles.Bold : FontStyles.Normal;
+            text.enableAutoSizing = false;
             text.color = color;
             text.alignment = alignment;
             text.textWrappingMode = TextWrappingModes.Normal;

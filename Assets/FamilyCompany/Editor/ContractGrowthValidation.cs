@@ -10,6 +10,7 @@ using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.History;
 using FamilyCompany.Simulation.Prototype;
+using FamilyCompany.Simulation.Workforce;
 using UnityEditor;
 using UnityEngine;
 
@@ -148,20 +149,28 @@ namespace FamilyCompany.Editor
         private static void ValidateSettlementAndSave(ContractClientTierCatalog clients, ICollection<string> lines)
         {
             var state = PrototypeStateFactory.Create(20000103);
-            state.Time.Advance(10);
+            new SimulationRunner(state).AdvanceMinutes(10);
             var card = ContractBusinessViewModelRules.CreateBoard(state, clients, BusinessIndustry.WebAndSoftware).Cards[0];
             var before = state.Company.CashWon;
             var accepted = state.Contracts.Accept(card.Definition.Offer, state.Company, state.Family, state.Growth, state.Time.ElapsedMinutes);
             Require(accepted.Accepted, "First contract could not be manually accepted.");
             Require(state.Contracts.Contracts.Count == 1, "Accepted contract count is wrong.");
-            var work = state.Contracts.RecordWork(card.OfferId, "player", card.Definition.Offer.EstimatedPersonHours,
-                state.Time.ElapsedMinutes, state.Family, state.Company);
+            var workSession = new AuthoritativeContractWorkSession(
+                card.OfferId,
+                "player",
+                state.Time.ElapsedMinutes);
+            var work = workSession.AdvanceTo(
+                accepted.Contract.DueMinute,
+                state.Contracts,
+                state.Family,
+                state.Company);
             Require(work.Completed, "First contract did not complete.");
             var expected = before - card.Definition.Offer.UpfrontCostWon + card.Definition.Offer.RewardWon;
             Require(state.Company.CashWon == expected, "Settlement amount is not exact.");
             var ledgerId = $"contract:{card.OfferId}:settlement";
             Require(state.Company.Ledger.Count(item => item.TransactionId == ledgerId) == 1, "Settlement ledger must be exactly once.");
-            var second = state.Contracts.RecordWork(card.OfferId, "player", 1, state.Time.ElapsedMinutes, state.Family, state.Company);
+            var second = state.Contracts.RecordWork(card.OfferId, "player", 1, accepted.Contract.DueMinute,
+                state.Family, state.Company);
             Require(second.RejectionReason == ContractWorkRejectionReason.ContractNotActive && state.Company.CashWon == expected,
                 "Retry paid or worked a completed contract.");
 
@@ -178,7 +187,7 @@ namespace FamilyCompany.Editor
             Require(beforeSummary.CompletedContracts == afterSummary.CompletedContracts &&
                     beforeSummary.EarnedContractRevenueWon == afterSummary.EarnedContractRevenueWon,
                 "Save/load changed reconstructed performance ledger.");
-            lines.Add("PASS accept-assign-complete=single-settlement,save-v7-reconstructs-growth");
+            lines.Add("PASS accept-assign-complete=single-settlement,save-v10-reconstructs-growth");
         }
 
         private static void ValidateProgressionAndRecovery(ContractClientTierCatalog clients, ICollection<string> lines)
@@ -222,12 +231,18 @@ namespace FamilyCompany.Editor
             var offer = ContractBusinessViewModelRules.CreateBoard(state, clients, BusinessIndustry.WebAndSoftware).Cards[0].Definition.Offer;
             Require(state.Contracts.Accept(offer, state.Company, state.Family, state.Growth, 10).Accepted, "Work-gate contract accept failed.");
             var session = new AuthoritativeContractWorkSession(offer.OfferId, "player", 10);
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(offer));
+            var minutesPerPersonHour = WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
+                state.Family.Get("player").Capability,
+                task);
             Require(session.AdvanceTo(10, state.Contracts, state.Family, state.Company).AppliedHours == 0, "Paused GameTime produced work.");
-            Require(session.AdvanceTo(69, state.Contracts, state.Family, state.Company).AppliedHours == 0, "Sub-hour GameTime produced work.");
-            var oneHour = session.AdvanceTo(70, state.Contracts, state.Family, state.Company);
-            Require(oneHour.AppliedHours == 1, "Sixty authoritative minutes did not produce one person-hour.");
-            Require(session.AdvanceTo(70, state.Contracts, state.Family, state.Company).AppliedHours == 0, "Same GameTime tick produced duplicate work.");
-            lines.Add("PASS work-authority=pause/frame/UI-zero,60-game-minutes-per-hour");
+            Require(session.AdvanceTo(10 + minutesPerPersonHour - 1, state.Contracts, state.Family, state.Company).AppliedHours == 0,
+                "Sub-hour skill-weighted GameTime produced work.");
+            var oneHour = session.AdvanceTo(10 + minutesPerPersonHour, state.Contracts, state.Family, state.Company);
+            Require(oneHour.AppliedHours == 1, "Skill-weighted authoritative minutes did not produce one person-hour.");
+            Require(session.AdvanceTo(10 + minutesPerPersonHour, state.Contracts, state.Family, state.Company).AppliedHours == 0,
+                "Same GameTime tick produced duplicate work.");
+            lines.Add($"PASS work-authority=pause/frame/UI-zero,skill-weighted-game-minutes={minutesPerPersonHour}");
         }
 
         private static void ValidateRoutesAndProducts(ContractClientTierCatalog clients, ICollection<string> lines)
@@ -273,14 +288,20 @@ namespace FamilyCompany.Editor
 
         private static FamilyState CreateExpertFamily()
         {
-            var stats = new EmployeeStats(95, 95, 95, 95, 95, 95, 95, 95, 100, 95);
             return new FamilyState(new[]
             {
-                new FamilyMemberState("player", "나", FamilyRole.Player, new DateTime(1985, 1, 1), "QA", stats: stats),
-                new FamilyMemberState("older_sister", "누나", FamilyRole.OlderSister, new DateTime(1979, 1, 1), "QA", stats: stats),
-                new FamilyMemberState("father", "아빠", FamilyRole.Father, new DateTime(1953, 1, 1), "QA", stats: stats),
-                new FamilyMemberState("mother", "엄마", FamilyRole.Mother, new DateTime(1955, 1, 1), "QA", stats: stats)
+                Expert("player", "나", FamilyRole.Player, 1985),
+                Expert("older_sister", "누나", FamilyRole.OlderSister, 1979),
+                Expert("father", "아빠", FamilyRole.Father, 1953),
+                Expert("mother", "엄마", FamilyRole.Mother, 1955)
             });
+        }
+
+        private static FamilyMemberState Expert(string id, string name, FamilyRole role, int birthYear)
+        {
+            return new FamilyMemberState(id, name, role, new DateTime(birthYear, 1, 1), "QA",
+                capability: new WorkforceCapabilityState(id, new WorkSkillSet(95, 95, 95, 95, 95, 95),
+                    95, WorkforceStressRules.MinimumStressGainBasisPoints));
         }
 
         private static CompanyGrowthState CreateMatureGrowth()

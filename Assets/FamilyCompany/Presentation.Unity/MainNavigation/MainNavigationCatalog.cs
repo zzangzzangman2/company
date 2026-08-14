@@ -259,6 +259,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             yield return "우리 가족회사";
             yield return "사무실로";
             yield return "준비 중";
+            yield return "기술개발 기획 창작 사업 운영 협업 잠재력 현재 상태 체력 스트레스 신뢰 저항 창업 가족 교육";
             foreach (var definition in Definitions)
             {
                 yield return definition.DisplayNameKo;

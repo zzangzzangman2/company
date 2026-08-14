@@ -9,6 +9,7 @@ using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Save;
 using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Game;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -161,9 +162,18 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                         ? presenter.GetFeatureButtonForQa("investment-stocks") != null
                         : presenter.GetFeatureButtonForQa("investment-stocks") == null,
                     "Stock-market feature button escaped the Investment hub.");
-                foreach (var feature in definition.Features)
-                    Require(presenter.GetFeatureButtonForQa(feature.Id) != null,
-                        "Visible feature card is not clickable: " + feature.Id);
+                if (definition.TabId == MainNavigationTabId.People)
+                {
+                    foreach (var memberId in new[] { "player", "older_sister", "father", "mother" })
+                        Require(presenter.GetWorkforceButtonForQa(memberId) != null,
+                            "Employed workforce card is not clickable: " + memberId);
+                }
+                else
+                {
+                    foreach (var feature in definition.Features)
+                        Require(presenter.GetFeatureButtonForQa(feature.Id) != null,
+                            "Visible feature card is not clickable: " + feature.Id);
+                }
                 yield return null;
                 var fileName = definition.TabId == MainNavigationTabId.Investment
                     ? "menu-investment-hub-1920x1080.png"
@@ -171,6 +181,18 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 RequestCapture(fileName);
                 yield return new WaitForSecondsRealtime(0.75f);
                 VerifyCapture(fileName, 1920, 1080);
+                if (definition.TabId == MainNavigationTabId.People)
+                {
+                    ValidateWorkforceTypography(presenter, Screen.width, Screen.height);
+                    ClickButton(presenter.GetWorkforceButtonForQa("mother"), "select mother workforce card");
+                    Require(presenter.SelectedWorkforceMemberIdForQa == "mother",
+                        "Employee selection did not update the shared roster detail.");
+                    RequestCapture("menu-people-mother-selected-1920x1080.png");
+                    yield return new WaitForSecondsRealtime(0.75f);
+                    VerifyCapture("menu-people-mother-selected-1920x1080.png", 1920, 1080);
+                    Append("WORKFORCE_ROSTER_PASS | employed=4 candidates=0 skills=6 potential=letter-only state=separate");
+                    continue;
+                }
                 if (definition.TabId == MainNavigationTabId.Investment)
                 {
                     RequestCapture("interaction-selected-investment-1920x1080.png");
@@ -333,7 +355,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                      {
                          new[] { 1600, 900, 1600, 900, 1 },
                          new[] { 1600, 1000, 1600, 1000, 1 },
-                         new[] { 2560, 1440, 1280, 720, 2 }
+                         new[] { 2560, 1440, 1280, 720, 2 },
+                         new[] { 1392, 768, 1392, 768, 1 },
+                         new[] { 1280, 720, 1280, 720, 1 }
                      })
             {
                 var targetWidth = resolution[0];
@@ -356,12 +380,74 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 RequestCapture(hubName, superSize);
                 yield return new WaitForSecondsRealtime(0.75f);
                 VerifyCapture(hubName, targetWidth, targetHeight);
+                ClickButton(presenter.GetTabButtonForQa(MainNavigationTabId.People),
+                    $"people {targetWidth}x{targetHeight}");
+                ValidateWorkforceTypography(presenter, windowWidth, windowHeight);
+                var peopleName = $"menu-people-{targetWidth}x{targetHeight}.png";
+                RequestCapture(peopleName, superSize);
+                yield return new WaitForSecondsRealtime(0.75f);
+                VerifyCapture(peopleName, targetWidth, targetHeight);
                 Require(presenter.TryHandleEscape() && !presenter.HasOpenPanel,
                     $"ESC priority did not close the main navigation panel first at {targetWidth}x{targetHeight}");
                 Append($"RESOLUTION_ROUTE_PASS | target={targetWidth}x{targetHeight} window={windowWidth}x{windowHeight} supersize={superSize}");
             }
             Require(!_fontErrorSeen, "Main navigation emitted a Korean glyph error during player QA.");
-            Append("INPUT_PASS | pointerTabs=5 pointerFeatures=20 keyboardSubmit=1 pointerSpeeds=3 officeReturn=pointer escapePriority=PASS pause=build-only worldInput=stock-suppressed");
+            Append("INPUT_PASS | pointerTabs=5 workforceCards=4 pointerFeatures=16 pointerSpeeds=3 officeReturn=pointer escapePriority=PASS pause=build-only worldInput=stock-suppressed");
+        }
+
+        private void ValidateWorkforceTypography(
+            MainNavigationHudPresenter presenter,
+            int pixelWidth,
+            int pixelHeight)
+        {
+            Canvas.ForceUpdateCanvases();
+            var texts = presenter.GetComponentsInChildren<TMP_Text>(true);
+            var panelTitles = 0;
+            var employeeNames = 0;
+            var bodyTexts = 0;
+            for (var index = 0; index < texts.Length; index++)
+            {
+                var text = texts[index];
+                if (text == null || !text.gameObject.name.StartsWith("Workforce ", StringComparison.Ordinal))
+                    continue;
+
+                float minimumPixels;
+                if (text.gameObject.name == "Workforce Panel Title")
+                {
+                    panelTitles++;
+                    minimumPixels = 24f;
+                }
+                else if (text.gameObject.name == "Workforce Employee Name")
+                {
+                    employeeNames++;
+                    minimumPixels = 18f;
+                }
+                else
+                {
+                    bodyTexts++;
+                    minimumPixels = 14f;
+                }
+
+                text.ForceMeshUpdate();
+                var scale = text.canvas != null ? text.canvas.scaleFactor : 1f;
+                var pixelFontSize = text.fontSize * scale;
+                Require(!text.enableAutoSizing,
+                    $"Workforce text uses forbidden auto-size: {text.gameObject.name} at {pixelWidth}x{pixelHeight}.");
+                Require(pixelFontSize + 0.05f >= minimumPixels,
+                    $"Workforce text is too small: {text.gameObject.name}={pixelFontSize:0.00}px, " +
+                    $"minimum={minimumPixels:0}px at {pixelWidth}x{pixelHeight}.");
+                Require(!text.isTextOverflowing,
+                    $"Workforce text overflows bounds: {text.gameObject.name}='{text.text}' " +
+                    $"at {pixelWidth}x{pixelHeight}; rect={text.rectTransform.rect.width:0.0}x" +
+                    $"{text.rectTransform.rect.height:0.0} preferred={text.preferredWidth:0.0}x" +
+                    $"{text.preferredHeight:0.0}.");
+            }
+
+            Require(panelTitles == 1 && employeeNames == 4 && bodyTexts >= 20,
+                $"Workforce typography coverage mismatch at {pixelWidth}x{pixelHeight}: " +
+                $"title={panelTitles} names={employeeNames} body={bodyTexts}.");
+            Append($"WORKFORCE_TYPOGRAPHY_PASS | resolution={pixelWidth}x{pixelHeight} " +
+                   "panel>=24px names>=18px body>=14px autosize=off overflow=0");
         }
 
         private GameState ValidateStockSaveRoundTrip(GameState state)
@@ -405,8 +491,82 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             var path = Path.Combine(_outputFolder, fileName);
             if (File.Exists(path)) File.Delete(path);
-            ScreenCapture.CaptureScreenshot(path, superSize);
+            CaptureOffscreen(path, superSize);
             _captureCount++;
+        }
+
+        private static void CaptureOffscreen(string path, int superSize)
+        {
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                var cameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                for (var index = 0; index < cameras.Length; index++)
+                {
+                    if (!cameras[index].enabled) continue;
+                    camera = cameras[index];
+                    break;
+                }
+            }
+
+            Require(camera != null, "An enabled camera is required for offscreen player capture.");
+            superSize = Math.Max(1, superSize);
+            var width = Math.Max(1, Screen.width * superSize);
+            var height = Math.Max(1, Screen.height * superSize);
+            var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var canvasStates = new List<OverlayCanvasCaptureState>();
+            var previousTarget = camera.targetTexture;
+            var previousActive = RenderTexture.active;
+            RenderTexture renderTexture = null;
+            Texture2D texture = null;
+
+            try
+            {
+                for (var index = 0; index < canvases.Length; index++)
+                {
+                    var canvas = canvases[index];
+                    if (!canvas.isRootCanvas) continue;
+                    canvasStates.Add(new OverlayCanvasCaptureState(canvas));
+                    if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                    {
+                        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                        canvas.worldCamera = camera;
+                        canvas.planeDistance = camera.nearClipPlane + 0.01f;
+                        canvas.overrideSorting = true;
+                        canvas.sortingOrder = short.MaxValue;
+                    }
+                    else
+                    {
+                        canvas.overrideSorting = true;
+                        canvas.sortingOrder = short.MinValue;
+                    }
+                }
+
+                renderTexture = RenderTexture.GetTemporary(
+                    width,
+                    height,
+                    24,
+                    RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.sRGB);
+                camera.targetTexture = renderTexture;
+                Canvas.ForceUpdateCanvases();
+                camera.Render();
+                RenderTexture.active = renderTexture;
+                texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+                texture.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
+                texture.Apply(false, false);
+                File.WriteAllBytes(path, texture.EncodeToPNG());
+            }
+            finally
+            {
+                RenderTexture.active = previousActive;
+                camera.targetTexture = previousTarget;
+                for (var index = 0; index < canvasStates.Count; index++)
+                    canvasStates[index].Restore();
+                Canvas.ForceUpdateCanvases();
+                if (texture != null) Destroy(texture);
+                if (renderTexture != null) RenderTexture.ReleaseTemporary(renderTexture);
+            }
         }
 
         private void VerifyCapture(string fileName, int expectedWidth, int expectedHeight)
@@ -427,8 +587,38 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             }
             Destroy(texture);
             Require(nonBlackSamples >= 16,
-                "Screenshot is effectively black; the D3D11 player window must be visible for capture: " + path);
+                "Offscreen D3D11 screenshot is effectively black: " + path);
             Append($"CAPTURE_PASS | {path.Replace('\\', '/')} | {expectedWidth}x{expectedHeight} | bytes={new FileInfo(path).Length}");
+        }
+
+        private readonly struct OverlayCanvasCaptureState
+        {
+            private readonly Canvas _canvas;
+            private readonly RenderMode _renderMode;
+            private readonly Camera _worldCamera;
+            private readonly float _planeDistance;
+            private readonly bool _overrideSorting;
+            private readonly int _sortingOrder;
+
+            public OverlayCanvasCaptureState(Canvas canvas)
+            {
+                _canvas = canvas;
+                _renderMode = canvas.renderMode;
+                _worldCamera = canvas.worldCamera;
+                _planeDistance = canvas.planeDistance;
+                _overrideSorting = canvas.overrideSorting;
+                _sortingOrder = canvas.sortingOrder;
+            }
+
+            public void Restore()
+            {
+                if (_canvas == null) return;
+                _canvas.renderMode = _renderMode;
+                _canvas.worldCamera = _worldCamera;
+                _canvas.planeDistance = _planeDistance;
+                _canvas.overrideSorting = _overrideSorting;
+                _canvas.sortingOrder = _sortingOrder;
+            }
         }
 
         private static string FeatureCaptureName(string featureId)

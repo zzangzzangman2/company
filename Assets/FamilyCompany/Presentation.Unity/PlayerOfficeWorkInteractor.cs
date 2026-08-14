@@ -1,8 +1,10 @@
 using System;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
+using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.Workforce;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -12,11 +14,12 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private PrototypeBootstrap bootstrap;
         [SerializeField] private OfficeWaypoint[] waypoints = Array.Empty<OfficeWaypoint>();
         [SerializeField] private float interactionRadius = 1.15f;
-        [SerializeField] private float secondsPerPersonHour = 0.8f;
         [SerializeField] private KeyCode workKey = KeyCode.E;
         private float _workProgress;
         private string _workingOfferId = string.Empty;
         private OfficeWaypoint _workingWaypoint;
+        private long _creditedThroughMinute;
+        private int _requiredGameMinutesPerPersonHour = 60;
         private readonly OfficePlayerWorkGate _workGate = new OfficePlayerWorkGate();
 
         public bool IsWorking => _workGate.HasActiveWork;
@@ -24,7 +27,7 @@ namespace FamilyCompany.Presentation.Unity
         public bool WantsOfficeSeat => _workGate.WantsOfficeSeat;
         public bool IsSeatedWorkReady => _workGate.IsSeatedWorkReady;
         public bool IsSeatingTransitionBlocked => _workGate.IsTransitionBlocked;
-        public float WorkProgress01 => Mathf.Clamp01(_workProgress / Mathf.Max(0.05f, secondsPerPersonHour));
+        public float WorkProgress01 => Mathf.Clamp01(_workProgress / Mathf.Max(1f, _requiredGameMinutesPerPersonHour));
 
         public void SetSeatedWorkGateRequired(bool required)
         {
@@ -99,38 +102,50 @@ namespace FamilyCompany.Presentation.Unity
                 _workingOfferId = contract.Offer.OfferId;
                 _workingWaypoint = waypoint;
                 _workProgress = 0f;
+                _creditedThroughMinute = bootstrap.State.Time.ElapsedMinutes;
+                _requiredGameMinutesPerPersonHour = RequiredGameMinutesPerPersonHour(contract, player);
                 _workGate.Begin(requiredActivity);
                 bootstrap.SetWorldNotice($"{contract.Offer.Title} 직접 작업 중 · E를 계속 누르세요.");
             }
 
             if (!_workGate.CanAccumulateProgress) return;
-            _workProgress += Time.deltaTime;
-            if (_workProgress < secondsPerPersonHour) return;
-            _workProgress = 0f;
-            var result = bootstrap.State.Contracts.RecordWork(
-                contract.Offer.OfferId,
-                "player",
-                1,
-                bootstrap.State.Time.ElapsedMinutes,
-                bootstrap.State.Family,
-                bootstrap.State.Company);
-            if (!result.Applied)
+            var currentMinute = bootstrap.State.Time.ElapsedMinutes;
+            _workProgress = Math.Max(0L, currentMinute - _creditedThroughMinute);
+            while (_workProgress >= _requiredGameMinutesPerPersonHour)
             {
-                bootstrap.SetWorldNotice(WorkFailureLabel(result.RejectionReason));
-                if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
-                ResetWork();
-                return;
-            }
+                var creditMinute = checked(_creditedThroughMinute + _requiredGameMinutesPerPersonHour);
+                var result = bootstrap.State.Contracts.RecordWork(
+                    contract.Offer.OfferId,
+                    "player",
+                    1,
+                    creditMinute,
+                    bootstrap.State.Family,
+                    bootstrap.State.Company);
+                if (!result.Applied)
+                {
+                    bootstrap.SetWorldNotice(WorkFailureLabel(result.RejectionReason));
+                    if (Application.isPlaying) GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
+                    ResetWork();
+                    return;
+                }
 
-            bootstrap.SetWorldNotice(result.Completed
-                ? $"직접 작업으로 계약 완료 · 보상 {result.RewardWon:N0}원"
-                : $"직접 작업 1시간 반영 · 남은 작업 {contract.RemainingPersonHours}시간");
-            if (Application.isPlaying)
-            {
-                if (result.Completed) GameAudioCoordinator.Instance.PlayCoinsSfx(result.RewardWon >= 500_000);
-                else GameAudioCoordinator.Instance.PlayPaperSfx(GamePaperSfx.Rustle);
+                _creditedThroughMinute = creditMinute;
+                bootstrap.SetWorldNotice(result.Completed
+                    ? $"직접 작업으로 계약 완료 · 보상 {result.RewardWon:N0}원"
+                    : $"직접 작업 1시간 반영 · 남은 작업 {contract.RemainingPersonHours}시간");
+                if (Application.isPlaying)
+                {
+                    if (result.Completed) GameAudioCoordinator.Instance.PlayCoinsSfx(result.RewardWon >= 500_000);
+                    else GameAudioCoordinator.Instance.PlayPaperSfx(GamePaperSfx.Rustle);
+                }
+                if (result.Completed)
+                {
+                    ResetWork();
+                    return;
+                }
+                _requiredGameMinutesPerPersonHour = RequiredGameMinutesPerPersonHour(contract, player);
+                _workProgress = Math.Max(0L, currentMinute - _creditedThroughMinute);
             }
-            if (result.Completed) ResetWork();
         }
 
         private OfficeWaypoint FindNearbyWaypoint(OfficeActivity requiredActivity)
@@ -154,7 +169,15 @@ namespace FamilyCompany.Presentation.Unity
             _workProgress = 0f;
             _workingOfferId = string.Empty;
             _workingWaypoint = null;
+            _creditedThroughMinute = 0L;
+            _requiredGameMinutesPerPersonHour = 60;
             _workGate.End();
+        }
+
+        private static int RequiredGameMinutesPerPersonHour(SubcontractState contract, FamilyMemberState member)
+        {
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
+            return WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(member.Capability, task);
         }
 
         private static float FlatDistance(Vector3 left, Vector3 right)
@@ -190,6 +213,7 @@ namespace FamilyCompany.Presentation.Unity
                 case ContractWorkRejectionReason.MemberUnavailable: return "지금은 학교나 외부 일정 때문에 작업할 수 없습니다.";
                 case ContractWorkRejectionReason.MemberEnergyInsufficient: return "체력이 부족합니다. 먼저 쉬어야 합니다.";
                 case ContractWorkRejectionReason.DeadlinePassed: return "작업하는 사이 계약 마감을 넘겼습니다.";
+                case ContractWorkRejectionReason.AuthoritativeTimeInsufficient: return "게임 시간이 아직 1인시만큼 지나지 않았습니다.";
                 default: return "직접 작업을 반영하지 못했습니다.";
             }
         }

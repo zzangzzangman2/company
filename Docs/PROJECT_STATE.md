@@ -2,6 +2,16 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-14 / 공용 업무 능력과 인사 roster
+
+- 가족과 향후 채용 완료 직원은 기술개발·기획·창작·사업·운영·협업 6능력과 잠재력을 같은
+  `WorkforceCapabilityState`로 사용한다. 별도 Speed는 없으며 업무별 10,000bp 프로필이 진행·품질·학습을 정한다.
+- MainNavigationV2 인사 탭은 현재 고용된 가족 4명만 데이터 기반으로 표시한다. 잠재력은 숫자가 아니라
+  S/A/B/C/D/F 등급만, 현재 스트레스와 스트레스 저항은 서로 다른 현재 상태로 표시한다.
+- Save schema v10은 능력·분야별 XP·fixed-point remainder·스트레스 증가 배율을 저장한다. v1~v9의
+  Speed/Stamina/Mental은 이관에서만 운영/스트레스 저항 초기값으로 읽으며 신규 권위 계산에서는 사용하지 않는다.
+- 세부 수치와 XP/이관 경계는 `Docs/WORKFORCE_CAPABILITIES_V1.md`가 정본이다.
+
 ## 2026-08-14 / Shared stamina + placed-facility recovery
 
 - All four family members start from one 10,000-unit profile. Integer GameTime drains 75% across a
@@ -12,8 +22,8 @@
   fail closed because no definition/facility exists.
 - A sticky stamina session gates routine autonomy refreshes while preserving attendance/mandatory
   and contract priority. Successful Performing completion releases the facility, returns to the
-  exact assigned seat, and resumes the exact task/remaining minutes. Save schema v9 stores semantic
-  stamina only and migrates v1-v8 legacy energy at the saved integer minute.
+  exact assigned seat, and resumes the exact task/remaining minutes. Save schema v10 stores semantic
+  stamina and workforce capability state and migrates earlier legacy state at the saved integer minute.
 - Unity 6000.3.21f1 pure, 1x/2x/4x, save/load, prototype/micro-action, build capability, and PlayMode
   integration QA pass. `Artifacts/StaminaRuntimeQa/four-family-overhead-bars.png` captures all four
   bars and `summary.txt` records the completed runtime round trip.
@@ -44,7 +54,7 @@
 | 메인 UI | `MainNavigationV2`: 회사·인사·사업·연구·투자 5개 허브 |
 | 계약 | 고객 등급 `T0 → T1 → T2 → T3 → T4`, 순차 해금과 하락/회복 |
 | 사무실 편집 | 배치·회전·이동·회수·재고·저장. 회사 허브에서 진입 |
-| 저장 | 전체 `GameSaveDto v9`, `v1`~`v8` 읽기/이관; OfficeGrid 하위 스키마 `v4`, 가구 재고 하위 스키마 `v1` |
+| 저장 | 전체 `GameSaveDto v10`, `v1`~`v9` 읽기/이관; OfficeGrid 하위 스키마 `v4`, 가구 재고 하위 스키마 `v1` |
 | 이동·애니메이션 | 공유 pivot/locomotion 규칙과 실제 frame displacement로 방향·걷기 판정 |
 | 렌더 | 1920×1080 reference, native scale 1, pixel snap, 180 PPU, 캐릭터 scale 1.55 |
 | Windows 실행 | 저장소 상대 경로 `BUILD_WINDOWS.cmd` / `RUN_WINDOWS.cmd`; `BUILD_INFO.txt`로 SHA 확인 |
@@ -55,7 +65,7 @@
 
 - `MainNavigationV2`가 런타임에 연결되었고 거부된 V1 경로는 제거되었다. 회사 허브는 사무실 편집기, 사업은 계약/제품, 투자는 주식으로 연결된다.
 - 계약 고객 성장은 day-one T0, T1~T4 순차 해금, 평판/실패 기반 하락과 T0 회복을 순수 시뮬레이션 규칙으로 처리한다.
-- 사무실 편집기와 재고 저장은 v8에서 도입되었고, 현재 전체 저장 스키마 v9에 그대로 통합되어 있다. 별도 여섯 번째 하단 탭은 만들지 않는다.
+- 사무실 편집기와 재고 저장은 v8에서 도입되었고, 현재 전체 저장 스키마 v10에 그대로 통합되어 있다. 별도 여섯 번째 하단 탭은 만들지 않는다.
 - 플레이어, 가족 출퇴근, 계약 이동이 공유 office locomotion 규칙과 실제 변위를 사용한다.
 - native render/pixel snap/viewport clarity 기준과 캐릭터 scale 1.55가 적용되었다.
 - 외곽 bay 52개, 단일 threshold, 가족 09:00~09:03/18:00 출퇴근 규칙이 적용되었다.
@@ -80,7 +90,7 @@
 | --- | --- | --- |
 | MainNavigationV2 compiler/editor/player | `884c53f`, `bc19d0c`, `4cf6e50` | PASS 기록 있음 |
 | 계약 T0~T4 pure harness/compiler | `a878ce1` | PASS 기록 있음 |
-| 사무실 편집/저장 v9 호환 | `7baac22`, `8d714c6` | compiler, logic, D3D PlayMode, v1~v8 migration PASS 기록 있음 |
+| 사무실 편집/저장 v10 호환 | `7baac22`, `8d714c6` | 기존 v9 compiler, logic, D3D PlayMode 기록과 v10 migration 회귀를 함께 확인 |
 | 공유 이동/실제 변위 | `aeae43f` | strict harness와 D3D movement QA PASS 기록 있음 |
 | native render clarity | `d235f41` | D3D render audit PASS 기록 있음 |
 | 외곽/출퇴근 | `7954d42` 이후 기준선 | layout/PlayMode PASS 기록 있음 |
@@ -92,7 +102,7 @@
 ## 최종 릴리스 체크리스트
 
 1. `git diff --check`, C# compiler, 순수 검증 harness, Unity D3D PlayMode/render QA를 통과한다.
-2. 저장 v1~v8→v9, 새 게임 v9, 편집 재고, 계약 성장, 주식 계좌, 출퇴근, 실제 변위 회귀를 확인한다.
+2. 저장 v1~v9→v10, 새 게임 v10, 편집 재고, 계약 성장, 주식 계좌, 출퇴근, 실제 변위 회귀를 확인한다.
 3. `BUILD_WINDOWS.cmd`로 새 실행본을 만들고 `BUILD_INFO.txt`와 현재 HEAD가 같은지 확인한다.
 4. 검증된 폴더 전체를 `C:\Users\godho\Downloads\Family\FamilyCompany_Playtest`에 배포한다.
 

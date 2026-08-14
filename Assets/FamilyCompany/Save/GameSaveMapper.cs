@@ -12,6 +12,7 @@ using FamilyCompany.Save.OfficeGrid;
 using FamilyCompany.Save.OfficeFurniture;
 using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.Stamina;
+using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Save
 {
@@ -44,15 +45,13 @@ namespace FamilyCompany.Save
                     trust = member.Trust,
                     stress = member.Stress,
                     development = member.Stats.Development,
-                    speed = member.Stats.Speed,
-                    stamina = member.Stats.Stamina,
                     planning = member.Stats.Planning,
                     art = member.Stats.Art,
                     sales = member.Stats.Sales,
-                    mental = member.Stats.Mental,
                     teamwork = member.Stats.Teamwork,
                     loyalty = member.Stats.Loyalty,
                     potential = member.Stats.Potential,
+                    capability = member.Capability.ExportSnapshot(),
                     autonomy = new OfficeAutonomySaveDto
                     {
                         currentAction = (int)member.Autonomy.CurrentAction,
@@ -134,6 +133,7 @@ namespace FamilyCompany.Save
                     penaltyWon = contract.Offer.PenaltyWon,
                     requiredDevelopment = contract.Offer.RequiredDevelopment,
                     requiredSpeed = contract.Offer.RequiredSpeed,
+                    requiredCapability = contract.Offer.RequiredCapability,
                     requiredTechnologyId = contract.Offer.RequiredTechnologyId,
                     industry = (int)contract.Offer.Industry,
                     acceptedMinute = contract.AcceptedMinute,
@@ -196,7 +196,7 @@ namespace FamilyCompany.Save
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5 && save.schemaVersion != 6 && save.schemaVersion != 7 && save.schemaVersion != 8 && save.schemaVersion != 9)
+            if (save.schemaVersion < 1 || save.schemaVersion > 10)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -274,6 +274,11 @@ namespace FamilyCompany.Save
                                     member.autonomy.microAction.visitedLocationMask)
                                 : new OfficeMicroActionState())
                     : new OfficeAutonomyState(lastProcessedMinute: save.elapsedMinutes);
+                var capability = save.schemaVersion >= 10
+                    ? WorkforceCapabilityState.ImportSnapshot(
+                        member.capability ?? throw new InvalidOperationException("Workforce capability data is incomplete."),
+                        member.memberId)
+                    : LegacyWorkforceCapabilityMigration.Migrate(member.memberId, stats);
                 return new FamilyMemberState(
                     member.memberId,
                     member.displayName,
@@ -285,7 +290,8 @@ namespace FamilyCompany.Save
                     member.stress,
                     stats,
                     careerMemories,
-                    autonomy);
+                    autonomy,
+                    capability);
             }));
             var events = new DeterministicEventQueue(save.events.Select(item => new ScheduledEvent(
                 item.eventId,
@@ -315,7 +321,8 @@ namespace FamilyCompany.Save
                     item.requiredDevelopment,
                     item.requiredSpeed,
                     item.requiredTechnologyId,
-                    save.schemaVersion >= 4 ? (BusinessIndustry)item.industry : BusinessIndustry.WebAndSoftware);
+                    save.schemaVersion >= 4 ? (BusinessIndustry)item.industry : BusinessIndustry.WebAndSoftware,
+                    save.schemaVersion >= 10 ? item.requiredCapability : item.requiredDevelopment);
                 return new SubcontractState(
                     offer,
                     item.acceptedMinute,

@@ -21,7 +21,8 @@ namespace FamilyCompany.Simulation.Contracts
             int requiredDevelopment = 0,
             int requiredSpeed = 0,
             string requiredTechnologyId = "",
-            BusinessIndustry industry = BusinessIndustry.WebAndSoftware)
+            BusinessIndustry industry = BusinessIndustry.WebAndSoftware,
+            int requiredCapability = -1)
         {
             OfferId = RequireText(offerId, nameof(offerId));
             ClientCompanyId = RequireText(clientCompanyId, nameof(clientCompanyId));
@@ -57,6 +58,8 @@ namespace FamilyCompany.Simulation.Contracts
             PenaltyWon = penaltyWon;
             RequiredDevelopment = requiredDevelopment;
             RequiredSpeed = requiredSpeed;
+            RequiredCapability = requiredCapability < 0 ? requiredDevelopment : requiredCapability;
+            if (RequiredCapability < 0 || RequiredCapability > 100) throw new ArgumentOutOfRangeException(nameof(requiredCapability));
             RequiredTechnologyId = requiredTechnologyId ?? string.Empty;
             Industry = industry;
         }
@@ -78,6 +81,7 @@ namespace FamilyCompany.Simulation.Contracts
         public long PenaltyWon { get; }
         public int RequiredDevelopment { get; }
         public int RequiredSpeed { get; }
+        public int RequiredCapability { get; }
         public string RequiredTechnologyId { get; }
         public BusinessIndustry Industry { get; }
 

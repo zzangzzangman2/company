@@ -3,12 +3,14 @@ using System.IO;
 using System.Linq;
 using FamilyCompany.Infrastructure.Unity;
 using FamilyCompany.Save;
+using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.History;
 using FamilyCompany.Simulation.Market;
 using FamilyCompany.Simulation.Prototype;
+using FamilyCompany.Simulation.Workforce;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -557,10 +559,16 @@ namespace FamilyCompany.Editor
                 7);
             var acceptance = source.Contracts.Accept(offer, source.Company, source.Time.ElapsedMinutes);
             AssertEqual(true, acceptance.Accepted, "save contract acceptance");
+            var saveMember = source.Family.Get("older_sister");
+            var saveTask = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(offer));
+            var partialHours = Math.Min(3, offer.EstimatedPersonHours);
+            var contributionMinute = checked(source.Time.ElapsedMinutes + (long)partialHours *
+                WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(saveMember.Capability, saveTask));
+            new SimulationRunner(source).AdvanceMinutes(contributionMinute - source.Time.ElapsedMinutes);
             var work = source.Contracts.RecordWork(
                 offer.OfferId,
                 "older_sister",
-                Math.Min(3, offer.EstimatedPersonHours),
+                partialHours,
                 source.Time.ElapsedMinutes,
                 source.Family,
                 source.Company);
@@ -573,7 +581,7 @@ namespace FamilyCompany.Editor
             AssertEqual(source.Company.CashWon, restored.Company.CashWon, "save cash");
             AssertEqual(source.Family.Get("older_sister").Energy, restored.Family.Get("older_sister").Energy, "save sister energy");
             AssertEqual(source.Events.Count, restored.Events.Count, "save event count");
-            AssertEqual(9, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
+            AssertEqual(10, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
             AssertEqual(source.OfficeGrid.ComputeLayoutHash(), restored.OfficeGrid.ComputeLayoutHash(), "office grid layout hash");
             AssertEqual(source.Contracts.Contracts.Count, restored.Contracts.Contracts.Count, "save contract count");
             var restoredContract = restored.Contracts.Get(offer.OfferId);
@@ -656,6 +664,12 @@ namespace FamilyCompany.Editor
             AssertEqual(true, acceptance.Accepted, "contract accepted");
             AssertEqual(4_900_000L, state.Company.CashWon, "contract upfront cash");
             var memberIds = new[] { "player", "older_sister", "father", "mother" };
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(offer));
+            var sharedWorkMinute = checked(state.Time.ElapsedMinutes + memberIds.Max(memberId =>
+                5L * WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
+                    state.Family.Get(memberId).Capability,
+                    task)));
+            new SimulationRunner(state).AdvanceMinutes(sharedWorkMinute - state.Time.ElapsedMinutes);
             ContractWorkResult finalWork = null;
             foreach (var memberId in memberIds)
             {
@@ -935,6 +949,10 @@ namespace FamilyCompany.Editor
             coordinator.InitializeNow();
             var start = sister.transform.position;
             AssertEqual(true, coordinator.AssignContractWork(offer.OfferId, "older_sister", 4), "physical contract assigned");
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(offer));
+            bootstrap.AdvanceTimeNow(checked(4 * WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
+                bootstrap.State.Family.Get("older_sister").Capability,
+                task)));
             for (var index = 0; index < 1600 && coordinator.CompletedTaskCount == 0; index++)
             {
                 sister.Tick(0.05f);

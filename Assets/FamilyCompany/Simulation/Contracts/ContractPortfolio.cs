@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.ContractGrowth;
+using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Simulation.Contracts
 {
@@ -12,7 +14,8 @@ namespace FamilyCompany.Simulation.Contracts
         ContractNotActive = 1,
         DeadlinePassed = 2,
         MemberEnergyInsufficient = 3,
-        MemberUnavailable = 4
+        MemberUnavailable = 4,
+        AuthoritativeTimeInsufficient = 5
     }
 
     public sealed class ContractAcceptanceResult
@@ -117,14 +120,18 @@ namespace FamilyCompany.Simulation.Contracts
                 return new ContractAcceptanceResult(decision, null);
             }
 
-            if (family != null && family.Members.Max(member => member.Stats.Development) < offer.RequiredDevelopment)
+            if (family != null)
             {
-                return RejectedAcceptance(ContractRejectionReason.DevelopmentInsufficient);
-            }
-
-            if (family != null && family.Members.Max(member => member.Stats.Speed) < offer.RequiredSpeed)
-            {
-                return RejectedAcceptance(ContractRejectionReason.SpeedInsufficient);
+                var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(offer));
+                var team = family.Members
+                    .Select(member => WorkforcePerformanceRules.CalculateScore(
+                        member.Capability.Skills,
+                        task.ProgressWeights))
+                    .OrderByDescending(score => score)
+                    .Take(offer.RequiredWorkers)
+                    .ToArray();
+                if (team.Length < offer.RequiredWorkers || team.Sum() / team.Length < offer.RequiredCapability)
+                    return RejectedAcceptance(ContractRejectionReason.DevelopmentInsufficient);
             }
 
             if (growth != null && !growth.HasTechnology(offer.RequiredTechnologyId))
@@ -182,7 +189,22 @@ namespace FamilyCompany.Simulation.Contracts
             {
                 return RejectedWork(ContractWorkRejectionReason.MemberUnavailable);
             }
-            var applicableHours = Math.Min(requestedPersonHours, contract.RemainingPersonHours);
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
+            var minutesPerPersonHour = WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
+                member.Capability,
+                task);
+            var existingMemberHours = contract.Contributions
+                .Where(item => string.Equals(item.MemberId, memberId, StringComparison.Ordinal))
+                .Sum(item => item.PersonHours);
+            var authoritativeMemberHourBudget = checked((int)Math.Min(
+                int.MaxValue,
+                (elapsedMinute - contract.AcceptedMinute) / minutesPerPersonHour));
+            var availableAuthoritativeHours = Math.Max(0, authoritativeMemberHourBudget - existingMemberHours);
+            if (availableAuthoritativeHours == 0)
+                return RejectedWork(ContractWorkRejectionReason.AuthoritativeTimeInsufficient);
+            var applicableHours = Math.Min(
+                Math.Min(requestedPersonHours, contract.RemainingPersonHours),
+                availableAuthoritativeHours);
             var energyCost = checked(applicableHours * EnergyCostPerPersonHour);
             if (member.Energy < energyCost)
             {
@@ -191,7 +213,13 @@ namespace FamilyCompany.Simulation.Contracts
 
             var appliedHours = contract.AddWork(memberId, applicableHours);
             member.ChangeEnergy(-checked(appliedHours * EnergyCostPerPersonHour));
-            member.ChangeStress(Math.Max(1, (appliedHours + 3) / 4));
+            member.ChangeStress(WorkforceStressRules.ApplyAuthoritativeStressGain(
+                Math.Max(1, (appliedHours + 3) / 4),
+                member.Capability.StressGainBasisPoints));
+            WorkforceGrowthRules.ApplyAuthoritativeContributionMinutes(
+                member.Capability,
+                task,
+                checked(appliedHours * (long)minutesPerPersonHour));
 
             if (contract.RemainingPersonHours != 0)
             {

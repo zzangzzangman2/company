@@ -111,7 +111,7 @@ namespace FamilyCompany.Editor
         private static void ValidateCurrentSaveRoundTrip(GameState source)
         {
             var sourceDto = GameSaveMapper.ToDto(source);
-            AssertEqual(9, sourceDto.schemaVersion, "save schema v9");
+            AssertEqual(10, sourceDto.schemaVersion, "save schema v10");
             var restored = GameSaveMapper.FromDto(sourceDto);
             AssertStateEqual(source, restored, "save v8 round trip");
         }

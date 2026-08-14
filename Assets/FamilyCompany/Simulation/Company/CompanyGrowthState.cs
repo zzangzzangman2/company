@@ -565,17 +565,14 @@ namespace FamilyCompany.Simulation.Company
             var project = ProductProject;
             if (project == null || project.Resolved || elapsedMinute < project.DueMinute) return 0;
 
-            var practicalAverage = (int)Math.Round(family.Members.Average(member =>
-                (member.Stats.Planning + member.Stats.Development + member.Stats.Art + member.Stats.Sales) / 4.0));
-            var organizationAverage = (int)Math.Round(family.Members.Average(member =>
-                (member.Stats.Mental + member.Stats.Teamwork) / 2.0));
+            var workforceQuality = ProductWorkforcePerformanceRules.CalculateCompatibilityQuality(family);
             var technologyBonus = (HasTechnology(ResearchTechnologyIds.ThreeDModeling) ? 5 : 0)
                                   + (HasTechnology(ResearchTechnologyIds.AutomationLine) ? 7 : 0);
             var variance = StableRandom.StableRandomInt(
                 $"product-result:{worldSeed}:{project.Sequence}:{project.StartedMinute}",
                 31) - 15;
             var quality = Math.Max(0, Math.Min(100,
-                (practicalAverage * 2 + organizationAverage) / 3 + technologyBonus + variance));
+                workforceQuality + technologyBonus + variance));
             var revenueRatePercent = Math.Max(20, 35 + quality * 2 + variance);
             var revenue = checked(project.BudgetWon * revenueRatePercent / 100L);
             project.Resolve(quality, revenue);

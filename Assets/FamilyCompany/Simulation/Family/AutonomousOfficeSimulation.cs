@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Simulation.Family
 {
@@ -129,9 +130,12 @@ namespace FamilyCompany.Simulation.Family
                 case AutonomousOfficeAction.Reception:
                 case AutonomousOfficeAction.Printing:
                 case AutonomousOfficeAction.Meeting:
-                    var energyCost = Math.Max(1, 4 - member.Stats.Stamina / 30);
-                    var stressGain = Math.Max(1, 4 - member.Stats.Mental / 30);
-                    if (action == AutonomousOfficeAction.Meeting && member.Stats.Teamwork < 60) stressGain++;
+                    const int energyCost = 2;
+                    var baseStressGain = action == AutonomousOfficeAction.Meeting &&
+                                         member.Capability.Skills.Collaboration < 60 ? 4 : 3;
+                    var stressGain = WorkforceStressRules.ApplyAuthoritativeStressGain(
+                        baseStressGain,
+                        member.Capability.StressGainBasisPoints);
                     member.ChangeEnergy(-energyCost);
                     member.ChangeStress(stressGain);
                     member.Autonomy.CompleteWorkBlock();

@@ -328,7 +328,7 @@ namespace FamilyCompany.Editor
 
             GameSaveDto save = GameSaveMapper.ToDto(bootstrap.State);
             GameState restored = GameSaveMapper.FromDto(save);
-            if (save.schemaVersion != 9 || save.staminaState == null ||
+            if (save.schemaVersion != 10 || save.staminaState == null ||
                 JsonUtility.ToJson(save.staminaState) !=
                 JsonUtility.ToJson(restored.Stamina.ExportSnapshot()))
                 throw new InvalidOperationException("Runtime stamina save/load roundtrip failed.");

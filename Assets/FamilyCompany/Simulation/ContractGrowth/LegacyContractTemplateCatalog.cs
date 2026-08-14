@@ -96,7 +96,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
 
         private static ContractDifficulty ResolveDifficulty(SubcontractOffer offer)
         {
-            var score = offer.EstimatedPersonHours + offer.RequiredDevelopment + offer.RequiredSpeed;
+            var score = offer.EstimatedPersonHours + offer.RequiredDevelopment + offer.RequiredCapability;
             if (!string.IsNullOrEmpty(offer.RequiredTechnologyId) || score >= 150) return ContractDifficulty.Enterprise;
             if (score >= 120) return ContractDifficulty.Professional;
             if (score >= 90) return ContractDifficulty.Skilled;

@@ -5,6 +5,7 @@ using System.Linq;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Simulation.ContractGrowth
 {
@@ -90,8 +91,9 @@ namespace FamilyCompany.Simulation.ContractGrowth
             if (growth == null) throw new ArgumentNullException(nameof(growth));
 
             var capability = family.Members.Sum(member =>
-                member.Stats.Development + member.Stats.Speed + member.Stats.Stamina +
-                member.Stats.Planning + member.Stats.Mental + member.Stats.Teamwork) /
+                member.Capability.Skills.Engineering + member.Capability.Skills.Planning +
+                member.Capability.Skills.Creative + member.Capability.Skills.Business +
+                member.Capability.Skills.Operations + member.Capability.Skills.Collaboration) /
                 Math.Max(1, family.Members.Count * 6);
             var capacity = Clamp100(
                 capability +
@@ -116,39 +118,16 @@ namespace FamilyCompany.Simulation.ContractGrowth
         private static int CalculateQuality(SubcontractState contract, FamilyState family)
         {
             if (contract.Contributions.Count == 0) return 45;
-            long weighted = 0;
-            var totalHours = 0;
-            foreach (var contribution in contract.Contributions.OrderBy(item => item.MemberId, StringComparer.Ordinal))
-            {
-                var member = family.Get(contribution.MemberId);
-                var specialty = LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer);
-                var relevant = RelevantCapability(member.Stats, specialty);
-                var score = (relevant * 55 + member.Stats.Planning * 15 + member.Stats.Teamwork * 15 +
-                             member.Stats.Mental * 10 + member.Stats.Speed * 5) / 100;
-                weighted += (long)score * contribution.PersonHours;
-                totalHours += contribution.PersonHours;
-            }
-            var average = totalHours == 0 ? 45 : (int)(weighted / totalHours);
-            var requirementPenalty = Math.Max(0, contract.Offer.RequiredDevelopment - average) / 2 +
-                                     Math.Max(0, contract.Offer.RequiredSpeed - average) / 3;
+            var specialty = LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer);
+            var task = ContractWorkTaskProfiles.Resolve(specialty);
+            var contributions = contract.Contributions.Select(item =>
+                new KeyValuePair<WorkforceCapabilityState, int>(
+                    family.Get(item.MemberId).Capability,
+                    item.PersonHours));
+            var average = WorkforcePerformanceRules.CalculateWeightedTeamScore(contributions, task, true);
+            var requirementPenalty = Math.Max(0, contract.Offer.RequiredCapability - average) / 2;
             var collaborationBonus = Math.Min(6, Math.Max(0, contract.Contributions.Count - 1) * 2);
             return Clamp100(average + collaborationBonus - requirementPenalty);
-        }
-
-        private static int RelevantCapability(EmployeeStats stats, ContractSpecialty specialty)
-        {
-            switch (specialty)
-            {
-                case ContractSpecialty.WebContent: return (stats.Development * 2 + stats.Art) / 3;
-                case ContractSpecialty.DataQualityAssurance: return (stats.Speed + stats.Planning * 2) / 3;
-                case ContractSpecialty.OfficeNetwork: return (stats.Development + stats.Planning + stats.Stamina) / 3;
-                case ContractSpecialty.BusinessSoftware: return (stats.Development * 2 + stats.Planning) / 3;
-                case ContractSpecialty.Localization: return (stats.Speed + stats.Planning + stats.Teamwork) / 3;
-                case ContractSpecialty.MobileContent: return (stats.Development + stats.Speed + stats.Art) / 3;
-                case ContractSpecialty.HardwareOperations: return (stats.Stamina + stats.Speed + stats.Planning) / 3;
-                case ContractSpecialty.RetailOperations: return (stats.Sales + stats.Speed + stats.Teamwork) / 3;
-                default: return stats.Development;
-            }
         }
 
         private static int SchedulePressurePenalty(SubcontractState contract)
