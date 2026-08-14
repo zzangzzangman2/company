@@ -435,23 +435,25 @@ namespace FamilyCompany.Editor
         {
             var checks = 0;
             OfficeLocomotionFacingState state = OfficeLocomotionFacingState.Initial(0);
-            OfficeNavPoint heading24 = HeadingFromSouthAngle(24f);
+            OfficeNavPoint heading22 = HeadingFromSouthAngle(22f);
             OfficeLocomotionFacingResult result = OfficeLocomotionPresentationRules.ResolveFacing(
-                state, heading24, heading24, 0.04f, false);
-            Require(result.State.VisualDirection == 0, "small facing hysteresis holds south at 24 degrees");
-            checks++;
-
-            OfficeNavPoint heading27 = HeadingFromSouthAngle(27f);
-            result = OfficeLocomotionPresentationRules.ResolveFacing(
-                result.State, heading27, heading27, 0.04f, false);
-            Require(result.State.VisualDirection == 1,
-                "actual walking direction commits without a backwards-facing stabilization frame");
+                state, heading22, heading22, 0.04f, false);
+            Require(result.State.VisualDirection == 0,
+                "actual motion below the 22.5-degree boundary resolves south");
             checks++;
 
             OfficeNavPoint heading23 = HeadingFromSouthAngle(23f);
             result = OfficeLocomotionPresentationRules.ResolveFacing(
                 result.State, heading23, heading23, 0.04f, false);
-            Require(result.State.VisualDirection == 1, "small return jitter does not flip immediately");
+            Require(result.State.VisualDirection == 1,
+                "actual walking direction crosses the 22.5-degree boundary immediately");
+            checks++;
+
+            OfficeNavPoint heading22Return = HeadingFromSouthAngle(22f);
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                result.State, heading22Return, heading22Return, 0.04f, false);
+            Require(result.State.VisualDirection == 0,
+                "actual motion cannot be held outside its nearest octant");
             checks++;
 
             state = OfficeLocomotionFacingState.Initial(6);
@@ -602,9 +604,24 @@ namespace FamilyCompany.Editor
                 forward, 0f, 0.03f, true, 4, stride);
             Require(pivot.Phase == OfficeLocomotionPhase.Pivot && pivot.DisplayDirection == 0,
                 "a stopped 180-degree reversal enters a planted-foot pivot");
-            pivot = OfficeLocomotionGaitRules.Resolve(pivot, 0f, 0.05f, true, 4, stride);
+            int previousPivotDirection = pivot.DisplayDirection;
+            for (var pivotStep = 0; pivotStep < 4; pivotStep++)
+            {
+                pivot = OfficeLocomotionGaitRules.Resolve(
+                    pivot,
+                    0f,
+                    OfficeLocomotionGaitRules.PivotSeconds,
+                    true,
+                    4,
+                    stride);
+                Require(OfficeLocomotionGaitRules.DirectionDistance(
+                            previousPivotDirection,
+                            pivot.DisplayDirection) <= 1,
+                    "180-degree pivot advances through adjacent octants");
+                previousPivotDirection = pivot.DisplayDirection;
+            }
             Require(pivot.DisplayDirection == 4 && pivot.Phase != OfficeLocomotionPhase.Pivot,
-                "pivot commits the new direction after its short transition");
+                "pivot commits the new direction after four adjacent steps");
             OfficeLocomotionGaitState quarterTurn = OfficeLocomotionGaitRules.Resolve(
                 OfficeLocomotionGaitState.Initial(0), 0f, 0.02f, true, 2, stride);
             Require(quarterTurn.Phase == OfficeLocomotionPhase.Pivot &&

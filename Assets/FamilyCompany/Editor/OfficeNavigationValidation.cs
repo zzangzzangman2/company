@@ -12,6 +12,8 @@ namespace FamilyCompany.Editor
         public static void Run()
         {
             var report = OfficeNavigationRegressionSuite.Run(128);
+            OfficeSharedLocomotionStrictReport strict =
+                OfficeSharedLocomotionStrictValidation.Run();
             var sceneReport = ValidateCanonicalScene();
             Debug.Log(
                 "OFFICE_NAVIGATION_VALIDATION: PASS | " +
@@ -22,7 +24,7 @@ namespace FamilyCompany.Editor
                 $"collisionSlides={report.CollisionSlideChecks} | motionPartitions={report.MotionPartitionChecks} | " +
                 $"trafficPermutations={report.TrafficPermutationChecks} | maxStretch={report.MaximumStretch:F3} | " +
                 $"maxExpanded={report.MaximumExpandedNodes}/{FamilyCompany.Simulation.Navigation.OfficeNavigationLimits.MaxExpandedNodes} | " +
-                $"deadlockTicks={report.DeadlockTicks} | {sceneReport}");
+                $"deadlockTicks={report.DeadlockTicks} | strict=({strict}) | {sceneReport}");
         }
 
         public static void RunBatch()

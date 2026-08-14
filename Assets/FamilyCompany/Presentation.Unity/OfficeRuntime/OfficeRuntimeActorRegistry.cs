@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 {
@@ -8,19 +7,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     {
         private static readonly string[] CanonicalFamilyIds =
             { "player", "older_sister", "father", "mother" };
+        private static readonly Comparison<OfficeRuntimeAgent> AgentOrder =
+            (left, right) => string.Compare(
+                left.AgentId,
+                right.AgentId,
+                StringComparison.Ordinal);
         private readonly Dictionary<string, OfficeRuntimeAgent> _actors =
             new Dictionary<string, OfficeRuntimeAgent>(StringComparer.Ordinal);
+        private readonly List<OfficeRuntimeAgent> _orderedActors =
+            new List<OfficeRuntimeAgent>(12);
 
         public int Count => _actors.Count;
-        public IReadOnlyList<OfficeRuntimeAgent> Actors => _actors.Values
-            .OrderBy(item => item.AgentId, StringComparer.Ordinal)
-            .ToArray();
+        public IReadOnlyList<OfficeRuntimeAgent> Actors => _orderedActors;
 
         public void Register(OfficeRuntimeAgent actor)
         {
             if (actor == null) throw new ArgumentNullException(nameof(actor));
             if (!_actors.TryAdd(actor.AgentId, actor))
                 throw new InvalidOperationException("Duplicate Starter Office actor: " + actor.AgentId);
+            _orderedActors.Add(actor);
+            _orderedActors.Sort(AgentOrder);
         }
 
         public bool TryGet(string memberId, out OfficeRuntimeAgent actor) =>

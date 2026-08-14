@@ -63,6 +63,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 gridY = (BasisX.x * delta.y - BasisX.y * delta.x) / Determinant;
                 return true;
             }
+
         }
 
         private sealed class ActorState
@@ -85,6 +86,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new Vector2(0.7071f, 0.7071f), new Vector2(-0.7071f, 0.7071f),
             new Vector2(0.7071f, -0.7071f), new Vector2(-0.7071f, -0.7071f)
         };
+        private const float AgentContactTolerance = 0.01f;
+        // CanMove intentionally permits its historical 0.01 contact tolerance. Recomputing the
+        // same boundary after applying a refined displacement can differ by a few float ulps, so
+        // the QA metric needs a smaller numerical epsilon before calling permitted contact a real
+        // penetration. This does not enlarge the movement envelope.
+        private const float AgentContactMetricEpsilon = 0.00001f;
+        private static readonly Comparison<OfficeTrafficAgentState> TrafficAgentOrder =
+            (left, right) => string.Compare(
+                left.AgentId,
+                right.AgentId,
+                StringComparison.Ordinal);
 
         private readonly HashSet<OfficeGridCoordinate> _hardFloor =
             new HashSet<OfficeGridCoordinate>();
@@ -96,6 +108,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new HashSet<string>(StringComparer.Ordinal);
         private readonly Dictionary<string, ActorState> _actors =
             new Dictionary<string, ActorState>(StringComparer.Ordinal);
+        private readonly List<OfficeTrafficAgentState> _trafficSnapshot =
+            new List<OfficeTrafficAgentState>(12);
+        private readonly List<OfficeGridCoordinate> _reservationRequestBuffer =
+            new List<OfficeGridCoordinate>(3);
+        private readonly List<int> _corridorClaimBuffer = new List<int>(3);
+        private readonly List<int> _corridorReleaseBuffer = new List<int>(4);
         private readonly Dictionary<OfficeGridCoordinate, int> _narrowCorridorIds =
             new Dictionary<OfficeGridCoordinate, int>();
         private readonly Dictionary<int, string> _narrowCorridorOwners =
@@ -275,7 +293,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (ReferenceEquals(peer, state) || !peer.IsPresent) continue;
                 float margin = Vector2.Distance(position, peer.Position) - (state.Radius + peer.Radius);
                 MinimumAgentSeparationMargin = Mathf.Min(MinimumAgentSeparationMargin, margin);
-                if (margin < -0.01f) AgentPenetrationCount++;
+                if (margin < -AgentContactTolerance - AgentContactMetricEpsilon)
+                    AgentPenetrationCount++;
             }
         }
 
@@ -295,14 +314,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             // Reservations from the previous frame must not keep a corridor locked after
             // the owner has stepped into the destination room.
             ReleaseExitedNarrowCorridors(self);
-            var requested = new List<OfficeGridCoordinate> { current };
-            if (upcoming != null)
-            {
-                for (var index = 0; index < upcoming.Count && index < 2; index++)
-                    if (!requested.Contains(upcoming[index])) requested.Add(upcoming[index]);
-            }
+            List<OfficeGridCoordinate> requested = PrepareReservationRequest(current, upcoming);
 
-            var claimedNow = new List<int>();
+            _corridorClaimBuffer.Clear();
             foreach (OfficeGridCoordinate cell in requested)
             {
                 if (!_narrowCorridorIds.TryGetValue(cell, out int corridorId)) continue;
@@ -313,7 +327,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     return false;
                 }
                 _narrowCorridorOwners.Add(corridorId, self.AgentId);
-                claimedNow.Add(corridorId);
+                _corridorClaimBuffer.Add(corridorId);
             }
 
             for (var requestIndex = 0; requestIndex < requested.Count; requestIndex++)
@@ -335,7 +349,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (requestIndex <= 1)
                 {
                     self.Reservations.Clear();
-                    foreach (int corridorId in claimedNow)
+                    foreach (int corridorId in _corridorClaimBuffer)
                         if (_narrowCorridorOwners.TryGetValue(corridorId, out string ownerId) &&
                             string.Equals(ownerId, self.AgentId, StringComparison.Ordinal))
                             _narrowCorridorOwners.Remove(corridorId);
@@ -362,12 +376,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             IReadOnlyList<OfficeGridCoordinate> upcoming)
         {
             ActorState self = RequiredActor(agentId);
-            var requested = new List<OfficeGridCoordinate> { current };
-            if (upcoming != null)
-            {
-                for (var index = 0; index < upcoming.Count && index < 2; index++)
-                    if (!requested.Contains(upcoming[index])) requested.Add(upcoming[index]);
-            }
+            List<OfficeGridCoordinate> requested = PrepareReservationRequest(current, upcoming);
             foreach (OfficeGridCoordinate cell in requested)
             {
                 if (_narrowCorridorIds.TryGetValue(cell, out int corridorId) &&
@@ -437,7 +446,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         return false;
                     }
                     float margin = Vector2.Distance(point, peer.Position) - (radius + peer.Radius);
-                    if (margin >= -0.01f) continue;
+                    if (margin >= -AgentContactTolerance) continue;
                     BlockedAgentMoveCount++;
                     return false;
                 }
@@ -466,7 +475,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (peer.Reservations.Contains(pointCell) && !peer.CurrentCell.Equals(pointCell))
                         return $"peer={peer.AgentId}:reserved={pointCell}";
                     float margin = Vector2.Distance(point, peer.Position) - (radius + peer.Radius);
-                    if (margin < -0.01f)
+                    if (margin < -AgentContactTolerance)
                         return $"peer={peer.AgentId}:overlap={margin:F3}:cell={peer.CurrentCell}";
                 }
             }
@@ -551,16 +560,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public IReadOnlyList<OfficeTrafficAgentState> TrafficSnapshot()
         {
-            return _actors.Values
-                .Where(item => item.IsPresent)
-                .OrderBy(item => item.AgentId, StringComparer.Ordinal)
-                .Select(item => new OfficeTrafficAgentState(
+            _trafficSnapshot.Clear();
+            foreach (ActorState item in _actors.Values)
+            {
+                if (!item.IsPresent) continue;
+                _trafficSnapshot.Add(new OfficeTrafficAgentState(
                     item.AgentId,
                     new OfficeNavPoint(item.Position.x, item.Position.y),
                     new OfficeNavPoint(item.DesiredVelocity.x, item.DesiredVelocity.y),
                     item.Radius,
-                    item.StuckSeconds))
-                .ToArray();
+                    item.StuckSeconds));
+            }
+            _trafficSnapshot.Sort(TrafficAgentOrder);
+            return _trafficSnapshot;
+        }
+
+        private List<OfficeGridCoordinate> PrepareReservationRequest(
+            OfficeGridCoordinate current,
+            IReadOnlyList<OfficeGridCoordinate> upcoming)
+        {
+            _reservationRequestBuffer.Clear();
+            _reservationRequestBuffer.Add(current);
+            if (upcoming == null) return _reservationRequestBuffer;
+            for (var index = 0; index < upcoming.Count && index < 2; index++)
+            {
+                OfficeGridCoordinate cell = upcoming[index];
+                if (!_reservationRequestBuffer.Contains(cell))
+                    _reservationRequestBuffer.Add(cell);
+            }
+            return _reservationRequestBuffer;
         }
 
         public OfficeGridCoordinate CurrentCell(string agentId) => RequiredActor(agentId).CurrentCell;
@@ -639,26 +667,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void ReleaseExitedNarrowCorridors(ActorState actor)
         {
-            var release = new List<int>();
+            _corridorReleaseBuffer.Clear();
             foreach (KeyValuePair<int, string> item in _narrowCorridorOwners)
             {
                 if (!string.Equals(item.Value, actor.AgentId, StringComparison.Ordinal)) continue;
                 bool currentInside = _narrowCorridorIds.TryGetValue(actor.CurrentCell, out int currentId) &&
                                      currentId == item.Key;
-                bool reservedInside = actor.Reservations.Any(cell =>
-                    _narrowCorridorIds.TryGetValue(cell, out int reservedId) && reservedId == item.Key);
-                if (!currentInside && !reservedInside) release.Add(item.Key);
+                bool reservedInside = false;
+                foreach (OfficeGridCoordinate cell in actor.Reservations)
+                {
+                    if (!_narrowCorridorIds.TryGetValue(cell, out int reservedId) ||
+                        reservedId != item.Key) continue;
+                    reservedInside = true;
+                    break;
+                }
+                if (!currentInside && !reservedInside) _corridorReleaseBuffer.Add(item.Key);
             }
-            foreach (int corridorId in release) _narrowCorridorOwners.Remove(corridorId);
+            foreach (int corridorId in _corridorReleaseBuffer)
+                _narrowCorridorOwners.Remove(corridorId);
         }
 
         private void ReleaseNarrowCorridors(string agentId)
         {
-            int[] owned = _narrowCorridorOwners
-                .Where(item => string.Equals(item.Value, agentId, StringComparison.Ordinal))
-                .Select(item => item.Key)
-                .ToArray();
-            foreach (int corridorId in owned) _narrowCorridorOwners.Remove(corridorId);
+            _corridorReleaseBuffer.Clear();
+            foreach (KeyValuePair<int, string> item in _narrowCorridorOwners)
+                if (string.Equals(item.Value, agentId, StringComparison.Ordinal))
+                    _corridorReleaseBuffer.Add(item.Key);
+            foreach (int corridorId in _corridorReleaseBuffer)
+                _narrowCorridorOwners.Remove(corridorId);
         }
 
         private bool PointClearsStatic(

@@ -19,6 +19,15 @@
 결정: 회사 UI는 새 하단 탭을 만들지 않고 `company.hub.build_editor` adapter를 호출한다. 가구 geometry/capability는 read-only query로 제공하며 movement·좌석·stamina·interaction lifecycle의 소유권은 기존 시스템에 남긴다.
 
 이유: 병렬 UI와 movement 작업의 파일을 직접 수정하지 않고도 안정적인 통합 경계를 제공해야 한다. 같은 query가 tile footprint, ground mask, access/egress를 공유하면 후속 소비자가 instance ID나 Sprite alpha를 충돌 정본으로 하드코딩하지 않는다.
+## 2026-08-14 / Starter Office 이동 방향은 실제 변위만 정본으로 사용
+
+결정: `OfficeSharedLocomotionRules`를 player, NPC, autonomy, contract route가 공유하는 순수 C# 운동·표현 경계로 사용한다. requested direction, actual displacement/speed, display facing, gait phase를 분리하고 수치 오차보다 큰 실제 root 변위가 있는 모든 프레임의 display facing은 실제 변위의 최근접 8방향으로 즉시 결정한다. 4° hysteresis, 0.075초 방향 안정화, 충돌 slide의 0.15초 semantic-facing hold는 폐기한다.
+
+결정: 135° 이상 급반전은 기존 속도를 0 근처까지 감속한 뒤 제자리 pivot을 끝내고 새 방향으로 가속한다. 정지 상태의 입력과 상호작용 목표 방향은 실제 변위 없이 인접 45° 방향을 거쳐 회전할 수 있으며 pivot 중 walk cycle은 진행하지 않는다. 도착 상호작용은 actual stop, Idle, desired facing 완료 전에는 Performing으로 진입하지 않는다. 착석 facing lock과 phase depth는 별도 착석 작업이 소유한다.
+
+결정: 보행 위상은 모든 현재·향후 캐릭터가 공유하는 `OfficeLocomotionGaitRules.DefaultStrideLength`와 누적 실제 이동거리로만 계산한다. member ID별 보폭, 회전시간, 방향 허용치와 Animator별 stride override를 금지한다.
+
+이유: semantic heading이나 presentation timer가 actual motion을 덮으면 벽 slide, 코너, 급반전에서 정면을 보며 옆·뒤로 미끄러지는 프레임이 생긴다. 실제 변위와 화면 방향을 같은 사실로 만들고 정지 회전과 거리 기반 발 위상을 공용 규칙으로 분리해야 가족 4명과 향후 직원 8명이 동일한 결정론·접지 품질을 유지한다.
 
 ## 2026-08-13 / compact 타이틀은 세로 확장 배경으로 레터박스를 제거
 

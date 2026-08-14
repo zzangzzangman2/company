@@ -94,6 +94,7 @@ namespace FamilyCompany.Presentation.Unity
         private ManagementUiV2Presenter _managementUiPresenter;
         private float _worldTimeScale = 1f;
         private double _officeRealtimeAccumulatorSeconds;
+        private bool _officePresentationWasLoading;
         private bool _officeObservationCamera = true;
         private const double OfficeSecondsPerGameMinute = 1d;
 
@@ -815,7 +816,20 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!_hasSession || _screen != PrototypeUiScreen.Playing || _state == null || _runner == null)
                 return;
-            if (ScenePreviewJump.IsPresentationLoading) return;
+            if (ScenePreviewJump.IsPresentationLoading)
+            {
+                _officePresentationWasLoading = true;
+                return;
+            }
+            if (_officePresentationWasLoading)
+            {
+                // Script Update order is not fixed. ScenePreviewJump can clear its loading flag
+                // earlier in the same long frame in which this clock runs, but that frame's
+                // unscaledDeltaTime still spans presentation rebuild work. Discard that boundary
+                // delta once so loading/rebind time never advances the authoritative game clock.
+                _officePresentationWasLoading = false;
+                return;
+            }
             double delta = Time.unscaledDeltaTime;
             if (double.IsNaN(delta) || double.IsInfinity(delta) || delta <= 0d) return;
 

@@ -51,7 +51,7 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - 사무실과 가구는 실제 Collider를 가진 3D 모듈이다.
 - Main Camera는 직교 투영으로 플레이어를 추적한다.
 - PixelatedCameraEffect가 월드 렌더를 낮은 내부 해상도로 축소하고 Point 필터로 확대한다.
-- 플레이어·누나·부모는 카메라 기준 이동 벡터를 45도 옥턴트로 양자화해 8방향 Sprite를 선택하고, 방향별 6프레임 보행을 0.11초 간격으로 순환한다.
+- 플레이어·누나·부모와 향후 직원은 실제 렌더 프레임 변위를 45도 옥턴트로 양자화해 8방향 Sprite를 선택한다. 방향별 6프레임 보행 위상은 시간 경과가 아니라 공용 stride 대비 누적 실제 이동거리로 계산한다.
 - 고동작 시트의 24개 실제 실루엣은 오프라인 분리기가 상체 중심·발 기준선으로 정렬해 256×256 단일 PNG 48개로 만든다. Editor 빌더는 이를 Point·180 PPU·하단 피벗 Sprite로 임포트하며 런타임 코드가 원본 PNG를 자르지 않는다.
 
 ## OfficeGrid 타일 이행 경계
@@ -124,6 +124,9 @@ PrototypeBootstrap / GameState.OfficeGrid
 
 - memberId별 활성 Runtime Actor는 정확히 하나다. Starter Runtime이 준비되면 Legacy NPC/player/navigation과 Preview mover는 비활성이다.
 - Occupancy는 모든 이동 후보의 start→end 구간을 actor radius로 표본 검사한다. World Update는 `OfficeNavigationMotionIntegrator`의 안정 substep으로 1×·2×·4× 시간 배속의 tunneling을 막는다.
+- `OfficeSharedLocomotionRules`는 requested displacement, actual displacement/speed, display facing, gait phase를 분리한 순수 C# 경계다. 수치 오차보다 큰 실제 root 변위가 있는 모든 프레임은 실제 변위의 최근접 8방향만 표시하며 semantic/requested heading과 충돌 투영은 이를 덮어쓸 수 없다.
+- 135° 이상 급반전은 감속 후 실제 정지, 인접 45° 방향을 거치는 제자리 pivot, 새 방향 가속 순서로 진행한다. 막힌 입력과 상호작용 도착도 변위 없이 같은 pivot 규칙을 사용하고 Pivot/Idle 중에는 보행 거리를 누적하지 않는다.
+- `DirectionalSpriteAnimator`는 공용 규칙의 Presentation adapter다. 모든 Actor는 `OfficeLocomotionGaitRules.DefaultStrideLength` 하나를 사용하며 member ID별 보폭·회전시간·방향 허용치는 두지 않는다. 상호작용은 실제 정지, Idle, 목표 facing이 모두 성립한 뒤에만 Performing으로 전환한다.
 - Actor는 현재 셀과 최대 두 개의 예정 셀을 예약하고, 실제 위치·desired velocity·stuck seconds를 기존 교통 규칙에 제공한다. 0.8초 회피, 1.1초 재탐색, 2초 예약 해제로 교착을 복구한다.
 - 좌석 셀은 일반 경로에서 Interaction Occupancy다. claim된 seatId만 접근 경로와 최종 operator anchor 이동에 허용된다.
 - 레이아웃 변경은 semantic `OfficeGrid`를 교체하고 Starter Runtime을 staged rebuild한다. 이전 Actor/path/reservation은 폐기되고 새 Occupancy revision과 레이아웃 해시에 맞춰 다시 바인딩된다.

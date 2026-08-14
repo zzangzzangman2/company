@@ -274,10 +274,14 @@ namespace FamilyCompany.Simulation.Navigation
 
     public static class OfficeLocomotionPresentationRules
     {
-        public const float DefaultHysteresisDegrees = 4f;
-        public const float DefaultFacingStabilizationSeconds = 0.075f;
-        public const float CollisionProjectionHoldSeconds = 0.15f;
-        private const float MinimumMotionSquared = 0.0000001f;
+        // Actual movement is the sole facing authority. A non-zero angular hold can keep the
+        // previous octant beyond the strict 22.5 degree quantization boundary and therefore make
+        // an otherwise correct root motion look like a sideways or backwards walk.
+        public const float DefaultHysteresisDegrees = 0f;
+        public const float DefaultFacingStabilizationSeconds = 0f;
+        public const float CollisionProjectionHoldSeconds = 0f;
+        // Matches OfficeNavPoint.Normalized's 1e-5 world-unit numerical-zero threshold.
+        private const float MinimumMotionSquared = 0.0000000001f;
 
         public static OfficeLocomotionFacingResult ResolveFacing(
             OfficeLocomotionFacingState state,
@@ -338,11 +342,16 @@ namespace FamilyCompany.Simulation.Navigation
             // collision slide or against residual velocity, which otherwise renders a visible
             // backward/sideways walk even though the root is travelling elsewhere.
             OfficeNavPoint heading = motionDisplacement;
-            int proposed = OfficeFacingHysteresisRules.ResolveDirection(
-                heading.X,
-                heading.Z,
-                current,
-                hysteresisDegrees);
+            // Zero-hysteresis locomotion has already crossed the shared measurable-motion gate.
+            // Use the nearest octant directly so OfficeFacingHysteresisRules' larger legacy
+            // dead-zone cannot retain a stale facing on a small final/corner displacement.
+            int proposed = hysteresisDegrees <= 0f
+                ? motionDirection
+                : OfficeFacingHysteresisRules.ResolveDirection(
+                    heading.X,
+                    heading.Z,
+                    current,
+                    hysteresisDegrees);
             if (proposed == current)
             {
                 return new OfficeLocomotionFacingResult(
@@ -456,7 +465,9 @@ namespace FamilyCompany.Simulation.Navigation
         // while the foot art changed pose, which read as conveyor-belt sliding at normal speed.
         public const float DefaultStrideLength = 0.78f;
         public const float StopSettleSeconds = 0.10f;
-        public const float PivotSeconds = 0.075f;
+        // One adjacent 45-degree body turn per interval. Four intervals make a stable 180-degree
+        // planted pivot while still exposing every intermediate direction at 30 fps.
+        public const float PivotSeconds = 0.04f;
         public const float ShortShuffleStrideFraction = 0.30f;
         private const float MinimumDistance = 0.000001f;
 
@@ -505,51 +516,48 @@ namespace FamilyCompany.Simulation.Navigation
 
             if (motionRequested)
             {
-                int directionDelta = CircularDirectionDistance(
+                int directionDelta = DirectionDistance(
                     state.DisplayDirection,
                     resolvedVisualDirection);
                 // Moving frames never enter this branch, so actual displacement still owns facing.
-                // A planted 90-degree turn should use the authored pivot clip before committing.
-                if (directionDelta >= 2)
+                // Stationary turns advance through adjacent octants instead of jumping directly
+                // from front to back. This also covers blocked input without advancing walk phase.
+                if (directionDelta >= 1)
                 {
                     bool beginPivot = state.Phase != OfficeLocomotionPhase.Pivot ||
                                       state.PivotTargetDirection != resolvedVisualDirection;
                     float pivotSeconds = beginPivot
                         ? deltaTime
                         : state.TransitionSeconds + deltaTime;
+                    int pivotDirection = state.DisplayDirection;
                     if (pivotSeconds + 0.000001f < PivotSeconds)
                     {
                         return new OfficeLocomotionGaitState(
                             OfficeLocomotionPhase.Pivot,
                             state.AccumulatedDistance,
-                            state.EpisodeDistance,
+                            0f,
                             0f,
                             pivotSeconds,
                             NearestContactFrame(state.Frame, frameCount),
-                            state.DisplayDirection,
+                            pivotDirection,
                             resolvedVisualDirection);
                     }
 
+                    pivotSeconds = Math.Max(0f, pivotSeconds - PivotSeconds);
+                    pivotDirection = AdvanceOneDirection(
+                        pivotDirection,
+                        resolvedVisualDirection);
+                    bool pivotComplete = pivotDirection == resolvedVisualDirection;
                     return new OfficeLocomotionGaitState(
-                        OfficeLocomotionPhase.Idle,
+                        pivotComplete ? OfficeLocomotionPhase.Idle : OfficeLocomotionPhase.Pivot,
                         state.AccumulatedDistance,
                         0f,
                         0f,
-                        0f,
+                        pivotComplete ? 0f : pivotSeconds,
                         NearestContactFrame(state.Frame, frameCount),
-                        resolvedVisualDirection,
-                        -1);
+                        pivotDirection,
+                        pivotComplete ? -1 : resolvedVisualDirection);
                 }
-
-                return new OfficeLocomotionGaitState(
-                    state.Phase,
-                    state.AccumulatedDistance,
-                    state.EpisodeDistance,
-                    0f,
-                    state.TransitionSeconds,
-                    state.Frame,
-                    resolvedVisualDirection,
-                    -1);
             }
 
             float stopSeconds = state.StopSeconds + deltaTime;
@@ -617,10 +625,206 @@ namespace FamilyCompany.Simulation.Navigation
             return distanceToFirst <= distanceToSecond ? first : second;
         }
 
-        private static int CircularDirectionDistance(int from, int to)
+        public static int DirectionDistance(int from, int to)
         {
+            if (from < 0 || from >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(from));
+            if (to < 0 || to >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(to));
             int delta = Math.Abs(from - to) % OfficeFacingHysteresisRules.DirectionCount;
             return Math.Min(delta, OfficeFacingHysteresisRules.DirectionCount - delta);
+        }
+
+        private static int AdvanceOneDirection(int current, int target)
+        {
+            int clockwise = (target - current + OfficeFacingHysteresisRules.DirectionCount) %
+                            OfficeFacingHysteresisRules.DirectionCount;
+            int step = clockwise <= OfficeFacingHysteresisRules.DirectionCount / 2 ? 1 : -1;
+            return (current + step + OfficeFacingHysteresisRules.DirectionCount) %
+                   OfficeFacingHysteresisRules.DirectionCount;
+        }
+    }
+
+    public readonly struct OfficeSharedLocomotionFrameResult
+    {
+        public OfficeSharedLocomotionFrameResult(
+            OfficeLocomotionFacingState facingState,
+            OfficeLocomotionGaitState gaitState,
+            int requestedDirection,
+            int motionDirection,
+            bool hasRequest,
+            bool isMoving,
+            float actualSpeed,
+            float facingAlignmentDot,
+            float facingAngularErrorDegrees,
+            bool usedRequestedFacing)
+        {
+            FacingState = facingState;
+            GaitState = gaitState;
+            RequestedDirection = requestedDirection;
+            MotionDirection = motionDirection;
+            HasRequest = hasRequest;
+            IsMoving = isMoving;
+            ActualSpeed = actualSpeed;
+            FacingAlignmentDot = facingAlignmentDot;
+            FacingAngularErrorDegrees = facingAngularErrorDegrees;
+            UsedRequestedFacing = usedRequestedFacing;
+        }
+
+        public OfficeLocomotionFacingState FacingState { get; }
+        public OfficeLocomotionGaitState GaitState { get; }
+        public int RequestedDirection { get; }
+        public int MotionDirection { get; }
+        public int DisplayDirection => GaitState.DisplayDirection;
+        public OfficeLocomotionPhase Phase => GaitState.Phase;
+        public bool HasRequest { get; }
+        public bool IsMoving { get; }
+        public float ActualSpeed { get; }
+        public float FacingAlignmentDot { get; }
+        public float FacingAngularErrorDegrees { get; }
+        public bool UsedRequestedFacing { get; }
+    }
+
+    /// <summary>
+    /// Pure shared movement/presentation boundary for player, NPC, autonomy, and contract routes.
+    /// Requested heading can rotate a planted actor but can never override an actual moving frame.
+    /// </summary>
+    public static class OfficeSharedLocomotionRules
+    {
+        public const float WalkSpeedThreshold = 0.02f;
+        public const float MaximumFacingErrorDegrees = 22.5f;
+        public const float MinimumFacingAlignmentDot = 0.9238795325f;
+        private const float MinimumVectorSquared = 0.0000001f;
+        private const float MinimumRootDisplacement = 0.00001f;
+
+        public static OfficeSharedLocomotionFrameResult ResolveFrame(
+            OfficeLocomotionFacingState facingState,
+            OfficeLocomotionGaitState gaitState,
+            OfficeNavPoint requestedDisplacement,
+            OfficeNavPoint actualDisplacement,
+            float actualTravelDistance,
+            float deltaTime,
+            bool collisionProjected,
+            float strideLength = OfficeLocomotionGaitRules.DefaultStrideLength,
+            int frameCount = 6)
+        {
+            if (actualTravelDistance < 0f || float.IsNaN(actualTravelDistance) ||
+                float.IsInfinity(actualTravelDistance))
+                throw new ArgumentOutOfRangeException(nameof(actualTravelDistance));
+            if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+                throw new ArgumentOutOfRangeException(nameof(deltaTime));
+            if (strideLength <= 0f || float.IsNaN(strideLength) || float.IsInfinity(strideLength))
+                throw new ArgumentOutOfRangeException(nameof(strideLength));
+
+            bool hasRequest = requestedDisplacement.SqrMagnitude > MinimumVectorSquared;
+            float netDisplacement = actualDisplacement.Magnitude;
+            float actualSpeed = deltaTime > 0.000001f ? actualTravelDistance / deltaTime : 0f;
+            // Any measurable root displacement remains a moving frame, even during the final
+            // low-speed deceleration sample. Treating that sample as stopped lets a reversal pivot
+            // begin while the body is still translating and breaks the planted-turn contract.
+            bool isMoving = netDisplacement > MinimumRootDisplacement &&
+                            actualTravelDistance > MinimumRootDisplacement;
+            OfficeNavPoint authoritativeMotion = isMoving
+                ? actualDisplacement
+                : new OfficeNavPoint(0f, 0f);
+
+            OfficeLocomotionFacingResult facing = OfficeLocomotionPresentationRules.ResolveFacing(
+                facingState,
+                requestedDisplacement,
+                authoritativeMotion,
+                deltaTime,
+                collisionProjected,
+                0f,
+                0f);
+            OfficeLocomotionGaitState gait = OfficeLocomotionGaitRules.Resolve(
+                gaitState,
+                isMoving ? actualTravelDistance : 0f,
+                deltaTime,
+                hasRequest,
+                facing.State.VisualDirection,
+                strideLength,
+                frameCount);
+
+            int requestedDirection = OfficeLocomotionPresentationRules.ResolveNearestDirection(
+                requestedDisplacement,
+                gait.DisplayDirection);
+            int motionDirection = OfficeLocomotionPresentationRules.ResolveNearestDirection(
+                authoritativeMotion,
+                gait.DisplayDirection);
+            float alignmentDot = 1f;
+            float angularError = 0f;
+            if (isMoving)
+            {
+                OfficeNavPoint displayHeading = DirectionVector(gait.DisplayDirection);
+                alignmentDot = OfficeNavPoint.Dot(
+                    displayHeading,
+                    actualDisplacement.Normalized);
+                alignmentDot = Math.Max(-1f, Math.Min(1f, alignmentDot));
+                angularError = (float)(Math.Acos(alignmentDot) * 180d / Math.PI);
+                if (gait.DisplayDirection != motionDirection ||
+                    alignmentDot + 0.000001f < MinimumFacingAlignmentDot ||
+                    angularError > MaximumFacingErrorDegrees + 0.0001f)
+                {
+                    throw new InvalidOperationException(
+                        $"Moving display direction must follow actual displacement: " +
+                        $"display={gait.DisplayDirection}, motion={motionDirection}, " +
+                        $"dot={alignmentDot:F6}, error={angularError:F4}.");
+                }
+            }
+
+            return new OfficeSharedLocomotionFrameResult(
+                facing.State,
+                gait,
+                requestedDirection,
+                motionDirection,
+                hasRequest,
+                isMoving,
+                actualSpeed,
+                alignmentDot,
+                angularError,
+                !isMoving && facing.UsedSemanticHeading);
+        }
+
+        public static bool RequiresStationaryPivot(
+            int displayDirection,
+            int requestedDirection,
+            OfficeLocomotionPhase phase)
+        {
+            if (displayDirection < 0 || displayDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(displayDirection));
+            if (requestedDirection < 0 || requestedDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(requestedDirection));
+            return phase == OfficeLocomotionPhase.Pivot ||
+                   OfficeLocomotionGaitRules.DirectionDistance(
+                       displayDirection,
+                       requestedDirection) >= 3;
+        }
+
+        public static bool IsInteractionFacingReady(
+            OfficeLocomotionGaitState gaitState,
+            int displayDirection,
+            int desiredDirection,
+            float actualSpeed)
+        {
+            if (displayDirection < 0 || displayDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(displayDirection));
+            if (desiredDirection < 0 || desiredDirection >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(desiredDirection));
+            if (actualSpeed < 0f || float.IsNaN(actualSpeed) || float.IsInfinity(actualSpeed))
+                throw new ArgumentOutOfRangeException(nameof(actualSpeed));
+            return actualSpeed < WalkSpeedThreshold &&
+                   gaitState.Phase == OfficeLocomotionPhase.Idle &&
+                   displayDirection == desiredDirection;
+        }
+
+        public static OfficeNavPoint DirectionVector(int direction)
+        {
+            if (direction < 0 || direction >= OfficeFacingHysteresisRules.DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(direction));
+            double radians = direction * Math.PI / 4d;
+            return new OfficeNavPoint(
+                (float)-Math.Sin(radians),
+                (float)-Math.Cos(radians));
         }
     }
 

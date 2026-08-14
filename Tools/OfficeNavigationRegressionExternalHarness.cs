@@ -8,6 +8,8 @@ internal static class OfficeNavigationRegressionExternalHarness
         try
         {
             OfficeNavigationRegressionReport report = OfficeNavigationRegressionSuite.Run(128);
+            OfficeSharedLocomotionStrictReport strict =
+                OfficeSharedLocomotionStrictValidation.Run();
             Console.WriteLine(
                 "OFFICE_NAVIGATION_REGRESSION_EXTERNAL: PASS " +
                 $"seeds={report.Seeds} " +
@@ -16,7 +18,7 @@ internal static class OfficeNavigationRegressionExternalHarness
                 $"gait={report.GaitPresentationChecks} " +
                 $"slides={report.CollisionSlideChecks} " +
                 $"partition={report.MotionPartitionChecks} " +
-                $"deadlockTicks={report.DeadlockTicks}");
+                $"deadlockTicks={report.DeadlockTicks} strict=({strict})");
             return 0;
         }
         catch (Exception exception)
