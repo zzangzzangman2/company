@@ -514,14 +514,14 @@
 
 - 생성 모드: OpenAI 내장 ImageGen의 reference-guided precise object edit. 기존 갈색 wall 모듈은 방향·한 bay 구조 참고, 사용자 이미지는 밝은 재질·낮은 cutaway·열린 통로 인상만 참고했으며 UI/가구/인물은 복제하지 않았다.
 - 승인 full-wall 프롬프트 핵심: 기존 SouthEast one-tile module과 transparent background를 유지하고 smooth light blue-gray plaster, slim matte-white top/base trim, pale panel seams, thin seamless ends로 교체한다. brown wood/fence/slats/rails/bulky pillars, floor, furniture, people, door, window, text는 금지한다.
-- 승인 open-entrance 프롬프트 핵심: 같은 한 타일 span과 재질에서 중앙 wall face를 완전히 제거하고 two slim jambs + subtle threshold만 남긴다. door leaf/closed door/open swing/gate/glass/handle/header/background는 금지한다.
+- 최종 open-entrance는 승인 벽 재질에서 중앙 wall face와 양쪽 jamb/lintel을 모두 제거하고 exterior-side thin threshold만 남긴 결정론적 파생본이다. door leaf/closed door/open swing/gate/glass/handle/header/background는 금지한다. 재작업 ImageGen threshold 후보는 checkerboard가 baked되어 폐기하고 정본 source의 hard-alpha mask를 사용했다.
 - cutaway는 승인 full source를 `Tools/prepare_office_perimeter_wall_sources.py --height-scale 0.58`로 isometric baseline 쪽에 nearest 압축해 파생했다. 생성된 checkerboard cutaway 후보는 투명 배경 계약 위반으로 폐기했다.
-- 후처리 계약: 1536×1536 RGBA source, alpha `{0,255}`, transparent RGB 0, canonical endpoints `(316,160)`/`(796,400)` 반경 2px visible, 정확한 480×240 source basis, scanline edge pad 4. Runtime은 640×512/180 PPU/Point/no mipmap/uncompressed이며 175px bounds scale로 정확히 160×80 endpoint span을 만든다.
+- 후처리 계약: 1536×1536 RGBA source, alpha `{0,255}`, transparent RGB 0, canonical inner-edge endpoints `(316,172)`/`(796,412)` 반경 2px visible, 정확한 480×240 source basis. Runtime은 640×512/180 PPU/Point/no mipmap/uncompressed이며 고정 1/3 nearest bake로 정확히 160×80 endpoint span을 만든다. near cutaway/threshold 기단은 inner edge 바깥쪽만, far full wall은 edge 위로 솟는 face/cap만 유지한다.
 - source 정본:
-  - `office_perimeter_wall_alpha_v1.png` — SHA-256 `E7BA97B890A33FDD731E64B085335D1F4270D4C945A84C957786E154C1257C1E`, GUID `786c6727de90f374aba5c1f14faadcdb`
+  - `office_perimeter_wall_alpha_v1.png` — SHA-256 `6F5A8C7313008DCF0A657101144E95A4A0EF63C63D7BD6730713C29CB24E4E82`, GUID `786c6727de90f374aba5c1f14faadcdb`
   - `office_perimeter_cutaway_wall_alpha_v1.png` — SHA-256 `E563FC5258FD2363AE05814641703591E33DBE46EC860BC31317C94273021ED1`, GUID `c4dc68c2e72a02d4ba251a254c4144e8`
-  - `office_entrance_door_alpha_v1.png` — SHA-256 `C70B8C5815EF152AE8A4F7C899E68991AA95585FD03AC944A5AC54E8EFE922B5`, GUID `a2d87f5f137975446a9532c0a42e1d9f`
+  - `office_entrance_door_alpha_v1.png` — SHA-256 `0D3CC8B100546F4A25FB73015E56A53054D8A75A7C993A0C9614538DF8BEFD6B`, GUID `a2d87f5f137975446a9532c0a42e1d9f`
 - runtime 정본:
-  - `office_perimeter_wall_v1.png` — SHA-256 `1B2374B5B9763D68097DB90A21CF1B73E5D2470A11F5C591F97CD47021F370A2`, GUID `95d951b2b1370524c886b2944a8828dc`
+  - `office_perimeter_wall_v1.png` — SHA-256 `4A9C6440EFCFBCEE4423531EBA797CAEA868D56107E29356CD631B32EE095FF2`, GUID `95d951b2b1370524c886b2944a8828dc`
   - `office_perimeter_cutaway_wall_v1.png` — SHA-256 `2E5EA9E9C0B167BD8230D04987CC2D51E1025FD8E0852373DF2451824A5E6214`, GUID `01b50657111c72a46a58758231288e8f`
-  - `office_entrance_door_v1.png` — SHA-256 `36B9E9E033A3CC9F101BE517B62D53F8D6706C169387AFC76F7668869BEF2C46`, GUID `bdb0baaefb381c84abbbb6802479ee22`
+  - `office_entrance_door_v1.png` — SHA-256 `869DB3D9DA8F98B50939D1F7EC917CF9C898B612CE9A95AE2A8A40540892B0F3`, GUID `bdb0baaefb381c84abbbb6802479ee22`

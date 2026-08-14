@@ -77,14 +77,14 @@ namespace FamilyCompany.Editor
                     item.KindId == OfficeGridLayouts.PerimeterCutawayWallKind);
                 PlacedOfficeFurniture openPassage = office.Furniture.Single(item =>
                     item.FurnitureId == "entrance_door");
-                Require(fullWallCount == 24 && cutawayWallCount == 23 &&
+                Require(fullWallCount == 26 && cutawayWallCount == 25 &&
                         openPassage.KindId == OfficeGridLayouts.EntranceDoorKind &&
                         openPassage.Origin.Equals(new OfficeGridCoordinate(8, 0)) &&
                         openPassage.Width == 1 && openPassage.Height == 1 &&
                         !openPassage.BlocksMovement,
                     $"Starter office must have four tile-aligned perimeter edges and one open passage; " +
                     $"full={fullWallCount} cutaway={cutawayWallCount} total={office.Furniture.Count}.");
-                for (var axis = 0; axis < 12; axis++)
+                for (var axis = 0; axis < 13; axis++)
                 {
                     Require(office.Furniture.Any(item =>
                             item.Origin.Equals(new OfficeGridCoordinate(axis, 0)) &&
@@ -124,7 +124,7 @@ namespace FamilyCompany.Editor
                     "09:00 office intents must not send newly arrived family back to the exit.");
                 Debug.Log(
                     "OFFICE_ATTENDANCE_VALIDATION: PASS | start=08:50 entry=09:00..09:03 " +
-                    "family=4 perimeterBays=48 openPassage=(8,0) oneTile=true nonBlocking=true " +
+                    "family=4 perimeterBays=52 openPassage=(8,0) oneTile=true nonBlocking=true " +
                     "doorSfxWindow=09:00..17:59 clockJump=09:50 dayJump=Sunday10:00..Monday10:00 " +
                     "midShiftLoadArmed=false exit=18:00");
             }

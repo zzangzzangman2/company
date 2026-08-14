@@ -66,6 +66,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return _unityGrid.GetCellCenterWorld(new Vector3Int(cell.X, cell.Y, 0));
         }
 
+        public Vector3 CellBasisXWorld()
+        {
+            if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");
+            if (_semanticGrid.Width > 1)
+                return CellCenterWorld(new OfficeGridCoordinate(1, 0)) -
+                       CellCenterWorld(new OfficeGridCoordinate(0, 0));
+            return new Vector3(TileWorldWidth * 0.5f, TileWorldHeight * 0.5f, 0f);
+        }
+
+        public Vector3 CellBasisYWorld()
+        {
+            if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");
+            if (_semanticGrid.Height > 1)
+                return CellCenterWorld(new OfficeGridCoordinate(0, 1)) -
+                       CellCenterWorld(new OfficeGridCoordinate(0, 0));
+            return new Vector3(-TileWorldWidth * 0.5f, TileWorldHeight * 0.5f, 0f);
+        }
+
         public Vector3 SubcellAnchorWorld(OfficeGridSubcellAnchor anchor)
         {
             if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");

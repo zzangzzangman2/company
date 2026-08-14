@@ -161,13 +161,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
             new FurnitureSpec(OfficeGridLayouts.FilingCabinetKind, "office_filing_cabinet", 200, 370,
                 OfficeFurnitureFacing.SouthEast, new Vector2(884f, 100f), new Vector2(884f, 82f)),
             new FurnitureSpec(OfficeGridLayouts.EntranceDoorKind, "office_entrance_door", 175, 420,
-                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
+                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 172f), new Vector2(316f, 172f),
                 "v1"),
             new FurnitureSpec(OfficeGridLayouts.EntranceWallKind, "office_perimeter_wall", 175, 420,
-                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
+                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 172f), new Vector2(316f, 172f),
                 "v1"),
             new FurnitureSpec(OfficeGridLayouts.PerimeterCutawayWallKind, "office_perimeter_cutaway_wall", 175, 300,
-                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
+                OfficeFurnitureFacing.SouthEast, new Vector2(316f, 172f), new Vector2(316f, 172f),
                 "v1")
         };
 
@@ -463,9 +463,11 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 if (spec.SourceOperatorSeatSocketPx.HasValue)
                     ValidateSourceCanvasAnchor(spec.SourceOperatorSeatSocketPx.Value, source, spec, "operator seat socket");
 
-                float scale = Mathf.Min(
-                    spec.MaximumWidth / (float)bounds.width,
-                    spec.MaximumHeight / (float)bounds.height);
+                float scale = IsPerimeterKind(spec.KindId)
+                    ? 1f / 3f
+                    : Mathf.Min(
+                        spec.MaximumWidth / (float)bounds.width,
+                        spec.MaximumHeight / (float)bounds.height);
                 int scaledWidth = Mathf.Max(1, Mathf.RoundToInt(bounds.width * scale));
                 int scaledHeight = Mathf.Max(1, Mathf.RoundToInt(bounds.height * scale));
                 int destinationX = (CanvasWidth - scaledWidth) / 2;
@@ -730,6 +732,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                         StringComparison.Ordinal))
                 {
                     ValidateOpenEntranceCenter(pixels, spec, path);
+                    ValidateExteriorThresholdOnly(pixels, spec, path);
                 }
 
                 Sprite sprite = RequiredSprite(path);
@@ -781,6 +784,34 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 throw new InvalidOperationException(
                     $"Entrance art must keep its central tile passage fully open: {path} pixel=({x},{y}).");
             }
+        }
+
+        private static void ValidateExteriorThresholdOnly(
+            IReadOnlyList<Color32> pixels,
+            FurnitureSpec spec,
+            string path)
+        {
+            var opaqueCount = 0;
+            var interiorOrVerticalCount = 0;
+            var maximumExteriorDepth = 0f;
+            for (var y = 0; y < CanvasHeight; y++)
+            for (var x = 0; x < CanvasWidth; x++)
+            {
+                if (pixels[y * CanvasWidth + x].a == 0) continue;
+                opaqueCount++;
+                float sampleX = x + 0.5f;
+                float sampleY = y + 0.5f;
+                float innerEdgeY = spec.RuntimeGroundAnchorPx.y +
+                                   0.5f * (sampleX - spec.RuntimeGroundAnchorPx.x);
+                if (sampleY > innerEdgeY + 0.5f) interiorOrVerticalCount++;
+                maximumExteriorDepth = Mathf.Max(maximumExteriorDepth, innerEdgeY - sampleY);
+            }
+
+            if (opaqueCount == 0 || interiorOrVerticalCount != 0 || maximumExteriorDepth > 8.5f)
+                throw new InvalidOperationException(
+                    $"Entrance must be a thin exterior-only threshold with no leaf, jamb or lintel: " +
+                    $"{path} opaque={opaqueCount} interiorOrVertical={interiorOrVerticalCount} " +
+                    $"maxExteriorDepth={maximumExteriorDepth:F3}px.");
         }
 
         private static void ValidateVisibleEndpoint(

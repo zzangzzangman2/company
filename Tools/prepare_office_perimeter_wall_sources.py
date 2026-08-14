@@ -12,7 +12,7 @@ from PIL import Image
 
 CANVAS = (1536, 1536)
 ANCHOR_X = 250
-ANCHOR_Y = 160
+ANCHOR_Y = 172
 SPAN_X = 960
 SPAN_Y = 480
 TILE_SPAN_COMPRESSION = 0.5
@@ -46,6 +46,22 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=0,
         help="Extend each scanline's two terminal pixels outward without moving floor endpoints.",
+    )
+    parser.add_argument(
+        "--exterior-threshold-only",
+        action="store_true",
+        help=(
+            "Discard every opaque pixel on the interior/vertical side of the canonical inner "
+            "edge, leaving a thin exterior-side threshold with no door frame or leaf."
+        ),
+    )
+    parser.add_argument(
+        "--far-wall-face-only",
+        action="store_true",
+        help=(
+            "For the two far edges, discard the screen-lower base pixels that would project "
+            "inside the floor, retaining only the edge connection and exterior-rising wall face."
+        ),
     )
     return parser.parse_args()
 
@@ -118,11 +134,11 @@ def compress_height_to_baseline(image: Image.Image, factor: float) -> Image.Imag
     if factor == 1.0:
         return image
 
-    # In normalized source coordinates the left endpoint is (316,160) from the bottom and the
+    # In normalized source coordinates the left endpoint is (316,172) from the bottom and the
     # right endpoint is one 2:1 source tile away at (+480,+240). PIL uses a top-left origin, so
-    # the floor baseline is y = (CANVAS.h - 160) - 0.5 * (x - 316). Keep every baseline point
+    # the floor baseline is y = (CANVAS.h - 1 - 172) - 0.5 * (x - 316). Keep every baseline point
     # fixed and compress only the perpendicular screen-height component above it.
-    baseline_intercept = CANVAS[1] - ANCHOR_Y + 0.5 * (ANCHOR_X + 66)
+    baseline_intercept = CANVAS[1] - 1 - ANCHOR_Y + 0.5 * (ANCHOR_X + 66)
     inverse = (
         1.0,
         0.0,
@@ -164,7 +180,7 @@ def normalize_authored_single_tile(
     )
     crop = crop.resize(target_size, Image.Resampling.NEAREST)
     canonical_left_x = ANCHOR_X + 66
-    canonical_left_y = CANVAS[1] - ANCHOR_Y
+    canonical_left_y = CANVAS[1] - 1 - ANCHOR_Y
     destination_x = round(canonical_left_x - (left_x - bounds[0]) * scale)
     destination_y = round(canonical_left_y - (left_y - bounds[1]) * scale)
     if (
@@ -201,6 +217,32 @@ def extend_terminal_edges(image: Image.Image, padding: int) -> Image.Image:
     return Image.fromarray(output, "RGBA")
 
 
+def retain_exterior_threshold(image: Image.Image) -> Image.Image:
+    """Keep only the base on/outside the floor edge; remove door leaf, jambs and lintel."""
+    pixels = np.asarray(image, dtype=np.uint8).copy()
+    alpha = pixels[:, :, 3]
+    rows, columns = np.indices(alpha.shape)
+    left_x = ANCHOR_X + 66
+    inner_edge_y = (CANVAS[1] - 1 - ANCHOR_Y) - 0.5 * (columns - left_x)
+    interior_or_vertical = rows < inner_edge_y - 0.5
+    pixels[interior_or_vertical] = 0
+    pixels[alpha == 0] = 0
+    return Image.fromarray(pixels, "RGBA")
+
+
+def retain_far_wall_face(image: Image.Image) -> Image.Image:
+    """Remove the screen-lower sill used by near edges; far-edge wall faces rise outward."""
+    pixels = np.asarray(image, dtype=np.uint8).copy()
+    alpha = pixels[:, :, 3]
+    rows, columns = np.indices(alpha.shape)
+    left_x = ANCHOR_X + 66
+    inner_edge_y = (CANVAS[1] - 1 - ANCHOR_Y) - 0.5 * (columns - left_x)
+    screen_lower_base = rows > inner_edge_y + 0.5
+    pixels[screen_lower_base] = 0
+    pixels[alpha == 0] = 0
+    return Image.fromarray(pixels, "RGBA")
+
+
 def validate_canonical_endpoints(image: Image.Image) -> None:
     """Require real art at both ends of the canonical one-tile (+480,+240) basis."""
     alpha = np.asarray(image.getchannel("A"), dtype=np.uint8)
@@ -221,6 +263,8 @@ def validate_canonical_endpoints(image: Image.Image) -> None:
 
 def main() -> int:
     args = parse_args()
+    if args.exterior_threshold_only and args.far_wall_face_only:
+        raise ValueError("threshold-only and far-wall-face-only are mutually exclusive")
     if (args.left_endpoint is None) != (args.right_endpoint is None):
         raise ValueError("left-endpoint and right-endpoint must be provided together")
     keyed = key_green(Image.open(args.input))
@@ -251,6 +295,10 @@ def main() -> int:
         source_size = f"{crop.width}x{crop.height}"
     canvas = compress_height_to_baseline(canvas, args.height_scale)
     canvas = extend_terminal_edges(canvas, args.edge_pad)
+    if args.exterior_threshold_only:
+        canvas = retain_exterior_threshold(canvas)
+    if args.far_wall_face_only:
+        canvas = retain_far_wall_face(canvas)
     validate_canonical_endpoints(canvas)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -259,7 +307,8 @@ def main() -> int:
         f"prepared {args.output} | source={source_size} "
         f"anchor=({ANCHOR_X},{ANCHOR_Y}) tile-span=({SPAN_X * TILE_SPAN_COMPRESSION:.0f},"
         f"{SPAN_Y * TILE_SPAN_COMPRESSION:.0f}) height-scale={args.height_scale:.3f}"
-        f" edge-pad={args.edge_pad}"
+        f" edge-pad={args.edge_pad} exterior-threshold-only={args.exterior_threshold_only}"
+        f" far-wall-face-only={args.far_wall_face_only}"
     )
     return 0
 
