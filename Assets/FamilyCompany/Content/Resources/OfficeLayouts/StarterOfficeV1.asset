@@ -429,6 +429,26 @@ MonoBehaviour:
     placementY2: 24
     facing: 0
     blocksMovement: 0
+  - furnitureId: wall_front_y0_x12
+    kindId: perimeter_cutaway_wall
+    originX: 12
+    originY: 0
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 0
+    facing: 0
+    blocksMovement: 0
+  - furnitureId: wall_back_y12_x12
+    kindId: entrance_wall
+    originX: 12
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 24
+    facing: 0
+    blocksMovement: 0
   - furnitureId: wall_front_x0_y00
     kindId: perimeter_cutaway_wall
     originX: 0
@@ -667,6 +687,26 @@ MonoBehaviour:
     height: 1
     placementX2: 24
     placementY2: 22
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_front_x0_y12
+    kindId: perimeter_cutaway_wall
+    originX: 0
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 0
+    placementY2: 24
+    facing: 1
+    blocksMovement: 0
+  - furnitureId: wall_back_x12_y12
+    kindId: entrance_wall
+    originX: 12
+    originY: 12
+    width: 1
+    height: 1
+    placementX2: 24
+    placementY2: 24
     facing: 1
     blocksMovement: 0
   seats:

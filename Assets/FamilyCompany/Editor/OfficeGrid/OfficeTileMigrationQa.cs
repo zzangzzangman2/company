@@ -54,6 +54,24 @@ namespace FamilyCompany.Editor.OfficeGridQa
             public Transform Parent;
         }
 
+        private readonly struct PerimeterEdgeEndpoints
+        {
+            public PerimeterEdgeEndpoints(Vector3 start, Vector3 end)
+            {
+                Start = start;
+                End = end;
+            }
+
+            public Vector3 Start { get; }
+            public Vector3 End { get; }
+        }
+
+        private sealed class PerimeterPixelMask
+        {
+            public readonly List<Vector2> BasePixels = new List<Vector2>();
+            public int VerticalOcclusionPixels;
+        }
+
         private static readonly Dictionary<string, FurnitureTransformSnapshot> FurnitureSnapshots =
             new Dictionary<string, FurnitureTransformSnapshot>(StringComparer.Ordinal);
 
@@ -229,6 +247,326 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 if (Application.isBatchMode) EditorApplication.Exit(1);
                 else throw;
             }
+        }
+
+        [MenuItem("Tools/Family Company/Office Grid/Capture Exterior Perimeter Before")]
+        public static void CaptureStarterPerimeterExteriorBefore()
+        {
+            CaptureStarterPerimeterExteriorFixed(
+                "Artifacts/PerimeterWallExteriorQa/before-fixed-1920x1080.png",
+                "OFFICE_STARTER_EXTERIOR_PERIMETER_BEFORE_CAPTURE",
+                false);
+        }
+
+        [MenuItem("Tools/Family Company/Office Grid/Capture Exterior Perimeter After")]
+        public static void CaptureStarterPerimeterExteriorAfter()
+        {
+            CaptureStarterPerimeterExteriorFixed(
+                "Artifacts/PerimeterWallExteriorQa/after-fixed-1920x1080.png",
+                "OFFICE_STARTER_EXTERIOR_PERIMETER_AFTER_CAPTURE",
+                true);
+        }
+
+        private static void CaptureStarterPerimeterExteriorFixed(
+            string capturePath,
+            string marker,
+            bool validateExteriorContract)
+        {
+            try
+            {
+                OfficeFurnitureAssetBuilder.BuildPerimeterWalls();
+                BuildPreviewScene(
+                    true,
+                    OfficeTilePreviewLayout.StarterOfficeV1,
+                    null,
+                    rebuildFurnitureAssets: false,
+                    rebuildTileAssets: false,
+                    savePreviewScene: false);
+                OfficeTileMigrationPreviewBootstrap bootstrap =
+                    UnityEngine.Object.FindFirstObjectByType<OfficeTileMigrationPreviewBootstrap>();
+                Camera camera = Camera.main;
+                Require(bootstrap != null && bootstrap.Presenter != null && camera != null,
+                    "Fixed perimeter review preview is missing.");
+                OfficeGridCameraFitter.Fit(camera, bootstrap.Presenter.FloorRenderer.bounds, 16f / 9f);
+                if (validateExteriorContract)
+                    ValidatePerimeterExteriorVisualsAndCaptureDebug(bootstrap, camera);
+                Capture(camera, capturePath, 1920, 1080);
+                Debug.Log(marker + ": PASS | framing=floor-bounds 1920x1080 | " + capturePath);
+                if (Application.isBatchMode) EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                if (Application.isBatchMode) EditorApplication.Exit(1);
+                else throw;
+            }
+        }
+
+        private static void ValidatePerimeterExteriorVisualsAndCaptureDebug(
+            OfficeTileMigrationPreviewBootstrap bootstrap,
+            Camera camera)
+        {
+            FamilyCompany.Simulation.OfficeLayout.OfficeGrid grid = bootstrap.Presenter.SemanticGrid;
+            FamilyCompany.Editor.OfficeGrid.OfficePerimeterExteriorValidation.ValidationMetrics semanticMetrics =
+                FamilyCompany.Editor.OfficeGrid.OfficePerimeterExteriorValidation.ValidateCurrentLayout(grid);
+            OfficeGridFurniturePresenter furniturePresenter = bootstrap.FurniturePresenter;
+            Require(furniturePresenter != null, "Exterior validation requires furniture presentation.");
+
+            var edges = new Dictionary<string, PerimeterEdgeEndpoints>(StringComparer.Ordinal);
+            var masks = new Dictionary<Sprite, PerimeterPixelMask>();
+            var maximumInnerEdgeErrorPx = 0f;
+            var maximumCornerErrorPx = 0f;
+            var baseOpaqueSamples = 0;
+            var verticalOcclusionSamples = 0;
+            var baseIntrusionPixels = 0;
+            var entranceGapWidthPx = 0f;
+            var previousTarget = camera.targetTexture;
+            var validationTarget = new RenderTexture(1920, 1080, 0, RenderTextureFormat.ARGB32);
+            try
+            {
+                camera.targetTexture = validationTarget;
+                Vector3 gridOrigin = bootstrap.Presenter.CellCenterWorld(new OfficeGridCoordinate(0, 0));
+                Vector3 basisX = bootstrap.Presenter.CellBasisXWorld();
+                Vector3 basisY = bootstrap.Presenter.CellBasisYWorld();
+                float determinant = basisX.x * basisY.y - basisX.y * basisY.x;
+                Require(Mathf.Abs(determinant) > 0.000001f, "Exterior validation grid basis is singular.");
+
+                foreach (PlacedOfficeFurniture item in grid.Furniture.Where(value =>
+                             OfficePerimeterExteriorGeometry.IsPerimeterKind(value.KindId)))
+                {
+                    Require(furniturePresenter.TryGetRenderer(item.FurnitureId, out SpriteRenderer renderer),
+                        "Missing perimeter renderer: " + item.FurnitureId);
+                    Require(furniturePresenter.TryGetDefinition(
+                            item.FurnitureId, out OfficeFurnitureVisualDefinition definition),
+                        "Missing perimeter definition: " + item.FurnitureId);
+                    OfficePerimeterExteriorGeometry.InnerEdgeWorld(
+                        item, grid, bootstrap.Presenter, out Vector3 expectedStart, out Vector3 expectedEnd);
+                    Vector3 actualStart = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                        renderer, definition.GroundAnchorPx);
+                    Vector3 actualEnd = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                        renderer, definition.GroundAnchorPx + new Vector2(160f, 80f));
+                    edges[item.FurnitureId] = new PerimeterEdgeEndpoints(actualStart, actualEnd);
+                    for (var sample = 0; sample <= 16; sample++)
+                    {
+                        float t = sample / 16f;
+                        float error = OfficeGridAlignmentMetrics.ScreenDistance(
+                            camera,
+                            Vector3.Lerp(actualStart, actualEnd, t),
+                            Vector3.Lerp(expectedStart, expectedEnd, t));
+                        maximumInnerEdgeErrorPx = Mathf.Max(maximumInnerEdgeErrorPx, error);
+                    }
+
+                    if (string.Equals(item.FurnitureId, "entrance_door", StringComparison.Ordinal))
+                        entranceGapWidthPx = OfficeGridAlignmentMetrics.ScreenDistance(
+                            camera, actualStart, actualEnd);
+
+                    PerimeterPixelMask mask = ResolvePerimeterPixelMask(renderer.sprite, definition, masks);
+                    verticalOcclusionSamples += mask.VerticalOcclusionPixels;
+                    Vector3 screenStart3 = camera.WorldToScreenPoint(expectedStart);
+                    Vector3 screenEnd3 = camera.WorldToScreenPoint(expectedEnd);
+                    var screenStart = new Vector2(screenStart3.x, screenStart3.y);
+                    var screenEnd = new Vector2(screenEnd3.x, screenEnd3.y);
+                    foreach (Vector2 pixel in mask.BasePixels)
+                    {
+                        baseOpaqueSamples++;
+                        Vector3 world = OfficeGridAlignmentMetrics.SpriteAnchorWorld(renderer, pixel);
+                        Vector3 delta = world - gridOrigin;
+                        float gridX = (delta.x * basisY.y - delta.y * basisY.x) / determinant;
+                        float gridY = (basisX.x * delta.y - basisX.y * delta.x) / determinant;
+                        bool inside = item.Facing == OfficeFurnitureFacing.SouthEast
+                            ? item.Origin.Y == 0 ? gridY > -0.5f : gridY < grid.Height - 0.5f
+                            : item.Origin.X == 0 ? gridX > -0.5f : gridX < grid.Width - 0.5f;
+                        if (!inside) continue;
+                        Vector3 screenPoint3 = camera.WorldToScreenPoint(world);
+                        float penetrationPx = PointToLineDistance(
+                            new Vector2(screenPoint3.x, screenPoint3.y), screenStart, screenEnd);
+                        if (penetrationPx > 0.5f) baseIntrusionPixels++;
+                    }
+
+                    if (string.Equals(item.FurnitureId, "entrance_door", StringComparison.Ordinal))
+                        Require(mask.VerticalOcclusionPixels == 0,
+                            "The entrance contains door-leaf, jamb, lintel or other vertical pixels.");
+                }
+
+                maximumCornerErrorPx = Mathf.Max(maximumCornerErrorPx,
+                    EdgeJoinError(camera, edges, "wall_front_y0_x00", false,
+                        "wall_front_x0_y00", false));
+                maximumCornerErrorPx = Mathf.Max(maximumCornerErrorPx,
+                    EdgeJoinError(camera, edges, "wall_front_y0_x12", true,
+                        "wall_back_x12_y00", false));
+                maximumCornerErrorPx = Mathf.Max(maximumCornerErrorPx,
+                    EdgeJoinError(camera, edges, "wall_back_y12_x00", false,
+                        "wall_front_x0_y12", true));
+                maximumCornerErrorPx = Mathf.Max(maximumCornerErrorPx,
+                    EdgeJoinError(camera, edges, "wall_back_y12_x12", true,
+                        "wall_back_x12_y12", true));
+            }
+            finally
+            {
+                camera.targetTexture = previousTarget;
+                UnityEngine.Object.DestroyImmediate(validationTarget);
+            }
+
+            Require(maximumInnerEdgeErrorPx <= 0.5f,
+                $"Wall inner-edge error exceeds 0.5 screen px: {maximumInnerEdgeErrorPx:F4}px.");
+            Require(maximumCornerErrorPx <= 0.5f,
+                $"Exterior corner join error exceeds 0.5 screen px: {maximumCornerErrorPx:F4}px.");
+            Require(baseIntrusionPixels == 0,
+                $"Exterior wall base intrudes into the floor polygon at {baseIntrusionPixels} opaque pixels.");
+            Require(baseOpaqueSamples > 0 && verticalOcclusionSamples > 0,
+                "Exterior pixel masks did not sample both bases and vertical wall faces.");
+
+            CapturePerimeterDebugOverlays(bootstrap, camera, edges);
+            Debug.Log(
+                "OFFICE_PERIMETER_EXTERIOR_VISUAL: PASS | resolution=1920x1080 " +
+                $"innerEdgeMaxErrorPx={maximumInnerEdgeErrorPx:F4} cornerMaxErrorPx={maximumCornerErrorPx:F4} " +
+                $"baseOpaqueSamples={baseOpaqueSamples} baseIntrusionPixels={baseIntrusionPixels} " +
+                $"verticalOcclusionMaskPixels={verticalOcclusionSamples} entranceGapWidthPx={entranceGapWidthPx:F3} " +
+                $"routes=4 routeSteps={string.Join(",", semanticMetrics.RouteSteps)} " +
+                "doorLeaf=false jamb=false lintel=false thresholdOnly=true");
+        }
+
+        private static PerimeterPixelMask ResolvePerimeterPixelMask(
+            Sprite sprite,
+            OfficeFurnitureVisualDefinition definition,
+            IDictionary<Sprite, PerimeterPixelMask> cache)
+        {
+            if (cache.TryGetValue(sprite, out PerimeterPixelMask cached)) return cached;
+            string path = AssetDatabase.GetAssetPath(sprite);
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            var mask = new PerimeterPixelMask();
+            try
+            {
+                if (!texture.LoadImage(File.ReadAllBytes(path), false))
+                    throw new InvalidDataException("Failed to read perimeter runtime sprite: " + path);
+                Color32[] pixels = texture.GetPixels32();
+                for (var y = 0; y < texture.height; y++)
+                for (var x = 0; x < texture.width; x++)
+                {
+                    if (pixels[y * texture.width + x].a == 0) continue;
+                    float sampleX = x + 0.5f;
+                    float sampleY = y + 0.5f;
+                    float innerEdgeY = definition.GroundAnchorPx.y +
+                                       0.5f * (sampleX - definition.GroundAnchorPx.x);
+                    if (sampleY <= innerEdgeY + 0.5f)
+                        mask.BasePixels.Add(new Vector2(sampleX, sampleY));
+                    else
+                        mask.VerticalOcclusionPixels++;
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+            cache.Add(sprite, mask);
+            return mask;
+        }
+
+        private static float PointToLineDistance(Vector2 point, Vector2 start, Vector2 end)
+        {
+            Vector2 line = end - start;
+            Require(line.sqrMagnitude > 0.0001f, "Cannot measure a zero-length exterior edge.");
+            return Mathf.Abs(line.x * (start.y - point.y) - (start.x - point.x) * line.y) /
+                   line.magnitude;
+        }
+
+        private static float EdgeJoinError(
+            Camera camera,
+            IReadOnlyDictionary<string, PerimeterEdgeEndpoints> edges,
+            string firstId,
+            bool firstEnd,
+            string secondId,
+            bool secondEnd)
+        {
+            Require(edges.ContainsKey(firstId) && edges.ContainsKey(secondId),
+                $"Corner validation is missing {firstId} or {secondId}.");
+            PerimeterEdgeEndpoints first = edges[firstId];
+            PerimeterEdgeEndpoints second = edges[secondId];
+            return OfficeGridAlignmentMetrics.ScreenDistance(
+                camera,
+                firstEnd ? first.End : first.Start,
+                secondEnd ? second.End : second.Start);
+        }
+
+        private static void CapturePerimeterDebugOverlays(
+            OfficeTileMigrationPreviewBootstrap bootstrap,
+            Camera camera,
+            IReadOnlyDictionary<string, PerimeterEdgeEndpoints> edges)
+        {
+            var overlayRoot = new GameObject("PerimeterExteriorQaOverlay");
+            Material material = null;
+            SpriteRenderer[] sprites = UnityEngine.Object.FindObjectsByType<SpriteRenderer>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            bool[] spriteStates = sprites.Select(renderer => renderer.enabled).ToArray();
+            try
+            {
+                Shader shader = Shader.Find("Sprites/Default");
+                Require(shader != null, "Sprites/Default shader is unavailable for exterior debug capture.");
+                material = new Material(shader);
+                Vector3 origin = bootstrap.Presenter.CellCenterWorld(new OfficeGridCoordinate(0, 0));
+                Vector3 basisX = bootstrap.Presenter.CellBasisXWorld();
+                Vector3 basisY = bootstrap.Presenter.CellBasisYWorld();
+                Vector3[] outline =
+                {
+                    origin - 0.5f * basisX - 0.5f * basisY,
+                    origin + 12.5f * basisX - 0.5f * basisY,
+                    origin + 12.5f * basisX + 12.5f * basisY,
+                    origin - 0.5f * basisX + 12.5f * basisY,
+                    origin - 0.5f * basisX - 0.5f * basisY
+                };
+                CreateQaLine(overlayRoot.transform, "FloorOuterPolygon", outline,
+                    new Color32(40, 255, 90, 255), 0.055f, 31998, material);
+
+                for (var index = 0; index < sprites.Length; index++) sprites[index].enabled = false;
+                Capture(camera,
+                    "Artifacts/PerimeterWallExteriorQa/floor-only-outline-1920x1080.png",
+                    1920,
+                    1080);
+                for (var index = 0; index < sprites.Length; index++) sprites[index].enabled = spriteStates[index];
+
+                var edgeIndex = 0;
+                foreach (KeyValuePair<string, PerimeterEdgeEndpoints> pair in edges)
+                {
+                    CreateQaLine(overlayRoot.transform, "WallInnerEdge_" + edgeIndex++,
+                        new[] { pair.Value.Start, pair.Value.End },
+                        new Color32(255, 40, 220, 255), 0.024f, 31999, material);
+                }
+                Capture(camera,
+                    "Artifacts/PerimeterWallExteriorQa/floor-wall-inner-edge-overlay-1920x1080.png",
+                    1920,
+                    1080);
+            }
+            finally
+            {
+                for (var index = 0; index < sprites.Length; index++) sprites[index].enabled = spriteStates[index];
+                UnityEngine.Object.DestroyImmediate(overlayRoot);
+                if (material != null) UnityEngine.Object.DestroyImmediate(material);
+            }
+        }
+
+        private static void CreateQaLine(
+            Transform parent,
+            string name,
+            IReadOnlyList<Vector3> positions,
+            Color color,
+            float width,
+            int sortingOrder,
+            Material material)
+        {
+            var lineObject = new GameObject(name);
+            lineObject.transform.SetParent(parent, false);
+            var line = lineObject.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.positionCount = positions.Count;
+            for (var index = 0; index < positions.Count; index++) line.SetPosition(index, positions[index]);
+            line.startWidth = width;
+            line.endWidth = width;
+            line.startColor = color;
+            line.endColor = color;
+            line.numCapVertices = 0;
+            line.numCornerVertices = 0;
+            line.sortingOrder = sortingOrder;
+            line.sharedMaterial = material;
         }
 
         private static void ValidateT2(OfficeTileMigrationPreviewBootstrap bootstrap, Camera camera)
@@ -453,7 +791,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             var grid = bootstrap.Presenter.SemanticGrid;
             bool starter = bootstrap.Layout == OfficeTilePreviewLayout.StarterOfficeV1;
-            int expectedFurnitureCount = starter ? 65 : 66;
+            int expectedFurnitureCount = starter ? 69 : 70;
             int expectedKindCount = starter ? 14 : 15;
             Require(grid.Furniture.Count >= 8, "T4 furniture count is below eight.");
             Require(grid.Furniture.Select(item => item.KindId).Distinct(StringComparer.Ordinal).Count() >= 4,

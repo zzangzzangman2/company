@@ -91,14 +91,13 @@ namespace FamilyCompany.Simulation.OfficeLayout
         {
             const int entranceX = 8;
             // Low cutaway walls close the two near edges without hiding the office. The two far
-            // edges use full-height bays. Every bay is one semantic tile long and the mirrored
-            // facing follows the second isometric grid axis; corners therefore form real L joins.
-            // A bay starts at its semantic anchor and ends at the next cell on that axis.  Four
-            // runs of width-1/height-1 bays meet at the same four corner anchors; using width bays
-            // would overshoot every far corner by one tile and make the walls cross.
+            // edges use full-height bays. Every perimeter tile contributes its one exterior edge,
+            // so a 13x13 floor owns 13 bays per side. Presentation shifts each visual by the exact
+            // half-cell tangent/normal offset from its unchanged semantic origin; adjacent runs
+            // therefore meet at the floor polygon's four true outer corners.
             // EntranceDoorKind is retained as the save/catalog compatibility key, but its visual
-            // is an always-open jamb-and-threshold frame: it never owns a door leaf or animation.
-            for (var x = 0; x < width - 1; x++)
+            // is an always-open exterior threshold: it owns no door leaf, jamb, lintel or animation.
+            for (var x = 0; x < width; x++)
             {
                 AddWallBay(
                     furniture,
@@ -116,10 +115,9 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     OfficeFurnitureFacing.SouthEast);
             }
 
-            // Mirroring preserves the authored ground pivot and makes the visual grow along the
-            // positive Y basis. Semantic anchors 0..11 therefore meet the X-axis runs at both
-            // corner pivots; shifting this run to 1..12 projects one bay beyond each far corner.
-            for (var y = 0; y < height - 1; y++)
+            // Mirroring preserves the authored inner-edge pivot and makes the visual grow along
+            // the positive Y basis. The full 0..12 run is required to cover all 13 exterior edges.
+            for (var y = 0; y < height; y++)
             {
                 AddWallBay(
                     furniture,

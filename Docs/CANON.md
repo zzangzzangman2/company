@@ -77,10 +77,10 @@
 
 ## 초기 타일 사무실 정본
 
-- 실제 새 게임과 v1~v5 저장 이관은 `OfficeGridLayouts.CreateStarterOfficeV1()`을 사용한다. 13×13, 실내 가구 17개 + 외곽 48 bay(총 65), 가족 workstation 4개이며 QA용 중앙 파티션은 없다.
+- 실제 새 게임과 v1~v5 저장 이관은 `OfficeGridLayouts.CreateStarterOfficeV1()`을 사용한다. 13×13, 실내 가구 17개 + 외곽 52 bay(총 69), 가족 workstation 4개이며 QA용 중앙 파티션은 없다.
 - 플레이테스트 런타임은 새 게임/불러오기 직후 StarterOfficeV1 타일 씬을 기본 월드로 렌더한다. 폐기된 OfficeVisualV2 통짜 PNG는 저장소와 빌드에 존재하지 않으며 `F9`로도 되돌리지 않는다.
 - `CreateMigrationPreview()`의 가구 18개·12종·파티션 구성은 T1~T5 회귀 fixture 전용이다. 실제 게임 기본 사무실로 사용하지 않는다.
 - workstation은 desk/chair/seat binding, seat/approach cell, NorthWest facing, 반 셀 operator anchor를 가진다. 네 가족의 의미 root는 좌석 셀 중심·scale 1이다.
 - 시각 calibration의 유일한 저장 위치는 version 2의 `OfficeFurnitureVisualCatalog.asset`과 `OfficeCharacterSeatPoseCatalog.asset`이다. 현재 좌표는 V2 실패 진단 candidate이며, 의자 좌판 중심·책상 operator socket·가구 네 점 footprint·clip/frame별 실제 pelvis/hand를 수동 교정하고 전체 QA를 통과한 값만 최종 승인 데이터가 된다.
 - NorthWest 회전의자의 좌판과 등받이 대부분은 인물 뒤 base로 그린다. chair front overlay는 등받이의 제한된 전면 가장자리와 근접 팔걸이만 인물 위에 그리고 좌판·몸통을 덮지 않는다. 책상 front overlay는 하체 앞의 다리·서랍·앞 모서리만 담당한다.
-- 외곽은 far full wall 24 + near cutaway 23 + `(8,0)` open passage frame 1의 정확한 한 타일 bay 48개다. `entrance_door`는 저장 호환 ID일 뿐 실제 door leaf나 열림 애니메이션이 아니며, 가족은 기존 `(8,1)` entrance를 통해 09:00~09:03 순차 입장한다.
+- 외곽은 13×13 바닥 polygon의 네 외변을 따라 far full wall 26 + near cutaway 25 + `(8,0)` exterior threshold 1의 정확한 한 타일 bay 52개다. 벽 inner edge는 바닥 outer edge와 일치하고 모든 기단 픽셀은 바닥 밖에 있어야 한다. `entrance_door`는 저장 호환 ID일 뿐 door leaf/jamb/lintel/열림 애니메이션이 아니며, 가족은 기존 `(8,1)` entrance를 통해 09:00~09:03 순차 입장한다.
