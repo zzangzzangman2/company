@@ -1,5 +1,16 @@
 # DECISIONS
 
+## 2026-08-14 / UI Remaster V3와 MapleStory typography를 전체 화면의 공용 정본으로 사용
+
+결정: Title, New Game/Load, Loading, HUD, 회사·인사·사업·연구·투자, People 상세는 프로젝트에 포함된
+Maplestory Light/Bold와 공용 V3 크기·weight·layout token을 사용한다. 글자는 런타임에서 렌더하며 이미지에
+굽지 않는다. 670자 한국어·영문·숫자 glyph와 1280×720, 1392×768, 1600×900/1000, 1920×1080의
+clipping·overflow·icon collision을 정적 검사와 Windows D3D11 캡처로 함께 판정한다.
+
+이유: 화면별 자체 폰트·크기와 단순 파일 생성형 캡처는 실제 검정 프레임, 해상도 강제, baseline 어긋남을
+놓칠 수 있다. 공용 typography 계약과 비활성 오프스크린 GPU readback을 함께 사용해야 회사 PC에서 창을
+노출하지 않으면서도 실제 픽셀 방향·해상도·내용을 검증할 수 있다.
+
 ## 2026-08-14 / 공용 업무 능력은 6종이며 잠재력은 문자 등급만 공개
 
 결정: 가족과 채용 완료 직원은 기술개발·기획·창작·사업·운영·협업 6종의 0~100 능력과 내부

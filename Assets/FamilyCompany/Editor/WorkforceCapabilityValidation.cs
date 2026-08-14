@@ -184,8 +184,18 @@ namespace FamilyCompany.Editor
                 "Legacy contract speed escaped its DTO/catalog compatibility boundary: " +
                 string.Join(", ", contractSpeedOffenders));
             var presenter = File.ReadAllText(Path.Combine(root, "Presentation.Unity", "MainNavigation", "MainNavigationHudPresenter.cs"));
-            Require(!presenter.Contains("Potential}") && !presenter.Contains("잠재력 {selected.Potential"),
+            var exactPotentialTokens = new[]
+            {
+                "selected.Potential}",
+                "selected.Potential:",
+                ".Capability.Potential}",
+                ".Capability.Potential:",
+                ".Potential.ToString("
+            };
+            Require(exactPotentialTokens.All(token => !presenter.Contains(token)),
                 "Employee UI leaks exact potential.");
+            Require(typeof(WorkforceRosterMemberViewModel).GetProperty("Potential") == null,
+                "Employee roster view model exposes exact potential instead of its letter grade.");
         }
 
         private static WorkforceCapabilityState NewCapability(string id, int allSkills, int potential) =>

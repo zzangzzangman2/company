@@ -38,6 +38,7 @@ namespace FamilyCompany.Presentation.Unity
         private bool _loadingUiLogged;
         private bool _loadingUiCapturePending;
         private bool _loadingUiCaptureComplete;
+        private bool _loadingUiCapturePassed;
         private bool _tileOfficeActive;
         private Renderer[] _legacyRenderers = System.Array.Empty<Renderer>();
         private StarterOfficeRuntimeBootstrap _starterRuntime;
@@ -309,6 +310,7 @@ namespace FamilyCompany.Presentation.Unity
                         Environment.GetCommandLineArgs(),
                         "-familyCompanyTileRuntimeQa") >= 0;
                     _loadingUiCaptureComplete = !_loadingUiCapturePending;
+                    _loadingUiCapturePassed = !_loadingUiCapturePending;
                     CaptureAndHideLegacyRenderers();
                     StartCoroutine(RebindStarterOfficeWithLoading(bootstrap));
                 }
@@ -326,6 +328,7 @@ namespace FamilyCompany.Presentation.Unity
                 Environment.GetCommandLineArgs(),
                 "-familyCompanyTileRuntimeQa") >= 0;
             _loadingUiCaptureComplete = !_loadingUiCapturePending;
+            _loadingUiCapturePassed = !_loadingUiCapturePending;
             CaptureAndHideLegacyRenderers();
             StartCoroutine(LoadStarterOffice());
         }
@@ -478,10 +481,34 @@ namespace FamilyCompany.Presentation.Unity
             yield return new WaitForEndOfFrame();
             string path = QaArtifactPath("starter-office-loading.png");
             Texture2D capture = null;
+            RenderTexture renderTexture = null;
+            RenderTexture previousActive = null;
             try
             {
+                renderTexture = RenderTexture.GetTemporary(
+                    Screen.width,
+                    Screen.height,
+                    0,
+                    RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.sRGB);
+                ScreenCapture.CaptureScreenshotIntoRenderTexture(renderTexture);
+                previousActive = RenderTexture.active;
+                RenderTexture.active = renderTexture;
                 capture = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
                 capture.ReadPixels(new Rect(0f, 0f, Screen.width, Screen.height), 0, 0, false);
+                capture.Apply(false, false);
+                Color32[] pixels = capture.GetPixels32();
+                for (int y = 0; y < capture.height / 2; y++)
+                {
+                    int oppositeY = capture.height - 1 - y;
+                    for (int x = 0; x < capture.width; x++)
+                    {
+                        int sourceIndex = y * capture.width + x;
+                        int targetIndex = oppositeY * capture.width + x;
+                        (pixels[sourceIndex], pixels[targetIndex]) = (pixels[targetIndex], pixels[sourceIndex]);
+                    }
+                }
+                capture.SetPixels32(pixels);
                 capture.Apply(false, false);
                 long luminance = 0L;
                 int samples = 0;
@@ -500,18 +527,22 @@ namespace FamilyCompany.Presentation.Unity
                 if (samples == 0 || luminance <= samples * 6L)
                 {
                     if (File.Exists(path)) File.Delete(path);
+                    _loadingUiCapturePassed = false;
                     Debug.LogError("STARTER_OFFICE_LOADING_UI_QA_FAIL | capture framebuffer is black");
                 }
                 else
                 {
                     File.WriteAllBytes(path, capture.EncodeToPNG());
+                    _loadingUiCapturePassed = true;
                     Debug.Log("STARTER_OFFICE_LOADING_UI_QA_PASS | capture=" + path +
                               " resolution=" + Screen.width + "x" + Screen.height);
                 }
             }
             finally
             {
+                RenderTexture.active = previousActive;
                 if (capture != null) Destroy(capture);
+                if (renderTexture != null) RenderTexture.ReleaseTemporary(renderTexture);
                 _loadingUiCaptureComplete = true;
             }
         }
@@ -572,6 +603,16 @@ namespace FamilyCompany.Presentation.Unity
             {
                 Debug.LogError("FAMILY_COMPANY_STARTER_TILE_MAIN_FLOW: FAIL | Starter runtime activation timeout");
                 Application.Quit(33);
+                yield break;
+            }
+
+            float loadingUiDeadline = Time.unscaledTime + 5f;
+            while ((_loading || !_loadingUiCaptureComplete) && Time.unscaledTime < loadingUiDeadline)
+                yield return null;
+            if (!_loadingUiCaptureComplete || !_loadingUiCapturePassed)
+            {
+                Debug.LogError("FAMILY_COMPANY_STARTER_TILE_MAIN_FLOW: FAIL | loading UI D3D capture missing or black");
+                Application.Quit(34);
                 yield break;
             }
 

@@ -1,12 +1,39 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
 {
     public sealed class TitleMoneyRainRenderer : MonoBehaviour
     {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+        private const uint SwpNoSize = 0x0001;
+        private const uint SwpNoZOrder = 0x0004;
+        private const uint SwpNoActivate = 0x0010;
+        private const uint SwpShowWindow = 0x0040;
+
+        private delegate bool EnumWindowsCallback(IntPtr window, IntPtr parameter);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr parameter);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(
+            IntPtr window,
+            IntPtr insertAfter,
+            int x,
+            int y,
+            int width,
+            int height,
+            uint flags);
+#endif
+
         // The class name is retained for scene/backward compatibility. V3 intentionally has no money-rain layer.
         public const string BackgroundResourcePath = "UiRemasterV3/Title/title_hero_background_v3";
         public const string PortraitBackgroundResourcePath = BackgroundResourcePath;
@@ -139,6 +166,7 @@ namespace FamilyCompany.Presentation.Unity
         private IEnumerator CaptureForQa(string outputFolder)
         {
             Directory.CreateDirectory(outputFolder);
+            yield return PrepareOffscreenCaptureWindow();
             for (var frame = 0; frame < 10; frame++) yield return new WaitForEndOfFrame();
 
             var resolutionLabel = Screen.width + "x" + Screen.height;
@@ -148,8 +176,7 @@ namespace FamilyCompany.Presentation.Unity
                     outputFolder,
                     $"ui-remaster-v3-{resolutionLabel}-title-{captureIndex + 1}.png");
                 if (File.Exists(outputPath)) File.Delete(outputPath);
-                ScreenCapture.CaptureScreenshot(outputPath);
-                yield return WaitForScreenshot(outputPath);
+                CaptureCurrentFrame(outputPath);
                 if (captureIndex >= 2) continue;
                 var nextCaptureTime = Time.realtimeSinceStartup + LoopDuration / 3f;
                 while (Time.realtimeSinceStartup < nextCaptureTime) yield return null;
@@ -169,22 +196,93 @@ namespace FamilyCompany.Presentation.Unity
             var clickedPath = Path.Combine(outputFolder, $"ui-remaster-v3-{resolutionLabel}-new-game-slots.png");
             if (File.Exists(clickedPath)) File.Delete(clickedPath);
             yield return new WaitForEndOfFrame();
-            ScreenCapture.CaptureScreenshot(clickedPath);
-            yield return WaitForScreenshot(clickedPath);
+            CaptureCurrentFrame(clickedPath);
             Debug.Log("FAMILY_COMPANY_UI_REMASTER_V3_ROUTE: PASS | main-menu>new-game-slots " + resolutionLabel);
             Debug.Log("FAMILY_COMPANY_UI_REMASTER_V3_CAPTURE: PASS | " + resolutionLabel);
             Application.Quit(0);
         }
 
-        private static IEnumerator WaitForScreenshot(string outputPath)
+        private static IEnumerator PrepareOffscreenCaptureWindow()
         {
-            for (var frame = 0; frame < 300; frame++)
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            IntPtr window = IntPtr.Zero;
+            for (int frame = 0; frame < 120 && window == IntPtr.Zero; frame++)
             {
-                yield return null;
-                if (File.Exists(outputPath) && new FileInfo(outputPath).Length >= 1024) yield break;
+                uint currentProcessId = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+                EnumWindows((candidate, _) =>
+                {
+                    GetWindowThreadProcessId(candidate, out uint candidateProcessId);
+                    if (candidateProcessId != currentProcessId) return true;
+                    window = candidate;
+                    return false;
+                }, IntPtr.Zero);
+                if (window == IntPtr.Zero) yield return null;
             }
+            if (window == IntPtr.Zero)
+                throw new IOException("Title QA could not resolve the Windows player handle.");
+            if (!SetWindowPos(
+                    window,
+                    IntPtr.Zero,
+                    -32000,
+                    -32000,
+                    0,
+                    0,
+                    SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpShowWindow))
+                throw new IOException("Title QA could not activate its offscreen Windows render surface.");
+            yield return new WaitForEndOfFrame();
+#else
+            yield return null;
+#endif
+        }
 
-            throw new IOException("Timed out while writing title money-rain screenshot: " + outputPath);
+        private static void CaptureCurrentFrame(string outputPath)
+        {
+            RenderTexture renderTexture = null;
+            RenderTexture previousActive = null;
+            Texture2D capture = null;
+            try
+            {
+                renderTexture = RenderTexture.GetTemporary(
+                    Screen.width,
+                    Screen.height,
+                    0,
+                    RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.sRGB);
+                ScreenCapture.CaptureScreenshotIntoRenderTexture(renderTexture);
+                previousActive = RenderTexture.active;
+                RenderTexture.active = renderTexture;
+                capture = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+                capture.ReadPixels(new Rect(0f, 0f, Screen.width, Screen.height), 0, 0, false);
+                capture.Apply(false, false);
+
+                Color32[] pixels = capture.GetPixels32();
+                long luminance = 0L;
+                int stride = Mathf.Max(1, pixels.Length / 4096);
+                for (int index = 0; index < pixels.Length; index += stride)
+                    luminance += pixels[index].r + pixels[index].g + pixels[index].b;
+                if (luminance <= 4096L * 6L)
+                    throw new IOException("Title capture framebuffer is black: " + outputPath);
+
+                for (int y = 0; y < capture.height / 2; y++)
+                {
+                    int oppositeY = capture.height - 1 - y;
+                    for (int x = 0; x < capture.width; x++)
+                    {
+                        int sourceIndex = y * capture.width + x;
+                        int targetIndex = oppositeY * capture.width + x;
+                        (pixels[sourceIndex], pixels[targetIndex]) = (pixels[targetIndex], pixels[sourceIndex]);
+                    }
+                }
+                capture.SetPixels32(pixels);
+                capture.Apply(false, false);
+                File.WriteAllBytes(outputPath, capture.EncodeToPNG());
+            }
+            finally
+            {
+                RenderTexture.active = previousActive;
+                if (capture != null) Destroy(capture);
+                if (renderTexture != null) RenderTexture.ReleaseTemporary(renderTexture);
+            }
         }
 
         private void EnsureResources(float unscaledTime)

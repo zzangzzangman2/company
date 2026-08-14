@@ -39,15 +39,15 @@
 
 | 항목 | 현재 값 |
 | --- | --- |
-| 문서 정리 기준 코드 | local `main` code integration `8d714c6` |
-| 문서 정리 당시 원격 기준 | `origin/main` `52a787f` |
+| 문서 정리 기준 코드 | clean local `main` HEAD |
+| 원격 기준 | push 후 `origin/main == main`; 그 전에는 `git status --short --branch`로 차이를 확인 |
 | Unity | `6000.3.21f1` |
 | 시작 씬 | `Assets/FamilyCompany/Scenes/Prototype01.unity` |
 | 최종 통합 main SHA | 이 문서를 포함한 clean `main` HEAD; 배포본의 `BUILD_INFO.txt`와 대조 |
 | 최종 Windows build SHA | 최종 빌드의 `BUILD_INFO.txt`가 유일한 정본 |
 | 최종 통합 QA | compiler, Unity static, D3D PlayMode PASS; Windows player는 배포본 `BUILD_INFO.txt`와 실행 로그로 판정 |
 
-`8d714c6`은 stamina까지 합친 코드 기준선이다. 이후 문서·통합 QA 수정은 같은 main 위에서만 수행하며, 실제 배포 SHA는 실행본 옆 `BUILD_INFO.txt`와 `git rev-parse HEAD`가 같아야 한다.
+실제 배포 SHA는 실행본 옆 `BUILD_INFO.txt`와 `git rev-parse HEAD`가 같아야 한다. 과거 기능별 SHA는 역사 증거일 뿐 현재 릴리스 식별자로 사용하지 않는다.
 
 ## 현재 런타임 정본
 
@@ -68,7 +68,7 @@
 
 근거 구현은 `GameTime`, `PrototypeStateFactory`, `OfficeAttendanceRules`, `StarterOfficeRuntimeBootstrap`, `MainNavigationHudPresenter`, `ContractGrowthValidation`, `GameSaveDto`, `OfficeNavigationMotionRules`, `DirectionalSpriteAnimator`, `PixelClarityProfile`에 있다.
 
-## 현재 통합됨 (`8d714c6` 코드 기준)
+## 현재 통합됨 (clean `main` HEAD 기준)
 
 - `MainNavigationV2`가 런타임에 연결되었고 거부된 V1 경로는 제거되었다. 회사 허브는 사무실 편집기, 사업은 계약/제품, 투자는 주식으로 연결된다.
 - 계약 고객 성장은 day-one T0, T1~T4 순차 해금, 평판/실패 기반 하락과 T0 회복을 순수 시뮬레이션 규칙으로 처리한다.
@@ -80,6 +80,9 @@
 - 저장소 상대 경로 Windows 빌드/실행 스크립트와 `BUILD_INFO.txt` 생성 절차가 있다.
 - 네 가족의 착석 방향 잠금, 키보드 손 접촉, 의자 하체 가림, 안전한 이석 경로가 통합되었다. 자유 보행만 실제 변위 방향을 사용하며 착석 중에는 좌석 방향 잠금이 최종 권한이다.
 - 네 가족의 체력과 머리 위 바가 통합되었다. 25% 임계치 전에는 체력 때문에 일어나지 않고, 임계치 이후 실제 배치·접근·capacity가 유효한 회복 시설만 claim해 수행·해제·원래 업무 복귀한다.
+- 가족과 향후 고용 직원은 기술개발·기획·창작·사업·운영·협업 6능력의 공용 모델을 사용한다. 인사 UI는 가족 4명의 실제 상태와 잠재력 문자 등급만 표시한다.
+- UI Remaster V3는 프로젝트 내 Maplestory Light/Bold와 670자 glyph 검증을 공용으로 사용한다. Title→New Game, Loading, 5개 허브, People, 계약·건축·주식 경로는 같은 Windows D3D11 런타임에서 검증한다.
+- `FAST_QA_WINDOWS.cmd`는 simulation-pure, editor-validation/broad, scripts-only cache, player-startup, D3D capture 프로필과 SLO 수치를 기록한다.
 
 ## 열린 기술 부채와 제품 backlog
 
@@ -95,14 +98,12 @@
 
 | 범위 | 기준 | 결과 |
 | --- | --- | --- |
-| MainNavigationV2 compiler/editor/player | `884c53f`, `bc19d0c`, `4cf6e50` | PASS 기록 있음 |
-| 계약 T0~T4 pure harness/compiler | `a878ce1` | PASS 기록 있음 |
-| 사무실 편집/저장 v10 호환 | `7baac22`, `8d714c6` | 기존 v9 compiler, logic, D3D PlayMode 기록과 v10 migration 회귀를 함께 확인 |
-| 공유 이동/실제 변위 | `aeae43f` | strict harness와 D3D movement QA PASS 기록 있음 |
-| native render clarity | `d235f41` | D3D render audit PASS 기록 있음 |
-| 외곽/출퇴근 | `7954d42` 이후 기준선 | layout/PlayMode PASS 기록 있음 |
-| seating + stamina + 위 전부의 최종 결합 | `8d714c6` 이후 main | compiler PASS; navigation strict, typing 24/24, seating facing/egress/depth, stamina 1/2/4x 및 실제 recovery 왕복, build editor PlayMode PASS |
-| 최종 portable Windows build | 최종 main | clean HEAD에서만 생성하고 `BUILD_INFO.txt` SHA 일치와 Windows D3D11 main-flow PASS로 판정 |
+| Simulation/Editor 전체 회귀 | clean `main` HEAD | FastQA `simulation-pure`, `editor-validation`, `editor-broad` PASS |
+| Workforce/Save v10 | clean `main` HEAD | skills=6, grades=S-F, v1~v9 migration, 1x/2x/4x PASS |
+| UI V3/Maplestory | clean `main` HEAD | assets=24, characters=670, missingGlyphs=0; 1280×720·1392×768·1600×900/1000·1920×1080 PASS |
+| Windows D3D11 UI | clean `main` HEAD | Title→New Game, Loading, 5 tabs, People, 계약·건축·주식, ESC, 1x/2x/4x PASS |
+| Windows D3D11 사무실 | clean `main` HEAD | 가족4 출근·착석·타이핑·이석·이동·충돌·상호작용·스태미나·저장/불러오기 PASS |
+| 최종 portable Windows build | 최종 `main` | clean HEAD에서만 생성하고 `BUILD_INFO.txt` SHA 일치, Release watermark 0, 배포 EXE smoke PASS로 판정 |
 
 과거 개별 PASS는 해당 기능의 회귀 근거다. 최종 결합 SHA의 PASS를 대신하지 않는다.
 

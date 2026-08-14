@@ -516,7 +516,10 @@ namespace FamilyCompany.Presentation.Unity
         private void ConfigureDisplayDefaults()
         {
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
-            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-familyCompanyCaptureMoneyRain") >= 0) return;
+            string[] arguments = Environment.GetCommandLineArgs();
+            if (Array.IndexOf(arguments, "-familyCompanyCaptureMoneyRain") >= 0 ||
+                Array.IndexOf(arguments, "-familyCompanyCaptureUiRemasterV3") >= 0)
+                return;
             if (!Application.isEditor && Screen.fullScreenMode == FullScreenMode.Windowed)
             {
                 var resolution = Screen.currentResolution;
