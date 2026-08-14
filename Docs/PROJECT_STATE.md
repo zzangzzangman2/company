@@ -2,6 +2,24 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-15 / P0 의자·이동·성능 1단계 통합 후보
+
+- 기준 `9109a8c1`에서 전용 `codex/integration-p0-qa`를 만들고 의자 `0c6e8983`, 이동 `b692d24a`,
+  성능 `9ea1312e`, 그 직계 문서 자식 `8ee72cd4`를 이 순서로 중복 없이 통합했다. 원본 브랜치와 `main`은
+  변경하지 않았다.
+- `OfficeRuntimeOccupancy` 충돌은 출근 ingress 상태, canonical 4×4 회전 ground mask, 미등록 콘텐츠의
+  full-cell fallback, cached continuous-grid transform/AABB broad-phase, layout `Revision`을 모두 보존했다.
+  actor 이동·reservation은 revision을 바꾸지 않는다.
+- `OfficeRuntimeWorkstationService`에서는 의자 `VisualRoot`를 움직이는 옛 정렬 API를 되살리지 않고 명시적
+  `OfficeSeatInteractionAnchors`만 유지했다. 자유 보행은 실제 변위 기반 8방향/`flipX=false`, 착석은
+  LeavingSeat safe anchor까지 좌석 claim·facing·depth를 유지한다.
+- Unity `6000.3.21f1` 격리 Editor QA는 chair foreground, seat egress 64건, seat occlusion 8방향,
+  movement 128 seeds/1,152 paths/1,970 moving frames, path cache revision/invalidation, furniture collision
+  10,368건/52 profiles, hybrid depth 120 permutations와 warmed 100회 allocation 0B를 모두 통과했다.
+  채택 로그의 동시 루트 Unity는 각 1개, 다른 작업방 루트는 0개였고 종료 뒤 integration 소유 프로세스는 0개다.
+- 후속 타이핑·마우스·물마시기 애니메이션 커밋은 아직 포함하지 않았다. 최종 Windows build와 D3D11 결합
+  플레이 검증은 그 커밋들을 추가 통합한 뒤 수행한다.
+
 ## 2026-08-15 / 의자·좌석 상태 안정화 후보 (`codex/chair-seat-stability`)
 
 - 착석은 의자 Transform을 쓰지 않는다. 가구 semantic root와 `VisualRoot`는 배치 때 기록한 parent,
