@@ -28,7 +28,7 @@ namespace FamilyCompany.Editor
                     "Fourth actor must arrive by 09:03.");
                 Require(OfficeRuntimeWorkstationService.StarterEntranceCell.Equals(
                         new OfficeGridCoordinate(8, 1)),
-                    "Starter attendance must use the one canonical office door.");
+                    "Starter attendance must use the one canonical open passage.");
                 FamilyCompany.Simulation.OfficeLayout.OfficeGrid office =
                     OfficeGridLayouts.CreateStarterOfficeV1();
                 Require(office.IsWalkable(new OfficeGridCoordinate(8, 1)),
@@ -42,11 +42,14 @@ namespace FamilyCompany.Editor
                     item.KindId == OfficeGridLayouts.EntranceWallKind);
                 int cutawayWallCount = office.Furniture.Count(item =>
                     item.KindId == OfficeGridLayouts.PerimeterCutawayWallKind);
+                PlacedOfficeFurniture openPassage = office.Furniture.Single(item =>
+                    item.FurnitureId == "entrance_door");
                 Require(fullWallCount == 24 && cutawayWallCount == 23 &&
-                        office.Furniture.Any(item =>
-                            item.FurnitureId == "entrance_door" &&
-                            item.Origin.Equals(new OfficeGridCoordinate(8, 0))),
-                    $"Starter office must have four tile-aligned perimeter edges and one canonical door; " +
+                        openPassage.KindId == OfficeGridLayouts.EntranceDoorKind &&
+                        openPassage.Origin.Equals(new OfficeGridCoordinate(8, 0)) &&
+                        openPassage.Width == 1 && openPassage.Height == 1 &&
+                        !openPassage.BlocksMovement,
+                    $"Starter office must have four tile-aligned perimeter edges and one open passage; " +
                     $"full={fullWallCount} cutaway={cutawayWallCount} total={office.Furniture.Count}.");
                 for (var axis = 0; axis < 12; axis++)
                 {
@@ -86,7 +89,9 @@ namespace FamilyCompany.Editor
                 Require(state.Family.Members.All(member =>
                         member.Autonomy.TargetLocation != OfficeSemanticLocation.Exit),
                     "09:00 office intents must not send newly arrived family back to the exit.");
-                Debug.Log("OFFICE_ATTENDANCE_VALIDATION: PASS | start=08:50 entry=09:00..09:03 family=4 exit=18:00");
+                Debug.Log(
+                    "OFFICE_ATTENDANCE_VALIDATION: PASS | start=08:50 entry=09:00..09:03 " +
+                    "family=4 perimeterBays=48 openPassage=(8,0) oneTile=true nonBlocking=true exit=18:00");
             }
             catch (Exception exception)
             {

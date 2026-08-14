@@ -37,6 +37,9 @@ namespace FamilyCompany.Presentation.Unity
         private float _arrivalReleaseRemaining;
         private IOfficeRuntimeAgent _lastAttendanceEntrant;
         private Vector2 _lastAttendanceEntryPosition;
+        private GameState _attendanceAudioState;
+        private long _attendanceDoorSfxShiftKey = long.MinValue;
+        private int _attendanceDoorSfxPlayCount;
         private const float MinimumAttendanceEntranceClearance = 0.72f;
 
         public OfficeSeatingState SeatingState => _seatingState;
@@ -44,6 +47,7 @@ namespace FamilyCompany.Presentation.Unity
             _seatingInitialized && _seatingState != null &&
             seatRegistry != null && seatRegistry.isActiveAndEnabled &&
             seatRegistry.SeatCount > 0 && seatRegistry.RuntimeRevision == _seatingRegistryRevision;
+        public int AttendanceDoorSfxPlayCount => _attendanceDoorSfxPlayCount;
 
         public void Configure(
             PrototypeBootstrap newBootstrap,
@@ -61,6 +65,7 @@ namespace FamilyCompany.Presentation.Unity
             _arrivalReleaseRemaining = 0f;
             _lastAttendanceEntrant = null;
             _lastAttendanceEntryPosition = Vector2.zero;
+            BindAttendanceAudioState(newBootstrap != null ? newBootstrap.State : null);
             _initialized = false;
         }
 
@@ -82,6 +87,7 @@ namespace FamilyCompany.Presentation.Unity
             _arrivalReleaseRemaining = 0f;
             _lastAttendanceEntrant = null;
             _lastAttendanceEntryPosition = Vector2.zero;
+            BindAttendanceAudioState(newBootstrap != null ? newBootstrap.State : null);
             _initialized = false;
         }
 
@@ -118,6 +124,7 @@ namespace FamilyCompany.Presentation.Unity
         public void RefreshNow()
         {
             if (bootstrap == null || bootstrap.State == null) return;
+            BindAttendanceAudioState(bootstrap.State);
             if (!_initialized) _initialized = true;
             AutonomousOfficeSimulation.EnsureIntents(
                 bootstrap.State.WorldSeed,
@@ -344,6 +351,7 @@ namespace FamilyCompany.Presentation.Unity
                     entrant.SetAttendanceOutside(false, false);
                     if (!entrant.IsPresentationAway)
                     {
+                        TryPlayAttendanceDoorSfx(now);
                         _lastAttendanceEntrant = entrant;
                         _lastAttendanceEntryPosition = entrant.Position;
                         _nextAttendanceArrivalIndex++;
@@ -397,6 +405,47 @@ namespace FamilyCompany.Presentation.Unity
                     " actors=" + orderedAgents.Length);
                 _lastRuntimeAttendancePhase = attendance;
             }
+        }
+
+        private void BindAttendanceAudioState(GameState state)
+        {
+            if (ReferenceEquals(_attendanceAudioState, state)) return;
+            long previousShiftKey = _attendanceDoorSfxShiftKey;
+            _attendanceAudioState = state;
+            if (state == null)
+            {
+                _attendanceDoorSfxShiftKey = long.MinValue;
+                _attendanceDoorSfxPlayCount = 0;
+                return;
+            }
+
+            DateTime now = state.Time.Now;
+            int minuteOfDay = checked(now.Hour * 60 + now.Minute);
+            bool preservesCurrentShift = previousShiftKey == now.Date.Ticks &&
+                                         minuteOfDay >= OfficeAttendanceRules.WorkStartsMinuteOfDay &&
+                                         minuteOfDay < OfficeAttendanceRules.WorkEndsMinuteOfDay;
+            if (preservesCurrentShift) return;
+            _attendanceDoorSfxShiftKey = long.MinValue;
+            _attendanceDoorSfxPlayCount = 0;
+        }
+
+        private void TryPlayAttendanceDoorSfx(DateTime now)
+        {
+            int minuteOfDay = checked(now.Hour * 60 + now.Minute);
+            if (minuteOfDay != OfficeAttendanceRules.WorkStartsMinuteOfDay) return;
+            long shiftKey = now.Date.Ticks;
+            if (_attendanceDoorSfxShiftKey == shiftKey) return;
+            bool played = GameAudioCoordinator.Instance.PlaySfx("door_open", 0.28f);
+            if (played)
+            {
+                _attendanceDoorSfxShiftKey = shiftKey;
+                _attendanceDoorSfxPlayCount++;
+            }
+            Debug.Log(
+                "STARTER_OFFICE_ATTENDANCE_DOOR_SFX | cue=door_open " +
+                "visualAnimation=false closeCue=false shift=" + now.ToString("yyyy-MM-dd") +
+                " playCount=" + _attendanceDoorSfxPlayCount +
+                " played=" + played);
         }
 
         private static int AttendanceOrder(string memberId)

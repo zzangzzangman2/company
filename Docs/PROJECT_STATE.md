@@ -447,3 +447,12 @@ Unity: 6000.3.21f1
 - 외부 순수 회귀는 Roslyn Simulation/Presentation/Editor compile 오류 0, navigation 128 seeds·1,152 paths, stale path cursor, animation strict 192/192 PASS다. 실제 Starter Player QA에는 stop-pivot-resume 급반전과 실제 변위↔표시 방향 즉시 일치 검사를 추가했다.
 - Unity 6000.3.21f1 로그인·라이선스를 정상 확인하고 Windows x64 비개발 빌드를 `C:/Users/godho/Downloads/Family/FamilyCompany_Playtest/FamilyCompany.exe`로 새로 승격했다. 실제 빌드 EXE의 headless Starter 전체 QA는 급반전 stop-pivot-resume, 8방향, 비좌석 상호작용 목적지, 충돌 3종, 네 좌석 work action hook/stand-up, 계약·저장·불러오기를 모두 통과했고 `reverseFacingFrames=0`, agent penetration 0을 기록했다. 빌드 fingerprint는 `A0F5135C4DCE9159D6298998FE77DF913E2C6D93D8ED513F12DE621100F53073`이며 최종 로그는 `Artifacts/MovementRuntimeQaLatest/family-company-player-qa-final-clean.log`다.
 - fail-closed 잔여: 소파 `PairedConversation`/`GroupMeeting`의 원자적 두 사람 claim, NW 외 좌석의 사람별·방향별 pelvis/hand 수동 승인, 서서 사용하는 시설 전용 원화, 호흡 Idle/이모트/떠오르는 수치의 생동감 레이어. 가족 4명은 새 contact sheet 육안 확인 뒤 `Human visual approval`을 다시 기록했고, 직원 후보 8명은 별도 육안 승인 전까지 manifest에서 미승인 상태를 유지한다.
+
+## 2026-08-14 / Starter Office 밝은 외곽 벽·상시 열린 출입구
+
+- 13×13 Starter Office의 외곽 48 bay는 기존 배치를 유지하면서 밝은 회청색 plaster와 흰 trim으로 교체했다. 두 far edge는 full wall, 두 near edge는 낮은 cutaway이며 각 source의 실제 연결점 `(316,160)` → `(796,400)`이 runtime의 정확한 `(+160,+80)` 한 타일 span으로 투영된다.
+- 네 직선과 네 L 코너는 동일 모듈의 SouthEast/SouthWest mirror로 이어진다. 굵은 갈색 기둥·슬랫·울타리 문법은 제거했고 얇은 panel seam만 남겼다.
+- `(8,0)`의 저장 호환 키 `entrance_door`/`EntranceDoorKind`는 유지하지만 그래픽은 두 jamb와 얇은 threshold만 가진 상시 열린 한 타일 통로다. 문짝·lintel·열림 애니메이션은 없고 `(8,1)` interior entrance는 기존처럼 walkable이다.
+- `OfficeFurnitureAssetBuilder.BuildPerimeterWalls`는 벽 3종 runtime PNG/importer/catalog entry만 갱신한다. 나머지 definition 객체, 특히 `swivel_chair`의 `frontOverlaySprite`와 `frontOverlayWhenOccupied`, pose catalog는 보존하고 변경 시 fail한다.
+- 가족의 기존 08:50 시작과 09:00~09:03 순차 출근은 그대로다. 첫 09:00 입장 성공 시 `door_open`만 한 번 재생하며 같은 shift의 후속 가족·layout rebuild·save/load rebind는 중복 재생하지 않는다. `door_close`는 이 출근 경로에서 호출하지 않는다.
+- Unity 6000.3.21f1 정적 QA는 perimeter 48/open passage 1, furniture 65/definitions 15, navigation 128 seeds·1,152 paths, depth 200 trials, Prototype 전체 검증을 통과했다. 1920×1080 D3D11 캡처에서 네 변·네 코너·열린 입구·낮은 전면 가림을 육안 확인했다.

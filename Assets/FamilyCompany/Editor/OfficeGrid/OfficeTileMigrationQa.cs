@@ -147,12 +147,15 @@ namespace FamilyCompany.Editor.OfficeGridQa
         internal static void BuildPreviewScene(
             bool includeT45,
             OfficeTilePreviewLayout layout = OfficeTilePreviewLayout.MigrationPreview,
-            string reviewCapturePath = null)
+            string reviewCapturePath = null,
+            bool rebuildFurnitureAssets = true,
+            bool rebuildTileAssets = true,
+            bool savePreviewScene = true)
         {
             OfficeGridValidation.Run();
-            OfficeTileAssetBuilder.Build();
+            if (rebuildTileAssets) OfficeTileAssetBuilder.Build();
             HighMotionCharacterArtBuilder.Validate();
-            if (includeT45) OfficeFurnitureAssetBuilder.Build();
+            if (includeT45 && rebuildFurnitureAssets) OfficeFurnitureAssetBuilder.Build();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var cameraObject = new GameObject("Main Camera");
@@ -192,12 +195,15 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Capture(camera, reviewCapturePath, 1920, 1080);
             }
 
-            var generated = bootstrap.transform.Find("GeneratedOfficeTilePreview");
-            if (generated != null) UnityEngine.Object.DestroyImmediate(generated.gameObject);
-            var sceneFolder = Path.GetDirectoryName(PreviewScenePath);
-            if (!string.IsNullOrEmpty(sceneFolder)) Directory.CreateDirectory(sceneFolder);
-            EditorSceneManager.SaveScene(scene, PreviewScenePath);
-            AssetDatabase.SaveAssets();
+            if (savePreviewScene)
+            {
+                var generated = bootstrap.transform.Find("GeneratedOfficeTilePreview");
+                if (generated != null) UnityEngine.Object.DestroyImmediate(generated.gameObject);
+                var sceneFolder = Path.GetDirectoryName(PreviewScenePath);
+                if (!string.IsNullOrEmpty(sceneFolder)) Directory.CreateDirectory(sceneFolder);
+                EditorSceneManager.SaveScene(scene, PreviewScenePath);
+                AssetDatabase.SaveAssets();
+            }
         }
 
         [MenuItem("Tools/Family Company/Office Grid/Capture Starter Perimeter Walls")]
@@ -206,9 +212,14 @@ namespace FamilyCompany.Editor.OfficeGridQa
             const string capturePath = "Artifacts/PerimeterWallQa/starter-perimeter-walls-1920x1080.png";
             try
             {
-                BuildPreviewScene(true, OfficeTilePreviewLayout.StarterOfficeV1, capturePath);
-                // Keep the checked-in preview scene on its canonical migration layout after review capture.
-                BuildPreviewScene(true, OfficeTilePreviewLayout.MigrationPreview);
+                OfficeFurnitureAssetBuilder.BuildPerimeterWalls();
+                BuildPreviewScene(
+                    true,
+                    OfficeTilePreviewLayout.StarterOfficeV1,
+                    capturePath,
+                    rebuildFurnitureAssets: false,
+                    rebuildTileAssets: false,
+                    savePreviewScene: false);
                 Debug.Log("OFFICE_STARTER_PERIMETER_WALL_CAPTURE: PASS | " + capturePath);
                 if (Application.isBatchMode) EditorApplication.Exit(0);
             }

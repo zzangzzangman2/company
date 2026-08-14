@@ -596,6 +596,48 @@ namespace FamilyCompany.Presentation.Unity
 
         private IEnumerator RunAttendanceFlowQa(PrototypeBootstrap bootstrap)
         {
+            OfficeAutonomyCoordinator autonomy =
+                Object.FindFirstObjectByType<OfficeAutonomyCoordinator>();
+            if (autonomy == null)
+            {
+                FailPlayerQa(35, "attendance autonomy coordinator is missing");
+                yield break;
+            }
+            GameAudioCoordinator audio = GameAudioCoordinator.Instance;
+            int doorOpenSfxBefore = audio.DoorOpenSfxPlayCount;
+            int doorCloseSfxBefore = audio.DoorCloseSfxPlayCount;
+            PlacedOfficeFurniture[] openPassageMarkers = _starterRuntime.World.Grid.Furniture
+                .Where(item => string.Equals(
+                    item.KindId,
+                    OfficeGridLayouts.EntranceDoorKind,
+                    StringComparison.Ordinal))
+                .ToArray();
+            var expectedPassageCell = new OfficeGridCoordinate(8, 0);
+            var expectedEntranceCell = OfficeRuntimeWorkstationService.StarterEntranceCell;
+            if (openPassageMarkers.Length != 1 ||
+                !openPassageMarkers[0].Origin.Equals(expectedPassageCell) ||
+                openPassageMarkers[0].Width != 1 || openPassageMarkers[0].Height != 1 ||
+                openPassageMarkers[0].BlocksMovement ||
+                !expectedEntranceCell.Equals(new OfficeGridCoordinate(8, 1)) ||
+                !_starterRuntime.World.Grid.IsWalkable(expectedEntranceCell))
+            {
+                FailPlayerQa(35, "starter office open-passage marker or interior entrance cell is invalid");
+                yield break;
+            }
+            if (!_starterRuntime.World.FurniturePresenter.TryGetSemanticRoot(
+                    openPassageMarkers[0].FurnitureId,
+                    out Transform openPassageRoot) ||
+                !_starterRuntime.World.FurniturePresenter.TryGetRenderer(
+                    openPassageMarkers[0].FurnitureId,
+                    out SpriteRenderer openPassageRenderer) ||
+                openPassageRenderer.sprite == null ||
+                openPassageRenderer.sprite.texture.filterMode != FilterMode.Point ||
+                openPassageRoot.GetComponentInChildren<Animator>(true) != null ||
+                openPassageRoot.GetComponentInChildren<Animation>(true) != null)
+            {
+                FailPlayerQa(35, "open passage renderer is missing, filtered, or visually animated");
+                yield break;
+            }
             if (_starterRuntime.Actors.Count != RuntimeActorCount)
             {
                 FailPlayerQa(35, "attendance roster did not contain the four starting family actors");
@@ -604,6 +646,17 @@ namespace FamilyCompany.Presentation.Unity
             if (_starterRuntime.Actors.Any(actor => actor == null || !actor.IsPresentationAway))
             {
                 FailPlayerQa(35, "actors were visible before the 09:00 office opening");
+                yield break;
+            }
+            if (autonomy.AttendanceDoorSfxPlayCount != 0)
+            {
+                FailPlayerQa(35, "attendance door SFX played before the 09:00 office opening");
+                yield break;
+            }
+            if (audio.DoorOpenSfxPlayCount != doorOpenSfxBefore ||
+                audio.DoorCloseSfxPlayCount != doorCloseSfxBefore)
+            {
+                FailPlayerQa(35, "a door cue played before the 09:00 office opening");
                 yield break;
             }
 
@@ -618,6 +671,34 @@ namespace FamilyCompany.Presentation.Unity
             if (_starterRuntime.Actors.Count(actor => !actor.IsPresentationAway) != 1)
             {
                 FailPlayerQa(35, "09:00 attendance stagger did not begin with exactly one actor");
+                yield break;
+            }
+            if (autonomy.AttendanceDoorSfxPlayCount != 1)
+            {
+                FailPlayerQa(35, "attendance start did not play exactly one door-open SFX");
+                yield break;
+            }
+            if (audio.DoorOpenSfxPlayCount - doorOpenSfxBefore != 1 ||
+                audio.DoorCloseSfxPlayCount - doorCloseSfxBefore != 0)
+            {
+                FailPlayerQa(35, "attendance start emitted an incorrect open/close door cue sequence");
+                yield break;
+            }
+            OfficeRuntimeAgent firstEntrant = _starterRuntime.Actors.Single(item => !item.IsPresentationAway);
+            if (!_starterRuntime.World.Presenter.NearestCell(firstEntrant.transform.position).Equals(expectedEntranceCell))
+            {
+                FailPlayerQa(35, "first attendance actor did not enter through the canonical open passage");
+                yield break;
+            }
+            string entranceCapturePath = QaArtifactPath(
+                "starter-office-open-entrance-arrival-1920x1080.png");
+            if (!TryCaptureStarterOfficeFrame(
+                    entranceCapturePath,
+                    1920,
+                    1080,
+                    out string entranceCaptureFailure))
+            {
+                FailPlayerQa(35, "open entrance arrival capture failed: " + entranceCaptureFailure);
                 yield break;
             }
 
@@ -650,10 +731,34 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(35, "family did not complete door-to-assigned-seat arrival: " + incomplete);
                 yield break;
             }
+            if (autonomy.AttendanceDoorSfxPlayCount != 1)
+            {
+                FailPlayerQa(35, "staggered family arrivals repeated the attendance door SFX");
+                yield break;
+            }
+            if (audio.DoorOpenSfxPlayCount - doorOpenSfxBefore != 1 ||
+                audio.DoorCloseSfxPlayCount - doorCloseSfxBefore != 0)
+            {
+                FailPlayerQa(35, "staggered attendance emitted duplicate or closing door cues");
+                yield break;
+            }
+            string overviewCapturePath = QaArtifactPath(
+                "starter-office-perimeter-overview-1920x1080.png");
+            if (!TryCaptureStarterOfficeFrame(
+                    overviewCapturePath,
+                    1920,
+                    1080,
+                    out string overviewCaptureFailure))
+            {
+                FailPlayerQa(35, "perimeter overview capture failed: " + overviewCaptureFailure);
+                yield break;
+            }
             Debug.Log(
                 "STARTER_OFFICE_ATTENDANCE_FLOW_QA_PASS | start=08:50 hidden=4 " +
-                "doorVisual=(8,0) entrance=(8,1) entry=09:00..09:03 present=4 " +
-                "assignedSeatArrivals=4 stagingStops=0 exit=18:00");
+                "openPassage=(8,0) oneTile=true nonBlocking=true doorAnimation=false " +
+                "entrance=(8,1) firstActorAtEntrance=true entry=09:00..09:03 present=4 " +
+                "doorOpenSfx=1 doorCloseSfx=0 duplicateSfx=0 assignedSeatArrivals=4 " +
+                "stagingStops=0 exit=18:00 captures=1920x1080");
         }
 
         private IEnumerator RunFourWayIntersectionQa()
@@ -1566,6 +1671,24 @@ namespace FamilyCompany.Presentation.Unity
             return TryCaptureQaCameraFrame(path, 1392, 699, out failure);
         }
 
+        private bool TryCaptureStarterOfficeFrame(
+            string path,
+            int width,
+            int height,
+            out string failure)
+        {
+            if (_starterRuntime == null || _starterRuntime.World == null ||
+                _starterRuntime.World.Presenter == null ||
+                _starterRuntime.World.FurniturePresenter == null)
+            {
+                failure = "Starter office world is unavailable for capture";
+                return false;
+            }
+            Bounds bounds = _starterRuntime.World.Presenter.FloorRenderer.bounds;
+            bounds.Encapsulate(_starterRuntime.World.FurniturePresenter.RenderBounds);
+            return TryCaptureQaCameraFrame(path, width, height, false, bounds, out failure);
+        }
+
         private bool TryCaptureQaWorkstationCloseup(
             string memberId,
             OfficeRuntimeAgent actor,
@@ -1681,7 +1804,7 @@ namespace FamilyCompany.Presentation.Unity
             int height,
             out string failure)
         {
-            return TryCaptureQaCameraFrame(path, width, height, false, out failure);
+            return TryCaptureQaCameraFrame(path, width, height, false, null, out failure);
         }
 
         private static bool TryCaptureQaCameraFrame(
@@ -1689,6 +1812,17 @@ namespace FamilyCompany.Presentation.Unity
             int width,
             int height,
             bool includeOfficeHud,
+            out string failure)
+        {
+            return TryCaptureQaCameraFrame(path, width, height, includeOfficeHud, null, out failure);
+        }
+
+        private static bool TryCaptureQaCameraFrame(
+            string path,
+            int width,
+            int height,
+            bool includeOfficeHud,
+            Bounds? fitBounds,
             out string failure)
         {
             failure = string.Empty;
@@ -1724,6 +1858,11 @@ namespace FamilyCompany.Presentation.Unity
                     camera.transform.rotation);
                 captureCamera.enabled = false;
                 captureCamera.targetTexture = target;
+                float captureAspect = width / (float)height;
+                if (fitBounds.HasValue)
+                    OfficeGridCameraFitter.Fit(captureCamera, fitBounds.Value, captureAspect);
+                else
+                    captureCamera.aspect = captureAspect;
                 if (includeOfficeHud)
                 {
                     officeHudCanvas = Object.FindObjectsByType<Canvas>(

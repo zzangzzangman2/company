@@ -53,6 +53,8 @@ namespace FamilyCompany.Presentation.Unity
         private string _currentBgmId = string.Empty;
         private float _screenPollRemaining;
         private int _footstepSequence;
+        private int _doorOpenSfxPlayCount;
+        private int _doorCloseSfxPlayCount;
 
         public static GameAudioCoordinator Instance
         {
@@ -66,6 +68,8 @@ namespace FamilyCompany.Presentation.Unity
         public float BgmVolume => bgmVolume;
         public float SfxVolume => sfxVolume;
         public string CurrentBgmId => _currentBgmId;
+        public int DoorOpenSfxPlayCount => _doorOpenSfxPlayCount;
+        public int DoorCloseSfxPlayCount => _doorCloseSfxPlayCount;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
@@ -189,6 +193,10 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             _sfxSource.PlayOneShot(clip, Mathf.Clamp01(volumeScale));
+            if (string.Equals(normalizedId, "door_open", StringComparison.Ordinal))
+                _doorOpenSfxPlayCount++;
+            else if (string.Equals(normalizedId, "door_close", StringComparison.Ordinal))
+                _doorCloseSfxPlayCount++;
             return true;
         }
 

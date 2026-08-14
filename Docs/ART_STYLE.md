@@ -145,3 +145,11 @@
 - 착석 자세 보정은 실제 pelvis/hand 점을 바꾸거나 신체 밖 가상 점을 만들지 않는다. `OfficeCharacterSeatPoseCatalog` v5는 translation만 허용하며 `VisualRoot.localRotation=identity`, pose scale `1.0`을 강제한다. Work pelvis는 cushion에 고정하고 SitDown/StandUp은 승인된 해부학 점을 사용해 서기↔좌판 구간을 보간한다.
 - 실제 업무 화면은 사람 승인·SHA 일치가 확인된 `OfficeSeatingV1` `NorthWest` 14프레임을 사용한다. 방향이 좌석 facing과 불일치하는 Legacy micro-action, 미승인 프레임, 다른 프레임으로의 fallback을 Starter Runtime에 섞지 않는다. 56개 완전성이 깨지면 승인된 Work/0 정적 자세로만 닫힌다.
 - 가구 footprint와 interaction cell은 보이는 Sprite의 장식이 아니라 게임 공간의 표현이다. 새 가구는 기본 차단이며 투명 픽셀이나 sorting order로 관통을 숨기지 않는다.
+
+## Starter Office perimeter wall (2026-08-14)
+
+- 재질은 밝은 저채도 회청색 plaster panel과 matte white top/base trim이다. 갈색 목재, 울타리 slat, 굵은 반복 post, gate, 금속 난간을 사용하지 않는다.
+- far 두 면은 사무실 경계를 읽을 수 있는 full height, 카메라에 가까운 두 면은 캐릭터와 가구를 가리지 않는 낮은 cutaway height다. 두 높이는 같은 색·trim·얇은 panel seam 문법을 공유한다.
+- 각 bay는 투명 배경의 정확한 한 타일 `(+160,+80)` screen span이며, SouthEast/SouthWest mirror가 네 L corner에서 틈이나 한 타일 overshoot 없이 만난다.
+- 출입구는 한 bay 전체가 열린 negative space다. 두 slim jamb와 얇은 isometric threshold는 허용하지만 door leaf, header/lintel, 손잡이, swing arc, 닫힌 문 silhouette는 금지한다.
+- runtime 규격은 640×512 RGBA, hard alpha, 180 PPU, Point/nearest, mipmap 없음, uncompressed다. 기존 source/runtime GUID와 `.meta`를 유지한다.

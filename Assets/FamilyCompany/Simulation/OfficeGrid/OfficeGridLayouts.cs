@@ -96,6 +96,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
             // A bay starts at its semantic anchor and ends at the next cell on that axis.  Four
             // runs of width-1/height-1 bays meet at the same four corner anchors; using width bays
             // would overshoot every far corner by one tile and make the walls cross.
+            // EntranceDoorKind is retained as the save/catalog compatibility key, but its visual
+            // is an always-open jamb-and-threshold frame: it never owns a door leaf or animation.
             for (var x = 0; x < width - 1; x++)
             {
                 AddWallBay(

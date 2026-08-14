@@ -160,13 +160,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 semanticFootprintHeight: 2),
             new FurnitureSpec(OfficeGridLayouts.FilingCabinetKind, "office_filing_cabinet", 200, 370,
                 OfficeFurnitureFacing.SouthEast, new Vector2(884f, 100f), new Vector2(884f, 82f)),
-            new FurnitureSpec(OfficeGridLayouts.EntranceDoorKind, "office_entrance_door", 200, 420,
+            new FurnitureSpec(OfficeGridLayouts.EntranceDoorKind, "office_entrance_door", 175, 420,
                 OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
                 "v1"),
-            new FurnitureSpec(OfficeGridLayouts.EntranceWallKind, "office_perimeter_wall", 200, 420,
+            new FurnitureSpec(OfficeGridLayouts.EntranceWallKind, "office_perimeter_wall", 175, 420,
                 OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
                 "v1"),
-            new FurnitureSpec(OfficeGridLayouts.PerimeterCutawayWallKind, "office_perimeter_cutaway_wall", 200, 300,
+            new FurnitureSpec(OfficeGridLayouts.PerimeterCutawayWallKind, "office_perimeter_cutaway_wall", 175, 300,
                 OfficeFurnitureFacing.SouthEast, new Vector2(316f, 160f), new Vector2(316f, 160f),
                 "v1")
         };
@@ -200,6 +200,52 @@ namespace FamilyCompany.Editor.OfficeGridQa
             AssetDatabase.SaveAssets();
             Validate();
             Debug.Log("FAMILY_COMPANY_OFFICE_FURNITURE_TYCOON_ALIGNMENT_V2_BUILD: PASS");
+        }
+
+        [MenuItem("Family Company/Art/Build Office Perimeter Walls Only")]
+        public static void BuildPerimeterWalls()
+        {
+            FurnitureSpec[] perimeterSpecs = Specs.Where(spec => IsPerimeterKind(spec.KindId)).ToArray();
+            if (perimeterSpecs.Length != 3)
+                throw new InvalidOperationException($"Expected exactly three perimeter visual specs, found {perimeterSpecs.Length}.");
+
+            Directory.CreateDirectory(RuntimeFolder);
+            foreach (FurnitureSpec spec in perimeterSpecs) BuildOne(spec);
+            var firstHashes = perimeterSpecs.ToDictionary(
+                spec => spec.RuntimePath,
+                spec => Sha256(spec.RuntimePath),
+                StringComparer.Ordinal);
+            foreach (FurnitureSpec spec in perimeterSpecs) BuildOne(spec);
+            foreach (FurnitureSpec spec in perimeterSpecs)
+            {
+                if (!string.Equals(firstHashes[spec.RuntimePath], Sha256(spec.RuntimePath), StringComparison.Ordinal))
+                    throw new InvalidOperationException("Perimeter runtime build is not deterministic: " + spec.RuntimePath);
+            }
+
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            foreach (FurnitureSpec spec in perimeterSpecs)
+                ConfigureImporter(spec.RuntimePath, spec.RuntimeGroundAnchorPx);
+
+            UpdatePerimeterWallCatalog(perimeterSpecs);
+            ValidatePerimeterWalls(perimeterSpecs);
+            AssetDatabase.SaveAssets();
+            Debug.Log(
+                "FAMILY_COMPANY_OFFICE_PERIMETER_WALL_BUILD: PASS | " +
+                "kinds=3 oneTileSpan=160x80 openPassage=true chairDefinitionUntouched=true");
+        }
+
+        public static void RunPerimeterWallsBatch()
+        {
+            try
+            {
+                BuildPerimeterWalls();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
         }
 
         public static void RunBatch()
@@ -332,6 +378,17 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 if (spec.RuntimeGroundAnchorPx.x < 0f || spec.RuntimeGroundAnchorPx.y < 0f ||
                     spec.RuntimeGroundAnchorPx.x > CanvasWidth || spec.RuntimeGroundAnchorPx.y > CanvasHeight)
                     throw new InvalidOperationException("Furniture ground anchor is outside the runtime canvas: " + spec.RuntimePath);
+                if (IsPerimeterKind(spec.KindId))
+                {
+                    Vector2 actualSpan = new Vector2(480f, 240f) * spec.BakedUniformScale;
+                    Vector2 expectedSpan = new Vector2(
+                        OfficeGridTilemapPresenter.TilePixelWidth * 0.5f,
+                        OfficeGridTilemapPresenter.TilePixelHeight * 0.5f);
+                    if (Vector2.Distance(actualSpan, expectedSpan) > 0.01f)
+                        throw new InvalidOperationException(
+                            $"Perimeter module does not span exactly one isometric tile: " +
+                            $"{spec.KindId} actual={actualSpan} expected={expectedSpan}.");
+                }
             }
 
             if (seenKinds.Count != 15) throw new InvalidOperationException("Furniture catalog must contain exactly 15 kinds.");
@@ -351,6 +408,29 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     throw new InvalidOperationException(
                         $"Approved seating Sprite SHA mismatch: {profile.MemberId}/{profile.Clip}/{profile.FrameIndex}.");
             }
+        }
+
+        private static void ValidatePerimeterWalls(IReadOnlyList<FurnitureSpec> perimeterSpecs)
+        {
+            foreach (FurnitureSpec spec in perimeterSpecs)
+            {
+                ValidateSourceSafetyMargin(spec);
+                ValidateRuntimeTexture(spec.RuntimePath, spec, false);
+                if (Mathf.Abs(spec.SourceAspect - spec.RuntimeAspect) / spec.SourceAspect > 0.005f)
+                    throw new InvalidOperationException($"Perimeter aspect drift exceeds 0.5%: {spec.RuntimePath}.");
+                Vector2 actualSpan = new Vector2(480f, 240f) * spec.BakedUniformScale;
+                Vector2 expectedSpan = new Vector2(
+                    OfficeGridTilemapPresenter.TilePixelWidth * 0.5f,
+                    OfficeGridTilemapPresenter.TilePixelHeight * 0.5f);
+                if (Vector2.Distance(actualSpan, expectedSpan) > 0.01f)
+                    throw new InvalidOperationException(
+                        $"Perimeter module does not span exactly one isometric tile: " +
+                        $"{spec.KindId} actual={actualSpan} expected={expectedSpan}.");
+            }
+
+            OfficeFurnitureVisualCatalog catalog = LoadFurnitureVisualCatalog();
+            foreach (FurnitureSpec spec in perimeterSpecs)
+                catalog.Resolve(spec.KindId, spec.Facing).Validate();
         }
 
         private static void BuildAllRuntimePngs()
@@ -469,6 +549,77 @@ namespace FamilyCompany.Editor.OfficeGridQa
             EditorUtility.SetDirty(catalog);
         }
 
+        private static void UpdatePerimeterWallCatalog(IReadOnlyList<FurnitureSpec> perimeterSpecs)
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<OfficeFurnitureVisualCatalog>(FurnitureCatalogPath);
+            if (catalog == null)
+                throw new FileNotFoundException("Office furniture visual catalog is missing.", FurnitureCatalogPath);
+
+            OfficeFurnitureVisualDefinition[] definitions = catalog.Definitions.ToArray();
+            OfficeFurnitureVisualDefinition[] preservedDefinitions = (OfficeFurnitureVisualDefinition[])definitions.Clone();
+            OfficeFurnitureVisualDefinition chairDefinition = definitions.Single(definition =>
+                definition != null &&
+                string.Equals(definition.KindId, OfficeGridLayouts.SwivelChairKind, StringComparison.Ordinal));
+            Sprite chairFrontOverlay = chairDefinition.FrontOverlaySprite;
+            bool chairFrontOverlayWhenOccupied = chairDefinition.FrontOverlayWhenOccupied;
+
+            foreach (FurnitureSpec spec in perimeterSpecs)
+            {
+                int[] matches = definitions
+                    .Select((definition, index) => new { definition, index })
+                    .Where(item => item.definition != null &&
+                                   string.Equals(item.definition.KindId, spec.KindId, StringComparison.Ordinal) &&
+                                   item.definition.Facing == spec.Facing)
+                    .Select(item => item.index)
+                    .ToArray();
+                if (matches.Length != 1)
+                    throw new InvalidOperationException(
+                        $"Expected one existing perimeter catalog entry for {spec.KindId}/{spec.Facing}, found {matches.Length}.");
+                definitions[matches[0]] = CreateVisualDefinition(spec);
+            }
+
+            catalog.ReplaceDefinitions(definitions, catalog.CalibrationVersion);
+            for (int index = 0; index < definitions.Length; index++)
+            {
+                if (IsPerimeterKind(definitions[index].KindId)) continue;
+                if (!ReferenceEquals(catalog.Definitions[index], preservedDefinitions[index]))
+                    throw new InvalidOperationException(
+                        $"Perimeter-only catalog update replaced unrelated definition at index {index}: {definitions[index].KindId}.");
+            }
+            if (!ReferenceEquals(chairDefinition, catalog.Definitions.Single(definition =>
+                    definition != null &&
+                    string.Equals(definition.KindId, OfficeGridLayouts.SwivelChairKind, StringComparison.Ordinal))) ||
+                chairDefinition.FrontOverlaySprite != chairFrontOverlay ||
+                chairDefinition.FrontOverlayWhenOccupied != chairFrontOverlayWhenOccupied)
+            {
+                throw new InvalidOperationException(
+                    "Perimeter-only catalog update attempted to modify the swivel-chair overlay linkage or occupied-overlay flag.");
+            }
+            EditorUtility.SetDirty(catalog);
+        }
+
+        private static OfficeFurnitureVisualDefinition CreateVisualDefinition(FurnitureSpec spec)
+        {
+            return OfficeFurnitureVisualDefinition.Create(
+                spec.KindId,
+                spec.Facing,
+                RequiredSprite(spec.RuntimePath),
+                spec.SourceForegroundPolygon.Length == 0 ? null : RequiredSprite(spec.FrontPath),
+                spec.RuntimeGroundAnchorPx,
+                spec.RuntimeSortAnchorPx,
+                spec.RuntimeSeatAnchorPx,
+                spec.RuntimeWorkSurfaceAnchorPx,
+                1f,
+                spec.SourceSeatAnchorPx.HasValue,
+                spec.SourceWorkSurfaceAnchorPx.HasValue,
+                spec.SourceForegroundPolygon.Length > 0,
+                spec.RuntimeGroundFootprintPolygonPx,
+                spec.SemanticFootprintWidth,
+                spec.SemanticFootprintHeight,
+                spec.RuntimeOperatorSeatSocketPx,
+                spec.SourceOperatorSeatSocketPx.HasValue);
+        }
+
         private static void CreateOrUpgradePoseCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<OfficeCharacterSeatPoseCatalog>(PoseCatalogPath);
@@ -531,10 +682,21 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Texture2D source = ReadTexture(spec.SourcePath);
             try
             {
-                RectInt bounds = VisibleBounds(source.GetPixels32(), source.width, source.height, 16);
+                Color32[] pixels = source.GetPixels32();
+                RectInt bounds = VisibleBounds(pixels, source.width, source.height, 16);
                 if (bounds.xMin < 24 || bounds.yMin < 24 ||
                     source.width - bounds.xMax < 24 || source.height - bounds.yMax < 24)
                     throw new InvalidOperationException($"Furniture source touches its safety margin: {spec.SourcePath} bounds={bounds}.");
+                if (IsPerimeterKind(spec.KindId))
+                {
+                    ValidateVisibleEndpoint(pixels, source.width, source.height, spec.SourceGroundAnchorPx, spec);
+                    ValidateVisibleEndpoint(
+                        pixels,
+                        source.width,
+                        source.height,
+                        spec.SourceGroundAnchorPx + new Vector2(480f, 240f),
+                        spec);
+                }
             }
             finally
             {
@@ -562,6 +724,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     if (pixel.a > 0 && pixel.r > 180 && pixel.b > 150 && pixel.g < 90)
                         throw new InvalidOperationException($"Furniture contains magenta fringe at {index}: {path}.");
                 }
+                if (!overlay && string.Equals(
+                        spec.KindId,
+                        OfficeGridLayouts.EntranceDoorKind,
+                        StringComparison.Ordinal))
+                {
+                    ValidateOpenEntranceCenter(pixels, spec, path);
+                }
 
                 Sprite sprite = RequiredSprite(path);
                 if (Math.Abs(sprite.pixelsPerUnit - PixelsPerUnit) > 0.01f)
@@ -583,6 +752,57 @@ namespace FamilyCompany.Editor.OfficeGridQa
             return new Vector2(
                 destinationX + (sourceAnchor.x - bounds.xMin) * scale,
                 destinationY + (sourceAnchor.y - bounds.yMin) * scale);
+        }
+
+        private static bool IsPerimeterKind(string kindId)
+        {
+            return string.Equals(kindId, OfficeGridLayouts.EntranceDoorKind, StringComparison.Ordinal) ||
+                   string.Equals(kindId, OfficeGridLayouts.EntranceWallKind, StringComparison.Ordinal) ||
+                   string.Equals(kindId, OfficeGridLayouts.PerimeterCutawayWallKind, StringComparison.Ordinal);
+        }
+
+        private static void ValidateOpenEntranceCenter(
+            IReadOnlyList<Color32> pixels,
+            FurnitureSpec spec,
+            string path)
+        {
+            Vector2 passageCenter = spec.RuntimeGroundAnchorPx + new Vector2(80f, 40f);
+            int minimumX = Mathf.RoundToInt(passageCenter.x - 36f);
+            int maximumX = Mathf.RoundToInt(passageCenter.x + 36f);
+            // A thin sill may cross the floor plane. The clear-body probe begins above it so
+            // the validator rejects a door leaf or center wall without rejecting the threshold.
+            int minimumY = Mathf.RoundToInt(passageCenter.y + 52f);
+            int maximumY = Mathf.RoundToInt(passageCenter.y + 145f);
+            for (int y = minimumY; y <= maximumY; y++)
+            for (int x = minimumX; x <= maximumX; x++)
+            {
+                if (x < 0 || x >= CanvasWidth || y < 0 || y >= CanvasHeight) continue;
+                if (pixels[y * CanvasWidth + x].a == 0) continue;
+                throw new InvalidOperationException(
+                    $"Entrance art must keep its central tile passage fully open: {path} pixel=({x},{y}).");
+            }
+        }
+
+        private static void ValidateVisibleEndpoint(
+            IReadOnlyList<Color32> pixels,
+            int width,
+            int height,
+            Vector2 endpoint,
+            FurnitureSpec spec)
+        {
+            int centerX = Mathf.RoundToInt(endpoint.x);
+            int centerY = Mathf.RoundToInt(endpoint.y);
+            for (int offsetY = -2; offsetY <= 2; offsetY++)
+            for (int offsetX = -2; offsetX <= 2; offsetX++)
+            {
+                if (offsetX * offsetX + offsetY * offsetY > 4) continue;
+                int x = centerX + offsetX;
+                int y = centerY + offsetY;
+                if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                if (pixels[y * width + x].a > 16) return;
+            }
+            throw new InvalidOperationException(
+                $"Perimeter source has no visible connection pixel within 2px of endpoint {endpoint}: {spec.SourcePath}.");
         }
 
         private static void ValidateSourceAnchor(Vector2 anchor, RectInt bounds, FurnitureSpec spec, string name)

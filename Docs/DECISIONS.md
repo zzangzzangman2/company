@@ -329,3 +329,13 @@ Shadow 선택만 기록하며 GameState·Save DTO·OfficeRuntimeAgent·패키지
 새 프레임워크는 이 정본을 중복시키지만, 스마트 오브젝트식 정의와 Utility 점수 분해는 선택 이유와 향후
 가구 Offer 연결을 검증하는 데 유용하다. Shadow 모드는 실제 플레이 결과를 보존한 상태에서 점수 품질과
 결정론을 측정하고 다음 활성화 여부를 별도로 판단하게 한다.
+
+## 2026-08-14 / 외곽 벽은 한 타일 모듈, 출입구는 상시 열린 호환 프레임
+
+결정: Starter Office 외곽은 별도 직선 화면 wall이 아니라 2:1 grid basis를 따르는 한 타일 모듈 48개로 닫는다. source의 두 실제 alpha endpoint와 runtime `160×80px` span을 함께 검증하며 SouthWest 면은 같은 모듈의 X mirror를 사용한다. far edge는 full height, near edge는 cutaway height를 사용한다.
+
+결정: 저장·layout·GUID 호환을 위해 `entrance_door`/`EntranceDoorKind` 이름은 유지한다. 이 키의 시각 의미는 문이 아니라 항상 열린 jamb+threshold frame이며 door leaf, lintel, Animator/Animation을 금지한다. family entrance authority `(8,1)`과 이동/좌석/방향 규칙은 바꾸지 않는다.
+
+결정: 벽 아트 갱신은 `BuildPerimeterWalls`로만 수행한다. 전체 가구 builder를 캡처 경로에서 호출하지 않고 catalog의 세 perimeter definition만 교체한다. 비벽 definition identity와 swivel-chair overlay link/occupied flag를 변경하면 즉시 실패한다.
+
+결정: 출근 표현은 시각적 문 열림 없이 09:00 첫 입장 성공의 `door_open` 한 번만 사용한다. gate는 날짜 shift와 현재 `GameState` rebind를 추적하고 성공 재생 뒤 잠긴다. 실제 전체 audio counter로 open 1/close 0을 Windows player QA에서 검증한다.

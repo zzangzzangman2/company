@@ -137,3 +137,9 @@ PrototypeBootstrap / GameState.OfficeGrid
 - `OfficeLayoutEditorWindow`는 0.5셀 snap, 전체 footprint 이동, 회전, 복사, 삭제, Undo/Redo, Workstation Blueprint와 접근 칸 지정을 제공한다.
 - `OfficePlaceableDefinition`의 기본값은 `BlocksMovement=true`다. 저장 전 overlap, 경계, 필수 좌석, approach, 출구 연결을 검증한다.
 - Runtime Presenter와 Save adapter가 같은 `OfficeGrid.ComputeLayoutHash()`를 사용하며 Scene Transform은 저장 정본이 아니다.
+
+## Perimeter visual and attendance-audio boundary
+
+- `OfficeGridLayouts` owns the 48 semantic perimeter placements. The three source/runtime PNG pairs and their pivots are presentation assets; `OfficeFurnitureAssetBuilder.BuildPerimeterWalls` may update only their catalog definitions.
+- `EntranceDoorKind` is a legacy persistence/catalog key for an always-open frame. Navigation continues to own the canonical interior entrance `(8,1)`; no door state or animation is added to `OfficeRuntimeAgent`.
+- `OfficeAutonomyCoordinator` observes the successful first 09:00 attendance release and requests one `door_open` SFX. `GameAudioCoordinator` owns playback and QA counters. Later staggered entrants and `door_close` are outside this attendance cue path.

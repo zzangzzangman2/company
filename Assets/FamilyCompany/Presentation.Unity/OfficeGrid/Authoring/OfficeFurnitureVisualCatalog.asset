@@ -270,13 +270,13 @@ MonoBehaviour:
     facing: 0
     baseSprite: {fileID: 21300000, guid: bdb0baaefb381c84abbbb6802479ee22, type: 3}
     frontOverlaySprite: {fileID: 0}
-    groundAnchorPx: {x: 233.75, y: 24}
-    sortAnchorPx: {x: 233.75, y: 24}
+    groundAnchorPx: {x: 245.66667, y: 26}
+    sortAnchorPx: {x: 245.66667, y: 26}
     groundFootprintPolygonPx:
-    - {x: 233.75, y: -56}
-    - {x: 393.75, y: 24}
-    - {x: 233.75, y: 104}
-    - {x: 73.75, y: 24}
+    - {x: 245.66667, y: -54}
+    - {x: 405.6667, y: 26}
+    - {x: 245.66669, y: 106}
+    - {x: 85.66667, y: 26}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
@@ -291,13 +291,13 @@ MonoBehaviour:
     facing: 0
     baseSprite: {fileID: 21300000, guid: 95d951b2b1370524c886b2944a8828dc, type: 3}
     frontOverlaySprite: {fileID: 0}
-    groundAnchorPx: {x: 233.75, y: 24}
-    sortAnchorPx: {x: 233.75, y: 24}
+    groundAnchorPx: {x: 245.33333, y: 25.333334}
+    sortAnchorPx: {x: 245.33333, y: 25.333334}
     groundFootprintPolygonPx:
-    - {x: 233.75, y: -56}
-    - {x: 393.75, y: 24}
-    - {x: 233.75, y: 104}
-    - {x: 73.75, y: 24}
+    - {x: 245.33333, y: -54.666664}
+    - {x: 405.3333, y: 25.333336}
+    - {x: 245.33331, y: 105.333336}
+    - {x: 85.33333, y: 25.333334}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
@@ -312,13 +312,13 @@ MonoBehaviour:
     facing: 0
     baseSprite: {fileID: 21300000, guid: 01b50657111c72a46a58758231288e8f, type: 3}
     frontOverlaySprite: {fileID: 0}
-    groundAnchorPx: {x: 233.75, y: 24}
-    sortAnchorPx: {x: 233.75, y: 24}
+    groundAnchorPx: {x: 245.33333, y: 25.666666}
+    sortAnchorPx: {x: 245.33333, y: 25.666666}
     groundFootprintPolygonPx:
-    - {x: 233.75, y: -56}
-    - {x: 393.75, y: 24}
-    - {x: 233.75, y: 104}
-    - {x: 73.75, y: 24}
+    - {x: 245.33333, y: -54.333336}
+    - {x: 405.3333, y: 25.666664}
+    - {x: 245.33331, y: 105.666664}
+    - {x: 85.33333, y: 25.666666}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
