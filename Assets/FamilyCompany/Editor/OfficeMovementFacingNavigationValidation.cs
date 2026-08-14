@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using FamilyCompany.Presentation.Unity;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
@@ -48,6 +49,7 @@ namespace FamilyCompany.Editor
             ValidateSameFrameLateralSpriteConsumption();
             ValidateEightDirectionsAndStoppedFacing();
             ValidateVisibleMotionFrameCap();
+            ValidateActorScopedDebtTransitionsAndRoundRobin();
             ValidateFourActorAttendanceIngressReservation();
             ValidateCanonicalFurniturePathDetours();
             Debug.Log(
@@ -450,6 +452,176 @@ namespace FamilyCompany.Editor
                     $"distanceError={Mathf.Abs(totalMoved - routeLength):F8} " +
                     $"drainedFrame={drainedAtFrame} multiStepRenders={multiStepRenderCount} " +
                     "finalDebt=0 penetrations=0");
+            }
+        }
+
+        private static void ValidateActorScopedDebtTransitionsAndRoundRobin()
+        {
+            float idleDebt = 0f;
+            for (var frame = 0; frame < 10 * 60 * 60; frame++)
+            {
+                OfficeVisibleMotionBudget idle =
+                    OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
+                        false,
+                        idleDebt,
+                        1f / 60f);
+                idleDebt = idle.RemainingDebtSeconds;
+            }
+            Require(idleDebt <= 0.0000001f,
+                "Ten minutes of idle/work accumulated visible motion debt.");
+
+            OfficeVisibleMotionBudget firstRouteFrame =
+                OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
+                    true,
+                    idleDebt,
+                    1f / 60f);
+            Require(firstRouteFrame.RemainingDebtSeconds <= 0.0000001f &&
+                    OfficeRuntimeAgent.DefaultMoveSpeed * firstRouteFrame.ConsumedSeconds <=
+                    0.099001f,
+                "A route starting after long idle inherited debt or exceeded its first-frame cap.");
+
+            var mixedDebt = new float[4];
+            bool[] oneMoving = { true, false, false, false };
+            for (var actor = 0; actor < mixedDebt.Length; actor++)
+            {
+                OfficeVisibleMotionBudget budget =
+                    OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
+                        oneMoving[actor],
+                        mixedDebt[actor],
+                        0.500f);
+                mixedDebt[actor] = budget.RemainingDebtSeconds;
+            }
+            Require(mixedDebt[0] > 0.43f &&
+                    mixedDebt.Skip(1).All(value => value <= 0.0000001f),
+                "One moving actor transferred hitch debt to an idle/work sibling.");
+
+            bool[] mixedIntent = { true, false, true, false };
+            for (var actor = 0; actor < mixedDebt.Length; actor++)
+            {
+                OfficeVisibleMotionBudget budget =
+                    OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
+                        mixedIntent[actor],
+                        mixedDebt[actor],
+                        0.200f);
+                mixedDebt[actor] = budget.RemainingDebtSeconds;
+            }
+            Require(mixedDebt[0] > 0f && mixedDebt[2] > 0f &&
+                    mixedDebt[1] <= 0.0000001f && mixedDebt[3] <= 0.0000001f,
+                "Mixed active/idle actor debt ownership was not isolated.");
+
+            float transitionDebt = mixedDebt[0];
+            string[] inactiveTransitions =
+            {
+                "route-cancelled",
+                "seat-claim-failed",
+                "blocked-no-intent",
+                "route-complete"
+            };
+            foreach (string transition in inactiveTransitions)
+            {
+                transitionDebt = OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
+                        false,
+                        transitionDebt,
+                        1f / 60f)
+                    .RemainingDebtSeconds;
+                Require(transitionDebt <= 0.0000001f,
+                    transition + " did not clear actor debt immediately.");
+                // A replan/departure starts a new route with zero old debt. A hitch may create
+                // new debt, but its first rendered displacement remains bounded.
+                OfficeVisibleMotionBudget restarted =
+                    OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
+                        true,
+                        transitionDebt,
+                        0.500f);
+                Require(restarted.ConsumedSeconds <=
+                        OfficeRuntimeWorld.MaximumVisibleMotionDeltaSeconds + 0.0000001f &&
+                        OfficeRuntimeAgent.DefaultMoveSpeed * restarted.ConsumedSeconds <=
+                        0.099001f,
+                    transition + " restart exceeded its first rendered movement budget.");
+                transitionDebt = restarted.RemainingDebtSeconds;
+            }
+
+            int drainFrames = 0;
+            while (transitionDebt > 0.0000001f && drainFrames < 120)
+            {
+                OfficeVisibleMotionBudget drained =
+                    OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
+                        true,
+                        transitionDebt,
+                        1f / 60f);
+                transitionDebt = drained.RemainingDebtSeconds;
+                drainFrames++;
+            }
+            Require(transitionDebt <= 0.0000001f && drainFrames < 120,
+                "Active route backlog did not drain in finite render time.");
+
+            ValidateRoundRobinRegistrationOrderDeterminism();
+            Debug.Log(
+                "ACTOR_SCOPED_MOTION_DEBT_TRACE | idleMinutes=10 actors=4 " +
+                "oneActive=pass mixedActiveIdle=pass cancelReplan=pass " +
+                "seatFailure=pass departure=pass firstFrame<=0.099 backlog=0 " +
+                $"drainFrames={drainFrames} roundRobinDeterministic=pass");
+        }
+
+        private static void ValidateRoundRobinRegistrationOrderDeterminism()
+        {
+            string[] canonical = { "father", "mother", "older_sister", "player" };
+            string[][] registrations =
+            {
+                new[] { "player", "older_sister", "father", "mother" },
+                new[] { "mother", "father", "player", "older_sister" },
+                new[] { "older_sister", "player", "mother", "father" }
+            };
+            string expectedSchedule = null;
+            foreach (string[] registration in registrations)
+            {
+                var registry = new OfficeRuntimeActorRegistry();
+                var objects = new List<GameObject>();
+                try
+                {
+                    FieldInfo idField = typeof(OfficeRuntimeAgent).GetField(
+                        "_agentId",
+                        BindingFlags.Instance | BindingFlags.NonPublic);
+                    Require(idField != null, "OfficeRuntimeAgent ID field was unavailable.");
+                    foreach (string id in registration)
+                    {
+                        var item = new GameObject("round-robin-" + id);
+                        objects.Add(item);
+                        OfficeRuntimeAgent agent = item.AddComponent<OfficeRuntimeAgent>();
+                        idField.SetValue(agent, id);
+                        registry.Register(agent);
+                    }
+                    string[] ordered = registry.Actors.Select(item => item.AgentId).ToArray();
+                    Require(ordered.SequenceEqual(canonical),
+                        "Runtime actor registry order depends on registration order.");
+                    int[] stepCounts = { 3, 1, 2, 3 };
+                    var schedule = new List<string>();
+                    for (var step = 0; step < stepCounts.Max(); step++)
+                    for (var actor = 0; actor < ordered.Length; actor++)
+                    {
+                        if (step < stepCounts[actor])
+                            schedule.Add(ordered[actor] + ":" + step);
+                    }
+                    string serialized = string.Join(",", schedule);
+                    if (expectedSchedule == null) expectedSchedule = serialized;
+                    else Require(serialized == expectedSchedule,
+                        "Round-robin substep schedule changed with registration order.");
+                    for (var actor = 0; actor < ordered.Length; actor++)
+                    {
+                        int actorIndex = actor;
+                        int first = schedule.FindIndex(value =>
+                            value == ordered[actorIndex] + ":0");
+                        int second = schedule.FindIndex(value =>
+                            value == ordered[actorIndex] + ":1");
+                        if (stepCounts[actor] > 1)
+                            Require(second - first >= ordered.Length - 1,
+                                ordered[actor] + " consumed all substeps before its peers.");
+                    }
+                }
+                finally
+                {
+                    foreach (GameObject item in objects) Object.DestroyImmediate(item);
+                }
             }
         }
 

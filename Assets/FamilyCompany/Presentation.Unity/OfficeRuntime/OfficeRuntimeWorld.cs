@@ -36,7 +36,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeRuntimeWorkstationService _workstations;
         private OfficeRuntimeDepthSorter _depthSorter;
         private bool _configured;
-        private float _motionTimeDebtSeconds;
+        private float[] _frameMotionDeltas = Array.Empty<float>();
+        private int[] _frameStepCounts = Array.Empty<int>();
 
         public OfficeGrid Grid => _grid;
         public OfficeGridTilemapPresenter Presenter => _presenter;
@@ -53,7 +54,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public float LastFrameDeltaTime { get; private set; }
         public float LastUnscaledFrameDeltaTime { get; private set; }
         public float LastMotionDeltaTime { get; private set; }
-        public float MotionTimeDebtSeconds => _motionTimeDebtSeconds;
+        public float MotionTimeDebtSeconds { get; private set; }
 
         public static OfficeVisibleMotionBudget ConsumeVisibleMotionBudget(
             float previousDebtSeconds,
@@ -70,6 +71,28 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float remaining = Mathf.Max(0f, available - consumed);
             if (remaining <= 0.0000001f) remaining = 0f;
             return new OfficeVisibleMotionBudget(consumed, remaining);
+        }
+
+        public static OfficeVisibleMotionBudget ConsumeActorVisibleMotionBudget(
+            bool hasActiveVisibleMotionIntent,
+            float previousDebtSeconds,
+            float unscaledFrameDeltaTime)
+        {
+            if (!hasActiveVisibleMotionIntent)
+            {
+                if (float.IsNaN(previousDebtSeconds) || float.IsInfinity(previousDebtSeconds) ||
+                    previousDebtSeconds < 0f)
+                    throw new ArgumentOutOfRangeException(nameof(previousDebtSeconds));
+                if (float.IsNaN(unscaledFrameDeltaTime) || float.IsInfinity(unscaledFrameDeltaTime) ||
+                    unscaledFrameDeltaTime < 0f)
+                    throw new ArgumentOutOfRangeException(nameof(unscaledFrameDeltaTime));
+                // Idle/work/failed reservation time is not traversable route distance. Runtime
+                // logic still receives one bounded tick, while stale catch-up is cleared now.
+                return new OfficeVisibleMotionBudget(
+                    Mathf.Min(unscaledFrameDeltaTime, MaximumVisibleMotionDeltaSeconds),
+                    0f);
+            }
+            return ConsumeVisibleMotionBudget(previousDebtSeconds, unscaledFrameDeltaTime);
         }
 
         public void Configure(
@@ -91,7 +114,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _occupancy,
                 _paths);
             _depthSorter = new OfficeRuntimeDepthSorter(grid, presenter, furniturePresenter);
-            _motionTimeDebtSeconds = 0f;
+            MotionTimeDebtSeconds = 0f;
             _configured = true;
         }
 
@@ -166,39 +189,77 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 // navigation deliberately advances only the debt consumed here: every TickRuntime
                 // substep moves the visible Transform and updates canonical occupancy together, so a
                 // logical seat/work arrival cannot run ahead of the body or reserve through furniture.
-                // Any hitch remainder stays in _motionTimeDebtSeconds and drains on later renders.
-                OfficeVisibleMotionBudget budget = ConsumeVisibleMotionBudget(
-                    _motionTimeDebtSeconds,
-                    unscaledDeltaTime);
-                float motionDeltaTime = budget.ConsumedSeconds;
-                _motionTimeDebtSeconds = budget.RemainingDebtSeconds;
+                // Any hitch remainder stays on the actor that owns the active route and drains on
+                // later renders. Idle time is never transferred to a future route.
                 LastFrameDeltaTime = deltaTime;
                 LastUnscaledFrameDeltaTime = unscaledDeltaTime;
-                LastMotionDeltaTime = motionDeltaTime;
-                foreach (OfficeRuntimeAgent actor in _registry.Actors)
+                IReadOnlyList<OfficeRuntimeAgent> actors = _registry.Actors;
+                EnsureFrameBuffers(actors.Count);
+                LastMotionDeltaTime = 0f;
+                MotionTimeDebtSeconds = 0f;
+                int maximumStepCount = 0;
+                for (var index = 0; index < actors.Count; index++)
                 {
-                    if (actor != null && actor.isActiveAndEnabled) actor.BeginPresentationFrame();
-                }
-                int stepCount = OfficeNavigationMotionIntegrator.CalculateStepCount(motionDeltaTime);
-                for (var step = 0; step < stepCount; step++)
-                {
-                    float stepDelta = OfficeNavigationMotionIntegrator.ResolveStepDelta(
-                        motionDeltaTime,
-                        step,
-                        stepCount);
-                    foreach (OfficeRuntimeAgent actor in _registry.Actors)
+                    OfficeRuntimeAgent actor = actors[index];
+                    if (actor == null || !actor.isActiveAndEnabled)
                     {
-                        if (actor != null && actor.isActiveAndEnabled) actor.TickRuntime(stepDelta);
+                        _frameMotionDeltas[index] = 0f;
+                        _frameStepCounts[index] = 0;
+                        continue;
+                    }
+                    actor.BeginPresentationFrame();
+                    float actorDelta = actor.ConsumeVisibleMotionDelta(unscaledDeltaTime);
+                    int actorSteps = OfficeNavigationMotionIntegrator.CalculateStepCount(actorDelta);
+                    _frameMotionDeltas[index] = actorDelta;
+                    _frameStepCounts[index] = actorSteps;
+                    LastMotionDeltaTime = Mathf.Max(LastMotionDeltaTime, actorDelta);
+                    MotionTimeDebtSeconds = Mathf.Max(
+                        MotionTimeDebtSeconds,
+                        actor.VisibleMotionDebtSeconds);
+                    maximumStepCount = Mathf.Max(maximumStepCount, actorSteps);
+                }
+                for (var step = 0; step < maximumStepCount; step++)
+                {
+                    for (var index = 0; index < actors.Count; index++)
+                    {
+                        OfficeRuntimeAgent actor = actors[index];
+                        int actorSteps = _frameStepCounts[index];
+                        if (actor == null || !actor.isActiveAndEnabled || step >= actorSteps) continue;
+                        float stepDelta = OfficeNavigationMotionIntegrator.ResolveStepDelta(
+                            _frameMotionDeltas[index],
+                            step,
+                            actorSteps);
+                        actor.TickRuntime(stepDelta);
+                        actor.ClearInactiveVisibleMotionDebt();
                     }
                 }
-                foreach (OfficeRuntimeAgent actor in _registry.Actors)
+                for (var index = 0; index < actors.Count; index++)
                 {
-                    if (actor != null && actor.isActiveAndEnabled) actor.TickPresentation(motionDeltaTime);
+                    OfficeRuntimeAgent actor = actors[index];
+                    if (actor != null && actor.isActiveAndEnabled)
+                        actor.TickPresentation(_frameMotionDeltas[index]);
+                }
+                MotionTimeDebtSeconds = 0f;
+                for (var index = 0; index < actors.Count; index++)
+                {
+                    OfficeRuntimeAgent actor = actors[index];
+                    if (actor != null && actor.isActiveAndEnabled)
+                        MotionTimeDebtSeconds = Mathf.Max(
+                            MotionTimeDebtSeconds,
+                            actor.VisibleMotionDebtSeconds);
                 }
                 // One footprint sort owns every sorting order in the office, applied last so nothing
                 // can leave a stale per-sprite order behind.
-                _depthSorter.Apply(_registry.Actors);
+                _depthSorter.Apply(actors);
             }
+        }
+
+        private void EnsureFrameBuffers(int actorCount)
+        {
+            if (_frameMotionDeltas.Length >= actorCount && _frameStepCounts.Length >= actorCount)
+                return;
+            _frameMotionDeltas = new float[actorCount];
+            _frameStepCounts = new int[actorCount];
         }
 
         private void OnDestroy()

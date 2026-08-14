@@ -112,6 +112,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _typingContactSampleCount;
         private bool _qaControl;
         private Vector2 _lastActualDisplacement;
+        private float _visibleMotionDebtSeconds;
+        private float _visibleFrameMovementBudgetWorld;
+        private float _visibleFrameMovementWorld;
         private OfficeGridCoordinate? _yieldCell;
         private int _presentationPathIndex = -1;
         private int _presentationWaypointChanges;
@@ -226,6 +229,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ? OfficeWorkMicroAction.None
             : _animator.CurrentOfficeWorkMicroAction;
         public Vector2 LastActualDisplacement => _lastActualDisplacement;
+        public float VisibleMotionDebtSeconds => _visibleMotionDebtSeconds;
+        public float VisibleFrameMovementWorld => _visibleFrameMovementWorld;
+        public bool HasActiveVisibleMotionIntent =>
+            _attendanceIngressActive ||
+            (_playerControlled && _playerInput.sqrMagnitude > 0.0001f) ||
+            (_destination.HasValue && !_arrived) ||
+            IsEnteringSeat ||
+            Phase == OfficeRuntimeAgentPhase.SittingDown ||
+            Phase == OfficeRuntimeAgentPhase.StandingUp ||
+            Phase == OfficeRuntimeAgentPhase.LeavingSeat;
         public Vector2 AccumulatedFrameDisplacement => _animator == null
             ? Vector2.zero
             : _animator.AccumulatedTileDisplacement;
@@ -413,6 +426,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _visualRoot.localPosition = Vector3.zero;
             _visualRoot.localRotation = Quaternion.identity;
             _visualRoot.localScale = Vector3.one * OfficeGridCharacterMover.UniformVisualScale;
+            ClearVisibleMotionDebt();
             Phase = OfficeRuntimeAgentPhase.Idle;
             _pathRevision = _world.Occupancy.Revision;
         }
@@ -614,6 +628,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void ResetRuntimeState()
         {
+            ClearVisibleMotionDebt();
             EndInteraction(
                 OfficeRuntimeInteractionTermination.Aborted,
                 OfficeRuntimeInteractionEndReason.RuntimeReset);
@@ -957,6 +972,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void BeginPresentationFrame()
         {
+            _visibleFrameMovementBudgetWorld =
+                DefaultMoveSpeed * OfficeRuntimeWorld.MaximumVisibleMotionDeltaSeconds;
+            _visibleFrameMovementWorld = 0f;
             _seatEgressFrameMovementBudgetWorld =
                 MaximumSeatEgressStepPx / OfficeGridTilemapPresenter.PixelsPerUnit;
             _seatEgressFrameMovementWorld = 0f;
@@ -1074,6 +1092,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private bool BeginDestination(OfficeRuntimeDestination destination)
         {
+            // A destination is a new distance contract. Never transfer catch-up time from an
+            // earlier completed/cancelled/idle job into its first rendered frame.
+            ClearVisibleMotionDebt();
             _standingFacingDirection = -1;
             if (_presentationAway)
             {
@@ -1220,15 +1241,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        internal float ConsumeVisibleMotionDelta(float unscaledFrameDeltaTime)
+        {
+            OfficeVisibleMotionBudget budget = OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
+                HasActiveVisibleMotionIntent,
+                _visibleMotionDebtSeconds,
+                unscaledFrameDeltaTime);
+            _visibleMotionDebtSeconds = budget.RemainingDebtSeconds;
+            return budget.ConsumedSeconds;
+        }
+
+        internal void ClearInactiveVisibleMotionDebt()
+        {
+            if (!HasActiveVisibleMotionIntent) ClearVisibleMotionDebt();
+        }
+
+        private void ClearVisibleMotionDebt()
+        {
+            _visibleMotionDebtSeconds = 0f;
+        }
+
         private void TickAttendanceIngress(float deltaTime)
         {
             Vector2 delta = _attendanceIngressInteriorWorld - Position;
             if (delta.magnitude <= ArrivalDistance)
             {
-                transform.position = new Vector3(
-                    _attendanceIngressInteriorWorld.x,
-                    _attendanceIngressInteriorWorld.y,
-                    transform.position.z);
+                if (!TryConsumeAttendanceIngressEndpoint(
+                        _attendanceIngressInteriorWorld,
+                        deltaTime)) return;
                 ReleaseAttendanceIngress();
                 StopMotion();
                 _world.Occupancy.UpdateActor(
@@ -1250,6 +1290,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float deltaTime,
             float maximumDistance)
         {
+            if (_visibleFrameMovementBudgetWorld <= 0.0000001f)
+            {
+                _lastActualDisplacement = Vector2.zero;
+                _desiredVelocity = targetVelocity;
+                return;
+            }
             float changePerSecond = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
                 new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
@@ -1263,7 +1309,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _currentVelocity = new Vector2(motion.Velocity.X, motion.Velocity.Z);
             OfficeNavPoint clamped = OfficeNavigationMotionIntegrator.ClampDisplacement(
                 motion.Displacement,
-                Mathf.Max(0f, maximumDistance));
+                Mathf.Min(
+                    Mathf.Max(0f, maximumDistance),
+                    _visibleFrameMovementBudgetWorld));
             var intended = new Vector2(clamped.X, clamped.Z);
             Vector2 before = Position;
             Vector2 after = before + intended;
@@ -1277,6 +1325,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (actual.sqrMagnitude > 0.0000001f)
             {
                 transform.position = new Vector3(after.x, after.y, transform.position.z);
+                ConsumeVisibleFrameMovement(actual.magnitude);
                 _stuckSeconds = Mathf.Max(0f, _stuckSeconds - deltaTime * 2f);
                 LastMovementBlocker = string.Empty;
             }
@@ -1296,6 +1345,38 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _desiredVelocity,
                 _stuckSeconds,
                 _seat?.SeatId ?? string.Empty);
+        }
+
+        private bool TryConsumeAttendanceIngressEndpoint(Vector2 target, float deltaTime)
+        {
+            Vector2 before = Position;
+            Vector2 intended = target - before;
+            float distance = intended.magnitude;
+            if (distance > _visibleFrameMovementBudgetWorld + 0.0000001f) return false;
+            if (distance <= 0.0000001f) return true;
+            if (!_world.Occupancy.CanMoveAttendanceIngress(
+                    _agentId,
+                    before,
+                    target,
+                    AgentRadius))
+            {
+                LastMovementBlocker = "attendance-ingress-endpoint";
+                return false;
+            }
+            transform.position = new Vector3(target.x, target.y, transform.position.z);
+            ConsumeVisibleFrameMovement(distance);
+            Vector2 semanticVelocity = intended.normalized * DefaultMoveSpeed;
+            _animator.AccumulateTileMotion(semanticVelocity, intended, deltaTime, false);
+            _lastActualDisplacement = intended;
+            _desiredVelocity = semanticVelocity;
+            _world.Occupancy.UpdateActor(
+                _agentId,
+                Position,
+                _desiredVelocity,
+                _stuckSeconds,
+                _seat?.SeatId ?? string.Empty);
+            LastMovementBlocker = string.Empty;
+            return true;
         }
 
         private void ReleaseAttendanceIngress()
@@ -1425,7 +1506,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             if (delta.magnitude <= ArrivalDistance)
             {
-                transform.position = new Vector3(target.x, target.y, transform.position.z);
+                if (!TryConsumeExactEndpoint(
+                        target,
+                        deltaTime,
+                        _destination.Value.SeatId,
+                        desiredDirection * DefaultMoveSpeed)) return;
                 _pathIndex = presentationTargetIndex + 1;
                 if (_pathIndex >= _path.Count) CompleteNavigation();
                 return;
@@ -1500,7 +1585,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Vector2 delta = target - Position;
             if (delta.magnitude <= ArrivalDistance)
             {
-                transform.position = new Vector3(target.x, target.y, transform.position.z);
+                if (!TryConsumeExactEndpoint(
+                        target,
+                        deltaTime,
+                        permittedSeatId,
+                        delta.sqrMagnitude > 0.000001f
+                            ? delta.normalized * (DefaultMoveSpeed * 0.72f)
+                            : Vector2.zero)) return true;
                 _world.Occupancy.UpdateActor(
                     _agentId,
                     Position,
@@ -1618,8 +1709,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                             delta.magnitude);
                         return;
                     }
-                    if (delta.sqrMagnitude > 0.00000001f)
-                        transform.position = new Vector3(target.x, target.y, transform.position.z);
+                    if (!TryConsumeExactEndpoint(
+                            target,
+                            deltaTime,
+                            _seat.SeatId,
+                            delta.sqrMagnitude > 0.000001f
+                                ? delta.normalized * 1.15f
+                                : Vector2.zero)) return;
                     StopMotion();
                     Phase = OfficeRuntimeAgentPhase.AligningSeat;
                     break;
@@ -1648,8 +1744,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         MoveWithCollision(velocity, deltaTime, _seat.SeatId, delta.magnitude);
                         return;
                     }
-                    if (delta.sqrMagnitude > 0.00000001f)
-                        transform.position = new Vector3(target.x, target.y, transform.position.z);
+                    if (!TryConsumeExactEndpoint(
+                            target,
+                            deltaTime,
+                            _seat.SeatId,
+                            delta.sqrMagnitude > 0.000001f
+                                ? delta.normalized * 1.15f
+                                : Vector2.zero)) return;
                     StopMotion();
                     Phase = OfficeRuntimeAgentPhase.RotatingToSeat;
                     break;
@@ -2028,11 +2129,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (delta.sqrMagnitude > 0.00000001f)
             {
                 float moved = delta.magnitude;
-                if (moved > _seatEgressFrameMovementBudgetWorld + 0.0000001f) return;
+                if (moved > _seatEgressFrameMovementBudgetWorld + 0.0000001f ||
+                    moved > _visibleFrameMovementBudgetWorld + 0.0000001f) return;
                 transform.position = new Vector3(
                     _seatEgressTargetWorld.x,
                     _seatEgressTargetWorld.y,
                     transform.position.z);
+                ConsumeVisibleFrameMovement(moved);
                 _seatEgressFrameMovementBudgetWorld =
                     Mathf.Max(0f, _seatEgressFrameMovementBudgetWorld - moved);
                 _seatEgressFrameMovementWorld += moved;
@@ -2158,6 +2261,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float maximumDistance = float.PositiveInfinity,
             Vector2? presentationSemanticVelocity = null)
         {
+            if (_visibleFrameMovementBudgetWorld <= 0.0000001f)
+            {
+                // This render already consumed its complete visible budget. The route and its
+                // time debt remain intact for the next frame; this is not a collision/stuck tick.
+                _lastActualDisplacement = Vector2.zero;
+                _desiredVelocity = targetVelocity;
+                return;
+            }
             Vector2 integrationTargetVelocity = targetVelocity;
             // LeavingSeat deliberately moves away from the chair while the presentation remains
             // locked to the seat facing. The normal pre-move pivot gate would otherwise wait for a
@@ -2180,11 +2291,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 changePerSecond,
                 deltaTime);
             _currentVelocity = new Vector2(motion.Velocity.X, motion.Velocity.Z);
-            OfficeNavPoint clampedDisplacement = float.IsPositiveInfinity(maximumDistance)
-                ? motion.Displacement
-                : OfficeNavigationMotionIntegrator.ClampDisplacement(
-                    motion.Displacement,
-                    Mathf.Max(0f, maximumDistance));
+            float visibleMaximumDistance = float.IsPositiveInfinity(maximumDistance)
+                ? _visibleFrameMovementBudgetWorld
+                : Mathf.Min(
+                    Mathf.Max(0f, maximumDistance),
+                    _visibleFrameMovementBudgetWorld);
+            OfficeNavPoint clampedDisplacement = OfficeNavigationMotionIntegrator.ClampDisplacement(
+                motion.Displacement,
+                visibleMaximumDistance);
             Vector2 intended = new Vector2(clampedDisplacement.X, clampedDisplacement.Z);
             Vector2 before = Position;
             Vector2 actual = OfficeRuntimeCollisionMotion.Resolve(
@@ -2203,6 +2317,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     before.x + actual.x,
                     before.y + actual.y,
                     transform.position.z);
+                ConsumeVisibleFrameMovement(actual.magnitude);
                 _stuckSeconds = Mathf.Max(0f, _stuckSeconds - deltaTime * 2f);
             }
             else
@@ -2233,6 +2348,68 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _desiredVelocity,
                 _stuckSeconds,
                 _seat?.SeatId ?? string.Empty);
+        }
+
+        private void ConsumeVisibleFrameMovement(float distance)
+        {
+            float safeDistance = Mathf.Max(0f, distance);
+            _visibleFrameMovementBudgetWorld = Mathf.Max(
+                0f,
+                _visibleFrameMovementBudgetWorld - safeDistance);
+            _visibleFrameMovementWorld += safeDistance;
+        }
+
+        private bool TryConsumeExactEndpoint(
+            Vector2 target,
+            float deltaTime,
+            string permittedSeatId,
+            Vector2 semanticVelocity)
+        {
+            Vector2 before = Position;
+            Vector2 intended = target - before;
+            float distance = intended.magnitude;
+            if (distance > _visibleFrameMovementBudgetWorld + 0.0000001f) return false;
+            if (distance <= 0.0000001f) return true;
+            Vector2 actual = OfficeRuntimeCollisionMotion.Resolve(
+                _world.Occupancy,
+                _agentId,
+                before,
+                intended,
+                semanticVelocity,
+                _lastActualDisplacement,
+                AgentRadius,
+                permittedSeatId,
+                out bool collisionProjected);
+            if (actual.sqrMagnitude > 0.0000001f)
+            {
+                transform.position = new Vector3(
+                    before.x + actual.x,
+                    before.y + actual.y,
+                    transform.position.z);
+                ConsumeVisibleFrameMovement(actual.magnitude);
+                _animator.AccumulateTileMotion(
+                    semanticVelocity,
+                    actual,
+                    deltaTime,
+                    collisionProjected);
+                _lastActualDisplacement = actual;
+                _desiredVelocity = semanticVelocity;
+                _world.Occupancy.UpdateActor(
+                    _agentId,
+                    Position,
+                    _desiredVelocity,
+                    _stuckSeconds,
+                    _seat?.SeatId ?? string.Empty);
+            }
+            bool reached = Vector2.Distance(actual, intended) <= 0.00001f;
+            if (reached) LastMovementBlocker = string.Empty;
+            else LastMovementBlocker = _world.Occupancy.DescribeMoveBlocker(
+                _agentId,
+                before,
+                target,
+                AgentRadius,
+                permittedSeatId);
+            return reached;
         }
 
         private bool RequiresPivotBeforeMoving(Vector2 targetVelocity)
