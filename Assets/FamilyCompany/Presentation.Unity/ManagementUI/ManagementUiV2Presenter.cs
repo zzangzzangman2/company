@@ -5,6 +5,7 @@ using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.ManagementUi;
+using FamilyCompany.Presentation.Unity.UIRemaster;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -860,12 +861,12 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
 
         private void LoadFonts()
         {
-            var catalog = Resources.Load<ManagementUiFontCatalog>(ManagementUiLayoutMetrics.FontCatalogResourcePath);
+            var catalog = Resources.Load<UiRemasterFontCatalog>(UiRemasterTypography.FontCatalogResourcePath);
             if (catalog != null && catalog.IsComplete)
             {
-                _bodyFont = CreateFontAsset(catalog.BodySource, "Management UI Pretendard v1");
-                _headingFont = CreateFontAsset(catalog.HeadingSource, "Management UI Maplestory Bold v1");
-                _fallbackFont = CreateFontAsset(catalog.FallbackSource, "Management UI Maplestory Light Fallback v1");
+                _bodyFont = CreateFontAsset(catalog.BodySource, "Management UI Maplestory Light V3");
+                _headingFont = CreateFontAsset(catalog.HeadingSource, "Management UI Maplestory Bold V3");
+                _fallbackFont = CreateFontAsset(catalog.FallbackSource, "Management UI Pretendard Fallback V3");
             }
             if (_bodyFont == null || _headingFont == null || _fallbackFont == null)
             {

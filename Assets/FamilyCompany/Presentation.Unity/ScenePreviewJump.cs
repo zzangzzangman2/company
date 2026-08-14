@@ -6,6 +6,7 @@ using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
+using FamilyCompany.Presentation.Unity.UIRemaster;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Navigation;
@@ -48,6 +49,21 @@ namespace FamilyCompany.Presentation.Unity
         private long _qaMaximumGcAllocatedBytes;
         private long _qaMaximumMainThreadNanoseconds;
         private int _qaMovementProfileSamples;
+        private Texture2D _loadingBackground;
+        private Texture2D _loadingPanel;
+        private Texture2D _loadingTrack;
+        private Texture2D _loadingFill;
+        private Texture2D _loadingIcon;
+        private GUIStyle _loadingPanelStyle;
+        private GUIStyle _loadingTrackStyle;
+        private GUIStyle _loadingFillStyle;
+        private GUIStyle _loadingTitleStyle;
+        private GUIStyle _loadingBodyStyle;
+        private GUIStyle _loadingPercentStyle;
+        private int _loadingStyleWidth;
+        private int _loadingStyleHeight;
+        private bool _loadingAssetsReady;
+        private bool _loadingAssetFailureLogged;
 
         private static readonly string[] QaMemberIds =
             { "player", "older_sister", "father", "mother" };
@@ -95,6 +111,11 @@ namespace FamilyCompany.Presentation.Unity
 
         private void Start()
         {
+            // The QA player is intentionally hosted in a hidden/background window. Keep normal
+            // release focus behavior unchanged while allowing that capture route to render.
+            if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(),
+                    "-familyCompanyTileRuntimeQa") >= 0)
+                Application.runInBackground = true;
             Debug.Log("[StarterOfficeTileRuntime] 처음하기/불러오기 = Starter 타일 사무실 · F2 = 배치 편집 · F9 = 단방향 복구");
             // Warm the additive office while the full-screen title is still visible. New Game can
             // then rebind an already-built runtime instead of exposing Prototype01 for a few seconds.
@@ -142,7 +163,7 @@ namespace FamilyCompany.Presentation.Unity
             if (gameBootstrap == null || gameBootstrap.UiScreen != PrototypeUiScreen.Playing) return;
             if (!_loadingUiLogged)
             {
-                Debug.Log("STARTER_OFFICE_LOADING_UI_VISIBLE | style=ModernTealProgress");
+                Debug.Log("STARTER_OFFICE_LOADING_UI_VISIBLE | style=UiRemasterV3Maplestory");
                 _loadingUiLogged = true;
             }
             DrawLoadingPresentation();
@@ -150,68 +171,123 @@ namespace FamilyCompany.Presentation.Unity
 
         private void DrawLoadingPresentation()
         {
-            float scale = Mathf.Clamp(Mathf.Min(Screen.width / 1600f, Screen.height / 900f), 0.72f, 1.35f);
-            DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0.025f, 0.075f, 0.08f, 1f));
-            DrawSolid(new Rect(0f, 0f, Screen.width, 6f * scale), new Color(0.20f, 0.78f, 0.66f, 1f));
+            EnsureLoadingPresentationResources();
+            if (!_loadingAssetsReady) return;
 
-            float cardWidth = Mathf.Min(680f * scale, Screen.width - 48f);
-            var card = new Rect(
-                (Screen.width - cardWidth) * 0.5f,
-                (Screen.height - 330f * scale) * 0.5f,
-                cardWidth,
-                330f * scale);
-            DrawSolid(new Rect(card.x + 8f * scale, card.y + 10f * scale, card.width, card.height),
-                new Color(0f, 0f, 0f, 0.24f));
-            DrawSolid(card, new Color(0.045f, 0.145f, 0.15f, 0.98f));
-            DrawSolid(new Rect(card.x, card.y, 5f * scale, card.height),
-                new Color(0.25f, 0.82f, 0.69f, 1f));
+            var screen = new Rect(0f, 0f, Screen.width, Screen.height);
+            DrawTextureAspectFill(screen, _loadingBackground);
+            var layout = UiRemasterLayout.CalculateLoading(Screen.width, Screen.height);
+            GUI.Box(layout.Panel, GUIContent.none, _loadingPanelStyle);
 
-            var eyebrow = new GUIStyle(GUI.skin.label)
+            var icon = layout.Icon;
+            icon.y += Mathf.Round(Mathf.Sin(Time.unscaledTime * 3.2f) * 3f);
+            GUI.DrawTexture(icon, _loadingIcon, ScaleMode.ScaleToFit, true);
+            GUI.Label(layout.Title, "출근 준비 중", _loadingTitleStyle);
+            GUI.Label(layout.Status, _loadingStage, _loadingBodyStyle);
+
+            var progress = Mathf.Clamp01(Mathf.Max(_loadingProgress, _loadingDisplayedProgress));
+            GUI.Box(layout.Track, GUIContent.none, _loadingTrackStyle);
+            if (progress > 0.001f)
             {
-                alignment = TextAnchor.MiddleLeft,
-                fontSize = Mathf.RoundToInt(13f * scale),
-                fontStyle = FontStyle.Bold
-            };
-            eyebrow.normal.textColor = new Color(0.43f, 0.91f, 0.80f, 1f);
-            var title = new GUIStyle(eyebrow) { fontSize = Mathf.RoundToInt(30f * scale) };
-            title.normal.textColor = new Color(0.94f, 0.98f, 0.94f, 1f);
-            var body = new GUIStyle(eyebrow)
-            {
-                fontSize = Mathf.RoundToInt(15f * scale),
-                fontStyle = FontStyle.Normal
-            };
-            body.normal.textColor = new Color(0.68f, 0.79f, 0.76f, 1f);
+                var fillInset = Mathf.Max(4f, Mathf.Round(layout.Track.height * 0.20f));
+                var fill = UiRemasterTypography.PixelSnap(new Rect(
+                    layout.Track.x + fillInset,
+                    layout.Track.y + fillInset,
+                    Mathf.Max(1f, (layout.Track.width - fillInset * 2f) * progress),
+                    layout.Track.height - fillInset * 2f));
+                GUI.Box(fill, GUIContent.none, _loadingFillStyle);
+            }
 
-            float left = card.x + 42f * scale;
-            GUI.Label(new Rect(left, card.y + 32f * scale, card.width - 84f * scale, 24f * scale),
-                "우리 가족회사  ·  MORNING SETUP", eyebrow);
-            GUI.Label(new Rect(left, card.y + 66f * scale, card.width - 84f * scale, 46f * scale),
-                "출근 준비 중", title);
-            GUI.Label(new Rect(left, card.y + 122f * scale, card.width - 84f * scale, 26f * scale),
-                _loadingStage, body);
-
-            float progress = Mathf.Clamp01(Mathf.Max(_loadingProgress, _loadingDisplayedProgress));
-            var track = new Rect(left, card.y + 170f * scale, card.width - 84f * scale, 16f * scale);
-            DrawSolid(track, new Color(0.02f, 0.07f, 0.075f, 0.9f));
-            if (progress > 0f)
-                DrawSolid(new Rect(track.x, track.y, track.width * progress, track.height),
-                    new Color(0.24f, 0.82f, 0.68f, 1f));
-            GUI.Label(new Rect(left, card.y + 193f * scale, card.width - 84f * scale, 26f * scale),
-                Mathf.RoundToInt(progress * 100f) + "%", eyebrow);
-
-            int dots = Mathf.FloorToInt(Time.unscaledTime * 2.4f) % 4;
-            GUI.Label(new Rect(left, card.y + 238f * scale, card.width - 84f * scale, 26f * scale),
-                "출근 준비 중" + new string('·', dots), body);
-            GUI.Label(new Rect(left, card.y + 272f * scale, card.width - 84f * scale, 24f * scale),
-                "가족별 출근 경로와 지정 좌석을 미리 준비하고 있습니다.", body);
+            GUI.Label(layout.Percent, Mathf.RoundToInt(progress * 100f) + "%", _loadingPercentStyle);
+            var dots = Mathf.FloorToInt(Time.unscaledTime * 2.4f) % 4;
+            GUI.Label(layout.Detail,
+                "가족별 출근 경로와 지정 좌석을 준비하고 있습니다" + new string('·', dots),
+                _loadingBodyStyle);
         }
 
-        private static void DrawSolid(Rect rect, Color color)
+        private void EnsureLoadingPresentationResources()
         {
-            Color previous = GUI.color;
-            GUI.color = color;
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = previous;
+            if (_loadingStyleWidth == Screen.width && _loadingStyleHeight == Screen.height &&
+                _loadingTitleStyle != null) return;
+            _loadingStyleWidth = Screen.width;
+            _loadingStyleHeight = Screen.height;
+            const string root = "UiRemasterV3/Loading/";
+            if (_loadingBackground == null) _loadingBackground = Resources.Load<Texture2D>(root + "loading_background_v3");
+            if (_loadingPanel == null) _loadingPanel = Resources.Load<Texture2D>(root + "loading_panel_v4");
+            if (_loadingTrack == null) _loadingTrack = Resources.Load<Texture2D>(root + "progress_track_v4");
+            if (_loadingFill == null) _loadingFill = Resources.Load<Texture2D>(root + "progress_fill_v4");
+            if (_loadingIcon == null) _loadingIcon = Resources.Load<Texture2D>(root + "loading_work_icon_v4");
+
+            if (!UiRemasterTypography.TryLoadFonts(out var bodyFont, out var headingFont, out _, out var fontError))
+            {
+                _loadingAssetsReady = false;
+                if (!_loadingAssetFailureLogged)
+                {
+                    Debug.LogError("UI_REMASTER_V3_LOADING_FONT_MISSING | " + fontError);
+                    _loadingAssetFailureLogged = true;
+                }
+                return;
+            }
+
+            _loadingAssetsReady = _loadingBackground != null && _loadingPanel != null && _loadingTrack != null &&
+                                  _loadingFill != null && _loadingIcon != null;
+            if (!_loadingAssetsReady)
+            {
+                if (!_loadingAssetFailureLogged)
+                {
+                    Debug.LogError("UI_REMASTER_V3_LOADING_ASSET_MISSING | generated loading assets failed to load");
+                    _loadingAssetFailureLogged = true;
+                }
+                return;
+            }
+
+            var scale = UiRemasterTypography.CalculateScale(Screen.width, Screen.height);
+            var ink = new Color(0.125f, 0.23f, 0.23f, 1f);
+            var mutedInk = new Color(0.22f, 0.34f, 0.33f, 1f);
+            _loadingPanelStyle = new GUIStyle(GUI.skin.box)
+            {
+                border = new RectOffset(36, 36, 32, 32),
+                normal = { background = _loadingPanel }
+            };
+            _loadingTrackStyle = new GUIStyle(GUI.skin.box)
+            {
+                border = new RectOffset(32, 32, 14, 14),
+                normal = { background = _loadingTrack }
+            };
+            _loadingFillStyle = new GUIStyle(GUI.skin.box)
+            {
+                border = new RectOffset(28, 28, 10, 10),
+                normal = { background = _loadingFill }
+            };
+            _loadingTitleStyle = UiRemasterTypography.CreateLabel(
+                GUI.skin.label, headingFont, UiRemasterTypography.PanelTitlePixels, scale,
+                TextAnchor.MiddleLeft, ink);
+            _loadingBodyStyle = UiRemasterTypography.CreateLabel(
+                GUI.skin.label, bodyFont, UiRemasterTypography.BodyPixels, scale,
+                TextAnchor.MiddleLeft, mutedInk, true);
+            _loadingPercentStyle = UiRemasterTypography.CreateLabel(
+                GUI.skin.label, headingFont, UiRemasterTypography.ButtonPixels, scale,
+                TextAnchor.MiddleRight, ink);
+        }
+
+        private static void DrawTextureAspectFill(Rect target, Texture texture)
+        {
+            var targetAspect = target.width / target.height;
+            var textureAspect = texture.width / (float)texture.height;
+            var source = new Rect(0f, 0f, 1f, 1f);
+            if (targetAspect > textureAspect)
+            {
+                var visibleHeight = textureAspect / targetAspect;
+                source.y = (1f - visibleHeight) * 0.5f;
+                source.height = visibleHeight;
+            }
+            else
+            {
+                var visibleWidth = targetAspect / textureAspect;
+                source.x = (1f - visibleWidth) * 0.5f;
+                source.width = visibleWidth;
+            }
+            GUI.DrawTextureWithTexCoords(target, texture, source, true);
         }
 
         private void BeginShowStarterOffice()
@@ -401,20 +477,41 @@ namespace FamilyCompany.Presentation.Unity
         {
             yield return new WaitForEndOfFrame();
             string path = QaArtifactPath("starter-office-loading.png");
+            Texture2D capture = null;
             try
             {
-                ScreenCapture.CaptureScreenshot(path);
-                float deadline = Time.realtimeSinceStartup + 2f;
-                while ((!File.Exists(path) || new FileInfo(path).Length <= 1024L) &&
-                       Time.realtimeSinceStartup < deadline)
-                    yield return null;
-                if (File.Exists(path) && new FileInfo(path).Length > 1024L)
-                    Debug.Log("STARTER_OFFICE_LOADING_UI_QA_PASS | capture=" + path);
+                capture = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+                capture.ReadPixels(new Rect(0f, 0f, Screen.width, Screen.height), 0, 0, false);
+                capture.Apply(false, false);
+                long luminance = 0L;
+                int samples = 0;
+                int stepX = Mathf.Max(1, Screen.width / 32);
+                int stepY = Mathf.Max(1, Screen.height / 18);
+                for (int y = stepY / 2; y < Screen.height; y += stepY)
+                {
+                    for (int x = stepX / 2; x < Screen.width; x += stepX)
+                    {
+                        Color32 pixel = capture.GetPixel(x, y);
+                        luminance += pixel.r + pixel.g + pixel.b;
+                        samples++;
+                    }
+                }
+
+                if (samples == 0 || luminance <= samples * 6L)
+                {
+                    if (File.Exists(path)) File.Delete(path);
+                    Debug.LogError("STARTER_OFFICE_LOADING_UI_QA_FAIL | capture framebuffer is black");
+                }
                 else
-                    Debug.LogError("STARTER_OFFICE_LOADING_UI_QA_FAIL | capture missing or blank");
+                {
+                    File.WriteAllBytes(path, capture.EncodeToPNG());
+                    Debug.Log("STARTER_OFFICE_LOADING_UI_QA_PASS | capture=" + path +
+                              " resolution=" + Screen.width + "x" + Screen.height);
+                }
             }
             finally
             {
+                if (capture != null) Destroy(capture);
                 _loadingUiCaptureComplete = true;
             }
         }

@@ -7,31 +7,15 @@ namespace FamilyCompany.Presentation.Unity
 {
     public sealed class TitleMoneyRainRenderer : MonoBehaviour
     {
-        public const string BackgroundResourcePath = "Title/MoneyRain/money_rain_tycoon_background_v2";
-        public const string PortraitBackgroundResourcePath = "Title/MoneyRain/money_rain_tycoon_background_portrait_v3";
-        public const string MintBundleResourcePath = "Title/MoneyRain/money_bundle_mint_v1";
-        public const string CoralBundleResourcePath = "Title/MoneyRain/money_bundle_coral_v1";
-        public const string SkyBundleResourcePath = "Title/MoneyRain/money_bundle_sky_v1";
-        public const int BundleInstanceCount = 12;
+        // The class name is retained for scene/backward compatibility. V3 intentionally has no money-rain layer.
+        public const string BackgroundResourcePath = "UiRemasterV3/Title/title_hero_background_v3";
+        public const string PortraitBackgroundResourcePath = BackgroundResourcePath;
+        public const int BundleInstanceCount = 0;
         public const float LoopDuration = 2.8f;
 
         private const float ResourceRetryIntervalSeconds = 2f;
 
-        private static readonly BundleSpec[] BundleSpecs =
-        {
-            new BundleSpec(0.09f, 0.04f, 0.66f, 1, 0.10f, -18f, 1, 0, 0.72f),
-            new BundleSpec(0.18f, 0.42f, 0.84f, 1, 0.07f,  12f, -1, 1, 0.78f),
-            new BundleSpec(0.30f, 0.76f, 1.04f, 2, 0.05f, -34f, 1, 2, 0.88f),
-            new BundleSpec(0.41f, 0.18f, 0.72f, 1, 0.09f,  25f, 1, 1, 0.74f),
-            new BundleSpec(0.52f, 0.57f, 1.12f, 2, 0.06f,  -8f, -1, 0, 0.94f),
-            new BundleSpec(0.63f, 0.89f, 0.80f, 1, 0.08f,  38f, 1, 2, 0.82f),
-            new BundleSpec(0.73f, 0.30f, 0.96f, 1, 0.04f, -27f, -1, 1, 0.90f),
-            new BundleSpec(0.84f, 0.67f, 1.18f, 2, 0.07f,  16f, 1, 0, 0.96f),
-            new BundleSpec(0.94f, 0.12f, 0.76f, 1, 0.05f, -42f, -1, 2, 0.76f),
-            new BundleSpec(0.36f, 0.95f, 0.60f, 1, 0.10f,   6f, 1, 0, 0.66f),
-            new BundleSpec(0.68f, 0.51f, 0.64f, 1, 0.09f,  31f, -1, 2, 0.68f),
-            new BundleSpec(0.90f, 0.83f, 0.90f, 2, 0.06f, -13f, 1, 1, 0.86f)
-        };
+        private static readonly BundleSpec[] BundleSpecs = Array.Empty<BundleSpec>();
 
         private Texture2D _backgroundTexture;
         private Texture2D _portraitBackgroundTexture;
@@ -58,10 +42,11 @@ namespace FamilyCompany.Presentation.Unity
         private void Start()
         {
             if (!Application.isPlaying) return;
-            const string argumentName = "-familyCompanyCaptureMoneyRain";
+            const string argumentName = "-familyCompanyCaptureUiRemasterV3";
             var arguments = Environment.GetCommandLineArgs();
             var argumentIndex = Array.IndexOf(arguments, argumentName);
             if (argumentIndex < 0 || argumentIndex + 1 >= arguments.Length) return;
+            Application.runInBackground = true;
             StartCoroutine(CaptureForQa(Path.GetFullPath(arguments[argumentIndex + 1])));
         }
 
@@ -73,8 +58,7 @@ namespace FamilyCompany.Presentation.Unity
             {
                 EnsureResources(Time.unscaledTime);
                 DrawBackground(fullScreen);
-                DrawBundles(fullScreen, Time.unscaledTime);
-                DrawReadabilityPanel(fullScreen);
+                // V3 hero already provides a calm, low-detail text-safe area. No legacy overlays are drawn.
             }
             finally
             {
@@ -162,7 +146,7 @@ namespace FamilyCompany.Presentation.Unity
             {
                 var outputPath = Path.Combine(
                     outputFolder,
-                    $"money-rain-{resolutionLabel}-frame-{captureIndex + 1}.png");
+                    $"ui-remaster-v3-{resolutionLabel}-title-{captureIndex + 1}.png");
                 if (File.Exists(outputPath)) File.Delete(outputPath);
                 ScreenCapture.CaptureScreenshot(outputPath);
                 yield return WaitForScreenshot(outputPath);
@@ -172,27 +156,23 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             var bootstrap = GetComponent<PrototypeBootstrap>();
-            Debug.Log("FAMILY_COMPANY_TITLE_MONEY_RAIN_CAPTURE_READY_FOR_CLICK: " + resolutionLabel);
-            var clickDeadline = Time.realtimeSinceStartup + 12f;
-            while (bootstrap != null && bootstrap.UiScreen == PrototypeUiScreen.MainMenu && Time.realtimeSinceStartup < clickDeadline)
-            {
-                yield return null;
-            }
+            if (bootstrap != null) bootstrap.ShowNewGameSlotsNow();
+            for (var frame = 0; frame < 3; frame++) yield return new WaitForEndOfFrame();
 
             if (bootstrap == null || bootstrap.UiScreen != PrototypeUiScreen.NewGameSlots)
             {
-                Debug.LogError("FAMILY_COMPANY_TITLE_MONEY_RAIN_BUTTON_CLICK: FAIL · expected NewGameSlots");
+                Debug.LogError("FAMILY_COMPANY_UI_REMASTER_V3_ROUTE: FAIL | expected NewGameSlots");
                 Application.Quit(1);
                 yield break;
             }
 
-            var clickedPath = Path.Combine(outputFolder, $"money-rain-{resolutionLabel}-after-click.png");
+            var clickedPath = Path.Combine(outputFolder, $"ui-remaster-v3-{resolutionLabel}-new-game-slots.png");
             if (File.Exists(clickedPath)) File.Delete(clickedPath);
             yield return new WaitForEndOfFrame();
             ScreenCapture.CaptureScreenshot(clickedPath);
             yield return WaitForScreenshot(clickedPath);
-            Debug.Log("FAMILY_COMPANY_TITLE_MONEY_RAIN_BUTTON_CLICK: PASS · " + resolutionLabel);
-            Debug.Log("FAMILY_COMPANY_TITLE_MONEY_RAIN_CAPTURE: PASS · " + resolutionLabel);
+            Debug.Log("FAMILY_COMPANY_UI_REMASTER_V3_ROUTE: PASS | main-menu>new-game-slots " + resolutionLabel);
+            Debug.Log("FAMILY_COMPANY_UI_REMASTER_V3_CAPTURE: PASS | " + resolutionLabel);
             Application.Quit(0);
         }
 
@@ -209,21 +189,13 @@ namespace FamilyCompany.Presentation.Unity
 
         private void EnsureResources(float unscaledTime)
         {
-            var missingAny = _backgroundTexture == null;
-            if (_portraitBackgroundTexture == null) missingAny = true;
-            for (var index = 0; index < _bundleTextures.Length; index++)
-            {
-                if (_bundleTextures[index] == null) missingAny = true;
-            }
+            var missingAny = _backgroundTexture == null || _portraitBackgroundTexture == null;
 
             if (!missingAny || unscaledTime < _nextResourceRetryTime) return;
             _nextResourceRetryTime = unscaledTime + ResourceRetryIntervalSeconds;
             if (_backgroundTexture == null) _backgroundTexture = Resources.Load<Texture2D>(BackgroundResourcePath);
             if (_portraitBackgroundTexture == null)
                 _portraitBackgroundTexture = Resources.Load<Texture2D>(PortraitBackgroundResourcePath);
-            if (_bundleTextures[0] == null) _bundleTextures[0] = Resources.Load<Texture2D>(MintBundleResourcePath);
-            if (_bundleTextures[1] == null) _bundleTextures[1] = Resources.Load<Texture2D>(CoralBundleResourcePath);
-            if (_bundleTextures[2] == null) _bundleTextures[2] = Resources.Load<Texture2D>(SkyBundleResourcePath);
         }
 
         private void DrawBackground(Rect fullScreen)
@@ -313,7 +285,7 @@ namespace FamilyCompany.Presentation.Unity
                 var alpha = progress <= 0.72f
                     ? Mathf.Lerp(0.72f, 0.46f, progress / 0.72f)
                     : Mathf.Lerp(0.46f, 0f, (progress - 0.72f) / 0.28f);
-                texture.SetPixel(x, 0, new Color(0.055f, 0.047f, 0.045f, alpha));
+                texture.SetPixel(x, 0, new Color(1f, 0.96f, 0.85f, alpha * 0.24f));
             }
 
             texture.Apply(false, true);

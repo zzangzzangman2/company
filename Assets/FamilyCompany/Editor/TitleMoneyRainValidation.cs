@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using FamilyCompany.Presentation.Unity;
+using FamilyCompany.Presentation.Unity.UIRemaster;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -9,194 +11,189 @@ namespace FamilyCompany.Editor
 {
     public static class TitleMoneyRainValidation
     {
-        public const string ArtifactFolder = "Artifacts/TitleMoneyRainQa";
-        public const string PlayerPath = ArtifactFolder + "/Player/FamilyCompanyTitleMoneyRainQa.exe";
+        public const string ArtifactFolder = "Artifacts/UiRemasterV3";
+        public const string PlayerPath = ArtifactFolder + "/Player/FamilyCompanyUiRemasterQa.exe";
         private const string ScenePath = "Assets/FamilyCompany/Scenes/Prototype01.unity";
+        private const string OfficePreviewScenePath =
+            "Assets/FamilyCompany/Scenes/OfficeTileMigrationPreview.unity";
         private const string BootstrapPath = "Assets/FamilyCompany/Presentation.Unity/PrototypeBootstrap.cs";
         private const string RendererPath = "Assets/FamilyCompany/Presentation.Unity/TitleMoneyRainRenderer.cs";
-        private const string PreviewGifPath = "Assets/Art/UI/Resources/Title/family_company_title_money_rain_v1.gif";
+        private const string LoadingPath = "Assets/FamilyCompany/Presentation.Unity/ScenePreviewJump.cs";
 
         private static readonly string[] RuntimeTexturePaths =
         {
-            "Assets/Art/UI/Resources/Title/MoneyRain/money_rain_tycoon_background_v2.png",
-            "Assets/Art/UI/Resources/Title/MoneyRain/money_rain_tycoon_background_portrait_v3.png",
-            "Assets/Art/UI/Resources/Title/MoneyRain/money_bundle_mint_v1.png",
-            "Assets/Art/UI/Resources/Title/MoneyRain/money_bundle_coral_v1.png",
-            "Assets/Art/UI/Resources/Title/MoneyRain/money_bundle_sky_v1.png"
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/title_hero_background_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/title_logo_frame_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/title_button_normal_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/title_button_hover_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/title_button_pressed_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/title_button_disabled_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/save_slot_normal_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/save_slot_selected_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/new_company_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/continue_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/load_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/settings_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/exit_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_background_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_panel_v4.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Loading/progress_track_v4.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Loading/progress_fill_v4.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_work_icon_v4.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Common/modal_frame_v3.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Common/card_normal_v4.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Common/card_hover_v4.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Common/card_featured_v4.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Common/card_disabled_v4.png",
+            "Assets/Art/UI/Resources/UiRemasterV3/Common/card_compact_normal_v5.png"
         };
 
-        [MenuItem("Family Company/Validate Title Money Rain")]
+        private static readonly HashSet<string> OpaqueBackgrounds = new HashSet<string>(StringComparer.Ordinal)
+        {
+            RuntimeTexturePaths[0], RuntimeTexturePaths[13]
+        };
+
+        [MenuItem("Family Company/Validate UI Remaster V3 Phase 1")]
         public static void Run()
         {
             ValidateRuntimeSourceContract();
-            ValidateMotionContract();
+            ValidateTypographyContract();
             ValidateResponsiveLayout();
-            var assetStatus = InspectAssets();
-            Debug.Log("FAMILY_COMPANY_TITLE_MONEY_RAIN_VALIDATION: PASS · " + assetStatus);
+            InspectAssets();
+            Debug.Log("FAMILY_COMPANY_UI_REMASTER_V3_VALIDATION: PASS | assets=24 fonts=MaplestoryLight,MaplestoryBold resolutions=1280x720,1392x768,1920x1080,2560x1440,3440x1440");
         }
 
-        [MenuItem("Family Company/Build Title Money Rain QA Player")]
+        [MenuItem("Family Company/Build UI Remaster V3 QA Player")]
         public static void BuildQaPlayer()
         {
             Run();
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(PlayerPath)) ?? ArtifactFolder);
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
-                scenes = new[] { ScenePath },
+                scenes = new[] { ScenePath, OfficePreviewScenePath },
                 locationPathName = PlayerPath,
                 target = BuildTarget.StandaloneWindows64,
-                options = BuildOptions.Development
+                options = BuildOptions.None
             });
             if (report.summary.result != BuildResult.Succeeded)
             {
                 throw new InvalidOperationException(
-                    $"Title money-rain QA player build failed: {report.summary.result}, {report.summary.totalErrors} errors");
+                    $"UI Remaster V3 release QA player build failed: {report.summary.result}, {report.summary.totalErrors} errors");
             }
 
-            Debug.Log($"FAMILY_COMPANY_TITLE_MONEY_RAIN_BUILD: PASS · {Path.GetFullPath(PlayerPath)}");
+            Debug.Log($"FAMILY_COMPANY_UI_REMASTER_V3_BUILD: PASS | release=true path={Path.GetFullPath(PlayerPath)}");
         }
 
-        public static string InspectAssets()
+        public static void InspectAssets()
         {
-            var availableRuntimeTextures = 0;
-            for (var index = 0; index < RuntimeTexturePaths.Length; index++)
+            foreach (var assetPath in RuntimeTexturePaths)
             {
-                var assetPath = RuntimeTexturePaths[index];
-                if (!File.Exists(Path.GetFullPath(assetPath))) continue;
-                availableRuntimeTextures++;
-                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
-                if (texture == null)
-                {
-                    throw new InvalidOperationException("Money-rain texture has not imported as Texture2D: " + assetPath);
-                }
-
-                if (index <= 1) continue;
+                Assert(File.Exists(Path.GetFullPath(assetPath)), "Generated UI texture is missing: " + assetPath);
                 var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
-                if (importer == null)
+                Assert(importer != null, "Generated UI texture has no TextureImporter: " + assetPath);
+                var importedTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+                var importedSprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+                if (importedTexture == null && importedSprite == null)
                 {
-                    throw new InvalidOperationException("Money bundle has no TextureImporter: " + assetPath);
+                    var imported = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+                    Debug.LogError($"UI_REMASTER_ASSET_DIAGNOSTIC path={assetPath} " +
+                                   $"mainType={AssetDatabase.GetMainAssetTypeAtPath(assetPath)?.FullName ?? "null"} " +
+                                   $"representations={imported.Length} names={string.Join(",", Array.ConvertAll(imported, asset => asset == null ? "null" : asset.GetType().FullName + ":" + asset.name))}");
                 }
-
-                if (!importer.alphaIsTransparency)
-                {
-                    throw new InvalidOperationException("Money bundle transparency is disabled: " + assetPath);
-                }
+                Assert(importedTexture != null || importedSprite != null,
+                    "Generated UI texture has no loadable Texture2D or Sprite: " + assetPath);
+                Assert(!importer.mipmapEnabled, "UI texture mipmaps must be disabled: " + assetPath);
+                Assert(importer.textureCompression == TextureImporterCompression.Uncompressed,
+                    "UI texture compression must be disabled: " + assetPath);
+                if (OpaqueBackgrounds.Contains(assetPath)) continue;
+                Assert(importedSprite != null, "Transparent UI texture has no runtime-loadable Sprite: " + assetPath);
+                Assert(importer.alphaIsTransparency, "Transparent UI texture alpha handling is disabled: " + assetPath);
+                Assert(importer.textureType == TextureImporterType.Sprite,
+                    "Transparent UI texture is not imported as a Sprite: " + assetPath);
             }
-
-            var previewAvailable = File.Exists(Path.GetFullPath(PreviewGifPath));
-            var status = $"runtime textures {availableRuntimeTextures}/{RuntimeTexturePaths.Length}, preview GIF {(previewAvailable ? "1/1" : "0/1")}";
-            if (availableRuntimeTextures != RuntimeTexturePaths.Length || !previewAvailable)
-            {
-                Debug.LogWarning("FAMILY_COMPANY_TITLE_MONEY_RAIN_ASSETS_PENDING: " + status +
-                                 " · missing textures use the bright non-art fallback; the GIF is never loaded at runtime.");
-            }
-
-            return status;
         }
 
         private static void ValidateRuntimeSourceContract()
         {
+            Assert(File.Exists(Path.GetFullPath(OfficePreviewScenePath)),
+                "Office preview scene required by the loading route is missing.");
             var bootstrap = File.ReadAllText(Path.GetFullPath(BootstrapPath));
             var renderer = File.ReadAllText(Path.GetFullPath(RendererPath));
-            Assert(!bootstrap.Contains("family_company_title_hero_v1"), "Bootstrap still references the retired title hero resource.");
-            Assert(!renderer.Contains("family_company_title_hero_v1"), "Money-rain renderer references the retired title hero resource.");
-            Assert(renderer.Contains("Time.unscaledTime"), "Money rain must advance from Time.unscaledTime while menus pause timeScale.");
-            Assert(renderer.Contains("finally"), "Money-rain GUI state restoration must be protected by finally.");
-            Assert(renderer.Contains("GUI.matrix = previousMatrix"), "Money-rain renderer must restore GUI.matrix.");
-            Assert(!renderer.Contains("family_company_title_money_rain_v1"), "Preview GIF must not be loaded by runtime code.");
-            Assert(TitleMoneyRainRenderer.BundleInstanceCount >= 8 && TitleMoneyRainRenderer.BundleInstanceCount <= 14,
-                "Visible money-bundle instance count must remain within 8..14.");
+            var loading = File.ReadAllText(Path.GetFullPath(LoadingPath));
+            Assert(renderer.Contains("UiRemasterV3/Title/title_hero_background_v3"),
+                "Title renderer is not bound to the generated V3 hero.");
+            Assert(TitleMoneyRainRenderer.BundleInstanceCount == 0,
+                "Rejected floating-money layer is still active.");
+            Assert(!renderer.Contains("money_bundle_"), "Rejected money-bundle resources are still referenced.");
+            Assert(!renderer.Contains("money_rain_tycoon_background"), "Rejected title background is still referenced.");
+            Assert(!bootstrap.Contains("BuildRoundedUiTexture"), "Title still renders code-generated flat boxes.");
+            Assert(bootstrap.Contains("UiRemasterV3/Title/"), "Title buttons are not bound to V3 generated assets.");
+            Assert(loading.Contains("UiRemasterV3/Loading/"), "Loading UI is not bound to V3 generated assets.");
+            Assert(!loading.Contains("ModernTealProgress"), "Rejected flat loading skin is still active.");
         }
 
-        private static void ValidateMotionContract()
+        private static void ValidateTypographyContract()
         {
-            var seenTexture = new bool[3];
-            var signature0 = FrameSignature(0f, 1920f, 1080f);
-            var signature1 = FrameSignature(TitleMoneyRainRenderer.LoopDuration / 3f, 1920f, 1080f);
-            var signature2 = FrameSignature(TitleMoneyRainRenderer.LoopDuration * 2f / 3f, 1920f, 1080f);
-            Assert(!Approximately(signature0, signature1) && !Approximately(signature1, signature2) && !Approximately(signature0, signature2),
-                "Three sampled money-rain frames must be observably different.");
-
-            for (var index = 0; index < TitleMoneyRainRenderer.BundleInstanceCount; index++)
-            {
-                var duration = TitleMoneyRainRenderer.GetBundleLoopDuration(index);
-                Assert(Mathf.Abs(duration - 2.8f) < 0.0001f,
-                    $"Bundle {index} duration {duration:0.###} is not the required 2.8 seconds.");
-                var first = TitleMoneyRainRenderer.CalculateBundlePose(index, 0.314f, 1920f, 1080f);
-                var looped = TitleMoneyRainRenderer.CalculateBundlePose(index, 0.314f + duration, 1920f, 1080f);
-                Assert(Vector2.Distance(first.Rect.center, looped.Rect.center) < 0.02f,
-                    $"Bundle {index} position does not wrap seamlessly.");
-                Assert(Mathf.Abs(Mathf.DeltaAngle(first.RotationDegrees, looped.RotationDegrees)) < 0.02f,
-                    $"Bundle {index} rotation does not wrap seamlessly.");
-                Assert(Mathf.Abs(first.Alpha - looped.Alpha) < 0.002f,
-                    $"Bundle {index} alpha does not wrap seamlessly.");
-                Assert(first.TextureIndex >= 0 && first.TextureIndex < seenTexture.Length,
-                    $"Bundle {index} has an invalid texture variant.");
-                seenTexture[first.TextureIndex] = true;
-            }
-
-            for (var index = 0; index < seenTexture.Length; index++)
-            {
-                Assert(seenTexture[index], "Money-bundle texture variant is unused: " + index);
-            }
+            Assert(UiRemasterTypography.PanelTitlePixels >= 24, "Panel title is below the 720p minimum.");
+            Assert(UiRemasterTypography.CardTitlePixels >= 18, "Card title is below the 720p minimum.");
+            Assert(UiRemasterTypography.BodyPixels >= 14, "Body text is below the 720p minimum.");
+            Assert(UiRemasterTypography.TopHudPixels >= 16, "Top HUD text is below the 720p minimum.");
+            Assert(UiRemasterTypography.BottomNavigationPixels >= 15, "Bottom navigation text is below the 720p minimum.");
+            Assert(UiRemasterTypography.ButtonPixels >= 14, "Button text is below the 720p minimum.");
+            Assert(Mathf.Approximately(UiRemasterTypography.CalculateScale(1280, 720), 1f),
+                "1280x720 must never autoshrink the UI.");
+            Assert(UiRemasterTypography.CalculateScale(1252, 745) >= 1f,
+                "Rejected 1252x745 case must never autoshrink typography.");
         }
 
         private static void ValidateResponsiveLayout()
         {
-            ValidateCompactLayout(440f, 481f);
-            ValidateCompactLayout(768f, 1024f);
-            ValidateLayout(1280f, 720f);
-            ValidateLayout(1920f, 1080f);
-            ValidateLayout(3440f, 1080f);
+            ValidateLayout(1280, 720);
+            ValidateLayout(1392, 768);
+            ValidateLayout(1920, 1080);
+            ValidateLayout(2560, 1440);
+            ValidateLayout(3440, 1440);
         }
 
-        private static void ValidateCompactLayout(float width, float height)
+        private static void ValidateLayout(int width, int height)
         {
-            Assert(TitleMoneyRainRenderer.IsCompactLayout(width, height),
-                $"Expected compact title layout at {width:0}x{height:0}.");
-            var layout = TitleMoneyRainRenderer.CalculateLayout(width, height);
-            var menu = layout.MenuSafeArea;
-            var heroHeight = TitleMoneyRainRenderer.CalculateCompactHeroHeight(width, height);
-            Assert(menu.x >= 0f && menu.y >= 0f && menu.xMax <= width && menu.yMax <= height + 0.01f,
-                $"Compact menu safe area is clipped at {width:0}x{height:0}.");
-            Assert(menu.width >= width - 50f && menu.height >= 200f,
-                $"Compact menu does not have enough room at {width:0}x{height:0}.");
-            Assert(heroHeight <= menu.y + 12.01f,
-                $"Compact menu leaves an unexpected gap below the hero at {width:0}x{height:0}.");
-            Assert(layout.ReadabilityPanel.width >= width && layout.ReadabilityPanel.height >= height,
-                $"Compact layout backdrop does not cover the screen at {width:0}x{height:0}.");
-        }
-
-        private static void ValidateLayout(float width, float height)
-        {
-            var layout = TitleMoneyRainRenderer.CalculateLayout(width, height);
-            var menu = layout.MenuSafeArea;
-            var panel = layout.ReadabilityPanel;
-            Assert(menu.x >= 0f && menu.y >= 0f && menu.xMax <= width && menu.yMax <= height + 0.01f,
-                $"Menu safe area is clipped at {width:0}x{height:0}.");
-            Assert(panel.x <= menu.x && panel.xMax >= menu.xMax + 20f && panel.y <= menu.y && panel.yMax >= menu.yMax,
-                $"Readability panel does not protect the menu at {width:0}x{height:0}.");
-            Assert(menu.width >= 450f && menu.height >= 545f,
-                $"Menu controls have insufficient space at {width:0}x{height:0}.");
-            Assert(panel.width / width <= 0.51f,
-                $"Readability panel consumes excessive ultrawide space at {width:0}x{height:0}.");
-        }
-
-        private static float FrameSignature(float time, float width, float height)
-        {
-            var signature = 0f;
-            for (var index = 0; index < TitleMoneyRainRenderer.BundleInstanceCount; index++)
+            var title = UiRemasterLayout.CalculateTitle(width, height);
+            var screen = new Rect(0f, 0f, width, height);
+            Assert(Contains(screen, title.Logo), $"Title logo is clipped at {width}x{height}.");
+            Assert(Contains(screen, title.Subtitle), $"Title subtitle is clipped at {width}x{height}.");
+            Assert(Contains(screen, title.Footer), $"Title footer is clipped at {width}x{height}.");
+            Assert(title.Buttons.Length == 5, "Title must expose exactly five menu hit targets.");
+            for (var index = 0; index < title.Buttons.Length; index++)
             {
-                var pose = TitleMoneyRainRenderer.CalculateBundlePose(index, time, width, height);
-                signature += pose.Rect.x * (index + 1f) + pose.Rect.y * (index + 2f) + pose.RotationDegrees * 0.1f;
+                Assert(Contains(screen, title.Buttons[index]), $"Title button {index} is clipped at {width}x{height}.");
+                Assert(IsIntegral(title.Buttons[index]), $"Title button {index} is not pixel-snapped at {width}x{height}.");
+                if (index > 0) Assert(!title.Buttons[index].Overlaps(title.Buttons[index - 1]),
+                    $"Title buttons overlap at {width}x{height}.");
             }
 
-            return signature;
+            var loading = UiRemasterLayout.CalculateLoading(width, height);
+            Assert(Contains(screen, loading.Panel), $"Loading panel is clipped at {width}x{height}.");
+            Assert(Contains(loading.Panel, loading.Icon) && Contains(loading.Panel, loading.Title) &&
+                   Contains(loading.Panel, loading.Status) && Contains(loading.Panel, loading.Track) &&
+                   Contains(loading.Panel, loading.Percent) && Contains(loading.Panel, loading.Detail),
+                $"Loading content escapes its generated panel at {width}x{height}.");
+            Assert(!loading.Icon.Overlaps(loading.Title), $"Loading icon collides with title at {width}x{height}.");
+            Assert(IsIntegral(loading.Panel) && IsIntegral(loading.Track),
+                $"Loading layout is not pixel-snapped at {width}x{height}.");
         }
 
-        private static bool Approximately(float first, float second)
+        private static bool Contains(Rect outer, Rect inner)
         {
-            return Mathf.Abs(first - second) < 0.01f;
+            return inner.xMin >= outer.xMin && inner.yMin >= outer.yMin &&
+                   inner.xMax <= outer.xMax && inner.yMax <= outer.yMax;
+        }
+
+        private static bool IsIntegral(Rect rect)
+        {
+            return Mathf.Approximately(rect.x, Mathf.Round(rect.x)) &&
+                   Mathf.Approximately(rect.y, Mathf.Round(rect.y)) &&
+                   Mathf.Approximately(rect.width, Mathf.Round(rect.width)) &&
+                   Mathf.Approximately(rect.height, Mathf.Round(rect.height));
         }
 
         private static void Assert(bool condition, string message)

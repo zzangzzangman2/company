@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.MainNavigation;
 using FamilyCompany.Presentation.Unity.ManagementUI;
+using FamilyCompany.Presentation.Unity.UIRemaster;
 using FamilyCompany.Simulation.ManagementUi;
 using UnityEditor;
 using UnityEngine;
@@ -31,7 +32,7 @@ namespace FamilyCompany.Editor
         private const string GameSaveMapperPath =
             "Assets/FamilyCompany/Save/GameSaveMapper.cs";
         private const string FontCatalogPath =
-            "Assets/FamilyCompany/Presentation.Unity/Resources/ManagementUI/ManagementUiFontCatalog_v1.asset";
+            "Assets/FamilyCompany/Presentation.Unity/Resources/UiRemasterV3/UiRemasterFontCatalog_v3.asset";
         private const string ArtRoot =
             "Assets/Art/UI/Resources/MainNavigationV2";
 
@@ -157,6 +158,8 @@ namespace FamilyCompany.Editor
             var cases = new[]
             {
                 new LayoutCase(1920, 1080, new UiSafeInsets(24, 18, 24, 18), "16:9-safe-area"),
+                new LayoutCase(1392, 768, UiSafeInsets.None, "compact-1392"),
+                new LayoutCase(1280, 720, UiSafeInsets.None, "minimum-1280"),
                 new LayoutCase(1600, 900, UiSafeInsets.None, "16:9-window"),
                 new LayoutCase(1600, 1000, UiSafeInsets.None, "16:10-window"),
                 new LayoutCase(2560, 1440, new UiSafeInsets(32, 20, 32, 20), "16:9-large")
@@ -168,6 +171,8 @@ namespace FamilyCompany.Editor
                     item.Height,
                     item.Insets);
                 MainNavigationLayoutMetrics.Validate(layout);
+                Require(layout.ContentPanel.Width >= Math.Min(1040d, layout.SafeArea.Width - 36d),
+                    $"Responsive content panel is too narrow for Korean stats at {item.Width}x{item.Height}.");
                 Debug.Log(
                     $"MAIN_NAVIGATION_LAYOUT: {item.Label} {item.Width}x{item.Height} " +
                     $"scale={layout.ScaleFactor:0.####} top={layout.TopHud} " +
@@ -242,9 +247,12 @@ namespace FamilyCompany.Editor
 
         private static void ValidateKoreanFonts()
         {
-            var catalog = AssetDatabase.LoadAssetAtPath<ManagementUiFontCatalog>(FontCatalogPath);
+            var catalog = AssetDatabase.LoadAssetAtPath<UiRemasterFontCatalog>(FontCatalogPath);
             Require(catalog != null && catalog.IsComplete,
                 "Bundled Korean font catalog is missing or incomplete.");
+            Require(catalog.BodySource.name.IndexOf("Maple", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    catalog.HeadingSource.name.IndexOf("Maple", StringComparison.OrdinalIgnoreCase) >= 0,
+                "Main navigation primary font family must be Maplestory Light/Bold.");
             var glyphs = new HashSet<char>(
                 string.Concat(MainNavigationCatalog.EnumerateKoreanText())
                     .Where(character => character >= '\uAC00' && character <= '\uD7A3'));
@@ -281,7 +289,10 @@ namespace FamilyCompany.Editor
                          "Selectable.Transition.SpriteSwap",
                          "MAIN_NAVIGATION_V2_ASSET_MISSING",
                          "World Dim 26 Percent",
-                         "MinimumBodyFontSize = 15f"
+                         "MinimumBodyFontSize = UiRemasterTypography.BodyPixels",
+                         "UiRemasterFontCatalog",
+                         "TryAddCharacters",
+                         "BuildWorkforceStateMetric"
                      })
             {
                 Require(presenter.Contains(required),

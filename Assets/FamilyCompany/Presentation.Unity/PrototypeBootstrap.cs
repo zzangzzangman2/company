@@ -14,6 +14,7 @@ using FamilyCompany.Simulation.Prototype;
 using FamilyCompany.Presentation.Unity.ManagementUI;
 using FamilyCompany.Presentation.Unity.MainNavigation;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Presentation.Unity.UIRemaster;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
@@ -53,6 +54,7 @@ namespace FamilyCompany.Presentation.Unity
         private GUIStyle _smallStyle;
         private GUIStyle _buttonStyle;
         private GUIStyle _slotStyle;
+        private GUIStyle _slotTextStyle;
         private GUIStyle _panelStyle;
         private GUIStyle _mainTitleStyle;
         private GUIStyle _mainTitleShadowStyle;
@@ -81,7 +83,18 @@ namespace FamilyCompany.Presentation.Unity
         private Texture2D _mainButtonDisabledTexture;
         private Texture2D _mainInfoTexture;
         private Texture2D _mainChipTexture;
+        private Texture2D _mainLogoTexture;
+        private Texture2D _slotNormalTexture;
+        private Texture2D _slotSelectedTexture;
+        private Texture2D _modalFrameTexture;
+        private readonly Texture2D[] _mainMenuIcons = new Texture2D[5];
+        private Font _uiBodyFont;
+        private Font _uiHeadingFont;
+        private Font _uiFallbackFont;
+        private bool _uiRemasterAssetsReady;
+        private bool _uiRemasterFailureLogged;
         private int _styleHeight;
+        private int _styleWidth;
         private int _activeSlot = UnityJsonSaveRepository.MinimumSlot;
         private int _pendingNewGameSlot;
         private bool _hasSession;
@@ -598,18 +611,18 @@ namespace FamilyCompany.Presentation.Unity
                     DrawPauseMenu();
                     break;
                 case PrototypeUiScreen.NewGameSlots:
-                    DrawMenuBackground("새로운 2000년");
+                    DrawMenuBackground(null);
                     DrawSlotPicker("처음하기", "새 회사를 시작할 저장 슬롯을 선택하세요.", true);
                     break;
                 case PrototypeUiScreen.SaveSlots:
                     DrawSlotPicker("저장하기", "현재 회사를 저장할 슬롯을 선택하세요.", true);
                     break;
                 case PrototypeUiScreen.LoadSlots:
-                    if (!_hasSession) DrawMenuBackground("기록에서 이어지는 회사");
+                    if (!_hasSession) DrawMenuBackground(null);
                     DrawSlotPicker("불러오기", "이어갈 회사를 선택하세요.", false);
                     break;
                 case PrototypeUiScreen.ConfirmNewGame:
-                    DrawMenuBackground("새로운 2000년");
+                    DrawMenuBackground(null);
                     DrawNewGameConfirmation();
                     break;
             }
@@ -623,67 +636,52 @@ namespace FamilyCompany.Presentation.Unity
 
         private void DrawLeftMainMenu(bool compact)
         {
-            var scale = compact
-                ? Mathf.Clamp(Mathf.Min(Screen.width / 440f, Screen.height / 481f), 0.82f, 1.18f)
-                : Mathf.Clamp(Screen.height / (float)ReferenceHeight, 0.72f, 1.25f);
-            var x = compact ? 20f * scale : Mathf.Max(72f, Screen.width * 0.065f);
-            var top = compact ? 21f * scale : 62f * scale;
-            var menuWidth = compact
-                ? Mathf.Min(190f * scale, Screen.width * 0.48f)
-                : Mathf.Clamp(288f * scale, 230f, 340f);
-            var titleWidth = compact ? Mathf.Min(280f * scale, Screen.width - x - 16f) : 520f * scale;
+            _ = compact;
+            if (!_uiRemasterAssetsReady)
+            {
+                var errorRect = new Rect(32f, 32f, Mathf.Max(1f, Screen.width - 64f), 80f);
+                GUI.Label(errorRect, "UI 자산을 불러오지 못했습니다.", _headingStyle);
+                return;
+            }
 
-            DrawColoredLabel(new Rect(x + 2f, top, titleWidth, 20f * scale),
-                "FAMILY COMPANY  /  SEOUL 2000", _mainChipStyle, new Color(1f, 0.48f, 0.34f, 1f));
+            var scale = UiRemasterTypography.CalculateScale(Screen.width, Screen.height);
+            var layout = UiRemasterLayout.CalculateTitle(Screen.width, Screen.height);
+            GUI.DrawTexture(layout.Logo, _mainLogoTexture, ScaleMode.StretchToFill, true);
+            var titleInset = UiRemasterTypography.Pixels(42f, scale);
+            var titleBounds = new Rect(
+                layout.Logo.x + titleInset,
+                layout.Logo.y + UiRemasterTypography.Pixels(10f, scale),
+                layout.Logo.width - titleInset * 2f,
+                layout.Logo.height - UiRemasterTypography.Pixels(20f, scale));
+            var titleContent = new GUIContent("우리 가족회사");
+            GUI.Label(UiRemasterTypography.CenterUsingFontMetrics(titleBounds, titleContent, _mainTitleStyle),
+                titleContent, _mainTitleStyle);
+            GUI.Label(layout.Subtitle, "네 식구가 함께 만드는 작은 회사의 역사", _mainSubtitleStyle);
 
-            var titleRect = new Rect(x, top + 20f * scale, titleWidth, 74f * scale);
-            var shadowRect = titleRect;
-            shadowRect.x += 3f * scale;
-            shadowRect.y += 4f * scale;
-            GUI.Label(shadowRect, "가족회사", _mainTitleShadowStyle);
-            GUI.Label(titleRect, "가족회사", _mainTitleStyle);
-            DrawColoredLabel(new Rect(x + 2f, top + 90f * scale, titleWidth, 24f * scale),
-                "네 식구가 함께 만드는 작은 회사의 역사", _mainSubtitleStyle,
-                new Color(0.93f, 0.86f, 0.72f, 0.96f));
-
-            var menuY = compact ? 141f * scale : 276f * scale;
-            var rowHeight = compact ? 33f * scale : 47f * scale;
-            var gap = compact ? 5f * scale : 8f * scale;
             var latestSlot = GetLatestSaveSlot();
 
-            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "01", "새 회사", true,
+            if (DrawLeftMenuRow(layout.Buttons[0], _mainMenuIcons[0], "처음 하기", true,
                     MainMenuButtonKind.Primary))
                 ShowNewGameSlotsNow();
-            menuY += rowHeight + gap;
-            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "02", "이어하기", latestSlot.HasValue,
+            if (DrawLeftMenuRow(layout.Buttons[1], _mainMenuIcons[1], "이어하기", latestSlot.HasValue,
                     MainMenuButtonKind.Standard))
                 ContinueLatestNow();
-            menuY += rowHeight + gap;
-            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "03", "불러오기", true,
+            if (DrawLeftMenuRow(layout.Buttons[2], _mainMenuIcons[2], "불러오기", true,
                     MainMenuButtonKind.Standard))
                 ShowLoadSlotsNow();
-            menuY += rowHeight + gap;
-            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "04", "화면 설정", true,
+            if (DrawLeftMenuRow(layout.Buttons[3], _mainMenuIcons[3], "설정", true,
                     MainMenuButtonKind.Standard))
                 ToggleFullscreenNow();
-            menuY += rowHeight + gap;
-            if (DrawLeftMenuRow(new Rect(x, menuY, menuWidth, rowHeight), "05", "종료", true,
+            if (DrawLeftMenuRow(layout.Buttons[4], _mainMenuIcons[4], "종료", true,
                     MainMenuButtonKind.Danger))
                 Application.Quit();
 
-            var statusY = compact ? Screen.height - 59f * scale : menuY + rowHeight + 24f * scale;
-            DrawSolid(new Rect(x, statusY, menuWidth, 1f), new Color(1f, 0.48f, 0.34f, 0.72f));
-            DrawColoredLabel(new Rect(x, statusY + 7f * scale, menuWidth, 19f * scale),
-                "2000.01.03  ·  가족 4명  ·  500만원", _mainInfoStyle,
-                new Color(1f, 0.89f, 0.69f, 1f));
-            DrawColoredLabel(new Rect(x, statusY + 27f * scale, menuWidth, 18f * scale),
-                string.IsNullOrWhiteSpace(_notice) ? "작은 의뢰 하나부터 시작하세요." : _notice,
-                _mainButtonDetailStyle, new Color(0.83f, 0.78f, 0.70f, 0.92f));
+            GUI.Label(layout.Footer, "2000년 1월 3일 · 가족 네 명의 첫 출근", _mainInfoStyle);
         }
 
         private bool DrawLeftMenuRow(
             Rect rect,
-            string index,
+            Texture2D icon,
             string title,
             bool enabled,
             MainMenuButtonKind kind)
@@ -697,19 +695,33 @@ namespace FamilyCompany.Presentation.Unity
             var clicked = GUI.Button(rect, GUIContent.none, style);
             GUI.enabled = previousEnabled;
 
-            var primary = kind == MainMenuButtonKind.Primary;
             var danger = kind == MainMenuButtonKind.Danger;
-            var indexColor = enabled
-                ? primary ? new Color(0.35f, 0.12f, 0.10f, 0.84f) : new Color(1f, 0.48f, 0.34f, 0.92f)
-                : new Color(0.49f, 0.48f, 0.46f, 0.78f);
             var titleColor = enabled
-                ? primary ? new Color(0.17f, 0.08f, 0.07f, 1f)
-                    : danger ? new Color(1f, 0.58f, 0.48f, 1f) : new Color(1f, 0.94f, 0.82f, 1f)
-                : new Color(0.49f, 0.48f, 0.46f, 0.88f);
-            var side = Mathf.Clamp(rect.height * 0.95f, 28f, 46f);
-            DrawColoredLabel(new Rect(rect.x + 5f, rect.y, side, rect.height),
-                index, _mainButtonIndexStyle, indexColor);
-            DrawColoredLabel(new Rect(rect.x + side, rect.y, rect.width - side - 12f, rect.height),
+                ? danger ? new Color(0.64f, 0.18f, 0.14f, 1f) : new Color(0.125f, 0.23f, 0.23f, 1f)
+                : new Color(0.39f, 0.47f, 0.45f, 1f);
+            var scale = UiRemasterTypography.CalculateScale(Screen.width, Screen.height);
+            var iconSize = Mathf.Min(rect.height - UiRemasterTypography.Pixels(16f, scale),
+                UiRemasterTypography.Pixels(42f, scale));
+            var iconRect = UiRemasterTypography.PixelSnap(new Rect(
+                rect.x + UiRemasterTypography.Pixels(22f, scale),
+                rect.y + (rect.height - iconSize) * 0.5f,
+                iconSize,
+                iconSize));
+            if (icon != null)
+            {
+                var previousColor = GUI.color;
+                GUI.color = enabled ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+                GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit, true);
+                GUI.color = previousColor;
+            }
+
+            var textBounds = new Rect(
+                iconRect.xMax + UiRemasterTypography.Pixels(UiRemasterLayout.IconTextGap, scale),
+                rect.y,
+                rect.xMax - iconRect.xMax - UiRemasterTypography.Pixels(30f, scale),
+                rect.height);
+            var content = new GUIContent(title);
+            DrawColoredLabel(UiRemasterTypography.CenterUsingFontMetrics(textBounds, content, _mainButtonTitleStyle),
                 title, _mainButtonTitleStyle, titleColor);
             return clicked;
         }
@@ -944,7 +956,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0.20f, 0.40f, 0.42f, 0.46f));
             var rect = CenteredRect(540f, 570f);
-            DrawSolid(rect, new Color(1f, 0.97f, 0.88f, 0.98f));
+            GUI.Box(rect, GUIContent.none, _panelStyle);
             GUILayout.BeginArea(new Rect(rect.x + 50f, rect.y + 42f, rect.width - 100f, rect.height - 84f));
             GUILayout.Label("게임 메뉴", _headingStyle);
             GUILayout.Label($"현재 저장 슬롯 · {_activeSlot}", _smallStyle);
@@ -961,26 +973,39 @@ namespace FamilyCompany.Presentation.Unity
         private void DrawSlotPicker(string title, string description, bool canUseEmptySlot)
         {
             DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0.20f, 0.40f, 0.42f, _hasSession ? 0.46f : 0.08f));
-            var panelWidth = Mathf.Min(1380f, Screen.width - 120f);
-            var panelHeight = Mathf.Min(650f, Screen.height - 130f);
+            var scale = UiRemasterTypography.CalculateScale(Screen.width, Screen.height);
+            var panelWidth = Mathf.Min(UiRemasterTypography.Pixels(1050f, scale), Screen.width - 48f);
+            var panelHeight = Mathf.Min(UiRemasterTypography.Pixels(650f, scale), Screen.height - 48f);
             var panel = CenteredRect(panelWidth, panelHeight);
-            DrawSolid(panel, new Color(1f, 0.97f, 0.88f, 0.98f));
-            GUI.Label(new Rect(panel.x + 44f, panel.y + 35f, panel.width - 88f, 45f), title, _headingStyle);
-            GUI.Label(new Rect(panel.x + 44f, panel.y + 82f, panel.width - 88f, 34f), description, _bodyStyle);
+            GUI.Box(panel, GUIContent.none, _panelStyle);
+            var inset = UiRemasterTypography.Pixels(48f, scale);
+            var headerInset = UiRemasterTypography.Pixels(72f, scale);
+            var headerTop = UiRemasterTypography.Pixels(48f, scale);
+            var titleHeight = UiRemasterTypography.Pixels(42f, scale);
+            var descriptionTop = headerTop + titleHeight + UiRemasterTypography.Pixels(4f, scale);
+            GUI.Label(new Rect(panel.x + headerInset, panel.y + headerTop, panel.width - headerInset * 2f,
+                titleHeight), title, _headingStyle);
+            GUI.Label(new Rect(panel.x + headerInset, panel.y + descriptionTop, panel.width - headerInset * 2f,
+                UiRemasterTypography.Pixels(30f, scale)), description, _bodyStyle);
 
-            const float gap = 22f;
-            var cardY = panel.y + 145f;
-            var cardWidth = (panel.width - 88f - gap * 2f) / 3f;
-            var cardHeight = panel.height - 245f;
-            var previousBackgroundColor = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(0.78f, 0.92f, 0.96f, 1f);
+            var gap = UiRemasterTypography.Pixels(10f, scale);
+            var cardY = panel.y + UiRemasterTypography.Pixels(138f, scale);
+            var backHeight = UiRemasterTypography.Pixels(52f, scale);
+            var backY = panel.yMax - UiRemasterTypography.Pixels(96f, scale);
+            var cardBottom = backY - UiRemasterTypography.Pixels(16f, scale);
+            var cardWidth = panel.width - inset * 2f;
+            var cardHeight = (cardBottom - cardY - gap * 2f) / 3f;
             for (var slot = UnityJsonSaveRepository.MinimumSlot; slot <= UnityJsonSaveRepository.MaximumSlot; slot++)
             {
                 var repository = GetRepository(slot);
-                var card = new Rect(panel.x + 44f + (slot - 1) * (cardWidth + gap), cardY, cardWidth, cardHeight);
+                var card = UiRemasterTypography.PixelSnap(new Rect(
+                    panel.x + inset,
+                    cardY + (slot - 1) * (cardHeight + gap),
+                    cardWidth,
+                    cardHeight));
                 var label = BuildSlotLabel(repository);
                 GUI.enabled = canUseEmptySlot || repository.Exists;
-                if (GUI.Button(card, label, _slotStyle))
+                if (GUI.Button(card, GUIContent.none, _slotStyle))
                 {
                     if (_screen == PrototypeUiScreen.NewGameSlots) SelectNewGameSlotNow(slot);
                     else if (_screen == PrototypeUiScreen.SaveSlots)
@@ -991,31 +1016,46 @@ namespace FamilyCompany.Presentation.Unity
                     }
                     else LoadSlotNow(slot);
                 }
+                var slotColumnWidth = Mathf.Min(UiRemasterTypography.Pixels(180f, scale), card.width * 0.24f);
+                var slotBounds = new Rect(card.x + UiRemasterTypography.Pixels(16f, scale), card.y,
+                    slotColumnWidth - UiRemasterTypography.Pixels(20f, scale), card.height);
+                var slotContent = new GUIContent("슬롯 " + slot);
+                GUI.Label(UiRemasterTypography.CenterUsingFontMetrics(slotBounds, slotContent, _mainButtonTitleStyle),
+                    slotContent, _mainButtonTitleStyle);
+                var labelBounds = new Rect(
+                    card.x + slotColumnWidth + UiRemasterTypography.Pixels(20f, scale),
+                    card.y + UiRemasterTypography.Pixels(12f, scale),
+                    card.width - slotColumnWidth - UiRemasterTypography.Pixels(44f, scale),
+                    card.height - UiRemasterTypography.Pixels(24f, scale));
+                GUI.Label(labelBounds, label, _slotTextStyle);
                 GUI.enabled = true;
             }
 
-            if (GUI.Button(new Rect(panel.x + 44f, panel.yMax - 72f, 180f, 42f), "뒤로", _buttonStyle)) ReturnFromSlotScreen();
-            GUI.backgroundColor = previousBackgroundColor;
+            if (GUI.Button(new Rect(panel.x + inset, backY,
+                    UiRemasterTypography.Pixels(190f, scale), backHeight), "뒤로", _buttonStyle))
+                ReturnFromSlotScreen();
         }
 
         private string BuildSlotLabel(UnityJsonSaveRepository repository)
         {
             if (!repository.TryLoad(out var save))
             {
-                return $"SLOT {repository.Slot}\n\n빈 슬롯\n\n새 가족회사를 시작할 수 있습니다.";
+                return "빈 슬롯\n새 가족회사를 시작할 수 있습니다.";
             }
 
             var campaignDate = GameTime.CampaignStart.AddMinutes(save.elapsedMinutes);
             var savedAt = repository.LastWriteTimeLocal;
             var businessCount = save.schemaVersion >= 4 ? save.growth?.ownedBusinesses?.Count ?? 0 : 0;
-            return $"SLOT {repository.Slot}\n\n{save.company.companyName}\n{campaignDate:yyyy.MM.dd HH:mm}\n\n현금  {save.company.cashWon:N0}원\n평판  {save.company.reputation}\n계약  {save.contracts?.Count ?? 0}건 · 자체 사업 {businessCount}개\n\n저장 {savedAt:yyyy.MM.dd HH:mm}";
+            return $"{save.company.companyName} · {campaignDate:yyyy.MM.dd HH:mm}\n" +
+                   $"현금 {save.company.cashWon:N0}원 · 평판 {save.company.reputation}\n" +
+                   $"계약 {save.contracts?.Count ?? 0}건 · 자체 사업 {businessCount}개 · 저장 {savedAt:yyyy.MM.dd HH:mm}";
         }
 
         private void DrawNewGameConfirmation()
         {
             DrawSolid(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0.20f, 0.40f, 0.42f, 0.34f));
             var panel = CenteredRect(620f, 340f);
-            DrawSolid(panel, new Color(1f, 0.97f, 0.88f, 0.99f));
+            GUI.Box(panel, GUIContent.none, _panelStyle);
             GUILayout.BeginArea(new Rect(panel.x + 48f, panel.y + 42f, panel.width - 96f, panel.height - 84f));
             GUILayout.Label($"SLOT {_pendingNewGameSlot} 덮어쓰기", _headingStyle);
             GUILayout.Space(16f);
@@ -1059,133 +1099,135 @@ namespace FamilyCompany.Presentation.Unity
 
         private void EnsureStyles()
         {
-            var targetHeight = Mathf.Max(720, Screen.height);
-            if (_titleStyle != null && _styleHeight == targetHeight) return;
+            var targetHeight = Mathf.Max(1, Screen.height);
+            var targetWidth = Mathf.Max(1, Screen.width);
+            if (_titleStyle != null && _styleHeight == targetHeight && _styleWidth == targetWidth) return;
             _styleHeight = targetHeight;
-            var scale = Mathf.Clamp(targetHeight / (float)ReferenceHeight, 0.75f, 1.35f);
+            _styleWidth = targetWidth;
+            var scale = UiRemasterTypography.CalculateScale(targetWidth, targetHeight);
             EnsureSolidTexture();
             EnsureMainMenuTextures();
+            if (!UiRemasterTypography.TryLoadFonts(out _uiBodyFont, out _uiHeadingFont, out _uiFallbackFont, out var fontError))
+            {
+                _uiRemasterAssetsReady = false;
+                if (!_uiRemasterFailureLogged)
+                {
+                    Debug.LogError("UI_REMASTER_V3_FONT_MISSING | " + fontError);
+                    _uiRemasterFailureLogged = true;
+                }
+            }
+
+            var headingFont = _uiHeadingFont != null ? _uiHeadingFont : GUI.skin.font;
+            var bodyFont = _uiBodyFont != null ? _uiBodyFont : GUI.skin.font;
+            var ink = new Color(0.125f, 0.23f, 0.23f, 1f);
+            var mutedInk = new Color(0.22f, 0.34f, 0.33f, 1f);
             _titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = Mathf.RoundToInt(70f * scale),
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.08f, 0.30f, 0.31f) }
+                font = headingFont,
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.MainTitlePixels, scale),
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                normal = { textColor = ink }
             };
             _subtitleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = Mathf.RoundToInt(27f * scale),
-                normal = { textColor = new Color(0.20f, 0.48f, 0.46f) }
+                font = bodyFont,
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.BodyPixels, scale),
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                normal = { textColor = mutedInk }
             };
             _headingStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = Mathf.RoundToInt(30f * scale),
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.08f, 0.30f, 0.31f) }
+                font = headingFont,
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.PanelTitlePixels, scale),
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                normal = { textColor = ink }
             };
             _bodyStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = Mathf.RoundToInt(18f * scale),
+                font = bodyFont,
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.BodyPixels, scale),
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.UpperLeft,
                 wordWrap = true,
-                normal = { textColor = new Color(0.12f, 0.27f, 0.28f) }
+                clipping = TextClipping.Clip,
+                normal = { textColor = ink }
             };
             _smallStyle = new GUIStyle(_bodyStyle)
             {
-                fontSize = Mathf.RoundToInt(14f * scale),
-                normal = { textColor = new Color(0.25f, 0.46f, 0.45f) }
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.CaptionPixels, scale),
+                normal = { textColor = mutedInk }
             };
-            _buttonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = Mathf.RoundToInt(20f * scale),
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleLeft,
-                padding = new RectOffset(22, 18, 8, 8),
-                margin = new RectOffset(0, 0, 0, 10),
-                normal = { textColor = new Color(0.08f, 0.28f, 0.29f) },
-                hover = { textColor = new Color(0.89f, 0.28f, 0.25f) }
-            };
-            _buttonStyle.normal.background = _solidTexture;
-            _buttonStyle.hover.background = _solidTexture;
-            _buttonStyle.active.background = _solidTexture;
-            _slotStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = Mathf.RoundToInt(18f * scale),
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.UpperLeft,
-                wordWrap = true,
-                padding = new RectOffset(24, 24, 24, 20),
-                normal = { textColor = new Color(0.08f, 0.28f, 0.29f) },
-                hover = { textColor = new Color(0.89f, 0.28f, 0.25f) }
-            };
-            _slotStyle.normal.background = _solidTexture;
-            _slotStyle.hover.background = _solidTexture;
-            _slotStyle.active.background = _solidTexture;
-            _panelStyle = new GUIStyle(GUI.skin.box);
 
             _mainTitleStyle = new GUIStyle(_titleStyle)
             {
-                fontSize = Mathf.RoundToInt(76f * scale),
-                normal = { textColor = new Color(1f, 0.94f, 0.78f, 1f) }
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.MainTitlePixels, scale),
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = ink }
             };
-            _mainTitleShadowStyle = new GUIStyle(_mainTitleStyle)
-            {
-                normal = { textColor = new Color(0.01f, 0.09f, 0.10f, 0.80f) }
-            };
+            _mainTitleShadowStyle = new GUIStyle(_mainTitleStyle);
             _mainSubtitleStyle = new GUIStyle(_subtitleStyle)
             {
-                fontSize = Mathf.RoundToInt(22f * scale),
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.93f, 0.86f, 0.72f, 1f) }
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.BodyPixels, scale),
+                normal = { textColor = mutedInk }
             };
             _mainChipStyle = new GUIStyle(_smallStyle)
             {
-                fontSize = Mathf.RoundToInt(13f * scale),
-                fontStyle = FontStyle.Bold,
+                font = headingFont,
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.CaptionPixels, scale),
+                fontStyle = FontStyle.Normal,
                 alignment = TextAnchor.MiddleLeft,
-                normal = { textColor = new Color(1f, 0.48f, 0.34f, 1f) }
+                normal = { textColor = mutedInk }
             };
             _mainButtonTitleStyle = new GUIStyle(_headingStyle)
             {
-                fontSize = Mathf.RoundToInt(21f * scale),
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.ButtonPixels, scale),
                 alignment = TextAnchor.MiddleLeft,
                 clipping = TextClipping.Clip,
-                normal = { textColor = Color.white }
+                normal = { textColor = ink }
             };
             _mainButtonDetailStyle = new GUIStyle(_smallStyle)
             {
-                fontSize = Mathf.RoundToInt(13f * scale),
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.CaptionPixels, scale),
                 alignment = TextAnchor.MiddleLeft,
                 clipping = TextClipping.Clip,
-                normal = { textColor = new Color(0.83f, 0.78f, 0.70f, 0.92f) }
+                normal = { textColor = mutedInk }
             };
             _mainButtonIndexStyle = new GUIStyle(_headingStyle)
             {
-                fontSize = Mathf.RoundToInt(16f * scale),
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.ButtonPixels, scale),
                 alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(1f, 0.48f, 0.34f, 0.92f) }
+                normal = { textColor = ink }
             };
             _mainInfoStyle = new GUIStyle(_smallStyle)
             {
-                fontSize = Mathf.RoundToInt(14f * scale),
-                fontStyle = FontStyle.Bold,
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.CaptionPixels, scale),
+                fontStyle = FontStyle.Normal,
                 clipping = TextClipping.Clip,
-                normal = { textColor = new Color(1f, 0.89f, 0.69f, 1f) }
+                normal = { textColor = mutedInk }
             };
             _mainShortcutStyle = new GUIStyle(_smallStyle)
             {
-                fontSize = Mathf.RoundToInt(13f * scale),
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.CaptionPixels, scale),
                 alignment = TextAnchor.MiddleLeft,
                 clipping = TextClipping.Clip,
-                normal = { textColor = new Color(0.69f, 0.87f, 0.82f, 0.92f) }
+                normal = { textColor = mutedInk }
             };
             _mainCompactTextButtonStyle = new GUIStyle(_mainShortcutStyle)
             {
-                fontSize = Mathf.RoundToInt(14f * scale),
-                fontStyle = FontStyle.Bold,
+                font = headingFont,
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.ButtonPixels, scale),
+                fontStyle = FontStyle.Normal,
                 alignment = TextAnchor.MiddleCenter,
                 padding = new RectOffset(4, 4, 2, 2),
-                normal = { textColor = new Color(0.72f, 0.91f, 0.85f, 0.96f) },
-                hover = { textColor = new Color(1f, 0.91f, 0.63f, 1f) },
-                active = { textColor = new Color(1f, 0.60f, 0.43f, 1f) }
+                normal = { textColor = ink },
+                hover = { textColor = new Color(0.12f, 0.43f, 0.40f, 1f) },
+                active = { textColor = new Color(0.65f, 0.20f, 0.16f, 1f) }
             };
             _mainCompactDangerButtonStyle = new GUIStyle(_mainCompactTextButtonStyle)
             {
@@ -1194,7 +1236,7 @@ namespace FamilyCompany.Presentation.Unity
                 active = { textColor = new Color(0.90f, 0.30f, 0.26f, 1f) }
             };
 
-            var roundedBorder = new RectOffset(24, 24, 24, 24);
+            var roundedBorder = new RectOffset(48, 48, 24, 24);
             _mainButtonStyle = CreateMainMenuButtonStyle(
                 _mainButtonTexture,
                 _mainButtonHoverTexture,
@@ -1215,6 +1257,36 @@ namespace FamilyCompany.Presentation.Unity
                 _mainButtonDisabledTexture,
                 _mainButtonDisabledTexture,
                 roundedBorder);
+            _buttonStyle = new GUIStyle(_mainButtonStyle)
+            {
+                font = headingFont,
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.ButtonPixels, scale),
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.MiddleCenter,
+                padding = new RectOffset(20, 20, 8, 8),
+                normal = { textColor = ink },
+                hover = { textColor = new Color(0.12f, 0.43f, 0.40f, 1f) },
+                active = { textColor = new Color(0.65f, 0.20f, 0.16f, 1f) }
+            };
+            _slotStyle = CreateMainMenuButtonStyle(
+                _slotNormalTexture,
+                _slotSelectedTexture,
+                _slotSelectedTexture,
+                new RectOffset(44, 44, 28, 28));
+            _slotTextStyle = new GUIStyle(_bodyStyle)
+            {
+                fontSize = UiRemasterTypography.Pixels(UiRemasterTypography.BodyPixels, scale),
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = true,
+                clipping = TextClipping.Clip,
+                normal = { textColor = ink }
+            };
+            _panelStyle = new GUIStyle(GUI.skin.box)
+            {
+                border = new RectOffset(40, 40, 40, 40),
+                padding = new RectOffset(0, 0, 0, 0),
+                normal = { background = _modalFrameTexture }
+            };
             _mainInfoBoxStyle = new GUIStyle(GUI.skin.box)
             {
                 border = roundedBorder,
@@ -1253,109 +1325,42 @@ namespace FamilyCompany.Presentation.Unity
 
         private void EnsureMainMenuTextures()
         {
-            if (_mainButtonTexture != null) return;
-            _mainButtonTexture = BuildRoundedUiTexture(
-                "Main Menu Charcoal",
-                new Color(0.11f, 0.095f, 0.09f, 0.92f),
-                new Color(0.055f, 0.047f, 0.045f, 0.96f),
-                new Color(0.58f, 0.49f, 0.40f, 0.72f));
-            _mainButtonHoverTexture = BuildRoundedUiTexture(
-                "Main Menu Warm Hover",
-                new Color(0.98f, 0.79f, 0.57f, 1f),
-                new Color(0.94f, 0.46f, 0.31f, 1f),
-                new Color(1f, 0.91f, 0.71f, 1f));
-            _mainButtonActiveTexture = BuildRoundedUiTexture(
-                "Main Menu Active",
-                new Color(0.98f, 0.57f, 0.36f, 1f),
-                new Color(0.86f, 0.35f, 0.28f, 1f),
-                new Color(1f, 0.88f, 0.66f, 1f));
-            _mainButtonPrimaryTexture = BuildRoundedUiTexture(
-                "Main Menu Coral Primary",
-                new Color(1f, 0.66f, 0.46f, 1f),
-                new Color(0.93f, 0.35f, 0.27f, 1f),
-                new Color(1f, 0.88f, 0.67f, 1f));
-            _mainButtonPrimaryHoverTexture = BuildRoundedUiTexture(
-                "Main Menu Coral Primary Hover",
-                new Color(1f, 0.83f, 0.58f, 1f),
-                new Color(1f, 0.49f, 0.31f, 1f),
-                new Color(1f, 0.96f, 0.78f, 1f));
-            _mainButtonDangerTexture = BuildRoundedUiTexture(
-                "Main Menu Danger",
-                new Color(0.20f, 0.24f, 0.25f, 0.96f),
-                new Color(0.11f, 0.13f, 0.14f, 0.98f),
-                new Color(0.91f, 0.39f, 0.34f, 0.92f));
-            _mainButtonDisabledTexture = BuildRoundedUiTexture(
-                "Main Menu Disabled",
-                new Color(0.105f, 0.095f, 0.09f, 0.82f),
-                new Color(0.065f, 0.058f, 0.055f, 0.88f),
-                new Color(0.30f, 0.27f, 0.24f, 0.62f));
-            _mainInfoTexture = BuildRoundedUiTexture(
-                "Main Menu Info",
-                new Color(0.11f, 0.095f, 0.09f, 0.90f),
-                new Color(0.055f, 0.047f, 0.045f, 0.94f),
-                new Color(0.75f, 0.50f, 0.36f, 0.72f));
-            _mainChipTexture = BuildRoundedUiTexture(
-                "Main Menu Chip",
-                new Color(1f, 0.88f, 0.67f, 0.98f),
-                new Color(0.97f, 0.57f, 0.38f, 0.98f),
-                new Color(1f, 0.96f, 0.82f, 1f));
-        }
+            if (_mainLogoTexture != null) return;
+            const string root = "UiRemasterV3/Title/";
+            _mainLogoTexture = Resources.Load<Texture2D>(root + "title_logo_frame_v3");
+            _mainButtonTexture = Resources.Load<Texture2D>(root + "title_button_normal_v3");
+            _mainButtonHoverTexture = Resources.Load<Texture2D>(root + "title_button_hover_v3");
+            _mainButtonActiveTexture = Resources.Load<Texture2D>(root + "title_button_pressed_v3");
+            _mainButtonDisabledTexture = Resources.Load<Texture2D>(root + "title_button_disabled_v3");
+            _slotNormalTexture = Resources.Load<Texture2D>(root + "save_slot_normal_v3");
+            _slotSelectedTexture = Resources.Load<Texture2D>(root + "save_slot_selected_v3");
+            _modalFrameTexture = Resources.Load<Texture2D>("UiRemasterV3/Common/modal_frame_v3");
+            _mainMenuIcons[0] = Resources.Load<Texture2D>(root + "Icons/new_company_v3");
+            _mainMenuIcons[1] = Resources.Load<Texture2D>(root + "Icons/continue_v3");
+            _mainMenuIcons[2] = Resources.Load<Texture2D>(root + "Icons/load_v3");
+            _mainMenuIcons[3] = Resources.Load<Texture2D>(root + "Icons/settings_v3");
+            _mainMenuIcons[4] = Resources.Load<Texture2D>(root + "Icons/exit_v3");
 
-        private static Texture2D BuildRoundedUiTexture(string textureName, Color top, Color bottom, Color borderColor)
-        {
-            const int width = 96;
-            const int height = 64;
-            const int radius = 15;
-            const int border = 3;
-            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
-            {
-                name = textureName,
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp,
-                hideFlags = HideFlags.HideAndDontSave
-            };
-            for (var y = 0; y < height; y++)
-            {
-                var progress = y / (float)(height - 1);
-                for (var x = 0; x < width; x++)
-                {
-                    if (!IsInsideRoundedRect(x, y, width, height, radius))
-                    {
-                        texture.SetPixel(x, y, Color.clear);
-                        continue;
-                    }
+            _mainButtonPrimaryTexture = _mainButtonTexture;
+            _mainButtonPrimaryHoverTexture = _mainButtonHoverTexture;
+            _mainButtonDangerTexture = _mainButtonTexture;
+            _mainInfoTexture = _mainButtonTexture;
+            _mainChipTexture = _mainButtonTexture;
 
-                    var insideFill = IsInsideRoundedRect(
-                        x - border,
-                        y - border,
-                        width - border * 2,
-                        height - border * 2,
-                        radius - border);
-                    var color = insideFill ? Color.Lerp(top, bottom, progress) : borderColor;
-                    if (insideFill && y <= border + 1) color = Color.Lerp(color, Color.white, 0.12f);
-                    texture.SetPixel(x, y, color);
-                }
-            }
-
-            texture.Apply(false, true);
-            return texture;
-        }
-
-        private static bool IsInsideRoundedRect(int x, int y, int width, int height, int radius)
-        {
-            if (x < 0 || y < 0 || x >= width || y >= height) return false;
-            if (x >= radius && x < width - radius) return true;
-            if (y >= radius && y < height - radius) return true;
-            var centerX = x < radius ? radius : width - radius - 1;
-            var centerY = y < radius ? radius : height - radius - 1;
-            var dx = x - centerX;
-            var dy = y - centerY;
-            return dx * dx + dy * dy <= radius * radius;
+            _uiRemasterAssetsReady = _mainLogoTexture != null && _mainButtonTexture != null &&
+                                       _mainButtonHoverTexture != null && _mainButtonActiveTexture != null &&
+                                       _mainButtonDisabledTexture != null && _slotNormalTexture != null &&
+                                       _slotSelectedTexture != null && _modalFrameTexture != null &&
+                                       _mainMenuIcons.All(item => item != null);
+            if (_uiRemasterAssetsReady || _uiRemasterFailureLogged) return;
+            Debug.LogError("UI_REMASTER_V3_ASSET_MISSING | one or more generated title/common assets failed to load");
+            _uiRemasterFailureLogged = true;
         }
 
         private static void DestroyRuntimeTexture(Texture2D texture)
         {
             if (texture == null) return;
+            if ((texture.hideFlags & HideFlags.DontSave) == 0) return;
             if (Application.isPlaying) Destroy(texture);
             else DestroyImmediate(texture);
         }

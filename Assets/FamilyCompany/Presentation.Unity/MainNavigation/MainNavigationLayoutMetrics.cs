@@ -45,6 +45,18 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         public const double TabHorizontalPadding = 16d;
         public const double MinimumHitTarget = 44d;
 
+        public static float ContentPanelWidthFor(int pixelWidth)
+        {
+            if (pixelWidth <= 0) throw new ArgumentOutOfRangeException(nameof(pixelWidth));
+            return (float)Math.Max(1040d, Math.Min(1180d, pixelWidth * (1120d / ReferenceWidth)));
+        }
+
+        public static float ContentPanelHeightFor(int pixelHeight)
+        {
+            if (pixelHeight <= 0) throw new ArgumentOutOfRangeException(nameof(pixelHeight));
+            return (float)Math.Max(500d, Math.Min(680d, pixelHeight * (680d / ReferenceHeight)));
+        }
+
         public static MainNavigationLayoutSnapshot Calculate(
             int pixelWidth,
             int pixelHeight,
@@ -66,22 +78,27 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 safeInsets.Top,
                 pixelWidth - safeInsets.Left - safeInsets.Right,
                 pixelHeight - safeInsets.Top - safeInsets.Bottom);
-            var margin = OuterMargin * scale;
+            var margin = Math.Max(18d, Math.Min(32d, OuterMargin * scale));
+            var topHeight = Math.Max(56d, Math.Min(72d, TopHudHeight * scale));
+            var bottomHeight = Math.Max(88d, Math.Min(104d, BottomNavigationHeight * scale));
+            var regionGap = Math.Max(14d, Math.Min(24d, RegionGap * scale));
             var top = new UiPixelRect(
                 safe.X + margin,
                 safe.Y + margin,
                 safe.Width - margin * 2d,
-                TopHudHeight * scale);
-            var bottomWidth = Math.Min(safe.Width - margin * 2d, BottomNavigationWidth * scale);
+                topHeight);
+            var bottomWidth = Math.Min(
+                safe.Width - margin * 2d,
+                Math.Max(760d, Math.Min(1120d, BottomNavigationWidth * scale)));
             var bottom = new UiPixelRect(
                 safe.X + (safe.Width - bottomWidth) * 0.5d,
-                safe.Bottom - margin - BottomNavigationHeight * scale,
+                safe.Bottom - margin - bottomHeight,
                 bottomWidth,
-                BottomNavigationHeight * scale);
-            var contentTop = top.Bottom + RegionGap * scale;
-            var contentBottom = bottom.Y - RegionGap * scale;
-            var panelWidth = Math.Min(safe.Width - margin * 2d, ContentPanelWidth * scale);
-            var panelHeight = Math.Min(ContentPanelHeight * scale, contentBottom - contentTop);
+                bottomHeight);
+            var contentTop = top.Bottom + regionGap;
+            var contentBottom = bottom.Y - regionGap;
+            var panelWidth = Math.Min(safe.Width - margin * 2d, ContentPanelWidthFor(pixelWidth));
+            var panelHeight = Math.Min(ContentPanelHeightFor(pixelHeight), contentBottom - contentTop);
             var panel = new UiPixelRect(
                 safe.X + (safe.Width - panelWidth) * 0.5d,
                 contentTop + Math.Max(0d, contentBottom - contentTop - panelHeight) * 0.5d,

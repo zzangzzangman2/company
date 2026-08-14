@@ -1,0 +1,351 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-14",
+  "generator": "Codex built-in image_gen",
+  "cliOrApiFallbackUsed": false,
+  "projectRoot": "C:/Users/godho/Documents/Codex/2026-08-14/family-company-main-navigation-ui/worktree-ui-remaster-integrated",
+  "acceptedAssets": [
+    {
+      "callId": "exec-10e750f4-ae27-4917-9693-0b3382403c46",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-10e750f4-ae27-4917-9693-0b3382403c46.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/title_hero_background_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable 1920x1080 game title hero background\nPrimary request: create a new title-screen hero for a warm Korean family-owned software company tycoon set in January 2000. Preserve the broad storytelling of a four-person family working together in a small office, but make the image a fresh original composition suitable for the game's actual title screen.\nInput images: Image 1 is composition, era-prop, and family-role reference only, not an edit target; Image 2 is the current in-game office screenshot and is palette, pixel density, isometric camera, and material reference only, not an edit target.\nScene/backdrop: cozy early-2000 Korean small office with honey wood desks, cream CRT computers, wired telephone, folders, paper contracts, fax/printer, mint filing furniture and a bright morning window.\nSubject: a readable isometric office vignette on the right 58-60%, with the four family members cooperating; left 40-42% is calm low-detail negative space for a runtime logo and vertical menu.\nStyle/medium: polished casual management tycoon 2D painted pixel-art hybrid, crisp pixel-friendly edges, controlled colored outlines, warm and friendly, clearly related to the current isometric game world but higher-fidelity title art.\nComposition/framing: exact 16:9 landscape; full-bleed opaque background; keep all faces and important props away from crop edges; left menu-safe area remains uncluttered and has enough contrast for deep-ink runtime Korean text.\nLighting/mood: soft optimistic morning light from upper left, cozy startup energy, restrained highlights.\nColor palette: warm cream #FFF4D8, honey wood, coral #F27662 accents, clear teal #2F7771 accents, pale mint #DCECE4, deep green ink #203B3A.\nConstraints: no text, no letters, no numbers, no logo, no watermark, no floating money, no currency, no black rectangular bar, no gray wireframe, no casino, no neon, no glassmorphism, no science-fiction metal, no modern flat monitors, no laptops, no smartphones; do not copy any specific game UI or trademark; do not reproduce the reference images pixel-for-pixel; no baked buttons or panels."
+    },
+    {
+      "callId": "exec-7c0bad8d-6f50-46c8-8378-3462465d7a55",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-7c0bad8d-6f50-46c8-8378-3462465d7a55.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/title_logo_frame_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI logo ornament frame\nPrimary request: an original horizontal empty title crest/backplate for the Korean game title, designed to receive runtime text in Unity.\nInput images: Image 1 is the newly approved title hero and provides palette, light, and era mood only; Image 2 is the current generated company badge and provides UI material language only, not an edit target.\nSubject: a light warm-cream horizontal plaque with a small restrained family-company motif at the far left, such as a tiny office folder, roofline, and sprouting leaf; coral corner accent, slim teal inner rule, soft gold pin details; completely empty central text area.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges; warm Korean family office atmosphere; subtle paper-and-wood craftsmanship.\nComposition/framing: centered wide plaque, genuinely transparent background, generous 12% transparent padding, strong silhouette; symmetric rounded stretch-safe ends and a large uniform empty center suitable for 9-slice scaling; no protrusion into the text-safe center.\nLighting/mood: soft upper-left office light, friendly and confident.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, sunny gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4.\nConstraints: genuinely transparent background with clean alpha; no text, no letters, no numbers, no logo, no watermark, no baked shadow rectangle, no black outline, no gray wireframe, no casino/neon/glass/SF metal; no characters; no office scene; no faux transparency checkerboard; stretch-safe empty center."
+    },
+    {
+      "callId": "exec-6327c656-503e-4233-973c-09f69c52c6cc",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-6327c656-503e-4233-973c-09f69c52c6cc.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/title_button_normal_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI primary menu button frame, normal state\nPrimary request: one empty horizontal button frame for the Family Company title menu, normal state.\nInput images: Image 1 is a style, palette, material, lighting, corner-radius, and line-weight reference only; do not copy its building/folder emblem.\nSubject: warm cream paper-like button face, slim teal inner stroke, restrained coral tab accent at the left edge, tiny soft-gold fastener details; no icon and completely empty text area.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, cozy Korean family office stationery motif.\nComposition/framing: centered wide button, genuinely transparent background, generous transparent padding, symmetric rounded corners, exact rectangular stretch-safe empty center for Unity 9-slice; compact visual height and strong silhouette.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, sunny gold #F2C35B, deep green ink #203B3A, pale mint #DCECE4.\nLighting/mood: soft upper-left highlight, subtle one-pixel-friendly shadow, calm normal state.\nConstraints: genuinely transparent background; no text; no letters; no numbers; no logo; no watermark; no icon; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; no baked scene; no faux transparency checkerboard; empty stretch-safe center."
+    },
+    {
+      "callId": "exec-043d3cfc-d977-4bd3-9ac5-2505db60c316",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-043d3cfc-d977-4bd3-9ac5-2505db60c316.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/title_button_hover_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI primary menu button frame, hover state\nPrimary request: create one hover-state horizontal button in the exact same visual family and proportions as Image 1, with brighter cream, clearer teal edge, warmer coral tabs, and restrained lifted highlight. The center must remain blank for Unity runtime text.\nInput images: Image 1 is a style, proportions, padding, material, and corner reference only; generate a fresh hover asset, not a flattened edit.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, cozy Korean family office stationery motif.\nComposition/framing: centered wide button; exact symmetric rounded corners; generous outer transparent padding; a large uniform stretch-safe center for 9-slice; strong silhouette at 50% scale.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, warm coral #F27662, sunny gold #F2C35B, deep green ink #203B3A.\nConstraints: output pixels outside the button must have true alpha 0; genuinely transparent background; absolutely no checkerboard pattern, no white or black matte, no backdrop texture outside the button; no text, letters, numbers, icon, logo, watermark; no glow bloom, black outline, casino/neon/glass/SF metal; no baked scene; empty stretch-safe center."
+    },
+    {
+      "callId": "exec-5c2166dd-00a7-4289-bf76-20a16112e6aa",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-5c2166dd-00a7-4289-bf76-20a16112e6aa.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/title_button_pressed_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI primary menu button frame, pressed state\nPrimary request: a single empty, very wide pressed menu button for a warm Korean family-company tycoon. The design uses a slim soft-gold outer rim, a clear-teal inner band, small coral diamond ornaments centered at the far left and far right, and a warm-cream blank face. Make it visibly pressed with the cream face inset downward, a strong lower teal edge, and reduced top highlight.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, cozy office stationery motif.\nComposition/framing: one isolated wide button around 3:1 aspect, centered; symmetric rounded ends; generous transparent canvas padding; large uniform blank center for Unity 9-slice; no other objects.\nTransparency requirement: true transparent PNG; all pixels outside the button object have RGBA alpha 0; all four corners alpha 0; transparent canvas appears empty, not drawn.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nConstraints: absolutely no checkerboard graphic, white background, black background, matte, scene, drop-shadow rectangle, text, letters, numbers, icons, logo, watermark, extra leaves, casino/neon/glass/SF metal; blank stretch-safe center."
+    },
+    {
+      "callId": "exec-7204f19d-48a5-41a4-ae9d-3b2b6fcf9cea",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-7204f19d-48a5-41a4-ae9d-3b2b6fcf9cea.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/title_button_disabled_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI primary menu button frame, disabled state\nPrimary request: a single empty, very wide disabled menu button for a warm Korean family-company tycoon. Match this family language: slim muted-soft-gold outer rim, desaturated pale-teal inner band, small muted-coral diamond ornaments at far left and far right, and a quiet ivory blank face. It should clearly look unavailable without becoming muddy.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, cozy office stationery motif.\nComposition/framing: one isolated wide button around 3:1 aspect, centered; symmetric rounded ends; generous transparent canvas padding; large uniform blank center for Unity 9-slice; no other objects.\nTransparency requirement: true transparent PNG; all pixels outside the button object have RGBA alpha 0; all four corners alpha 0; no drawn background.\nColor palette: quiet ivory #EFE9DB, pale teal #9FBDB6, muted coral #C99488, muted gold #C9AE72, green-gray ink #687873.\nConstraints: absolutely no checkerboard graphic, white or black background, matte, scene, drop-shadow rectangle, text, letters, numbers, icons, logo, watermark, leaves, leather tabs, casino/neon/glass/SF metal; blank stretch-safe center."
+    },
+    {
+      "callId": "exec-e4db1125-0d3c-4b31-8444-898f31fbf8e1",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-e4db1125-0d3c-4b31-8444-898f31fbf8e1.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/save_slot_normal_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI save-slot card frame, normal state\nPrimary request: one empty horizontal save-slot card for a warm Korean family-company tycoon. Use a quiet ivory paper surface, slim teal left index rail, small coral folder tab in the upper-left corner, and restrained soft-gold date-divider line. Reserve a clear square area at far left for a runtime thumbnail/icon and a large blank text area at center-right.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, cozy year-2000 office filing-card motif.\nComposition/framing: isolated wide card about 2.6:1, centered on transparent canvas; generous transparent padding; symmetric softly rounded corners; stretch-safe blank center for Unity 9-slice; external border thin and light.\nColor palette: ivory #FAF7EF, warm cream #FFF4D8, clear teal #2F7771, coral #F27662, pale mint #DCECE4, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: all pixels outside the card silhouette must be true RGBA alpha 0, including four corners; no background, matte, checkerboard, shadow panel, or scene.\nConstraints: no text, letters, numbers, logo, watermark, person, building, ribbon, repeated icon; no black outline, gray wireframe, casino/neon/glass/SF metal; blank content areas."
+    },
+    {
+      "callId": "exec-ea21155d-b049-4f55-b18b-8c32c5ba4e54",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-ea21155d-b049-4f55-b18b-8c32c5ba4e54.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/save_slot_selected_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI save-slot card frame, selected state\nPrimary request: one empty selected save-slot card for a warm Korean family-company tycoon. It matches the office filing-card language of Image 1: quiet ivory paper surface, slim teal left index rail, coral folder tab upper-left, a clear thumbnail-safe square at far left, and blank center-right text area. Make selection immediately readable with a brighter coral tab, clearer teal double rule, restrained soft-gold focus corners, and slight paper elevation.\nInput image role: Image 1 is the exact approved normal save-slot card composition, proportions, padding, and material reference; generate a fresh selected variant.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges.\nComposition/framing: isolated wide card around 2.6:1 centered on transparent canvas; generous transparent padding; same content-safe areas as reference; stretch-safe blank center for Unity 9-slice.\nTransparency requirement: true RGBA alpha 0 outside the card silhouette including all four corners; no background, matte, checkerboard, shadow panel, or scene.\nColor palette: ivory #FAF7EF, warm cream #FFF4D8, clear teal #2F7771, brighter coral #F27662, pale mint #DCECE4, soft gold #F2C35B.\nConstraints: no text, letters, numbers, logo, watermark, person, building, ribbon, repeated icon; no black outline, gray wireframe, casino/neon/glass/SF metal; blank content areas."
+    },
+    {
+      "callId": "exec-98080398-1ada-4ad9-9c1b-b553cb2b8106",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-98080398-1ada-4ad9-9c1b-b553cb2b8106.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/new_company_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable small game UI icon, new company\nPrimary request: one compact icon for starting a new family company: a tiny warm-cream office folder opened like a storefront, with one coral roof-tab, one teal door, and a small gold sprouting leaf. No text.\nStyle/medium: polished casual management tycoon 2D painted pixel-art hybrid with crisp pixel-friendly edges, cozy year-2000 Korean office mood.\nComposition/framing: single isolated icon centered in square transparent canvas, generous 18% padding, strong simple silhouette readable at 32-40 pixels, consistent upper-left light, balanced visual weight.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: true RGBA alpha 0 outside the icon including four corners; no backdrop, matte, checkerboard, tile, or button.\nConstraints: no text, letters, numbers, brand logo, watermark, people, extra props, black outline, casino/neon/glass/SF metal."
+    },
+    {
+      "callId": "exec-43af30f9-ffcf-4db8-a290-ba4239818bcd",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-43af30f9-ffcf-4db8-a290-ba4239818bcd.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/continue_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable small game UI icon, continue game\nPrimary request: one compact continue-game icon: a warm-cream office folder with a clear teal circular forward arrow wrapping around a small soft-gold desk clock with no legible numerals, plus one coral bookmark tab. No text.\nStyle/medium: polished casual management tycoon 2D painted pixel-art hybrid with crisp pixel-friendly edges, matching a cozy year-2000 Korean office.\nComposition/framing: one isolated icon centered in square transparent canvas, generous 18% padding, strong simple silhouette readable at 32-40 pixels, upper-left light, same visual weight as a small storefront-folder icon.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: true RGBA alpha 0 outside the icon including all four corners; no background, matte, checkerboard, tile, or button.\nConstraints: no text, letters, numbers, brand logo, watermark, people, extra props, black outline, casino/neon/glass/SF metal."
+    },
+    {
+      "callId": "exec-1c638b3e-ef4f-4d62-af45-bdaec5a587a7",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-1c638b3e-ef4f-4d62-af45-bdaec5a587a7.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/load_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable small game UI icon, load saved game\nPrimary request: one compact load-game icon: a warm-cream archive folder with three layered paper records and a clear teal downward arrow entering the open folder, plus one small coral tab and soft-gold clip. No text.\nStyle/medium: polished casual management tycoon 2D painted pixel-art hybrid with crisp pixel-friendly edges, matching a cozy year-2000 Korean office.\nComposition/framing: one isolated icon centered in square transparent canvas, generous 18% padding, strong simple silhouette readable at 32-40 pixels, upper-left light, same visual weight as the companion new-company and continue icons.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: true RGBA alpha 0 outside the icon including all four corners; no background, matte, checkerboard, tile, or button.\nConstraints: no text, letters, numbers, brand logo, watermark, people, extra props, black outline, casino/neon/glass/SF metal."
+    },
+    {
+      "callId": "exec-64d94d8b-4ea5-426b-b3ca-977a8ef315b8",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-64d94d8b-4ea5-426b-b3ca-977a8ef315b8.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/exit_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable small game UI icon, exit game\nPrimary request: one compact exit-game icon: a warm-cream small office doorway with a coral door opened outward and a clear-teal arrow leaving toward the right, with one restrained soft-gold handle. Friendly and calm, not alarming. No text.\nStyle/medium: polished casual management tycoon 2D painted pixel-art hybrid with crisp pixel-friendly edges, matching a cozy year-2000 Korean office.\nComposition/framing: one isolated icon centered in square transparent canvas, generous 18% padding, strong simple silhouette readable at 32-40 pixels, upper-left light, same visual weight as companion folder and settings icons.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: true RGBA alpha 0 outside the icon including all four corners; no background, matte, checkerboard, tile, or button.\nConstraints: no text, letters, numbers, brand logo, watermark, people, warning sign, extra props, black outline, casino/neon/glass/SF metal."
+    },
+    {
+      "callId": "exec-ce934f4d-17df-42b0-aacb-e1608845f83b",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-ce934f4d-17df-42b0-aacb-e1608845f83b.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Title/Icons/settings_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable small game UI icon, settings\nPrimary request: one compact settings icon for a warm Korean family-company tycoon: one clear-teal friendly gear, one short coral pencil, and one small warm-cream blank note card held by a soft-gold pin. No text.\nStyle/medium: polished casual management tycoon 2D painted pixel-art hybrid with crisp pixel-friendly edges, cozy year-2000 office atmosphere.\nComposition/framing: a single isolated icon centered in a square canvas, scaled so the entire silhouette including highlights stays inside an inner 64% safe square; at least 18% completely empty transparent padding on every side; readable at 32-40 pixels; upper-left light.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: true transparent PNG; all pixels in a 12-pixel perimeter around the full canvas and all four corners must be exact RGBA alpha 0; no background or edge spill.\nConstraints: no checkerboard graphic, white/black matte, tile, button, text, letters, numbers, logo, watermark, people, extra props, black outline, casino/neon/glass/SF metal."
+    },
+    {
+      "callId": "exec-9cb84c80-0b69-466c-9ad6-58a913d7633b",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-9cb84c80-0b69-466c-9ad6-58a913d7633b.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_background_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable 1920x1080 game loading background\nPrimary request: create a calm loading-screen illustration for starting a new Korean family-company tycoon game in January 2000. Show a small office just before opening time: morning sun, neatly arranged honey-wood desks, cream CRT monitors warming up, four empty chairs slightly pulled back, a thermos, paper folders, wall clock without legible numerals, fax/printer, and one small potted plant. No people.\nInput image role: Image 1 is the approved title hero and provides palette, camera, pixel density, materials, and era mood only; this loading scene must be a fresh quieter composition.\nStyle/medium: polished casual management tycoon 2D painted pixel-art hybrid with crisp pixel-friendly edges, warm Korean family office atmosphere.\nComposition/framing: exact 16:9 opaque full-bleed background; office vignette weighted to the right and lower half; calm low-detail warm-cream and pale-mint area across the left-center for runtime status text and a progress panel; keep all important props away from crop edges.\nLighting/mood: peaceful optimistic morning preparation, subtle upper-left sunlight, visibly active but not busy.\nColor palette: warm cream #FFF4D8, honey wood, coral #F27662, clear teal #2F7771, pale mint #DCECE4, deep green ink #203B3A.\nConstraints: no text, no letters, no numbers, no logo, no watermark, no progress bar, no button, no UI panel, no floating money, no currency, no black rectangular bar, no gray wireframe, no casino/neon/glass/SF metal, no modern flat monitors, laptops, or smartphones; no baked title screen; no copied trademarked game assets."
+    },
+    {
+      "callId": "exec-e1bf12c1-12c6-4beb-af12-b85c775d244b",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-e1bf12c1-12c6-4beb-af12-b85c775d244b.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_panel_v4.png",
+      "status": "accepted",
+      "selectionNote": "Exact built-in ImageGen artwork and alpha preserved; deterministic transparent-padding crop only, with no artwork or text synthesis.",
+      "cropRect": { "x": 40, "y": 172, "width": 1968, "height": 383 },
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI lightweight loading status panel frame\nPrimary request: one wide, low-height, empty loading status panel to place over a bright office illustration. Use a very thin cream paper edge, slim teal inner rule, tiny coral corner tabs, and a restrained soft-gold lower accent. The interior is a calm near-neutral ivory surface with enough contrast for deep-ink Korean runtime text. No ornamental knobs and no icon.\nInput image role: Image 1 is the approved loading background and supplies palette and lighting only; the output is a separate transparent UI asset, not a scene edit.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, light Korean office stationery motif.\nComposition/framing: centered wide shallow rectangle, genuinely transparent canvas, generous transparent padding; symmetric rounded corners; border visual thickness no more than 4% of panel width and 12% of panel height; large uniform stretch-safe center for Unity 9-slice.\nColor palette: warm cream #FFF4D8, quiet ivory #FAF7EF, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: all pixels outside the panel silhouette are true RGBA alpha 0 including all four corners; no backdrop, no checkerboard, no matte.\nConstraints: no text, letters, numbers, icon, logo, watermark; no heavy double frame, metal bolts, black border, gray fill, casino/neon/glass/SF metal; no scene; no fake shadow rectangle; empty stretch-safe center."
+    },
+    {
+      "callId": "exec-a0f52b72-0b58-44c5-964c-c06448720768",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-a0f52b72-0b58-44c5-964c-c06448720768.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/progress_track_v4.png",
+      "status": "accepted",
+      "selectionNote": "Exact built-in ImageGen artwork and alpha preserved; deterministic transparent-padding crop only, with no artwork or text synthesis.",
+      "cropRect": { "x": 44, "y": 282, "width": 2083, "height": 157 },
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI loading progress-bar track\nPrimary request: one very long, thin, empty progress-bar back track for a warm casual family-company tycoon loading screen. Use a pale warm-cream recessed center, a crisp slim deep-teal rim, tiny coral end accents, and a subtle soft-gold lower lip. No fill and no text.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, light office stationery craftsmanship.\nComposition/framing: isolated single horizontal track, centered, about 8:1 width-to-height; generous transparent padding around it; symmetric rounded endcaps; uniform stretch-safe middle for Unity 9-slice; clear at 50% scale.\nTransparency requirement: every pixel outside the progress track silhouette must be true RGBA alpha 0 including the four canvas corners. No background, no gradient backdrop, no checkerboard, no matte, no shadow panel.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nConstraints: no text, letters, numbers, icons, logo, watermark, fill, black border, casino/neon/glass/SF metal, extra objects; empty stretch-safe center."
+    },
+    {
+      "callId": "exec-5429c794-22ac-4e25-b9bc-769cb5ff8bad",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-5429c794-22ac-4e25-b9bc-769cb5ff8bad.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/progress_fill_v4.png",
+      "status": "accepted",
+      "selectionNote": "Exact built-in ImageGen artwork and alpha preserved; deterministic transparent-padding crop only, with no artwork or text synthesis.",
+      "cropRect": { "x": 50, "y": 256, "width": 1989, "height": 229 },
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI loading progress fill\nPrimary request: one isolated long thin loading-progress fill shape. Use a clear teal rounded strip, a compact coral arrow-shaped leading cap at the right, and one small soft-gold highlight seam. No empty track, frame, or background.\nStyle/medium: polished casual management tycoon 2D painted UI with crisp pixel-friendly edges, warm office stationery character.\nComposition/framing: single object around 8:1 aspect centered on a transparent canvas, generous empty transparent padding, rounded left cap, compact right leading cap, uniform stretch-safe teal middle for Unity 9-slice/cropped fill.\nTransparency requirement: true transparent PNG, RGBA alpha 0 everywhere outside the fill silhouette, all four corners alpha 0, no drawn canvas.\nColor palette: clear teal #2F7771, coral #F27662, soft gold #F2C35B, pale mint #DCECE4.\nConstraints: absolutely no checkerboard pattern, white/black/gray background, matte, scene, track, outer frame, text, letters, numbers, icon, logo, watermark, black outline, glow bloom, casino/neon/glass/SF metal; one fill strip only."
+    },
+    {
+      "callId": "exec-1e37465c-f56e-4c83-8c85-2b3ed7a600df",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-1e37465c-f56e-4c83-8c85-2b3ed7a600df.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_work_icon_v4.png",
+      "status": "accepted",
+      "selectionNote": "Exact built-in ImageGen artwork and alpha preserved; deterministic transparent-padding crop only, with no artwork or text synthesis.",
+      "cropRect": { "x": 148, "y": 137, "width": 945, "height": 945 },
+      "prompt": "Use case: stylized-concept\nAsset type: shippable small game loading icon\nPrimary request: a single compact office folder-and-pencil icon that suggests preparing for work: one warm kraft folder with a coral tab, one short teal pencil, and a tiny soft-gold paper clip. It will pulse and bob beside runtime Korean loading status text.\nStyle/medium: polished casual management tycoon 2D painted pixel-art hybrid with crisp pixel-friendly edges, matching a cozy year-2000 Korean office.\nComposition/framing: one isolated icon only, centered in a square canvas, strong simple silhouette, readable at 32-48 pixels, generous 18% transparent padding, consistent upper-left light.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: true RGBA alpha 0 outside the object including every corner; no backdrop, no matte, no checkerboard, no shadow card.\nConstraints: no text, letters, numbers, logo, watermark; no extra loose objects; no black outline; no casino/neon/glass/SF metal."
+    },
+    {
+      "callId": "exec-828ed1a8-731d-4de8-acaa-b3c6cfd9ff9c",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-828ed1a8-731d-4de8-acaa-b3c6cfd9ff9c.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/modal_frame_v3.png",
+      "status": "accepted",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI lightweight management modal frame\nPrimary request: one large empty modal/content panel frame for company, people, business, research, and investment hubs. It must replace a rejected thick ornamental frame: use a near-neutral ivory reading surface, a very thin warm-cream paper edge, one slim teal rule, tiny coral corner tabs, and one restrained soft-gold header notch. No knobs, badges, repeated icons, or thick double border.\nStyle/medium: polished modern casual management tycoon 2D painted UI with pixel-friendly crisp edges, warm Korean family-office stationery character.\nComposition/framing: isolated wide 16:9-ish panel on a transparent canvas; symmetric softly rounded corners; generous external transparent padding; large uniform empty center; border visual thickness under 5% of content width and under 7% of content height; stretch-safe edge runs and corners for Unity 9-slice.\nColor palette: near-neutral ivory #FAF7EF interior, warm cream #FFF4D8 edge, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nTransparency requirement: all pixels outside the panel silhouette must be true RGBA alpha 0 including all four corners; no background, gradient backdrop, matte, checkerboard, world scene, or shadow rectangle.\nConstraints: no text, letters, numbers, logo, watermark, icon; no metal knobs, black outline, black bar, gray wireframe, casino/neon/glass/SF metal; empty readable center; no baked world."
+    },
+    {
+      "callId": "exec-1ee453f7-20c2-43c7-8f32-96b5fe96c69b",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-1ee453f7-20c2-43c7-8f32-96b5fe96c69b.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_normal_v4.png",
+      "status": "accepted",
+      "selectionNote": "Accepted transparent edge-to-edge frame; calm normal-state runtime tint.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI 9-slice card frame hover variant. Primary request: make a hover-state variant of the referenced edge-to-edge warm casual management tycoon card. Preserve the exact geometry, canvas coverage, thin symmetric cream/teal/gold rails, large empty center, and corner-safe coral leaf accents. Add only a restrained hover cue: slightly clearer teal inner rail and a soft warm-gold edge lift, with no glow spilling outside and no shape/layout change. The visible artwork must remain within 4 to 8 pixels of every canvas edge with no large transparent top or bottom padding. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: horizontal, centered, symmetric, stretch-safe empty center, edge-to-edge. Constraints: genuinely transparent background outside the thin frame; no text; no letters; no numbers; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; no baked game world; no mockup perspective; no external transparent padding; no alpha halo. Deliver one isolated hover-state UI frame only."
+    },
+    {
+      "callId": "exec-1ee453f7-20c2-43c7-8f32-96b5fe96c69b",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-1ee453f7-20c2-43c7-8f32-96b5fe96c69b.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_hover_v4.png",
+      "status": "accepted",
+      "selectionNote": "Native transparent hover output.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI 9-slice card frame hover variant. Primary request: make a hover-state variant of the referenced edge-to-edge warm casual management tycoon card. Preserve the exact geometry, canvas coverage, thin symmetric cream/teal/gold rails, large empty center, and corner-safe coral leaf accents. Add only a restrained hover cue: slightly clearer teal inner rail and a soft warm-gold edge lift, with no glow spilling outside and no shape/layout change. The visible artwork must remain within 4 to 8 pixels of every canvas edge with no large transparent top or bottom padding. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: horizontal, centered, symmetric, stretch-safe empty center, edge-to-edge. Constraints: genuinely transparent background outside the thin frame; no text; no letters; no numbers; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; no baked game world; no mockup perspective; no external transparent padding; no alpha halo. Deliver one isolated hover-state UI frame only."
+    },
+    {
+      "callId": "exec-1b26c2b6-5f10-4f9b-9313-d6f0d16b6a31",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-1b26c2b6-5f10-4f9b-9313-d6f0d16b6a31.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_featured_v4.png",
+      "status": "accepted",
+      "selectionNote": "Native transparent selected/featured output.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI 9-slice card frame selected/featured variant. Primary request: make a clearly selected featured-state variant of the referenced edge-to-edge warm casual management tycoon card. Preserve the exact geometry, canvas coverage, large empty center and thin symmetric frame. Add a restrained coral selected rail plus a soft-gold secondary edge and a very subtle warm-cream center tint; selected state must be immediately readable without neon, glow, heavy outline or raised casino styling. Keep all accents in corner-safe zones. The visible artwork must remain within 4 to 8 pixels of every canvas edge with no large transparent top or bottom padding. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: horizontal, centered, symmetric, stretch-safe empty center, edge-to-edge. Constraints: genuinely transparent background outside the thin frame; no text; no letters; no numbers; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; no baked game world; no mockup perspective; no external transparent padding; no alpha halo. Deliver one isolated selected/featured-state UI frame only."
+    },
+    {
+      "callId": "exec-1ee453f7-20c2-43c7-8f32-96b5fe96c69b",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-1ee453f7-20c2-43c7-8f32-96b5fe96c69b.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_disabled_v4.png",
+      "status": "accepted",
+      "selectionNote": "Accepted transparent geometry with pale-mint disabled runtime tint; opaque disabled generations rejected.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI 9-slice card frame hover variant. Primary request: make a hover-state variant of the referenced edge-to-edge warm casual management tycoon card. Preserve the exact geometry, canvas coverage, thin symmetric cream/teal/gold rails, large empty center, and corner-safe coral leaf accents. Add only a restrained hover cue: slightly clearer teal inner rail and a soft warm-gold edge lift, with no glow spilling outside and no shape/layout change. The visible artwork must remain within 4 to 8 pixels of every canvas edge with no large transparent top or bottom padding. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: horizontal, centered, symmetric, stretch-safe empty center, edge-to-edge. Constraints: genuinely transparent background outside the thin frame; no text; no letters; no numbers; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; no baked game world; no mockup perspective; no external transparent padding; no alpha halo. Deliver one isolated hover-state UI frame only."
+    },
+    {
+      "callId": "exec-a4e91b61-d297-459d-bc18-ada915ec03f4",
+      "sourcePath": "C:/Users/godho/.codex/generated_images/019ffdb9-2633-73f0-9d6d-76d427801eaf/exec-a4e91b61-d297-459d-bc18-ada915ec03f4.png",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_compact_normal_v5.png",
+      "status": "accepted",
+      "selectionNote": "Built-in RGB artwork preserved exactly; deterministic rounded-rectangle alpha mask repaired the model output alpha channel only. No artwork or text was synthesized outside built-in image_gen.",
+      "alphaPostprocess": "Measured visible bounds; exact alpha 0 corners and anti-aliased rounded edge; Unity Image.Type.Simple for compact 72-86px cells.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable compact game UI list-row and stat-cell 9-slice frame. Primary request: derive a minimal compact frame from the reference palette and alpha silhouette, specifically for 80-pixel-tall employee rows and ability stat cells. Remove every coral leaf, corner flower, motif, flourish, shadow lobe, and ornamental double rail. Use only a very thin clear-teal inner keyline, a soft warm-gold one-pixel-style outer accent, a small friendly corner radius, and a calm pale-mint-to-warm-ivory empty center. The frame must remain readable when shrunk to 180x72 pixels and leave at least 88 percent of the area as unobstructed text space. Preserve genuine transparent exterior and edge-to-edge geometry with no external top/bottom padding. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: wide horizontal compact card, perfectly symmetric, stretch-safe empty center, border within 4 to 8 pixels of canvas edge. Constraints: output RGBA PNG; all four corner pixels alpha zero; no checkerboard; no white/black matte; no alpha halo; absolutely no decorative icons or leaves; no text; no letters; no numbers; no logo; no watermark; no neon/glass/metal/casino styling; no baked world. Deliver one isolated compact normal-state frame only."
+    }
+  ],
+  "rejectedCalls": [
+    {
+      "callId": "exec-e6a69f7d",
+      "status": "rejected",
+      "reason": "hover edit exported an opaque checkerboard instead of true alpha"
+    },
+    {
+      "callId": "exec-933bfac3",
+      "status": "rejected",
+      "reason": "pressed variant exported opaque background"
+    },
+    {
+      "callId": "exec-f2f55d11",
+      "status": "rejected",
+      "reason": "pressed retry remained opaque"
+    },
+    {
+      "callId": "exec-cf0a4784",
+      "status": "rejected",
+      "reason": "two-reference pressed retry remained opaque/checkerboard"
+    },
+    {
+      "callId": "exec-1447c142",
+      "status": "rejected",
+      "reason": "disabled variant alpha passed but visual language diverged with leaves/leather"
+    },
+    {
+      "callId": "exec-549aa469",
+      "status": "rejected",
+      "reason": "first progress fill exported opaque background"
+    },
+    {
+      "callId": "exec-7398d4f8",
+      "status": "rejected",
+      "reason": "card frame exported opaque background"
+    },
+    {
+      "callId": "exec-a55005e7",
+      "status": "rejected",
+      "reason": "settings icon retained non-zero corner alpha; replaced by exec-ce934f4d"
+    },
+    {
+      "callId": "exec-4649100c-e583-4e10-80c1-70528f1f7baa",
+      "status": "rejected",
+      "reason": "first workforce card kept a border and fasteners too heavy for 82px display"
+    },
+    {
+      "callId": "exec-edc7d970-8a13-4e52-bc0c-ad46685fff0a",
+      "status": "rejected",
+      "reason": "thin-border refinement baked an opaque checkerboard/white matte"
+    },
+    {
+      "callId": "exec-a088beff-d282-4d3c-8b0e-e8932b5e595e",
+      "status": "rejected",
+      "reason": "reference-based hover refinement exported opaque corners"
+    },
+    {
+      "callId": "exec-fbef495d-beaa-4c8c-8531-e3381b8c5ff4",
+      "status": "rejected-raw-output",
+      "reason": "Opaque/checker exterior; visual only, not shipped.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI 9-slice card frame edit. Primary request: preserve the referenced warm cream, clear teal, coral and soft-gold casual Korean family-company tycoon card design, but rebuild it as a light thin edge-to-edge 9-slice frame. The visible artwork must reach within 4 to 8 pixels of every canvas edge; remove the large transparent top and bottom padding completely. Keep a large calm near-neutral cream empty center for runtime ability/stat text. Use thin symmetric corners and rails, restrained tiny office-notebook/leaf accents only in corner-safe zones, no large ornaments intruding into content, no heavy double frame. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: horizontal card, perfectly centered and symmetric, stretch-safe empty center, outer frame flush to the canvas boundary with only a tiny alpha safety margin. Constraints: genuinely transparent background outside the thin frame; no text; no letters; no numbers; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; no baked game world; no mockup perspective; no external transparent padding; no alpha halo. Deliver one isolated normal-state UI frame only."
+    },
+    {
+      "callId": "exec-8573c975-b026-4490-8e7b-224b496d242e",
+      "status": "rejected-raw-output",
+      "reason": "Disabled generation exported opaque/checker exterior.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI 9-slice card frame disabled/secondary variant. Primary request: make a quiet disabled/secondary-state variant of the referenced edge-to-edge warm casual management tycoon card. Preserve the exact geometry, canvas coverage, large empty center and thin symmetric frame. Reduce saturation gently into pale mint and warm ivory, soften coral accents, keep deep-green rails readable, and retain enough contrast for dark runtime Korean body text. Do not make it gray, muddy or low-contrast. The visible artwork must remain within 4 to 8 pixels of every canvas edge with no large transparent top or bottom padding. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: horizontal, centered, symmetric, stretch-safe empty center, edge-to-edge. Constraints: genuinely transparent background outside the thin frame; no text; no letters; no numbers; no logo; no watermark; no black rectangular bar; no gray wireframe; no casino/neon/glass/SF metal; no baked game world; no mockup perspective; no external transparent padding; no alpha halo. Deliver one isolated disabled/secondary-state UI frame only."
+    },
+    {
+      "callId": "exec-ba4b7e24-23a4-4c15-ae6d-98e13f214516",
+      "status": "rejected-raw-output",
+      "reason": "Alpha correction retry remained opaque.",
+      "prompt": "Use case: stylized-concept. Asset type: production correction of a shippable game UI 9-slice normal card frame. Primary request: keep the exact referenced thin edge-to-edge cream, teal, coral and gold frame design and large empty cream center, but remove every checkerboard pixel and replace the area outside the rounded outer frame with genuine RGBA transparency. The previous checkerboard is an error reference, not artwork. Outer visible frame should sit within 4 to 8 pixels of the canvas edge; preserve symmetric corners and stretch-safe center. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Constraints: alpha channel required; all four corner pixels alpha zero; genuinely transparent background outside the rounded frame; no checkerboard pattern; no white matte; no black background; no alpha halo; no text; no letters; no numbers; no logo; no watermark; no casino/neon/glass/SF metal; no baked world; no external transparent padding. Deliver one isolated normal-state horizontal frame only."
+    },
+    {
+      "callId": "exec-4376b328-a5ef-4061-9bc8-82df16cdfc73",
+      "status": "rejected-raw-output",
+      "reason": "Normal-state edit flattened output to 24bpp opaque.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI 9-slice normal-state card frame variant. Primary request: the reference has correct genuine alpha transparency and edge-to-edge geometry; preserve that exact alpha silhouette, canvas coverage, rounded shape, thin rails, large empty cream center and corner-safe coral leaves. Convert only the hover styling to a calm normal state by reducing the gold edge lift and slightly softening the teal rail. Do not add or replace the transparent exterior with checkerboard, white, black or any opaque matte. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: horizontal, centered, symmetric, stretch-safe empty center, visible frame within 4 to 8 pixels of canvas edge. Constraints: preserve genuine RGBA transparency from reference; all four corner pixels alpha zero; no checkerboard pattern; no white matte; no black background; no alpha halo; no text; no letters; no numbers; no logo; no watermark; no casino/neon/glass/SF metal; no baked world; no external transparent padding. Deliver one isolated normal-state horizontal frame only."
+    },
+    {
+      "callId": "exec-a4dcca23-a8d3-4daf-af6a-bebfe56609fb",
+      "status": "rejected-raw-output",
+      "reason": "Disabled edit flattened output to 24bpp opaque.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable game UI 9-slice disabled/secondary card frame variant. Primary request: preserve the reference image geometry and its existing genuine transparent alpha exterior exactly. Only recolor the frame into a quieter pale-mint and warm-ivory disabled state: reduce gold intensity, soften coral accents, retain readable teal rails and dark-text-friendly empty cream center. Do not alter the transparent pixels or add a background. Keep visible frame edge-to-edge and corners symmetric. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Constraints: preserve source alpha channel exactly; transparent exterior must stay transparent; all four corner pixels alpha zero; no checkerboard pattern; no white/black/colored matte; no alpha halo; no text; no letters; no numbers; no logo; no watermark; no gray wireframe; no casino/neon/glass/SF metal; no baked world; no external transparent padding. Deliver one isolated disabled/secondary horizontal frame only."
+    },
+    {
+      "callId": "exec-52484181-8ac1-450e-9302-d968c5888b2a",
+      "status": "rejected-raw-output",
+      "reason": "Selected-to-disabled edit flattened output to 24bpp opaque.",
+      "prompt": "Use case: stylized-concept. Asset type: production shippable game UI 9-slice disabled card frame. Edit only the colored frame pixels of the referenced transparent selected card: replace the coral selected rail with pale mint, soften the gold rail, and keep the warm ivory empty center. Do not touch, fill, composite, flatten or regenerate the transparent exterior pixels; preserve the source PNG alpha mask exactly. Preserve exact 1774x887 geometry and edge-to-edge silhouette. Disabled must remain readable behind deep-green Korean runtime text, never gray or low contrast. Constraints: output RGBA PNG; preserve source alpha mask exactly; corner pixels must remain alpha 0; transparent exterior remains transparent; no checkerboard; no opaque white/black background; no halo; no text; no letters; no numbers; no logo; no watermark; no extra objects. Deliver one isolated disabled frame only."
+    },
+    {
+      "callId": "exec-a4e91b61-d297-459d-bc18-ada915ec03f4",
+      "status": "rejected-raw-output",
+      "reason": "Raw compact output alpha was invalid; exact built-in RGB was retained only after deterministic alpha-channel repair in accepted V5.",
+      "prompt": "Use case: stylized-concept. Asset type: shippable compact game UI list-row and stat-cell 9-slice frame. Primary request: derive a minimal compact frame from the reference palette and alpha silhouette, specifically for 80-pixel-tall employee rows and ability stat cells. Remove every coral leaf, corner flower, motif, flourish, shadow lobe, and ornamental double rail. Use only a very thin clear-teal inner keyline, a soft warm-gold one-pixel-style outer accent, a small friendly corner radius, and a calm pale-mint-to-warm-ivory empty center. The frame must remain readable when shrunk to 180x72 pixels and leave at least 88 percent of the area as unobstructed text space. Preserve genuine transparent exterior and edge-to-edge geometry with no external top/bottom padding. Style/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges. Composition/framing: wide horizontal compact card, perfectly symmetric, stretch-safe empty center, border within 4 to 8 pixels of canvas edge. Constraints: output RGBA PNG; all four corner pixels alpha zero; no checkerboard; no white/black matte; no alpha halo; absolutely no decorative icons or leaves; no text; no letters; no numbers; no logo; no watermark; no neon/glass/metal/casino styling; no baked world. Deliver one isolated compact normal-state frame only."
+    }
+  ],
+  "supersededAssets": [
+    {
+      "callId": "exec-4b76de47-e8f9-4f8e-b854-bb9014d9314c",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_normal_v3.png",
+      "status": "superseded",
+      "reason": "Large transparent padding and ornament density caused compact workforce text collisions; V4/V5 assets replace it.",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI frame — ultra-light reusable stat card, normal state\nPrimary request: one empty horizontal employee-stat card drawn like a thin premium office stationery border, not a panel or plaque. The warm cream center occupies at least 94% of the total card height. The visible frame is a crisp 2–3 pixel-friendly line with only two tiny coral corner ticks, no hardware and no shadow.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, warm Korean family office mood, understated paper card, thin clear-teal inner line, hairline soft-gold outer line.\nColor palette: warm cream #FFF4D8, clear teal #2F7771, coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nComposition/framing: one centered front-facing wide rectangle, 3:1 aspect, generous transparent padding, perfectly symmetrical rounded corners, uniform straight stretch-safe edges, large blank center for runtime Korean stats and progress bars, designed for 220x82 pixel display and Unity 9-slice.\nConstraints: pixels outside the card must have true alpha 0; genuinely transparent background; absolutely no checkerboard, white matte, colored backdrop, vignette, or cast shadow; no text, letters, numbers, logo, watermark, icon, ribbon, knob, bolt, fastener, thick bevel, double frame, black bar, gray wireframe, casino, neon, glass, or science-fiction metal."
+    },
+    {
+      "callId": "exec-80ca2c31-e0ce-4e6d-8375-e139d52224dd",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_hover_v3.png",
+      "status": "superseded",
+      "reason": "Large transparent padding and ornament density caused compact workforce text collisions; V4/V5 assets replace it.",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI frame — ultra-light reusable stat card, hover state\nPrimary request: one empty horizontal hover card drawn as a thin premium office-stationery border. The warm bright-cream center occupies at least 94% of the card height. Use a crisp clear-teal hairline, a hairline soft-gold outer rule, and exactly two tiny coral leaf-like corner ticks at upper-left and lower-right. The hover state is indicated only by a slightly brighter face and clearer teal line.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, warm Korean family office mood, understated, no glow or shadow.\nComposition/framing: one centered front-facing 3:1 horizontal rectangle, generous transparent padding, perfectly symmetrical rounded corners, uniform straight stretch-safe edges, large blank center for runtime Korean stats, designed for 220x82 pixels and Unity 9-slice.\nConstraints: pixels outside the card must have true alpha 0; genuinely transparent background; absolutely no checkerboard, white matte, colored backdrop, vignette, or cast shadow; no text, letters, numbers, logo, watermark, icon, ribbon, knob, bolt, fastener, thick bevel, double frame, black bar, gray wireframe, casino, neon, glass, or SF metal."
+    },
+    {
+      "callId": "exec-c39ca2cb-8ea6-4e28-95d8-065384396779",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_featured_v3.png",
+      "status": "superseded",
+      "reason": "Large transparent padding and ornament density caused compact workforce text collisions; V4/V5 assets replace it.",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI frame — ultra-light reusable stat card, featured/selected state\nPrimary request: one empty horizontal selected employee card drawn as a thin premium office-stationery border. The pale warm-cream center occupies at least 92% of the card height. Show an unmistakable but restrained selected state with a slim coral inner plate along the left edge and a clear teal hairline around the card, plus a hairline soft-gold outer rule. No glow, no shadow, no hardware.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, warm Korean family office mood, understated.\nComposition/framing: one centered front-facing 3:1 horizontal rectangle, generous transparent padding, perfectly symmetrical rounded corners, uniform stretch-safe edges, large blank center for runtime Korean stats, designed for 220x82 pixels and Unity 9-slice.\nColor palette: warm cream #FFF4D8, pale mint #DCECE4, clear teal #2F7771, selected coral #F27662, soft gold #F2C35B, deep green ink #203B3A.\nConstraints: pixels outside the card must have true alpha 0; genuinely transparent background; absolutely no checkerboard, matte, backdrop, vignette, glow, or cast shadow; no text, letters, numbers, logo, watermark, icon, ribbon, knob, bolt, fastener, thick bevel, double frame, black bar, gray wireframe, casino, neon, glass, or SF metal."
+    },
+    {
+      "callId": "exec-91b430e5-ab43-4aba-92aa-fc45b2814230",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Common/card_disabled_v3.png",
+      "status": "superseded",
+      "reason": "Large transparent padding and ornament density caused compact workforce text collisions; V4/V5 assets replace it.",
+      "prompt": "Use case: stylized-concept\nAsset type: shippable game UI frame — ultra-light reusable stat card, disabled/read-only state\nPrimary request: one empty horizontal read-only stat card drawn as a thin premium office-stationery border. The pale mint-cream center occupies at least 94% of the card height. Use a quiet desaturated teal hairline and a warm beige-gold outer rule so deep-green runtime Korean text remains high contrast. State must look unavailable without becoming gray or muddy.\nStyle/medium: polished casual management tycoon 2D painted UI with pixel-friendly crisp edges, warm Korean family office mood, understated.\nComposition/framing: one centered front-facing 3:1 horizontal rectangle, generous transparent padding, perfectly symmetrical rounded corners, uniform stretch-safe edges, large blank center, designed for 220x82 pixels and Unity 9-slice.\nColor palette: pale mint #DCECE4, warm cream #FFF4D8, muted teal, soft beige-gold, deep green ink compatibility.\nConstraints: pixels outside the card must have true alpha 0; genuinely transparent background; absolutely no checkerboard, matte, backdrop, vignette, glow, or cast shadow; no text, letters, numbers, logo, watermark, icon, ribbon, knob, bolt, fastener, thick bevel, double frame, black bar, flat gray fill, gray wireframe, casino, neon, glass, or SF metal."
+    },
+    {
+      "callId": "exec-e1bf12c1-12c6-4beb-af12-b85c775d244b",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_panel_v3.png",
+      "status": "superseded",
+      "reason": "Original built-in output had excessive transparent padding; V4 is the exact-art crop used at runtime.",
+      "promptRef": "acceptedAssets:Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_panel_v4.png"
+    },
+    {
+      "callId": "exec-a0f52b72-0b58-44c5-964c-c06448720768",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/progress_track_v3.png",
+      "status": "superseded",
+      "reason": "Original built-in output had excessive transparent padding; V4 is the exact-art crop used at runtime.",
+      "promptRef": "acceptedAssets:Assets/Art/UI/Resources/UiRemasterV3/Loading/progress_track_v4.png"
+    },
+    {
+      "callId": "exec-5429c794-22ac-4e25-b9bc-769cb5ff8bad",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/progress_fill_v3.png",
+      "status": "superseded",
+      "reason": "Original built-in output had excessive transparent padding; V4 is the exact-art crop used at runtime.",
+      "promptRef": "acceptedAssets:Assets/Art/UI/Resources/UiRemasterV3/Loading/progress_fill_v4.png"
+    },
+    {
+      "callId": "exec-1e37465c-f56e-4c83-8c85-2b3ed7a600df",
+      "projectPath": "Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_work_icon_v3.png",
+      "status": "superseded",
+      "reason": "Original built-in output had excessive transparent padding; V4 is the exact-art crop used at runtime.",
+      "promptRef": "acceptedAssets:Assets/Art/UI/Resources/UiRemasterV3/Loading/loading_work_icon_v4.png"
+    }
+  ],
+  "acceptedAssetCount": 24,
+  "supersededAssetCount": 8,
+  "rejectedCallCount": 18
+}

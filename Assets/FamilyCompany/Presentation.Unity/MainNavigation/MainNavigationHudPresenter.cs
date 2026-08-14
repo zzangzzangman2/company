@@ -5,6 +5,7 @@ using FamilyCompany.Infrastructure.Unity;
 using FamilyCompany.Presentation.Unity.ContractGrowth;
 using FamilyCompany.Presentation.Unity.ManagementUI;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Presentation.Unity.UIRemaster;
 using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.ManagementUi;
 using TMPro;
@@ -20,13 +21,16 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         public static readonly Vector2 ReferenceResolution =
             new Vector2(MainNavigationLayoutMetrics.ReferenceWidth, MainNavigationLayoutMetrics.ReferenceHeight);
         public const float CanvasMatchWidthOrHeight = (float)MainNavigationLayoutMetrics.MatchWidthOrHeight;
-        public const float MinimumBodyFontSize = 15f;
+        public const float MinimumBodyFontSize = UiRemasterTypography.BodyPixels;
 
         private const string FrameRoot = "MainNavigationV2/Frames/";
         private const string MarkerRoot = "MainNavigationV2/Markers/";
+        private const string V3CommonRoot = "UiRemasterV3/Common/";
 
         private static readonly Color DeepInk = Hex("203B3A");
         private static readonly Color Cream = Hex("FFF4D8");
+        private static readonly Color DisabledCardTint = Hex("EAF6EF");
+        private static readonly Color SelectedCompactTint = Hex("FFDCCF");
         private static readonly Color WorldDim = new Color(0.125f, 0.231f, 0.227f, 0.26f);
 
         private readonly MainNavigationSession _session = new MainNavigationSession();
@@ -89,6 +93,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private Sprite _cardDisabled;
         private Sprite _cardFeatured;
         private Sprite _cardFeaturedHover;
+        private Sprite _cardCompact;
         private Sprite _closeNormal;
         private Sprite _closeHover;
         private Sprite _closePressed;
@@ -303,13 +308,14 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             _tabHover = LoadRequiredSprite(FrameRoot + "tab_hover_v2");
             _tabSelected = LoadRequiredSprite(FrameRoot + "tab_selected_v2");
             _tabPressed = LoadRequiredSprite(FrameRoot + "tab_pressed_v2");
-            _modalFrame = LoadRequiredSprite(FrameRoot + "modal_frame_v2");
-            _modalHeader = LoadRequiredSprite(FrameRoot + "modal_header_v2");
-            _cardNormal = LoadRequiredSprite(FrameRoot + "card_normal_v2");
-            _cardHover = LoadRequiredSprite(FrameRoot + "card_hover_v2");
-            _cardDisabled = LoadRequiredSprite(FrameRoot + "card_disabled_v2");
-            _cardFeatured = LoadRequiredSprite(FrameRoot + "card_featured_v2");
-            _cardFeaturedHover = LoadRequiredSprite(FrameRoot + "card_featured_hover_v2");
+            _modalFrame = LoadRequiredSprite(V3CommonRoot + "modal_frame_v3");
+            _cardCompact = LoadRequiredSprite(V3CommonRoot + "card_compact_normal_v5");
+            _modalHeader = _cardCompact;
+            _cardNormal = LoadRequiredSprite(V3CommonRoot + "card_normal_v4");
+            _cardHover = LoadRequiredSprite(V3CommonRoot + "card_featured_v4");
+            _cardDisabled = LoadRequiredSprite(V3CommonRoot + "card_disabled_v4");
+            _cardFeatured = LoadRequiredSprite(V3CommonRoot + "card_featured_v4");
+            _cardFeaturedHover = LoadRequiredSprite(V3CommonRoot + "card_featured_v4");
             _closeNormal = LoadRequiredSprite(FrameRoot + "close_normal_v2");
             _closeHover = LoadRequiredSprite(FrameRoot + "close_hover_v2");
             _closePressed = LoadRequiredSprite(FrameRoot + "close_pressed_v2");
@@ -344,7 +350,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             companyIcon.rectTransform.anchorMax = new Vector2(0f, 0.5f);
             companyIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
             companyIcon.rectTransform.anchoredPosition = new Vector2(12f, 0f);
-            _companyText = AddText(company, "우리 가족회사", 24f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            _companyText = AddText(company, "우리 가족회사", CanvasFont(24f, UiRemasterTypography.TopHudPixels), true, TextAlignmentOptions.MidlineLeft, DeepInk);
             _companyText.rectTransform.anchorMin = Vector2.zero;
             _companyText.rectTransform.anchorMax = Vector2.one;
             _companyText.rectTransform.offsetMin = new Vector2(76f, 0f);
@@ -355,7 +361,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
             var time = CreateSpritePanel("Canonical Date Time Badge", _topHud, _timeBadge, true);
             AddLayout(time, 520f, 56f, 440f, 0f);
-            _timeText = AddText(time, string.Empty, 20f, false, TextAlignmentOptions.Midline, DeepInk);
+            _timeText = AddText(time, string.Empty, CanvasFont(20f, UiRemasterTypography.TopHudPixels), false, TextAlignmentOptions.Midline, DeepInk);
             _timeText.rectTransform.anchorMin = Vector2.zero;
             _timeText.rectTransform.anchorMax = Vector2.one;
             _timeText.rectTransform.offsetMin = new Vector2(72f, 0f);
@@ -384,7 +390,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     () => _bootstrap.SetWorldTimeScaleNow(capturedSpeed),
                     96f,
                     50f);
-                var label = AddText(button.GetComponent<RectTransform>(), $"{speed}x", 20f, true, TextAlignmentOptions.Midline, DeepInk);
+                var label = AddText(button.GetComponent<RectTransform>(), $"{speed}x", CanvasFont(20f, UiRemasterTypography.ButtonPixels), true, TextAlignmentOptions.Midline, DeepInk);
                 Stretch(label.rectTransform);
                 _speedButtons[speed] = button;
                 _speedLabels[speed] = label;
@@ -418,12 +424,13 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 var buttonLayout = button.gameObject.AddComponent<VerticalLayoutGroup>();
                 ConfigureLayout(buttonLayout, new RectOffset(12, 12, 7, 6), 2f);
                 buttonLayout.childAlignment = TextAnchor.MiddleCenter;
-                var icon = AddIcon(button.GetComponent<RectTransform>(), LoadRequiredSprite(definition.IconResourcePath), 42f);
-                AddLayout(icon.rectTransform, 42f, 42f, 42f, 0f);
+                var navigationIconSize = CanvasPixels(WorkforceCanvasScale() < 0.8f ? 36f : 42f);
+                var icon = AddIcon(button.GetComponent<RectTransform>(), LoadRequiredSprite(definition.IconResourcePath), navigationIconSize);
+                AddLayout(icon.rectTransform, navigationIconSize, navigationIconSize, navigationIconSize, 0f);
                 var label = AddText(
                     button.GetComponent<RectTransform>(),
                     definition.DisplayNameKo,
-                    18f,
+                    CanvasFont(18f, UiRemasterTypography.BottomNavigationPixels),
                     true,
                     TextAlignmentOptions.Midline,
                     DeepInk);
@@ -442,7 +449,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             panelLayout.childAlignment = TextAnchor.UpperCenter;
 
             var header = CreateSpritePanel("Main Navigation Modal Header", _contentPanel, _modalHeader, true);
-            AddLayout(header, -1f, 104f, 104f, 0f);
+            header.GetComponent<Image>().type = Image.Type.Simple;
+            var headerHeight = CanvasHeight(104f, 82f);
+            AddLayout(header, -1f, headerHeight, headerHeight, 0f);
             var headerLayout = header.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(headerLayout, new RectOffset(18, 14, 10, 10), 16f);
             headerLayout.childAlignment = TextAnchor.MiddleLeft;
@@ -450,14 +459,14 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             AddLayout(_panelIcon.rectTransform, 78f, 78f, 78f, 0f);
 
             var titleHost = CreateRect("Panel Titles", header);
-            AddLayout(titleHost, -1f, 82f, 520f, 1f);
+            AddLayout(titleHost, -1f, CanvasHeight(82f, 62f), 520f, 1f);
             var titleLayout = titleHost.gameObject.AddComponent<VerticalLayoutGroup>();
             ConfigureLayout(titleLayout, null, 3f);
             titleLayout.childAlignment = TextAnchor.MiddleLeft;
-            _panelTitle = AddText(titleHost, string.Empty, 32f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
-            AddLayout(_panelTitle.rectTransform, -1f, 40f, 0f, 1f);
-            _panelDescription = AddText(titleHost, string.Empty, 18f, false, TextAlignmentOptions.MidlineLeft, DeepInk);
-            AddLayout(_panelDescription.rectTransform, -1f, 34f, 0f, 1f);
+            _panelTitle = AddText(titleHost, string.Empty, CanvasFont(32f, UiRemasterTypography.PanelTitlePixels), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            AddLayout(_panelTitle.rectTransform, -1f, CanvasHeight(40f, 36f), 0f, 1f);
+            _panelDescription = AddText(titleHost, string.Empty, CanvasFont(18f, UiRemasterTypography.BodyPixels), false, TextAlignmentOptions.MidlineLeft, DeepInk);
+            AddLayout(_panelDescription.rectTransform, -1f, CanvasHeight(34f, 26f), 0f, 1f);
 
             _officeReturnButton = CreateSpriteButton(
                 header,
@@ -467,12 +476,12 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 _closePressed,
                 _closeHover,
                 NavigateBackNow,
-                150f,
-                54f);
+                Mathf.Max(150f, CanvasPixels(120f)),
+                CanvasHeight(54f, 48f));
             _officeReturnLabel = AddText(
                 _officeReturnButton.GetComponent<RectTransform>(),
                 "← 사무실",
-                17f,
+                CanvasFont(17f, UiRemasterTypography.ButtonPixels),
                 true,
                 TextAlignmentOptions.Midline,
                 DeepInk);
@@ -586,92 +595,114 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 _selectedWorkforceMemberId = roster[0].MemberId;
             var selected = roster.First(item => item.MemberId == _selectedWorkforceMemberId);
 
+            var compact = IsCompactWorkforceLayout();
             var root = CreateRect("Workforce Roster", _featureHost);
             Stretch(root);
-            var rosterBacking = root.gameObject.AddComponent<Image>();
-            rosterBacking.sprite = _cardDisabled;
-            rosterBacking.type = Image.Type.Sliced;
-            rosterBacking.color = Color.white;
-            rosterBacking.raycastTarget = false;
+            // The modal already supplies the common cream surface. A second full-size compact
+            // sprite scales its top rail into the title/description baseline at some aspect ratios.
+            // Keep only the individual employee/stat/state frames so all copy stays unobstructed.
             var horizontal = root.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(horizontal, null, 14f);
+            ConfigureLayout(horizontal, null, CanvasPixels(14f));
             horizontal.childAlignment = TextAnchor.UpperLeft;
 
             var list = CreateRect("Employee Card List", root);
-            AddLayout(list, 350f, -1f, 350f, 0f);
+            var listWidth = CanvasPixels(compact ? 250f : 340f);
+            AddLayout(list, listWidth, -1f, listWidth, 0f);
             var listLayout = list.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(listLayout, null, 8f);
+            ConfigureLayout(listLayout, null, CanvasPixels(8f));
             listLayout.childAlignment = TextAnchor.UpperCenter;
             foreach (var member in roster)
                 BuildWorkforceMemberCard(list, member, member.MemberId == selected.MemberId);
 
-            var detail = CreateSpritePanel("Employee Capability Detail", root, _cardNormal, true);
-            AddLayout(detail, -1f, -1f, 700f, 1f);
+            // The detail column lives inside the roster's common background. Giving it a second
+            // compact frame placed that frame's top rule through the potential-description line
+            // at 1920x1080. Keep the structural container unframed; individual stat/state cards
+            // below still use the generated compact sprite.
+            var detail = CreateRect("Employee Capability Detail", root);
+            AddLayout(detail, -1f, -1f, CanvasPixels(560f), 1f);
             var detailLayout = detail.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(detailLayout, new RectOffset(20, 20, 12, 10), 5f);
+            ConfigureLayout(detailLayout, PixelPadding(20, 20, 12, 10), CanvasPixels(4f));
             detailLayout.childAlignment = TextAnchor.UpperLeft;
 
             var identity = AddText(detail,
                 $"{selected.DisplayName}  ·  {selected.RoleKo}   {selected.EmploymentTypeKo}",
-                WorkforceFont(24f, 24f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+                CanvasFont(28f, UiRemasterTypography.PanelTitlePixels), true, TextAlignmentOptions.MidlineLeft, DeepInk);
             identity.gameObject.name = "Workforce Panel Title";
-            AddLayout(identity.rectTransform, -1f, WorkforceHeight(32f, 30f), 0f, 0f);
+            identity.textWrappingMode = TextWrappingModes.NoWrap;
+            var identityHeight = CanvasHeight(36f, 32f);
+            var identityElement = AddLayout(identity.rectTransform, -1f, identityHeight, 0f, 0f);
+            identityElement.minHeight = identityHeight;
             var potential = AddText(detail,
-                $"잠재력  {selected.PotentialGrade}등급   ·   현재 XP와 다음 성장",
-                WorkforceFont(17f, 14f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+                $"잠재력 {selected.PotentialGrade}등급  ·  성장 경험치는 실제 업무 기여 시간 기준",
+                CanvasFont(18f, 18f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
             potential.gameObject.name = "Workforce Body Potential";
-            AddLayout(potential.rectTransform, -1f, WorkforceHeight(24f, 20f), 0f, 0f);
+            potential.textWrappingMode = TextWrappingModes.NoWrap;
+            var potentialHeight = CanvasHeight(28f, 24f);
+            var potentialElement = AddLayout(potential.rectTransform, -1f, potentialHeight, 0f, 0f);
+            potentialElement.minHeight = potentialHeight;
 
-            var compactSkills = WorkforceCanvasScale() < 0.8f;
             var skillGrid = CreateRect("Six Work Skills", detail);
-            AddLayout(skillGrid, -1f, compactSkills ? 168f : 256f, 0f, 1f);
-            var grid = skillGrid.gameObject.AddComponent<GridLayoutGroup>();
-            grid.padding = new RectOffset();
-            grid.spacing = compactSkills ? new Vector2(8f, 8f) : new Vector2(10f, 8f);
-            grid.cellSize = compactSkills ? new Vector2(174f, 80f) : new Vector2(351f, 80f);
-            grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
-            grid.startAxis = GridLayoutGroup.Axis.Horizontal;
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = compactSkills ? 3 : 2;
-            foreach (var skill in selected.Skills) BuildWorkforceSkillCard(skillGrid, skill);
+            var skillColumns = compact ? 3 : 2;
+            var skillRows = compact ? 2 : 3;
+            var skillGapPixels = compact ? 8f : 10f;
+            var skillHeightPixels = compact ? 82f : 86f;
+            var skillGridHeightPixels = skillRows * skillHeightPixels + (skillRows - 1) * skillGapPixels;
+            var skillGridHeight = CanvasPixels(skillGridHeightPixels);
+            var skillGridElement = AddLayout(skillGrid, -1f, skillGridHeight, 0f, 0f);
+            skillGridElement.minHeight = skillGridHeight;
+            var gridLayout = skillGrid.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(gridLayout, null, CanvasPixels(skillGapPixels));
+            gridLayout.childForceExpandWidth = true;
+            var skills = selected.Skills.ToArray();
+            for (var rowIndex = 0; rowIndex < skillRows; rowIndex++)
+            {
+                var row = CreateRect("Skill Row " + rowIndex, skillGrid);
+                var rowHeight = CanvasPixels(skillHeightPixels);
+                var rowElement = AddLayout(row, -1f, rowHeight, 0f, 0f);
+                rowElement.minHeight = rowHeight;
+                var rowLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+                ConfigureLayout(rowLayout, null, CanvasPixels(skillGapPixels));
+                rowLayout.childForceExpandWidth = true;
+                for (var columnIndex = 0; columnIndex < skillColumns; columnIndex++)
+                {
+                    var skillIndex = rowIndex * skillColumns + columnIndex;
+                    if (skillIndex < skills.Length) BuildWorkforceSkillCard(row, skills[skillIndex]);
+                }
+            }
 
-            var state = CreateSpritePanel("Current State Separate", detail, _cardFeatured, true);
-            AddLayout(state, -1f, WorkforceHeight(68f, 48f), 0f, 0f);
+            var state = CreateSpritePanel("Current State Separate", detail, _cardCompact, true);
+            state.GetComponent<Image>().type = Image.Type.Simple;
+            state.GetComponent<Image>().color = SelectedCompactTint;
+            var stateHeight = CanvasHeight(82f, 78f);
+            var stateElement = AddLayout(state, -1f, stateHeight, 0f, 0f);
+            stateElement.minHeight = stateHeight;
             var stateLayout = state.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(stateLayout, new RectOffset(14, 14, 7, 6), 1f);
+            ConfigureLayout(stateLayout, PixelPadding(14, 14, 7, 7), CanvasPixels(2f));
             stateLayout.childAlignment = TextAnchor.MiddleLeft;
-            var stateHeading = AddText(state, "현재 상태 · 업무 능력과 별도", WorkforceFont(14f, 14f), true,
+            var stateHeading = AddText(state, "현재 상태  ·  업무 능력과 별도", CanvasFont(18f, 18f), true,
                 TextAlignmentOptions.MidlineLeft, DeepInk);
             stateHeading.gameObject.name = "Workforce Body State Heading";
-            AddLayout(stateHeading.rectTransform, -1f, WorkforceHeight(20f, 18f), 0f, 0f);
+            stateHeading.textWrappingMode = TextWrappingModes.NoWrap;
+            AddLayout(stateHeading.rectTransform, -1f, CanvasHeight(24f, 22f), 0f, 0f);
             var stateMetrics = CreateRect("Current State Metrics", state);
-            AddLayout(stateMetrics, -1f, WorkforceHeight(28f, 20f), 0f, 0f);
+            AddLayout(stateMetrics, -1f, CanvasHeight(30f, 28f), 0f, 0f);
             var metricsLayout = stateMetrics.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(metricsLayout, null, 12f);
+            ConfigureLayout(metricsLayout, null, CanvasPixels(12f));
             metricsLayout.childAlignment = TextAnchor.MiddleLeft;
-            var primaryState = AddText(stateMetrics,
-                $"체력 {selected.StaminaBasisPoints / 100}% · 스트레스 {selected.Stress}",
-                WorkforceFont(15f, 14f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
-            primaryState.gameObject.name = "Workforce Body State Primary";
-            AddLayout(primaryState.rectTransform, -1f, WorkforceHeight(28f, 20f), 260f, 1f);
-            var relationshipState = AddText(stateMetrics,
-                $"신뢰 {selected.Trust} · 스트레스 저항 {selected.StressResistancePercent}%",
-                WorkforceFont(15f, 14f), true, TextAlignmentOptions.MidlineLeft, DeepInk);
-            relationshipState.gameObject.name = "Workforce Body State Relationship";
-            AddLayout(relationshipState.rectTransform, -1f, WorkforceHeight(28f, 20f), 360f, 1f);
-            var education = AddText(detail, "교육 준비 중 · 현재 XP는 실제 업무 기여 시간으로만 오릅니다.",
-                WorkforceFont(14f, 14f), false, TextAlignmentOptions.MidlineLeft, DeepInk);
-            education.gameObject.name = "Workforce Body Education";
-            var educationHeight = WorkforceHeight(20f, 18f);
-            var educationElement = AddLayout(education.rectTransform, -1f, educationHeight, 0f, 0f);
-            educationElement.minHeight = educationHeight;
+            BuildWorkforceStateMetric(stateMetrics, $"체력 {selected.StaminaBasisPoints / 100}%", "Stamina");
+            BuildWorkforceStateMetric(stateMetrics, $"스트레스 {selected.Stress}", "Stress");
+            BuildWorkforceStateMetric(stateMetrics, $"신뢰 {selected.Trust}", "Trust");
+            BuildWorkforceStateMetric(stateMetrics, $"저항 {selected.StressResistancePercent}%", "Resistance");
         }
 
         private void BuildWorkforceMemberCard(RectTransform parent, WorkforceRosterMemberViewModel member, bool selected)
         {
             var card = CreateSpritePanel("Employee " + member.MemberId, parent,
-                selected ? _cardFeatured : _cardNormal, true);
-            var cardHeight = WorkforceHeight(104f, 76f);
+                _cardCompact, true);
+            card.GetComponent<Image>().type = Image.Type.Simple;
+            card.GetComponent<Image>().color = selected ? SelectedCompactTint : Color.white;
+            var compact = IsCompactWorkforceLayout();
+            var cardHeight = CanvasHeight(104f, compact ? 82f : 104f);
             var cardElement = AddLayout(card, -1f, cardHeight, 0f, 0f);
             cardElement.minHeight = cardHeight;
             var button = card.gameObject.AddComponent<Button>();
@@ -682,60 +713,66 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 _selectedWorkforceMemberId = capturedId;
                 RefreshOpenPanel();
             });
-            ConfigureSpriteSwap(button, selected ? _cardFeatured : _cardNormal, _cardHover,
-                selected ? _cardFeatured : _cardNormal, _cardHover);
+            ConfigureSpriteSwap(button, _cardCompact, _cardCompact, _cardCompact, _cardCompact);
             _workforceButtons[member.MemberId] = button;
 
             var layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(10, 10, 9, 9), 10f);
+            ConfigureLayout(layout, PixelPadding(10, 10, 8, 8), CanvasPixels(10f));
             layout.childAlignment = TextAnchor.MiddleLeft;
             var portraitSize = WorkforcePortraitSize();
             var portrait = AddIcon(card, ResolveWorkforcePortrait(member.MemberId), portraitSize);
             AddLayout(portrait.rectTransform, portraitSize, portraitSize, portraitSize, 0f);
             var copy = CreateRect("Employee Summary", card);
-            var copyHeight = WorkforceHeight(82f, 64f);
+            var copyHeight = cardHeight - CanvasPixels(16f);
             var copyElement = AddLayout(copy, -1f, copyHeight, 150f, 1f);
             copyElement.minHeight = copyHeight;
             var copyLayout = copy.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(copyLayout, null, 1f);
+            ConfigureLayout(copyLayout, null, CanvasPixels(1f));
             copyLayout.childAlignment = TextAnchor.MiddleLeft;
             var name = AddText(copy,
-                member.DisplayName + " <size=78%>· " + member.EmploymentTypeKo + "</size>",
-                WorkforceFont(18f, 18f), true,
+                member.DisplayName + "  ·  " + member.EmploymentTypeKo,
+                CanvasFont(20f, 18f), true,
                 TextAlignmentOptions.MidlineLeft, DeepInk);
             name.gameObject.name = "Workforce Employee Name";
-            var nameHeight = WorkforceHeight(26f, 26f);
+            name.textWrappingMode = TextWrappingModes.NoWrap;
+            var nameHeight = CanvasHeight(28f, 24f);
             var nameElement = AddLayout(name.rectTransform, -1f, nameHeight, 0f, 0f);
             nameElement.minHeight = nameHeight;
-            var role = AddText(copy, member.RoleKo, WorkforceFont(15f, 14f), false,
+            var role = AddText(copy, member.RoleKo, CanvasFont(16f, UiRemasterTypography.BodyPixels), false,
                 TextAlignmentOptions.MidlineLeft, DeepInk);
             role.gameObject.name = "Workforce Body Role";
-            var roleHeight = WorkforceHeight(22f, 17f);
+            role.textWrappingMode = TextWrappingModes.NoWrap;
+            var roleHeight = CanvasHeight(22f, 20f);
             var roleElement = AddLayout(role.rectTransform, -1f, roleHeight, 0f, 0f);
             roleElement.minHeight = roleHeight;
             var stamina = AddText(copy, $"체력 {member.StaminaBasisPoints / 100}%",
-                WorkforceFont(15f, 14f), true,
+                CanvasFont(16f, UiRemasterTypography.BodyPixels), true,
                 TextAlignmentOptions.MidlineLeft, DeepInk);
             stamina.gameObject.name = "Workforce Body Stamina";
-            var staminaHeight = WorkforceHeight(22f, 17f);
+            stamina.textWrappingMode = TextWrappingModes.NoWrap;
+            var staminaHeight = CanvasHeight(22f, 20f);
             var staminaElement = AddLayout(stamina.rectTransform, -1f, staminaHeight, 0f, 0f);
             staminaElement.minHeight = staminaHeight;
         }
 
         private void BuildWorkforceSkillCard(RectTransform parent, WorkforceSkillViewModel skill)
         {
-            var card = CreateSpritePanel("Skill " + skill.SkillId, parent, _cardDisabled, true);
+            var card = CreateSpritePanel("Skill " + skill.SkillId, parent, _cardCompact, true);
+            card.GetComponent<Image>().type = Image.Type.Simple;
+            card.GetComponent<Image>().color = DisabledCardTint;
+            AddLayout(card, -1f, -1f, CanvasPixels(150f), 1f);
             var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(12, 12, 6, 5), 1f);
-            var heading = AddText(card, $"{skill.LabelKo}  {skill.Value}", WorkforceFont(16f, 14f), true,
+            ConfigureLayout(layout, PixelPadding(12, 12, 6, 6), CanvasPixels(2f));
+            var heading = AddText(card, $"{skill.LabelKo}  {skill.Value}", CanvasFont(18f, 18f), true,
                 TextAlignmentOptions.MidlineLeft, DeepInk);
-            heading.gameObject.name = "Workforce Body Skill";
-            AddLayout(heading.rectTransform, -1f, WorkforceHeight(21f, 18f), 0f, 0f);
+            heading.gameObject.name = "Workforce Skill Title";
+            heading.textWrappingMode = TextWrappingModes.NoWrap;
+            AddLayout(heading.rectTransform, -1f, CanvasHeight(24f, 22f), 0f, 0f);
             var bar = CreateRect("Skill Value Bar", card);
-            AddLayout(bar, -1f, 12f, 0f, 0f);
+            AddLayout(bar, -1f, CanvasHeight(12f, 10f), 0f, 0f);
             var back = bar.gameObject.AddComponent<Image>();
-            back.sprite = _cardNormal;
-            back.type = Image.Type.Sliced;
+            back.sprite = _cardCompact;
+            back.type = Image.Type.Simple;
             back.raycastTarget = false;
             var fill = CreateRect("Skill Value Fill", bar);
             fill.anchorMin = Vector2.zero;
@@ -750,10 +787,20 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var next = skill.NextExperience <= 0
                 ? "최대 숙련"
                 : $"XP {skill.Experience:N0} / {skill.NextExperience:N0}";
-            var xp = AddText(card, next, WorkforceFont(15f, 14f), false,
+            var xp = AddText(card, next, CanvasFont(16f, UiRemasterTypography.BodyPixels), false,
                 TextAlignmentOptions.MidlineLeft, DeepInk);
             xp.gameObject.name = "Workforce Body Experience";
-            AddLayout(xp.rectTransform, -1f, WorkforceHeight(19f, 18f), 0f, 0f);
+            xp.textWrappingMode = TextWrappingModes.NoWrap;
+            AddLayout(xp.rectTransform, -1f, CanvasHeight(22f, 20f), 0f, 0f);
+        }
+
+        private void BuildWorkforceStateMetric(RectTransform parent, string value, string metricId)
+        {
+            var metric = AddText(parent, value, CanvasFont(16f, UiRemasterTypography.BodyPixels), true,
+                TextAlignmentOptions.MidlineLeft, DeepInk);
+            metric.gameObject.name = "Workforce State " + metricId;
+            metric.textWrappingMode = TextWrappingModes.NoWrap;
+            AddLayout(metric.rectTransform, -1f, CanvasHeight(30f, 28f), CanvasPixels(112f), 1f);
         }
 
         private Sprite ResolveWorkforcePortrait(string memberId)
@@ -1248,19 +1295,14 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             return icon;
         }
 
-        private static float WorkforceFont(float preferredCanvasSize, float minimumPixelSize)
-        {
-            return Mathf.Max(preferredCanvasSize, minimumPixelSize / WorkforceCanvasScale());
-        }
-
-        private static float WorkforceHeight(float preferredCanvasSize, float minimumPixelSize)
-        {
-            return Mathf.Max(preferredCanvasSize, minimumPixelSize / WorkforceCanvasScale());
-        }
-
         private static float WorkforcePortraitSize()
         {
-            return WorkforceCanvasScale() < 0.8f ? 56f : 74f;
+            return CanvasPixels(IsCompactWorkforceLayout() ? 50f : 74f);
+        }
+
+        private static bool IsCompactWorkforceLayout()
+        {
+            return WorkforceCanvasScale() < 0.9f;
         }
 
         private static float WorkforceCanvasScale()
@@ -1268,6 +1310,35 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var widthScale = Mathf.Max(1f, Screen.width) / ReferenceResolution.x;
             var heightScale = Mathf.Max(1f, Screen.height) / ReferenceResolution.y;
             return Mathf.Max(0.01f, Mathf.Sqrt(widthScale * heightScale));
+        }
+
+        private static float CanvasPixels(float pixels)
+        {
+            return pixels / WorkforceCanvasScale();
+        }
+
+        private static int CanvasPixelsInt(float pixels)
+        {
+            return Mathf.Max(0, Mathf.RoundToInt(CanvasPixels(pixels)));
+        }
+
+        private static float CanvasFont(float preferredCanvasSize, float minimumPixelSize)
+        {
+            return Mathf.Max(preferredCanvasSize, CanvasPixels(minimumPixelSize));
+        }
+
+        private static float CanvasHeight(float preferredCanvasSize, float minimumPixelSize)
+        {
+            return Mathf.Max(preferredCanvasSize, CanvasPixels(minimumPixelSize));
+        }
+
+        private static RectOffset PixelPadding(float left, float right, float top, float bottom)
+        {
+            return new RectOffset(
+                CanvasPixelsInt(left),
+                CanvasPixelsInt(right),
+                CanvasPixelsInt(top),
+                CanvasPixelsInt(bottom));
         }
 
         private TMP_Text AddText(
@@ -1281,8 +1352,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var rect = CreateRect("Text", parent);
             var text = rect.gameObject.AddComponent<TextMeshProUGUI>();
             text.font = heading ? _headingFont : _bodyFont;
-            text.fontSize = Mathf.Max(MinimumBodyFontSize, fontSize);
-            text.fontStyle = heading ? FontStyles.Bold : FontStyles.Normal;
+            text.fontSize = CanvasFont(fontSize, MinimumBodyFontSize);
+            text.fontStyle = FontStyles.Normal;
             text.enableAutoSizing = false;
             text.color = color;
             text.alignment = alignment;
@@ -1290,7 +1361,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.raycastTarget = false;
             text.margin = Vector4.zero;
-            text.lineSpacing = 1.5f;
+            text.lineSpacing = 0f;
             SetText(text, value);
             return text;
         }
@@ -1310,34 +1381,44 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private void ApplyAnchoredLayout()
         {
             if (_safeRoot == null || _topHud == null || _contentPanel == null || _bottomNavigation == null) return;
-            var width = _safeRoot.rect.width > 1f ? _safeRoot.rect.width : MainNavigationLayoutMetrics.ReferenceWidth;
-            var height = _safeRoot.rect.height > 1f ? _safeRoot.rect.height : MainNavigationLayoutMetrics.ReferenceHeight;
-            const float margin = (float)MainNavigationLayoutMetrics.OuterMargin;
-            const float topHeight = (float)MainNavigationLayoutMetrics.TopHudHeight;
-            const float bottomHeight = (float)MainNavigationLayoutMetrics.BottomNavigationHeight;
-            const float gap = (float)MainNavigationLayoutMetrics.RegionGap;
+            var safe = Screen.safeArea;
+            var safeInsets = new UiSafeInsets(
+                safe.xMin,
+                Screen.height - safe.yMax,
+                Screen.width - safe.xMax,
+                safe.yMin);
+            var layout = MainNavigationLayoutMetrics.Calculate(Screen.width, Screen.height, safeInsets);
+            var canvas = _root.GetComponent<Canvas>();
+            var canvasScale = canvas != null ? Mathf.Max(0.01f, canvas.scaleFactor) : WorkforceCanvasScale();
+            var safeHeight = (float)layout.SafeArea.Height;
+            var topMargin = (float)(layout.TopHud.Y - layout.SafeArea.Y) / canvasScale;
+            var sideMargin = (float)(layout.TopHud.X - layout.SafeArea.X) / canvasScale;
+            var topHeight = (float)layout.TopHud.Height / canvasScale;
 
             _topHud.anchorMin = new Vector2(0f, 1f);
             _topHud.anchorMax = new Vector2(1f, 1f);
             _topHud.pivot = new Vector2(0.5f, 1f);
-            _topHud.offsetMin = new Vector2(margin, -margin - topHeight);
-            _topHud.offsetMax = new Vector2(-margin, -margin);
+            _topHud.offsetMin = new Vector2(sideMargin, -topMargin - topHeight);
+            _topHud.offsetMax = new Vector2(-sideMargin, -topMargin);
 
-            var bottomWidth = Mathf.Min((float)MainNavigationLayoutMetrics.BottomNavigationWidth, width - margin * 2f);
+            var bottomWidth = (float)layout.BottomNavigation.Width / canvasScale;
+            var bottomHeight = (float)layout.BottomNavigation.Height / canvasScale;
+            var bottomMargin = (float)(layout.SafeArea.Bottom - layout.BottomNavigation.Bottom) / canvasScale;
             _bottomNavigation.anchorMin = new Vector2(0.5f, 0f);
             _bottomNavigation.anchorMax = new Vector2(0.5f, 0f);
             _bottomNavigation.pivot = new Vector2(0.5f, 0f);
             _bottomNavigation.sizeDelta = new Vector2(bottomWidth, bottomHeight);
-            _bottomNavigation.anchoredPosition = new Vector2(0f, margin);
+            _bottomNavigation.anchoredPosition = new Vector2(0f, bottomMargin);
 
-            var availablePanelHeight = height - margin * 2f - topHeight - bottomHeight - gap * 2f;
-            var panelWidth = Mathf.Min((float)MainNavigationLayoutMetrics.ContentPanelWidth, width - margin * 2f);
-            var panelHeight = Mathf.Min((float)MainNavigationLayoutMetrics.ContentPanelHeight, availablePanelHeight);
+            var panelWidth = (float)layout.ContentPanel.Width / canvasScale;
+            var panelHeight = (float)layout.ContentPanel.Height / canvasScale;
+            var panelCenterFromTop = (float)(layout.ContentPanel.Y - layout.SafeArea.Y + layout.ContentPanel.Height * 0.5d);
+            var panelCenterY = (safeHeight * 0.5f - panelCenterFromTop) / canvasScale;
             _contentPanel.anchorMin = new Vector2(0.5f, 0.5f);
             _contentPanel.anchorMax = new Vector2(0.5f, 0.5f);
             _contentPanel.pivot = new Vector2(0.5f, 0.5f);
             _contentPanel.sizeDelta = new Vector2(panelWidth, panelHeight);
-            _contentPanel.anchoredPosition = Vector2.zero;
+            _contentPanel.anchoredPosition = new Vector2(0f, panelCenterY);
         }
 
         private static void ApplySafeArea(RectTransform target, Rect safe)
@@ -1351,12 +1432,12 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
         private void LoadFonts()
         {
-            var catalog = Resources.Load<ManagementUiFontCatalog>(ManagementUiLayoutMetrics.FontCatalogResourcePath);
+            var catalog = Resources.Load<UiRemasterFontCatalog>(UiRemasterTypography.FontCatalogResourcePath);
             if (catalog != null && catalog.IsComplete)
             {
-                _bodyFont = CreateFontAsset(catalog.BodySource, "Main Navigation Pretendard V2");
-                _headingFont = CreateFontAsset(catalog.HeadingSource, "Main Navigation Maplestory Bold V2");
-                _fallbackFont = CreateFontAsset(catalog.FallbackSource, "Main Navigation Maplestory Light Fallback V2");
+                _bodyFont = CreateFontAsset(catalog.BodySource, "Main Navigation Maplestory Light V3");
+                _headingFont = CreateFontAsset(catalog.HeadingSource, "Main Navigation Maplestory Bold V3");
+                _fallbackFont = CreateFontAsset(catalog.FallbackSource, "Main Navigation Pretendard Fallback V3");
             }
             if (_bodyFont == null || _headingFont == null || _fallbackFont == null)
             {
@@ -1370,6 +1451,23 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 _bodyFont.fallbackFontAssetTable.Add(_fallbackFont);
             if (_headingFont != null && _bodyFont != null && _bodyFont != _headingFont)
                 _headingFont.fallbackFontAssetTable.Add(_bodyFont);
+            PrewarmMainNavigationGlyphs();
+        }
+
+        private void PrewarmMainNavigationGlyphs()
+        {
+            var characters = string.Concat(MainNavigationCatalog.EnumerateKoreanText()) +
+                             "나누나아빠엄마개발제작재무품질검사운영고객응대계약영업" +
+                             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" +
+                             "%/,.·:()←-+";
+            var bodyMissing = string.Empty;
+            var headingMissing = string.Empty;
+            var fallbackMissing = string.Empty;
+            var bodyReady = _bodyFont != null && _bodyFont.TryAddCharacters(characters, out bodyMissing);
+            var headingReady = _headingFont != null && _headingFont.TryAddCharacters(characters, out headingMissing);
+            var fallbackReady = _fallbackFont != null && _fallbackFont.TryAddCharacters("₩", out fallbackMissing);
+            if (!bodyReady || !headingReady || !fallbackReady)
+                Debug.LogError($"MAIN_NAVIGATION_GLYPH_PREWARM_FAIL: body='{bodyMissing}' heading='{headingMissing}' fallback='{fallbackMissing}'");
         }
 
         private static TMP_FontAsset CreateFontAsset(Font source, string assetName)

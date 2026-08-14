@@ -50,19 +50,18 @@
 | `MaplestoryLight.ttf` | `6D51D8E576F77B01914095AA1F69F9D37C16D93FE940D748962867F218442BA9` |
 | `PretendardVariable.ttf` | `3090CCDE0442BB347AA7685D9BA8B17436A60682DF6E8F92A9A670DE14056E22` |
 
-## 향후 1920×1080 가로 UI 역할 제안
+## UI Remaster V3 런타임 역할
 
-이 항목은 후속 UI 작업을 위한 역할 제안이며 현재 UI·씬을 변경하지 않는다.
-
-- `MaplestoryBold`: 타이틀, 큰 탭 제목, 주요 버튼. 1080p 기준 28px 이상, 타이틀은 40~64px 권장.
-- `MaplestoryLight`: 보조 제목과 짧은 HUD 명칭. 20px 미만의 작은 본문에는 사용하지 않는다.
-- `PretendardVariable`: 본문, 계약 설명, 표, 날짜·금액·수치. 1080p 기준 최소 18px, 일반 본문은 20~24px 권장.
-- 작은 한글은 넓은 행간과 높은 명암 대비를 우선하고, 사무실 화면 위에 놓일 때 반투명 배경이나 외곽선을 별도로 설계한다.
-- `simul`의 세로 모바일 줄바꿈·좌표·패널 비율은 재사용하지 않는다. 1920×1080/16:9 PC 가로 풀화면과 넓은 사무실 동시 표시를 기준으로 새로 배치한다.
-- 후속 시각 작업이 필요하면 밝고 캐주얼한 가로 ImageGen 비주얼을 먼저 만들고 Unity 글자·버튼은 이미지와 분리한다.
+- `MaplestoryBold`: 타이틀, 패널·카드 제목, 선택 탭, 주요 버튼.
+- `MaplestoryLight`: 본문, 설명, 날짜·시간·금액·능력치 등 모든 일반 런타임 텍스트.
+- `PretendardVariable`: 메이플 폰트에 없는 기호를 위한 fallback 전용. 화면별 기본 글꼴로 사용하지 않는다.
+- 1280×720 최소 기준은 패널 제목 28px, 카드 제목 20px, 본문 16px, 상단 18px, 하단 17px, 버튼 16px이다. autosize로 이 값 아래로 축소하지 않는다.
+- 작은 한글은 충분한 행 높이와 높은 명암 대비를 우선하고, `MaplestoryBold.ttf`에는 TMP 합성 Bold를 중복 적용하지 않는다.
+- `simul`의 세로 모바일 줄바꿈·좌표·패널 비율은 재사용하지 않는다. 1920×1080/16:9 PC 가로 풀화면과 1280×720 최소 화면을 함께 검증한다.
+- ImageGen bitmap에는 글자를 굽지 않고 Unity 런타임 TMP/IMGUI 텍스트를 분리해 렌더링한다.
 
 ## 2026-08-11 / TMP Essential Resources 동반 폰트
 
 - `Assets/TextMesh Pro/Fonts/LiberationSans.ttf`는 Unity가 TextMesh Pro Essential Resources로 배포하는 서드파티 폰트이며 SIL Open Font License 1.1을 따른다. 저장소에 넣은 이유는 Docs/DECISIONS.md의 2026-08-11 항목에 있다.
-- 이 폰트는 TMP 기본 폰트 에셋과 폴백 용도로만 존재하며 한글 UI 정본이 아니다. 관리 UI의 한글 표시는 계속 Maplestory Bold/Light와 Pretendard Variable이 담당한다.
+- 이 폰트는 TMP 기본 폰트 에셋과 폴백 용도로만 존재하며 한글 UI 정본이 아니다. UI Remaster V3의 한글 정본은 Maplestory Bold/Light이고 Pretendard Variable은 기호 fallback이다.
 - `ManagementUiV2Presenter`는 한글 카탈로그가 비었거나 불완전할 때만 Unity 내장 `LegacyRuntime.ttf`로 폴백하고 `MANAGEMENT_UI_FONT_FALLBACK` 오류를 남긴다. 이 오류가 보이면 한글 정본 폰트가 빠진 것이므로 폴백에 의존해 출시하지 않는다.

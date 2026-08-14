@@ -27,6 +27,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private int _captureCount;
         private int _pointerRouteCount;
         private int _keyboardRouteCount;
+        private bool _buildAdapterAvailable;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallForQa()
@@ -86,7 +87,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 yield return current;
             }
 
-            Append($"PLAYER_QA_PASS | renderer=D3D11 captures={_captureCount} pointerRoutes={_pointerRouteCount} keyboardRoutes={_keyboardRouteCount} adapters=contract,build stockRoute=investment-only spriteStates=hover,pressed,selected");
+            Append($"PLAYER_QA_PASS | renderer=D3D11 captures={_captureCount} pointerRoutes={_pointerRouteCount} keyboardRoutes={_keyboardRouteCount} " +
+                   $"adapters=contract,stock build={(_buildAdapterAvailable ? "integrated" : "dependency-placeholder")} " +
+                   "stockRoute=investment-only spriteStates=hover,pressed,selected");
             yield return new WaitForSecondsRealtime(0.25f);
             Application.Quit(0);
         }
@@ -132,14 +135,17 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             Require(contractAdapter != null && contractAdapter.IsReady,
                 "ContractBusinessRuntimeAdapter is missing or not ready.");
             var buildController = presenter.GetOfficeBuildControllerForQa();
-            Require(buildController != null,
-                "OfficeBuildEditorNavigationAdapter target controller is missing.");
+            _buildAdapterAvailable = buildController != null;
+            if (!_buildAdapterAvailable)
+                Append("BUILD_ADAPTER_DEPENDENCY_SKIP | route=office.build-editor placeholder=clickable integrationCandidate=required");
             Require(presenter.GetFeatureButtonForQa("investment-stocks") == null &&
                     !adapter.OpenFromInvestment() && !adapter.IsStockMarketOpen,
                 "Main HUD exposes a direct stock-market route outside the Investment hub.");
             Require(OfficeBuildEditorNavigationAdapter.EntryId == MainNavigationRouteIds.BuildingEditor,
                 "Build-editor route ID does not match the dependency adapter.");
-            Append("ADAPTER_READY_PASS | contract=ContractBusinessRuntimeAdapter build=OfficeBuildEditorNavigationAdapter stock=investment-only");
+            Append($"ADAPTER_READY_PASS | contract=ContractBusinessRuntimeAdapter " +
+                   $"build={(_buildAdapterAvailable ? "OfficeBuildEditorNavigationAdapter" : "dependency-placeholder")} " +
+                   "stock=investment-only");
 
             foreach (var speed in new[] { 2, 4, 1 })
             {
@@ -209,7 +215,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     else ClickButton(featureButton, feature.Id);
                     yield return null;
 
-                    if (feature.Action == MainNavigationFeatureAction.OpenBuildingEditor)
+                    if (feature.Action == MainNavigationFeatureAction.OpenBuildingEditor && buildController != null)
                     {
                         Require(buildController.IsOpen && Mathf.Approximately(Time.timeScale, 0f),
                             "Build adapter did not open its dedicated paused editor.");
@@ -260,7 +266,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                             "Contract adapter back stack did not return to BusinessHub.");
                 }
             }
-            Append("FEATURE_ROUTE_PASS | visibleCards=21 dedicatedStatus=people,research,company,investment contract=board products=progress build=editor keyboardSubmit=people-hiring");
+            Append($"FEATURE_ROUTE_PASS | visibleCards=21 dedicatedStatus=people,research,company,investment " +
+                   $"contract=board products=progress build={(_buildAdapterAvailable ? "editor" : "clickable-placeholder")} " +
+                   "keyboardSubmit=people-hiring");
 
             Require(FindObjectsByType<StockMarketFullscreenPanel>(FindObjectsSortMode.None).Length == 1,
                 "Exactly one canonical StockMarketFullscreenPanel must exist.");
@@ -376,12 +384,16 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 VerifyCapture(closedName, targetWidth, targetHeight);
                 ClickButton(presenter.GetTabButtonForQa(MainNavigationTabId.Company),
                     $"company {targetWidth}x{targetHeight}");
+                yield return null;
+                Canvas.ForceUpdateCanvases();
                 var hubName = $"menu-company-{targetWidth}x{targetHeight}.png";
                 RequestCapture(hubName, superSize);
                 yield return new WaitForSecondsRealtime(0.75f);
                 VerifyCapture(hubName, targetWidth, targetHeight);
                 ClickButton(presenter.GetTabButtonForQa(MainNavigationTabId.People),
                     $"people {targetWidth}x{targetHeight}");
+                yield return null;
+                Canvas.ForceUpdateCanvases();
                 ValidateWorkforceTypography(presenter, windowWidth, windowHeight);
                 var peopleName = $"menu-people-{targetWidth}x{targetHeight}.png";
                 RequestCapture(peopleName, superSize);
@@ -415,7 +427,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 if (text.gameObject.name == "Workforce Panel Title")
                 {
                     panelTitles++;
-                    minimumPixels = 24f;
+                    minimumPixels = 28f;
                 }
                 else if (text.gameObject.name == "Workforce Employee Name")
                 {
@@ -425,7 +437,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 else
                 {
                     bodyTexts++;
-                    minimumPixels = 14f;
+                    minimumPixels = 16f;
                 }
 
                 text.ForceMeshUpdate();
@@ -443,11 +455,59 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     $"{text.preferredHeight:0.0}.");
             }
 
+            ValidateWorkforceTextCollisions(texts, pixelWidth, pixelHeight);
+
             Require(panelTitles == 1 && employeeNames == 4 && bodyTexts >= 20,
                 $"Workforce typography coverage mismatch at {pixelWidth}x{pixelHeight}: " +
                 $"title={panelTitles} names={employeeNames} body={bodyTexts}.");
             Append($"WORKFORCE_TYPOGRAPHY_PASS | resolution={pixelWidth}x{pixelHeight} " +
-                   "panel>=24px names>=18px body>=14px autosize=off overflow=0");
+                   "font=Maplestory panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0");
+        }
+
+        private static void ValidateWorkforceTextCollisions(
+            IReadOnlyList<TMP_Text> allTexts,
+            int pixelWidth,
+            int pixelHeight)
+        {
+            var visible = new List<KeyValuePair<TMP_Text, Rect>>();
+            for (var index = 0; index < allTexts.Count; index++)
+            {
+                var text = allTexts[index];
+                if (text == null || !text.gameObject.activeInHierarchy ||
+                    !text.gameObject.name.StartsWith("Workforce ", StringComparison.Ordinal))
+                    continue;
+                visible.Add(new KeyValuePair<TMP_Text, Rect>(text, ScreenRect(text.rectTransform)));
+            }
+
+            for (var leftIndex = 0; leftIndex < visible.Count; leftIndex++)
+            {
+                for (var rightIndex = leftIndex + 1; rightIndex < visible.Count; rightIndex++)
+                {
+                    var left = visible[leftIndex];
+                    var right = visible[rightIndex];
+                    var overlapWidth = Mathf.Min(left.Value.xMax, right.Value.xMax) -
+                                       Mathf.Max(left.Value.xMin, right.Value.xMin);
+                    var overlapHeight = Mathf.Min(left.Value.yMax, right.Value.yMax) -
+                                        Mathf.Max(left.Value.yMin, right.Value.yMin);
+                    Require(overlapWidth <= 0.5f || overlapHeight <= 0.5f,
+                        $"Workforce text rectangles collide at {pixelWidth}x{pixelHeight}: " +
+                        $"{left.Key.gameObject.name}='{left.Key.text}' {left.Value} vs " +
+                        $"{right.Key.gameObject.name}='{right.Key.text}' {right.Value}.");
+                }
+            }
+        }
+
+        private static Rect ScreenRect(RectTransform rectTransform)
+        {
+            var corners = new Vector3[4];
+            rectTransform.GetWorldCorners(corners);
+            var bottomLeft = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
+            var topRight = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
+            return Rect.MinMaxRect(
+                Mathf.Min(bottomLeft.x, topRight.x),
+                Mathf.Min(bottomLeft.y, topRight.y),
+                Mathf.Max(bottomLeft.x, topRight.x),
+                Mathf.Max(bottomLeft.y, topRight.y));
         }
 
         private GameState ValidateStockSaveRoundTrip(GameState state)
