@@ -5,7 +5,7 @@
 - Local main 기준선 `4cf6e50`에 build editor 구현 `7baac22`와 MainNavigation route `bc19d0c`가 통합되어 있다.
 - 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v9이며 v1~v8을 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
 - 진입점은 `사무실 → 회사 → 건축·편집`이다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
-- 배치 geometry를 movement가 직접 소비하는 hand-off는 아직 열려 있다. 최종 seating/stamina 결합과 portable build 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
+- 배치 geometry는 `OfficeRuntimeOccupancy`가 read-only query로 직접 소비한다. 알려진 가구는 canonical 4방향 profile, 이전 저장의 미등록 콘텐츠는 부분 legacy profile 없이 전체 셀 차단 fallback을 사용한다. 최종 seating/stamina 결합과 portable build 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
 
 ## Audit: canonical versus legacy
 
@@ -203,9 +203,10 @@ OfficeFurnitureGeometrySnapshot snapshot = geometry.Resolve(placedFurniture);
 // snapshot.InteractionAccessSockets / snapshot.SeatEgressSockets: claim candidates
 ```
 
-The movement integration must replace the legacy `OfficeFurnitureCollisionCatalog.asset` lookup
-with this query while keeping path, reservation, interaction, and seat lifecycle in their existing
-services. The editor does not duplicate those lifecycles.
+Runtime movement now resolves this query while keeping path, reservation, interaction, and seat
+lifecycle in their existing services. A saved kind/facing absent from the canonical query is blocked
+as a full rectangle rather than inheriting a partial legacy mask. The editor does not duplicate those
+lifecycles.
 
 ## QA status
 
@@ -215,8 +216,12 @@ Passed with Unity 6000.3.21f1:
 - `OFFICE_FURNITURE_BUILD_SYSTEM_QA: PASS`: all 13 purchasable definitions x four geometry
   rotations; every definition's purchase, 90-degree rotate, move, store, stored placement and exact
   sale refund; exact single debit/idempotency; funds failure; stored state/schema v8 round trip;
-  v7 migration; collision/occlusion separation; access/egress/path/entrance checks; family ID and
-  energy preservation;
+  v7 migration plus 52 schema-v3 geometry round trips; collision/occlusion separation;
+  access/egress/path/entrance checks; family ID and energy preservation;
+- `FAMILY_COMPANY_OFFICE_FURNITURE_COLLISION_QA: PASS`: 10,368 direct/path cases across 8
+  directions, four family radii, 30/60/120fps and 1x/2x/4x; 52 canonical profiles, 1,216 subcell
+  checks, 16 full-cell fallback subcells, 416 actual Sprite-alpha attack paths, visible pass-through
+  and resolved-endpoint penetration zero;
 - `OFFICE_BUILD_EDITOR_RUNTIME_QA: PASS`: actual Prototype PlayMode company-hub adapter open,
   timescale/bootstrap pause, vending purchase and actor-preserving runtime rebuild, rendered Sprite
   at the semantic tile anchor, reachable `DrinkVending` capability, four canonical actors, and exact
@@ -239,8 +244,7 @@ unchanged Unity `JsonUtility` missing-field-null assumption. The successful Prot
 also exercises the current contract/runtime path. PlayMode emitted one Unity SearchDatabase
 `ArgumentOutOfRangeException` while indexing, after which the runtime QA completed and exited 0.
 
-Current status: **integrated on local main baseline `4cf6e50`**. `MainNavigationV2` calls
-`OfficeBuildEditorNavigationAdapter`, and four-direction vending art is loaded through the additive
-Resources hook. The remaining editor boundary is movement consumption of the read-only geometry
-query without changing reservation/seat lifecycle. Final combined seating/stamina regression and a
-fresh Windows build remain pending in [PROJECT_STATE.md](PROJECT_STATE.md).
+Current status: `MainNavigationV2` calls `OfficeBuildEditorNavigationAdapter`, four-direction vending
+art is loaded through the additive Resources hook, and movement/path occupancy consumes the
+read-only canonical geometry query without changing reservation/seat lifecycle. Final release state
+and Windows build identity remain governed by [PROJECT_STATE.md](PROJECT_STATE.md).

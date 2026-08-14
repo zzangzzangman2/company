@@ -98,6 +98,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         public void TickMovement(float deltaTime)
         {
             if (!_routeMovementEnabled || _route.Length < 2 || _gridPresenter == null || deltaTime <= 0f) return;
+            Vector3 before = transform.position;
             var target = _gridPresenter.CellCenterWorld(_route[_targetIndex]);
             var delta = target - transform.position;
             var maximumStep = _moveSpeed * deltaTime;
@@ -117,7 +118,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 _distanceTravelled += displacement.magnitude;
             }
 
-            _animator.SetWorldVelocity(new Vector3(velocity.x, 0f, velocity.y));
+            Vector3 actual = transform.position - before;
+            _animator.SetWorldVelocity(new Vector3(
+                actual.x / deltaTime,
+                0f,
+                actual.y / deltaTime));
             UpdateSortingOrder();
         }
 

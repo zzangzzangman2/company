@@ -75,11 +75,11 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 ## 실제 회사 이동
 
 - `StarterOfficeRuntimeBootstrap`이 플레이어와 가족 4인의 `OfficeRuntimeAgent`를 단일 소유한다. legacy `PrototypePlayerController`, `OfficeWorkerAgent`, 3D `CharacterController` 경로는 Starter Runtime이 준비되면 비활성이다.
-- `OfficeRuntimeOccupancy`와 결정론적 cardinal `OfficeRuntimePathService`가 static/interaction/dynamic occupancy와 예약을 처리한다.
+- `OfficeRuntimeOccupancy`와 결정론적 cardinal `OfficeRuntimePathService`가 static/interaction/dynamic occupancy와 예약을 처리한다. 편집 가능 가구는 `OfficeFurnitureGeometryQuery.Shared`의 회전된 ground mask가 정본이며 query에 없는 legacy/unknown 저장 콘텐츠는 전체 셀로 fail-closed한다.
 - 플레이어·가족·계약 이동은 `OfficeSharedLocomotionRules`를 공유한다. 방향과 gait는 요청 벡터가 아니라 실제 frame displacement/speed로 결정하며 막힌 입력은 걷기 위상을 진행하지 않는다.
 - `OfficeAutonomyCoordinator`의 의미 목적지와 계약 coordinator의 업무 목적지는 같은 actor/path/occupancy로 투영된다. 계약 업무는 실제 도착·정지·작업 상태에서만 `RecordWork`를 호출한다.
 - 평일 학교·외부 일정·영업·가사와 수면은 `FamilyScheduleRules`에서 계산하며 계약 코어와 UI가 같은 가용성 판정을 사용한다.
-- 배치 직후 이동은 현재 `OfficeFurnitureCollisionCatalog` lookup을 거친다. 이를 `OfficeBuildEditorGeometryQuery`의 배치 geometry로 교체하는 hand-off는 아직 열린 기술 부채다.
+- 출근 actor는 첫 live path segment를 문 밖으로 연장한 비가시 exterior point에서 단일 ingress gate를 claim한 뒤 entrance로 이동한다. 동시 요청은 한 명씩 직렬화되고 이후에는 기존 path/reservation/seat lifecycle을 그대로 사용한다.
 
 ## Native Smart Interaction P1.5
 
@@ -119,9 +119,10 @@ PrototypeBootstrap / GameState.OfficeGrid
 
 - memberId별 활성 Runtime Actor는 정확히 하나다. Starter Runtime이 준비되면 Legacy NPC/player/navigation과 Preview mover는 비활성이다.
 - Occupancy는 모든 이동 후보의 start→end 구간을 actor radius로 표본 검사한다. World Update는 `OfficeNavigationMotionIntegrator`의 안정 substep으로 1×·2×·4× 시간 배속의 tunneling을 막는다.
-- `OfficeSharedLocomotionRules`는 requested displacement, actual displacement/speed, display facing, gait phase를 분리한 순수 C# 경계다. 수치 오차보다 큰 실제 root 변위가 있는 모든 프레임은 실제 변위의 최근접 8방향만 표시하며 semantic/requested heading과 충돌 투영은 이를 덮어쓸 수 없다.
+- `OfficeRuntimeCollisionMotion`은 contact와 선택한 축 slide를 합친 뒤 segment와 exact endpoint를 다시 검사한다. 경계 보간과 zero-length point 판정이 다르면 합성 displacement 전체를 refine하므로 `Resolve`가 반환한 위치를 같은 frame의 `UpdateActor`가 침투로 판정할 수 없다.
+- `OfficeSharedLocomotionRules`는 requested displacement, actual displacement/speed, display facing, gait phase를 분리한 순수 C# 경계다. 실제 root 변위가 motion authority이며 4°/0.075초 hold는 인접 octant 경계와 최대 30.5° 오차 안에서만 동작한다. 좌우 cardinal 또는 두 octant 이상 전환은 즉시 반영되어 semantic/requested heading이 횡이동 frame을 정면 방향으로 덮을 수 없다.
 - 135° 이상 급반전은 감속 후 실제 정지, 인접 45° 방향을 거치는 제자리 pivot, 새 방향 가속 순서로 진행한다. 막힌 입력과 상호작용 도착도 변위 없이 같은 pivot 규칙을 사용하고 Pivot/Idle 중에는 보행 거리를 누적하지 않는다.
-- `DirectionalSpriteAnimator`는 공용 규칙의 Presentation adapter다. 모든 Actor는 `OfficeLocomotionGaitRules.DefaultStrideLength` 하나를 사용하며 member ID별 보폭·회전시간·방향 허용치는 두지 않는다. 상호작용은 실제 정지, Idle, 목표 facing이 모두 성립한 뒤에만 Performing으로 전환한다.
+- `DirectionalSpriteAnimator`는 공용 규칙의 Presentation adapter다. 최종 renderer에 적용된 clip/Sprite/flip과 같은 frame의 실제 변위·속도·resolved direction을 trace하며, 독립 8방향 원화의 `flipX=false`를 소비 경계에서 강제한다. 모든 Actor는 `OfficeLocomotionGaitRules.DefaultStrideLength` 하나를 사용하며 member ID별 보폭·회전시간·방향 허용치는 두지 않는다. 상호작용은 실제 정지, Idle, 목표 facing이 모두 성립한 뒤에만 Performing으로 전환한다.
 - Actor는 현재 셀과 최대 두 개의 예정 셀을 예약하고, 실제 위치·desired velocity·stuck seconds를 기존 교통 규칙에 제공한다. 0.8초 회피, 1.1초 재탐색, 2초 예약 해제로 교착을 복구한다.
 - 좌석 셀은 일반 경로에서 Interaction Occupancy다. claim된 seatId만 접근 경로와 최종 operator anchor 이동에 허용된다.
 - 레이아웃 변경은 semantic `OfficeGrid`를 교체하고 Starter Runtime을 staged rebuild한다. 이전 Actor/path/reservation은 폐기되고 새 Occupancy revision과 레이아웃 해시에 맞춰 다시 바인딩된다.

@@ -17,6 +17,31 @@ AlignChairPresentationToOccupant`→`OfficeGridFurniturePresenter.AlignSeatPrese
 의자 `VisualRoot.position`을 캐릭터 골반으로 당기고 기립 뒤 되돌려 의자 비행을 직접 만들었다. 의자를
 불변으로 바꾼 D3D11 4명 동시 검증은 가구 Transform 전 항목과 logical root·pelvis-seat를 실질 0으로 유지했다.
 손–키보드 64.989~91.534px는 기존 타이핑 아트의 별도 `KNOWN_FAIL`이며 좌석 안정화 PASS로 완화하지 않는다.
+## 2026-08-15 / 횡이동은 같은 frame의 실제 변위와 8방향 Sprite가 함께 증명한다
+
+결정: 실제 root displacement가 있는 frame은 그 heading만 motion facing의 권한으로 사용한다. 4°/0.075초
+hysteresis는 최근접 방향과 현재 방향이 인접한 45° 경계에서만 허용하고, 오차가 30.5°를 넘거나 두 octant
+이상 바뀌거나 좌우 cardinal로 전환하면 즉시 적용한다. 이는 2026-08-14의 "모든 실제 이동 frame 즉시
+전환" 결정을 경계 인접 안정화에 한해 대체하며, 실제 횡이동 중 South/North sprite 유지는 허용하지 않는다.
+
+결정: 최종 `SpriteRenderer` 소비 단계는 actual displacement/speed, resolved motion/display direction,
+phase/clip, Sprite asset name, `flipX`를 같은 frame trace로 제공한다. 모든 방향이 독립 원화이므로
+`flipX=false`를 매 frame 강제한다. 보행 위상은 실제 이동거리와 속도만 소비하고 정지 시 마지막 자연스러운
+방향을 유지한다. legacy mover도 요청 속도가 아니라 controller/transform의 실제 frame displacement를 전달한다.
+
+결정: `OfficeRuntimeOccupancy`는 알려진 가구에 `OfficeFurnitureGeometryQuery.Shared`의 회전된 4×4
+subcell ground mask를 사용한다. 이전 저장에서 정본 geometry를 찾지 못하면 부분 legacy profile을
+재사용하지 않고 전체 셀 차단으로 fail-closed한다. 출근 입장은 live path 첫 구간을 문 밖으로 연장한 단일
+ingress reservation으로 직렬화하며 기존 좌석 claim·Transform·socket 소유권을 변경하지 않는다.
+
+결정: contact refinement와 축 slide를 합친 최종 displacement는 segment query뿐 아니라 같은 endpoint의
+zero-length collision query도 통과해야 한다. 두 판정 중 하나가 실패하면 합성 displacement 전체를 다시
+보수적으로 refine한다. 4×4 mask 경계의 보간 반올림을 여유 공간으로 간주하거나 QA tolerance로 숨기지 않는다.
+
+이유: 방향 계산과 최종 Sprite 선택이 다른 frame/state를 읽으면 계산 테스트가 통과해도 정면 몸으로
+횡이동할 수 있다. 또한 편집 geometry와 runtime collision의 이중 정본, 화면 안 spawn, 공동 입구 무예약은
+가구 관통·NPC 중첩을 만든다. 같은 frame trace, exact endpoint 검증, fail-closed 이관, 단일 ingress gate가
+각각 이 경계를 관측 가능하고 결정론적으로 만든다.
 
 ## 2026-08-14 / UI Remaster V3와 MapleStory typography를 전체 화면의 공용 정본으로 사용
 

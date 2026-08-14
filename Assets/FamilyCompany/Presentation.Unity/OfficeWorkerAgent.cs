@@ -1044,7 +1044,11 @@ namespace FamilyCompany.Presentation.Unity
                 _replanRemaining = 0f;
             }
 
-            spriteAnimator?.SetWorldVelocity(_currentVelocity);
+            // Legacy worker presentation still shares DirectionalSpriteAnimator even though the
+            // Starter Runtime disables this actor path. Feed the controller-observed displacement
+            // rather than the pre-collision integrator velocity so it cannot regress to stale
+            // facing if a legacy scene is loaded.
+            spriteAnimator?.SetWorldVelocity(actual / Mathf.Max(0.000001f, deltaTime));
             TickFootsteps(deltaTime, actual.magnitude);
             if (spriteAnimator == null && _currentVelocity.sqrMagnitude > 0.01f)
             {

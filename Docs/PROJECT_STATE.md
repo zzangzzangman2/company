@@ -15,6 +15,17 @@
 - 기존 Northwest 타이핑 아트의 hand-keyboard 간격은 player `91.534px`, older_sister `78.188px`, father
   `79.401px`, mother `64.989px`로 3.5px 계약을 통과하지 못한다. 좌석 안정화와 분리된 필수 후속이며 현재
   전환 QA는 이를 `KNOWN_FAIL`/exit 97로 보존한다.
+## 2026-08-15 / 실제 변위 방향·가구 geometry·출근 ingress
+
+- 자유 보행의 최종 표현 방향은 실제 frame displacement의 8방향 양자화 결과다. 경계 인접 방향에만
+  4°/0.075초 hysteresis를 허용하며, 좌우 cardinal 이동과 두 octant 이상 전환은 즉시 반영한다.
+- `DirectionalSpriteAnimator`가 실제 변위·속도, motion/display direction, phase/clip, 최종 Sprite 이름과
+  `flipX`를 같은 frame trace로 공개한다. 8방향 원화는 mirroring하지 않으며 최종 소비 단계에서 `flipX=false`를 강제한다.
+- `OfficeRuntimeOccupancy`는 모든 알려진 편집 가구의 `OfficeFurnitureGeometryQuery.Shared` 4방향 ground
+  mask를 path와 collision에 직접 사용한다. 정본 query에 없는 과거/미등록 저장 콘텐츠는 부분 legacy mask를
+  재사용하지 않고 전체 셀 차단으로 fail-closed한다.
+- 출근자는 첫 live route segment의 문 밖 2.5배 지점에서 나타나 단일 ingress gate를 예약한 뒤 입장한다.
+  4인이 동시에 요청해도 한 명씩 진입하며, 기존 workstation seat claim/socket 소유권은 변경하지 않는다.
 
 ## 2026-08-14 / 공용 업무 능력과 인사 roster
 
@@ -68,7 +79,7 @@
 | 영역 | 현재 동작 |
 | --- | --- |
 | 새 게임 | `2000-01-03 08:50`, 가족 4인, 자본금 5,000,000원 |
-| 출퇴근 | 가족만 `09:00`~`09:03` 1분 간격 입장, `18:00`부터 퇴근 |
+| 출퇴근 | 가족만 `09:00`~`09:03` 1분 간격, 문 밖 spawn과 단일 ingress 예약으로 입장, `18:00`부터 퇴근 |
 | 직원 8인 | 시작 인원이 아닌 향후 채용 후보. 고용 전 런타임 출근 금지 |
 | 사무실 | `StarterOfficeV1`, 13×13, 실내 가구 17 + 외곽 bay 52, 가족 workstation 4 |
 | 외곽 출입구 | `(8,0)` threshold 1칸. `entrance_door`는 호환 ID이며 door leaf/jamb/lintel 애니메이션이 아님 |
@@ -76,7 +87,7 @@
 | 계약 | 고객 등급 `T0 → T1 → T2 → T3 → T4`, 순차 해금과 하락/회복 |
 | 사무실 편집 | 배치·회전·이동·회수·재고·저장. 회사 허브에서 진입 |
 | 저장 | 전체 `GameSaveDto v10`, `v1`~`v9` 읽기/이관; OfficeGrid 하위 스키마 `v4`, 가구 재고 하위 스키마 `v1` |
-| 이동·애니메이션 | 공유 pivot/locomotion 규칙과 실제 frame displacement로 방향·걷기 판정 |
+| 이동·애니메이션 | 실제 frame displacement 기반 8방향, 인접 경계 hysteresis, 거리 기반 걷기, canonical 가구 회피 |
 | 렌더 | 1920×1080 reference, native scale 1, pixel snap, 180 PPU, 캐릭터 scale 1.55 |
 | Windows 실행 | 저장소 상대 경로 `BUILD_WINDOWS.cmd` / `RUN_WINDOWS.cmd`; `BUILD_INFO.txt`로 SHA 확인 |
 
@@ -88,6 +99,8 @@
 - 계약 고객 성장은 day-one T0, T1~T4 순차 해금, 평판/실패 기반 하락과 T0 회복을 순수 시뮬레이션 규칙으로 처리한다.
 - 사무실 편집기와 재고 저장은 v8에서 도입되었고, 현재 전체 저장 스키마 v10에 그대로 통합되어 있다. 별도 여섯 번째 하단 탭은 만들지 않는다.
 - 플레이어, 가족 출퇴근, 계약 이동이 공유 office locomotion 규칙과 실제 변위를 사용한다.
+- 배치 가구의 canonical 4방향 geometry가 occupancy/path의 정본이며 legacy/unknown 저장은 전체 셀 fallback한다.
+- 출근 입구는 문 밖 비가시 spawn과 단일 ingress reservation으로 직렬화되어 같은 진입점 중첩을 막는다.
 - native render/pixel snap/viewport clarity 기준과 캐릭터 scale 1.55가 적용되었다.
 - 외곽 bay 52개, 단일 threshold, 가족 09:00~09:03/18:00 출퇴근 규칙이 적용되었다.
 - 주식 코어의 시장 시간, 7+7 호가, FIFO, 수수료·세금, 저장 결정론과 투자 허브 진입점이 유지된다.
@@ -100,13 +113,12 @@
 
 ## 열린 기술 부채와 제품 backlog
 
-1. `OfficeRuntimeOccupancy`의 `OfficeFurnitureCollisionCatalog` 의존을 배치된 가구 geometry query로 교체해 편집 직후 path/occupancy가 같은 footprint를 사용하게 한다.
-2. 직원 후보 8인은 고용 시스템이 생긴 뒤에만 출근시킨다. 시작 roster나 09:00~09:03 가족 출근에 섞지 않는다.
-3. 소파/다인 좌석은 group atomic claim, 짝 이동, 취소/퇴장 해제, non-NorthWest pose 승인과 idle/emote QA를 추가한다.
-4. 오피스 확장은 현재 StarterOffice를 보존하며 단계별 면적/가구 해금으로 구현한다. 과거 요청서의 숫자를 검증 없이 새 정본으로 삼지 않는다.
-5. 60일 외상 매출/지급, 경쟁 견적, 뉴스 조합은 `GAMEPLAY_FUN_V1.md`와 `DO_NOTS.md`의 재미·미래 누설 제한을 지키며 별도 설계/검증한다.
-6. 주식은 전체 계좌/주문/체결/원장 persistence, S3/S4 시나리오, 외부 tape/호가 연결을 확장하되 기존 결정론을 보존한다.
-7. Utility AI의 선택 규칙은 현재 `WeightedPick`이 정본이다. `ArgMax` 변경은 제안만으로 적용하지 않는다.
+1. 직원 후보 8인은 고용 시스템이 생긴 뒤에만 출근시킨다. 시작 roster나 09:00~09:03 가족 출근에 섞지 않는다.
+2. 소파/다인 좌석은 group atomic claim, 짝 이동, 취소/퇴장 해제, non-NorthWest pose 승인과 idle/emote QA를 추가한다.
+3. 오피스 확장은 현재 StarterOffice를 보존하며 단계별 면적/가구 해금으로 구현한다. 과거 요청서의 숫자를 검증 없이 새 정본으로 삼지 않는다.
+4. 60일 외상 매출/지급, 경쟁 견적, 뉴스 조합은 `GAMEPLAY_FUN_V1.md`와 `DO_NOTS.md`의 재미·미래 누설 제한을 지키며 별도 설계/검증한다.
+5. 주식은 전체 계좌/주문/체결/원장 persistence, S3/S4 시나리오, 외부 tape/호가 연결을 확장하되 기존 결정론을 보존한다.
+6. Utility AI의 선택 규칙은 현재 `WeightedPick`이 정본이다. `ArgMax` 변경은 제안만으로 적용하지 않는다.
 
 ## 검증 상태
 

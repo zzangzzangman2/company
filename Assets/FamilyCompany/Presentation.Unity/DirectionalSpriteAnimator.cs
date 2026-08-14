@@ -8,6 +8,46 @@ using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity
 {
+    public readonly struct DirectionalLocomotionFrameTrace
+    {
+        public DirectionalLocomotionFrameTrace(
+            Vector2 actualDisplacement,
+            float actualSpeed,
+            int motionDirection,
+            int displayDirection,
+            OfficeLocomotionPhase phase,
+            string clip,
+            string spriteName,
+            bool flipX,
+            bool isMoving)
+        {
+            ActualDisplacement = actualDisplacement;
+            ActualSpeed = actualSpeed;
+            MotionDirection = motionDirection;
+            DisplayDirection = displayDirection;
+            Phase = phase;
+            Clip = clip ?? string.Empty;
+            SpriteName = spriteName ?? string.Empty;
+            FlipX = flipX;
+            IsMoving = isMoving;
+        }
+
+        public Vector2 ActualDisplacement { get; }
+        public float ActualSpeed { get; }
+        public int MotionDirection { get; }
+        public int DisplayDirection { get; }
+        public OfficeLocomotionPhase Phase { get; }
+        public string Clip { get; }
+        public string SpriteName { get; }
+        public bool FlipX { get; }
+        public bool IsMoving { get; }
+
+        public override string ToString() =>
+            $"actual=({ActualDisplacement.x:F5},{ActualDisplacement.y:F5}) " +
+            $"speed={ActualSpeed:F4} motionDir={MotionDirection} displayDir={DisplayDirection} " +
+            $"phase={Phase} clip={Clip} sprite={SpriteName} flipX={FlipX} moving={IsMoving}";
+    }
+
     public sealed class DirectionalSpriteAnimator : MonoBehaviour
     {
         public const int DirectionCount = 8;
@@ -183,9 +223,35 @@ namespace FamilyCompany.Presentation.Unity
             OfficeLocomotionGaitRules.DefaultStrideLength);
         public float StrideLength => OfficeLocomotionGaitRules.DefaultStrideLength;
 
+        public DirectionalLocomotionFrameTrace CaptureLocomotionFrameTrace()
+        {
+            string clip = _seatingClip.HasValue
+                ? "Seating/" + _seatingClip.Value
+                : IsLocomotionTransitionSpriteActive
+                    ? "Transition/" + LocomotionPhase
+                    : _tileIsMoving
+                        ? "Walk"
+                        : "Idle";
+            return new DirectionalLocomotionFrameTrace(
+                _tileFrameDisplacement,
+                _tileActualSpeed,
+                _lastMotionDirection,
+                _lastDirection,
+                LocomotionPhase,
+                clip,
+                targetRenderer == null || targetRenderer.sprite == null
+                    ? string.Empty
+                    : targetRenderer.sprite.name,
+                targetRenderer != null && targetRenderer.flipX,
+                IsMoving);
+        }
+
         public void Configure(SpriteRenderer renderer, Sprite[] frames, float secondsPerFrame = 0.11f)
         {
             targetRenderer = renderer;
+            // Starter Office owns eight independently authored directions. Mirroring a stale
+            // front/diagonal sprite would make the direction metadata and visible body disagree.
+            if (targetRenderer != null) targetRenderer.flipX = false;
             walkFrames = frames ?? Array.Empty<Sprite>();
             frameSeconds = Mathf.Max(0.05f, secondsPerFrame);
             _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
@@ -801,6 +867,10 @@ namespace FamilyCompany.Presentation.Unity
         private void ApplyFrame()
         {
             if (targetRenderer == null) return;
+            // Eight authored directions are the final visual authority. Reassert this at the
+            // consumer boundary so a serialized/legacy/external flip cannot outlive Configure and
+            // turn correct direction metadata into the wrong body silhouette for even one frame.
+            targetRenderer.flipX = false;
             EnforceOfficeSeatingFacingLock();
             _currentAppliedSpriteDirection = -1;
             _currentAppliedSpriteDirectionMatchesLock = true;

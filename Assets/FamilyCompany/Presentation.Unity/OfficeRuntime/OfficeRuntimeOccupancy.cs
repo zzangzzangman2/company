@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
-using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
@@ -21,11 +20,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private sealed class FurnitureObstacle
         {
             public PlacedOfficeFurniture Furniture;
-            public OfficeFurnitureCollisionProfile Profile;
+            public OfficeFurnitureGeometryProfile CanonicalProfile;
             public OfficeRuntimeOccupancyLayer Layer;
             public string InteractionSeatId = string.Empty;
             public readonly HashSet<string> PermittedWorkSurfaceSeatIds =
                 new HashSet<string>(StringComparer.Ordinal);
+
+            public float ClearancePadding => 0f;
+
+            public bool IsOccupied(int subcellX, int subcellY)
+            {
+                if (CanonicalProfile != null)
+                    return CanonicalProfile.IsSolidGroundSubcell(subcellX, subcellY);
+                return true;
+            }
 
             public bool IsPermitted(string permittedSeatId)
             {
@@ -120,6 +128,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new Dictionary<int, string>();
         private OfficeGrid _grid;
         private OfficeGridTilemapPresenter _presenter;
+        private string _attendanceIngressOwner = string.Empty;
+        private Vector2 _attendanceIngressExterior;
+        private Vector2 _attendanceIngressInterior;
+        private float _attendanceIngressRadius;
 
         public int Revision { get; private set; }
         public int StaticViolationCount { get; private set; }
@@ -128,6 +140,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public int BlockedStaticMoveCount { get; private set; }
         public int BlockedInteractionMoveCount { get; private set; }
         public int BlockedAgentMoveCount { get; private set; }
+        public int CanonicalGeometryObstacleCount { get; private set; }
+        public int LegacyCollisionFallbackCount { get; private set; }
+        public int FullCellFallbackCount { get; private set; }
+        public string AttendanceIngressOwner => _attendanceIngressOwner;
         public float MinimumAgentSeparationMargin { get; private set; } = float.PositiveInfinity;
 
         public void ResetMetrics()
@@ -151,6 +167,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _profiledInteractionSeatIds.Clear();
             _narrowCorridorIds.Clear();
             _narrowCorridorOwners.Clear();
+            _attendanceIngressOwner = string.Empty;
+            _attendanceIngressExterior = Vector2.zero;
+            _attendanceIngressInterior = Vector2.zero;
+            _attendanceIngressRadius = 0f;
+            CanonicalGeometryObstacleCount = 0;
+            LegacyCollisionFallbackCount = 0;
+            FullCellFallbackCount = 0;
             var blockingFurnitureCells = new HashSet<OfficeGridCoordinate>();
             foreach (PlacedOfficeFurniture furniture in grid.Furniture)
             {
@@ -170,10 +193,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _hardFloor.Add(cell);
             }
 
-            OfficeFurnitureCollisionCatalog catalog =
-                Resources.Load<OfficeFurnitureCollisionCatalog>(
-                    OfficeFurnitureCollisionCatalog.DefaultResourcePath);
-            if (catalog != null) catalog.Validate();
             var obstaclesByFurnitureId = new Dictionary<string, FurnitureObstacle>(StringComparer.Ordinal);
             foreach (PlacedOfficeFurniture furniture in grid.Furniture)
             {
@@ -181,8 +200,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 var obstacle = CreateObstacle(
                     furniture,
                     OfficeRuntimeOccupancyLayer.StaticHard,
-                    string.Empty,
-                    catalog);
+                    string.Empty);
                 _furnitureObstacles.Add(obstacle);
                 obstaclesByFurnitureId[furniture.FurnitureId] = obstacle;
             }
@@ -197,8 +215,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _furnitureObstacles.Add(CreateObstacle(
                         seatFurniture,
                         OfficeRuntimeOccupancyLayer.Interaction,
-                        seat.SeatId,
-                        catalog));
+                        seat.SeatId));
                     _profiledInteractionSeatIds.Add(seat.SeatId);
                 }
                 if (!seat.HasWorkstationBinding) continue;
@@ -233,6 +250,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void UnregisterActor(string agentId)
         {
+            ReleaseAttendanceIngress(agentId);
             ReleaseNarrowCorridors(agentId ?? string.Empty);
             _actors.Remove(agentId ?? string.Empty);
         }
@@ -244,6 +262,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ActorState state = RequiredActor(agentId);
             if (!isPresent)
             {
+                ReleaseAttendanceIngress(state.AgentId);
                 state.IsPresent = false;
                 state.DesiredVelocity = Vector2.zero;
                 state.StuckSeconds = 0f;
@@ -278,7 +297,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 state.CurrentCell = _presenter.NearestCell(new Vector3(position.x, position.y, 0f));
                 return;
             }
-            if (!PointClearsStatic(position, state.Radius, permittedSeatId, out OfficeRuntimeOccupancyLayer blockedLayer))
+            bool insideClaimedIngress =
+                string.Equals(_attendanceIngressOwner, state.AgentId, StringComparison.Ordinal) &&
+                PointInsideAttendanceIngress(position, state.Radius);
+            if (!insideClaimedIngress &&
+                !PointClearsStatic(
+                    position,
+                    state.Radius,
+                    permittedSeatId,
+                    out OfficeRuntimeOccupancyLayer blockedLayer))
             {
                 if (blockedLayer == OfficeRuntimeOccupancyLayer.Interaction) InteractionViolationCount++;
                 else StaticViolationCount++;
@@ -296,6 +323,84 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (margin < -AgentContactTolerance - AgentContactMetricEpsilon)
                     AgentPenetrationCount++;
             }
+        }
+
+        public bool TryClaimAttendanceIngress(
+            string agentId,
+            Vector2 exterior,
+            Vector2 interior,
+            float radius)
+        {
+            ActorState actor = RequiredActor(agentId);
+            if (actor.IsPresent || radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
+                return false;
+            if (_attendanceIngressOwner.Length > 0 &&
+                !string.Equals(_attendanceIngressOwner, actor.AgentId, StringComparison.Ordinal))
+                return false;
+            if ((interior - exterior).sqrMagnitude <= 0.0001f) return false;
+
+            foreach (ActorState peer in _actors.Values)
+            {
+                if (ReferenceEquals(peer, actor) || !peer.IsPresent) continue;
+                float required = radius + peer.Radius + 0.06f;
+                if (DistanceToSegment(peer.Position, exterior, interior) < required) return false;
+                OfficeGridCoordinate interiorCell = _presenter.NearestCell(
+                    new Vector3(interior.x, interior.y, 0f));
+                if (peer.Reservations.Contains(interiorCell)) return false;
+            }
+
+            _attendanceIngressOwner = actor.AgentId;
+            _attendanceIngressExterior = exterior;
+            _attendanceIngressInterior = interior;
+            _attendanceIngressRadius = radius;
+            actor.Position = exterior;
+            actor.CurrentCell = _presenter.NearestCell(new Vector3(exterior.x, exterior.y, 0f));
+            return true;
+        }
+
+        public bool CanMoveAttendanceIngress(
+            string agentId,
+            Vector2 start,
+            Vector2 end,
+            float radius)
+        {
+            ActorState actor = RequiredActor(agentId);
+            if (!actor.IsPresent ||
+                !string.Equals(_attendanceIngressOwner, actor.AgentId, StringComparison.Ordinal) ||
+                Mathf.Abs(radius - _attendanceIngressRadius) > 0.0001f ||
+                !PointInsideAttendanceIngress(start, radius) ||
+                !PointInsideAttendanceIngress(end, radius))
+                return false;
+
+            Vector2 delta = end - start;
+            int samples = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.045f));
+            for (var sample = 1; sample <= samples; sample++)
+            {
+                Vector2 point = Vector2.Lerp(start, end, sample / (float)samples);
+                OfficeGridCoordinate pointCell = _presenter.NearestCell(
+                    new Vector3(point.x, point.y, 0f));
+                foreach (ActorState peer in _actors.Values)
+                {
+                    if (ReferenceEquals(peer, actor) || !peer.IsPresent) continue;
+                    if (peer.Reservations.Contains(pointCell) && !peer.CurrentCell.Equals(pointCell))
+                        return false;
+                    if (Vector2.Distance(point, peer.Position) < radius + peer.Radius - AgentContactTolerance)
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        public void ReleaseAttendanceIngress(string agentId)
+        {
+            if (!string.Equals(
+                    _attendanceIngressOwner,
+                    agentId ?? string.Empty,
+                    StringComparison.Ordinal)) return;
+            _attendanceIngressOwner = string.Empty;
+            _attendanceIngressExterior = Vector2.zero;
+            _attendanceIngressInterior = Vector2.zero;
+            _attendanceIngressRadius = 0f;
         }
 
         public bool TryReservePath(
@@ -499,7 +604,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (FurnitureObstacle obstacle in _furnitureObstacles)
             {
                 if (obstacle.IsPermitted(permitted)) continue;
-                float expandedRadius = radius + (obstacle.Profile?.ClearancePadding ?? 0f);
+                float expandedRadius = radius + obstacle.ClearancePadding;
                 foreach (Vector2 direction in CollisionDirections)
                 {
                     Vector2 samplePoint = point + direction * expandedRadius;
@@ -592,6 +697,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         }
 
         public OfficeGridCoordinate CurrentCell(string agentId) => RequiredActor(agentId).CurrentCell;
+
+        private bool PointInsideAttendanceIngress(Vector2 point, float radius)
+        {
+            if (_attendanceIngressOwner.Length == 0) return false;
+            float tolerance = Mathf.Min(0.04f, Mathf.Max(0.01f, radius * 0.20f));
+            return DistanceToSegment(
+                       point,
+                       _attendanceIngressExterior,
+                       _attendanceIngressInterior) <= tolerance;
+        }
 
         private static float DistanceToSegment(Vector2 point, Vector2 start, Vector2 end)
         {
@@ -732,7 +847,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (FurnitureObstacle obstacle in _furnitureObstacles)
             {
                 if (obstacle.IsPermitted(permitted)) continue;
-                float expandedRadius = radius + (obstacle.Profile?.ClearancePadding ?? 0f);
+                float expandedRadius = radius + obstacle.ClearancePadding;
                 foreach (Vector2 direction in CollisionDirections)
                 {
                     Vector2 samplePoint = point + direction * expandedRadius;
@@ -745,23 +860,37 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
-        private static FurnitureObstacle CreateObstacle(
+        private FurnitureObstacle CreateObstacle(
             PlacedOfficeFurniture furniture,
             OfficeRuntimeOccupancyLayer layer,
-            string interactionSeatId,
-            OfficeFurnitureCollisionCatalog catalog)
+            string interactionSeatId)
         {
-            OfficeFurnitureCollisionProfile profile = null;
-            catalog?.TryResolve(
-                furniture.KindId,
-                furniture.Facing,
-                furniture.Width,
-                furniture.Height,
-                out profile);
+            OfficeFurnitureGeometryProfile canonicalProfile = null;
+            if (OfficeFurnitureGeometryQuery.Shared.TryResolve(
+                    furniture.KindId,
+                    furniture.Origin,
+                    furniture.Facing,
+                    out OfficeFurnitureGeometrySnapshot geometry))
+            {
+                if (geometry.Profile.FootprintWidth != furniture.Width ||
+                    geometry.Profile.FootprintHeight != furniture.Height)
+                    throw new InvalidOperationException(
+                        $"Furniture '{furniture.FurnitureId}' footprint {furniture.Width}x{furniture.Height} " +
+                        $"does not match canonical geometry " +
+                        $"{geometry.Profile.FootprintWidth}x{geometry.Profile.FootprintHeight}.");
+                canonicalProfile = geometry.Profile;
+                CanonicalGeometryObstacleCount++;
+            }
+
+            // A kind/facing absent from the canonical query is legacy or unknown save content.
+            // Keep it as a full semantic rectangle: a partial legacy profile could create a new
+            // visible pass-through during migration, while the conservative rectangle preserves
+            // the pre-geometry collision contract until that content receives canonical geometry.
+            if (canonicalProfile == null) FullCellFallbackCount++;
             return new FurnitureObstacle
             {
                 Furniture = furniture,
-                Profile = profile,
+                CanonicalProfile = canonicalProfile,
                 Layer = layer,
                 InteractionSeatId = interactionSeatId ?? string.Empty
             };
@@ -779,14 +908,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float localY = gridY - furniture.Origin.Y + 0.5f;
             if (localX < 0f || localY < 0f || localX >= furniture.Width || localY >= furniture.Height)
                 return false;
-            if (obstacle.Profile == null) return true;
+            if (obstacle.CanonicalProfile == null) return true;
             int subcellX = Mathf.Min(
-                furniture.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell - 1,
-                Mathf.FloorToInt(localX * OfficeFurnitureCollisionCatalog.SubcellsPerCell));
+                furniture.Width * OfficeFurnitureGeometryProfile.SubcellsPerCell - 1,
+                Mathf.FloorToInt(localX * OfficeFurnitureGeometryProfile.SubcellsPerCell));
             int subcellY = Mathf.Min(
-                furniture.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell - 1,
-                Mathf.FloorToInt(localY * OfficeFurnitureCollisionCatalog.SubcellsPerCell));
-            return obstacle.Profile.IsOccupied(subcellX, subcellY);
+                furniture.Height * OfficeFurnitureGeometryProfile.SubcellsPerCell - 1,
+                Mathf.FloorToInt(localY * OfficeFurnitureGeometryProfile.SubcellsPerCell));
+            return obstacle.IsOccupied(subcellX, subcellY);
         }
 
         private ContinuousGridTransform CaptureContinuousGridTransform()

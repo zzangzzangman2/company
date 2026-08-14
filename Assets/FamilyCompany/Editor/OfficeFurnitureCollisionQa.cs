@@ -67,7 +67,62 @@ namespace FamilyCompany.Editor
                 "FAMILY_COMPANY_OFFICE_FURNITURE_COLLISION_PROFILES: PASS | " +
                 $"profiles={result.AuthoredProfileCount} subcells={result.SubcellChecks} " +
                 $"fallbackSubcells={result.FallbackSubcellChecks} " +
-                $"defaultRadiusClearances={result.DefaultRadiusClearances}");
+                $"defaultRadiusClearances={result.DefaultRadiusClearances} " +
+                $"visualApproaches={result.VisualApproachChecks} " +
+                $"opaqueApproaches={result.OpaqueApproachChecks} " +
+                $"transparentApproaches={result.TransparentApproachChecks} visiblePassThroughs=0");
+        }
+
+        [MenuItem("Family Company/QA/Office Furniture Collision Boundary Regression")]
+        public static void RunBoundaryRegression()
+        {
+            string[] affectedKinds =
+            {
+                OfficeGridLayouts.CoffeeTableKind,
+                OfficeGridLayouts.DeskWithPcKind,
+                OfficeGridLayouts.MeetingTableKind,
+                OfficeGridLayouts.ReceptionCounterKind,
+                OfficeGridLayouts.SofaKind
+            };
+            TargetSpec[] specs = BuildTargetSpecs()
+                .Where(item => affectedKinds.Contains(item.KindId))
+                .ToArray();
+            DirectionSpec south = Directions.Single(item => item.Name == "South");
+            DirectionSpec southEast = Directions.Single(item => item.Name == "SouthEast");
+            var failures = new List<string>();
+            foreach (TargetSpec spec in specs)
+            using (var fixture = new Fixture(spec))
+            {
+                CollisionCaseResult[] cases =
+                {
+                    RunDirectCase(fixture, south, "player", 30, 4, 3.30f, "corner_slide", 0.42f),
+                    RunDirectCase(fixture, southEast, "player", 30, 1, 3.30f, "corner_slide", 0.42f),
+                    RunDirectCase(fixture, southEast, "player", 60, 2, 3.30f, "corner_slide", 0.42f),
+                    RunDirectCase(fixture, southEast, "player", 120, 4, 3.30f, "corner_slide", 0.42f)
+                };
+                failures.AddRange(cases.Where(item => !item.passed).Select(item =>
+                    $"{item.target}/{item.direction}/{item.frameRate}fps/x{item.timeScale}: {item.failure}"));
+            }
+            if (failures.Count > 0)
+                throw new InvalidOperationException(
+                    "Canonical boundary regression failed: " + string.Join(" | ", failures));
+            Debug.Log(
+                "FAMILY_COMPANY_OFFICE_FURNITURE_BOUNDARY_QA: PASS | " +
+                $"targets={specs.Length} cases={specs.Length * 4} endpointViolations=0");
+        }
+
+        public static void RunBoundaryRegressionBatch()
+        {
+            try
+            {
+                RunBoundaryRegression();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
         }
 
         private static CollisionReport Execute()
@@ -89,7 +144,11 @@ namespace FamilyCompany.Editor
                 authoredProfileCount = profileValidation.AuthoredProfileCount,
                 profileSubcellChecks = profileValidation.SubcellChecks,
                 fallbackSubcellChecks = profileValidation.FallbackSubcellChecks,
-                defaultRadiusClearances = profileValidation.DefaultRadiusClearances
+                defaultRadiusClearances = profileValidation.DefaultRadiusClearances,
+                visualApproachChecks = profileValidation.VisualApproachChecks,
+                opaqueApproachChecks = profileValidation.OpaqueApproachChecks,
+                transparentApproachChecks = profileValidation.TransparentApproachChecks,
+                visiblePassThroughs = profileValidation.VisiblePassThroughs
             };
             var varianceGroups = new Dictionary<string, List<Vector2>>(StringComparer.Ordinal);
             var imageEndpoints = new Dictionary<string, List<ImageEndpoint>>(StringComparer.Ordinal);
@@ -294,29 +353,25 @@ namespace FamilyCompany.Editor
         private static CollisionProfileValidationResult ValidateCollisionProfiles(
             IReadOnlyList<TargetSpec> specs)
         {
-            OfficeFurnitureCollisionCatalog catalog =
-                Resources.Load<OfficeFurnitureCollisionCatalog>(
-                    OfficeFurnitureCollisionCatalog.DefaultResourcePath);
-            if (catalog == null)
-                throw new InvalidOperationException("Default office furniture collision catalog is missing.");
-            catalog.Validate();
-
             var profileSpecs = specs.Where(item => !item.IsWall).ToList();
-            foreach (OfficeFurnitureCollisionProfile catalogProfile in catalog.Profiles)
+            foreach (OfficeFurnitureDefinition definition in OfficeFurnitureCatalog.All.Where(
+                         item => item.IsPlayerEditable && item.Geometry != null))
+            foreach (OfficeFurnitureFacing facing in Enum.GetValues(typeof(OfficeFurnitureFacing)))
             {
+                OfficeGridCoordinate footprint = definition.FootprintFor(facing);
                 bool alreadyCovered = profileSpecs.Any(item =>
-                    string.Equals(item.KindId, catalogProfile.KindId, StringComparison.Ordinal) &&
-                    item.Facing == catalogProfile.Facing &&
-                    item.Width == catalogProfile.SemanticFootprintWidth &&
-                    item.Height == catalogProfile.SemanticFootprintHeight);
+                    string.Equals(item.KindId, definition.DefinitionId, StringComparison.Ordinal) &&
+                    item.Facing == facing &&
+                    item.Width == footprint.X &&
+                    item.Height == footprint.Y);
                 if (alreadyCovered) continue;
                 profileSpecs.Add(new TargetSpec(
-                    catalogProfile.KindId,
-                    catalogProfile.SemanticFootprintWidth,
-                    catalogProfile.SemanticFootprintHeight,
-                    catalogProfile.Facing,
+                    definition.DefinitionId,
+                    footprint.X,
+                    footprint.Y,
+                    facing,
                     string.Equals(
-                        catalogProfile.KindId,
+                        definition.DefinitionId,
                         OfficeGridLayouts.SwivelChairKind,
                         StringComparison.Ordinal),
                     false));
@@ -326,29 +381,36 @@ namespace FamilyCompany.Editor
             var failures = new List<string>();
             foreach (TargetSpec spec in profileSpecs)
             {
-                if (!catalog.TryResolve(
+                if (!OfficeFurnitureGeometryQuery.Shared.TryResolve(
                         spec.KindId,
+                        new OfficeGridCoordinate(0, 0),
                         spec.Facing,
-                        spec.Width,
-                        spec.Height,
-                        out OfficeFurnitureCollisionProfile profile))
+                        out OfficeFurnitureGeometrySnapshot geometry))
                 {
-                    failures.Add($"missing authored profile {spec.KindId}/{spec.Facing} {spec.Width}x{spec.Height}");
+                    failures.Add($"missing canonical geometry {spec.KindId}/{spec.Facing} {spec.Width}x{spec.Height}");
+                    continue;
+                }
+                OfficeFurnitureGeometryProfile profile = geometry.Profile;
+                if (profile.FootprintWidth != spec.Width || profile.FootprintHeight != spec.Height)
+                {
+                    failures.Add(
+                        $"canonical footprint mismatch {spec.KindId}/{spec.Facing}: " +
+                        $"{profile.FootprintWidth}x{profile.FootprintHeight} != {spec.Width}x{spec.Height}");
                     continue;
                 }
 
                 result.AuthoredProfileCount++;
                 using (var fixture = new Fixture(spec))
                 {
-                    int subcellWidth = spec.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
-                    int subcellHeight = spec.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    int subcellWidth = spec.Width * OfficeFurnitureGeometryProfile.SubcellsPerCell;
+                    int subcellHeight = spec.Height * OfficeFurnitureGeometryProfile.SubcellsPerCell;
                     for (var subcellY = 0; subcellY < subcellHeight; subcellY++)
                     for (var subcellX = 0; subcellX < subcellWidth; subcellX++)
                     {
                         Vector2 point = fixture.FurnitureLocalPoint(
-                            (subcellX + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell,
-                            (subcellY + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell);
-                        bool expectedOccupied = profile.IsOccupied(subcellX, subcellY);
+                            (subcellX + 0.5f) / OfficeFurnitureGeometryProfile.SubcellsPerCell,
+                            (subcellY + 0.5f) / OfficeFurnitureGeometryProfile.SubcellsPerCell);
+                        bool expectedOccupied = profile.IsSolidGroundSubcell(subcellX, subcellY);
                         bool clearsTinyProbe = fixture.Occupancy.CanTraverseStatic(
                             point,
                             point,
@@ -371,6 +433,8 @@ namespace FamilyCompany.Editor
                                 "qa_chair_seat"))
                             failures.Add("swivel_chair owner cannot enter its permitted interaction profile");
                     }
+
+                    ValidateVisibleApproachCoverage(spec, fixture, failures, result);
                 }
 
                 var fallbackComparisonSpec = new TargetSpec(
@@ -383,13 +447,13 @@ namespace FamilyCompany.Editor
                 using (var authoredFixture = new Fixture(spec))
                 using (var fallbackFixture = new Fixture(fallbackComparisonSpec))
                 {
-                    int scanWidth = spec.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
-                    int scanHeight = spec.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    int scanWidth = spec.Width * OfficeFurnitureGeometryProfile.SubcellsPerCell;
+                    int scanHeight = spec.Height * OfficeFurnitureGeometryProfile.SubcellsPerCell;
                     for (var scanY = -2; scanY <= scanHeight + 1; scanY++)
                     for (var scanX = -2; scanX <= scanWidth + 1; scanX++)
                     {
-                        float localX = (scanX + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell;
-                        float localY = (scanY + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                        float localX = (scanX + 0.5f) / OfficeFurnitureGeometryProfile.SubcellsPerCell;
+                        float localY = (scanY + 0.5f) / OfficeFurnitureGeometryProfile.SubcellsPerCell;
                         Vector2 authoredPoint = authoredFixture.FurnitureLocalPoint(localX, localY);
                         Vector2 fallbackPoint = fallbackFixture.FurnitureLocalPoint(localX, localY);
                         bool authoredClears = authoredFixture.Occupancy.CanTraverseStatic(
@@ -417,12 +481,12 @@ namespace FamilyCompany.Editor
                 false);
             using (var fixture = new Fixture(fallbackSpec))
             {
-                for (var subcellY = 0; subcellY < OfficeFurnitureCollisionCatalog.SubcellsPerCell; subcellY++)
-                for (var subcellX = 0; subcellX < OfficeFurnitureCollisionCatalog.SubcellsPerCell; subcellX++)
+                for (var subcellY = 0; subcellY < OfficeFurnitureGeometryProfile.SubcellsPerCell; subcellY++)
+                for (var subcellX = 0; subcellX < OfficeFurnitureGeometryProfile.SubcellsPerCell; subcellX++)
                 {
                     Vector2 point = fixture.FurnitureLocalPoint(
-                        (subcellX + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell,
-                        (subcellY + 0.5f) / OfficeFurnitureCollisionCatalog.SubcellsPerCell);
+                        (subcellX + 0.5f) / OfficeFurnitureGeometryProfile.SubcellsPerCell,
+                        (subcellY + 0.5f) / OfficeFurnitureGeometryProfile.SubcellsPerCell);
                     result.FallbackSubcellChecks++;
                     if (fixture.Occupancy.CanTraverseStatic(point, point, 0.005f, string.Empty))
                         failures.Add($"full-cell fallback left subcell ({subcellX},{subcellY}) open");
@@ -435,6 +499,98 @@ namespace FamilyCompany.Editor
                 throw new InvalidOperationException(
                     "Office furniture collision profile QA failed: " + string.Join("; ", failures.Take(40)));
             return result;
+        }
+
+        private static void ValidateVisibleApproachCoverage(
+            TargetSpec spec,
+            Fixture fixture,
+            ICollection<string> failures,
+            CollisionProfileValidationResult result)
+        {
+            using (var visual = VisualAlphaSampler.Create(spec))
+            {
+                foreach (DirectionSpec direction in Directions)
+                {
+                    result.VisualApproachChecks++;
+                    Vector2 start = fixture.FindSafeStart(direction.WorldDirection);
+                    Vector2 goal = fixture.TargetCenter - direction.WorldDirection * 2.5f;
+                    bool crossesVisiblePixels = false;
+                    Vector2 ideal = start;
+                    for (var sample = 0; sample < 320; sample++)
+                    {
+                        Vector2 remaining = goal - ideal;
+                        if (remaining.magnitude <= 0.02f) break;
+                        ideal += remaining.normalized * Mathf.Min(0.02f, remaining.magnitude);
+                        if (!visual.OverlapsCircle(
+                                ideal - fixture.TargetCenter,
+                                OfficeRuntimeAgent.DefaultRadius)) continue;
+                        crossesVisiblePixels = true;
+                        break;
+                    }
+                    if (!crossesVisiblePixels)
+                    {
+                        // This line is a documented transparent clearance, not a collision probe.
+                        // It remains subject to the canonical subcell, access/egress, path, and
+                        // production-radius checks in this suite; it simply cannot demonstrate a
+                        // visible-sprite false negative because there are no pixels to penetrate.
+                        result.TransparentApproachChecks++;
+                        continue;
+                    }
+                    result.OpaqueApproachChecks++;
+
+                    string actorId = $"visual-coverage-{spec.KindId}-{spec.Facing}-{direction.Name}";
+                    fixture.Occupancy.RegisterActor(
+                        actorId,
+                        start,
+                        OfficeRuntimeAgent.DefaultRadius);
+                    fixture.Occupancy.ResetMetrics();
+                    Vector2 current = start;
+                    Vector2 previous = Vector2.zero;
+                    bool projected = false;
+                    bool unsafeEndpoint = false;
+                    for (var step = 0; step < 320; step++)
+                    {
+                        Vector2 remaining = goal - current;
+                        if (remaining.magnitude <= 0.02f) break;
+                        Vector2 intended = remaining.normalized * Mathf.Min(0.02f, remaining.magnitude);
+                        Vector2 actual = OfficeRuntimeCollisionMotion.Resolve(
+                            fixture.Occupancy,
+                            actorId,
+                            current,
+                            intended,
+                            remaining.normalized * OfficeRuntimeAgent.DefaultMoveSpeed,
+                            previous,
+                            OfficeRuntimeAgent.DefaultRadius,
+                            string.Empty,
+                            out bool stepProjected);
+                        current += actual;
+                        previous = actual;
+                        projected |= stepProjected;
+                        if (!fixture.Occupancy.CanTraverseStatic(
+                                current,
+                                current,
+                                OfficeRuntimeAgent.DefaultRadius,
+                                string.Empty))
+                        {
+                            unsafeEndpoint = true;
+                            break;
+                        }
+                        fixture.Occupancy.UpdateActor(
+                            actorId,
+                            current,
+                            remaining.normalized,
+                            0f);
+                        if (projected) break;
+                    }
+                    fixture.Occupancy.UnregisterActor(actorId);
+                    if (!unsafeEndpoint && projected) continue;
+                    result.VisiblePassThroughs++;
+                    failures.Add(
+                        $"{spec.KindId}/{spec.Facing}/{direction.Name} " +
+                        $"visible Sprite path {(unsafeEndpoint ? "returned an unsafe endpoint" : "was not projected")}; " +
+                        $"start=({start.x:F5},{start.y:F5}) end=({current.x:F5},{current.y:F5})");
+                }
+            }
         }
 
         private static CollisionCaseResult RunDirectCase(
@@ -765,10 +921,14 @@ namespace FamilyCompany.Editor
             text.AppendLine($"- Starter layout hash: `{report.layoutHash}`");
             text.AppendLine($"- Cases: **{report.totalCases}**");
             text.AppendLine($"- Failures: **{report.failedCases}**");
-            text.AppendLine($"- Authored 4x4 profiles: **{report.authoredProfileCount}**");
+            text.AppendLine($"- Canonical 4x4 geometry profiles: **{report.authoredProfileCount}**");
             text.AppendLine($"- Authored subcell checks: **{report.profileSubcellChecks}**");
             text.AppendLine($"- Full-cell fallback checks: **{report.fallbackSubcellChecks}**");
             text.AppendLine($"- Full-cell false positives removed at the production radius: **{report.defaultRadiusClearances}**");
+            text.AppendLine($"- Actual Sprite-alpha attack paths (13 kinds x 4 facings x 8 directions): **{report.visualApproachChecks}**");
+            text.AppendLine($"- Paths crossing opaque runtime Sprite pixels: **{report.opaqueApproachChecks}**");
+            text.AppendLine($"- Transparent paths retained under mask/path/anchor checks: **{report.transparentApproachChecks}**");
+            text.AppendLine($"- Visible Sprite pass-throughs / unsafe resolved endpoints: **{report.visiblePassThroughs}**");
             text.AppendLine($"- Maximum 30/60/120fps stop variance: **{report.maximumStopVariance:F5}** world unit");
             text.AppendLine("- Matrix: 8 directions × 4 family members × player input/NPC path × " +
                             "30/60/120fps × TimeScale 1/2/4 × low/high speed");
@@ -826,33 +986,31 @@ namespace FamilyCompany.Editor
                 PlotPoint(extentX + extentY),
                 PlotPoint(-extentX + extentY)
             };
-            OfficeFurnitureCollisionCatalog collisionCatalog =
-                Resources.Load<OfficeFurnitureCollisionCatalog>(
-                    OfficeFurnitureCollisionCatalog.DefaultResourcePath);
-            OfficeFurnitureCollisionProfile profile = null;
-            bool hasProfile = !spec.IsWall && collisionCatalog != null &&
-                              collisionCatalog.TryResolve(
+            OfficeFurnitureGeometryProfile profile = null;
+            OfficeFurnitureGeometrySnapshot geometry = null;
+            bool hasProfile = !spec.IsWall &&
+                              OfficeFurnitureGeometryQuery.Shared.TryResolve(
                                   spec.KindId,
+                                  new OfficeGridCoordinate(0, 0),
                                   spec.Facing,
-                                  spec.Width,
-                                  spec.Height,
-                                  out profile);
+                                  out geometry);
+            if (hasProfile) profile = geometry.Profile;
             if (hasProfile)
             {
-                int subcellWidth = spec.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
-                int subcellHeight = spec.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                int subcellWidth = spec.Width * OfficeFurnitureGeometryProfile.SubcellsPerCell;
+                int subcellHeight = spec.Height * OfficeFurnitureGeometryProfile.SubcellsPerCell;
                 for (var subcellY = 0; subcellY < subcellHeight; subcellY++)
                 for (var subcellX = 0; subcellX < subcellWidth; subcellX++)
                 {
-                    if (!profile.IsOccupied(subcellX, subcellY)) continue;
+                    if (!profile.IsSolidGroundSubcell(subcellX, subcellY)) continue;
                     float minimumX = subcellX /
-                                     (float)OfficeFurnitureCollisionCatalog.SubcellsPerCell -
+                                     (float)OfficeFurnitureGeometryProfile.SubcellsPerCell -
                                      spec.Width * 0.5f;
                     float minimumY = subcellY /
-                                     (float)OfficeFurnitureCollisionCatalog.SubcellsPerCell -
+                                     (float)OfficeFurnitureGeometryProfile.SubcellsPerCell -
                                      spec.Height * 0.5f;
-                    float maximumX = minimumX + 1f / OfficeFurnitureCollisionCatalog.SubcellsPerCell;
-                    float maximumY = minimumY + 1f / OfficeFurnitureCollisionCatalog.SubcellsPerCell;
+                    float maximumX = minimumX + 1f / OfficeFurnitureGeometryProfile.SubcellsPerCell;
+                    float maximumY = minimumY + 1f / OfficeFurnitureGeometryProfile.SubcellsPerCell;
                     Vector2[] subcell =
                     {
                         PlotPoint(basisX * minimumX + basisY * minimumY),
@@ -1024,6 +1182,20 @@ namespace FamilyCompany.Editor
                 Presenter.Configure(Grid, _tiles);
                 Occupancy = new OfficeRuntimeOccupancy();
                 Occupancy.Rebuild(Grid, Presenter);
+                bool hasCanonicalGeometry = !spec.IsWall &&
+                                            OfficeFurnitureCatalog.Find(spec.KindId)?.Geometry != null;
+                if (hasCanonicalGeometry &&
+                    (Occupancy.CanonicalGeometryObstacleCount != 1 ||
+                     Occupancy.LegacyCollisionFallbackCount != 0 ||
+                     Occupancy.FullCellFallbackCount != 0))
+                    throw new InvalidOperationException(
+                        $"Runtime occupancy did not consume canonical geometry for " +
+                        $"{spec.KindId}/{spec.Facing}.");
+                if (!spec.IsWall && !hasCanonicalGeometry &&
+                    Occupancy.FullCellFallbackCount != 1)
+                    throw new InvalidOperationException(
+                        $"Unknown saved furniture did not retain the safe full-cell fallback: " +
+                        $"{spec.KindId}/{spec.Facing}.");
                 Paths = new OfficeRuntimePathService(Grid, Occupancy, Presenter);
                 Vector2 sum = Vector2.zero;
                 var count = 0;
@@ -1079,6 +1251,117 @@ namespace FamilyCompany.Editor
                 if (_root != null) Object.DestroyImmediate(_root);
                 foreach (Tile tile in _tiles)
                     if (tile != null) Object.DestroyImmediate(tile);
+            }
+        }
+
+        private sealed class VisualAlphaSampler : IDisposable
+        {
+            private sealed class Layer
+            {
+                public Sprite Sprite;
+                public Texture2D ReadableTexture;
+                public Color32[] Pixels;
+            }
+
+            private readonly List<Layer> _layers = new List<Layer>();
+            private readonly bool _flipX;
+            private readonly float _scale;
+
+            private VisualAlphaSampler(
+                OfficeFurnitureVisualDefinition definition,
+                bool flipX)
+            {
+                _flipX = flipX;
+                _scale = definition.UniformScale;
+                AddLayer(definition.BaseSprite);
+                if (definition.FrontOverlayWhenOccupied && definition.FrontOverlaySprite != null)
+                    AddLayer(definition.FrontOverlaySprite);
+            }
+
+            public static VisualAlphaSampler Create(TargetSpec spec)
+            {
+                OfficeFurnitureVisualCatalog catalog =
+                    OfficeGridQa.OfficeFurnitureAssetBuilder.LoadFurnitureVisualCatalog();
+                if (!OfficeBuildFurnitureVisualLibrary.TryResolve(
+                        catalog,
+                        spec.KindId,
+                        spec.Facing,
+                        out OfficeFurnitureVisualDefinition definition,
+                        out bool flipX))
+                    throw new InvalidOperationException(
+                        $"No runtime visual for collision coverage {spec.KindId}/{spec.Facing}.");
+                return new VisualAlphaSampler(definition, flipX);
+            }
+
+            public bool OverlapsCircle(Vector2 relativeWorld, float radius)
+            {
+                foreach (Layer layer in _layers)
+                {
+                    Sprite sprite = layer.Sprite;
+                    float inverseScale = 1f / _scale;
+                    float centerX = sprite.pivot.x +
+                                    (_flipX ? -relativeWorld.x : relativeWorld.x) *
+                                    inverseScale * sprite.pixelsPerUnit;
+                    float centerY = sprite.pivot.y +
+                                    relativeWorld.y * inverseScale * sprite.pixelsPerUnit;
+                    float radiusPixels = radius * inverseScale * sprite.pixelsPerUnit;
+                    int minimumX = Mathf.Max(0, Mathf.FloorToInt(centerX - radiusPixels));
+                    int maximumX = Mathf.Min(
+                        Mathf.CeilToInt(sprite.rect.width) - 1,
+                        Mathf.CeilToInt(centerX + radiusPixels));
+                    int minimumY = Mathf.Max(0, Mathf.FloorToInt(centerY - radiusPixels));
+                    int maximumY = Mathf.Min(
+                        Mathf.CeilToInt(sprite.rect.height) - 1,
+                        Mathf.CeilToInt(centerY + radiusPixels));
+                    float radiusSquared = radiusPixels * radiusPixels;
+                    Rect textureRect = sprite.textureRect;
+                    for (var y = minimumY; y <= maximumY; y++)
+                    for (var x = minimumX; x <= maximumX; x++)
+                    {
+                        float dx = x + 0.5f - centerX;
+                        float dy = y + 0.5f - centerY;
+                        if (dx * dx + dy * dy > radiusSquared) continue;
+                        int textureX = Mathf.FloorToInt(textureRect.x) + x;
+                        int textureY = Mathf.FloorToInt(textureRect.y) + y;
+                        int pixelIndex = textureY * layer.ReadableTexture.width + textureX;
+                        if (pixelIndex >= 0 && pixelIndex < layer.Pixels.Length &&
+                            layer.Pixels[pixelIndex].a > 25)
+                            return true;
+                    }
+                }
+                return false;
+            }
+
+            private void AddLayer(Sprite sprite)
+            {
+                if (sprite == null) return;
+                string assetPath = AssetDatabase.GetAssetPath(sprite.texture);
+                string absolutePath = Path.GetFullPath(assetPath);
+                if (!File.Exists(absolutePath))
+                    throw new FileNotFoundException(
+                        $"Runtime Sprite texture for '{sprite.name}' is missing.",
+                        absolutePath);
+                var readable = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (!ImageConversion.LoadImage(readable, File.ReadAllBytes(absolutePath), false))
+                {
+                    Object.DestroyImmediate(readable);
+                    throw new InvalidOperationException(
+                        $"Could not decode runtime Sprite texture '{assetPath}'.");
+                }
+                _layers.Add(new Layer
+                {
+                    Sprite = sprite,
+                    ReadableTexture = readable,
+                    Pixels = readable.GetPixels32()
+                });
+            }
+
+            public void Dispose()
+            {
+                foreach (Layer layer in _layers)
+                    if (layer.ReadableTexture != null)
+                        Object.DestroyImmediate(layer.ReadableTexture);
+                _layers.Clear();
             }
         }
 
@@ -1173,6 +1456,10 @@ namespace FamilyCompany.Editor
             public int profileSubcellChecks;
             public int fallbackSubcellChecks;
             public int defaultRadiusClearances;
+            public int visualApproachChecks;
+            public int opaqueApproachChecks;
+            public int transparentApproachChecks;
+            public int visiblePassThroughs;
             public float maximumStopVariance;
             public List<CollisionTargetResult> targets = new List<CollisionTargetResult>();
             public List<CollisionCaseResult> cases = new List<CollisionCaseResult>();
@@ -1184,6 +1471,10 @@ namespace FamilyCompany.Editor
             public int SubcellChecks;
             public int FallbackSubcellChecks;
             public int DefaultRadiusClearances;
+            public int VisualApproachChecks;
+            public int OpaqueApproachChecks;
+            public int TransparentApproachChecks;
+            public int VisiblePassThroughs;
         }
 
         [Serializable]

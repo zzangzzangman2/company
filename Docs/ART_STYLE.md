@@ -1,6 +1,6 @@
 # ART STYLE
 
-최종 갱신: 2026-08-14
+최종 갱신: 2026-08-15
 
 ## 정본 방향
 
@@ -136,6 +136,8 @@
 
 - 정규 걷기 방향 순서는 South, SouthWest, West, NorthWest, North, NorthEast, East, SouthEast다. 화면 XY의 실제 displacement만 이 순서를 결정한다.
 - 걷는 프레임의 방향은 실제 이동 벡터를 최근접 45도 방향으로 양자화한 결과만 사용한다. 의미 입력, 경로 lookahead, 충돌 전 원래 방향으로 실제 이동과 다른 앞·뒤·옆 Sprite를 유지하지 않는다.
+- 4°/0.075초 방향 안정화는 인접 45° 경계에서만 적용하며 실제 heading과의 오차가 30.5°를 넘을 수 없다. 좌우 cardinal 이동은 같은 frame에 West/East 원화를 선택하고 South/North 몸으로 한 frame도 횡이동하지 않는다.
+- 방향별 원화 8세트를 좌우 반전으로 대체하지 않는다. 최종 SpriteRenderer는 매 frame `flipX=false`이며 direction token이 resolved direction과 일치해야 한다.
 - 장애물에 막히거나 상호작용 위치에 도착해 실제 변위가 0인 경우에는 보행 프레임을 진행하지 않는다. 요청 방향이 다르면 발을 고정한 제자리 pivot으로 몸 방향만 바꾸며 180°는 인접 45° 방향을 순서대로 거친다.
 - 6프레임 walk cycle은 모든 가족과 직원이 공유하는 stride calibration과 누적 실제 이동거리로 구동한다. 속도, 배속, 렌더 FPS가 달라져도 같은 이동거리의 발 위상은 같고 member별 보폭 수치는 두지 않는다.
 - 가족 네 명의 8방향 정본은 `HighMotionDirectionManifest.asset`의 source→canonical 순열과 사람 승인 체크로 관리한다. Runtime에서 memberId별 방향 교체 코드를 두지 않는다.

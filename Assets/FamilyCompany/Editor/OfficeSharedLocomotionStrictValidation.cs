@@ -136,10 +136,10 @@ namespace FamilyCompany.Editor
             Require(metrics.UnnecessaryCornerStops == 0, "45/90 degree steering must not stop unnecessarily");
             Require(metrics.MaximumFacingErrorDegrees <=
                     OfficeSharedLocomotionRules.MaximumFacingErrorDegrees + 0.0001f,
-                "moving facing error exceeded 22.5 degrees");
+                "moving facing error exceeded the adjacent-octant hysteresis envelope");
             Require(metrics.MinimumFacingAlignmentDot + 0.000001f >=
                     OfficeSharedLocomotionRules.MinimumFacingAlignmentDot,
-                "moving facing dot fell below cos(22.5 degrees)");
+                "moving facing dot fell below the adjacent-octant hysteresis envelope");
             Require(managedHeapGrowth == 0,
                 "pure locomotion rules grew the managed heap during steady-state stepping");
 

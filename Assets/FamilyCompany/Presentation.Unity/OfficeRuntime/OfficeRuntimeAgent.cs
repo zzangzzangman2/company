@@ -39,6 +39,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         // projection roundoff can never turn an exactly-on-boundary step into a false violation.
         private const float MaximumSeatEgressStepPx = 0.899f;
         private const float SeatEgressCompletionTolerancePx = 0.25f;
+        // Start far enough behind the authored entrance that a newly released attendee is outside
+        // the office/camera bounds. The vector is derived from the first live path segment, so the
+        // rule remains correct if the isometric tile basis or door approach changes.
+        private const float AttendanceExteriorPathSegmentMultiplier = 2.5f;
 
         private PrototypeBootstrap _bootstrap;
         private OfficeRuntimeWorld _world;
@@ -73,6 +77,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _standingFacingDirection = -1;
         private bool _attendanceDepartureActive;
         private bool _attendanceArrivalActive;
+        private bool _attendanceIngressActive;
+        private Vector2 _attendanceIngressExteriorWorld;
+        private Vector2 _attendanceIngressInteriorWorld;
         private int _attendanceSeatArrivalCount;
         private OfficeRuntimeDestination? _preparedAttendanceDestination;
         private readonly List<OfficeGridCoordinate> _preparedAttendancePath =
@@ -338,6 +345,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             : _renderer.sprite.name;
         public bool IsPresentationAway => _presentationAway;
         public int AttendanceSeatArrivalCount => _attendanceSeatArrivalCount;
+        public bool IsAttendanceIngressActive => _attendanceIngressActive;
+        public Vector2 AttendanceIngressExteriorWorld => _attendanceIngressExteriorWorld;
+        public Vector2 AttendanceIngressInteriorWorld => _attendanceIngressInteriorWorld;
         public string LastReservationBlocker { get; private set; } = string.Empty;
         public string LastMovementBlocker { get; private set; } = string.Empty;
 
@@ -615,6 +625,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _autonomyDestination = null;
             _attendanceDepartureActive = false;
             _attendanceArrivalActive = false;
+            ReleaseAttendanceIngress();
             _attendanceSeatArrivalCount = 0;
             _preparedAttendanceDestination = null;
             _preparedAttendancePath.Clear();
@@ -673,6 +684,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _destination = null;
                 _pendingDestination = null;
                 _attendanceArrivalActive = false;
+                ReleaseAttendanceIngress();
                 _path.Clear();
                 _pathIndex = 0;
                 _arrived = true;
@@ -692,17 +704,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _agentId,
                     "attendance-entry:" + _agentId,
                     out OfficeRuntimeDestination entry)) return;
-            Vector3 entrance = _world.Presenter.CellCenterWorld(entry.Cell);
-            transform.position = new Vector3(entrance.x, entrance.y, transform.position.z);
             if ((!_preparedAttendanceDestination.HasValue || _preparedAttendancePath.Count == 0) &&
                 !PrepareAttendanceArrival()) return;
-            if (BeginPreparedAttendanceDestination(
+            if (BeginPreparedAttendanceIngress(
                     _preparedAttendanceDestination.Value,
                     _preparedAttendancePath))
             {
                 _attendanceArrivalActive = true;
                 Debug.Log(
                     "STARTER_OFFICE_ATTENDANCE_ENTRY | member=" + _agentId +
+                    " | exterior=" + _attendanceIngressExteriorWorld.ToString("F3") +
+                    " | entrance=" + _attendanceIngressInteriorWorld.ToString("F3") +
                     " | routeCells=" + _preparedAttendancePath.Count +
                     " | route=" + string.Join(">", _preparedAttendancePath) +
                     " | destination=" + _preparedAttendanceDestination.Value.DestinationId);
@@ -882,6 +894,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _desiredVelocity,
                 _stuckSeconds,
                 _seat?.SeatId ?? string.Empty);
+
+            if (_attendanceIngressActive)
+            {
+                TickAttendanceIngress(deltaTime);
+                return;
+            }
 
             if (_playerControlled && !_attendanceDepartureActive && !_attendanceArrivalActive &&
                 _playerInput.sqrMagnitude > 0.0001f)
@@ -1138,14 +1156,28 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return RebuildPath();
         }
 
-        private bool BeginPreparedAttendanceDestination(
+        private bool BeginPreparedAttendanceIngress(
             OfficeRuntimeDestination destination,
             IReadOnlyList<OfficeGridCoordinate> route)
         {
             if (!destination.RequiresSeat || route == null || route.Count < 2) return false;
-            OfficeGridCoordinate current = _world.Presenter.NearestCell(transform.position);
-            if (!route[0].Equals(current) ||
+            if (!route[0].Equals(OfficeRuntimeWorkstationService.StarterEntranceCell) ||
                 !route[route.Count - 1].Equals(destination.Cell)) return false;
+
+            Vector3 entranceWorld3 = _world.Presenter.CellCenterWorld(route[0]);
+            Vector3 nextWorld3 = _world.Presenter.CellCenterWorld(route[1]);
+            var entranceWorld = new Vector2(entranceWorld3.x, entranceWorld3.y);
+            var inwardSegment = new Vector2(
+                nextWorld3.x - entranceWorld3.x,
+                nextWorld3.y - entranceWorld3.y);
+            if (inwardSegment.sqrMagnitude <= 0.0001f) return false;
+            Vector2 exteriorWorld =
+                entranceWorld - inwardSegment * AttendanceExteriorPathSegmentMultiplier;
+            if (!_world.Occupancy.TryClaimAttendanceIngress(
+                    _agentId,
+                    exteriorWorld,
+                    entranceWorld,
+                    AgentRadius)) return false;
 
             _standingFacingDirection = -1;
             ReleaseSeatImmediately();
@@ -1154,9 +1186,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     destination.SeatId,
                     "starter-office-attendance-seat:" + _agentId,
                     out _seat,
-                    out _seatClaim)) return false;
+                    out _seatClaim))
+            {
+                _world.Occupancy.ReleaseAttendanceIngress(_agentId);
+                return false;
+            }
             destination = _world.Workstations.DestinationForSeat(_seat, destination);
 
+            transform.position = new Vector3(exteriorWorld.x, exteriorWorld.y, transform.position.z);
+            _attendanceIngressExteriorWorld = exteriorWorld;
+            _attendanceIngressInteriorWorld = entranceWorld;
+            _attendanceIngressActive = true;
             SetPresentationAway(false);
             _world.Occupancy.UpdateActor(
                 _agentId,
@@ -1175,6 +1215,93 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _presentationPathIndex = _pathIndex;
             _pathRevision = _world.Occupancy.Revision;
             return true;
+        }
+
+        private void TickAttendanceIngress(float deltaTime)
+        {
+            Vector2 delta = _attendanceIngressInteriorWorld - Position;
+            if (delta.magnitude <= ArrivalDistance)
+            {
+                transform.position = new Vector3(
+                    _attendanceIngressInteriorWorld.x,
+                    _attendanceIngressInteriorWorld.y,
+                    transform.position.z);
+                ReleaseAttendanceIngress();
+                StopMotion();
+                _world.Occupancy.UpdateActor(
+                    _agentId,
+                    Position,
+                    Vector2.zero,
+                    0f,
+                    _seat?.SeatId ?? string.Empty);
+                return;
+            }
+
+            float arrivalScale = Mathf.Clamp01(delta.magnitude / 0.32f);
+            float speed = Mathf.Lerp(0.34f, DefaultMoveSpeed, arrivalScale);
+            MoveAttendanceIngress(delta.normalized * speed, deltaTime, delta.magnitude);
+        }
+
+        private void MoveAttendanceIngress(
+            Vector2 targetVelocity,
+            float deltaTime,
+            float maximumDistance)
+        {
+            float changePerSecond = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
+                new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
+                new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
+                7.5f,
+                false);
+            OfficeMotionIntegrationResult motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
+                new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
+                new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
+                changePerSecond,
+                deltaTime);
+            _currentVelocity = new Vector2(motion.Velocity.X, motion.Velocity.Z);
+            OfficeNavPoint clamped = OfficeNavigationMotionIntegrator.ClampDisplacement(
+                motion.Displacement,
+                Mathf.Max(0f, maximumDistance));
+            var intended = new Vector2(clamped.X, clamped.Z);
+            Vector2 before = Position;
+            Vector2 after = before + intended;
+            Vector2 actual = _world.Occupancy.CanMoveAttendanceIngress(
+                _agentId,
+                before,
+                after,
+                AgentRadius)
+                ? intended
+                : Vector2.zero;
+            if (actual.sqrMagnitude > 0.0000001f)
+            {
+                transform.position = new Vector3(after.x, after.y, transform.position.z);
+                _stuckSeconds = Mathf.Max(0f, _stuckSeconds - deltaTime * 2f);
+                LastMovementBlocker = string.Empty;
+            }
+            else
+            {
+                _currentVelocity = Vector2.zero;
+                _stuckSeconds += deltaTime;
+                LastMovementBlocker = "attendance-ingress-reserved";
+            }
+            _animator.AccumulateTileMotion(targetVelocity, actual, deltaTime, false);
+            _lastActualDisplacement = actual;
+            _desiredVelocity = targetVelocity;
+            _world.Workstations.ApplyDynamicCharacterOrder(_renderer, transform.position);
+            _world.Occupancy.UpdateActor(
+                _agentId,
+                Position,
+                _desiredVelocity,
+                _stuckSeconds,
+                _seat?.SeatId ?? string.Empty);
+        }
+
+        private void ReleaseAttendanceIngress()
+        {
+            if (_world != null && !string.IsNullOrEmpty(_agentId))
+                _world.Occupancy.ReleaseAttendanceIngress(_agentId);
+            _attendanceIngressActive = false;
+            _attendanceIngressExteriorWorld = Vector2.zero;
+            _attendanceIngressInteriorWorld = Vector2.zero;
         }
 
         private bool RebuildPath()
@@ -2759,6 +2886,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             EndInteraction(
                 OfficeRuntimeInteractionTermination.Aborted,
                 OfficeRuntimeInteractionEndReason.Disabled);
+            ReleaseAttendanceIngress();
             if (_world != null) _world.Occupancy.ClearReservations(_agentId);
             ReleaseSeatImmediately();
         }
@@ -2773,6 +2901,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _animator.OfficeFrameApplied -= HandleOfficeFrameApplied;
                 _animator.SetExternallyTicked(false);
             }
+            ReleaseAttendanceIngress();
             if (_world != null) _world.Occupancy.UnregisterActor(_agentId);
             ReleaseSeatImmediately();
             DestroySeatedUpperBodyProtection();

@@ -274,11 +274,13 @@ namespace FamilyCompany.Simulation.Navigation
 
     public static class OfficeLocomotionPresentationRules
     {
-        // Actual movement is the sole facing authority. A non-zero angular hold can keep the
-        // previous octant beyond the strict 22.5 degree quantization boundary and therefore make
-        // an otherwise correct root motion look like a sideways or backwards walk.
-        public const float DefaultHysteresisDegrees = 0f;
-        public const float DefaultFacingStabilizationSeconds = 0f;
+        // Actual movement remains the sole facing authority. Hysteresis is limited to an adjacent
+        // octant near a 22.5-degree boundary; a cardinal/lateral change (two or more octants) or a
+        // heading beyond this envelope commits immediately, so the hold can never produce a
+        // front-facing sideways walk.
+        public const float DefaultHysteresisDegrees = 4f;
+        public const float DefaultFacingStabilizationSeconds = 0.075f;
+        public const float MaximumHeldFacingErrorDegrees = 30.5f;
         public const float CollisionProjectionHoldSeconds = 0f;
         // Matches OfficeNavPoint.Normalized's 1e-5 world-unit numerical-zero threshold.
         private const float MinimumMotionSquared = 0.0000000001f;
@@ -342,16 +344,20 @@ namespace FamilyCompany.Simulation.Navigation
             // collision slide or against residual velocity, which otherwise renders a visible
             // backward/sideways walk even though the root is travelling elsewhere.
             OfficeNavPoint heading = motionDisplacement;
-            // Zero-hysteresis locomotion has already crossed the shared measurable-motion gate.
-            // Use the nearest octant directly so OfficeFacingHysteresisRules' larger legacy
-            // dead-zone cannot retain a stale facing on a small final/corner displacement.
+            OfficeNavPoint normalizedHeading = heading.Normalized;
+            float currentAlignment = OfficeNavPoint.Dot(
+                OfficeSharedLocomotionRules.DirectionVector(current),
+                normalizedHeading);
+            currentAlignment = Math.Max(-1f, Math.Min(1f, currentAlignment));
+            float currentError = (float)(Math.Acos(currentAlignment) * 180d / Math.PI);
+            // Do not pass actual displacement through OfficeFacingHysteresisRules' legacy input
+            // magnitude dead-zone. ResolveFrame already proved this is measurable root motion,
+            // including the final low-speed/corner sample, so its angle must remain authoritative.
             int proposed = hysteresisDegrees <= 0f
                 ? motionDirection
-                : OfficeFacingHysteresisRules.ResolveDirection(
-                    heading.X,
-                    heading.Z,
-                    current,
-                    hysteresisDegrees);
+                : currentError <= 22.5f + hysteresisDegrees
+                    ? current
+                    : motionDirection;
             if (proposed == current)
             {
                 return new OfficeLocomotionFacingResult(
@@ -361,12 +367,38 @@ namespace FamilyCompany.Simulation.Navigation
                     false);
             }
 
-            // Motion is authoritative and cannot wait behind a presentation timer: even one
-            // delayed frame can be a backwards step during an abrupt change of direction.
-            current = proposed;
+            int octantDistance = OfficeLocomotionGaitRules.DirectionDistance(current, proposed);
+            bool commitImmediately = stabilizationSeconds <= 0f ||
+                                     octantDistance >= 2 ||
+                                     currentError > MaximumHeldFacingErrorDegrees + 0.0001f;
+            if (commitImmediately)
+            {
+                return new OfficeLocomotionFacingResult(
+                    new OfficeLocomotionFacingState(proposed, -1, 0f, projectedSeconds),
+                    semanticDirection,
+                    motionDirection,
+                    false);
+            }
+
+            float candidateSeconds = state.CandidateDirection == proposed
+                ? state.CandidateSeconds + deltaTime
+                : deltaTime;
+            if (candidateSeconds + 0.000001f < stabilizationSeconds)
+            {
+                return new OfficeLocomotionFacingResult(
+                    new OfficeLocomotionFacingState(
+                        current,
+                        proposed,
+                        candidateSeconds,
+                        projectedSeconds),
+                    semanticDirection,
+                    motionDirection,
+                    false);
+            }
+
             return new OfficeLocomotionFacingResult(
                 new OfficeLocomotionFacingState(
-                    current,
+                    proposed,
                     -1,
                     0f,
                     projectedSeconds),
@@ -692,8 +724,9 @@ namespace FamilyCompany.Simulation.Navigation
     public static class OfficeSharedLocomotionRules
     {
         public const float WalkSpeedThreshold = 0.02f;
-        public const float MaximumFacingErrorDegrees = 22.5f;
-        public const float MinimumFacingAlignmentDot = 0.9238795325f;
+        public const float MaximumFacingErrorDegrees =
+            OfficeLocomotionPresentationRules.MaximumHeldFacingErrorDegrees;
+        public const float MinimumFacingAlignmentDot = 0.8616291604f;
         private const float MinimumVectorSquared = 0.0000001f;
         private const float MinimumRootDisplacement = 0.00001f;
 
@@ -734,8 +767,8 @@ namespace FamilyCompany.Simulation.Navigation
                 authoritativeMotion,
                 deltaTime,
                 collisionProjected,
-                0f,
-                0f);
+                OfficeLocomotionPresentationRules.DefaultHysteresisDegrees,
+                OfficeLocomotionPresentationRules.DefaultFacingStabilizationSeconds);
             OfficeLocomotionGaitState gait = OfficeLocomotionGaitRules.Resolve(
                 gaitState,
                 isMoving ? actualTravelDistance : 0f,
@@ -761,7 +794,10 @@ namespace FamilyCompany.Simulation.Navigation
                     actualDisplacement.Normalized);
                 alignmentDot = Math.Max(-1f, Math.Min(1f, alignmentDot));
                 angularError = (float)(Math.Acos(alignmentDot) * 180d / Math.PI);
-                if (gait.DisplayDirection != motionDirection ||
+                int octantError = OfficeLocomotionGaitRules.DirectionDistance(
+                    gait.DisplayDirection,
+                    motionDirection);
+                if (octantError > 1 ||
                     alignmentDot + 0.000001f < MinimumFacingAlignmentDot ||
                     angularError > MaximumFacingErrorDegrees + 0.0001f)
                 {

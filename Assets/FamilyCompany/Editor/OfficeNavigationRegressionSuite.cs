@@ -435,26 +435,45 @@ namespace FamilyCompany.Editor
         {
             var checks = 0;
             OfficeLocomotionFacingState state = OfficeLocomotionFacingState.Initial(0);
-            OfficeNavPoint heading22 = HeadingFromSouthAngle(22f);
+            OfficeNavPoint heading24 = HeadingFromSouthAngle(24f);
             OfficeLocomotionFacingResult result = OfficeLocomotionPresentationRules.ResolveFacing(
-                state, heading22, heading22, 0.04f, false);
+                state, heading24, heading24, 0.04f, false);
             Require(result.State.VisualDirection == 0,
-                "actual motion below the 22.5-degree boundary resolves south");
+                "adjacent-octant hysteresis holds south inside the boundary envelope");
             checks++;
 
-            OfficeNavPoint heading23 = HeadingFromSouthAngle(23f);
+            OfficeNavPoint heading27 = HeadingFromSouthAngle(27f);
             result = OfficeLocomotionPresentationRules.ResolveFacing(
-                result.State, heading23, heading23, 0.04f, false);
+                result.State, heading27, heading27, 0.04f, false);
+            Require(result.State.VisualDirection == 0 && result.State.CandidateDirection == 1,
+                "a new adjacent octant waits for the minimum stable-facing interval");
+            checks++;
+
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                result.State, heading27, heading27, 0.04f, false);
+            Require(result.State.VisualDirection == 1 && result.State.CandidateDirection == -1,
+                "a stable adjacent heading commits after 75ms");
+            checks++;
+
+            OfficeNavPoint heading24Return = HeadingFromSouthAngle(24f);
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                result.State, heading24Return, heading24Return, 0.04f, false);
             Require(result.State.VisualDirection == 1,
-                "actual walking direction crosses the 22.5-degree boundary immediately");
+                "return jitter inside the hysteresis envelope does not flip left/right");
             checks++;
 
-            OfficeNavPoint heading22Return = HeadingFromSouthAngle(22f);
+            state = OfficeLocomotionFacingState.Initial(0);
+            OfficeNavPoint west = new OfficeNavPoint(-1f, 0f);
             result = OfficeLocomotionPresentationRules.ResolveFacing(
-                result.State, heading22Return, heading22Return, 0.04f, false);
-            Require(result.State.VisualDirection == 0,
-                "actual motion cannot be held outside its nearest octant");
-            checks++;
+                state, west, west, 0.01f, false);
+            Require(result.State.VisualDirection == 2,
+                "leftward travel immediately uses the west sprite rather than a front sprite");
+            OfficeNavPoint east = new OfficeNavPoint(1f, 0f);
+            result = OfficeLocomotionPresentationRules.ResolveFacing(
+                result.State, east, east, 0.01f, false);
+            Require(result.State.VisualDirection == 6,
+                "rightward travel immediately uses the east sprite rather than a front sprite");
+            checks += 2;
 
             state = OfficeLocomotionFacingState.Initial(6);
             OfficeNavPoint semanticEast = new OfficeNavPoint(1f, 0f);

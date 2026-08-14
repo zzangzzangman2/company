@@ -59,10 +59,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 contactDisplacement = Vector2.zero;
                 return Vector2.zero;
             }
-            if (occupancy.CanMove(
+            if (CanMoveWithSafeEndpoint(
+                    occupancy,
                     agentId,
                     start,
-                    start + intendedDisplacement,
+                    intendedDisplacement,
                     radius,
                     permittedSeatId))
             {
@@ -105,6 +106,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 canMoveY,
                 agentId);
             Vector2 actual = contact + new Vector2(slide.X, slide.Z);
+            // Axis candidates are refined from the contact point independently. On a chamfered
+            // 4x4 mask their sum can land exactly on the blocked side of a floating-point edge
+            // even though the segment probe's interpolated endpoint rounded to the safe side.
+            // Revalidate the composed displacement with an exact point query and conservatively
+            // refine the whole result if necessary. This is a collision guarantee, not a QA
+            // tolerance: UpdateActor must never observe a position Resolve just returned as safe.
+            if (!CanMoveWithSafeEndpoint(
+                    occupancy,
+                    agentId,
+                    start,
+                    actual,
+                    radius,
+                    permittedSeatId))
+                actual = RefineSafeDisplacement(
+                    occupancy,
+                    agentId,
+                    start,
+                    actual,
+                    radius,
+                    permittedSeatId);
             collisionProjected = (actual - intendedDisplacement).sqrMagnitude > MinimumDisplacementSquared;
             return actual;
         }
@@ -118,7 +139,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string permittedSeatId)
         {
             if (displacement.sqrMagnitude <= MinimumDisplacementSquared) return Vector2.zero;
-            if (occupancy.CanMove(agentId, start, start + displacement, radius, permittedSeatId))
+            if (CanMoveWithSafeEndpoint(
+                    occupancy,
+                    agentId,
+                    start,
+                    displacement,
+                    radius,
+                    permittedSeatId))
                 return displacement;
 
             float safe = 0f;
@@ -126,15 +153,29 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             for (var iteration = 0; iteration < ContactRefinementIterations; iteration++)
             {
                 float probe = (safe + blocked) * 0.5f;
-                if (occupancy.CanMove(
+                if (CanMoveWithSafeEndpoint(
+                        occupancy,
                         agentId,
                         start,
-                        start + displacement * probe,
+                        displacement * probe,
                         radius,
                         permittedSeatId)) safe = probe;
                 else blocked = probe;
             }
             return displacement * safe;
+        }
+
+        private static bool CanMoveWithSafeEndpoint(
+            OfficeRuntimeOccupancy occupancy,
+            string agentId,
+            Vector2 start,
+            Vector2 displacement,
+            float radius,
+            string permittedSeatId)
+        {
+            Vector2 end = start + displacement;
+            return occupancy.CanMove(agentId, start, end, radius, permittedSeatId) &&
+                   occupancy.CanMove(agentId, end, end, radius, permittedSeatId);
         }
     }
 }

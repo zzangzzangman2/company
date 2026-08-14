@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Save;
+using FamilyCompany.Save.OfficeGrid;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.Prototype;
 using UnityEditor;
 using UnityEngine;
+using OfficeGridState = FamilyCompany.Simulation.OfficeLayout.OfficeGrid;
 
 namespace FamilyCompany.Editor.OfficeGrid
 {
@@ -24,6 +26,7 @@ namespace FamilyCompany.Editor.OfficeGrid
             int[] energy = state.Family.Members.Select(item => item.Energy).ToArray();
             string originalHash = state.OfficeGrid.ComputeLayoutHash();
             ValidateCanonicalGeometry(failures);
+            ValidateLegacyGeometryRoundTrips(failures);
             ValidateBlockedSocketPlacement(failures);
             ValidateEveryCatalogTransaction(failures);
             ValidateInsufficientFundsAndLegacyMigration(failures);
@@ -138,7 +141,7 @@ namespace FamilyCompany.Editor.OfficeGrid
                     "OFFICE_FURNITURE_BUILD_SYSTEM_QA: FAIL | " + string.Join(" | ", failures.Take(12)));
             Debug.Log(
                 "OFFICE_FURNITURE_BUILD_SYSTEM_QA: PASS | geometry=13x4 | catalogTransactions=13 | " +
-                "bought=6 | schema=8+v7-migration | family=4 | cash=" +
+                "geometryMigration=52 | bought=6 | schema=8+v7-migration | family=4 | cash=" +
                 state.Company.CashWon);
         }
 
@@ -234,6 +237,73 @@ namespace FamilyCompany.Editor.OfficeGrid
                             definitionId + "/" + facing + "/seat" + slot + " front-left-right egress");
                     }
                 }
+            }
+        }
+
+        private static void ValidateLegacyGeometryRoundTrips(ICollection<string> failures)
+        {
+            foreach (OfficeFurnitureDefinition definition in OfficeFurnitureCatalog.All.Where(
+                         item => item.IsPlayerEditable))
+            foreach (OfficeFurnitureFacing facing in Enum.GetValues(typeof(OfficeFurnitureFacing)))
+            {
+                const int width = 7;
+                const int height = 7;
+                var floor = Enumerable.Repeat(
+                    OfficeFloorTileKind.WarmWoodA,
+                    width * height).ToArray();
+                var walkable = Enumerable.Repeat(true, width * height).ToArray();
+                var origin = new OfficeGridCoordinate(2, 2);
+                OfficeGridCoordinate footprint = definition.FootprintFor(facing);
+                if (definition.BlocksNavigation)
+                {
+                    for (var y = origin.Y; y < origin.Y + footprint.Y; y++)
+                    for (var x = origin.X; x < origin.X + footprint.X; x++)
+                        walkable[y * width + x] = false;
+                }
+                string furnitureId = "legacy-geometry-" + definition.DefinitionId + "-" + facing;
+                var source = new OfficeGridState(
+                    width,
+                    height,
+                    floor,
+                    walkable,
+                    new[]
+                    {
+                        new PlacedOfficeFurniture(
+                            furnitureId,
+                            definition.DefinitionId,
+                            origin,
+                            footprint.X,
+                            footprint.Y,
+                            facing,
+                            definition.BlocksNavigation)
+                    });
+                OfficeGridSaveDto legacy = OfficeGridSaveAdapter.ToDto(source);
+                legacy.schemaVersion = 3;
+                foreach (PlacedOfficeFurnitureSaveDto item in legacy.furniture)
+                {
+                    item.placementX2 = 0;
+                    item.placementY2 = 0;
+                }
+                OfficeGridState restored = OfficeGridSaveAdapter.Restore(legacy);
+                PlacedOfficeFurniture migrated = restored.Furniture.Single();
+                Require(failures, migrated.KindId == definition.DefinitionId,
+                    definition.DefinitionId + "/" + facing + " legacy kind");
+                Require(failures, migrated.Facing == facing,
+                    definition.DefinitionId + "/" + facing + " legacy facing");
+                Require(failures,
+                    migrated.PlacementAnchor.Equals(
+                        PlacedOfficeFurniture.DefaultPlacementAnchor(
+                            origin,
+                            footprint.X,
+                            footprint.Y)),
+                    definition.DefinitionId + "/" + facing + " legacy placement anchor");
+                OfficeFurnitureGeometrySnapshot geometry =
+                    OfficeFurnitureGeometryQuery.Shared.Resolve(migrated);
+                Require(failures,
+                    geometry.Profile.Facing == facing &&
+                    geometry.Profile.FootprintWidth == footprint.X &&
+                    geometry.Profile.FootprintHeight == footprint.Y,
+                    definition.DefinitionId + "/" + facing + " migrated canonical geometry");
             }
         }
 
