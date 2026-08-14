@@ -134,7 +134,15 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 new Vector2(620f, 235f),
                 "v3",
                 "office_swivel_chair_northwest",
-                new Vector2(600f, 650f)),
+                new Vector2(600f, 650f),
+                // Preserve the limited foreground introduced with the canonical V3 chair.
+                // In the baked 640x512 Sprite this is exactly base alpha where x >= 317
+                // and y >= 98: the right/backrest edge and near armrest, not the cushion.
+                sourceForegroundPolygon: new[]
+                {
+                    new Vector2(610f, 468f), new Vector2(904f, 468f),
+                    new Vector2(904f, 934f), new Vector2(610f, 934f)
+                }),
             new FurnitureSpec(OfficeGridLayouts.ReceptionCounterKind, "office_reception_counter", 500, 340,
                 OfficeFurnitureFacing.SouthEast, new Vector2(834f, 180f), new Vector2(834f, 162f),
                 semanticFootprintWidth: 2),

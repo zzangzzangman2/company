@@ -74,6 +74,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
         menuName = "Family Company/Office Work Action Frame Set")]
     public sealed class OfficeWorkActionFrameSet : ScriptableObject
     {
+        private static readonly string[] DirectionNameTokens =
+        {
+            "south",
+            "southwest",
+            "west",
+            "northwest",
+            "north",
+            "northeast",
+            "east",
+            "southeast"
+        };
+
         [SerializeField] private string memberId = string.Empty;
         [SerializeField] private OfficeWorkActionClip[] clips = Array.Empty<OfficeWorkActionClip>();
 
@@ -107,6 +119,40 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             }
 
             clip = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Reads the independently authored direction token from a canonical sprite name.
+        /// Slot position alone cannot detect a west/north sprite accidentally assigned to a
+        /// northwest channel, so runtime seating QA uses this metadata as a second source.
+        /// Unknown legacy names deliberately return false instead of guessing.
+        /// </summary>
+        public static bool TryResolveNamedDirection(Sprite sprite, out int direction)
+        {
+            direction = -1;
+            if (sprite == null || string.IsNullOrWhiteSpace(sprite.name)) return false;
+
+            var tokens = sprite.name.Split(
+                new[] { '_', '-', ' ' },
+                StringSplitOptions.RemoveEmptyEntries);
+            for (var tokenIndex = 0; tokenIndex < tokens.Length; tokenIndex++)
+            {
+                for (var candidate = 0; candidate < DirectionNameTokens.Length; candidate++)
+                {
+                    if (!string.Equals(
+                            tokens[tokenIndex],
+                            DirectionNameTokens[candidate],
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    direction = candidate;
+                    return true;
+                }
+            }
+
             return false;
         }
 

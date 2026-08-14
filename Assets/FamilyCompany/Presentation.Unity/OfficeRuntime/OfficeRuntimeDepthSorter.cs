@@ -33,12 +33,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         /// </summary>
         private const int FrontPriority = 2;
 
+        /// <summary>The chair's near back/arm redraws after the desk lip.</summary>
+        private const int ChairFrontPriority = 3;
+
         private readonly OfficeGrid _grid;
         private readonly OfficeGridTilemapPresenter _presenter;
         private readonly OfficeGridFurniturePresenter _furniturePresenter;
         private readonly List<OfficeDepthItem> _items = new List<OfficeDepthItem>();
         private readonly Dictionary<string, SpriteRenderer> _actorRenderers =
             new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeSeatSlot> _seatsById =
+            new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeSeatSlot> _seatsByFurnitureId =
+            new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeRuntimeAgent> _activeSeatOccupants =
+            new Dictionary<string, OfficeRuntimeAgent>(StringComparer.Ordinal);
 
         public OfficeRuntimeDepthSorter(
             OfficeGrid grid,
@@ -48,6 +57,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
             _furniturePresenter = furniturePresenter ?? throw new ArgumentNullException(nameof(furniturePresenter));
+            foreach (OfficeSeatSlot seat in _grid.SeatSlots)
+            {
+                _seatsById.Add(seat.SeatId, seat);
+                _seatsByFurnitureId[seat.ChairFurnitureId] = seat;
+                if (seat.HasWorkstationBinding)
+                    _seatsByFurnitureId[seat.WorkSurfaceFurnitureId] = seat;
+            }
         }
 
         public int LastItemCount { get; private set; }
@@ -56,6 +72,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _items.Clear();
             _actorRenderers.Clear();
+            _activeSeatOccupants.Clear();
+
+            if (actors != null)
+            {
+                foreach (OfficeRuntimeAgent actor in actors)
+                {
+                    if (actor == null || !actor.isActiveAndEnabled || !actor.IsOccupyingSeat ||
+                        actor.ActiveSeatId.Length == 0) continue;
+                    _activeSeatOccupants[actor.ActiveSeatId] = actor;
+                }
+            }
 
             foreach (PlacedOfficeFurniture furniture in _grid.Furniture)
             {
@@ -69,13 +96,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     maxY,
                     BasePriority));
                 if (_furniturePresenter.HasEnabledFrontOverlay(furniture.FurnitureId))
+                {
+                    ResolveForegroundDepth(
+                        furniture,
+                        out int frontMinX,
+                        out int frontMinY,
+                        out int frontMaxX,
+                        out int frontMaxY,
+                        out int frontPriority);
                     _items.Add(new OfficeDepthItem(
                         FrontPrefix + furniture.FurnitureId,
-                        furniture.Origin.X,
-                        furniture.Origin.Y,
-                        maxX,
-                        maxY,
-                        FrontPriority));
+                        frontMinX,
+                        frontMinY,
+                        frontMaxX,
+                        frontMaxY,
+                        frontPriority));
+                }
             }
 
             if (actors != null)
@@ -118,11 +154,91 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (_actorRenderers.TryGetValue(agentId, out SpriteRenderer renderer) && renderer != null)
                     renderer.sortingOrder = entry.Value;
             }
+            RecordSeatingDepthSamples(actors, orders);
+        }
+
+        private void ResolveForegroundDepth(
+            PlacedOfficeFurniture furniture,
+            out int minX,
+            out int minY,
+            out int maxX,
+            out int maxY,
+            out int priority)
+        {
+            minX = furniture.Origin.X;
+            minY = furniture.Origin.Y;
+            maxX = furniture.Origin.X + furniture.Width - 1;
+            maxY = furniture.Origin.Y + furniture.Height - 1;
+            priority = FrontPriority;
+            if (!_seatsByFurnitureId.TryGetValue(furniture.FurnitureId, out OfficeSeatSlot seat) ||
+                !_activeSeatOccupants.TryGetValue(seat.SeatId, out OfficeRuntimeAgent occupant)) return;
+
+            if (occupant.IsSeatForegroundOcclusionEngaged)
+            {
+                // Both redraw masks bind to the interaction socket while the body is behind their
+                // foreground planes. This lets a 2x1 desk front share depth with its operator even
+                // though the desk base keeps its full semantic footprint.
+                minX = maxX = seat.Cell.X;
+                minY = maxY = seat.Cell.Y;
+                priority = string.Equals(
+                    furniture.FurnitureId,
+                    seat.ChairFurnitureId,
+                    StringComparison.Ordinal)
+                    ? ChairFrontPriority
+                    : FrontPriority;
+                return;
+            }
+
+            // The reservation remains active during the exit. Once the actor crosses the chair
+            // plane, keep the redraw mask with the furniture base so it cannot slice the departing
+            // body merely because the seat claim has not yet been released.
+            priority = BasePriority;
+        }
+
+        private void RecordSeatingDepthSamples(
+            IReadOnlyList<OfficeRuntimeAgent> actors,
+            IReadOnlyDictionary<string, int> orders)
+        {
+            if (actors == null) return;
+            foreach (OfficeRuntimeAgent actor in actors)
+            {
+                if (actor == null || !actor.isActiveAndEnabled || !actor.IsOccupyingSeat ||
+                    actor.ActiveSeatId.Length == 0 ||
+                    !_seatsById.TryGetValue(actor.ActiveSeatId, out OfficeSeatSlot seat) ||
+                    !orders.TryGetValue(ActorPrefix + actor.AgentId, out int actorOrder) ||
+                    !orders.TryGetValue(FurniturePrefix + seat.ChairFurnitureId, out int chairBaseOrder))
+                    continue;
+
+                bool hasChairFront = orders.TryGetValue(
+                    FrontPrefix + seat.ChairFurnitureId,
+                    out int chairFrontOrder);
+                var deskBaseOrder = 0;
+                var deskFrontOrder = 0;
+                bool hasDesk = seat.HasWorkstationBinding && orders.TryGetValue(
+                    FurniturePrefix + seat.WorkSurfaceFurnitureId,
+                    out deskBaseOrder);
+                bool hasDeskFront = hasDesk && orders.TryGetValue(
+                    FrontPrefix + seat.WorkSurfaceFurnitureId,
+                    out deskFrontOrder);
+                actor.RecordSeatingDepthSample(new OfficeSeatingDepthSnapshot(
+                    actor.Phase,
+                    actor.CurrentSeatingClip,
+                    actor.CurrentSeatingFrame,
+                    actor.IsSeatForegroundOcclusionEngaged,
+                    actorOrder,
+                    chairBaseOrder,
+                    hasChairFront,
+                    chairFrontOrder,
+                    hasDesk,
+                    deskBaseOrder,
+                    hasDeskFront,
+                    deskFrontOrder));
+            }
         }
 
         private OfficeGridCoordinate ResolveActorCell(OfficeRuntimeAgent actor)
         {
-            if (actor.IsOccupyingSeat && actor.ActiveSeatId.Length > 0)
+            if (actor.IsSeatForegroundOcclusionEngaged && actor.ActiveSeatId.Length > 0)
             {
                 foreach (OfficeSeatSlot seat in _grid.SeatSlots)
                 {
