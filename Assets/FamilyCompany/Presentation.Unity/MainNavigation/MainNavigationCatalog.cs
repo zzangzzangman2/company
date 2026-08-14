@@ -16,16 +16,18 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
     public enum MainNavigationFeatureAction
     {
         None,
+        OpenStatus,
+        OpenBuildingEditor,
+        OpenContractBoard,
+        OpenProductOpportunities,
         OpenStockMarket
     }
 
     public static class MainNavigationRouteIds
     {
-        // Placeholder contract only. Replace with the construction task's public route ID
-        // during commander-led integration; this branch does not own editor/shop/placement logic.
-        public const string BuildingEditorPlaceholder = "company.building-editor";
-        public const string BusinessContractsPlaceholder = "business.contracts";
-        public const string BusinessProductsPlaceholder = "business.products";
+        public const string BuildingEditor = "company.hub.build_editor";
+        public const string BusinessContracts = "business.contracts";
+        public const string BusinessProducts = "business.products";
         public const string StockMarket = "investment.stock-market";
     }
 
@@ -112,7 +114,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     "company-building-editor",
                     "건축·편집",
                     "사무실 확장과 가구 구매·배치 화면으로 들어갑니다.",
-                    routeId: MainNavigationRouteIds.BuildingEditorPlaceholder)),
+                    "이용 가능 · 열기",
+                    MainNavigationFeatureAction.OpenBuildingEditor,
+                    MainNavigationRouteIds.BuildingEditor)),
             new MainNavigationTabDefinition(
                 MainNavigationTabId.People,
                 "people",
@@ -133,12 +137,16 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     "projects-contracts",
                     "하청 계약",
                     "고객사의 요구 역량·마감·보상을 비교해 일을 수주합니다.",
-                    routeId: MainNavigationRouteIds.BusinessContractsPlaceholder),
+                    "이용 가능 · 열기",
+                    MainNavigationFeatureAction.OpenContractBoard,
+                    MainNavigationRouteIds.BusinessContracts),
                 Feature(
                     "projects-products",
                     "자체 제품",
                     "현금·평판·분야 경험을 쌓아 자체 제품을 해금합니다.",
-                    routeId: MainNavigationRouteIds.BusinessProductsPlaceholder),
+                    "이용 가능 · 진행 보기",
+                    MainNavigationFeatureAction.OpenProductOpportunities,
+                    MainNavigationRouteIds.BusinessProducts),
                 Feature("projects-outsourcing", "외주", "부족한 역량과 시간을 외부 파트너로 보완합니다."),
                 Feature("projects-operations", "운영·유지보수", "완료한 제품과 고객 시스템을 안정적으로 운영합니다.")),
             new MainNavigationTabDefinition(
@@ -215,32 +223,35 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var allFeatureIds = Definitions.SelectMany(item => item.Features).Select(item => item.Id).ToArray();
             if (allFeatureIds.Distinct(StringComparer.Ordinal).Count() != allFeatureIds.Length)
                 throw new InvalidOperationException("Feature IDs must be unique across the entire main navigation catalog.");
-            var actionable = Definitions
+            var stockRoutes = Definitions
                 .SelectMany(tab => tab.Features.Select(feature => new { tab.TabId, Feature = feature }))
-                .Where(item => item.Feature.Action != MainNavigationFeatureAction.None)
+                .Where(item => item.Feature.Action == MainNavigationFeatureAction.OpenStockMarket)
                 .ToArray();
-            if (actionable.Length != 1 || actionable[0].TabId != MainNavigationTabId.Investment ||
-                actionable[0].Feature.Action != MainNavigationFeatureAction.OpenStockMarket ||
-                actionable[0].Feature.RouteId != MainNavigationRouteIds.StockMarket)
-                throw new InvalidOperationException("Stock market must be the only actionable hub card and belong to Investment.");
+            if (stockRoutes.Length != 1 || stockRoutes[0].TabId != MainNavigationTabId.Investment ||
+                stockRoutes[0].Feature.RouteId != MainNavigationRouteIds.StockMarket)
+                throw new InvalidOperationException("Stock market must have one route inside Investment.");
             if (Get(MainNavigationTabId.Investment).Features.Any(feature =>
                     string.IsNullOrWhiteSpace(feature.IconResourcePath)))
                 throw new InvalidOperationException("Every Investment feature must reference one canonical V2 icon.");
             var buildingRoutes = Definitions
                 .SelectMany(tab => tab.Features.Select(feature => new { tab.TabId, Feature = feature }))
-                .Where(item => item.Feature.RouteId == MainNavigationRouteIds.BuildingEditorPlaceholder)
+                .Where(item => item.Feature.RouteId == MainNavigationRouteIds.BuildingEditor)
                 .ToArray();
             if (buildingRoutes.Length != 1 || buildingRoutes[0].TabId != MainNavigationTabId.Company ||
-                buildingRoutes[0].Feature.Action != MainNavigationFeatureAction.None)
-                throw new InvalidOperationException("Building editor must remain a single inactive Company-hub placeholder route.");
-            ValidateInactivePlaceholderRoute(
-                MainNavigationRouteIds.BusinessContractsPlaceholder,
+                buildingRoutes[0].Feature.Action != MainNavigationFeatureAction.OpenBuildingEditor)
+                throw new InvalidOperationException("Building editor must consume one Company-hub adapter route.");
+            ValidateIntegratedRoute(
+                MainNavigationRouteIds.BusinessContracts,
                 MainNavigationTabId.Projects,
+                MainNavigationFeatureAction.OpenContractBoard,
                 "Business contracts");
-            ValidateInactivePlaceholderRoute(
-                MainNavigationRouteIds.BusinessProductsPlaceholder,
+            ValidateIntegratedRoute(
+                MainNavigationRouteIds.BusinessProducts,
                 MainNavigationTabId.Projects,
+                MainNavigationFeatureAction.OpenProductOpportunities,
                 "Business products");
+            if (Definitions.SelectMany(item => item.Features).Any(item => item.Action == MainNavigationFeatureAction.None))
+                throw new InvalidOperationException("Every visible feature card must expose a mouse/keyboard route.");
         }
 
         public static IEnumerable<string> EnumerateKoreanText()
@@ -266,7 +277,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             string displayNameKo,
             string descriptionKo,
             string statusKo = "준비 중",
-            MainNavigationFeatureAction action = MainNavigationFeatureAction.None,
+            MainNavigationFeatureAction action = MainNavigationFeatureAction.OpenStatus,
             string routeId = "",
             string iconResourcePath = "")
         {
@@ -280,9 +291,10 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 iconResourcePath);
         }
 
-        private static void ValidateInactivePlaceholderRoute(
+        private static void ValidateIntegratedRoute(
             string routeId,
             MainNavigationTabId expectedTab,
+            MainNavigationFeatureAction expectedAction,
             string label)
         {
             var matches = Definitions
@@ -290,8 +302,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 .Where(item => item.Feature.RouteId == routeId)
                 .ToArray();
             if (matches.Length != 1 || matches[0].TabId != expectedTab ||
-                matches[0].Feature.Action != MainNavigationFeatureAction.None)
-                throw new InvalidOperationException($"{label} must remain one inactive {expectedTab}-hub placeholder route.");
+                matches[0].Feature.Action != expectedAction)
+                throw new InvalidOperationException($"{label} must expose one integrated {expectedTab}-hub route.");
         }
     }
 }

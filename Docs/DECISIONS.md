@@ -1,5 +1,15 @@
 # DECISIONS
 
+## 2026-08-14 / 메인 내비게이션은 V2 스킨과 실제 adapter route로 확정
+
+결정: 사무실 상단은 회사명·날짜/시간·1x/2x/4x만, 하단은 회사·인사·사업·연구·투자 5개만 둔다. ImageGen은 cream/coral/teal 9-slice surface와 아이콘만 제공하고 회사명, 날짜, 숫자, 상태, 버튼 글자는 TMP/uGUI가 별도 렌더한다. 검은 상·하단 바, 두꺼운 문서형 테두리, 회색 카드와 V1 자산은 사용하지 않는다.
+
+이유: 이미지에 정보를 구우면 회사명·시간·상태 변화와 다국어가 깨지고, 거절된 V1 문서 허브는 실제 경영게임 화면보다 구식 관리 도구처럼 보였다. 장식과 상태를 분리한 V2는 네 목표 해상도에서 같은 hierarchy와 입력 의미를 유지한다.
+
+결정: 회사의 건축·편집은 `OfficeBuildEditorNavigationAdapter`, 사업의 하청 계약·자체 제품은 `ContractBusinessRuntimeAdapter`, 투자의 주식시장은 기존 `StockMarketFullscreenPanel` 정본만 호출한다. 나머지 카드도 막힌 placeholder로 두지 않고 전용 화면에 들어가 명시적 `준비 중` 상태를 보여 준다.
+
+이유: public adapter를 경계로 사용하면 UI가 건축·계약·시장 상태를 복제하지 않으며, 사용자는 모든 카드에서 클릭 결과와 일관된 ESC/back 스택을 확인할 수 있다.
+
 ## 2026-08-14 / 자판기 4방향은 additive Resources 정본으로 확정
 
 결정: 실패한 투명/체커 배경 ImageGen 결과는 자산으로 채택하지 않는다. 같은 2000년형 크림·민트 자판기를 SE/SW 조작면과 NW/NE 후면의 실제 4회전으로 다시 만들고, 공식 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 18 --opaque-threshold 210 --despill --edge-contract 1`만 사용해 alpha source를 만든다. `OfficeBuildVendingArtBuilder`는 이를 640×512 hard-alpha, 180 PPU, Point, mipmap 없음, ground pivot `(320,28)`의 방향별 Resources Sprite로 결정론적으로 승격한다.

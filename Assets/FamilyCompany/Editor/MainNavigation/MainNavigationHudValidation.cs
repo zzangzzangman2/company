@@ -22,6 +22,10 @@ namespace FamilyCompany.Editor
             "Assets/FamilyCompany/Presentation.Unity/StockMarketFullscreenPanel.cs";
         private const string StockMarketAdapterPath =
             "Assets/FamilyCompany/Presentation.Unity/MainNavigation/StockMarketNavigationAdapter.cs";
+        private const string ContractAdapterPath =
+            "Assets/FamilyCompany/Presentation.Unity/ContractGrowth/ContractBusinessRuntimeAdapter.cs";
+        private const string BuildAdapterPath =
+            "Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/OfficeBuildEditorNavigationAdapter.cs";
         private const string StockMarketBridgePath =
             "Assets/FamilyCompany/Simulation/Market/StockMarketGameStateBridge.cs";
         private const string GameSaveMapperPath =
@@ -93,14 +97,20 @@ namespace FamilyCompany.Editor
                     $"Tab {definition.Id} must expose at least four functional category cards.");
                 foreach (var feature in definition.Features)
                 {
-                    if (feature.Action == MainNavigationFeatureAction.None)
+                    if (feature.Action == MainNavigationFeatureAction.OpenStatus)
                         Require(feature.StatusKo == "준비 중",
-                            $"Inactive feature {feature.Id} must remain marked 준비 중.");
+                            $"Unimplemented feature {feature.Id} must remain marked 준비 중.");
+                    Require(feature.Action != MainNavigationFeatureAction.None,
+                        $"Visible feature {feature.Id} does not expose a dedicated route.");
                 }
 
                 session.Open(pair.Key);
                 Require(session.HasActiveTab && session.ActiveTab == pair.Key,
                     $"Button route for {pair.Key} did not open the correct screen.");
+                session.OpenFeature(definition.Features[0].Id);
+                Require(session.HasActiveFeature && session.HandleEscape() && session.HasActiveTab &&
+                        !session.HasActiveFeature,
+                    $"ESC did not return {pair.Key}'s feature screen to its hub.");
                 Require(session.HandleEscape() && !session.HasActiveTab,
                     $"ESC did not close {pair.Key} to the office.");
                 Require(!session.HandleEscape(),
@@ -121,35 +131,35 @@ namespace FamilyCompany.Editor
                 "Stock market must have exactly one UI route and it must be inside Investment.");
             var buildingRoutes = MainNavigationCatalog.All
                 .SelectMany(tab => tab.Features.Select(feature => new { tab.TabId, Feature = feature }))
-                .Where(item => item.Feature.RouteId == MainNavigationRouteIds.BuildingEditorPlaceholder)
+                .Where(item => item.Feature.RouteId == MainNavigationRouteIds.BuildingEditor)
                 .ToArray();
             Require(buildingRoutes.Length == 1 && buildingRoutes[0].TabId == MainNavigationTabId.Company &&
-                    buildingRoutes[0].Feature.Action == MainNavigationFeatureAction.None &&
+                    buildingRoutes[0].Feature.Action == MainNavigationFeatureAction.OpenBuildingEditor &&
                     buildingRoutes[0].Feature.DisplayNameKo == "건축·편집",
-                "Building editor must be one inactive placeholder card inside Company.");
+                "Building editor must consume one active adapter route inside Company.");
             var businessRoutes = MainNavigationCatalog.All
                 .SelectMany(tab => tab.Features.Select(feature => new { tab.TabId, Feature = feature }))
-                .Where(item => item.Feature.RouteId == MainNavigationRouteIds.BusinessContractsPlaceholder ||
-                               item.Feature.RouteId == MainNavigationRouteIds.BusinessProductsPlaceholder)
+                .Where(item => item.Feature.RouteId == MainNavigationRouteIds.BusinessContracts ||
+                               item.Feature.RouteId == MainNavigationRouteIds.BusinessProducts)
                 .ToArray();
             Require(businessRoutes.Length == 2 && businessRoutes.All(item =>
                         item.TabId == MainNavigationTabId.Projects &&
-                        item.Feature.Action == MainNavigationFeatureAction.None),
-                "Contract and product integration hooks must stay inactive inside Projects.");
+                        item.Feature.Action != MainNavigationFeatureAction.None),
+                "Contract and product adapters must expose active routes inside Projects.");
             Require(businessRoutes.Any(item => item.Feature.DisplayNameKo == "하청 계약") &&
                     businessRoutes.Any(item => item.Feature.DisplayNameKo == "자체 제품"),
                 "Projects hub is missing its contract or product card.");
-            Debug.Log("MAIN_NAVIGATION_CATALOG: PASS tabs=5 routes=5 stockRoute=investment-only buildingRoute=company-placeholder businessRoutes=projects-placeholders officeReturn=PASS escapePriority=PASS");
+            Debug.Log("MAIN_NAVIGATION_CATALOG: PASS tabs=5 allCards=clickable stockRoute=investment-only buildingAdapter=company businessAdapter=projects featureBack=PASS officeReturn=PASS escapePriority=PASS");
         }
 
         private static void ValidateLayoutContracts()
         {
             var cases = new[]
             {
-                new LayoutCase(1280, 720, UiSafeInsets.None, "16:9-720p"),
                 new LayoutCase(1920, 1080, new UiSafeInsets(24, 18, 24, 18), "16:9-safe-area"),
-                new LayoutCase(1920, 1200, UiSafeInsets.None, "16:10"),
-                new LayoutCase(3440, 1080, new UiSafeInsets(40, 0, 40, 0), "ultrawide")
+                new LayoutCase(1600, 900, UiSafeInsets.None, "16:9-window"),
+                new LayoutCase(1600, 1000, UiSafeInsets.None, "16:10-window"),
+                new LayoutCase(2560, 1440, new UiSafeInsets(32, 20, 32, 20), "16:9-large")
             };
             foreach (var item in cases)
             {
@@ -180,6 +190,8 @@ namespace FamilyCompany.Editor
                 .ToArray();
             Require(paths.Length == 34,
                 $"V2 generated UI asset inventory must contain exactly 34 runtime PNGs; found {paths.Length}.");
+            Require(!Directory.Exists(Path.Combine(projectRoot, "Assets/Art/UI/Resources/MainNavigation")),
+                "Rejected MainNavigation V1 assets remain in the tracked runtime tree.");
             foreach (var path in paths)
             {
                 var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
@@ -259,7 +271,12 @@ namespace FamilyCompany.Editor
                          "OpenTabNow(capturedTab)",
                          "OpenFromInvestment",
                          "TryHandleBackToInvestment",
-                         "COMMANDER INTEGRATION HOOK",
+                         "OfficeBuildEditorNavigationAdapter.TryOpen",
+                         "ContractBusinessRuntimeAdapter",
+                         "OpenContractBoard",
+                         "OpenProductOpportunities",
+                         "BuildComingSoonDetail",
+                         "NavigateBackNow",
                          "ReturnToOfficeNow",
                          "Selectable.Transition.SpriteSwap",
                          "MAIN_NAVIGATION_V2_ASSET_MISSING",
@@ -300,6 +317,20 @@ namespace FamilyCompany.Editor
             Require(adapter.Contains("_canonicalPanel.CloseNow()") &&
                     adapter.Contains("OpenTabNow(MainNavigationTabId.Investment)"),
                 "Stock-market back route does not return to the Investment hub.");
+
+            var contractAdapter = File.ReadAllText(Path.GetFullPath(ContractAdapterPath));
+            Require(contractAdapter.Contains("public void OpenContractBoard()") &&
+                    contractAdapter.Contains("public void OpenProductOpportunities()") &&
+                    contractAdapter.Contains("public ContractBoardViewModel GetBoardViewModel()"),
+                "ContractBusinessRuntimeAdapter public navigation/view-model API drifted.");
+            var buildAdapter = File.ReadAllText(Path.GetFullPath(BuildAdapterPath));
+            Require(buildAdapter.Contains("public const string EntryId") &&
+                    buildAdapter.Contains("public static bool TryOpen"),
+                "OfficeBuildEditorNavigationAdapter public API drifted.");
+            Require(presenter.Contains("OfficeBuildEditorNavigationAdapter.EntryId") &&
+                    presenter.Contains("_contractBusinessNavigation.GetBoardViewModel()") &&
+                    presenter.Contains("_contractBusinessNavigation.GetProductOpportunities()"),
+                "Main navigation does not consume both dependency adapters and their canonical view models.");
 
             var bridge = File.ReadAllText(Path.GetFullPath(StockMarketBridgePath));
             Require(bridge.Contains("state.StockMarket") && bridge.Contains("state.ReplaceStockMarketState"),

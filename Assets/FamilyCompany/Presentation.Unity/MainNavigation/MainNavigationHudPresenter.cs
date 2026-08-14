@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using FamilyCompany.Infrastructure.Unity;
+using FamilyCompany.Presentation.Unity.ContractGrowth;
 using FamilyCompany.Presentation.Unity.ManagementUI;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.ManagementUi;
 using TMPro;
 using UnityEngine;
@@ -36,6 +41,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
         private PrototypeBootstrap _bootstrap;
         private StockMarketNavigationAdapter _stockMarketNavigation;
+        private ContractBusinessRuntimeAdapter _contractBusinessNavigation;
+        private OfficeLayoutEditModeController _officeBuildController;
         private GameObject _root;
         private RectTransform _safeRoot;
         private RectTransform _topHud;
@@ -47,6 +54,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private TMP_Text _timeText;
         private TMP_Text _panelTitle;
         private TMP_Text _panelDescription;
+        private TMP_Text _officeReturnLabel;
         private Image _panelIcon;
         private Button _officeReturnButton;
         private TMP_FontAsset _bodyFont;
@@ -57,6 +65,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private Rect _lastSafeArea;
         private float _nextLabelRefresh;
         private bool _built;
+        private string _featureRouteFailureKo = string.Empty;
 
         private Sprite _topBackplate;
         private Sprite _companyBadge;
@@ -84,6 +93,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private Sprite _comingSoonRibbon;
 
         public bool HasOpenPanel => _session.HasActiveTab;
+        public bool HasOpenFeature => _session.HasActiveFeature;
+        public string ActiveFeatureId => _session.ActiveFeatureId;
         public string ActiveTabId => _session.HasActiveTab
             ? MainNavigationCatalog.Get(_session.ActiveTab).Id
             : string.Empty;
@@ -95,34 +106,73 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             if (_stockMarketNavigation == null)
                 _stockMarketNavigation = bootstrap.gameObject.AddComponent<StockMarketNavigationAdapter>();
             _stockMarketNavigation.Configure(bootstrap, this);
+            _contractBusinessNavigation = bootstrap.GetComponent<ContractBusinessRuntimeAdapter>();
+            if (_contractBusinessNavigation == null)
+                _contractBusinessNavigation = bootstrap.gameObject.AddComponent<ContractBusinessRuntimeAdapter>();
+            var historyCatalog = FindFirstObjectByType<KoreaHistoryV1RuntimeCatalog>();
+            if (historyCatalog != null)
+            {
+                _contractBusinessNavigation.Configure(bootstrap, historyCatalog);
+                _contractBusinessNavigation.StateChanged -= HandleContractBusinessStateChanged;
+                _contractBusinessNavigation.StateChanged += HandleContractBusinessStateChanged;
+            }
+            _officeBuildController = FindFirstObjectByType<OfficeLayoutEditModeController>();
             if (Application.isPlaying && !_built) BuildRuntimeUi();
         }
 
         public void ResetSessionView()
         {
             _stockMarketNavigation?.CloseForSessionReset();
+            _contractBusinessNavigation?.ReturnToOffice();
+            if (_officeBuildController != null && _officeBuildController.IsOpen) _officeBuildController.Close();
             _session.CloseToOffice();
+            _featureRouteFailureKo = string.Empty;
             if (_built) RefreshOpenPanel();
         }
 
         public void OpenTabNow(MainNavigationTabId tabId)
         {
             _stockMarketNavigation?.CloseForSessionReset();
+            _contractBusinessNavigation?.ReturnToOffice();
             _session.Open(tabId);
+            if (tabId == MainNavigationTabId.Projects && _contractBusinessNavigation?.IsReady == true)
+                _contractBusinessNavigation.OpenBusinessHub();
+            _featureRouteFailureKo = string.Empty;
             if (_built) RefreshOpenPanel();
         }
 
         public void ReturnToOfficeNow()
         {
             _stockMarketNavigation?.CloseForSessionReset();
+            _contractBusinessNavigation?.ReturnToOffice();
             if (_session.CloseToOffice() && _built) RefreshOpenPanel();
+        }
+
+        public void NavigateBackNow()
+        {
+            if (_session.BackToHub())
+            {
+                if (_session.ActiveTab == MainNavigationTabId.Projects &&
+                    _contractBusinessNavigation?.CurrentRoute != ContractBusinessRoute.BusinessHub)
+                    _contractBusinessNavigation?.TryBack();
+                _featureRouteFailureKo = string.Empty;
+                if (_built) RefreshOpenPanel();
+                return;
+            }
+            ReturnToOfficeNow();
         }
 
         public bool TryHandleEscape()
         {
             if (_bootstrap == null || _bootstrap.UiScreen != PrototypeUiScreen.Playing) return false;
             if (_stockMarketNavigation != null && _stockMarketNavigation.TryHandleBackToInvestment()) return true;
+            if (_session.HasActiveFeature)
+            {
+                NavigateBackNow();
+                return true;
+            }
             if (!_session.HandleEscape()) return false;
+            _contractBusinessNavigation?.ReturnToOffice();
             if (_built) RefreshOpenPanel();
             return true;
         }
@@ -141,6 +191,11 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 : null;
 
         public StockMarketNavigationAdapter GetStockMarketNavigationForQa() => _stockMarketNavigation;
+        public ContractBusinessRuntimeAdapter GetContractBusinessNavigationForQa() => _contractBusinessNavigation;
+        public OfficeLayoutEditModeController GetOfficeBuildControllerForQa() =>
+            _officeBuildController != null
+                ? _officeBuildController
+                : _officeBuildController = FindFirstObjectByType<OfficeLayoutEditModeController>();
 
         private void Awake()
         {
@@ -158,7 +213,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             if (!_built) BuildRuntimeUi();
             RefreshSafeAreaIfNeeded();
             var playing = _bootstrap.UiScreen == PrototypeUiScreen.Playing;
-            var visible = playing && !(_stockMarketNavigation?.IsStockMarketOpen ?? false);
+            if (_officeBuildController == null) _officeBuildController = FindFirstObjectByType<OfficeLayoutEditModeController>();
+            var externalBuildOpen = _officeBuildController != null && _officeBuildController.IsOpen;
+            var visible = playing && !(_stockMarketNavigation?.IsStockMarketOpen ?? false) && !externalBuildOpen;
             if (_root.activeSelf != visible) _root.SetActive(visible);
             if (!playing && _session.HasActiveTab)
             {
@@ -173,10 +230,18 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
         private void OnDestroy()
         {
+            if (_contractBusinessNavigation != null)
+                _contractBusinessNavigation.StateChanged -= HandleContractBusinessStateChanged;
             if (_bodyFont != null) Destroy(_bodyFont);
             if (_headingFont != null && _headingFont != _bodyFont) Destroy(_headingFont);
             if (_fallbackFont != null && _fallbackFont != _bodyFont && _fallbackFont != _headingFont)
                 Destroy(_fallbackFont);
+        }
+
+        private void HandleContractBusinessStateChanged()
+        {
+            if (_built && _session.HasActiveTab && _session.ActiveTab == MainNavigationTabId.Projects)
+                RefreshOpenPanel();
         }
 
         private void BuildRuntimeUi()
@@ -395,20 +460,21 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 _closeHover,
                 _closePressed,
                 _closeHover,
-                ReturnToOfficeNow,
+                NavigateBackNow,
                 150f,
                 54f);
-            var closeLabel = AddText(
+            _officeReturnLabel = AddText(
                 _officeReturnButton.GetComponent<RectTransform>(),
                 "← 사무실",
                 17f,
                 true,
                 TextAlignmentOptions.Midline,
                 DeepInk);
-            Stretch(closeLabel.rectTransform);
+            Stretch(_officeReturnLabel.rectTransform);
 
             _featureHost = CreateRect("Main Navigation Feature Cards", _contentPanel);
-            AddLayout(_featureHost, -1f, -1f, 0f, 1f);
+            var featureLayout = AddLayout(_featureHost, -1f, -1f, 0f, 1f);
+            featureLayout.flexibleHeight = 1f;
             _contentPanel.gameObject.SetActive(false);
         }
 
@@ -422,16 +488,36 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             if (open)
             {
                 var definition = MainNavigationCatalog.Get(_session.ActiveTab);
-                SetText(_panelTitle, definition.DisplayNameKo);
-                SetText(_panelDescription, definition.DescriptionKo);
                 _panelIcon.sprite = LoadRequiredSprite(definition.IconResourcePath);
                 ClearChildren(_featureHost);
-                if (definition.TabId == MainNavigationTabId.Investment)
-                    BuildInvestmentCards(definition);
+                if (_session.HasActiveFeature)
+                {
+                    var feature = definition.Features.First(item =>
+                        string.Equals(item.Id, _session.ActiveFeatureId, StringComparison.Ordinal));
+                    SetText(_panelTitle, feature.DisplayNameKo);
+                    SetText(_panelDescription, definition.DisplayNameKo + " 허브의 전용 화면");
+                    SetText(_officeReturnLabel, "← " + definition.DisplayNameKo);
+                    BuildFeatureDetail(feature, definition);
+                }
                 else
-                    BuildStandardCards(definition);
+                {
+                    SetText(_panelTitle, definition.DisplayNameKo);
+                    SetText(_panelDescription, definition.DescriptionKo);
+                    SetText(_officeReturnLabel, "← 사무실");
+                    if (definition.TabId == MainNavigationTabId.Investment)
+                        BuildInvestmentCards(definition);
+                    else
+                        BuildStandardCards(definition);
+                }
             }
             RefreshTabStyles();
+            if (open && EventSystem.current != null)
+            {
+                var focus = _session.HasActiveFeature
+                    ? _officeReturnButton
+                    : _featureButtons.Values.FirstOrDefault(button => button != null && button.interactable);
+                if (focus != null) EventSystem.current.SetSelectedGameObject(focus.gameObject);
+            }
         }
 
         private void BuildInvestmentCards(MainNavigationTabDefinition definition)
@@ -475,6 +561,177 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 BuildFeatureCard(feature, gridHost, definition, false, 232f);
         }
 
+        private void BuildFeatureDetail(
+            MainNavigationFeatureDefinition feature,
+            MainNavigationTabDefinition tab)
+        {
+            switch (feature.Action)
+            {
+                case MainNavigationFeatureAction.OpenContractBoard:
+                    BuildContractBoardDetail(feature, tab);
+                    return;
+                case MainNavigationFeatureAction.OpenProductOpportunities:
+                    BuildProductOpportunityDetail(feature, tab);
+                    return;
+                default:
+                    BuildComingSoonDetail(feature, tab);
+                    return;
+            }
+        }
+
+        private void BuildContractBoardDetail(
+            MainNavigationFeatureDefinition feature,
+            MainNavigationTabDefinition tab)
+        {
+            if (_contractBusinessNavigation?.IsReady != true)
+            {
+                _featureRouteFailureKo = "계약 고객 카탈로그를 연결하는 중입니다.";
+                BuildComingSoonDetail(feature, tab);
+                return;
+            }
+
+            var board = _contractBusinessNavigation.GetBoardViewModel();
+            var root = CreateRect("Contract Board Adapter View", _featureHost);
+            Stretch(root);
+            var vertical = root.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(vertical, null, 12f);
+            vertical.childAlignment = TextAnchor.UpperCenter;
+            var guidance = AddText(
+                root,
+                board.HeadingKo + "\n" + board.GuidanceKo,
+                16f,
+                false,
+                TextAlignmentOptions.TopLeft,
+                DeepInk);
+            AddLayout(guidance.rectTransform, -1f, 72f, 0f, 0f);
+
+            var cards = board.Cards.Take(3).ToArray();
+            var gridHost = CreateRect("Canonical Contract Offers", root);
+            AddLayout(gridHost, -1f, 354f, 0f, 1f);
+            var grid = gridHost.gameObject.AddComponent<GridLayoutGroup>();
+            grid.padding = new RectOffset();
+            grid.spacing = new Vector2(12f, 0f);
+            grid.cellSize = new Vector2(cards.Length <= 1 ? 1030f : cards.Length == 2 ? 509f : 335f, 350f);
+            grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            grid.startAxis = GridLayoutGroup.Axis.Horizontal;
+            grid.childAlignment = TextAnchor.UpperCenter;
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = Math.Max(1, cards.Length);
+            foreach (var offer in cards)
+            {
+                var card = CreateSpritePanel("Contract Offer " + offer.OfferId, gridHost, _cardNormal, true);
+                var cardLayout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+                ConfigureLayout(cardLayout, new RectOffset(18, 18, 18, 16), 5f);
+                cardLayout.childAlignment = TextAnchor.UpperLeft;
+                var tier = AddText(card, offer.TierKo, 15f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
+                AddLayout(tier.rectTransform, -1f, 24f, 0f, 0f);
+                var client = AddText(card, offer.ClientNameKo, 21f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
+                AddLayout(client.rectTransform, -1f, 30f, 0f, 0f);
+                var title = AddText(card, offer.TitleKo, 17f, true, TextAlignmentOptions.TopLeft, DeepInk);
+                AddLayout(title.rectTransform, -1f, 46f, 0f, 0f);
+                var facts = AddText(
+                    card,
+                    offer.RewardKo + "\n" + offer.DeadlineKo + "\n" + offer.WorkKo + "\n" + offer.CapabilityKo,
+                    15f,
+                    false,
+                    TextAlignmentOptions.TopLeft,
+                    DeepInk);
+                AddLayout(facts.rectTransform, -1f, 132f, 0f, 1f);
+                var ready = offer.MemberChoices.Count(item => item.Available);
+                var status = AddText(
+                    card,
+                    "지금 배정 가능 " + ready + "명",
+                    15f,
+                    true,
+                    TextAlignmentOptions.BottomLeft,
+                    DeepInk);
+                AddLayout(status.rectTransform, -1f, 36f, 0f, 0f);
+            }
+        }
+
+        private void BuildProductOpportunityDetail(
+            MainNavigationFeatureDefinition feature,
+            MainNavigationTabDefinition tab)
+        {
+            if (_contractBusinessNavigation?.IsReady != true)
+            {
+                _featureRouteFailureKo = "사업 성장 상태를 연결하는 중입니다.";
+                BuildComingSoonDetail(feature, tab);
+                return;
+            }
+
+            var opportunities = _contractBusinessNavigation.GetProductOpportunities().Take(4).ToArray();
+            var root = CreateRect("Product Opportunity Adapter View", _featureHost);
+            Stretch(root);
+            var grid = root.gameObject.AddComponent<GridLayoutGroup>();
+            grid.padding = new RectOffset();
+            grid.spacing = new Vector2(16f, 16f);
+            grid.cellSize = new Vector2(505f, 226f);
+            grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            grid.startAxis = GridLayoutGroup.Axis.Horizontal;
+            grid.childAlignment = TextAnchor.UpperCenter;
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 2;
+            foreach (var opportunity in opportunities)
+            {
+                var card = CreateSpritePanel(
+                    "Product Opportunity " + opportunity.Definition.ProductPathId,
+                    root,
+                    opportunity.Unlocked ? _cardNormal : _cardDisabled,
+                    true);
+                var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+                ConfigureLayout(layout, new RectOffset(30, 30, 24, 18), 5f);
+                layout.childAlignment = TextAnchor.UpperLeft;
+                var title = AddText(card, opportunity.Definition.DisplayNameKo, 21f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
+                AddLayout(title.rectTransform, -1f, 30f, 0f, 0f);
+                var progress = AddText(
+                    card,
+                    $"진행 {opportunity.ProgressBasisPoints / 100}% · {(opportunity.Unlocked ? "해금 조건 충족" : "조건 축적 중")}",
+                    16f,
+                    true,
+                    TextAlignmentOptions.MidlineLeft,
+                    DeepInk);
+                AddLayout(progress.rectTransform, -1f, 26f, 0f, 0f);
+                var conditions = AddText(
+                    card,
+                    string.Join("\n", opportunity.ConditionLabels.Take(3)) + "\n수익 구조 · " + opportunity.Definition.RevenueModelKo,
+                    15f,
+                    false,
+                    TextAlignmentOptions.TopLeft,
+                    DeepInk);
+                AddLayout(conditions.rectTransform, -1f, 112f, 0f, 1f);
+            }
+        }
+
+        private void BuildComingSoonDetail(
+            MainNavigationFeatureDefinition feature,
+            MainNavigationTabDefinition tab)
+        {
+            var card = CreateSpritePanel("Dedicated Status " + feature.Id, _featureHost, _cardDisabled, true);
+            card.anchorMin = new Vector2(0.07f, 0.07f);
+            card.anchorMax = new Vector2(0.93f, 0.93f);
+            card.pivot = new Vector2(0.5f, 0.5f);
+            card.offsetMin = Vector2.zero;
+            card.offsetMax = Vector2.zero;
+            var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(layout, new RectOffset(54, 54, 30, 28), 10f);
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            var iconPath = string.IsNullOrEmpty(feature.IconResourcePath) ? tab.IconResourcePath : feature.IconResourcePath;
+            var icon = AddIcon(card, LoadRequiredSprite(iconPath), 88f);
+            AddLayout(icon.rectTransform, 88f, 88f, 88f, 0f);
+            var title = AddText(card, feature.DisplayNameKo + " 전용 화면", 26f, true, TextAlignmentOptions.Midline, DeepInk);
+            AddLayout(title.rectTransform, -1f, 38f, 0f, 0f);
+            var message = string.IsNullOrEmpty(_featureRouteFailureKo)
+                ? feature.DescriptionKo + "\n현재 버전에서는 준비 중이며, 구현 상태를 숨기지 않습니다."
+                : _featureRouteFailureKo + "\n사무실로 돌아가 다시 시도할 수 있습니다.";
+            var body = AddText(card, message, 17f, false, TextAlignmentOptions.Midline, DeepInk);
+            AddLayout(body.rectTransform, -1f, 80f, 0f, 0f);
+            var marker = CreateSpritePanel("Explicit Coming Soon State", card, _comingSoonRibbon, true);
+            AddLayout(marker, 140f, 34f, 140f, 0f);
+            var markerText = AddText(marker, "준비 중", 16f, true, TextAlignmentOptions.Midline, DeepInk);
+            Stretch(markerText.rectTransform);
+        }
+
         private void BuildFeatureCard(
             MainNavigationFeatureDefinition feature,
             RectTransform parent,
@@ -482,8 +739,12 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             bool featured,
             float preferredHeight)
         {
-            var actionable = feature.Action == MainNavigationFeatureAction.OpenStockMarket;
-            var cardSprite = featured ? _cardFeatured : actionable ? _cardNormal : _cardDisabled;
+            var actionable = feature.Action != MainNavigationFeatureAction.None;
+            var available = feature.Action == MainNavigationFeatureAction.OpenStockMarket ||
+                            feature.Action == MainNavigationFeatureAction.OpenBuildingEditor ||
+                            feature.Action == MainNavigationFeatureAction.OpenContractBoard ||
+                            feature.Action == MainNavigationFeatureAction.OpenProductOpportunities;
+            var cardSprite = featured ? _cardFeatured : _cardNormal;
             var card = CreateSpritePanel($"Feature {feature.Id}", parent, cardSprite, true);
             AddLayout(card, -1f, preferredHeight, 0f, 1f);
             ConfigureFeatureRoute(feature, card, featured);
@@ -529,18 +790,18 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             description.textWrappingMode = TextWrappingModes.Normal;
 
             var marker = CreateSpritePanel(
-                actionable ? "Available Marker" : "Coming Soon Marker",
+                available ? "Available Marker" : "Coming Soon Marker",
                 textHost,
-                actionable ? _notificationBadge : _comingSoonRibbon,
+                available ? _notificationBadge : _comingSoonRibbon,
                 true);
-            AddLayout(marker, actionable ? 126f : 116f, 28f, actionable ? 126f : 116f, 0f);
+            AddLayout(marker, available ? 126f : 116f, 28f, available ? 126f : 116f, 0f);
             var markerText = AddText(
                 marker,
-                actionable ? "이용 가능" : statusKo,
+                available ? "이용 가능" : "준비 중",
                 15f,
                 true,
                 TextAlignmentOptions.Midline,
-                actionable ? Cream : DeepInk);
+                available ? Cream : DeepInk);
             Stretch(markerText.rectTransform);
         }
 
@@ -549,34 +810,68 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             RectTransform card,
             bool featured)
         {
-            if (feature.Action == MainNavigationFeatureAction.OpenStockMarket)
+            if (feature.Action == MainNavigationFeatureAction.None) return;
+            var button = card.gameObject.AddComponent<Button>();
+            button.targetGraphic = card.GetComponent<Image>();
+            button.onClick.AddListener(() => OpenFeatureRoute(feature));
+            ConfigureSpriteSwap(
+                button,
+                featured ? _cardFeatured : _cardNormal,
+                featured ? _cardFeaturedHover : _cardHover,
+                featured ? _cardFeatured : _cardNormal,
+                featured ? _cardFeatured : _cardHover);
+            _featureButtons[feature.Id] = button;
+        }
+
+        private void OpenFeatureRoute(MainNavigationFeatureDefinition feature)
+        {
+            _featureRouteFailureKo = string.Empty;
+            switch (feature.Action)
             {
-                var button = card.gameObject.AddComponent<Button>();
-                button.targetGraphic = card.GetComponent<Image>();
-                button.onClick.AddListener(() => _stockMarketNavigation?.OpenFromInvestment());
-                ConfigureSpriteSwap(
-                    button,
-                    featured ? _cardFeatured : _cardNormal,
-                    featured ? _cardFeaturedHover : _cardHover,
-                    featured ? _cardFeatured : _cardNormal,
-                    _cardFeatured);
-                _featureButtons[feature.Id] = button;
-                return;
+                case MainNavigationFeatureAction.OpenStockMarket:
+                    _stockMarketNavigation?.OpenFromInvestment();
+                    return;
+                case MainNavigationFeatureAction.OpenBuildingEditor:
+                    if (!string.Equals(feature.RouteId, OfficeBuildEditorNavigationAdapter.EntryId, StringComparison.Ordinal))
+                    {
+                        _featureRouteFailureKo = "건축·편집 경로 ID가 연결되지 않았습니다.";
+                        break;
+                    }
+                    if (OfficeBuildEditorNavigationAdapter.TryOpen(feature.RouteId, out var buildFailure))
+                    {
+                        _officeBuildController = FindFirstObjectByType<OfficeLayoutEditModeController>();
+                        return;
+                    }
+                    _featureRouteFailureKo = buildFailure;
+                    break;
+                case MainNavigationFeatureAction.OpenContractBoard:
+                    if (_contractBusinessNavigation?.IsReady == true)
+                    {
+                        _contractBusinessNavigation.OpenContractBoard();
+                        _session.OpenFeature(feature.Id);
+                        if (_built) RefreshOpenPanel();
+                        return;
+                    }
+                    _featureRouteFailureKo = "계약 고객 카탈로그가 아직 준비되지 않았습니다.";
+                    break;
+                case MainNavigationFeatureAction.OpenProductOpportunities:
+                    if (_contractBusinessNavigation?.IsReady == true)
+                    {
+                        _contractBusinessNavigation.OpenProductOpportunities();
+                        _session.OpenFeature(feature.Id);
+                        if (_built) RefreshOpenPanel();
+                        return;
+                    }
+                    _featureRouteFailureKo = "자체 제품 성장 상태가 아직 준비되지 않았습니다.";
+                    break;
+                case MainNavigationFeatureAction.OpenStatus:
+                    break;
+                default:
+                    _featureRouteFailureKo = "알 수 없는 기능 경로입니다.";
+                    break;
             }
-            if (feature.RouteId == MainNavigationRouteIds.BuildingEditorPlaceholder)
-            {
-                // COMMANDER INTEGRATION HOOK: resolve the construction task's public open adapter here.
-                return;
-            }
-            if (feature.RouteId == MainNavigationRouteIds.BusinessContractsPlaceholder)
-            {
-                // COMMANDER INTEGRATION HOOK: call the canonical contract route and display-name adapter here.
-                return;
-            }
-            if (feature.RouteId == MainNavigationRouteIds.BusinessProductsPlaceholder)
-            {
-                // COMMANDER INTEGRATION HOOK: call the canonical product route/progress adapter here.
-            }
+            _session.OpenFeature(feature.Id);
+            if (_built) RefreshOpenPanel();
         }
 
         private void ResolveFeaturePresentation(
@@ -591,21 +886,37 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 descriptionKo = _stockMarketNavigation?.ReadOnlyPortfolioSummaryKo() ?? feature.DescriptionKo;
                 return;
             }
-            if (feature.RouteId == MainNavigationRouteIds.BusinessContractsPlaceholder)
+            if (feature.Action == MainNavigationFeatureAction.OpenBuildingEditor)
             {
-                // COMMANDER VIEW-MODEL HOOK: read the first-contract badge and real client display name.
+                statusKo = "이용 가능";
                 return;
             }
-            if (feature.RouteId == MainNavigationRouteIds.BusinessProductsPlaceholder)
+            if (feature.Action == MainNavigationFeatureAction.OpenContractBoard &&
+                _contractBusinessNavigation?.IsReady == true)
             {
-                // COMMANDER VIEW-MODEL HOOK: format canonical cash/reputation/domain-experience progress.
+                var board = _contractBusinessNavigation.GetBoardViewModel();
+                var first = board.Cards.FirstOrDefault();
+                if (first != null)
+                    descriptionKo = $"현재 제안 · {first.ClientNameKo} / {first.TitleKo}";
+                statusKo = "이용 가능";
+                return;
+            }
+            if (feature.Action == MainNavigationFeatureAction.OpenProductOpportunities &&
+                _contractBusinessNavigation?.IsReady == true)
+            {
+                var product = _contractBusinessNavigation.GetProductOpportunities()
+                    .OrderByDescending(item => item.ProgressBasisPoints)
+                    .FirstOrDefault();
+                if (product != null)
+                    descriptionKo = $"{product.Definition.DisplayNameKo} · 진행 {product.ProgressBasisPoints / 100}%";
+                statusKo = "진행 보기";
             }
         }
 
         private void RefreshLiveLabels()
         {
             if (!_built || _bootstrap.State == null) return;
-            SetText(_companyText, "우리 가족회사");
+            SetText(_companyText, _bootstrap.State.Company.CompanyName);
             SetText(_timeText, _bootstrap.State.Time.Now.ToString("yyyy년 MM월 dd일 ddd HH:mm"));
             RefreshSpeedStyles();
         }

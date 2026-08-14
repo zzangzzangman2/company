@@ -1,5 +1,12 @@
 # PROJECT STATE
 
+## 2026-08-14 / Main Navigation HUD V2 candidate complete
+
+- 사무실 HUD를 밝은 cream/coral/teal ImageGen 9-slice V2로 확정했다. 상단은 회사명·2000년 날짜/시간·1x/2x/4x, 하단은 회사·인사·사업·연구·투자 5개만 표시하며 모든 글자와 입력은 Unity TMP/uGUI가 소유한다.
+- 회사→`OfficeBuildEditorNavigationAdapter`, 사업→`ContractBusinessRuntimeAdapter` 계약/제품, 투자→기존 `StockMarketFullscreenPanel`을 실제 연결했다. 인사·연구와 미구현 회사/투자 기능은 모두 클릭 가능한 전용 `준비 중` 화면을 갖는다.
+- Unity 6000.3.21f1 Editor validation과 D3D11 Development Player QA가 PASS했다. 21개 카드, pointer route 52회, keyboard submit, ESC/back, build-only pause, stock save/load, loaded contract rebind와 1920×1080·1600×900·1600×1000·2560×1440 캡처를 검증했다.
+- 거절된 MainNavigation V1 runtime 자산·문서·ledger는 tracked tree에서 제거했다. UI-only 변경은 계약/건축 dependency 뒤에 적용할 별도 commit으로 유지한다.
+
 ## 2026-08-14 / Office Build Editor + Furniture Economy V1 candidate
 
 - 회사 hub가 연결할 안정 API `OfficeBuildEditorNavigationAdapter.EntryId/TryOpen`을 추가했다. 별도 여섯 번째 하단 탭은 만들지 않았고, 현재 Starter Office에서는 F2 개발 진입과 같은 transaction-backed 편집기를 연다.

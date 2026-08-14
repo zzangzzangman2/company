@@ -4,7 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using FamilyCompany.Infrastructure.Unity;
+using FamilyCompany.Presentation.Unity.ContractGrowth;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Save;
+using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Game;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,6 +23,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private string _outputFolder;
         private string _reportPath;
         private bool _fontErrorSeen;
+        private int _captureCount;
+        private int _pointerRouteCount;
+        private int _keyboardRouteCount;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallForQa()
@@ -79,7 +85,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 yield return current;
             }
 
-            Append("PLAYER_QA_PASS | renderer=D3D11 captures=11 pointerRoutes=13 stockRoute=investment-only spriteStates=hover,pressed,selected");
+            Append($"PLAYER_QA_PASS | renderer=D3D11 captures={_captureCount} pointerRoutes={_pointerRouteCount} keyboardRoutes={_keyboardRouteCount} adapters=contract,build stockRoute=investment-only spriteStates=hover,pressed,selected");
             yield return new WaitForSecondsRealtime(0.25f);
             Application.Quit(0);
         }
@@ -121,10 +127,18 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var adapter = presenter.GetStockMarketNavigationForQa();
             Require(adapter != null && adapter.CanonicalPanel != null,
                 "Stock-market navigation adapter or canonical panel is missing.");
+            var contractAdapter = presenter.GetContractBusinessNavigationForQa();
+            Require(contractAdapter != null && contractAdapter.IsReady,
+                "ContractBusinessRuntimeAdapter is missing or not ready.");
+            var buildController = presenter.GetOfficeBuildControllerForQa();
+            Require(buildController != null,
+                "OfficeBuildEditorNavigationAdapter target controller is missing.");
             Require(presenter.GetFeatureButtonForQa("investment-stocks") == null &&
                     !adapter.OpenFromInvestment() && !adapter.IsStockMarketOpen,
                 "Main HUD exposes a direct stock-market route outside the Investment hub.");
-            Append("STOCK_ROUTE_GUARD_PASS | mainHudDirectButtons=0 entry=investment-only");
+            Require(OfficeBuildEditorNavigationAdapter.EntryId == MainNavigationRouteIds.BuildingEditor,
+                "Build-editor route ID does not match the dependency adapter.");
+            Append("ADAPTER_READY_PASS | contract=ContractBusinessRuntimeAdapter build=OfficeBuildEditorNavigationAdapter stock=investment-only");
 
             foreach (var speed in new[] { 2, 4, 1 })
             {
@@ -147,13 +161,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                         ? presenter.GetFeatureButtonForQa("investment-stocks") != null
                         : presenter.GetFeatureButtonForQa("investment-stocks") == null,
                     "Stock-market feature button escaped the Investment hub.");
-                if (definition.TabId == MainNavigationTabId.Company)
-                    Require(presenter.GetFeatureButtonForQa("company-building-editor") == null,
-                        "Building-editor placeholder became interactive before its public adapter was integrated.");
-                if (definition.TabId == MainNavigationTabId.Projects)
-                    Require(presenter.GetFeatureButtonForQa("projects-contracts") == null &&
-                            presenter.GetFeatureButtonForQa("projects-products") == null,
-                        "Business placeholders became interactive before the canonical route adapter was integrated.");
+                foreach (var feature in definition.Features)
+                    Require(presenter.GetFeatureButtonForQa(feature.Id) != null,
+                        "Visible feature card is not clickable: " + feature.Id);
                 yield return null;
                 var fileName = definition.TabId == MainNavigationTabId.Investment
                     ? "menu-investment-hub-1920x1080.png"
@@ -167,7 +177,68 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     yield return new WaitForSecondsRealtime(0.75f);
                     VerifyCapture("interaction-selected-investment-1920x1080.png", 1920, 1080);
                 }
+
+                foreach (var feature in definition.Features)
+                {
+                    if (feature.Action == MainNavigationFeatureAction.OpenStockMarket) continue;
+                    var featureButton = presenter.GetFeatureButtonForQa(feature.Id);
+                    var keyboardRoute = feature.Id == "people-hiring";
+                    if (keyboardRoute) SubmitButton(featureButton, feature.Id);
+                    else ClickButton(featureButton, feature.Id);
+                    yield return null;
+
+                    if (feature.Action == MainNavigationFeatureAction.OpenBuildingEditor)
+                    {
+                        Require(buildController.IsOpen && Mathf.Approximately(Time.timeScale, 0f),
+                            "Build adapter did not open its dedicated paused editor.");
+                        RequestCapture("build-editor-from-company-1920x1080.png");
+                        yield return new WaitForSecondsRealtime(0.75f);
+                        VerifyCapture("build-editor-from-company-1920x1080.png", 1920, 1080);
+                        buildController.Close();
+                        yield return new WaitForSecondsRealtime(0.25f);
+                        Require(!buildController.IsOpen && Mathf.Approximately(Time.timeScale, 1f) &&
+                                presenter.ActiveTabId == "company" && !presenter.HasOpenFeature,
+                            "Build editor did not restore time and return to the Company hub.");
+                        continue;
+                    }
+
+                    Require(presenter.HasOpenFeature && presenter.ActiveFeatureId == feature.Id,
+                        "Feature did not enter its dedicated screen: " + feature.Id);
+                    if (feature.Action == MainNavigationFeatureAction.OpenContractBoard)
+                        Require(contractAdapter.CurrentRoute == ContractBusinessRoute.ContractBoard &&
+                                contractAdapter.GetBoardViewModel().Cards.Count > 0,
+                            "Contract route did not consume the canonical contract board.");
+                    if (feature.Action == MainNavigationFeatureAction.OpenProductOpportunities)
+                        Require(contractAdapter.CurrentRoute == ContractBusinessRoute.ProductOpportunities &&
+                                contractAdapter.GetProductOpportunities().Count > 0,
+                            "Product route did not consume canonical opportunity progress.");
+
+                    var detailCapture = FeatureCaptureName(feature.Id);
+                    if (!string.IsNullOrEmpty(detailCapture))
+                    {
+                        RequestCapture(detailCapture);
+                        yield return new WaitForSecondsRealtime(0.75f);
+                        VerifyCapture(detailCapture, 1920, 1080);
+                    }
+
+                    if (keyboardRoute)
+                    {
+                        Require(presenter.TryHandleEscape(), "Keyboard ESC did not leave " + feature.Id);
+                    }
+                    else
+                    {
+                        ClickButton(presenter.GetOfficeReturnButtonForQa(), "back to " + definition.Id);
+                    }
+                    yield return null;
+                    Require(presenter.HasOpenPanel && !presenter.HasOpenFeature &&
+                            presenter.ActiveTabId == definition.Id,
+                        "Feature back route did not return to its hub: " + feature.Id);
+                    if (definition.TabId == MainNavigationTabId.Projects)
+                        Require(contractAdapter.CurrentRoute == ContractBusinessRoute.BusinessHub,
+                            "Contract adapter back stack did not return to BusinessHub.");
+                }
             }
+            Append("FEATURE_ROUTE_PASS | visibleCards=21 dedicatedStatus=people,research,company,investment contract=board products=progress build=editor keyboardSubmit=people-hiring");
 
             Require(FindObjectsByType<StockMarketFullscreenPanel>(FindObjectsSortMode.None).Length == 1,
                 "Exactly one canonical StockMarketFullscreenPanel must exist.");
@@ -192,7 +263,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             ClickButton(stockButton, "investment stock market");
             yield return null;
             var stockPanel = adapter.CanonicalPanel;
-            Require(stockPanel.IsOpen, "Investment stock-market card did not open the canonical panel.");
+            Require(stockPanel.IsOpen && stockPanel.WorldInteractionSuppressed &&
+                    Mathf.Approximately(Time.timeScale, 1f) && Mathf.Approximately(bootstrap.WorldTimeScale, 1f),
+                "Stock market did not suppress world input while preserving canonical game-speed semantics.");
             Require(ReferenceEquals(stockPanel.BoundGameStateForQa, bootstrap.State) &&
                     ReferenceEquals(adapter.CanonicalGameState, bootstrap.State),
                 "Stock-market route is not bound to the current canonical GameState instance.");
@@ -206,14 +279,16 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             VerifyCapture("stock-market-from-investment-1920x1080.png", 1920, 1080);
 
             Require(presenter.TryHandleEscape() && !stockPanel.IsOpen &&
-                    presenter.HasOpenPanel && presenter.ActiveTabId == "investment",
+                    !stockPanel.WorldInteractionSuppressed && presenter.HasOpenPanel &&
+                    presenter.ActiveTabId == "investment",
                 "First ESC did not return from Stock Market to the Investment hub.");
             Require(presenter.TryHandleEscape() && !presenter.HasOpenPanel,
                 "Second ESC did not return from the Investment hub to the office.");
             Append("BACK_STACK_PASS | stock-market>investment>office");
             yield return new WaitForSecondsRealtime(0.25f);
 
-            ClickButton(presenter.GetTabButtonForQa(MainNavigationTabId.Investment), "investment reopen");
+            presenter.OpenTabNow(MainNavigationTabId.Investment);
+            Require(presenter.ActiveTabId == "investment", "Investment hub did not reopen programmatically.");
             yield return new WaitForSecondsRealtime(0.1f);
             ClickButton(presenter.GetFeatureButtonForQa("investment-stocks"), "investment stock market reopen");
             yield return null;
@@ -241,20 +316,52 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     presenter.TryHandleEscape() && !presenter.HasOpenPanel,
                 "Loaded state did not preserve the stock-market > investment > office route.");
             Append("STOCK_LOAD_ROUTE_PASS | jsonRepository=isolated portfolio=preserved route=stock>investment>office runtimeSessionsPerState=1");
-            Screen.SetResolution(1680, 1050, FullScreenMode.Windowed);
-            yield return new WaitForSecondsRealtime(1f);
-            Canvas.ForceUpdateCanvases();
-            Require(Screen.width == 1680 && Screen.height == 1050,
-                $"Alternate resolution mismatch: {Screen.width}x{Screen.height}");
-            RequestCapture("closed-hud-1680x1050.png");
-            yield return new WaitForSecondsRealtime(0.75f);
-            VerifyCapture("closed-hud-1680x1050.png", 1680, 1050);
 
-            ClickButton(presenter.GetTabButtonForQa(MainNavigationTabId.Company), "company");
-            Require(presenter.TryHandleEscape() && !presenter.HasOpenPanel,
-                "ESC priority did not close the main navigation panel first.");
+            presenter.OpenTabNow(MainNavigationTabId.Projects);
+            yield return new WaitForSecondsRealtime(0.1f);
+            ClickButton(presenter.GetFeatureButtonForQa("projects-contracts"), "contract after loaded state");
+            Require(presenter.ActiveFeatureId == "projects-contracts" &&
+                    contractAdapter.CurrentRoute == ContractBusinessRoute.ContractBoard &&
+                    contractAdapter.GetBoardViewModel().Cards.Count > 0,
+                "Contract adapter route regressed after canonical GameState load.");
+            Require(presenter.TryHandleEscape() && presenter.ActiveTabId == "projects" &&
+                    presenter.TryHandleEscape() && !presenter.HasOpenPanel,
+                "Loaded state did not preserve contract-board > business-hub > office route.");
+            Append("CONTRACT_LOAD_ROUTE_PASS | gameState=rebound route=contract-board>business-hub>office");
+
+            foreach (var resolution in new[]
+                     {
+                         new[] { 1600, 900, 1600, 900, 1 },
+                         new[] { 1600, 1000, 1600, 1000, 1 },
+                         new[] { 2560, 1440, 1280, 720, 2 }
+                     })
+            {
+                var targetWidth = resolution[0];
+                var targetHeight = resolution[1];
+                var windowWidth = resolution[2];
+                var windowHeight = resolution[3];
+                var superSize = resolution[4];
+                Screen.SetResolution(windowWidth, windowHeight, FullScreenMode.Windowed);
+                yield return new WaitForSecondsRealtime(1f);
+                Canvas.ForceUpdateCanvases();
+                Require(Screen.width == windowWidth && Screen.height == windowHeight,
+                    $"Render-window mismatch: requested={windowWidth}x{windowHeight} actual={Screen.width}x{Screen.height}");
+                var closedName = $"closed-hud-{targetWidth}x{targetHeight}.png";
+                RequestCapture(closedName, superSize);
+                yield return new WaitForSecondsRealtime(0.75f);
+                VerifyCapture(closedName, targetWidth, targetHeight);
+                ClickButton(presenter.GetTabButtonForQa(MainNavigationTabId.Company),
+                    $"company {targetWidth}x{targetHeight}");
+                var hubName = $"menu-company-{targetWidth}x{targetHeight}.png";
+                RequestCapture(hubName, superSize);
+                yield return new WaitForSecondsRealtime(0.75f);
+                VerifyCapture(hubName, targetWidth, targetHeight);
+                Require(presenter.TryHandleEscape() && !presenter.HasOpenPanel,
+                    $"ESC priority did not close the main navigation panel first at {targetWidth}x{targetHeight}");
+                Append($"RESOLUTION_ROUTE_PASS | target={targetWidth}x{targetHeight} window={windowWidth}x{windowHeight} supersize={superSize}");
+            }
             Require(!_fontErrorSeen, "Main navigation emitted a Korean glyph error during player QA.");
-            Append("INPUT_PASS | pointerTabs=5 pointerSpeeds=3 officeReturn=pointer escapePriority=PASS");
+            Append("INPUT_PASS | pointerTabs=5 pointerFeatures=20 keyboardSubmit=1 pointerSpeeds=3 officeReturn=pointer escapePriority=PASS pause=build-only worldInput=stock-suppressed");
         }
 
         private GameState ValidateStockSaveRoundTrip(GameState state)
@@ -294,11 +401,12 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             stateField.SetValue(bootstrap, loadedState);
         }
 
-        private void RequestCapture(string fileName)
+        private void RequestCapture(string fileName, int superSize = 1)
         {
             var path = Path.Combine(_outputFolder, fileName);
             if (File.Exists(path)) File.Delete(path);
-            ScreenCapture.CaptureScreenshot(path, 1);
+            ScreenCapture.CaptureScreenshot(path, superSize);
+            _captureCount++;
         }
 
         private void VerifyCapture(string fileName, int expectedWidth, int expectedHeight)
@@ -307,6 +415,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             Require(File.Exists(path) && new FileInfo(path).Length > 0L, "Screenshot is missing: " + path);
             var texture = new Texture2D(2, 2, TextureFormat.RGB24, false);
             Require(texture.LoadImage(File.ReadAllBytes(path), false), "Screenshot PNG could not be decoded: " + path);
+            Require(texture.width == expectedWidth && texture.height == expectedHeight,
+                $"Screenshot dimension mismatch for {fileName}: {texture.width}x{texture.height}");
             var pixels = texture.GetPixels32();
             var stride = Math.Max(1, pixels.Length / 4096);
             var nonBlackSamples = 0;
@@ -321,11 +431,38 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             Append($"CAPTURE_PASS | {path.Replace('\\', '/')} | {expectedWidth}x{expectedHeight} | bytes={new FileInfo(path).Length}");
         }
 
+        private static string FeatureCaptureName(string featureId)
+        {
+            switch (featureId)
+            {
+                case "people-hiring": return "detail-people-coming-soon-1920x1080.png";
+                case "research-tech-tree": return "detail-research-coming-soon-1920x1080.png";
+                case "projects-contracts": return "detail-contract-board-1920x1080.png";
+                case "projects-products": return "detail-product-opportunities-1920x1080.png";
+                case "investment-loans": return "detail-investment-coming-soon-1920x1080.png";
+                default: return string.Empty;
+            }
+        }
+
+        private void SubmitButton(Button button, string label)
+        {
+            Require(button != null && button.interactable && button.gameObject.activeInHierarchy,
+                "Keyboard target is unavailable: " + label);
+            var eventSystem = EventSystem.current;
+            Require(eventSystem != null, "EventSystem is missing for keyboard QA.");
+            eventSystem.SetSelectedGameObject(button.gameObject);
+            var submitted = ExecuteEvents.Execute(button.gameObject, new BaseEventData(eventSystem), ExecuteEvents.submitHandler);
+            Require(submitted, "Keyboard submit handler did not execute for: " + label);
+            _keyboardRouteCount++;
+            Append("KEYBOARD_SUBMIT_PASS | target=" + label);
+        }
+
         private void ClickButton(Button button, string label)
         {
             var pointer = CreatePointer(button, label);
             Require(ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler),
                 "Pointer click handler did not execute for: " + label);
+            _pointerRouteCount++;
             Append($"POINTER_CLICK_PASS | target={label} position={pointer.position.x:0.0},{pointer.position.y:0.0}");
         }
 

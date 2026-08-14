@@ -1,6 +1,17 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-13
+최종 갱신: 2026-08-14
+
+## Main Navigation HUD V2 (2026-08-14)
+
+- Runtime root: `Assets/Art/UI/Resources/MainNavigationV2/`
+- Status: CANONICAL GENERATED UI SKIN; 이전 `MainNavigation/` V1은 거절되어 runtime, ledger, 문서와 함께 제거함
+- Runtime set: `Frames` 22장, `Icons/Bottom` 5장, `Icons/Investment` 5장, `Markers` 2장, 합계 34장
+- Reference: `Assets/Art/UI/Resources/MainNavigationV2/Reference/main_navigation_v2_visual_target.png`
+- Provenance ledger: `Assets/Art/UI/Resources/MainNavigationV2/Generation/main_navigation_imagegen_ledger_v2.json`
+- Creation: OpenAI built-in ImageGen으로 생성한 밝은 cream/coral/teal 캐주얼 경영게임 surface와 아이콘. 글자, 회사명, 날짜·시간, 숫자, 버튼 label은 이미지에 굽지 않고 Unity TMP/uGUI가 렌더함.
+- Runtime ownership: frame은 Unity sliced Sprite, input state는 SpriteSwap으로 사용하며 PPU 100, Bilinear, Clamp, mipmap off, uncompressed import를 고정함.
+- Rights: project-owned generated assets; no third-party source material.
 
 ## Starter office entrance door (2026-08-13)
 

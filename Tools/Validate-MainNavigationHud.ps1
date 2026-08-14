@@ -70,7 +70,6 @@ $sourcePaths = @(
     & rg --files (Join-Path $projectRoot 'Assets\FamilyCompany\Presentation.Unity') -g '*.cs'
 )
 $compileArguments = @(
-    $csc,
     '-nologo',
     '-langversion:latest',
     '-target:library',
@@ -78,7 +77,9 @@ $compileArguments = @(
     '-warn:4',
     "-out:$runtimeOutput"
 ) + $referenceArguments + $sourcePaths
-& $dotnet @compileArguments
+$runtimeResponse = Join-Path $outputRoot 'runtime.rsp'
+[IO.File]::WriteAllLines($runtimeResponse, $compileArguments, [Text.UTF8Encoding]::new($false))
+& $dotnet $csc "@$runtimeResponse"
 if ($LASTEXITCODE -ne 0) { throw "Main navigation runtime compilation failed with exit code $LASTEXITCODE." }
 
 $editorOutput = Join-Path $outputRoot 'FamilyCompany.MainNavigation.Editor.External.dll'
