@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    { "pattern": "^Assets/FamilyCompany/Simulation/.*\\.cs$", "profile": "simulation-pure", "methods": [] },
+    { "pattern": "^Assets/FamilyCompany/Editor/(StaminaSimulationValidation|StaminaGameStateIntegrationValidation)\\.cs$", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.StaminaSimulationValidation.Run", "FamilyCompany.Editor.StaminaGameStateIntegrationValidation.Run"] },
+    { "pattern": "^Assets/FamilyCompany/Editor/OverheadStaminaBarValidation\\.cs$", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.OverheadStaminaBarValidation.Run"] },
+    { "pattern": "OfficeInteraction", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.OfficeInteractionCatalogValidation.Run", "FamilyCompany.Editor.OfficeRuntimeInteractionLifecycleValidation.Run"] },
+    { "pattern": "OfficeNavigation|Locomotion", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.OfficeNavigationValidation.Run"] },
+    { "pattern": "Seat|Seating|Chair|Sit", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.OfficeSeatingRulesValidation.Run", "FamilyCompany.Editor.OfficeGridQa.OfficeSeatEgressValidation.Validate"] },
+    { "pattern": "ManagementUi|MainNavigation|Hud", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.ManagementUiV2Validation.Run"] },
+    { "pattern": "Render|Pixel|Clarity", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.RenderClarityValidation.Run"] },
+    { "pattern": "^Assets/FamilyCompany/Editor/.*\\.cs$", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.PrototypeValidation.Run"] }
+  ],
+  "broadMethods": [
+    "FamilyCompany.Editor.PrototypeValidation.Run",
+    "FamilyCompany.Editor.OfficeGridQa.OfficeGridValidation.Run",
+    "FamilyCompany.Editor.OfficeNavigationValidation.Run",
+    "FamilyCompany.Editor.OfficeInteractionCatalogValidation.Run",
+    "FamilyCompany.Editor.OfficeRuntimeInteractionLifecycleValidation.Run",
+    "FamilyCompany.Editor.OfficeSeatingRulesValidation.Run",
+    "FamilyCompany.Editor.StaminaSimulationValidation.Run",
+    "FamilyCompany.Editor.StaminaGameStateIntegrationValidation.Run",
+    "FamilyCompany.Editor.OverheadStaminaBarValidation.Run",
+    "FamilyCompany.Editor.RenderClarityValidation.Run"
+  ]
+}

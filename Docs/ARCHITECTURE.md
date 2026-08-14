@@ -1,5 +1,17 @@
 # ARCHITECTURE
 
+## Fast QA boundary
+
+`FAST_QA_WINDOWS.cmd` owns short feedback selection, project-local locking, compatibility fingerprints,
+timing JSON, and hidden process ownership. The Editor-only `FastQaEditorEntry` invokes existing validations
+or a dedicated Windows Fast QA build. Release ownership stays with `WindowsPlayerBuild` and
+`BUILD_WINDOWS.cmd`; Fast QA output can never be promoted by release scripts.
+
+`FamilyCompany.Simulation` keeps `noEngineReferences`; its fast profile uses the compiler bundled with the
+selected Unity installation and runs deterministic smoke/stamina checks without starting Unity. Runtime
+scripts-only builds require a compatible prebuilt Fast QA player. Asset and serialization-layout changes
+cross the data-build boundary and fall back.
+
 ## 계층
 
 - FamilyCompany.Simulation: Unity 참조가 없는 시간, RNG, 이벤트, 가족, 회사, 회계, 역사 resolver, 시장 코어, 게임 상태

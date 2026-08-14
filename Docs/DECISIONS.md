@@ -17,6 +17,14 @@ Mental은 스트레스 저항 초기값을 만드는 일회성 이관에서만 �
 혼동한다. 업무 프로필과 상태를 분리하면 가족과 미래 직원이 같은 규칙으로 성장하면서 배속·저장에도
 동일한 결과를 유지한다.
 
+## 2026-08-14 / Warm incremental QA와 release build를 분리한다
+
+- 영구 detached QA worktree의 `Library/Bee`와 별도 Fast QA player cache를 반복 검증에 재사용한다.
+- 순수 Simulation은 Unity Editor를 시작하지 않고 설치된 Unity의 Roslyn/Mono로 검증하며, Editor gate는 manifest로 선택한다.
+- `BuildOptions.BuildScriptsOnly`는 호환되는 normal Fast QA player와 동일한 serialization-layout signature가 있을 때만 허용한다.
+- cold import, clean build, 최종 배포는 60초 SLO 통계에서 분리한다.
+- 측정 전 asmdef 분할, 매번 Library 삭제, 모든 Unity 프로세스 전역 대기/종료, asset 변경에 scripts-only 강제는 채택하지 않는다.
+
 ## 2026-08-14 / 메인 내비게이션은 V2 스킨과 실제 adapter route로 확정
 
 결정: 사무실 상단은 회사명·날짜/시간·1x/2x/4x만, 하단은 회사·인사·사업·연구·투자 5개만 둔다. ImageGen은 cream/coral/teal 9-slice surface와 아이콘만 제공하고 회사명, 날짜, 숫자, 상태, 버튼 글자는 TMP/uGUI가 별도 렌더한다. 검은 상·하단 바, 두꺼운 문서형 테두리, 회색 카드와 V1 자산은 사용하지 않는다.

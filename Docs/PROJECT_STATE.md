@@ -12,6 +12,13 @@
   Speed/Stamina/Mental은 이관에서만 운영/스트레스 저항 초기값으로 읽으며 신규 권위 계산에서는 사용하지 않는다.
 - 세부 수치와 XP/이관 경계는 `Docs/WORKFORCE_CAPABILITIES_V1.md`가 정본이다.
 
+## 2026-08-14 / Windows Fast QA candidate
+
+- `FAST_QA_WINDOWS.cmd`는 변경 분류, project-local lock, validation manifest, cache fingerprint, 순수 Simulation harness, Editor validation, scripts-only/normal Fast QA player build, D3D11 capture 재사용을 제공한다.
+- 출력은 `Artifacts/FastQa`로 격리되며 release build/deploy 경로는 변경하지 않는다.
+- 60초는 기능 PASS와 분리된 SLO다. cold import와 clean release는 별도 측정/최종 gate다.
+- gameplay, seating, UI, stamina, stats, Save 구현 파일 변경은 0이다.
+
 ## 2026-08-14 / Shared stamina + placed-facility recovery
 
 - All four family members start from one 10,000-unit profile. Integer GameTime drains 75% across a
