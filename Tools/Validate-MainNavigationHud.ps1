@@ -41,6 +41,7 @@ $runtimeOutput = Join-Path $outputRoot 'FamilyCompany.Runtime.External.dll'
 $referencePaths = @(
     $netstandard,
     (Join-Path $unityModules 'UnityEngine.CoreModule.dll'),
+    (Join-Path $unityModules 'UnityEngine.AnimationModule.dll'),
     (Join-Path $unityModules 'UnityEngine.PhysicsModule.dll'),
     (Join-Path $unityModules 'UnityEngine.AudioModule.dll'),
     (Join-Path $unityModules 'UnityEngine.InputLegacyModule.dll'),
