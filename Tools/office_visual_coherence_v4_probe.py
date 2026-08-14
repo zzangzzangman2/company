@@ -85,6 +85,11 @@ FURNITURE_FRONT_PNG = {
 }
 FURNITURE_ROOT = os.path.join(ART, "Office", "Tiles", "Furniture", "Runtime")
 
+# Mirrors OfficeSeatedUpperBodyProtectionRules.ProtectionBelowPelvisPx. Keep the two in step:
+# the redraw seam sits this far below the pelvis joint so the waist stays in front of the chair.
+PROTECTION_BELOW_PELVIS_PX = 12
+MODEL_UPPER_BODY_REDRAW = True
+
 
 # --------------------------------------------------------------------------- asset readers
 def _vec(text):
@@ -212,9 +217,15 @@ class Scene:
 
     def draw(self, only=None):
         for order, key, png, root, pivot, scale in sorted(self.layers, key=lambda t: (t[0], t[1])):
-            if only is not None and png not in only:
+            # In-memory layers carry the path of the asset they were derived from, so an `only`
+            # filter keeps a crop together with the sprite it came from.
+            tag = png if isinstance(png, str) else getattr(png, "probe_tag", None)
+            if only is not None and tag not in only:
                 continue
-            im = Image.open(png).convert("RGBA")
+            # A layer may be an already-built image rather than a path on disk: the seated
+            # upper-body redraw is a crop of the pose frame, not its own asset.
+            im = png.convert("RGBA") if isinstance(png, Image.Image) \
+                else Image.open(png).convert("RGBA")
             if abs(scale - 1.0) > 1e-6:
                 im = im.resize((round(im.width * scale), round(im.height * scale)), Image.NEAREST)
             bottom_left = (root[0] - pivot[0] * scale, root[1] - pivot[1] * scale)
@@ -340,9 +351,17 @@ def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CH
             scene.add(tile, root, (TILE_W / 2, 0.0), 1.0, -10000, key=y * 100 + x)
 
     marks = []
+    skipped_kinds = {}
     for item in layout["furniture"]:
         definition = catalog[item["kind"]]
         root = subcell_px(item["px2"], item["py2"])
+        # Kinds added to the layout after this probe was written have no PNG mapping yet.
+        # Skipping them keeps the seated-composite measurement usable instead of crashing the
+        # whole run, but it is reported rather than swallowed - the render is missing those
+        # objects and must not be read as a full picture of the office.
+        if item["kind"] not in FURNITURE_PNG:
+            skipped_kinds[item["kind"]] = skipped_kinds.get(item["kind"], 0) + 1
+            continue
         png = os.path.join(FURNITURE_ROOT, FURNITURE_PNG[item["kind"]])
         sort_world = sprite_point(root, definition["ground"], definition["sort"], definition["scale"])
         base_order = sorting_order(sort_world[1])
@@ -354,6 +373,10 @@ def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CH
         if front and definition["front_when_occupied"] and item["id"] in occupied_chairs:
             scene.add(os.path.join(FURNITURE_ROOT, front), root, definition["ground"],
                       definition["scale"], base_order + 2)
+
+    if skipped_kinds:
+        detail = ", ".join(f"{k} x{n}" for k, n in sorted(skipped_kinds.items()))
+        print(f"  [skipped: no PNG mapping] {detail}")
 
     if seated:
         for seat in layout["seats"]:
@@ -376,8 +399,27 @@ def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CH
             frame = poses[member]["frame"]
             chair_sort_world = sprite_point(chair_root, chair_def["ground"], chair_def["sort"],
                                             chair_def["scale"])
-            scene.add(frame_path(member, clip_name, frame), visual_root, pivot, character_scale,
-                      sorting_order(chair_sort_world[1]) + 1)
+            chair_base_order = sorting_order(chair_sort_world[1])
+            pose_png = frame_path(member, clip_name, frame)
+            scene.add(pose_png, visual_root, pivot, character_scale, chair_base_order + 1)
+
+            # Plane 5 of the shipped stack: OfficeSeatedUpperBodyProtectionRules redraws the pose
+            # above the pelvis seam on top of the chair foreground, so the torso is never buried
+            # under the chair. Without this the probe shows the chair back and the far armrest
+            # crossing the body, which is not what the game draws.
+            if MODEL_UPPER_BODY_REDRAW:
+                cutoff = max(0, int(pose[0][1]) - PROTECTION_BELOW_PELVIS_PX)
+                upper = Image.open(pose_png).convert("RGBA")
+                if cutoff > 0:
+                    # pose anchors are y-up from the sprite bottom; PIL rows run the other way
+                    alpha = upper.split()[3]
+                    cleared = Image.new("L", upper.size, 0)
+                    keep_rows = upper.height - cutoff
+                    cleared.paste(alpha.crop((0, 0, upper.width, keep_rows)), (0, 0))
+                    upper.putalpha(cleared)
+                upper.probe_tag = pose_png
+                scene.add(upper, visual_root, pivot, character_scale, chair_base_order + 3)
+
             marks.append(dict(member=member, seat=seat_world, work=work_world, opseat=opseat_world,
                               hand=hand_world, visual_root=visual_root, chair=chair_root, desk=desk_root))
     return scene, marks
