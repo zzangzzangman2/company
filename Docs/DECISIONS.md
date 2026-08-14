@@ -1,5 +1,19 @@
 # DECISIONS
 
+## 2026-08-14 / 건축·편집은 의미 layout + 소유 inventory + 복식부기 transaction으로 확정
+
+결정: 사무실 배치는 계속 `GameState.OfficeGrid`가 소유하고, 구매·보관·구매 basis는 새 `OfficeFurnitureInventoryState`가 소유한다. 모든 확정 명령은 먼저 immutable 후보 layout/inventory를 검증한 뒤 ledger를 한 번만 전기하고 두 상태를 함께 교체한다. Save schema v8은 inventory를 저장하며 v1-v7은 기존 grid 가구를 `LegacyIncluded`로 이관한다.
+
+이유: scene Transform이나 편집기 전용 화폐를 저장하면 렌더·충돌·소유권·회계가 서로 다른 사실이 된다. 의미 상태와 idempotent transaction ID를 분리하면 preview 취소와 실패가 0원 변경이고, 같은 가구 종류의 여러 instance와 판매 basis도 저장 후 동일하게 복원된다.
+
+결정: 가격은 2000년 한국 KRW 기준 reference price를 definition에 보존하고 모든 품목에 하나의 명시적 25% gameplay scale만 적용한다. 구매는 office furniture asset, 판매는 원가 제거와 처분손실(legacy included는 별도 sale income)로 기록한다.
+
+이유: 시작 자금 500만원 안에서 배치 실험이 가능해야 하지만 품목별 숨은 보정은 경제 규칙을 설명하거나 검증할 수 없다. 기준 가격과 gameplay 조정을 분리하면 현실성 근거와 게임 밸런스를 독립적으로 바꿀 수 있다.
+
+결정: 회사 UI는 새 하단 탭을 만들지 않고 `company.hub.build_editor` adapter를 호출한다. 가구 geometry/capability는 read-only query로 제공하며 movement·좌석·stamina·interaction lifecycle의 소유권은 기존 시스템에 남긴다.
+
+이유: 병렬 UI와 movement 작업의 파일을 직접 수정하지 않고도 안정적인 통합 경계를 제공해야 한다. 같은 query가 tile footprint, ground mask, access/egress를 공유하면 후속 소비자가 instance ID나 Sprite alpha를 충돌 정본으로 하드코딩하지 않는다.
+
 ## 2026-08-13 / compact 타이틀은 세로 확장 배경으로 레터박스를 제거
 
 결정: 1.35 미만 화면에서는 16:9 V2를 scale-to-fit하지 않고, V2의 위아래를 확장한 10:11 세로 V3를 aspect-fill한다. 가로 화면은 기존 V2를 그대로 사용하며 메뉴·돈다발 애니메이션 로직은 공유한다.

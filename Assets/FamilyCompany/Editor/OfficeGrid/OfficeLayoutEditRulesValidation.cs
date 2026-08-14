@@ -64,19 +64,10 @@ namespace FamilyCompany.Editor.OfficeGrid
                 "free standing furniture moves on its own");
 
             OfficeLayoutEditResult removed = OfficeLayoutEditRules.RemoveFurniture(start, "desk_father");
-            Require(failures, removed.Success, "removing a desk succeeds");
-            if (removed.Success)
-            {
-                Require(failures, removed.Grid.SeatSlots.All(s => s.SeatId != "seat_father"), "seat removed with it");
-                Require(
-                    failures,
-                    removed.Grid.Furniture.All(f => f.FurnitureId != "chair_father"),
-                    "chair removed with it");
-                Require(
-                    failures,
-                    removed.Grid.IsWalkable(new OfficeGridCoordinate(2, 8)),
-                    "floor reopened after removal");
-            }
+            Require(
+                failures,
+                !removed.Success && removed.Failure == OfficeLayoutEditFailure.RequiredWorkstation,
+                "assigned family workstation cannot be stored or sold");
 
             foreach (string propId in new[]
                      { "water", "plant", "sofa", "copier", "bookcase", "filing", "coffee", "meeting", "reception" })
@@ -84,7 +75,7 @@ namespace FamilyCompany.Editor.OfficeGrid
                 Require(
                     failures,
                     OfficeLayoutEditRules.RotateFurniture(start, propId).Success,
-                    propId + " rotates by mirroring its facing");
+                    propId + " rotates by a full 90-degree turn");
                 bool movable = false;
                 foreach (Vector2Int step in new[]
                          {
@@ -96,10 +87,9 @@ namespace FamilyCompany.Editor.OfficeGrid
             }
             Require(
                 failures,
-                !OfficeLayoutEditRules.CanRotate(start, "desk_player") &&
-                OfficeLayoutEditRules.RotateFurniture(start, "desk_player").Failure ==
-                OfficeLayoutEditFailure.RotationUnsupported,
-                "a workstation refuses rotation explicitly instead of falling back");
+                OfficeLayoutEditRules.CanRotate(start, "desk_player") &&
+                OfficeLayoutEditRules.RotateFurniture(start, "desk_player").Success,
+                "a workstation rotates desk, chair, seat, approach and facing atomically");
 
             var accepted = 0;
             var refused = 0;

@@ -24,7 +24,7 @@ namespace FamilyCompany.Editor
                 ValidateDailyJumpMatchesHourlySteps();
                 var longRunState = ValidateSevenDayBoundsAndRecovery();
                 ValidateForcedBurnoutRecovery();
-                ValidateSaveV7RoundTrip(longRunState);
+                ValidateCurrentSaveRoundTrip(longRunState);
                 Debug.Log("FAMILY_COMPANY_AUTONOMY_LONG_RUN_VALIDATION: PASS");
             }
             catch (Exception exception)
@@ -108,12 +108,12 @@ namespace FamilyCompany.Editor
             }
         }
 
-        private static void ValidateSaveV7RoundTrip(GameState source)
+        private static void ValidateCurrentSaveRoundTrip(GameState source)
         {
             var sourceDto = GameSaveMapper.ToDto(source);
-            AssertEqual(7, sourceDto.schemaVersion, "save schema v7");
+            AssertEqual(8, sourceDto.schemaVersion, "save schema v8");
             var restored = GameSaveMapper.FromDto(sourceDto);
-            AssertStateEqual(source, restored, "save v7 round trip");
+            AssertStateEqual(source, restored, "save v8 round trip");
         }
 
         private static void AssertStateEqual(GameState expected, GameState actual, string label)

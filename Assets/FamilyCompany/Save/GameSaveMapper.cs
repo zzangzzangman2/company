@@ -9,6 +9,7 @@ using FamilyCompany.Simulation.Finance;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.Market;
 using FamilyCompany.Save.OfficeGrid;
+using FamilyCompany.Save.OfficeFurniture;
 using FamilyCompany.Simulation.OfficeLayout;
 
 namespace FamilyCompany.Save
@@ -184,14 +185,15 @@ namespace FamilyCompany.Save
                     }).ToList()
                 },
                 stockMarket = ToStockMarketSaveDto(state.StockMarket),
-                officeGrid = OfficeGridSaveAdapter.ToDto(state.OfficeGrid)
+                officeGrid = OfficeGridSaveAdapter.ToDto(state.OfficeGrid),
+                officeFurnitureInventory = OfficeFurnitureInventorySaveAdapter.ToDto(state.OfficeFurnitureInventory)
             };
         }
 
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5 && save.schemaVersion != 6 && save.schemaVersion != 7)
+            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5 && save.schemaVersion != 6 && save.schemaVersion != 7 && save.schemaVersion != 8)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -388,6 +390,11 @@ namespace FamilyCompany.Save
                     ? throw new InvalidOperationException("Office grid data is incomplete.")
                     : OfficeGridSaveAdapter.Restore(save.officeGrid)
                 : OfficeGridLayouts.CreateStarterOfficeV1();
+            var officeFurnitureInventory = save.schemaVersion >= 8
+                ? save.officeFurnitureInventory == null
+                    ? throw new InvalidOperationException("Office furniture inventory data is incomplete.")
+                    : OfficeFurnitureInventorySaveAdapter.Restore(save.officeFurnitureInventory)
+                : OfficeFurnitureInventoryState.MigrateFromGrid(officeGrid, save.elapsedMinutes);
             return new GameState(
                 save.worldSeed,
                 new GameTime(save.elapsedMinutes),
@@ -397,7 +404,8 @@ namespace FamilyCompany.Save
                 contracts,
                 growth,
                 stockMarket,
-                officeGrid);
+                officeGrid,
+                officeFurnitureInventory);
         }
 
         private static StockMarketSessionSaveDto ToStockMarketSaveDto(StockMarketSessionStateDto state)

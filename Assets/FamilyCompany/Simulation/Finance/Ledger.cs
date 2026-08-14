@@ -11,6 +11,9 @@ namespace FamilyCompany.Simulation.Finance
         public const string SalesRevenue = "sales_revenue";
         public const string OperatingExpense = "operating_expense";
         public const string BrokerageAccount = "brokerage_account";
+        public const string OfficeFurnitureAssets = "office_furniture_assets";
+        public const string AssetDisposalLoss = "asset_disposal_loss";
+        public const string OfficeFurnitureSaleIncome = "office_furniture_sale_income";
     }
 
     public sealed class LedgerLine

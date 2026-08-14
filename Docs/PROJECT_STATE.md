@@ -1,5 +1,15 @@
 # PROJECT STATE
 
+## 2026-08-14 / Office Build Editor + Furniture Economy V1 candidate
+
+- 회사 hub가 연결할 안정 API `OfficeBuildEditorNavigationAdapter.EntryId/TryOpen`을 추가했다. 별도 여섯 번째 하단 탭은 만들지 않았고, 현재 Starter Office에서는 F2 개발 진입과 같은 transaction-backed 편집기를 연다.
+- 2000년 KRW 기준 13종 가구 카탈로그와 단일 25% gameplay scale, 구매 자산/현금 복식부기, 구매 basis별 판매·처분손실, 보관 재고와 안정 instance ID를 구현했다. Save schema는 v8이며 v1-v7 layout은 `LegacyIncluded` 재고로 이관한다.
+- 편집기는 구매·보관 배치·이동·90° 회전·보관·판매를 preview-first로 수행한다. 확정 전에는 돈·layout·runtime occupancy를 바꾸지 않으며, 확정 후 기존 actor snapshot rebuild를 사용해 가족 ID·에너지와 계약/자율 상태를 보존한다.
+- 모든 구매 가능 가구는 회전된 tile footprint, 4×4 subcell ground collision mask, 별도 occlusion envelope, capability/access socket, 좌석 front/left/right egress를 가진다. 입구 `(8,1)`, 지정 좌석 접근, capability 가구 접근과 BFS 연결을 끊는 배치는 거절한다.
+- Unity 6000.3.21f1에서 `OFFICE_FURNITURE_BUILD_SYSTEM_QA: PASS`(13종×4방향, 13종 전체 transaction lifecycle, 자금 부족, v8 roundtrip/v7 migration), `OFFICE_BUILD_EDITOR_RUNTIME_QA: PASS`(hub adapter, pause, 자판기 구매, runtime rebuild, tile anchor presenter, reachable capability, actors=4), Office Grid/Tile Snap/Isometric Depth/Layout Edit/Interaction Offer/Lifecycle/Occupancy 회귀가 PASS했다.
+- 공유 `OfficeGridFurniturePresenter` 변경은 resolver 호출 1곳(4줄)에 한정했다. 새 자판기와 향후 승인 방향 Sprite를 실제 runtime rebuild에서도 표시하기 위해 필요하며, main HUD·좌석·이동·벽·stamina·contract 소유 파일은 수정하지 않았다.
+- 남은 통합 접점은 회사 hub의 카드가 adapter를 호출하는 것과 movement 소유자가 read-only geometry query를 기존 collision catalog 대신 소비하는 것이다. 승인된 자판기 방향별 alpha PNG가 들어오기 전에는 투명 procedural sprite가 안전 fallback으로 표시된다.
+
 ## 2026-08-13 / Starting roster and single-door attendance correction
 
 - The initial office runtime now creates only the four family members. The eight employee candidates remain content for the future hiring system and no longer consume per-frame motion, occupancy, sprite animation, and depth-sort work before they are hired.
