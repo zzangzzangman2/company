@@ -34,8 +34,6 @@ namespace FamilyCompany.Presentation.Unity
         [SerializeField] private OfficeSeatingPresentationMode seatingPresentationMode =
             OfficeSeatingPresentationMode.Animated;
         [SerializeField, Range(0f, 20f)] private float facingHysteresisDegrees = 7.5f;
-        [SerializeField, Min(0.1f)] private float strideLength =
-            OfficeLocomotionGaitRules.DefaultStrideLength;
         private Vector3 _worldVelocity;
         private float _frameClock;
         private int _walkFrame;
@@ -51,9 +49,11 @@ namespace FamilyCompany.Presentation.Unity
         private bool _tileDisplacementDirection;
         private bool _externallyTicked;
         private Vector2 _tileFrameDisplacement;
+        private float _tileFrameTravelDistance;
         private Vector2 _tileSemanticDisplacement;
         private float _tileFrameDeltaTime;
         private float _tileActualSpeed;
+        private bool _tileIsMoving;
         private bool _tileFrameCollisionProjected;
         private bool _tilePresentationFrameOpen;
         private OfficeLocomotionFacingState _tileFacingState;
@@ -61,6 +61,8 @@ namespace FamilyCompany.Presentation.Unity
         private int _lastSemanticDirection;
         private int _lastMotionDirection;
         private bool _usedSemanticHeading;
+        private float _lastFacingAlignmentDot = 1f;
+        private float _lastFacingAngularErrorDegrees;
         private OfficeLocomotionGaitState _tileGaitState;
         private bool _tileGaitStateInitialized;
 
@@ -72,7 +74,7 @@ namespace FamilyCompany.Presentation.Unity
         public OfficeWorkMicroAction CurrentOfficeWorkMicroAction =>
             _officeWorkSession?.CurrentAction ?? OfficeWorkMicroAction.None;
         public bool IsMoving => _tileDisplacementDirection
-            ? _tileFrameDisplacement.sqrMagnitude > 0.0000001f
+            ? _tileIsMoving
             : _worldVelocity.sqrMagnitude > 0.0025f;
         public int ConfiguredFrameCount => walkFrames?.Length ?? 0;
         public int ConfiguredLocomotionTransitionFrameCount =>
@@ -118,20 +120,25 @@ namespace FamilyCompany.Presentation.Unity
         public bool IsNavigationAnimationSuppressed => _navigationAnimationSuppressed;
         public OfficeSeatingPresentationMode SeatingPresentationMode => seatingPresentationMode;
         public Vector2 AccumulatedTileDisplacement => _tileFrameDisplacement;
+        public Vector2 ActualTileDisplacement => _tileFrameDisplacement;
         public Vector2 SemanticTileDisplacement => _tileSemanticDisplacement;
+        public Vector2 RequestedTileDisplacement => _tileSemanticDisplacement;
         public float ActualTileSpeed => _tileActualSpeed;
         public bool WasCollisionProjected => _tileFrameCollisionProjected;
         public int SemanticDirection => _lastSemanticDirection;
+        public int RequestedDirection => _lastSemanticDirection;
         public int MotionDirection => _lastMotionDirection;
         public bool UsedSemanticHeading => _usedSemanticHeading;
+        public float FacingAlignmentDot => _lastFacingAlignmentDot;
+        public float FacingAngularErrorDegrees => _lastFacingAngularErrorDegrees;
         public OfficeLocomotionPhase LocomotionPhase => _tileGaitStateInitialized
             ? _tileGaitState.Phase
             : OfficeLocomotionPhase.Idle;
         public float GaitDistance => _tileGaitStateInitialized ? _tileGaitState.AccumulatedDistance : 0f;
         public float GaitPhase01 => OfficeLocomotionGaitRules.Phase01(
             GaitDistance,
-            Mathf.Max(0.1f, strideLength));
-        public float StrideLength => Mathf.Max(0.1f, strideLength);
+            OfficeLocomotionGaitRules.DefaultStrideLength);
+        public float StrideLength => OfficeLocomotionGaitRules.DefaultStrideLength;
 
         public void Configure(SpriteRenderer renderer, Sprite[] frames, float secondsPerFrame = 0.11f)
         {
@@ -153,8 +160,11 @@ namespace FamilyCompany.Presentation.Unity
                     nameof(newIdleFrames));
             if (newStrideLength <= 0f || float.IsNaN(newStrideLength) || float.IsInfinity(newStrideLength))
                 throw new ArgumentOutOfRangeException(nameof(newStrideLength));
+            if (Mathf.Abs(newStrideLength - OfficeLocomotionGaitRules.DefaultStrideLength) > 0.000001f)
+                throw new ArgumentException(
+                    "Starter Office locomotion uses the shared stride calibration for every actor.",
+                    nameof(newStrideLength));
             idleFrames = newIdleFrames == null ? Array.Empty<Sprite>() : (Sprite[])newIdleFrames.Clone();
-            strideLength = newStrideLength;
             ResetTileGaitState(_lastDirection);
             ApplyFrame();
         }
@@ -242,9 +252,11 @@ namespace FamilyCompany.Presentation.Unity
             _tileDisplacementDirection = true;
             _tilePresentationFrameOpen = false;
             _tileFrameDisplacement = actualDisplacement;
+            _tileFrameTravelDistance = actualDisplacement.magnitude;
             _tileSemanticDisplacement = actualDisplacement;
             _tileFrameDeltaTime = 1f;
             _tileActualSpeed = actualDisplacement.magnitude;
+            _tileIsMoving = false;
             _tileFrameCollisionProjected = false;
             _worldVelocity = new Vector3(actualDisplacement.x, 0f, actualDisplacement.y);
         }
@@ -254,9 +266,11 @@ namespace FamilyCompany.Presentation.Unity
             _tileDisplacementDirection = true;
             _tilePresentationFrameOpen = true;
             _tileFrameDisplacement = Vector2.zero;
+            _tileFrameTravelDistance = 0f;
             _tileSemanticDisplacement = Vector2.zero;
             _tileFrameDeltaTime = 0f;
             _tileActualSpeed = 0f;
+            _tileIsMoving = false;
             _tileFrameCollisionProjected = false;
             _usedSemanticHeading = false;
         }
@@ -272,10 +286,11 @@ namespace FamilyCompany.Presentation.Unity
             if (!_tilePresentationFrameOpen) BeginTilePresentationFrame();
             _tileSemanticDisplacement += semanticVelocity * deltaTime;
             _tileFrameDisplacement += actualDisplacement;
+            _tileFrameTravelDistance += actualDisplacement.magnitude;
             _tileFrameDeltaTime += deltaTime;
             _tileFrameCollisionProjected |= collisionProjected;
             _tileActualSpeed = _tileFrameDeltaTime > 0.000001f
-                ? _tileFrameDisplacement.magnitude / _tileFrameDeltaTime
+                ? _tileFrameTravelDistance / _tileFrameDeltaTime
                 : 0f;
             _worldVelocity = new Vector3(
                 _tileFrameDisplacement.x,
@@ -293,9 +308,11 @@ namespace FamilyCompany.Presentation.Unity
             _tileDisplacementDirection = true;
             if (_tilePresentationFrameOpen) return;
             _tileFrameDisplacement = Vector2.zero;
+            _tileFrameTravelDistance = 0f;
             _tileSemanticDisplacement = Vector2.zero;
             _tileFrameDeltaTime = 0f;
             _tileActualSpeed = 0f;
+            _tileIsMoving = false;
             _tileFrameCollisionProjected = false;
             _worldVelocity = Vector3.zero;
         }
@@ -317,6 +334,18 @@ namespace FamilyCompany.Presentation.Unity
                 _ => Vector2.zero
             };
             AccumulateTileMotion(heading, Vector2.zero, deltaTime, false);
+        }
+
+        public bool IsReadyForInteractionFacing(int desiredDirection)
+        {
+            if (desiredDirection < 0 || desiredDirection >= DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(desiredDirection));
+            EnsureTileGaitState();
+            return OfficeSharedLocomotionRules.IsInteractionFacingReady(
+                _tileGaitState,
+                _lastDirection,
+                desiredDirection,
+                _tileActualSpeed);
         }
 
         public void RestoreStandingFacing(int direction)
@@ -459,39 +488,34 @@ namespace FamilyCompany.Presentation.Unity
             if (_tileDisplacementDirection)
             {
                 EnsureTileFacingState();
-                int resolvedVisualDirection = _tileFacingState.VisualDirection;
-                bool hasSemanticRequest = _tileSemanticDisplacement.sqrMagnitude > 0.0000001f;
-                if (IsMoving || hasSemanticRequest)
-                {
-                    OfficeLocomotionFacingResult facing =
-                        OfficeLocomotionPresentationRules.ResolveFacing(
-                            _tileFacingState,
-                            new OfficeNavPoint(
-                                _tileSemanticDisplacement.x,
-                                _tileSemanticDisplacement.y),
-                            new OfficeNavPoint(
-                                _tileFrameDisplacement.x,
-                                _tileFrameDisplacement.y),
-                            _tileFrameDeltaTime > 0.000001f ? _tileFrameDeltaTime : Mathf.Max(0f, deltaTime),
-                            _tileFrameCollisionProjected,
-                            Mathf.Min(
-                                facingHysteresisDegrees,
-                                OfficeLocomotionPresentationRules.DefaultHysteresisDegrees));
-                    _tileFacingState = facing.State;
-                    resolvedVisualDirection = facing.State.VisualDirection;
-                    _lastSemanticDirection = facing.SemanticDirection;
-                    _lastMotionDirection = facing.MotionDirection;
-                    _usedSemanticHeading = facing.UsedSemanticHeading;
-                }
                 EnsureTileGaitState();
-                _tileGaitState = OfficeLocomotionGaitRules.Resolve(
-                    _tileGaitState,
-                    _tileFrameDisplacement.magnitude,
-                    _tileFrameDeltaTime > 0.000001f ? _tileFrameDeltaTime : Mathf.Max(0f, deltaTime),
-                    _tileSemanticDisplacement.sqrMagnitude > 0.0000001f,
-                    resolvedVisualDirection,
-                    Mathf.Max(0.1f, strideLength),
-                    WalkFrameCount);
+                float resolvedDeltaTime = _tileFrameDeltaTime > 0.000001f
+                    ? _tileFrameDeltaTime
+                    : Mathf.Max(0f, deltaTime);
+                OfficeSharedLocomotionFrameResult locomotion =
+                    OfficeSharedLocomotionRules.ResolveFrame(
+                        _tileFacingState,
+                        _tileGaitState,
+                        new OfficeNavPoint(
+                            _tileSemanticDisplacement.x,
+                            _tileSemanticDisplacement.y),
+                        new OfficeNavPoint(
+                            _tileFrameDisplacement.x,
+                            _tileFrameDisplacement.y),
+                        _tileFrameTravelDistance,
+                        resolvedDeltaTime,
+                        _tileFrameCollisionProjected,
+                        OfficeLocomotionGaitRules.DefaultStrideLength,
+                        WalkFrameCount);
+                _tileFacingState = locomotion.FacingState;
+                _tileGaitState = locomotion.GaitState;
+                _tileActualSpeed = locomotion.ActualSpeed;
+                _tileIsMoving = locomotion.IsMoving;
+                _lastSemanticDirection = locomotion.RequestedDirection;
+                _lastMotionDirection = locomotion.MotionDirection;
+                _usedSemanticHeading = locomotion.UsedRequestedFacing;
+                _lastFacingAlignmentDot = locomotion.FacingAlignmentDot;
+                _lastFacingAngularErrorDegrees = locomotion.FacingAngularErrorDegrees;
                 _lastDirection = _tileGaitState.DisplayDirection;
                 _walkFrame = _tileGaitState.Frame;
                 _frameClock = 0f;
@@ -629,7 +653,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private int ResolveLocomotionTransitionPose()
         {
-            float shuffleDistance = Mathf.Max(0.1f, strideLength) *
+            float shuffleDistance = OfficeLocomotionGaitRules.DefaultStrideLength *
                                     OfficeLocomotionGaitRules.ShortShuffleStrideFraction;
             return _tileGaitState.Phase switch
             {
@@ -811,6 +835,8 @@ namespace FamilyCompany.Presentation.Unity
             _lastSemanticDirection = _tileFacingState.VisualDirection;
             _lastMotionDirection = _tileFacingState.VisualDirection;
             _usedSemanticHeading = false;
+            _lastFacingAlignmentDot = 1f;
+            _lastFacingAngularErrorDegrees = 0f;
         }
 
         private void EnsureTileGaitState()

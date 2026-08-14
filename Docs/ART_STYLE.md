@@ -138,7 +138,9 @@
 ## Starter Office 이동 방향·배치 표현 규칙
 
 - 정규 걷기 방향 순서는 South, SouthWest, West, NorthWest, North, NorthEast, East, SouthEast다. 화면 XY의 실제 displacement만 이 순서를 결정한다.
-- 방향 전환은 실제 이동 픽셀이 발생한 프레임에만 허용한다. 장애물에 막힌 정지 프레임과 셀 코너 도착 프레임은 마지막 facing을 유지한다.
+- 걷는 프레임의 방향은 실제 이동 벡터를 최근접 45도 방향으로 양자화한 결과만 사용한다. 의미 입력, 경로 lookahead, 충돌 전 원래 방향으로 실제 이동과 다른 앞·뒤·옆 Sprite를 유지하지 않는다.
+- 장애물에 막히거나 상호작용 위치에 도착해 실제 변위가 0인 경우에는 보행 프레임을 진행하지 않는다. 요청 방향이 다르면 발을 고정한 제자리 pivot으로 몸 방향만 바꾸며 180°는 인접 45° 방향을 순서대로 거친다.
+- 6프레임 walk cycle은 모든 가족과 직원이 공유하는 stride calibration과 누적 실제 이동거리로 구동한다. 속도, 배속, 렌더 FPS가 달라져도 같은 이동거리의 발 위상은 같고 member별 보폭 수치는 두지 않는다.
 - 가족 네 명의 8방향 정본은 `HighMotionDirectionManifest.asset`의 source→canonical 순열과 사람 승인 체크로 관리한다. Runtime에서 memberId별 방향 교체 코드를 두지 않는다.
 - 방향 승인판은 화살표·방향 이름·파일 이름·현재 Sprite를 한 칸에 함께 표시한다. 정본 산출물은 `Artifacts/StarterOfficeDirectionQa/office-character-direction-contact-sheet.png`다.
 - 의자·책상 그림은 semantic placement anchor와 다른 위치로 자동 보정하지 않는다. 잘못된 chair-seat/desk-seat/pelvis/hand 정렬은 Editor에서 오류로 보여 주고 배치 또는 아트 캘리브레이션을 수정한다.

@@ -47,6 +47,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private DirectionalSpriteAnimator _animator;
         private OfficeCharacterSeatPoseCatalog _poseCatalog;
         private readonly List<OfficeGridCoordinate> _path = new List<OfficeGridCoordinate>();
+        private readonly List<OfficeGridCoordinate> _upcomingPathCells =
+            new List<OfficeGridCoordinate>(2);
         private int _pathIndex;
         private int _pathRevision;
         private OfficeRuntimeDestination? _destination;
@@ -184,7 +186,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public float ActualPresentationSpeed => _animator == null ? 0f : _animator.ActualTileSpeed;
         public bool WasCollisionProjected => _animator != null && _animator.WasCollisionProjected;
         public int SemanticDirection => _animator == null ? 0 : _animator.SemanticDirection;
+        public int RequestedDirection => _animator == null ? 0 : _animator.RequestedDirection;
         public int MotionDirection => _animator == null ? 0 : _animator.MotionDirection;
+        public float FacingAlignmentDot => _animator == null ? 1f : _animator.FacingAlignmentDot;
+        public float FacingAngularErrorDegrees => _animator == null
+            ? 0f
+            : _animator.FacingAngularErrorDegrees;
         public bool UsedSemanticHeading => _animator != null && _animator.UsedSemanticHeading;
         public OfficeLocomotionPhase LocomotionPhase => _animator == null
             ? OfficeLocomotionPhase.Idle
@@ -1101,9 +1108,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _pathIndex,
                 presentationTargetIndex,
                 currentCell);
-            var upcoming = new List<OfficeGridCoordinate>();
-            for (var index = _pathIndex; index < _path.Count && upcoming.Count < 2; index++)
-                upcoming.Add(_path[index]);
+            _upcomingPathCells.Clear();
+            for (var index = _pathIndex; index < _path.Count && _upcomingPathCells.Count < 2; index++)
+                _upcomingPathCells.Add(_path[index]);
             if (presentationTargetIndex != _presentationPathIndex)
             {
                 _presentationPathIndex = presentationTargetIndex;
@@ -1130,12 +1137,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _desiredVelocity,
                 _stuckSeconds,
                 _seat?.SeatId ?? string.Empty);
-            if (!_world.Occupancy.TryReservePath(_agentId, currentCell, upcoming))
+            if (!_world.Occupancy.TryReservePath(_agentId, currentCell, _upcomingPathCells))
             {
                 LastReservationBlocker = _world.Occupancy.DescribePathReservationBlocker(
                     _agentId,
                     currentCell,
-                    upcoming);
+                    _upcomingPathCells);
                 _stuckSeconds += deltaTime;
                 OfficeTrafficDecision blockedTraffic = _world.ResolveTraffic(
                     _agentId,
@@ -1144,7 +1151,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     AgentRadius,
                     _stuckSeconds);
                 if (_stuckSeconds >= OfficeNavigationTrafficRules.RecoveryThresholdSeconds &&
-                    TryTickGridYield(currentCell, upcoming, deltaTime, _destination.Value.SeatId))
+                    TryTickGridYield(
+                        currentCell,
+                        _upcomingPathCells,
+                        deltaTime,
+                        _destination.Value.SeatId))
                 {
                     if (_stuckSeconds >= 2.0f) _world.Occupancy.ClearReservations(_agentId);
                     return;
@@ -1212,11 +1223,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 var left = new OfficeGridCoordinate(-forward.Y, forward.X);
                 var right = new OfficeGridCoordinate(forward.Y, -forward.X);
                 bool preferLeft = StableYieldSide(_agentId);
-                var offsets = preferLeft
-                    ? new[] { left, right, new OfficeGridCoordinate(-forward.X, -forward.Y) }
-                    : new[] { right, left, new OfficeGridCoordinate(-forward.X, -forward.Y) };
-                foreach (OfficeGridCoordinate offset in offsets)
+                OfficeGridCoordinate reverse = new OfficeGridCoordinate(-forward.X, -forward.Y);
+                for (var offsetIndex = 0; offsetIndex < 3; offsetIndex++)
                 {
+                    OfficeGridCoordinate offset = offsetIndex switch
+                    {
+                        0 => preferLeft ? left : right,
+                        1 => preferLeft ? right : left,
+                        _ => reverse
+                    };
                     if (offset.X == 0 && offset.Y == 0) continue;
                     var candidate = new OfficeGridCoordinate(
                         currentCell.X + offset.X,
@@ -1477,7 +1492,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool TickStandingAlignment(float deltaTime)
         {
             if (_standingFacingDirection < 0) return false;
-            if (_animator.CurrentDirection == _standingFacingDirection)
+            if (_animator.IsReadyForInteractionFacing(_standingFacingDirection))
             {
                 _standingFacingDirection = -1;
                 if (_interactionPhase == OfficeRuntimeInteractionPhase.Aligning)
@@ -1645,8 +1660,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (_animator == null || targetVelocity.sqrMagnitude <= 0.000001f) return false;
             int current = _animator.CurrentDirection;
             int target = DirectionalSpriteAnimator.ResolveTileDirection(targetVelocity, current);
-            int delta = Mathf.Abs(current - target) % DirectionalSpriteAnimator.DirectionCount;
-            return Mathf.Min(delta, DirectionalSpriteAnimator.DirectionCount - delta) >= 3;
+            return OfficeSharedLocomotionRules.RequiresStationaryPivot(
+                current,
+                target,
+                _animator.LocomotionPhase);
         }
 
         private void StopMotion(bool keepStuck = false)

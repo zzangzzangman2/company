@@ -12,6 +12,7 @@ using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Unity.Profiling;
 using Object = UnityEngine.Object;
 
 namespace FamilyCompany.Presentation.Unity
@@ -41,6 +42,12 @@ namespace FamilyCompany.Presentation.Unity
         private StarterOfficeRuntimeBootstrap _starterRuntime;
         private string _playerQaFailure = string.Empty;
         private int _playerQaExitCode;
+        private ProfilerRecorder _qaGcAllocatedRecorder;
+        private ProfilerRecorder _qaMainThreadRecorder;
+        private bool _qaMovementProfilingActive;
+        private long _qaMaximumGcAllocatedBytes;
+        private long _qaMaximumMainThreadNanoseconds;
+        private int _qaMovementProfileSamples;
 
         private static readonly string[] QaMemberIds =
             { "player", "older_sister", "father", "mother" };
@@ -100,6 +107,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private void Update()
         {
+            SampleMovementProfile();
             if (Input.GetKeyDown(JumpKey)) BeginShowStarterOffice();
             if (_loading)
             {
@@ -470,6 +478,8 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
 
+            BeginMovementProfile();
+
             yield return RunAttendanceFlowQa(bootstrap);
             if (QuitIfPlayerQaFailed(Time.timeScale)) yield break;
             yield return RunRealtimeAutonomyClockQa(bootstrap);
@@ -506,6 +516,7 @@ namespace FamilyCompany.Presentation.Unity
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
 
             OfficeRuntimeOccupancy occupancy = _starterRuntime.World.Occupancy;
+            string movementProfile = EndMovementProfile();
             Debug.Log(
                 "FAMILY_COMPANY_STARTER_TILE_MAIN_FLOW: PASS | " +
                 $"layoutHash={_starterRuntime.LayoutHash} furniture={_starterRuntime.World.Grid.Furniture.Count} " +
@@ -513,7 +524,7 @@ namespace FamilyCompany.Presentation.Unity
                 $"replans={_starterRuntime.World.ReplanCount} arrivals={_starterRuntime.World.ArrivalCount} " +
                 $"blockedStaticAttempts={occupancy.StaticViolationCount} " +
                 $"blockedInteractionAttempts={occupancy.InteractionViolationCount} " +
-                $"agentPenetrations={occupancy.AgentPenetrationCount}");
+                $"agentPenetrations={occupancy.AgentPenetrationCount} | {movementProfile}");
             Time.timeScale = previousTimeScale;
             yield return null;
             Application.Quit(0);
@@ -992,12 +1003,25 @@ namespace FamilyCompany.Presentation.Unity
                 float observedGaitDistance = player.GaitDistance;
                 float observedGaitPhase = player.GaitPhase01;
                 OfficeLocomotionPhase observedLocomotionPhase = player.LocomotionPhase;
+                bool observedPivot = false;
+                bool movedDuringPivot = false;
                 bool observedProjection = false;
                 string observedSprite = string.Empty;
-                float started = Time.time;
-                while (Time.time - started < 2f)
+                float started = Time.unscaledTime;
+                var observationFrames = 0;
+                // A cold Windows player can spend more than two scaled seconds in its first
+                // rendered frame. The intentional planted pivot needs up to four presentation
+                // frames, so retain a small real-time window and always sample at least eight
+                // rendered frames before deciding that held input produced no movement.
+                while (observationFrames < 8 || Time.unscaledTime - started < 0.5f)
                 {
                     yield return null;
+                    observationFrames++;
+                    if (player.LocomotionPhase == OfficeLocomotionPhase.Pivot)
+                    {
+                        observedPivot = true;
+                        movedDuringPivot |= player.LastActualDisplacement.sqrMagnitude > 0.0000000001f;
+                    }
                     if (player.LastActualDisplacement.sqrMagnitude > observedDisplacement.sqrMagnitude)
                         observedDisplacement = player.LastActualDisplacement;
                     if (player.AccumulatedFrameDisplacement.sqrMagnitude <= 0.0000001f) continue;
@@ -1021,7 +1045,19 @@ namespace FamilyCompany.Presentation.Unity
                 yield return null;
                 if (observedDisplacement.sqrMagnitude <= 0.0000001f)
                 {
-                    FailPlayerQa(51, "player produced no displacement for " + QaDirectionNames[direction]);
+                    FailPlayerQa(
+                        51,
+                        $"player produced no displacement for {QaDirectionNames[direction]} " +
+                        $"after {observationFrames} frames: phase={player.Phase} " +
+                        $"locomotion={player.LocomotionPhase} direction={player.CurrentDirection} " +
+                        $"desired={player.DesiredVelocity} blocker={player.LastMovementBlocker}");
+                    yield break;
+                }
+                if (movedDuringPivot)
+                {
+                    FailPlayerQa(
+                        52,
+                        $"player translated during planted pivot for {QaDirectionNames[direction]}");
                     yield break;
                 }
                 int expected = DirectionalSpriteAnimator.ResolveTileDirection(observedDisplacement);
@@ -1058,8 +1094,9 @@ namespace FamilyCompany.Presentation.Unity
                     $"stepDisplacement={observedDisplacement} frameDisplacement={observedFrameDisplacement} " +
                     $"semanticDisplacement={observedSemanticDisplacement} actualSpeed={observedSpeed:F3} " +
                     $"semanticDir={observedSemanticDirection} motionDir={observedMotionDirection} " +
-                    $"visualDir={observedVisualDirection} projected={observedProjection} " +
-                    $"locomotion={observedLocomotionPhase} gaitDistance={observedGaitDistance:F3} " +
+                     $"visualDir={observedVisualDirection} projected={observedProjection} " +
+                     $"pivotObserved={observedPivot} observationFrames={observationFrames} " +
+                     $"locomotion={observedLocomotionPhase} gaitDistance={observedGaitDistance:F3} " +
                     $"gaitPhase={observedGaitPhase:F4} walkFrame={observedWalkFrame} " +
                     $"spriteAssetPath=Assets/Art/Characters/Player/Pixel/HighMotion/Frames/{observedSprite}.png");
             }
@@ -1100,9 +1137,8 @@ namespace FamilyCompany.Presentation.Unity
                 float started = Time.time;
                 Vector2 previous = player.Position;
                 float maximumFrameDisplacement = 0f;
-                float mismatchedFacingSeconds = 0f;
-                float reverseFacingSeconds = 0f;
-                float maximumReverseFacingSeconds = 0f;
+                float maximumFacingError = 0f;
+                float minimumFacingDot = 1f;
                 int reverseFacingFrames = 0;
                 int projectedFrames = 0;
                 while (Time.time - started < 10f)
@@ -1112,33 +1148,31 @@ namespace FamilyCompany.Presentation.Unity
                         maximumFrameDisplacement,
                         Vector2.Distance(previous, player.Position));
                     previous = player.Position;
-                    if (player.AccumulatedFrameDisplacement.sqrMagnitude <= 0.0000001f) continue;
+                    if (player.AccumulatedFrameDisplacement.sqrMagnitude <= 0.0000000001f) continue;
                     if (player.WasCollisionProjected) projectedFrames++;
+                    maximumFacingError = Mathf.Max(
+                        maximumFacingError,
+                        player.FacingAngularErrorDegrees);
+                    minimumFacingDot = Mathf.Min(minimumFacingDot, player.FacingAlignmentDot);
                     int expectedDirection = player.MotionDirection;
                     int directionDelta = Mathf.Abs(player.CurrentDirection - expectedDirection);
                     directionDelta = Mathf.Min(directionDelta, DirectionalSpriteAnimator.DirectionCount - directionDelta);
-                    if (directionDelta >= 3)
+                    // Every moving frame is strict: the displayed octant is the nearest octant of
+                    // actual displacement. There is no semantic-facing grace window.
+                    if (directionDelta != 0 ||
+                        player.FacingAngularErrorDegrees >
+                        OfficeSharedLocomotionRules.MaximumFacingErrorDegrees + 0.0001f ||
+                        player.FacingAlignmentDot + 0.000001f <
+                        OfficeSharedLocomotionRules.MinimumFacingAlignmentDot)
                     {
                         reverseFacingFrames++;
-                        reverseFacingSeconds += Time.deltaTime;
-                        maximumReverseFacingSeconds = Mathf.Max(
-                            maximumReverseFacingSeconds,
-                            reverseFacingSeconds);
-                    }
-                    else reverseFacingSeconds = 0f;
-                    if (directionDelta >= 2) mismatchedFacingSeconds += Time.deltaTime;
-                    else mismatchedFacingSeconds = 0f;
-                    // Any actual walking frame that faces three or four octants away is a visible
-                    // backwards step. Reversals must stop and pivot before displacement resumes.
-                    if (directionDelta >= 3)
-                    {
                         FailPlayerQa(
                             65 + scenario,
-                            $"player {labels[scenario]} facing diverged: semanticDir={player.SemanticDirection} " +
+                            $"player {labels[scenario]} facing diverged: requestedDir={player.RequestedDirection} " +
                             $"motionDir={player.MotionDirection} visualDir={player.CurrentDirection} " +
-                            $"usedSemantic={player.UsedSemanticHeading} projected={player.WasCollisionProjected} " +
-                            $"mismatchSeconds={mismatchedFacingSeconds:F3} " +
-                            $"reverseSeconds={reverseFacingSeconds:F3} reverseFrames={reverseFacingFrames}");
+                            $"usedRequested={player.UsedSemanticHeading} projected={player.WasCollisionProjected} " +
+                            $"dot={player.FacingAlignmentDot:F6} " +
+                            $"error={player.FacingAngularErrorDegrees:F4} reverseFrames={reverseFacingFrames}");
                         yield break;
                     }
                 }
@@ -1161,8 +1195,8 @@ namespace FamilyCompany.Presentation.Unity
                     $"STARTER_OFFICE_PLAYER_COLLISION_SAMPLE_PASS | target={labels[scenario]} " +
                     $"duration=10.00 timeScale={Time.timeScale:F1} maxFrameDelta={maximumFrameDisplacement:F4} " +
                     $"projectedFrames={projectedFrames} reverseFacingFrames={reverseFacingFrames} " +
-                    $"maxReverseFacingSeconds={maximumReverseFacingSeconds:F3} " +
-                    $"maxMismatchSeconds={mismatchedFacingSeconds:F3} replans=0 arrivals=0 | " +
+                    $"strictFacingErrorMax={maximumFacingError:F4} " +
+                    $"strictFacingDotMin={minimumFacingDot:F6} replans=0 arrivals=0 | " +
                     OccupancyMetricSummary());
             }
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
@@ -2027,15 +2061,46 @@ namespace FamilyCompany.Presentation.Unity
                 FailPlayerQa(63, "slot 3 load failed: " + bootstrap.WorldNotice);
                 yield break;
             }
+            string immediateStateHash = bootstrap.State.OfficeGrid.ComputeLayoutHash();
+            if (bootstrap.State.Time.ElapsedMinutes != savedMinutes ||
+                !string.Equals(immediateStateHash, savedLayoutHash, StringComparison.Ordinal))
+            {
+                FailPlayerQa(
+                    64,
+                    $"save/load state mismatch: minutes={bootstrap.State.Time.ElapsedMinutes}/{savedMinutes} " +
+                    $"stateHash={immediateStateHash} expected={savedLayoutHash}");
+                yield break;
+            }
+
+            var loadingFrames = 0;
+            while (ScenePreviewJump.IsPresentationLoading && loadingFrames < 900)
+            {
+                yield return null;
+                loadingFrames++;
+            }
+            if (ScenePreviewJump.IsPresentationLoading ||
+                bootstrap.State.Time.ElapsedMinutes != savedMinutes)
+            {
+                FailPlayerQa(
+                    64,
+                    $"save/load presentation did not keep authoritative time paused: " +
+                    $"loading={ScenePreviewJump.IsPresentationLoading} frames={loadingFrames} " +
+                    $"minutes={bootstrap.State.Time.ElapsedMinutes}/{savedMinutes}");
+                yield break;
+            }
+
+            // Once the loading presentation has closed, the normal realtime clock is expected to
+            // resume. Give the rebuilt runtime its historical settling window without incorrectly
+            // requiring that ordinary post-load playtime remain frozen.
             for (var frame = 0; frame < 60; frame++) yield return null;
             string restoredStateHash = bootstrap.State.OfficeGrid.ComputeLayoutHash();
-            if (bootstrap.State.Time.ElapsedMinutes != savedMinutes ||
-                !string.Equals(restoredStateHash, savedLayoutHash, StringComparison.Ordinal) ||
+            long postLoadMinutes = bootstrap.State.Time.ElapsedMinutes;
+            if (!string.Equals(restoredStateHash, savedLayoutHash, StringComparison.Ordinal) ||
                 !string.Equals(_starterRuntime.LayoutHash, savedLayoutHash, StringComparison.Ordinal))
             {
                 FailPlayerQa(
                     64,
-                    $"save/load runtime mismatch: minutes={bootstrap.State.Time.ElapsedMinutes}/{savedMinutes} " +
+                    $"save/load runtime mismatch: minutes={postLoadMinutes}/{savedMinutes} " +
                     $"stateHash={restoredStateHash} runtimeHash={_starterRuntime.LayoutHash} expected={savedLayoutHash}");
                 yield break;
             }
@@ -2048,7 +2113,9 @@ namespace FamilyCompany.Presentation.Unity
             Debug.Log(
                 "STARTER_OFFICE_CONTRACT_SAVE_LOAD_QA_PASS | offer=" + offer.OfferId +
                 " | member=mother | slot=3 | layoutHash=" + savedLayoutHash +
-                " | elapsedMinutes=" + savedMinutes + " | attendanceDoorCueDelta=0");
+                " | loadedMinutes=" + savedMinutes + " | postLoadMinutes=" + postLoadMinutes +
+                " | loadingFrames=" + loadingFrames + " | loadingClockDelta=0" +
+                " | attendanceDoorCueDelta=0");
         }
 
         private IEnumerator WaitForRuntimeReady(int exitCode, string label)
@@ -2183,12 +2250,63 @@ namespace FamilyCompany.Presentation.Unity
         private bool QuitIfPlayerQaFailed(float previousTimeScale)
         {
             if (_playerQaFailure.Length == 0) return false;
+            string movementProfile = EndMovementProfile();
             Debug.LogError(
                 "FAMILY_COMPANY_STARTER_TILE_MAIN_FLOW: FAIL | code=" + _playerQaExitCode +
-                " | " + _playerQaFailure);
+                " | " + _playerQaFailure + " | " + movementProfile);
             Time.timeScale = previousTimeScale;
             Application.Quit(_playerQaExitCode == 0 ? 30 : _playerQaExitCode);
             return true;
+        }
+
+        private void BeginMovementProfile()
+        {
+            EndMovementProfile();
+            _qaMaximumGcAllocatedBytes = 0L;
+            _qaMaximumMainThreadNanoseconds = 0L;
+            _qaMovementProfileSamples = 0;
+            _qaGcAllocatedRecorder = ProfilerRecorder.StartNew(
+                ProfilerCategory.Memory,
+                "GC Allocated In Frame",
+                1);
+            _qaMainThreadRecorder = ProfilerRecorder.StartNew(
+                ProfilerCategory.Internal,
+                "Main Thread",
+                1);
+            _qaMovementProfilingActive = true;
+        }
+
+        private void SampleMovementProfile()
+        {
+            if (!_qaMovementProfilingActive) return;
+            if (_qaGcAllocatedRecorder.Valid)
+                _qaMaximumGcAllocatedBytes = Math.Max(
+                    _qaMaximumGcAllocatedBytes,
+                    _qaGcAllocatedRecorder.LastValue);
+            if (_qaMainThreadRecorder.Valid)
+                _qaMaximumMainThreadNanoseconds = Math.Max(
+                    _qaMaximumMainThreadNanoseconds,
+                    _qaMainThreadRecorder.LastValue);
+            _qaMovementProfileSamples++;
+        }
+
+        private string EndMovementProfile()
+        {
+            if (!_qaMovementProfilingActive) return "movementProfiler=inactive";
+            SampleMovementProfile();
+            string summary =
+                $"movementProfilerSamples={_qaMovementProfileSamples} " +
+                $"maxGcAllocFrame={_qaMaximumGcAllocatedBytes}B " +
+                $"maxMainThread={_qaMaximumMainThreadNanoseconds / 1000000f:F3}ms";
+            _qaGcAllocatedRecorder.Dispose();
+            _qaMainThreadRecorder.Dispose();
+            _qaMovementProfilingActive = false;
+            return summary;
+        }
+
+        private void OnDestroy()
+        {
+            EndMovementProfile();
         }
 
         private static OfficeTileMigrationPreviewBootstrap FindBootstrap(Scene scene)
