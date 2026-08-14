@@ -35,8 +35,10 @@
   coroutine으로 전부 사전 계산한다. 진행률을 `ScenePreviewJump` Loading UI에 반영하고 매 4노드마다
   프레임을 양보한다. layout rebuild도 같은 준비가 끝나기 전에는 runtime ready를 열지 않는다.
 - 동일 1배속 Development 시나리오에서 정적 reachability flood는 `90회/8,733 방문 노드`에서
-  `0회/0 방문 노드`로, main-thread p99는 `184.631ms`에서 `22.468ms`로 줄었다. Release/D3D11 정상
-  구간 wall max는 1배속 `23.424ms`, 4배속 `36.165ms`이며, 두 배속 모두 플레이 중 50ms 이상 프레임은 없다.
+  `0회/0 방문 노드`로, main-thread p99는 `184.631ms`에서 `22.468ms`로 줄었다. 최종 격리
+  Release/D3D11 정상 구간 wall max는 1배속 `23.943ms`, 4배속 `36.965ms`이며, 두 배속 모두 플레이 중
+  50ms 이상 프레임은 없다. 빌드→1배속→4배속을 직렬 실행했고 각 플레이 측정 중 루트 플레이어는
+  최대 1개, Unity/임포트/빌드 background worker와 다른 작업방 루트는 0개였다.
 - `OfficeHybridContinuousDepth`는 재사용 workspace를 사용하며 warmed 100회 정렬의 managed allocation은
   0B다. 의자 presentation 정렬은 수정하지 않았고 계측상 최대 `0.166ms`로 정지 원인이 아니다.
 - 정적 캐시 invalidation, first/warm call, 이동·충돌·상호작용·depth, Windows Release build 검증을

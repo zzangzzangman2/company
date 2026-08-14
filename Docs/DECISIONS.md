@@ -59,8 +59,8 @@ lazy flood-fill을 허용하지 않는다.
 
 이유: 09:00과 반복 스케줄에서 capability/offer query가 같은 13×13 layout을 90번 동기 flood-fill하고
 8,733노드를 다시 방문해 4.7초 main-thread 정지를 만들었다. 분산 lazy 안은 첫 상호작용으로 작업을 옮겨
-최대 2.4초 프레임을 남겼다. 완전 prewarm과 명시적 revision 경계는 Loading 2.20초를 쓰는 대신 Release
-플레이 정상 구간을 1배속 23.424ms, 4배속 36.165ms wall max로 제한하며 stale graph도 막는다.
+최대 2.4초 프레임을 남겼다. 완전 prewarm과 명시적 revision 경계는 Loading 2.27초 이하를 쓰는 대신
+격리 Release 플레이 정상 구간을 1배속 23.943ms, 4배속 36.965ms wall max로 제한하며 stale graph도 막는다.
 
 ## 2026-08-14 / UI Remaster V3와 MapleStory typography를 전체 화면의 공용 정본으로 사용
 
