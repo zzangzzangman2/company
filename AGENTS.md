@@ -6,7 +6,7 @@
 2. Docs/CANON.md
 3. Docs/DECISIONS.md
 4. Docs/ARCHITECTURE.md
-5. 시각/씬 작업이면 Docs/ART_STYLE.md와 Docs/OFFICE_V0_2.md
+5. 시각/씬 작업이면 Docs/ART_STYLE.md, Docs/ARCHITECTURE.md, Docs/OFFICE_BUILD_EDITOR_V1.md, Docs/MAIN_NAVIGATION_HUD_V2.md
 6. 회사 역사·시장·계약 작업이면 Docs/ULTIMATE_VISION.md, Docs/REAL_COMPANY_ALT_HISTORY.md, Docs/SIMUL_MARKET_PORT.md, Docs/CONTRACTS_V0_3.md
 7. 작업과 직접 관련된 추가 문서
 
@@ -29,6 +29,7 @@
 - 생성 에셋은 사용자가 권리를 보유한다고 명시했다. 출처와 생성/편집 이력은 Docs/ASSET_MANIFEST.md에 남긴다.
 - Library, Temp, Logs, UserSettings는 Git에 넣지 않는다. Assets의 .meta는 반드시 추적한다.
 - 다른 작업자의 변경을 삭제하거나 되돌리지 않는다.
+- Docs/PROJECT_STATE.md는 현재 상태만 기록한다. `Docs/History/Reports/`의 완료 보고서는 당시 증거이며 현재 정본이나 미완료 목록을 덮어쓰지 않는다.
 
 ## History 데이터 소유권
 

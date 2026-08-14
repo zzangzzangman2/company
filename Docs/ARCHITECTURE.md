@@ -24,7 +24,7 @@
 - 저장 대상은 의미 상태다. Transform, 렌더러 캐시, UI 선택 상태는 저장하지 않는다.
 - 가족 자율 행동은 30분 절대 경계에서 진행하며 현재 행동·의미 목적지·처리 시각·누적 업무/휴식·사건만 저장한다. 같은 seed와 목표 시각이면 시간 진행 호출을 나눠도 결과가 같다.
 - P1.5 `OfficeInteractions`는 Unity 참조가 없는 Interaction Definition/Catalog와 정수 Utility 점수 추적을 소유한다. 현재 선택 정본은 기존 `WeightedPick`이며 Shadow 선택과 score trace는 저장 상태나 행동 결과를 변경하지 않는다.
-- 계약 저장은 제안 원본, 수락·납기·해결 시각, 상태, 완료 인시와 가족별 기여 인시를 보존한다. 스키마 v2는 스키마 v1을 빈 계약 목록으로 이관한다.
+- 전체 저장 스키마는 `GameSaveDto v8`이며 v1~v7을 읽어 결정론적으로 이관한다. 계약 페이로드는 v2에서 도입되었고 제안 원본, 수락·납기·해결 시각, 상태, 완료 인시와 가족별 기여 인시를 보존한다. 계약 이전 v1 저장은 빈 계약 목록으로 이관한다.
 - 주식시장 session·호가·체결 계산은 순수 C#이며 `companyId + date + minute + pulse`를 안정 키로 사용한다.
 - 플레이어 지정가 대기주문은 가격우선·시간우선 FIFO와 queue-ahead를 순수 C#으로 유지하고, Unity UI·저장·원장은 이 코어의 결과만 투영한다.
 - 호가 프레젠테이션은 내부 10단계를 유지하고 화면에 최우선 7매도+7매수를 표시한다.
@@ -46,52 +46,33 @@
 
 Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 준다. 구역 이동은 현재 우선순위가 공간 감각 검증이므로 포털 없이 직접 걸어서 가능하게 시작한다. 향후 맵이 커지면 의미 위치 ID와 전환 시스템을 추가한다.
 
-## 2.5D 도트 프레젠테이션
+## 등각 도트 프레젠테이션과 OfficeGrid
 
-- 사무실과 가구는 실제 Collider를 가진 3D 모듈이다.
-- Main Camera는 직교 투영으로 플레이어를 추적한다.
-- PixelatedCameraEffect가 월드 렌더를 낮은 내부 해상도로 축소하고 Point 필터로 확대한다.
-- 플레이어·누나·부모와 향후 직원은 실제 렌더 프레임 변위를 45도 옥턴트로 양자화해 8방향 Sprite를 선택한다. 방향별 6프레임 보행 위상은 시간 경과가 아니라 공용 stride 대비 누적 실제 이동거리로 계산한다.
-- 고동작 시트의 24개 실제 실루엣은 오프라인 분리기가 상체 중심·발 기준선으로 정렬해 256×256 단일 PNG 48개로 만든다. Editor 빌더는 이를 Point·180 PPU·하단 피벗 Sprite로 임포트하며 런타임 코드가 원본 PNG를 자르지 않는다.
-
-## OfficeGrid 타일 이행 경계
-
-- `FamilyCompany.Simulation.OfficeLayout.OfficeGrid`가 폭·높이·행 우선 바닥 종류·통행 가능 배열·배치 가구·좌석 슬롯을 불변 의미 상태로 소유한다. Unity Transform과 화면 픽셀은 들어가지 않는다.
-- 저장 스키마 v6은 `officeGrid` 서브 페이로드를 보존한다. v1~v5 저장은 결정론적인 13×13 초기 격자로 이관하고, 저장·복원 뒤 `ComputeLayoutHash()`가 같아야 한다.
-- `OfficeGridTilemapPresenter`는 Unity 내장 Isometric Grid/Tilemap에 320×160, 180 PPU 바닥 Tile을 투영할 뿐 격자 상태를 소유하지 않는다.
-- 캐릭터 프레젠테이션은 그리드 셀 중심을 발 기준점으로 사용하고, 화면 Y(격자의 x+y에 대응)에 따라 매 프레임 정렬한다. 누적 스케일은 균등이어야 하고 16:9 기본 카메라에서 실제 실루엣 높이는 화면의 14~18%다.
-- T1~T3은 `OfficeTileMigrationPreview` 격리 씬에서 검증한다. 현재 `Prototype01`의 OfficeVisualV2·3D Collider·웨이포인트·좌석·계약은 T4/T5 이관 전까지 런타임 폴백이며 삭제하지 않는다.
-- 16:9가 아닌 화면에서는 타일이나 캐릭터를 비균등하게 늘리지 않는다. `OfficeGridCameraFitter`가 균등 직교 크기만 늘려 네 격자 모서리를 보존한다.
-- `OfficeGridLayouts.CreateMigrationPreview()`는 18개 가구·12종 kind·파티션을 가진 T1~T5 회귀 fixture다. 실제 새 게임과 v1~v5 저장 이관은 같은 13×13 구조에서 불필요한 파티션을 뺀 `CreateStarterOfficeV1()` 17개 가구·11종을 사용한다. Preview fixture를 게임 기본값으로 다시 연결하지 않는다.
-- 각 `OfficeSeatSlot`에서 파생한 `OfficeWorkstationSlot`은 desk/chair/seat ID, seat/approach cell, facing, 반 셀 정밀도의 `OperatorAnchor`를 한 의미 단위로 묶는다. 저장 서브스키마 v3은 `operatorX2/operatorY2`를 보존하고 v1은 레거시 좌석, v2는 연결된 work-surface 방향의 반 셀 operator anchor로 안전 이관한다.
-- `OfficeFurnitureVisualCatalog` calibration v2는 12종·방향별 base/front Sprite, ground/sort, 네 점 ground footprint, 의미 footprint 크기, chair seat, desk operator seat/work socket, 양의 균등 scale을 명시한다. 네 점은 타일맵이 독립 계산한 footprint 투영과 각 점 2px 이내여야 한다.
-- `OfficeGridFurniturePresenter`는 의미 root를 footprint 중심·scale 1에 고정하고, 자식 `VisualRoot`에만 균등 scale과 승인된 socket 정렬을 적용한다. desk를 먼저 배치하고 desk operator seat socket에 chair seat를 맞춘다. chair·desk의 의미 root와 footprint는 이 시각 보정으로 이동하지 않는다.
-- `OfficeGridCharacterMover`의 의미 root는 항상 scale 1·좌석 셀 중심이며 SpriteRenderer는 균등 scale 1.69의 자식 `VisualRoot`에 있다. 착석 Sprite가 적용된 직후 `OfficeRuntimeAgent`가 승인된 실제 pelvis를 chair seat로 옮기는 translation만 적용한다. `VisualRoot.localRotation`은 identity, pose scale은 1.0이며 일어서면 위치·회전·scale을 정본 상태로 복원한다.
-- `OfficeCharacterSeatPoseCatalog` calibration v5의 키는 member/direction/clip/frame이고 각 승인 항목은 `humanApproved`와 source Sprite SHA-256을 가진다. Starter Runtime은 네 가족의 `NorthWest` SitDown 4 + Work 6 + StandUp 4, 총 56개가 모두 승인된 경우에만 Animated를 사용한다. 누락·미승인 시에는 승인된 `Work/0` SafeStaticWork로 fail-closed하며 다른 방향이나 프레임으로 추측 fallback하지 않는다.
-- 착석 중 정렬 stack은 `OfficeRuntimeWorkstationService`만 소유한다. character order를 기준으로 desk base `-2`, chair base `-1`, character `0`, desk front `+1`, chair back `+2`다. 책상 front는 고정 Y 절단이 아니라 앞 모서리·다리·서랍만 포함하는 원본 좌표 픽셀 마스크다.
-- `OfficeTycoonAlignmentCalibrationWindow`는 가구 100/200/400% 픽셀 보기, 네 점 footprint·socket 드래그, character clip/frame·onion skin, workstation 합성과 실시간 오차를 제공한다. 자세 scale/rotation은 각각 1.000/0.000으로 잠그고 실제 pelvis/hand와 사람 승인·source SHA만 저장한다. PNG 빌더는 기존 calibration asset을 자동 승인하거나 덮어쓰지 않는다.
-- `OfficeGridCollisionMonitor`는 실제 Transform을 매 프레임 가장 가까운 셀로 투영해 막힌 셀 침범을 계측하는 QA 전용 경계다. 결과는 저장하지 않는다.
-- `OfficeTycoonAlignmentV2Qa`는 Preview와 Starter를 분리 실행하고 1920×1080 캡처, 실제 네 점 footprint, chair↔desk socket, pelvis↔seat, hand↔work, 프레임 안정성, 얼굴/하체 overlay, 60초 Transform 0 변화, 충돌·중복 claim·저장 왕복을 검사한다. 기존 `Prototype01`의 OfficeVisualV2·Collider·계약·자율 AI는 T6 통합 전까지 폴백으로 유지한다.
-- 2026-08-11 사용자 폐기 결정으로 OfficeVisualV2 base/foreground/guide PNG는 저장소와 빌드에서 제거했다. `Prototype01`의 계약·자율 AI·Collider는 시뮬레이션 호환용으로 유지하되 Renderer/Camera는 세션 시작 때 차단하고, `OfficeTileMigrationPreview`를 additive로 올린 StarterOfficeV1만 월드로 렌더한다. `F9`는 구형 화면 복귀가 아니라 이 타일 표시를 복구하는 단방향 키다.
+- `FamilyCompany.Simulation.OfficeLayout.OfficeGrid`가 폭·높이·바닥·통행 가능 셀·배치 가구·좌석 슬롯을 의미 상태로 소유한다. Unity Transform과 화면 픽셀은 저장 정본이 아니다.
+- `StarterOfficeV1`은 13×13, 실내 가구 17개와 외곽 bay 52개, 가족 workstation 4개를 가진 실제 새 게임 레이아웃이다. `CreateMigrationPreview()`는 회귀 fixture일 뿐 게임 기본값이 아니다.
+- `OfficeGridTilemapPresenter`는 320×160, 180 PPU 등각 Tile을 투영하고 `OfficeGridFurniturePresenter`는 같은 placement anchor/footprint를 렌더한다.
+- 전체 저장은 v8이며 `officeGrid` 하위 스키마 v4와 가구 재고 하위 스키마 v1을 보존한다. v1~v7 이관 뒤 `ComputeLayoutHash()`가 같아야 한다.
+- 가구 시각 정본은 `OfficeFurnitureVisualCatalog` calibration v3, 착석 정본은 `OfficeCharacterSeatPoseCatalog` v5다. 의미 root는 scale 1이며 가구 보정은 승인된 균등 scale/socket, 착석 보정은 실제 pelvis/hand 기반 translation만 허용한다.
+- `OfficeGridCharacterMover`의 SpriteRenderer는 균등 scale 1.55를 사용한다. 1.69는 화면을 과도하게 점유해 폐기된 값이다.
+- 16:9가 아닌 화면에서도 타일·캐릭터를 비균등하게 늘리지 않는다. `OfficeGridCameraFitter`가 aspect-safe하게 균등 직교 크기를 조정한다.
+- 월드는 final backbuffer native resolution에서 Point/pixel snap으로 렌더한다. 폐기된 `OfficeVisualV2` 통짜 화면과 저해상도 중간 버퍼를 런타임 폴백으로 되살리지 않는다.
+- 고동작 시트의 실제 실루엣은 오프라인 분리기가 상체 중심·발 기준선으로 정렬한 256×256 단일 PNG 48개다. 런타임 코드가 원본 PNG를 다시 자르지 않는다.
 
 ## 실제 회사 이동
 
-- 플레이어는 PrototypePlayerController와 CharacterController로 직접 이동한다.
-- NPC는 OfficeWorkerAgent와 CharacterController로 웨이포인트 사이를 실제 이동한다.
-- OfficeAutonomyCoordinator는 순수 시뮬레이션의 의미 목적지를 실제 웨이포인트로 투영한다. 계약 coordinator가 배정한 업무는 자율 목적지보다 우선하고 완료 후 기존 자율 행동을 재개한다.
-- 평일 학교·외부 일정·영업·가사와 수면은 FamilyScheduleRules에서 계산하며 계약 코어와 화면 배정이 같은 가용성 판정을 사용한다.
-- 외부 일정은 `Outside` 의미 목적지를 출구 웨이포인트에 투영한다. NPC는 출구 도착 뒤 렌더만 숨기고, 복귀 행동이 정해지면 다시 표시되어 안전 통로로 걸어 들어온다.
-- 플레이어 직접 작업은 PlayerOfficeWorkInteractor가 계약 단계의 의미 장소를 요구하고, 근처에서 E를 유지한 경우에만 계약 코어의 `RecordWork`를 호출한다.
-- OfficeWaypoint는 위치, 업무 종류, 최소·최대 체류 시간을 가진다.
-- 체류 시간은 agentId, 정거장 횟수, waypointId에 StableRandom 키를 적용해 재현된다.
-- 현재 경로는 사전 정의된 안전 통로다. 사무실 배치를 플레이어가 자유 편집하게 되면 경로 탐색 계층을 추가한다.
+- `StarterOfficeRuntimeBootstrap`이 플레이어와 가족 4인의 `OfficeRuntimeAgent`를 단일 소유한다. legacy `PrototypePlayerController`, `OfficeWorkerAgent`, 3D `CharacterController` 경로는 Starter Runtime이 준비되면 비활성이다.
+- `OfficeRuntimeOccupancy`와 결정론적 cardinal `OfficeRuntimePathService`가 static/interaction/dynamic occupancy와 예약을 처리한다.
+- 플레이어·가족·계약 이동은 `OfficeSharedLocomotionRules`를 공유한다. 방향과 gait는 요청 벡터가 아니라 실제 frame displacement/speed로 결정하며 막힌 입력은 걷기 위상을 진행하지 않는다.
+- `OfficeAutonomyCoordinator`의 의미 목적지와 계약 coordinator의 업무 목적지는 같은 actor/path/occupancy로 투영된다. 계약 업무는 실제 도착·정지·작업 상태에서만 `RecordWork`를 호출한다.
+- 평일 학교·외부 일정·영업·가사와 수면은 `FamilyScheduleRules`에서 계산하며 계약 코어와 UI가 같은 가용성 판정을 사용한다.
+- 배치 직후 이동은 현재 `OfficeFurnitureCollisionCatalog` lookup을 거친다. 이를 `OfficeBuildEditorGeometryQuery`의 배치 geometry로 교체하는 hand-off는 아직 열린 기술 부채다.
 
 ## Native Smart Interaction P1.5
 
 - `OfficeInteractionDefinition`은 행동, 의미 위치, target template, 가구 kind, 지속 시간, capacity, cooldown, 접근·예약 정책과 역할별 기존 weight를 순수 C# 데이터로 묶는다.
 - `OfficeInteractionCatalog`는 현재 13종 Micro Action의 표준·회의·fallback 후보 20개를 광고한다. 기존 후보 생성은 아직 정본이며 Editor QA가 action/location/target/weight 1:1 parity를 검사한다.
 - `OfficeInteractionScoring`은 기존 weight×20, macro compatibility, Energy/Stress 기반 need, 미방문 novelty, availability와 repetition을 정수로 합산한다. 후보는 OfferId 정렬 뒤 StableRandom top-band로 Shadow 선택하므로 입력 배열 순서에 독립적이다.
-- `OfficeInteractionSelectionTrace`는 legacy 선택, Shadow 선택, duration, resolved target, partner와 후보별 점수 분해를 진단 이벤트로 노출한다. 구독자가 없으면 retained state가 없으며 저장 스키마 v7은 그대로다.
+- `OfficeInteractionSelectionTrace`는 legacy 선택, Shadow 선택, duration, resolved target, partner와 후보별 점수 분해를 진단 이벤트로 노출한다. 구독자가 없으면 retained state가 없으며 이 진단은 전체 저장 스키마 v8에 별도 상태를 추가하지 않는다.
 - `OfficeInteractionOfferFactory`는 Definition을 현재 `OfficeGrid.Furniture`에 투영해 실제 `FurnitureId`별 Offer를 만든다. 접근 칸과 capacity는 Definition에서 파생되며, passability/reachability는 호출자가 주입하므로 Simulation은 Unity를 참조하지 않는다.
 - `OfficeRuntimeInteractionOfferResolver`는 현재 Occupancy와 cardinal PathService로 열린 접근 칸·도달 가능한 접근 칸만 남긴다. 결과는 캐시하지 않으며 Occupancy revision이 바뀌면 동일 intent도 다시 해석해 이동·삭제된 가구의 예전 접근 칸을 사용하지 않는다.
 - Micro Action 목적지는 `OfficeInteractionCatalog`의 Interaction ID를 런타임까지 전달하고, OfferId/FurnitureId를 가진 목적지로 해석한다. 물리 회의 테이블을 사용하는 직접 플레이어/계약 경로만 작성 좌석이 생길 때까지 기존 계약을 유지한다.
@@ -103,7 +84,7 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - 계약 수락·작업·수익·실패·저장·이동 효과음은 프레젠테이션 결과만 표현하며 시뮬레이션 상태나 RNG를 변경하지 않는다.
 - OfficeSoundscapeController는 NPC의 최초 관측을 무음으로 시드하고 Inside/Outside·Walking/도착 전이만 감시한다. 퇴실·복귀 문, 프린터 종이, 계약 업무/회의 환경음은 전역 쿨다운을 거쳐 중복 폭주 없이 재생한다.
 - LeisureAudioCueCatalog는 회복 활동 ID와 ImageGen 장면 ID를 1:1로 유지하고 각 장면의 진입 SFX·반복 BGM·완료 SFX를 의미 데이터로 제공한다.
-- `simul`의 세로 화면 배치와 좌표는 아키텍처 입력이 아니다. 재사용 대상은 순수 규칙, 검증 교훈, 라이선스가 확인된 원본 자산이며 모든 후속 화면은 1920×1080 16:9에 새로 투영한다.
+- `simul`의 세로 화면 배치와 좌표는 아키텍처 입력이 아니다. 재사용 대상은 순수 규칙, 검증 교훈, 라이선스가 확인된 원본 자산이며 UI는 1920×1080 reference에서 설계하고 1600×1000 같은 16:10과 compact 창에도 반응형으로 투영한다.
 
 ## Starter Office Runtime V1
 
@@ -161,6 +142,6 @@ PixelClarityDefault (ScriptableObject policy)
 
 ## Perimeter visual and attendance-audio boundary
 
-- `OfficeGridLayouts` owns the 48 semantic perimeter placements. The three source/runtime PNG pairs and their pivots are presentation assets; `OfficeFurnitureAssetBuilder.BuildPerimeterWalls` may update only their catalog definitions.
-- `EntranceDoorKind` is a legacy persistence/catalog key for an always-open frame. Navigation continues to own the canonical interior entrance `(8,1)`; no door state or animation is added to `OfficeRuntimeAgent`.
+- `OfficeGridLayouts` owns the 52 semantic perimeter placements: far full wall 26, near cutaway 25, exterior threshold 1. The three source/runtime PNG pairs and their pivots are presentation assets; `OfficeFurnitureAssetBuilder.BuildPerimeterWalls` may update only their catalog definitions.
+- `EntranceDoorKind` is a legacy persistence/catalog key for an always-open threshold. Navigation continues to own the canonical interior entrance `(8,1)`; door leaf, jamb, lintel, door state, and animation are not added to `OfficeRuntimeAgent`.
 - `OfficeAutonomyCoordinator` observes the shift's first successful attendance release (normally 09:00, including same-state clock/day jumps into a newly observed work shift) and requests one `door_open` SFX. A newly bound save that is already mid-shift consumes the date without replaying the cue. `GameAudioCoordinator` owns playback and QA counters; later staggered entrants and `door_close` are outside this path.

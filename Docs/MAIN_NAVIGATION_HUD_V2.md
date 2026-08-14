@@ -1,13 +1,11 @@
 # Main Navigation HUD V2 — ImageGen 전면 재디자인
 
-## 격리 기준
+## 현재 통합 상태
 
-- worktree: `C:/Users/godho/Documents/Codex/2026-08-14/family-company-main-navigation-ui/worktree`
-- branch: `codex/main-navigation-hud`
-- 작업 시작 HEAD: `9ad8eb7b88e85b5f6ff70161a770add48793b84b`
-- 작업 시작 `origin/main`: `9ad8eb7b88e85b5f6ff70161a770add48793b84b`
-- 최종 재확인 `origin/main`: `52a787f7c821b3297c1118299bad003089b7362c`
-- UI 후보는 dependency와 분리된 commit으로 보존한다. 이 작업에서는 push, main 통합, 배포 빌드를 하지 않는다.
+- `MainNavigationV2` 구현 `884c53f`, dependency route `bc19d0c`, compile 보강 `4cf6e50`이 local main 기준선에 통합되어 있다.
+- 거부된 V1 UI/자산은 runtime에서 제거되었으며 현재 진입 정본은 V2 하나다.
+- 회사의 build editor, 사업의 계약/제품, 투자의 주식 route가 실제 adapter에 연결되어 있다.
+- 최종 seating/stamina 결합 SHA와 새 Windows build 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
 
 ## 결과 계약
 
@@ -104,4 +102,4 @@
 
 ## 통합 상태
 
-READY 후보. 계약과 건축 dependency를 먼저 적용한 뒤 UI-only commit들을 순서대로 적용한다. V1/거절본은 최종 runtime과 tracked 문서·자산에서 제거했으며 push/main 통합/배포는 수행하지 않았다.
+Local main `4cf6e50` 기준 **통합 완료**다. 계약·건축·주식 adapter와 V2 UI가 함께 연결되었고 V1/거절본은 runtime과 tracked 자산에서 제거되었다. seating/stamina까지 합친 최종 main 재검증과 fresh portable build는 [PROJECT_STATE.md](PROJECT_STATE.md)의 pending 항목이다.

@@ -1,3 +1,6 @@
+> [!NOTE]
+> 역사 구현 보고서입니다. 현재 정본·미완료·최신 검증은 [PROJECT_STATE.md](../../PROJECT_STATE.md)를 따릅니다.
+
 # Family Company post-push P1 furniture collision completion — 2026-08-12
 
 Source task: `FAMILY_COMPANY_POST_PUSH_REVIEW_AND_TASKS_2026-08-12.md`

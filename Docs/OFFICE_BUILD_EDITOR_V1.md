@@ -1,15 +1,11 @@
 # Office Build Editor / Furniture Economy V1
 
-## Branch boundary and repository snapshot
+## Current integration status
 
-- Isolated worktree: `C:\Users\godho\Documents\Codex\2026-08-14\family-company-build-editor\work\repo`
-- Branch: `codex/build-editor-furniture`
-- Start HEAD: `715ef105596df015903362fb01e140f987e8b52b`
-- Start `origin/main`: `52a787f7c821b3297c1118299bad003089b7362c`
-- Canonical `main` was ahead of `origin/main` by one commit. It also had an unrelated dirty
-  `OfficeTileMigrationQa.cs` wall-task change; that file was not copied or edited here.
-- This branch does not modify the main HUD, wall/door definitions or art, seating claim code,
-  stamina/needs policy, or rendering settings.
+- Local main 기준선 `4cf6e50`에 build editor 구현 `7baac22`와 MainNavigation route `bc19d0c`가 통합되어 있다.
+- 전체 저장 스키마는 v8이며 v1~v7을 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
+- 진입점은 `사무실 → 회사 → 건축·편집`이다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
+- 배치 geometry를 movement가 직접 소비하는 hand-off는 아직 열려 있다. 최종 seating/stamina 결합과 portable build 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
 
 ## Audit: canonical versus legacy
 
@@ -52,8 +48,8 @@ as a definition ID.
 | `partition` | 사무용 파티션 | Divider | 1x2 | none | none | NW | block | canonical authored/mirror | 130,000 | 32,500 | 50% | 80 |
 | `filing_cabinet` | 4단 철제 서류함 | Storage | 1x1 | Filing / 1 | cardinal | SE | block | canonical authored/mirror | 220,000 | 55,000 | 55% | 150 |
 
-Structural entrance/wall IDs are cataloged as non-player-editable, non-purchasable records so
-the parallel wall branch remains the sole owner.
+Structural entrance/wall IDs are cataloged as non-player-editable, non-purchasable records. The
+perimeter layout/presentation boundary remains their sole owner.
 
 An `OfficeFurnitureInstanceState` persists stable `instanceId`, `definitionId`, placed/stored
 state, origin, quarter rotation, legacy/purchased basis state, gameplay purchase basis, acquired
@@ -120,8 +116,7 @@ if (!OfficeBuildEditorNavigationAdapter.TryOpen(id, out string failure))
     ShowToast(failure);
 ```
 
-The company HUD branch owns the route `office world -> 회사 -> company hub -> 건축·편집 card`.
-This branch does not edit its files.
+`MainNavigationV2`가 route `office world -> 회사 -> company hub -> 건축·편집 card`를 소유하고 위 adapter를 호출한다. 편집기가 열린 동안만 시뮬레이션을 멈추고 닫으면 회사 허브로 돌아간다.
 
 Stamina/needs integration:
 
@@ -132,8 +127,8 @@ var water = query.FindAvailableForAgent(
 ```
 
 The same API supports `DrinkVending` and `RestSeat`; it returns only placed, statically reachable
-instances with a claimable capacity slot. Need thresholds and recovery amounts remain owned by
-the stamina branch.
+instances with a claimable capacity slot. Need thresholds and recovery amounts belong to the
+stamina/needs simulation, whose final main integration is pending in [PROJECT_STATE.md](PROJECT_STATE.md).
 
 ## Built-in image generation audit
 
@@ -179,7 +174,7 @@ The four chroma and alpha sources are stored under
 operating fronts; NW/NE expose the opposing rear+side surfaces, so none is a fake label or runtime
 flip. Visual inspection passed on the generated chroma sources and transparent runtime outputs;
 automated QA found zero visible magenta-fringe pixels. The procedural sprite remains only as a
-missing/corrupt-resource safety guard and is not selected by the accepted candidate.
+missing/corrupt-resource safety guard and is not selected when the approved runtime asset exists.
 
 ## Canonical ground geometry and movement hand-off
 
@@ -208,9 +203,9 @@ OfficeFurnitureGeometrySnapshot snapshot = geometry.Resolve(placedFurniture);
 // snapshot.InteractionAccessSockets / snapshot.SeatEgressSockets: claim candidates
 ```
 
-The movement owner must replace the legacy `OfficeFurnitureCollisionCatalog.asset` lookup with
-this query while keeping path, reservation, interaction, and seat lifecycle in its existing
-services. This branch does not duplicate those lifecycles.
+The movement integration must replace the legacy `OfficeFurnitureCollisionCatalog.asset` lookup
+with this query while keeping path, reservation, interaction, and seat lifecycle in their existing
+services. The editor does not duplicate those lifecycles.
 
 ## QA status
 
@@ -244,9 +239,8 @@ unchanged Unity `JsonUtility` missing-field-null assumption. The successful Prot
 also exercises the current contract/runtime path. PlayMode emitted one Unity SearchDatabase
 `ArgumentOutOfRangeException` while indexing, after which the runtime QA completed and exited 0.
 
-Candidate readiness: **ready for integration with declared owners**. The company-HUD owner still
-needs to call `OfficeBuildEditorNavigationAdapter`; the movement owner still needs to consume the
-read-only geometry query without changing its reservation/seat lifecycle. Four-direction vending
-art is complete and loaded through the exact additive Resources hook. Starting base is
-`715ef105596df015903362fb01e140f987e8b52b`. No main merge, remote push, Windows release build, or
-user deployment was performed.
+Current status: **integrated on local main baseline `4cf6e50`**. `MainNavigationV2` calls
+`OfficeBuildEditorNavigationAdapter`, and four-direction vending art is loaded through the additive
+Resources hook. The remaining editor boundary is movement consumption of the read-only geometry
+query without changing reservation/seat lifecycle. Final combined seating/stamina regression and a
+fresh Windows build remain pending in [PROJECT_STATE.md](PROJECT_STATE.md).

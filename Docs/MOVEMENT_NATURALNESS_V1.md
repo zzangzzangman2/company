@@ -4,6 +4,9 @@
 성격: **감사 결과 + 요청서**. 정본이 아니다.
 전제: 코덱스가 지금 이 영역을 작업 중이다. **중복 요청을 피하려고 먼저 있는 것부터 확인했다.**
 
+> [!NOTE]
+> 2026-08-14 현재 화면 scale, 타일 전환, Starter Runtime path/occupancy, 실제 displacement 기반 방향·보행은 통합되었다. 이 문서는 당시 제안 기록으로만 보존하며 현재 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)와 [ARCHITECTURE.md](ARCHITECTURE.md)를 따른다.
+
 ---
 
 ## 0. 결론
@@ -16,7 +19,7 @@
 
 그래서 순서는 이렇다.
 
-1. 캐릭터 크기 정상화 (`OFFICE_VIEW_FIX_REQUEST.md`) — 타일 씬에서는 이미 해결됨
+1. 캐릭터 크기 정상화 — native render와 scale 1.55로 해결됨
 2. 메인 흐름을 타일로 교체 — 그때 이동 계층도 같이 승계
 3. **그 다음에** 남은 자연스러움 항목을 본다
 

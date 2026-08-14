@@ -1,3 +1,6 @@
+> [!NOTE]
+> 역사 구현 보고서입니다. 현재 정본·미완료·최신 검증은 [PROJECT_STATE.md](../../PROJECT_STATE.md)를 따릅니다.
+
 # Animation Coherence V1 — P0-0 완료
 
 날짜: 2026-08-13

@@ -1,12 +1,12 @@
 # 계약 고객 성장 V1
 
-이 문서는 2000년 가족회사의 `첫 하청 → 실적 → 상위 고객 → 자체 제품` 규칙과 통합 경계를 기록한다. 구현은 기존 `BootstrapContractCatalog` 21종, `ContractPortfolio`, `CompanyGrowthState`, Korea History V1 기업 등록부, Save v7을 보존한다.
+이 문서는 2000년 가족회사의 `첫 하청 → 실적 → 상위 고객 → 자체 제품` 규칙과 현재 통합 경계를 기록한다. 구현은 기존 `BootstrapContractCatalog` 21종, `ContractPortfolio`, `CompanyGrowthState`, Korea History V1 기업 등록부와 전체 Save v8을 보존한다.
 
-## 현재 정본과 레거시 우회
+## 현재 정본과 읽기 호환
 
 - 새 게임은 2000-01-03 08:50, 가족 4인, 현금 5,000,000원으로 시작한다.
 - 첫 계약은 자동 수락하지 않는다. 사업 허브의 첫 계약 추천 3개 중 하나를 플레이어가 고른다.
-- 기존 `ManagementUiV2Presenter`는 삼성전자·LG전자·SK텔레콤을 고정 생성하므로, 중앙 UI 통합 때 그 계약 탭을 `ContractBusinessRuntimeAdapter`가 주는 게시판으로 교체해야 한다. 교체 전에는 레거시 경로로 첫날 대기업이 노출될 수 있다.
+- `MainNavigationV2` 사업 허브의 `ContractBusinessRuntimeAdapter`가 계약/제품의 유일한 정본 진입점이다. 첫날에는 T0만 노출하며 삼성전자·LG전자·SK텔레콤을 고정 생성하는 구형 관리 UI를 다시 연결하지 않는다.
 - 기존 실제 기업명과 Korea History V1 `companyId`는 변경하지 않는다. 과거 UI의 `samsung-electronics`, `lg-electronics`, `sk-telecom`은 각각 기존 등록부 ID로 읽기 호환한다.
 - 저장소에는 실존 기업 로고 리소스가 없다. 계약 카드는 텍스트 회사명과 중립 업종 아이콘을 쓰며 실존 로고를 생성하거나 변형하지 않는다.
 
@@ -51,9 +51,9 @@
 - 수락 계약은 기존 `ContractPortfolio`와 ledger transaction `contract:{offerId}:settlement`를 사용하므로 완료 정산은 정확히 한 번이다.
 - `AuthoritativeContractWorkSession`은 증가한 GameTime 60분마다 1인시만 기록한다. 실시간 초, frame rate, UI 열기/닫기는 작업량을 만들지 않는다.
 
-## Save와 자체 제품
+## Save v8과 자체 제품
 
-- Save v7 스키마는 변경하지 않는다. 첫 계약 수락 여부는 저장된 계약 존재 여부로, 실적 ledger는 resolved 계약의 stable offer ID/status/contributions/resolved minute에서 재구성한다.
+- 전체 Save v8은 v1~v7을 읽어 이관한다. 첫 계약 수락 여부는 저장된 계약 존재 여부로, 실적 ledger는 resolved 계약의 stable offer ID/status/contributions/resolved minute에서 재구성하므로 별도 중복 진행도 payload를 만들지 않는다.
 - 과도 상태인 게시판·route·작업 command session은 저장하지 않는다. 저장/로드 후 동일 seed/달력 날짜/실적이면 동일 제안이 나온다.
 - 자체 제품 후보는 기존 `CompanyGrowthState`의 연구, 시장 보고서, 자체 사업, 제품 프로젝트를 사용한다. 현금·전체 완료 건수·관련 업종 인시·평판·필요 연구·해당 시장 보고서를 실제 진행도로 보여 준다.
 
@@ -73,6 +73,6 @@
 
 ## 검증 상태
 
-- 실제 등록부 기반 100 seed 순수 하네스, 첫날 T0만 노출, T3/T4 0건, 추천 3개 결정론, 1회 정산, Save v7 동일성, 다중 지표 순차 해금, 실패 회복, 해금 뒤 삼성전자 등장, GameTime 정지 시 작업 0, 제품 진행도와 route stack을 통과했다.
+- 실제 등록부 기반 100 seed 순수 하네스에서 첫날 T0만 노출, T3/T4 0건, 추천 3개 결정론, 1회 정산, Save v8 왕복/구버전 이관, 다중 지표 순차 해금, 실패 회복, 해금 뒤 삼성전자 등장, GameTime 정지 시 작업 0, 제품 진행도와 route stack을 통과했다.
 - Unity 6000.3.21f1 관리 어셈블리 기준 Simulation/Presentation/Editor 독립 컴파일은 경고 0·오류 0이다.
-- Unity 배치 Editor/PlayMode/Windows Player/D3D11 캡처는 로컬 Editor 라이선스가 없어 실행 전 종료 코드 198로 중단됐다. 라이선스가 활성화된 중앙 환경에서 Editor validation과 최종 HUD 통합 후 실행해야 한다.
+- `MainNavigationV2` 통합 D3D11 Player QA에서 계약/제품 route, loaded-state rebind, ESC/back이 PASS했다. 최종 seating/stamina 결합 SHA의 재검증은 [PROJECT_STATE.md](PROJECT_STATE.md)에 기록한다.

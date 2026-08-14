@@ -175,8 +175,8 @@ py -3 Tools/measure_animation_coherence.py
 py -3 Tools/measure_animation_coherence.py --motion walk --strict
 ```
 
-- 캐릭터를 **자동 발견**한다. 직원이 늘어나면 프레임이 들어온 순간부터 자동으로 포함된다.
-  (지금 12명을 찾았다: 가족 4명 + 직원 8명)
+- 캐릭터 아트 집합을 **자동 발견**한다. 현재 asset QA 대상은 가족 4명 + 향후 채용 후보 8명이다.
+  이는 런타임 시작 roster나 출근 인원을 뜻하지 않으며 시작 actor는 가족 4명뿐이다.
 - `--strict`는 게이트 위반 시 종료 코드 1을 낸다. 빌드·검증 파이프라인에 물릴 수 있다.
 - 출력: `Artifacts/AnimationCoherence/animation-coherence.{txt,json}`
 

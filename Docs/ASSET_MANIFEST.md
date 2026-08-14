@@ -81,12 +81,12 @@
 - 상태: SOURCE
 - SHA-256: DA59648080EF37A77D2C812EC5266655E10741F7B32C0BB250F42274F14F88BE
 
-### 비정본 시안
+### 제거된 비정본 시안 tombstone (2026-08-14)
 
-- 경로: Assets/Art/Characters/OlderSister/older_sister_office_neutral_v1.png
-- 상태: DEPRECATED CONCEPT, 런타임 사용 금지
-- 이유: 사용자가 나시티·돌핀팬츠·맨발로 의상을 교체했다.
-- SHA-256: 52C428A0D64F92BF609ABEF78870E63500F9C2E8B96B97DFC859D8F447564C28
+- 경로: `Assets/Art/Characters/OlderSister/older_sister_office_neutral_v1.png`
+- 상태: REMOVED DEPRECATED CONCEPT
+- 이유: 나시티·돌핀팬츠·맨발 정본으로 교체되었고 GUID `ca576568262b0064fb2ba43e634ab913`의 외부 참조가 0임을 삭제 직전에 확인했다.
+- 삭제 전 SHA-256: `52C428A0D64F92BF609ABEF78870E63500F9C2E8B96B97DFC859D8F447564C28`
 
 ### 캐릭터 정체성 참고 원화
 
@@ -113,18 +113,23 @@
 - 상태: SOURCE
 - SHA-256: 49CE3AB3194A0646BEF3ABFDBC3765F7DF6DD9F657249025ED05A69A6D526E3B
 
-### 도트 비정본
+### 제거된 구형 누나 도트 tombstone (2026-08-14)
 
-- 경로: Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v1.png
-- 상태: DEPRECATED, 런타임 사용 금지
-- 이유: 생성 크로마의 어두운 녹색 잔상이 남아 v2로 교체했다.
+아래 v1 시트와 기계 분리 프레임은 v2 identity reference와 현재 HighMotion 8방향×6프레임으로 완전히 대체되었다. 각 GUID는 자기 `.meta` 외 참조 0을 삭제 직전에 확인했다. v2 시트, chroma source, HighMotion, office module atlas는 보존한다.
 
-### 레거시 Unity 생성 프레임
+| 제거 경로 | GUID | 삭제 전 SHA-256 |
+| --- | --- | --- |
+| `Assets/Art/Characters/OlderSister/Pixel/older_sister_pixel_walk4x2_v1.png` | `dddb366d877ce454d9f079b157c6a331` | `9C90EAED493A8EBC8746D2AEC275D3DF40B603722A17A821F7740C19D5A6B87A` |
+| `Assets/Art/Characters/OlderSister/Pixel/Frames/sister_east_a.png` | `8a4541a0fd1050c4d9011a4270543758` | `0684E09EB9EE21F798691F425F04F4EE16CA85DE3F6F576845E24B61835C9A5D` |
+| `Assets/Art/Characters/OlderSister/Pixel/Frames/sister_east_b.png` | `ba9b86ae2bdcefb4dbc18b91ddb3ff3a` | `AA319EF7A6C02D851C5CEEF6DA08C1990AC4AC9A542A8532CABE6F793F3E7BD0` |
+| `Assets/Art/Characters/OlderSister/Pixel/Frames/sister_north_a.png` | `2e650dcc40b91d0489816f9a53fc137d` | `FE0896CB95EB65E775686BD4155FCBBD33F3A92D4F8B606B1A6D4FBB5D5CFDAA` |
+| `Assets/Art/Characters/OlderSister/Pixel/Frames/sister_north_b.png` | `82f33dc2cfd17c84f8603aa0ad0129a2` | `C14D0F2D232E844CC1A5C1D18096517209381E030502F6A5CD5486C0316A129D` |
+| `Assets/Art/Characters/OlderSister/Pixel/Frames/sister_south_a.png` | `4b789643b32b8f84d8bd9681a307331e` | `27B58C5644E6944F8045A1F2BDE53CBA0FC5CE061A8A887D0BFDB2DE4C4A7761` |
+| `Assets/Art/Characters/OlderSister/Pixel/Frames/sister_south_b.png` | `016849479d8b7104489c1b0ac439ba9c` | `EB76CE94A2E6ADBAF2C724BDBF557AC48EC978BD547A3602F7CFAED967400CD2` |
+| `Assets/Art/Characters/OlderSister/Pixel/Frames/sister_west_a.png` | `73650d11323963a49916d656fe03c552` | `A5A343B1C5523A0BA2660E8E2C085170CA41B4558A3F67E8DCAD6C9180A5368E` |
+| `Assets/Art/Characters/OlderSister/Pixel/Frames/sister_west_b.png` | `3198b1f4ade2d684a8a49fb60d5b7f08` | `6DF64837F53AA8284807DCFD2D621A84B9721DD89BED76A8213691DB6EB92623` |
 
-- 경로: Assets/Art/Characters/OlderSister/Pixel/Frames/
-- 상태: LEGACY GENERATED ASSETS
-- 제작: 구형 Office V0.2 빌더가 4x2 시트를 8개 단일 Sprite PNG로 기계적으로 분리했다.
-- 규칙: 직접 수정하지 않고 정본 시트나 빌더를 수정한 뒤 재생성한다.
+제거된 폴더 `.meta` GUID는 `99884834cf3bde0419b11cc40259e127`이며 외부 참조 0이었다.
 
 ## 사무실 비주얼 타깃
 

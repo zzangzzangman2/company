@@ -1,3 +1,6 @@
+> [!NOTE]
+> 역사 구현 보고서입니다. 현재 정본·미완료·최신 검증은 [PROJECT_STATE.md](../../PROJECT_STATE.md)를 따릅니다.
+
 # P1.5 Native Deterministic Smart Interaction Shadow 완료 보고서
 
 ## 범위

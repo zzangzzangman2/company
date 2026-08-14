@@ -3,6 +3,9 @@
 작성: 2026-08-10 / Claude
 성격: **제안서 + 실행 방법**. Codex가 검토 후 정본에 합칠 항목을 고른다.
 
+> [!NOTE]
+> 이 문서는 live-patch 제안 기록이다. 현재 portable Windows 빌드/실행 정본은 [PLAYTEST_BUILD.md](PLAYTEST_BUILD.md)와 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
+
 ---
 
 ## 0. 결론부터
@@ -35,7 +38,7 @@ IL2CPP는 물론이고 Mono 백엔드도 공식 지원이 없다. 이건 우회�
 | `Start-/Stop-FamilyCompanyBuildWatch.ps1` | 워처를 백그라운드로 켜고 끄기 |
 | `Build-FamilyCompanyWindows.ps1` | 1회 빌드 |
 
-산출물은 `C:\Users\godho\Downloads\FamilyCompany_Playtest`로 나간다.
+현재 자동 빌드 산출물은 저장소 상대 경로 `Builds/Windows/FamilyCompany_Playtest`로 나간다.
 
 **빠진 것 3개:**
 

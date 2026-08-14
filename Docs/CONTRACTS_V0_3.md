@@ -18,17 +18,17 @@
 
 ## 실제 회사명
 
-계약의 `clientCompanyId`는 영구 ID이고 `ExactClientDisplayName`은 해당 날짜의 실제 회사명이다. 런타임은 임의 가명을 생성하지 않는다. Claude의 국내 회사 등록부가 들어오면 계약 생성기가 그 등록부의 실제 이름을 전달한다.
+계약의 `clientCompanyId`는 영구 ID이고 `ExactClientDisplayName`은 해당 날짜의 실제 회사명이다. 런타임은 읽기 전용 Korea History V1 `HistoricalCompanyRegistry`에서 날짜에 맞는 이름을 가져오며 임의 가명을 생성하지 않는다. 등록부에 없는 day-one T0만 [CONTRACT_CLIENT_PROGRESSION_V1.md](CONTRACT_CLIENT_PROGRESSION_V1.md)의 네 중립 상호를 사용한다.
 
 ## 실제 이동 연결
 
-계약 수락 후 작업량을 회의, 자료 입력·개발, 출력·검수 묶음으로 나눈다. OfficeContractTaskCoordinator가 지정한 가족을 해당 웨이포인트로 보내며 CharacterController 이동과 체류가 실제로 끝나야 `RecordWork`가 호출된다. 이동 중에는 계약 진행률이 오르지 않는다.
+계약 수락 후 작업량을 회의, 자료 입력·개발, 출력·검수 묶음으로 나눈다. `OfficeContractTaskCoordinator`가 지정한 가족을 Starter Office의 의미 목적지로 보내고, `OfficeRuntimeAgent`가 path/occupancy를 따라 실제 도착·정지·작업 상태가 된 뒤에만 `RecordWork`를 호출한다. 요청 이동 중이거나 장애물로 막혀 실제 변위가 없을 때는 계약 진행률이 오르지 않는다.
 
 - 첫 공동 작업: 회의 지점
 - 중간 작업: 업무 책상 중 결정론적으로 선택한 지점
 - 마지막 4인시 이하: 출력·검수 지점
-- 시작 가족 NPC: 누나, 아빠 placeholder, 엄마 placeholder
-- 플레이어: 계속 직접 이동하며 이후 상호작용 키로 작업 참여를 연결한다.
+- 시작 actor: 플레이어·누나·아빠·엄마 네 가족. 임시 capsule/placeholder와 향후 직원 8인은 시작 roster가 아니다.
+- 플레이어: 같은 Starter Office movement/interaction 경계에서 직접 이동하고 상호작용 키로 작업에 참여한다.
 
 ## 계약 생명주기
 
@@ -37,7 +37,11 @@
 - 완료: 납기 이내에 요구 인시가 모두 채워지면 보상을 매출로 기록하고 평판 2를 얻는다.
 - 실패: 납기를 넘긴 미완료 계약은 자동 실패하고 평판 2를 잃는다. 이미 쓴 착수 비용은 돌려받지 않는다.
 - 중복 방지: 동일 offerId는 완료·실패 여부와 관계없이 다시 수락할 수 없다.
-- 저장: 스키마 v2가 제안 원본, 상태, 완료 인시, 해결 시각과 가족별 기여 인시를 저장한다. 기존 스키마 v1 저장은 계약 목록이 빈 상태로 계속 불러온다.
+- 저장: 현재 전체 스키마는 v8이다. 계약 페이로드 v2가 제안 원본, 상태, 완료 인시, 해결 시각과 가족별 기여 인시를 저장하며, 계약 이전 v1 저장은 빈 계약 목록으로 이관한다. 전체 v1~v7 저장은 v8로 읽기 호환한다.
+
+## 고객 성장
+
+새 게임은 중립 T0 고객으로 시작하며 실적·정시율·품질·만족·평판·업종 경험·회사 등급·역량을 모두 충족해야 `T1 → T2 → T3 → T4`가 순차 해금된다. 실패하면 하락할 수 있고 일반 게시판의 T0 회복 계약으로 다시 올라갈 수 있다. 세부 수치와 실제 기업 목록은 [CONTRACT_CLIENT_PROGRESSION_V1.md](CONTRACT_CLIENT_PROGRESSION_V1.md)를 따른다.
 
 ## 값싼 인수와의 연결
 

@@ -1,10 +1,10 @@
 # ART STYLE
 
-최종 갱신: 2026-08-11
+최종 갱신: 2026-08-14
 
 ## 정본 방향
 
-가족회사는 3D 공간과 실제 충돌·이동을 유지하면서, 직교 등각 카메라와 저해상도 포인트 렌더, 2D 도트 캐릭터를 결합한 2.5D 도트 스타일을 사용한다.
+가족회사는 순수 의미 `OfficeGrid`와 Unity Isometric Tilemap, 직교 등각 카메라, native-resolution Point 렌더, 2D 도트 캐릭터를 결합한 등각 도트 스타일을 사용한다.
 
 ## 최상위 화풍 정본
 
@@ -43,7 +43,7 @@
 - 팔레트는 꿀빛 목재, 크림색 플라스틱·금속, 먼지 낀 민트, 절제된 청록 화면, 작은 복숭아색 포인트다.
 - CRT, 유선 전화, 팩스·복사기, 서류철, 금속 캐비닛처럼 2000년 한국 소형 사무실 소품을 사용한다.
 - 현대식 평면 모니터, 노트북, 스마트폰, LED 가구, 읽을 수 있는 브랜드·문서를 넣지 않는다.
-- 모듈은 한 셀에 한 개, 다른 셀과 겹치지 않으며 실제 충돌용 3D 오브젝트와 분리해 교체·배치할 수 있어야 한다.
+- 모듈은 `OfficeGrid`의 의미 footprint와 placement anchor를 가져야 한다. 시각 Sprite, path/occupancy, 상호작용 socket과 저장이 같은 배치를 가리키며 겹침은 editor validation에서 거부한다.
 
 ### ImageGen 입력 순서
 
@@ -53,21 +53,17 @@
 4. 프롬프트에 `Image 1에서는 렌더링 문법만 가져오고 한수아의 얼굴·머리·체형·복장·포즈를 복제하지 않는다`를 항상 적는다.
 5. 사무실은 SIMUL v3 앵커, 현재 사무실 도트 타깃, 가족회사 타이틀의 시대 소품을 각각 화풍·공간·소품 참조로 분리한다.
 
-순수 2D 등각 타일맵을 정본으로 선택하지 않은 이유:
+### 현재 타일 사무실 정본
 
-- 사무실 벽과 가구를 옮기거나 확장할 때 3D 모듈이 더 빠르다.
-- 캐릭터가 가구 사이를 실제 좌표로 이동하고 충돌하기 쉽다.
-- 카메라 줌, 층 확장, 오브젝트 배치, 가구 상호작용을 다시 그리지 않고 조정할 수 있다.
-- 고품질 등각 도트를 가구의 모든 방향마다 따로 그리는 제작량을 줄인다.
-
-### 2026-08-11 타일 이행 상태
-
-위 2.5D 선택은 현재 `Prototype01` 폴백의 설명으로 남긴다. 회사 성장과 가구 배치를 지원하기 위해 순수 의미 격자 + Unity Isometric Tilemap 방향을 T1~T3 격리 프리뷰에서 검증했다. 320×160·180 PPU 우드 바닥 3종, 13×13 격자, 가족 4인의 실제 8방향×6프레임 이동과 14~18% 실루엣 크기까지 통과했으며, 사용자의 T3 캡처 승인 전에는 기존 가구·좌석·계약 렌더 정본을 제거하지 않는다. 타일 프리뷰도 SIMUL-v3 등각 도트 팔레트, Point 필터, 하드 알파, 균등 스케일 규칙을 그대로 따른다.
+- `Prototype01`은 `StarterOfficeV1`의 13×13 의미 격자를 Unity Isometric Tilemap으로 렌더한다.
+- 바닥은 320×160·180 PPU, 가구와 벽은 hard alpha·Point·균등 scale을 사용한다.
+- `OfficeVisualV2` 통짜 PNG와 3D collider/waypoint 화면은 폐기된 렌더 경로이며 fallback 정본이 아니다.
+- 사무실 편집기는 Sprite Transform이 아니라 의미 footprint/anchor를 편집하고 같은 상태를 저장·경로·상호작용에 전달한다.
 
 ## 화면 규칙
 
 - 카메라: 직교 투영, 약 45도 회전, 플레이어 추적
-- 렌더: 낮은 내부 해상도로 축소 후 Point 필터 확대
+- 렌더: final backbuffer native resolution, Point, pixel snap. 저해상도 중간 버퍼 확대와 전체 화면 sharpening은 사용하지 않는다.
 - 캐릭터: 8방향, 방향별 6프레임 걷기, 상체 중심과 발 위치를 기준으로 정렬
 - 공간: 따뜻한 나무 바닥, 크림·민트 벽, 복숭아색과 청록 포인트
 - 형태: 둥글고 귀엽지만 통로와 상호작용 지점은 명확하게 읽힌다.
@@ -76,7 +72,7 @@
 
 ## 타이틀 화면 규칙
 
-- 타이틀은 16:9 가로 전용 키아트를 사용하고 1920×1080에서 먼저 검증한다.
+- 타이틀은 1920×1080 reference 키아트와 440×481 compact 키아트를 반응형으로 선택한다. 16:10을 포함한 다른 화면비에서도 안전 영역과 UI를 잘라내지 않는다.
 - 키아트는 왼쪽에 제목과 세로 메뉴가 올라갈 어두운 안전 영역을 둔다.
 - 타이틀 키아트는 런타임 월드 배경이 아니라 시작 화면에서만 사용한다.
 - 이미지에 제목, 버튼, 저장 정보 같은 조작 UI를 굽지 않는다. 모든 글자와 입력 상태는 Unity UI가 그린다.
@@ -128,12 +124,13 @@
 - 각 `Pixel/HighMotion/<id>_pixel_walk8dir6_{a,b}_v1.png`는 원화의 얼굴, 머리, 복장, 대표 소지품을 유지한 런타임 번역이다.
 - 공통 셀 순서와 Point·180 PPU·하드 알파 규칙은 다른 가족 도트와 같다.
 
-## 사무실 도트 모듈 정본
+## 사무실 도트 모듈 레거시 입력
 
 - 아틀라스: `Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png`
 - 개별 Sprite: `Assets/Art/Office/Pixel/Modules/`
 - 12종: CRT 업무책상, 회전의자, 접수대, 4인 회의탁자, 서류장, 팩스·복사기, 정수기, 2인 소파, 커피탁자, 화분, 유리 파티션, 4단 캐비닛
-- 상태: CANONICAL PROP SET V1. 현재 3D 충돌 모듈을 유지하면서 이후 월드 비주얼 교체에 사용한다.
+- 상태: LEGACY TOOLCHAIN INPUT, NOT RUNTIME CANON. 현재 runtime 가구 정본은 `Assets/Art/Office/Tiles/Furniture/Runtime/`과 `OfficeFurnitureVisualCatalog` v3이다.
+- atlas와 `Modules/`는 Editor builder/검증 코드가 참조하므로 참조 제거와 도구 교체 전에는 삭제하지 않는다.
 
 ## Starter Office 이동 방향·배치 표현 규칙
 
@@ -153,7 +150,7 @@
 - 재질은 밝은 저채도 회청색 plaster panel과 matte white top/base trim이다. 갈색 목재, 울타리 slat, 굵은 반복 post, gate, 금속 난간을 사용하지 않는다.
 - far 두 면은 사무실 경계를 읽을 수 있는 full height, 카메라에 가까운 두 면은 캐릭터와 가구를 가리지 않는 낮은 cutaway height다. 두 높이는 같은 색·trim·얇은 panel seam 문법을 공유한다.
 - 각 bay는 투명 배경의 정확한 한 타일 `(+160,+80)` screen span이며, SouthEast/SouthWest mirror가 네 L corner에서 틈이나 한 타일 overshoot 없이 만난다.
-- 출입구는 한 bay 전체가 열린 negative space다. 두 slim jamb와 얇은 isometric threshold는 허용하지만 door leaf, header/lintel, 손잡이, swing arc, 닫힌 문 silhouette는 금지한다.
+- 출입구는 한 bay 전체가 열린 negative space와 exterior-side thin threshold만 가진다. door leaf, jamb, header/lintel, 손잡이, swing arc, 닫힌 문 silhouette는 금지한다.
 - runtime 규격은 640×512 RGBA, hard alpha, 180 PPU, Point/nearest, mipmap 없음, uncompressed다. 기존 source/runtime GUID와 `.meta`를 유지한다.
 
 ## 월드 도트 샘플링과 화면 선명도 (2026-08-14)

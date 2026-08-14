@@ -1,3 +1,6 @@
+> [!NOTE]
+> 역사 구현 보고서입니다. 현재 정본·미완료·최신 검증은 [PROJECT_STATE.md](../../PROJECT_STATE.md)를 따릅니다.
+
 # Movement & Seating Audit Completion — 2026-08-12
 
 감사 원본: `Downloads/FAMILY_COMPANY_MOVEMENT_SEATING_AUDIT_2026-08-12.md`
