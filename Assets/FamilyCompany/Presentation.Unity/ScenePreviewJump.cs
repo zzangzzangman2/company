@@ -843,9 +843,41 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
             OfficeRuntimeAgent firstEntrant = _starterRuntime.Actors.Single(item => !item.IsPresentationAway);
+            float entranceDeadline = Time.unscaledTime + 5f;
+            Vector2 previousEntrancePosition = firstEntrant.Position;
+            float maximumEntranceRenderStep = 0f;
+            while (!_starterRuntime.World.Presenter.NearestCell(
+                       firstEntrant.transform.position).Equals(expectedEntranceCell) &&
+                   Time.unscaledTime < entranceDeadline)
+            {
+                yield return null;
+                float renderStep = Vector2.Distance(
+                    previousEntrancePosition,
+                    firstEntrant.Position);
+                maximumEntranceRenderStep = Mathf.Max(maximumEntranceRenderStep, renderStep);
+                if (renderStep > 0.099001f)
+                {
+                    FailPlayerQa(
+                        35,
+                        "first attendance actor exceeded the visible ingress frame budget: " +
+                        renderStep.ToString("F6"));
+                    yield break;
+                }
+                if (_starterRuntime.Actors.Count(actor => !actor.IsPresentationAway) != 1)
+                {
+                    FailPlayerQa(
+                        35,
+                        "another attendance actor became visible before the first reached the entrance");
+                    yield break;
+                }
+                previousEntrancePosition = firstEntrant.Position;
+            }
             if (!_starterRuntime.World.Presenter.NearestCell(firstEntrant.transform.position).Equals(expectedEntranceCell))
             {
-                FailPlayerQa(35, "first attendance actor was not aligned with the canonical open passage entrance");
+                FailPlayerQa(
+                    35,
+                    "first attendance actor did not walk from the exterior to the canonical entrance " +
+                    "within 5 real seconds: position=" + firstEntrant.Position);
                 yield break;
             }
             string entranceCapturePath = QaArtifactPath(
@@ -914,7 +946,8 @@ namespace FamilyCompany.Presentation.Unity
             Debug.Log(
                 "STARTER_OFFICE_ATTENDANCE_FLOW_QA_PASS | start=08:50 hidden=4 " +
                 "openPassage=(8,0) oneTile=true nonBlocking=true doorAnimation=false " +
-                "entrance=(8,1) firstActorAlignedEntrance=true entry=09:00..09:03 present=4 " +
+                "entrance=(8,1) firstActorAlignedEntrance=true maxIngressRenderStep=" +
+                maximumEntranceRenderStep.ToString("F6") + " entry=09:00..09:03 present=4 " +
                 "doorOpenSfx=1 doorCloseSfx=0 duplicateSfx=0 assignedSeatArrivals=4 " +
                 "stagingStops=0 exit=18:00 captures=1920x1080");
         }
