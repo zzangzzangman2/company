@@ -371,6 +371,25 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
             AddFlexibleSpacer(_topHud);
 
+            var officeViewButton = CreateSpriteButton(
+                _topHud,
+                "Office Observation Camera Guide",
+                _speedNormal,
+                _speedHover,
+                _speedPressed,
+                _speedSelected,
+                _bootstrap.ToggleOfficeObservationCameraNow,
+                206f,
+                50f);
+            var officeViewLabel = AddText(
+                officeViewButton.GetComponent<RectTransform>(),
+                "사무실 보기 · C",
+                CanvasFont(17f, UiRemasterTypography.ButtonPixels),
+                true,
+                TextAlignmentOptions.Midline,
+                DeepInk);
+            Stretch(officeViewLabel.rectTransform);
+
             var speedHost = CreateRect("Canonical Time Speed Segments", _topHud);
             AddLayout(speedHost, 320f, 52f, 320f, 0f);
             var speedLayout = speedHost.gameObject.AddComponent<HorizontalLayoutGroup>();

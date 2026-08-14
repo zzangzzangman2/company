@@ -43,6 +43,7 @@ $referencePaths = @(
     (Join-Path $unityModules 'UnityEngine.CoreModule.dll'),
     (Join-Path $unityModules 'UnityEngine.AnimationModule.dll'),
     (Join-Path $unityModules 'UnityEngine.PhysicsModule.dll'),
+    (Join-Path $unityModules 'UnityEngine.Physics2DModule.dll'),
     (Join-Path $unityModules 'UnityEngine.AudioModule.dll'),
     (Join-Path $unityModules 'UnityEngine.InputLegacyModule.dll'),
     (Join-Path $unityModules 'UnityEngine.IMGUIModule.dll'),
@@ -105,6 +106,7 @@ foreach ($requiredToken in @(
     'Image.Type.Sliced',
     'Selectable.Transition.SpriteSwap',
     'MAIN_NAVIGATION_V2_ASSET_MISSING',
+    '사무실 보기 · C',
     'ReturnToOfficeNow')) {
     if ($presenterSource.IndexOf($requiredToken, [StringComparison]::Ordinal) -lt 0) {
         throw "Main navigation presenter is missing required structure token: $requiredToken"

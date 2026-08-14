@@ -183,12 +183,25 @@ namespace FamilyCompany.Simulation.ManagementUi
         public const double OuterMargin = 24d;
         public const double Gap = 16d;
         public const double TopHudHeight = 88d;
-        public const double RailWidth = 288d;
+        public const double RailWidth = 280d;
+        public const double QuickActionsWidth = 272d;
         public const double TabsHeight = 56d;
-        public const double ProgressHeight = 280d;
+        public const double ProgressHeight = 240d;
+        public const double FamilyCardHeight = 176d;
+        public const double MinimumClickTarget = 48d;
+        public const double PanelBorder = 12d;
+        public const double CardBorder = 16d;
+        public const double MinimumTextInnerClearance = 8d;
+        public const double PixelSnapGuard = 1d;
+        public const double PanelContentInset = PanelBorder + MinimumTextInnerClearance + PixelSnapGuard;
+        public const double CardContentInset = CardBorder + MinimumTextInnerClearance + PixelSnapGuard;
+        public const double ButtonHorizontalBorder = 12d;
+        public const double ButtonVerticalBorder = 5d;
+        public const double MinimumButtonOpaqueCoverage = 0.8d;
         public const double MinimumOfferCardWidthPixels = 264d;
         public const string SkinResourcePath = "ManagementUI/ManagementUiSkin_v1";
         public const string FontCatalogResourcePath = "ManagementUI/ManagementUiFontCatalog_v1";
+        public const string BackgroundResourcePath = "ManagementUIP0/office_management_background_v1";
 
         public static ManagementUiLayoutSnapshot Calculate(
             int pixelWidth,
@@ -217,6 +230,7 @@ namespace FamilyCompany.Simulation.ManagementUi
             var gap = Gap * scale;
             var topHeight = TopHudHeight * scale;
             var railWidth = RailWidth * scale;
+            var quickWidth = QuickActionsWidth * scale;
             var tabsHeight = TabsHeight * scale;
             var progressHeight = ProgressHeight * scale;
             var contentX = safe.X + margin;
@@ -225,7 +239,7 @@ namespace FamilyCompany.Simulation.ManagementUi
             var bodyY = topHud.Bottom + gap;
             var bodyHeight = safe.Bottom - margin - bodyY;
             var family = new UiPixelRect(contentX, bodyY, railWidth, bodyHeight);
-            var quick = new UiPixelRect(contentX + contentWidth - railWidth, bodyY, railWidth, bodyHeight);
+            var quick = new UiPixelRect(contentX + contentWidth - quickWidth, bodyY, quickWidth, bodyHeight);
             var centerX = family.Right + gap;
             var centerWidth = quick.X - gap - centerX;
             var center = new UiPixelRect(centerX, bodyY, centerWidth, bodyHeight);
@@ -293,6 +307,47 @@ namespace FamilyCompany.Simulation.ManagementUi
                     if (card.Overlaps(layout.OfferCards[other]))
                         throw new InvalidOperationException($"Offer cards {index} and {other} overlap.");
             }
+        }
+    }
+
+    public static class ManagementUiR1RegressionFixture
+    {
+        public static readonly int[] OfferBorderWidths = { 385, 358, 394 };
+        public static readonly int[] OfferTextSafeDeficits = { 13, 16, 16 };
+        public const int OfferBorderWidthSpread = 36;
+        public const int MaximumOfferBorderWidthSpread = 2;
+        public const int MinimumTextInnerClearance = 8;
+
+        public const int SpeedOpaqueWidth = 22;
+        public const int SpeedOpaqueHeight = 32;
+        public const int SpeedHitWidth = 75;
+        public const int SpeedHitHeight = 48;
+        public const int SaveOpaqueWidth = 34;
+        public const int SaveOpaqueHeight = 32;
+        public const int SaveHitWidth = 116;
+        public const int SaveHitHeight = 48;
+        public const int MenuOpaqueWidth = 94;
+        public const int MenuOpaqueHeight = 32;
+        public const int MenuHitWidth = 240;
+        public const int MenuHitHeight = 48;
+
+        public static int CalculateSpread(int[] widths)
+        {
+            if (widths == null || widths.Length == 0) throw new ArgumentException("At least one width is required.", nameof(widths));
+            var minimum = widths[0];
+            var maximum = widths[0];
+            for (var index = 1; index < widths.Length; index++)
+            {
+                minimum = Math.Min(minimum, widths[index]);
+                maximum = Math.Max(maximum, widths[index]);
+            }
+            return maximum - minimum;
+        }
+
+        public static double SurfaceRatio(int opaque, int hit)
+        {
+            if (opaque < 0 || hit <= 0) throw new ArgumentOutOfRangeException();
+            return opaque / (double)hit;
         }
     }
 }

@@ -5,7 +5,6 @@ using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.ManagementUi;
-using FamilyCompany.Presentation.Unity.UIRemaster;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -31,6 +30,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private static readonly Color BorderColor = Hex("9CAFAA");
         private static readonly Color DisabledColor = Hex(ManagementUiAccessibility.DisabledHex);
         private static readonly Color DisabledTextColor = Hex(ManagementUiAccessibility.DisabledTextHex);
+        private static readonly Color BackgroundTint = new Color(1f, 1f, 1f, 1f);
         private static readonly Color OfficeHudShellColor = Hex("142729");
         private static readonly Color OfficeHudCardColor = Hex("203B3B");
         private static readonly Color OfficeHudTextColor = Hex("FFF6E2");
@@ -38,6 +38,15 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private static readonly Color OfficeHudAccentColor = Hex("EF7558");
         private static readonly string[] ContractClientIds = { "samsung-electronics", "lg-electronics", "sk-telecom" };
         private static readonly string[] ContractClientNames = { "삼성전자", "LG전자", "SK텔레콤" };
+        public const string KoreanGlyphQaSample =
+            "가족회사 관리화면 궭값 안녕하세요 한글 완성형 자모 ㄱㄴㄷㅏㅑㅓ 각 가나다라마바사 " +
+            "0123456789 1×2×4× ₩원 · ,.!?()[]{}:+-/% ㈜";
+        // Conservative minimum across normal, disabled and tab tight crops at alpha >= 200.
+        // The editor validator re-measures the source PNGs so these reported player metrics
+        // cannot silently drift when an artist replaces a skin asset.
+        public const float TightButtonOpaqueAreaRatio = 0.9314f;
+        public const float TightButtonOpaqueWidthRatio = 0.9893f;
+        public const float TightButtonOpaqueHeightRatio = 0.9464f;
 
         private readonly Dictionary<string, TMP_Text> _officeMemberStatus =
             new Dictionary<string, TMP_Text>(StringComparer.Ordinal);
@@ -51,11 +60,14 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private PrototypeBootstrap _bootstrap;
         private GameObject _officeHudRoot;
         private GameObject _managementRoot;
+        private CanvasGroup _managementCanvasGroup;
         private RectTransform _officeSafeRoot;
         private RectTransform _managementSafeRoot;
         private RectTransform _familyHost;
         private RectTransform _contentHost;
         private RectTransform _progressHost;
+        private RectTransform _contentView;
+        private RectTransform _progressView;
         private TMP_Text _officeCompanyText;
         private TMP_Text _officeTimeText;
         private TMP_Text _officeNoticeText;
@@ -70,6 +82,11 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private ManagementUiSkinCatalog _skin;
         private Texture2D _fallbackTexture;
         private Sprite _fallbackSprite;
+        private Sprite _runtimePanelSprite;
+        private Sprite _runtimeCardSprite;
+        private Sprite _runtimeButtonSprite;
+        private Sprite _runtimeDisabledButtonSprite;
+        private Sprite _runtimeTabSprite;
         private PrototypeUiScreen _lastScreen = (PrototypeUiScreen)(-1);
         private OfficeManagementTab _tab = OfficeManagementTab.Contracts;
         private BusinessIndustry _contractIndustry = BusinessIndustry.WebAndSoftware;
@@ -84,6 +101,26 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private bool _built;
         private bool _reportedFontFailure;
         private bool _reportedSkinFallback;
+        private bool _managementDataPrewarmed;
+        private object _prewarmedState;
+        private int _missingGlyphCount;
+
+        public GameObject GetManagementRootForQa() => _managementRoot;
+        public int MissingGlyphCountForQa => _missingGlyphCount;
+        public bool IsManagementDataPrewarmedForCurrentStateForQa =>
+            _managementDataPrewarmed && _bootstrap != null && ReferenceEquals(_prewarmedState, _bootstrap.State);
+        public bool IsManagementVisibleForQa =>
+            _managementRoot != null && _managementRoot.activeInHierarchy &&
+            _managementCanvasGroup != null && _managementCanvasGroup.alpha >= 0.999f &&
+            _managementCanvasGroup.interactable && _managementCanvasGroup.blocksRaycasts;
+        public bool IsManagementPrewarmHiddenForQa =>
+            _managementRoot != null && _managementRoot.activeInHierarchy &&
+            _managementCanvasGroup != null && _managementCanvasGroup.alpha <= 0.001f &&
+            !_managementCanvasGroup.interactable && !_managementCanvasGroup.blocksRaycasts;
+        public int ManagementCanvasCountForQa =>
+            _managementRoot != null ? _managementRoot.GetComponentsInChildren<Canvas>(true).Length : 0;
+        public int ManagementButtonListenerHostCountForQa =>
+            _managementRoot != null ? _managementRoot.GetComponentsInChildren<Button>(true).Length : 0;
 
         public void Configure(PrototypeBootstrap bootstrap)
         {
@@ -100,6 +137,8 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             _productTitle = "우리 가족 업무도우미";
             _nextLiveRefresh = 0f;
             _nextSourceRefresh = 0f;
+            _managementDataPrewarmed = false;
+            _prewarmedState = null;
         }
 
         private void Awake()
@@ -118,17 +157,36 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             if (!_built) BuildRuntimeUi();
             RefreshSafeAreaIfNeeded();
 
+            if (!ReferenceEquals(_prewarmedState, _bootstrap.State))
+            {
+                _prewarmedState = _bootstrap.State;
+                _managementDataPrewarmed = false;
+            }
+            if (!_managementDataPrewarmed && _bootstrap.State != null && ScenePreviewJump.IsPresentationLoading)
+            {
+                RebuildManagementData();
+                WarmHiddenManagementPresentation();
+                _managementDataPrewarmed = true;
+                Debug.Log("MANAGEMENT_UI_LOADING_PREWARM: PASS family,offers,layout,glyphs,canvas,tmp-mesh hidden=1");
+            }
+
             var screen = _bootstrap.UiScreen;
             // The compact top/bottom main navigation HUD owns the normal office screen.
             // Keep this legacy observation HUD built for regression compatibility, but hidden.
             var officeVisible = false;
             var managementVisible = screen == PrototypeUiScreen.Management;
             if (_officeHudRoot.activeSelf != officeVisible) _officeHudRoot.SetActive(officeVisible);
-            if (_managementRoot.activeSelf != managementVisible) _managementRoot.SetActive(managementVisible);
+            SetManagementVisibility(managementVisible);
             if (_lastScreen != screen)
             {
                 _lastScreen = screen;
-                if (managementVisible) RebuildManagementData();
+                if (managementVisible && !_managementDataPrewarmed)
+                {
+                    RebuildManagementData();
+                    WarmHiddenManagementPresentation();
+                    _managementDataPrewarmed = true;
+                    SetManagementVisibility(true);
+                }
                 _nextLiveRefresh = 0f;
             }
 
@@ -144,6 +202,11 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             if (_headingFont != null && _headingFont != _bodyFont) Destroy(_headingFont);
             if (_fallbackFont != null && _fallbackFont != _bodyFont && _fallbackFont != _headingFont) Destroy(_fallbackFont);
             if (_fallbackSprite != null) Destroy(_fallbackSprite);
+            if (_runtimePanelSprite != null) Destroy(_runtimePanelSprite);
+            if (_runtimeCardSprite != null) Destroy(_runtimeCardSprite);
+            if (_runtimeButtonSprite != null) Destroy(_runtimeButtonSprite);
+            if (_runtimeDisabledButtonSprite != null) Destroy(_runtimeDisabledButtonSprite);
+            if (_runtimeTabSprite != null) Destroy(_runtimeTabSprite);
             if (_fallbackTexture != null) Destroy(_fallbackTexture);
         }
 
@@ -155,13 +218,37 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             LoadSkin();
             _officeHudRoot = CreateCanvas("Office Observation HUD", 210, out _officeSafeRoot);
             _managementRoot = CreateCanvas("Management Overlay V2", 220, out _managementSafeRoot);
+            _managementCanvasGroup = _managementRoot.AddComponent<CanvasGroup>();
             BuildOfficeHud();
             BuildManagementOverlay();
             _officeHudRoot.SetActive(false);
-            _managementRoot.SetActive(false);
+            SetManagementVisibility(false);
             _built = true;
             RefreshSafeAreaIfNeeded(true);
             Debug.Log("MANAGEMENT_UI_V2_RUNTIME: READY");
+        }
+
+        private void SetManagementVisibility(bool visible)
+        {
+            if (_managementRoot == null || _managementCanvasGroup == null) return;
+            if (!_managementRoot.activeSelf) _managementRoot.SetActive(true);
+            _managementCanvasGroup.alpha = visible ? 1f : 0f;
+            _managementCanvasGroup.interactable = visible;
+            _managementCanvasGroup.blocksRaycasts = visible;
+        }
+
+        private void WarmHiddenManagementPresentation()
+        {
+            if (_managementRoot == null || _managementSafeRoot == null) return;
+            SetManagementVisibility(false);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_managementSafeRoot);
+            Canvas.ForceUpdateCanvases();
+            foreach (var text in _managementRoot.GetComponentsInChildren<TMP_Text>(true))
+            {
+                if (!text.gameObject.activeInHierarchy || string.IsNullOrEmpty(text.text)) continue;
+                text.ForceMeshUpdate(false, false);
+            }
+            Canvas.ForceUpdateCanvases();
         }
 
         private static void EnsureEventSystem()
@@ -183,6 +270,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             var canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = sortingOrder;
+            canvas.pixelPerfect = true;
             var scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = ReferenceResolution;
@@ -312,22 +400,29 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private void BuildManagementOverlay()
         {
             var background = _managementSafeRoot.gameObject.AddComponent<Image>();
-            background.color = PageColor;
-            background.sprite = PanelSprite;
-            background.type = Image.Type.Sliced;
+            background.color = BackgroundTint;
+            background.sprite = Resources.Load<Sprite>(ManagementUiLayoutMetrics.BackgroundResourcePath);
+            background.type = background.sprite != null ? Image.Type.Simple : Image.Type.Sliced;
+            if (background.sprite == null)
+            {
+                background.color = PageColor;
+                background.sprite = PanelSprite;
+            }
+            background.raycastTarget = false;
             var rootLayout = _managementSafeRoot.gameObject.AddComponent<VerticalLayoutGroup>();
             ConfigureLayout(rootLayout, new RectOffset(24, 24, 24, 24), 16f);
             rootLayout.childControlHeight = true;
             rootLayout.childForceExpandHeight = false;
 
             var top = CreatePanel("Management Top HUD", _managementSafeRoot, PanelColor, PanelSprite);
-            AddLayout(top, -1f, 88f, 88f, 0f);
+            AddLayout(top, -1f, (float)ManagementUiLayoutMetrics.TopHudHeight, (float)ManagementUiLayoutMetrics.TopHudHeight, 0f);
             var topLayout = top.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(topLayout, new RectOffset(20, 20, 14, 14), 16f);
-            _managementCompanyText = AddText(top, string.Empty, 28f, true, TextAlignmentOptions.MidlineLeft, -1f, 60f);
-            _managementTimeText = AddText(top, string.Empty, 20f, false, TextAlignmentOptions.Midline, 430f, 60f);
-            _managementCashText = AddText(top, string.Empty, 20f, false, TextAlignmentOptions.MidlineRight, 370f, 60f);
-            AddButton(top, "사무실 관찰  ESC", _bootstrap.CloseManagementNow, true, 230f, 54f);
+            ConfigureLayout(topLayout, PanelSafePadding(), 16f);
+            topLayout.childAlignment = TextAnchor.MiddleCenter;
+            _managementCompanyText = AddText(top, string.Empty, 24f, true, TextAlignmentOptions.MidlineLeft, -1f, 48f);
+            _managementTimeText = AddText(top, string.Empty, 18f, false, TextAlignmentOptions.Midline, 410f, 48f);
+            _managementCashText = AddText(top, string.Empty, 18f, false, TextAlignmentOptions.MidlineRight, 330f, 48f);
+            AddButton(top, "사무실 보기 · C", _bootstrap.CloseManagementNow, true, 224f, 48f);
 
             var body = CreateRect("Management Body Grid", _managementSafeRoot);
             AddLayout(body, -1f, -1f, -1f, 1f);
@@ -337,7 +432,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             bodyLayout.childForceExpandWidth = false;
 
             _familyHost = CreatePanel("Family Rail", body, PanelColor, PanelSprite);
-            AddLayout(_familyHost, 288f, -1f, -1f, 0f);
+            AddLayout(_familyHost, (float)ManagementUiLayoutMetrics.RailWidth, -1f, -1f, 0f);
 
             var center = CreateRect("Management Center", body);
             AddLayout(center, -1f, -1f, -1f, 1f);
@@ -349,17 +444,17 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             _contentHost = CreateRect("Primary Content", center);
             AddLayout(_contentHost, -1f, -1f, -1f, 1f);
             _progressHost = CreatePanel("Progress Strip", center, PanelColor, PanelSprite);
-            AddLayout(_progressHost, -1f, 280f, 280f, 0f);
+            AddLayout(_progressHost, -1f, (float)ManagementUiLayoutMetrics.ProgressHeight, (float)ManagementUiLayoutMetrics.ProgressHeight, 0f);
 
             BuildQuickActions(body);
         }
 
         private void BuildTabRow(RectTransform center)
         {
-            var tabs = CreatePanel("Management Tabs", center, PanelColor, PanelSprite);
-            AddLayout(tabs, -1f, 56f, 56f, 0f);
+            var tabs = CreateRect("Management Tabs", center);
+            AddLayout(tabs, -1f, (float)ManagementUiLayoutMetrics.TabsHeight, (float)ManagementUiLayoutMetrics.TabsHeight, 0f);
             var layout = tabs.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(8, 8, 8, 8), 8f);
+            ConfigureLayout(layout, new RectOffset(0, 0, 4, 4), 16f);
             AddTabButton(tabs, "계약", () => SelectTab(OfficeManagementTab.Contracts));
             AddTabButton(tabs, "R&D", () => SelectTab(OfficeManagementTab.Research));
             AddTabButton(tabs, "시장·제품", () => SelectTab(OfficeManagementTab.Products));
@@ -368,21 +463,43 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private void BuildQuickActions(RectTransform body)
         {
             var quick = CreatePanel("Quick Actions", body, PanelColor, PanelSprite);
-            AddLayout(quick, 288f, -1f, -1f, 0f);
+            AddLayout(quick, (float)ManagementUiLayoutMetrics.QuickActionsWidth, -1f, -1f, 0f);
             var layout = quick.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(16, 16, 16, 16), 10f);
+            ConfigureLayout(layout, PanelSafePadding(), 8f);
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
-            AddText(quick, "빠른 조작", 25f, true, TextAlignmentOptions.MidlineLeft, -1f, 42f);
-            _managementNoticeText = AddText(quick, string.Empty, 17f, false, TextAlignmentOptions.TopLeft, -1f, 120f);
-            AddButton(quick, "사무실 관찰", _bootstrap.CloseManagementNow, true, -1f, 52f);
-            AddButton(quick, "+1시간", () => RunAndRefresh(() => _bootstrap.AdvanceTimeNow(60)), false, -1f, 48f);
-            AddButton(quick, "+1일", () => RunAndRefresh(() => _bootstrap.AdvanceTimeNow(1440)), false, -1f, 48f);
-            AddButton(quick, "저장", _bootstrap.ShowSaveSlotsNow, false, -1f, 48f);
-            AddButton(quick, "불러오기", _bootstrap.ShowLoadSlotsNow, false, -1f, 48f);
+            AddText(quick, "보기와 시간", 23f, true, TextAlignmentOptions.MidlineLeft, -1f, 40f);
+            _managementNoticeText = AddText(quick, string.Empty, 16f, false, TextAlignmentOptions.TopLeft, -1f, 80f);
+            AddButton(quick, "사무실 보기", _bootstrap.CloseManagementNow, true, -1f, 56f);
+            AddText(quick, "가족이 일하는 모습을 봅니다 · C", 14f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
+
+            var speedRow = CreateRect("Time Speed", quick);
+            AddLayout(speedRow, -1f, 48f, 48f, 0f);
+            var speedLayout = speedRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(speedLayout, null, 8f);
+            foreach (var speed in new[] { 1, 2, 4 })
+            {
+                var capturedSpeed = speed;
+                AddButton(speedRow, $"{speed}×", () => _bootstrap.SetWorldTimeScaleNow(capturedSpeed), false, -1f, 48f);
+            }
+
+            var saveRow = CreateRect("Save And Load", quick);
+            AddLayout(saveRow, -1f, 48f, 48f, 0f);
+            var saveLayout = saveRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(saveLayout, null, 8f);
+            AddButton(saveRow, "저장", _bootstrap.ShowSaveSlotsNow, false, -1f, 48f);
+            AddButton(saveRow, "불러오기", _bootstrap.ShowLoadSlotsNow, false, -1f, 48f);
+
             AddButton(quick, "게임 메뉴", _bootstrap.ShowPauseMenuNow, false, -1f, 48f);
-            AddButton(quick, "전체 화면  F11", _bootstrap.ToggleFullscreenNow, false, -1f, 48f);
-            AddText(quick, "ESC  관리 화면 닫기\nF11  전체 화면 전환\nCtrl+S  현재 슬롯 빠른 저장", 16f, false, TextAlignmentOptions.BottomLeft, -1f, 90f);
+            AddButton(quick, "전체 화면 · F11", _bootstrap.ToggleFullscreenNow, false, -1f, 48f);
+
+            var timeRow = CreateRect("Time Advance", quick);
+            AddLayout(timeRow, -1f, 48f, 48f, 0f);
+            var timeLayout = timeRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(timeLayout, null, 8f);
+            AddButton(timeRow, "+1시간", () => RunAndRefresh(() => _bootstrap.AdvanceTimeNow(60)), false, -1f, 48f);
+            AddButton(timeRow, "+1일", () => RunAndRefresh(() => _bootstrap.AdvanceTimeNow(1440)), false, -1f, 48f);
+            AddText(quick, "ESC  관리 닫기\nCtrl+S  빠른 저장", 14f, false, TextAlignmentOptions.BottomLeft, -1f, 56f);
         }
 
         private void SelectTab(OfficeManagementTab tab)
@@ -394,12 +511,19 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
 
         private void RebuildManagementData()
         {
-            if (!_built && _contentHost == null) return;
+            if (!_built || _bootstrap == null || _bootstrap.State == null ||
+                _familyHost == null || _contentHost == null || _progressHost == null) return;
             RebuildFamilyRail();
             ClearChildren(_contentHost);
-            ClearLayoutGroups(_contentHost);
             ClearChildren(_progressHost);
-            ClearLayoutGroups(_progressHost);
+            // LayoutGroup removal is deferred until end-of-frame in a player. Reusing the
+            // persistent host therefore allowed a second loading prewarm to add a duplicate
+            // HorizontalLayoutGroup before the first was destroyed. Give every data bind a
+            // fresh, inactive-safe child root and keep the persistent hosts component-free.
+            _contentView = CreateRect("Primary Content View", _contentHost);
+            Stretch(_contentView);
+            _progressView = CreateRect("Progress View", _progressHost);
+            Stretch(_progressView);
             switch (_tab)
             {
                 case OfficeManagementTab.Contracts:
@@ -421,41 +545,41 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             ClearChildren(_familyHost);
             var layout = _familyHost.gameObject.GetComponent<VerticalLayoutGroup>() ??
                          _familyHost.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(14, 14, 14, 14), 10f);
+            ConfigureLayout(layout, PanelSafePadding(), 8f);
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
-            AddText(_familyHost, "가족 4명", 25f, true, TextAlignmentOptions.MidlineLeft, -1f, 42f);
+            AddText(_familyHost, "가족 4명", 23f, true, TextAlignmentOptions.MidlineLeft, -1f, 40f);
             if (_bootstrap.State == null) return;
             foreach (var member in _bootstrap.State.Family.Members)
             {
                 var card = CreatePanel($"Family {member.MemberId}", _familyHost, CardColor, CardSprite);
-                AddLayout(card, -1f, 188f, 188f, 0f);
+                AddLayout(card, -1f, (float)ManagementUiLayoutMetrics.FamilyCardHeight, (float)ManagementUiLayoutMetrics.FamilyCardHeight, 0f);
                 var cardLayout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-                ConfigureLayout(cardLayout, new RectOffset(14, 14, 12, 12), 4f);
+                ConfigureLayout(cardLayout, CardSafePadding(), 4f);
                 cardLayout.childControlHeight = true;
                 cardLayout.childForceExpandHeight = false;
-                AddText(card, $"{member.DisplayName} · {member.AgeAt(_bootstrap.State.Time)}살", 21f, true, TextAlignmentOptions.MidlineLeft, -1f, 30f);
-                AddText(card, member.CompanyDuty, 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
-                AddText(card, $"기술개발 {member.Capability.Skills.Engineering}   운영 {member.Capability.Skills.Operations}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
-                AddText(card, $"체력 {member.Energy}   스트레스 {member.Stress}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
-                AddText(card, AutonomyPresentationLabel(member), 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
+                var familyTitle = AddText(card, $"{member.DisplayName} · {member.AgeAt(_bootstrap.State.Time)}살", 20f, true, TextAlignmentOptions.MidlineLeft, -1f, 28f);
+                familyTitle.gameObject.name = "Family Title";
+                AddText(card, member.CompanyDuty, 16f, false, TextAlignmentOptions.MidlineLeft, -1f, 24f);
+                AddText(card, $"개발 {member.Capability.Skills.Engineering} · 운영 {member.Capability.Skills.Operations} · 체력 {member.Energy}", 15f, false, TextAlignmentOptions.MidlineLeft, -1f, 24f);
+                AddText(card, AutonomyPresentationLabel(member), 15f, false, TextAlignmentOptions.MidlineLeft, -1f, 28f);
             }
         }
 
         private void BuildContractContent()
         {
-            var contentLayout = _contentHost.gameObject.AddComponent<HorizontalLayoutGroup>();
+            var contentLayout = _contentView.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(contentLayout, null, 16f);
             contentLayout.childControlWidth = true;
             contentLayout.childForceExpandWidth = true;
             for (var index = 0; index < 3; index++) BuildContractCard(index);
 
-            var progressLayout = _progressHost.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(progressLayout, new RectOffset(16, 16, 14, 14), 10f);
+            var progressLayout = _progressView.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(progressLayout, PanelSafePadding(), 8f);
             progressLayout.childControlHeight = true;
             progressLayout.childForceExpandHeight = false;
-            var titleRow = CreateRect("Contract Progress Title", _progressHost);
-            AddLayout(titleRow, -1f, 44f, 44f, 0f);
+            var titleRow = CreateRect("Contract Progress Title", _progressView);
+            AddLayout(titleRow, -1f, 48f, 48f, 0f);
             var titleLayout = titleRow.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(titleLayout, null, 10f);
             var active = _bootstrap.State.Contracts.Contracts
@@ -467,11 +591,11 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             AddButton(titleRow, "다른 의뢰", NextContractPage, false, 150f, 40f);
             if (active.Length == 0)
             {
-                AddText(_progressHost, "위 의뢰를 수락한 뒤 가족에게 업무를 배정하세요. 플레이어는 사무실의 의미 장소에서 E로 직접 참여합니다.", 19f, false, TextAlignmentOptions.TopLeft, -1f, 150f);
+                AddText(_progressView, "위 의뢰를 수락한 뒤 가족에게 업무를 배정하세요. 플레이어는 사무실의 의미 장소에서 E로 직접 참여합니다.", 19f, false, TextAlignmentOptions.TopLeft, -1f, 150f);
                 return;
             }
 
-            var contractsRow = CreateRect("Active Contracts", _progressHost);
+            var contractsRow = CreateRect("Active Contracts", _progressView);
             AddLayout(contractsRow, -1f, -1f, -1f, 1f);
             var contractsLayout = contractsRow.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(contractsLayout, null, 12f);
@@ -489,10 +613,10 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
                 _contractIndustry,
                 sequence);
             var existing = _bootstrap.State.Contracts.Contracts.FirstOrDefault(item => item.Offer.OfferId == offer.OfferId);
-            var card = CreatePanel($"Offer {cardIndex + 1}", _contentHost, CardColor, CardSprite);
-            AddLayout(card, -1f, -1f, -1f, 1f);
+            var card = CreatePanel($"Offer {cardIndex + 1}", _contentView, CardColor, CardSprite);
+            AddEqualWidthLayout(card);
             var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(18, 18, 16, 16), 7f);
+            ConfigureLayout(layout, CardSafePadding(), 7f);
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
             AddText(card, offer.ExactClientDisplayName, 26f, true, TextAlignmentOptions.MidlineLeft, -1f, 38f);
@@ -521,13 +645,13 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             var card = CreatePanel($"Active {contract.Offer.OfferId}", parent, CardColor, CardSprite);
             AddLayout(card, -1f, -1f, -1f, 1f);
             var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(12, 12, 10, 10), 6f);
+            ConfigureLayout(layout, CardSafePadding(), 6f);
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
             AddText(card, contract.Offer.Title, 19f, true, TextAlignmentOptions.MidlineLeft, -1f, 30f);
             AddText(card, $"진행 {contract.CompletedPersonHours}/{contract.Offer.EstimatedPersonHours}시간 · 마감 {dueDays}일", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 26f);
             var buttons = CreateRect("Member Assignment", card);
-            AddLayout(buttons, -1f, 42f, 42f, 0f);
+            AddLayout(buttons, -1f, 48f, 48f, 0f);
             var buttonLayout = buttons.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(buttonLayout, null, 6f);
             foreach (var member in _bootstrap.State.Family.Members)
@@ -545,10 +669,10 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         {
             if (!_bootstrap.State.Growth.ResearchCenterUnlocked)
             {
-                var panel = CreatePanel("Research Locked", _contentHost, CardColor, CardSprite);
+                var panel = CreatePanel("Research Locked", _contentView, CardColor, CardSprite);
                 Stretch(panel);
                 var layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-                ConfigureLayout(layout, new RectOffset(36, 36, 36, 36), 18f);
+                ConfigureLayout(layout, CardSafePadding(), 16f);
                 layout.childControlHeight = true;
                 layout.childForceExpandHeight = false;
                 AddText(panel, "R&D 센터 설립", 32f, true, TextAlignmentOptions.MidlineLeft, -1f, 52f);
@@ -559,22 +683,22 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             }
             else
             {
-                var layout = _contentHost.gameObject.AddComponent<HorizontalLayoutGroup>();
+                var layout = _contentView.gameObject.AddComponent<HorizontalLayoutGroup>();
                 ConfigureLayout(layout, null, 16f);
                 layout.childControlWidth = true;
                 layout.childForceExpandWidth = true;
                 foreach (var definition in ResearchTechnologyCatalog.All) BuildResearchCard(definition);
             }
 
-            var progressLayout = _progressHost.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(progressLayout, new RectOffset(16, 16, 14, 14), 8f);
+            var progressLayout = _progressView.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(progressLayout, PanelSafePadding(), 8f);
             progressLayout.childControlHeight = true;
             progressLayout.childForceExpandHeight = false;
-            AddText(_progressHost, "공개된 가족 역량", 24f, true, TextAlignmentOptions.MidlineLeft, -1f, 42f);
+            AddText(_progressView, "공개된 가족 역량", 24f, true, TextAlignmentOptions.MidlineLeft, -1f, 42f);
             foreach (var member in _bootstrap.State.Family.Members)
             {
                 var relationship = member.MemberId == "player" ? string.Empty : $" · 나와 {_bootstrap.State.Family.RelationshipLabel("player", member.MemberId)}";
-                AddText(_progressHost, $"{member.DisplayName} · 기획 {member.Capability.Skills.Planning}  창작 {member.Capability.Skills.Creative}  사업 {member.Capability.Skills.Business}  협업 {member.Capability.Skills.Collaboration} · 기억 {member.CareerMemories.Count}{relationship}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 30f);
+                AddText(_progressView, $"{member.DisplayName} · 기획 {member.Capability.Skills.Planning}  창작 {member.Capability.Skills.Creative}  사업 {member.Capability.Skills.Business}  협업 {member.Capability.Skills.Collaboration} · 기억 {member.CareerMemories.Count}{relationship}", 17f, false, TextAlignmentOptions.MidlineLeft, -1f, 30f);
             }
         }
 
@@ -582,10 +706,10 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         {
             var researched = _bootstrap.State.Growth.HasTechnology(definition.TechnologyId);
             var prerequisiteReady = string.IsNullOrEmpty(definition.PrerequisiteId) || _bootstrap.State.Growth.HasTechnology(definition.PrerequisiteId);
-            var card = CreatePanel($"Research {definition.TechnologyId}", _contentHost, CardColor, CardSprite);
+            var card = CreatePanel($"Research {definition.TechnologyId}", _contentView, CardColor, CardSprite);
             AddLayout(card, -1f, -1f, -1f, 1f);
             var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(18, 18, 16, 16), 10f);
+            ConfigureLayout(layout, CardSafePadding(), 8f);
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
             AddText(card, definition.DisplayName, 26f, true, TextAlignmentOptions.MidlineLeft, -1f, 42f);
@@ -601,14 +725,14 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
 
         private void BuildProductContent()
         {
-            var vertical = _contentHost.gameObject.AddComponent<VerticalLayoutGroup>();
+            var vertical = _contentView.gameObject.AddComponent<VerticalLayoutGroup>();
             ConfigureLayout(vertical, null, 14f);
             vertical.childControlHeight = true;
             vertical.childForceExpandHeight = true;
             var definitions = BusinessIndustryCatalog.All;
             for (var rowIndex = 0; rowIndex < 2; rowIndex++)
             {
-                var row = CreateRect($"Business Row {rowIndex + 1}", _contentHost);
+                var row = CreateRect($"Business Row {rowIndex + 1}", _contentView);
                 AddLayout(row, -1f, -1f, -1f, 1f);
                 var rowLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
                 ConfigureLayout(rowLayout, null, 14f);
@@ -626,7 +750,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             var card = CreatePanel($"Business {definition.Industry}", parent, selected ? Hex("E5F4F0") : CardColor, CardSprite);
             AddLayout(card, -1f, -1f, -1f, 1f);
             var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(14, 14, 12, 12), 5f);
+            ConfigureLayout(layout, CardSafePadding(), 5f);
             layout.childControlHeight = true;
             layout.childForceExpandHeight = false;
             AddText(card, definition.DisplayName, 23f, true, TextAlignmentOptions.MidlineLeft, -1f, 34f);
@@ -654,11 +778,11 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
 
         private void BuildProductProgress()
         {
-            var layout = _progressHost.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(16, 16, 14, 14), 14f);
+            var layout = _progressView.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(layout, PanelSafePadding(), 16f);
             layout.childControlWidth = true;
             layout.childForceExpandWidth = true;
-            var portfolio = CreateRect("Business Portfolio", _progressHost);
+            var portfolio = CreateRect("Business Portfolio", _progressView);
             AddLayout(portfolio, -1f, -1f, -1f, 1f);
             var portfolioLayout = portfolio.gameObject.AddComponent<VerticalLayoutGroup>();
             ConfigureLayout(portfolioLayout, null, 6f);
@@ -672,7 +796,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             var reportButton = AddButton(portfolio, "시장 재조사 · 100,000원", () => RunAndRefresh(() => _bootstrap.PurchaseMarketReportNow(_selectedBusinessIndustry)), false, -1f, 42f);
             SetButtonInteractable(reportButton, marketUnlocked && _bootstrap.State.Company.CashWon >= CompanyGrowthState.MarketReportCostWon);
 
-            var product = CreateRect("Product Project", _progressHost);
+            var product = CreateRect("Product Project", _progressView);
             AddLayout(product, -1f, -1f, -1f, 1f);
             var productLayout = product.gameObject.AddComponent<VerticalLayoutGroup>();
             ConfigureLayout(productLayout, null, 6f);
@@ -693,7 +817,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
                            _bootstrap.State.Growth.MarketReport.Industry == _selectedBusinessIndustry &&
                            (_bootstrap.State.Growth.ProductProject == null || _bootstrap.State.Growth.ProductProject.Resolved);
             var budgetRow = CreateRect("Product Budgets", product);
-            AddLayout(budgetRow, -1f, 42f, 42f, 0f);
+            AddLayout(budgetRow, -1f, 48f, 48f, 0f);
             var budgetLayout = budgetRow.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(budgetLayout, null, 6f);
             foreach (var budget in new long[] { 1_000_000, 2_000_000, 4_000_000 })
@@ -861,12 +985,12 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
 
         private void LoadFonts()
         {
-            var catalog = Resources.Load<UiRemasterFontCatalog>(UiRemasterTypography.FontCatalogResourcePath);
+            var catalog = Resources.Load<ManagementUiFontCatalog>(ManagementUiLayoutMetrics.FontCatalogResourcePath);
             if (catalog != null && catalog.IsComplete)
             {
-                _bodyFont = CreateFontAsset(catalog.BodySource, "Management UI Maplestory Light V3");
-                _headingFont = CreateFontAsset(catalog.HeadingSource, "Management UI Maplestory Bold V3");
-                _fallbackFont = CreateFontAsset(catalog.FallbackSource, "Management UI Pretendard Fallback V3");
+                _bodyFont = CreateFontAsset(catalog.BodySource, "Management UI Pretendard Body P0");
+                _headingFont = CreateFontAsset(catalog.HeadingSource, "Management UI Maplestory Bold Heading P0");
+                _fallbackFont = CreateFontAsset(catalog.FallbackSource, "Management UI Noto Sans KR Jamo Fallback P0");
             }
             if (_bodyFont == null || _headingFont == null || _fallbackFont == null)
             {
@@ -876,10 +1000,23 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
                 _fallbackFont = _fallbackFont != null ? _fallbackFont : _bodyFont;
                 Debug.LogError("MANAGEMENT_UI_FONT_FALLBACK: bundled Korean font catalog is missing or incomplete.");
             }
-            if (_bodyFont != null && _fallbackFont != null && _fallbackFont != _bodyFont)
-                _bodyFont.fallbackFontAssetTable.Add(_fallbackFont);
-            if (_headingFont != null && _bodyFont != null && _bodyFont != _headingFont)
-                _headingFont.fallbackFontAssetTable.Add(_bodyFont);
+            AddFallback(_bodyFont, _fallbackFont);
+            AddFallback(_headingFont, _bodyFont);
+            AddFallback(_headingFont, _fallbackFont);
+            // Populate the terminal OFL fallback first. Doing this before heading/body
+            // requests prevents the first speed label (for example U+00D7) from observing
+            // an atlas that is wired but not yet populated.
+            EnsureGlyphs(_fallbackFont, KoreanGlyphQaSample);
+            EnsureGlyphs(_bodyFont, KoreanGlyphQaSample);
+            EnsureGlyphs(_headingFont, KoreanGlyphQaSample);
+            if (_missingGlyphCount == 0)
+                Debug.Log("MANAGEMENT_UI_KOREAN_GLYPHS: PASS complete,jamo,digits,won,punctuation");
+        }
+
+        private static void AddFallback(TMP_FontAsset target, TMP_FontAsset fallback)
+        {
+            if (target == null || fallback == null || target == fallback) return;
+            if (!target.fallbackFontAssetTable.Contains(fallback)) target.fallbackFontAssetTable.Add(fallback);
         }
 
         private static TMP_FontAsset CreateFontAsset(Font source, string assetName)
@@ -901,7 +1038,35 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private void LoadSkin()
         {
             _skin = Resources.Load<ManagementUiSkinCatalog>(ManagementUiLayoutMetrics.SkinResourcePath);
-            if (_skin != null && _skin.IsComplete) return;
+            if (_skin != null && _skin.IsComplete)
+            {
+                _runtimePanelSprite = CreateTightSlice(
+                    _skin.Panel,
+                    new Rect(18f, 10f, 988f, 492f),
+                    new Vector4(12f, 12f, 12f, 12f),
+                    "Management Panel Tight Slice P0");
+                _runtimeCardSprite = CreateTightSlice(
+                    _skin.Card,
+                    new Rect(15f, 10f, 481f, 620f),
+                    new Vector4(16f, 16f, 16f, 16f),
+                    "Management Card Tight Slice P0");
+                _runtimeButtonSprite = CreateTightSlice(
+                    _skin.Button,
+                    new Rect(98f, 8f, 188f, 112f),
+                    new Vector4(12f, 5f, 12f, 5f),
+                    "Management Button Tight Slice P0");
+                _runtimeDisabledButtonSprite = CreateTightSlice(
+                    _skin.ButtonDisabled,
+                    new Rect(98f, 8f, 187f, 112f),
+                    new Vector4(12f, 5f, 12f, 5f),
+                    "Management Disabled Button Tight Slice P0");
+                _runtimeTabSprite = CreateTightSlice(
+                    _skin.Tab,
+                    new Rect(10f, 24f, 492f, 112f),
+                    new Vector4(12f, 5f, 12f, 5f),
+                    "Management Tab Tight Slice P0");
+                return;
+            }
             _skin = null;
             _fallbackTexture = new Texture2D(8, 8, TextureFormat.RGBA32, false)
             {
@@ -930,11 +1095,33 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             }
         }
 
-        private Sprite PanelSprite => _skin != null ? _skin.Panel : _fallbackSprite;
-        private Sprite CardSprite => _skin != null ? _skin.Card : _fallbackSprite;
-        private Sprite ButtonSprite => _skin != null ? _skin.Button : _fallbackSprite;
-        private Sprite DisabledButtonSprite => _skin != null ? _skin.ButtonDisabled : _fallbackSprite;
-        private Sprite TabSprite => _skin != null ? _skin.Tab : _fallbackSprite;
+        private static Sprite CreateTightSlice(Sprite source, Rect textureRect, Vector4 border, string spriteName)
+        {
+            if (source == null || source.texture == null) return source;
+            var sourceRect = source.rect;
+            var rect = new Rect(
+                sourceRect.x + textureRect.x,
+                sourceRect.y + textureRect.y,
+                Mathf.Min(textureRect.width, sourceRect.width - textureRect.x),
+                Mathf.Min(textureRect.height, sourceRect.height - textureRect.y));
+            var sprite = Sprite.Create(
+                source.texture,
+                rect,
+                new Vector2(0.5f, 0.5f),
+                source.pixelsPerUnit,
+                0,
+                SpriteMeshType.FullRect,
+                border);
+            sprite.name = spriteName;
+            sprite.hideFlags = HideFlags.DontSave;
+            return sprite;
+        }
+
+        private Sprite PanelSprite => _runtimePanelSprite != null ? _runtimePanelSprite : _skin != null ? _skin.Panel : _fallbackSprite;
+        private Sprite CardSprite => _runtimeCardSprite != null ? _runtimeCardSprite : _skin != null ? _skin.Card : _fallbackSprite;
+        private Sprite ButtonSprite => _runtimeButtonSprite != null ? _runtimeButtonSprite : _skin != null ? _skin.Button : _fallbackSprite;
+        private Sprite DisabledButtonSprite => _runtimeDisabledButtonSprite != null ? _runtimeDisabledButtonSprite : _skin != null ? _skin.ButtonDisabled : _fallbackSprite;
+        private Sprite TabSprite => _runtimeTabSprite != null ? _runtimeTabSprite : _skin != null ? _skin.Tab : _fallbackSprite;
 
         private TMP_Text AddText(
             RectTransform parent,
@@ -969,6 +1156,8 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             float preferredWidth,
             float preferredHeight)
         {
+            if (preferredHeight >= 0f)
+                preferredHeight = Mathf.Max(preferredHeight, (float)ManagementUiLayoutMetrics.MinimumClickTarget);
             var rect = CreateRect($"Button {label}", parent);
             var image = rect.gameObject.AddComponent<Image>();
             image.sprite = ButtonSprite;
@@ -991,6 +1180,7 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             AddLayout(rect, preferredWidth, preferredHeight, preferredHeight, preferredWidth < 0f ? 1f : 0f);
             var text = AddText(rect, label, 18f, true, TextAlignmentOptions.Center, -1f, -1f, primary ? Color.white : TextColor);
             Stretch(text.rectTransform);
+            text.margin = new Vector4(12f, 4f, 12f, 4f);
             return button;
         }
 
@@ -1059,6 +1249,17 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
             return element;
         }
 
+        private static LayoutElement AddEqualWidthLayout(RectTransform rect)
+        {
+            var element = rect.gameObject.GetComponent<LayoutElement>() ?? rect.gameObject.AddComponent<LayoutElement>();
+            element.minWidth = 0f;
+            element.preferredWidth = 0f;
+            element.flexibleWidth = 1f;
+            element.minHeight = 0f;
+            element.flexibleHeight = 1f;
+            return element;
+        }
+
         private static void ConfigureLayout(HorizontalOrVerticalLayoutGroup layout, RectOffset padding, float spacing)
         {
             layout.padding = padding ?? new RectOffset();
@@ -1073,20 +1274,49 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
         private void SetText(TMP_Text target, string value)
         {
             if (target == null) return;
-            var normalized = value ?? string.Empty;
-            EnsureGlyphs(target.font, normalized);
-            target.text = normalized;
+            // Preserve the caller's code points. In particular, decomposed Hangul Jamo
+            // must exercise the bundled fallback instead of being hidden by NFC conversion.
+            var renderedValue = value ?? string.Empty;
+            EnsureGlyphs(target.font, renderedValue);
+            target.text = renderedValue;
         }
 
         private void EnsureGlyphs(TMP_FontAsset font, string value)
         {
             if (font == null || string.IsNullOrEmpty(value)) return;
-            if (font.TryAddCharacters(value, out var missing) || string.IsNullOrEmpty(missing)) return;
-            if (_fallbackFont != null && _fallbackFont != font &&
-                (_fallbackFont.TryAddCharacters(missing, out var fallbackMissing) || string.IsNullOrEmpty(fallbackMissing))) return;
+            var unresolved = new List<char>();
+            foreach (var character in value)
+            {
+                if (char.IsWhiteSpace(character)) continue;
+                if (font.HasCharacter(character, false, true)) continue;
+                if (_fallbackFont != null && _fallbackFont != font &&
+                    _fallbackFont.HasCharacter(character, false, true)) continue;
+                if (!unresolved.Contains(character)) unresolved.Add(character);
+            }
+            if (unresolved.Count == 0) return;
             if (_reportedFontFailure) return;
+            var missing = new string(unresolved.ToArray());
+            _missingGlyphCount += missing.Length;
             _reportedFontFailure = true;
-            Debug.LogError($"MANAGEMENT_UI_MISSING_GLYPH: {missing}");
+            Debug.LogError($"MANAGEMENT_UI_MISSING_GLYPH: text={missing} codePoints={FormatCodePoints(missing)}");
+        }
+
+        private static RectOffset PanelSafePadding()
+        {
+            var inset = (int)ManagementUiLayoutMetrics.PanelContentInset;
+            return new RectOffset(inset, inset, inset, inset);
+        }
+
+        private static RectOffset CardSafePadding()
+        {
+            var inset = (int)ManagementUiLayoutMetrics.CardContentInset;
+            return new RectOffset(inset, inset, inset, inset);
+        }
+
+        private static string FormatCodePoints(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "none";
+            return string.Join(",", value.Select(character => $"U+{(int)character:X4}"));
         }
 
         private static void ClearChildren(RectTransform parent)
@@ -1097,15 +1327,6 @@ namespace FamilyCompany.Presentation.Unity.ManagementUI
                 var child = parent.GetChild(index).gameObject;
                 child.SetActive(false);
                 Destroy(child);
-            }
-        }
-
-        private static void ClearLayoutGroups(RectTransform parent)
-        {
-            foreach (var group in parent.GetComponents<HorizontalOrVerticalLayoutGroup>())
-            {
-                group.enabled = false;
-                Destroy(group);
             }
         }
 

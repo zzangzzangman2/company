@@ -39,6 +39,8 @@ $referencePaths = @(
     $netstandard,
     (Join-Path $unityModules 'UnityEngine.CoreModule.dll'),
     (Join-Path $unityModules 'UnityEngine.PhysicsModule.dll'),
+    (Join-Path $unityModules 'UnityEngine.Physics2DModule.dll'),
+    (Join-Path $unityModules 'UnityEngine.AnimationModule.dll'),
     (Join-Path $unityModules 'UnityEngine.AudioModule.dll'),
     (Join-Path $unityModules 'UnityEngine.InputLegacyModule.dll'),
     (Join-Path $unityModules 'UnityEngine.IMGUIModule.dll'),
@@ -47,6 +49,8 @@ $referencePaths = @(
     (Join-Path $unityModules 'UnityEngine.TextCoreFontEngineModule.dll'),
     (Join-Path $unityModules 'UnityEngine.TextCoreTextEngineModule.dll'),
     (Join-Path $unityModules 'UnityEngine.UIModule.dll'),
+    (Join-Path $unityModules 'UnityEngine.GridModule.dll'),
+    (Join-Path $unityModules 'UnityEngine.TilemapModule.dll'),
     (Join-Path $unityModules 'UnityEngine.ScreenCaptureModule.dll'),
     (Join-Path $unityModules 'UnityEngine.JSONSerializeModule.dll'),
     (Join-Path $unityModules 'UnityEngine.UnityWebRequestModule.dll'),
@@ -85,6 +89,8 @@ $textRendering = Join-Path $unityModules 'UnityEngine.TextRenderingModule.dll'
     -r:$netstandard `
     -r:$engineCore `
     -r:$textRendering `
+    -r:(Join-Path $unityModules 'UnityEngine.ImageConversionModule.dll') `
+    -r:(Join-Path $templateAssemblies 'Unity.TextMeshPro.dll') `
     -r:$editorCore `
     -r:$runtimeOutput `
     (Join-Path $projectRoot 'Assets\FamilyCompany\Editor\ManagementUiV2Validation.cs')

@@ -15,4 +15,4 @@ MonoBehaviour:
   contractVersion: management-ui-fonts-v1
   bodySource: {fileID: 12800000, guid: fd100000000000000000000000000003, type: 3}
   headingSource: {fileID: 12800000, guid: fd100000000000000000000000000001, type: 3}
-  fallbackSource: {fileID: 12800000, guid: fd100000000000000000000000000002, type: 3}
+  fallbackSource: {fileID: 12800000, guid: fd100000000000000000000000000004, type: 3}
