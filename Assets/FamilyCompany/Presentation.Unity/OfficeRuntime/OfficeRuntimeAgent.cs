@@ -33,10 +33,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public const float DefaultRadius = 0.22f;
         public const float DefaultMoveSpeed = 1.65f;
         private const float ArrivalDistance = 0.035f;
-        // Typing is anchored by the authored hand socket, never by a member-specific body offset.
-        // The shared chair presentation follows the resulting pelvis position, so every body can
-        // keep both hands planted on the keyboard without scale/rotation distortion.
-        private const float TypingWorkContactWeight = 1f;
+        // One shared tolerance minimizes chair pull-out while keeping every approved typing hand
+        // on the workstation. The remaining translation is derived only from pose anchors and
+        // furniture sockets; member IDs never participate in the placement rule.
+        private const float TypingHandContactBudgetPx = 3.5f;
+        private const float MaximumChairPresentationStepPx = 0.9f;
 
         private PrototypeBootstrap _bootstrap;
         private OfficeRuntimeWorld _world;
@@ -108,6 +109,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _standTransitionInitialized;
         private float _sitPlacementProgress01;
         private float _standPlacementProgress01;
+        private bool _seatPresentationPrepared;
+        private bool _chairPresentationReturning;
+        private bool _chairPresentationMoveComplete;
+        private Vector3 _chairPresentationAuthoredPelvisWorld;
+        private Vector3 _chairPresentationTargetPelvisWorld;
+        private bool _finishingWorkPresentationObserved;
         private int _observedSitDownFrameMask;
         private int _observedWorkFrameMask;
         private int _observedStandUpFrameMask;
@@ -120,6 +127,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private float _previousTransitionCushionDistancePx;
         private float _maxTransitionPelvisStepPx;
         private int _transitionMonotonicViolationCount;
+        private bool _hasVisibleSeatingPelvisSample;
+        private Vector2 _previousVisibleSeatingPelvisScreen;
+        private bool _hasChairPresentationSample;
+        private Vector2 _previousChairPresentationScreen;
+        private float _maxChairPresentationStepPx;
+        private int _seatingFacingViolationCount;
+        private bool _seatFacingAlignedBeforeSitDown;
+        private OfficeSeatingDepthSnapshot _lastSeatingDepthSample;
+        private int _seatingDepthViolationCount;
 
         public event Action<IOfficeRuntimeAgent, string> AssignedTaskCompleted;
 
@@ -203,6 +219,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             : _animator.StrideLength;
         public int CurrentWalkFrame => _animator == null ? 0 : _animator.CurrentWalkFrame;
         public int CurrentDirection => _animator == null ? 0 : _animator.CurrentDirection;
+        public int ExpectedSeatDirection => _seatDirection;
+        public bool IsOfficeSeatingFacingLocked =>
+            _animator != null && _animator.IsOfficeSeatingFacingLocked;
+        public int LockedOfficeSeatingDirection => _animator == null
+            ? -1
+            : _animator.LockedOfficeSeatingDirection;
+        public int CurrentSpriteDirection => _animator == null
+            ? -1
+            : _animator.CurrentAppliedSpriteDirection;
+        public int SeatingFacingViolationCount => _seatingFacingViolationCount;
+        public bool WasSeatFacingAlignedBeforeSitDown => _seatFacingAlignedBeforeSitDown;
+        public bool IsSeatEntryPresentationPlanted =>
+            _animator != null && _animator.IsOfficeSeatingEntryPlanted;
+        public int SeatingSpriteDirectionMismatchCount => _animator == null
+            ? 0
+            : _animator.OfficeSeatingDirectionMismatchCount;
+        public int MaximumSeatingSpriteDirectionOctantDelta => _animator == null
+            ? 0
+            : _animator.MaximumOfficeSeatingDirectionOctantDelta;
         public SpriteRenderer PresentationRenderer => _renderer;
         public int SemanticPathLength => _path.Count;
         public int PresentationPathIndex => _presentationPathIndex;
@@ -222,6 +257,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public float MaxAnimatedAnchorErrorPx => _maxAnimatedAnchorErrorPx;
         public float MaxTransitionPelvisStepPx => _maxTransitionPelvisStepPx;
         public int TransitionMonotonicViolationCount => _transitionMonotonicViolationCount;
+        public float MaxChairPresentationStepPx => _maxChairPresentationStepPx;
+        public OfficeSeatingDepthSnapshot LastSeatingDepthSample => _lastSeatingDepthSample;
+        public int SeatingDepthViolationCount => _seatingDepthViolationCount;
+        public bool IsSeatForegroundOcclusionEngaged
+        {
+            get
+            {
+                if (_seat == null || _world == null) return false;
+                return OfficeSeatOcclusionRules.Evaluate(
+                    Phase,
+                    Position,
+                    _world.Workstations.SeatOperatorWorld(_seat),
+                    _world.Workstations.SeatApproachWorld(_seat)).ForegroundEngaged;
+            }
+        }
         public float VisualRotationErrorDegrees => _visualRoot == null
             ? float.PositiveInfinity
             : Quaternion.Angle(Quaternion.identity, _visualRoot.localRotation);
@@ -845,8 +895,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float presentationDeltaTime = _animator.IsOfficeSeatingPoseActive
                 ? Mathf.Max(0f, Time.unscaledDeltaTime)
                 : deltaTime;
+            BeginChairPresentationReturnAfterExitPlane();
+            AdvanceChairPresentation();
+            RecordChairPresentationMotion();
             _animator.Tick(presentationDeltaTime);
             _animator.EndTilePresentationFrame();
+            if (Phase == OfficeRuntimeAgentPhase.FinishingWork)
+                _finishingWorkPresentationObserved = true;
+            RecordSeatingFacingInvariant();
             if (_seat != null && _renderer != null)
             {
                 _world.Workstations.ApplyPresentationStack(_seat, _renderer, transform.position);
@@ -982,7 +1038,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 Phase == OfficeRuntimeAgentPhase.SittingDown ||
                 Phase == OfficeRuntimeAgentPhase.MovingToSit ||
                 Phase == OfficeRuntimeAgentPhase.FinishingWork ||
-                Phase == OfficeRuntimeAgentPhase.StandingUp)
+                Phase == OfficeRuntimeAgentPhase.StandingUp ||
+                Phase == OfficeRuntimeAgentPhase.LeavingSeat)
             {
                 if (_destination.HasValue &&
                     _destination.Value.DestinationId == destination.DestinationId &&
@@ -1348,6 +1405,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 EndInteraction(
                     OfficeRuntimeInteractionTermination.Aborted,
                     OfficeRuntimeInteractionEndReason.SeatUnavailable);
+                Phase = OfficeRuntimeAgentPhase.Idle;
                 ReleaseSeatImmediately();
                 ResumeAutonomy();
                 return;
@@ -1356,6 +1414,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 case OfficeRuntimeAgentPhase.MovingToSit:
                 {
+                    _seatDirection = FacingDirection(_seat.Facing);
+                    if (!PrepareChairPresentationForWork())
+                    {
+                        EndInteraction(
+                            OfficeRuntimeInteractionTermination.Aborted,
+                            OfficeRuntimeInteractionEndReason.SeatUnavailable);
+                        Phase = OfficeRuntimeAgentPhase.Idle;
+                        ReleaseSeatImmediately();
+                        ResumeAutonomy();
+                        return;
+                    }
                     Vector3 target3 = _world.Workstations.SeatOperatorWorld(_seat);
                     Vector2 target = new Vector2(target3.x, target3.y);
                     Vector2 delta = target - Position;
@@ -1366,27 +1435,30 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         return;
                     }
                     transform.position = new Vector3(target.x, target.y, transform.position.z);
-                    _seatDirection = FacingDirection(_seat.Facing);
                     StopMotion();
                     if (_animator.CurrentDirection != _seatDirection)
                     {
                         _animator.AccumulateStandingFacingRequest(_seatDirection, deltaTime);
                         return;
                     }
+                    if (!_animator.IsOfficeSeatingEntryPlanted ||
+                        !_chairPresentationMoveComplete) return;
                     _sitTransitionInitialized = false;
                     _standTransitionInitialized = false;
                     _hasTransitionPelvisSample = false;
                     if (!_seatClaim.TryOccupy(out _) ||
-                        !_animator.PrepareOfficeSeatingFacing(_seatDirection) ||
+                        !_animator.TryLockOfficeSeatingFacingAfterPlantedRotation(_seatDirection) ||
                         !_animator.BeginSitDown(_seatDirection))
                     {
                         EndInteraction(
                             OfficeRuntimeInteractionTermination.Aborted,
                             OfficeRuntimeInteractionEndReason.SeatUnavailable);
+                        Phase = OfficeRuntimeAgentPhase.Idle;
                         ReleaseSeatImmediately();
                         ResumeAutonomy();
                         return;
                     }
+                    _seatFacingAlignedBeforeSitDown = true;
                     Phase = OfficeRuntimeAgentPhase.SittingDown;
                     CurrentActivity = _destination.HasValue
                         ? _destination.Value.Activity
@@ -1402,6 +1474,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         EndInteraction(
                             OfficeRuntimeInteractionTermination.Aborted,
                             OfficeRuntimeInteractionEndReason.SeatUnavailable);
+                        Phase = OfficeRuntimeAgentPhase.Idle;
                         ReleaseSeatImmediately();
                         ResumeAutonomy();
                         return;
@@ -1428,12 +1501,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     break;
                 case OfficeRuntimeAgentPhase.FinishingWork:
                     StopMotion();
+                    if (!_finishingWorkPresentationObserved) return;
                     if (!_animator.IsOfficeWorkSafeToStand) return;
                     if (!_animator.BeginStandUp())
                     {
                         EndInteraction(
                             OfficeRuntimeInteractionTermination.Aborted,
                             OfficeRuntimeInteractionEndReason.SeatUnavailable);
+                        Phase = OfficeRuntimeAgentPhase.Idle;
                         ReleaseSeatImmediately();
                         ResumeAutonomy();
                         return;
@@ -1447,7 +1522,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (!_animator.IsOfficeSeatingTransitionComplete || _standPlacementProgress01 < 0.9999f)
                         return;
                     ResetVisualPose();
-                    _animator.ResumeWalkingAfterSeating();
+                    if (!_animator.FinishOfficeSeatingPoseForLeavingSeat())
+                    {
+                        Phase = OfficeRuntimeAgentPhase.Idle;
+                        ReleaseSeatImmediately();
+                        ResumeAutonomy();
+                        return;
+                    }
                     Phase = OfficeRuntimeAgentPhase.LeavingSeat;
                     break;
                 case OfficeRuntimeAgentPhase.LeavingSeat:
@@ -1462,9 +1543,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                             deltaTime,
                             _seat.SeatId,
                             delta.magnitude);
+                        BeginChairPresentationReturnAfterExitPlane();
                         return;
                     }
                     transform.position = new Vector3(target.x, target.y, transform.position.z);
+                    BeginChairPresentationReturnAfterExitPlane();
+                    StopMotion();
+                    if (!_chairPresentationMoveComplete) return;
                     ReleaseSeatImmediately();
                     if (_pendingDestination.HasValue)
                     {
@@ -1534,6 +1619,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (Phase == OfficeRuntimeAgentPhase.Working) BeginSafeStand();
                 return;
             }
+            if (Phase == OfficeRuntimeAgentPhase.FinishingWork ||
+                Phase == OfficeRuntimeAgentPhase.StandingUp ||
+                Phase == OfficeRuntimeAgentPhase.LeavingSeat)
+            {
+                _releaseSeatRequested = true;
+                return;
+            }
             ReleaseSeatImmediately();
             Phase = OfficeRuntimeAgentPhase.Idle;
             StopMotion();
@@ -1544,6 +1636,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (Phase == OfficeRuntimeAgentPhase.FinishingWork ||
                 Phase == OfficeRuntimeAgentPhase.StandingUp) return;
             _releaseSeatRequested = true;
+            _finishingWorkPresentationObserved = false;
             _animator.RequestOfficeWorkSafeStop();
             Phase = OfficeRuntimeAgentPhase.FinishingWork;
         }
@@ -1587,7 +1680,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Vector2? presentationSemanticVelocity = null)
         {
             Vector2 integrationTargetVelocity = targetVelocity;
-            bool waitingForPivot = RequiresPivotBeforeMoving(targetVelocity);
+            // LeavingSeat deliberately moves away from the chair while the presentation remains
+            // locked to the seat facing. The normal pre-move pivot gate would otherwise wait for a
+            // direction change that the lock is correctly refusing, deadlocking the exit step.
+            bool preserveSeatFacingWhileLeaving =
+                Phase == OfficeRuntimeAgentPhase.LeavingSeat &&
+                _animator != null &&
+                _animator.IsOfficeSeatingFacingLocked;
+            bool waitingForPivot = !preserveSeatFacingWhileLeaving &&
+                                   RequiresPivotBeforeMoving(targetVelocity);
             if (waitingForPivot) integrationTargetVelocity = Vector2.zero;
             float changePerSecond = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
@@ -1711,16 +1812,132 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             else if (_animator.SeatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork)
             {
-                _world.Workstations.RestoreChairPresentation(_seat);
                 ApplySeatedContactPlacement(profile);
             }
             else
             {
-                _world.Workstations.RestoreChairPresentation(_seat);
                 ApplyAnimatedSeatingPlacement(clip, frame, profile);
             }
+            RecordVisibleSeatingPelvisContinuity(profile);
+            RecordChairPresentationMotion();
             _alignedClip = clip;
             _alignedFrame = frame;
+        }
+
+        private bool PrepareChairPresentationForWork()
+        {
+            if (_seatPresentationPrepared) return true;
+            if (_seat == null || _renderer == null || _renderer.sprite == null) return false;
+
+            _world.Workstations.RestoreChairPresentation(_seat);
+            ResetVisualPose();
+            _chairPresentationAuthoredPelvisWorld =
+                _world.Workstations.ChairSeatAnchorWorld(_seat);
+            _chairPresentationTargetPelvisWorld = _chairPresentationAuthoredPelvisWorld;
+            _chairPresentationReturning = false;
+            if (!_seat.HasWorkstationBinding)
+            {
+                _seatPresentationPrepared = true;
+                _chairPresentationMoveComplete = true;
+                SeedChairPresentationMotionSample();
+                return true;
+            }
+
+            OfficeCharacterSeatPoseProfile profile = _poseCatalog.ResolveApproved(
+                _agentId,
+                _seatDirection,
+                OfficeSeatingAnimationClip.Work,
+                0);
+            Vector2 pelvisToHandPx = profile.HandAnchorPx - profile.PelvisAnchorPx;
+            if (_renderer.flipX) pelvisToHandPx.x = -pelvisToHandPx.x;
+            if (_renderer.flipY) pelvisToHandPx.y = -pelvisToHandPx.y;
+            Vector3 pelvisToHandWorld = _renderer.transform.TransformVector(new Vector3(
+                pelvisToHandPx.x / _renderer.sprite.pixelsPerUnit,
+                pelvisToHandPx.y / _renderer.sprite.pixelsPerUnit,
+                0f));
+            Vector3 exactHandContactPelvis =
+                _world.Workstations.DeskWorkSocketWorld(_seat) - pelvisToHandWorld;
+            Vector3 requiredShift =
+                exactHandContactPelvis - _chairPresentationAuthoredPelvisWorld;
+            float requiredShiftPx = Camera.main == null
+                ? float.PositiveInfinity
+                : OfficeGridAlignmentMetrics.WorldDisplacementScreenPx(
+                    Camera.main,
+                    _chairPresentationAuthoredPelvisWorld,
+                    requiredShift);
+            bool finiteShift = !float.IsNaN(requiredShiftPx) && !float.IsInfinity(requiredShiftPx);
+            float shiftFraction = !finiteShift || requiredShiftPx <= 0.0001f
+                ? 1f
+                : Mathf.Clamp01(1f - (TypingHandContactBudgetPx / requiredShiftPx));
+            _chairPresentationTargetPelvisWorld =
+                _chairPresentationAuthoredPelvisWorld + (requiredShift * shiftFraction);
+            _seatPresentationPrepared = true;
+            _chairPresentationMoveComplete = requiredShift.sqrMagnitude <= 0.0000001f ||
+                                             shiftFraction <= 0.0001f;
+            SeedChairPresentationMotionSample();
+            return true;
+        }
+
+        private void BeginChairPresentationReturnAfterExitPlane()
+        {
+            if (!_seatPresentationPrepared || _chairPresentationReturning || _seat == null ||
+                Phase != OfficeRuntimeAgentPhase.LeavingSeat ||
+                IsSeatForegroundOcclusionEngaged) return;
+            _chairPresentationReturning = true;
+            _chairPresentationTargetPelvisWorld = _chairPresentationAuthoredPelvisWorld;
+            _chairPresentationMoveComplete = ChairPresentationDistancePxToTarget() <= 0.01f;
+        }
+
+        private void AdvanceChairPresentation()
+        {
+            if (!_seatPresentationPrepared || _chairPresentationMoveComplete || _seat == null) return;
+            Vector3 current = _world.Workstations.ChairSeatAnchorWorld(_seat);
+            if (Camera.main == null)
+            {
+                _world.Workstations.AlignChairPresentationToOccupant(
+                    _seat,
+                    _chairPresentationTargetPelvisWorld);
+                _chairPresentationMoveComplete = true;
+                return;
+            }
+
+            float remainingPx = OfficeGridAlignmentMetrics.ScreenDistance(
+                Camera.main,
+                current,
+                _chairPresentationTargetPelvisWorld);
+            if (remainingPx <= 0.01f)
+            {
+                _world.Workstations.AlignChairPresentationToOccupant(
+                    _seat,
+                    _chairPresentationTargetPelvisWorld);
+                _chairPresentationMoveComplete = true;
+                return;
+            }
+
+            float fraction = Mathf.Clamp01(MaximumChairPresentationStepPx / remainingPx);
+            _world.Workstations.AlignChairPresentationToOccupant(
+                _seat,
+                Vector3.Lerp(current, _chairPresentationTargetPelvisWorld, fraction));
+            _chairPresentationMoveComplete = fraction >= 0.9999f;
+        }
+
+        private float ChairPresentationDistancePxToTarget()
+        {
+            if (_seat == null) return 0f;
+            if (Camera.main == null) return float.PositiveInfinity;
+            return OfficeGridAlignmentMetrics.ScreenDistance(
+                Camera.main,
+                _world.Workstations.ChairSeatAnchorWorld(_seat),
+                _chairPresentationTargetPelvisWorld);
+        }
+
+        private void SeedChairPresentationMotionSample()
+        {
+            if (_seat == null || Camera.main == null) return;
+            Vector3 screen = Camera.main.WorldToScreenPoint(
+                _world.Workstations.ChairSeatAnchorWorld(_seat));
+            _hasChairPresentationSample = true;
+            _previousChairPresentationScreen = new Vector2(screen.x, screen.y);
         }
 
         private void ApplyTypingWorkstationContactPlacement(
@@ -1732,28 +1949,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (Mathf.Abs(profile.UniformScale - 1f) > 0.0001f)
                 throw new InvalidOperationException($"Seated pose scale must be 1 for {_agentId}.");
 
-            _world.Workstations.RestoreChairPresentation(_seat);
-            _visualRoot.localPosition = Vector3.zero;
-            _visualRoot.localRotation = Quaternion.identity;
-            _visualRoot.localScale = Vector3.one * OfficeGridCharacterMover.UniformVisualScale;
-            Vector3 pelvis = OfficeSeatedOccupantContract.OccupantSeatContactWorld(
-                _renderer,
-                profile.PelvisAnchorPx);
-            Vector3 hand = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
-                _renderer,
-                profile.HandAnchorPx);
-            Vector3 seatDelta = _world.Workstations.ChairSeatAnchorWorld(_seat) - pelvis;
-            Vector3 workDelta = _world.Workstations.DeskWorkSocketWorld(_seat) - hand;
-            Vector3 balancedDelta = Vector3.Lerp(
-                seatDelta,
-                workDelta,
-                TypingWorkContactWeight);
-            _visualRoot.localPosition = transform.InverseTransformVector(balancedDelta);
-            Vector3 alignedPelvis = OfficeSeatedOccupantContract.OccupantSeatContactWorld(
-                _renderer,
-                profile.PelvisAnchorPx);
-            _world.Workstations.AlignChairPresentationToOccupant(_seat, alignedPelvis);
-            _world.Workstations.ApplyPresentationStack(_seat, _renderer, transform.position);
+            ApplySeatAnchorPlacement(
+                profile,
+                _world.Workstations.ChairSeatAnchorWorld(_seat));
         }
 
         private void ApplyAnimatedSeatingPlacement(
@@ -1861,6 +2059,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _maxTypingSeatContactErrorPx = 0f;
             _maxTypingHandWorkErrorPx = 0f;
             _typingContactSampleCount = 0;
+            _finishingWorkPresentationObserved = false;
+            _hasChairPresentationSample = false;
+            _previousChairPresentationScreen = Vector2.zero;
+            _maxChairPresentationStepPx = 0f;
+            _seatingFacingViolationCount = 0;
+            _seatFacingAlignedBeforeSitDown = false;
+            _lastSeatingDepthSample = default;
+            _seatingDepthViolationCount = 0;
+            _hasVisibleSeatingPelvisSample = false;
+            _previousVisibleSeatingPelvisScreen = Vector2.zero;
             ResetTransitionMotionMetrics();
             _maxTransitionPelvisStepPx = 0f;
             _transitionMonotonicViolationCount = 0;
@@ -1977,6 +2185,57 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _previousTransitionCushionDistancePx = 0f;
         }
 
+        private void RecordChairPresentationMotion()
+        {
+            if (_seat == null || Camera.main == null) return;
+            Vector3 chairScreen3 = Camera.main.WorldToScreenPoint(
+                _world.Workstations.ChairSeatAnchorWorld(_seat));
+            var chairScreen = new Vector2(chairScreen3.x, chairScreen3.y);
+            if (_hasChairPresentationSample)
+            {
+                _maxChairPresentationStepPx = Mathf.Max(
+                    _maxChairPresentationStepPx,
+                    Vector2.Distance(_previousChairPresentationScreen, chairScreen));
+            }
+            _hasChairPresentationSample = true;
+            _previousChairPresentationScreen = chairScreen;
+        }
+
+        private void RecordVisibleSeatingPelvisContinuity(
+            OfficeCharacterSeatPoseProfile profile)
+        {
+            if (profile == null || Camera.main == null) return;
+            Vector3 pelvisScreen3 = Camera.main.WorldToScreenPoint(
+                OfficeSeatedOccupantContract.OccupantSeatContactWorld(
+                    _renderer,
+                    profile.PelvisAnchorPx));
+            var pelvisScreen = new Vector2(pelvisScreen3.x, pelvisScreen3.y);
+            if (_hasVisibleSeatingPelvisSample)
+            {
+                _maxTransitionPelvisStepPx = Mathf.Max(
+                    _maxTransitionPelvisStepPx,
+                    Vector2.Distance(_previousVisibleSeatingPelvisScreen, pelvisScreen));
+            }
+            _hasVisibleSeatingPelvisSample = true;
+            _previousVisibleSeatingPelvisScreen = pelvisScreen;
+        }
+
+        private void RecordSeatingFacingInvariant()
+        {
+            if (!IsOccupyingSeat || _animator == null) return;
+            bool valid = _animator.IsOfficeSeatingFacingLocked &&
+                         _animator.LockedOfficeSeatingDirection == _seatDirection &&
+                         _animator.CurrentDirection == _seatDirection &&
+                         _animator.IsCurrentAppliedSpriteDirectionLocked;
+            if (!valid) _seatingFacingViolationCount++;
+        }
+
+        internal void RecordSeatingDepthSample(OfficeSeatingDepthSnapshot sample)
+        {
+            _lastSeatingDepthSample = sample;
+            if (!sample.IsValidStack) _seatingDepthViolationCount++;
+        }
+
         private void TrackWorkstationMetrics()
         {
             if (_seat == null || Camera.main == null) return;
@@ -2031,9 +2290,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _standTransitionInitialized = false;
                 _sitPlacementProgress01 = 0f;
                 _standPlacementProgress01 = 0f;
+                _seatPresentationPrepared = false;
+                _chairPresentationReturning = false;
+                _chairPresentationMoveComplete = false;
+                _chairPresentationAuthoredPelvisWorld = Vector3.zero;
+                _chairPresentationTargetPelvisWorld = Vector3.zero;
+                _finishingWorkPresentationObserved = false;
                 ResetTransitionMotionMetrics();
-                if (_animator != null && _animator.IsOfficeSeatingPoseActive)
-                    _animator.ResumeWalkingAfterSeating();
+                if (_animator != null)
+                {
+                    if (_animator.IsOfficeSeatingPoseActive)
+                        _animator.ResumeWalkingAfterSeating();
+                    else if (_animator.IsOfficeSeatingFacingLocked)
+                        _animator.ReleaseOfficeSeatingFacingLock();
+                }
                 ResetVisualPose();
             }
         }

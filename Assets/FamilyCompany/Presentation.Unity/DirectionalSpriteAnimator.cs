@@ -1,6 +1,7 @@
 using System;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
+using FamilyCompany.Presentation.Unity.OfficeWorkActions;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeWorkActions;
 using UnityEngine;
@@ -65,10 +66,49 @@ namespace FamilyCompany.Presentation.Unity
         private float _lastFacingAngularErrorDegrees;
         private OfficeLocomotionGaitState _tileGaitState;
         private bool _tileGaitStateInitialized;
+        private bool _officeSeatingFacingLocked;
+        private int _lockedOfficeSeatingDirection = -1;
+        private int _officeSeatingFacingViolationCount;
+        private int _maximumOfficeSeatingFacingDelta;
+        private int _officeWorkSpriteDirectionViolationCount;
+        private int _maximumOfficeWorkSpriteDirectionDelta;
+        private int _officeAppliedSpriteDirectionViolationCount;
+        private int _maximumOfficeAppliedSpriteDirectionDelta;
+        private int _currentAppliedSpriteDirection = -1;
+        private bool _currentAppliedSpriteDirectionMatchesLock = true;
 
         public event Action<OfficeSeatingAnimationClip, int, Sprite> OfficeFrameApplied;
 
         public int CurrentDirection => _lastDirection;
+        public bool IsOfficeSeatingFacingLocked => _officeSeatingFacingLocked;
+        public int LockedOfficeSeatingDirection =>
+            _officeSeatingFacingLocked ? _lockedOfficeSeatingDirection : -1;
+        public bool IsOfficeSeatingFacingConsistent =>
+            !_officeSeatingFacingLocked || _lastDirection == _lockedOfficeSeatingDirection;
+        public int OfficeSeatingFacingViolationCount => _officeSeatingFacingViolationCount;
+        public int MaximumOfficeSeatingFacingDelta => _maximumOfficeSeatingFacingDelta;
+        public int OfficeWorkSpriteDirectionViolationCount =>
+            _officeWorkSpriteDirectionViolationCount;
+        public int MaximumOfficeWorkSpriteDirectionDelta =>
+            _maximumOfficeWorkSpriteDirectionDelta;
+        public int OfficeAppliedSpriteDirectionViolationCount =>
+            _officeAppliedSpriteDirectionViolationCount;
+        public int MaximumOfficeAppliedSpriteDirectionDelta =>
+            _maximumOfficeAppliedSpriteDirectionDelta;
+        public int OfficeSeatingDirectionMismatchCount =>
+            _officeSeatingFacingViolationCount +
+            _officeWorkSpriteDirectionViolationCount +
+            _officeAppliedSpriteDirectionViolationCount;
+        public int MaximumOfficeSeatingDirectionOctantDelta => Mathf.Max(
+            _maximumOfficeSeatingFacingDelta,
+            Mathf.Max(
+                _maximumOfficeWorkSpriteDirectionDelta,
+                _maximumOfficeAppliedSpriteDirectionDelta));
+        public int CurrentAppliedSpriteDirection => _currentAppliedSpriteDirection;
+        public bool HasCurrentAppliedSpriteDirectionMetadata =>
+            _currentAppliedSpriteDirection >= 0;
+        public bool IsCurrentAppliedSpriteDirectionLocked =>
+            _currentAppliedSpriteDirectionMatchesLock;
         public int CurrentWalkFrame => _walkFrame;
         public bool IsOfficeWorkAnimationHookActive => _officeWorkSession != null;
         public OfficeWorkMicroAction CurrentOfficeWorkMicroAction =>
@@ -76,6 +116,9 @@ namespace FamilyCompany.Presentation.Unity
         public bool IsMoving => _tileDisplacementDirection
             ? _tileIsMoving
             : _worldVelocity.sqrMagnitude > 0.0025f;
+        public bool IsOfficeSeatingEntryPlanted =>
+            !IsMoving &&
+            (!_tileGaitStateInitialized || _tileGaitState.Phase == OfficeLocomotionPhase.Idle);
         public int ConfiguredFrameCount => walkFrames?.Length ?? 0;
         public int ConfiguredLocomotionTransitionFrameCount =>
             locomotionTransitionFrames?.Length ?? 0;
@@ -321,6 +364,12 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (direction < 0 || direction >= DirectionCount)
                 throw new ArgumentOutOfRangeException(nameof(direction));
+            if (_officeSeatingFacingLocked)
+            {
+                if (direction != _lockedOfficeSeatingDirection)
+                    RecordOfficeSeatingFacingViolation(direction);
+                return;
+            }
             Vector2 heading = direction switch
             {
                 0 => new Vector2(0f, -1f),
@@ -352,6 +401,12 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (direction < 0 || direction >= DirectionCount)
                 throw new ArgumentOutOfRangeException(nameof(direction));
+            if (_officeSeatingFacingLocked)
+            {
+                if (direction != _lockedOfficeSeatingDirection)
+                    RecordOfficeSeatingFacingViolation(direction);
+                return;
+            }
             if (_seatingClip.HasValue)
                 throw new InvalidOperationException("Standing facing cannot be restored during a seating clip.");
 
@@ -375,9 +430,45 @@ namespace FamilyCompany.Presentation.Unity
             if (!HasOfficeSeatingFrames || direction < 0 || direction >= DirectionCount) return false;
             if (seatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork && direction != 3)
                 return false;
+            if (_officeSeatingFacingLocked)
+            {
+                if (direction != _lockedOfficeSeatingDirection)
+                {
+                    RecordOfficeSeatingFacingViolation(direction);
+                    return false;
+                }
+                return !_seatingClip.HasValue;
+            }
+            return EstablishOfficeSeatingFacingLock(direction);
+        }
+
+        /// <summary>
+        /// Strict runtime entry point. The caller must first finish the planted turn and stop
+        /// locomotion; this method never rotates or snaps the character to satisfy the request.
+        /// </summary>
+        public bool TryLockOfficeSeatingFacingAfterPlantedRotation(int direction)
+        {
+            if (!HasOfficeSeatingFrames || direction < 0 || direction >= DirectionCount) return false;
+            if (seatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork && direction != 3)
+                return false;
+            if (_officeSeatingFacingLocked)
+            {
+                if (direction == _lockedOfficeSeatingDirection) return !_seatingClip.HasValue;
+                RecordOfficeSeatingFacingViolation(direction);
+                return false;
+            }
+            if (_lastDirection != direction || !IsOfficeSeatingEntryPlanted) return false;
+            return EstablishOfficeSeatingFacingLock(direction);
+        }
+
+        private bool EstablishOfficeSeatingFacingLock(int direction)
+        {
             EndOfficeWorkSession();
             _worldVelocity = Vector3.zero;
             _lastDirection = direction;
+            _officeSeatingFacingLocked = true;
+            _lockedOfficeSeatingDirection = direction;
+            ResetOfficeSeatingDirectionMetrics();
             ResetTileFacingState(direction);
             ResetTileGaitState(direction);
             _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
@@ -428,22 +519,39 @@ namespace FamilyCompany.Presentation.Unity
 
         public bool BeginSitDown(int direction)
         {
-            if (!HasOfficeSeatingFrames) return false;
+            if (!HasOfficeSeatingFrames ||
+                !_officeSeatingFacingLocked ||
+                _seatingClip.HasValue ||
+                direction != _lockedOfficeSeatingDirection)
+            {
+                if (_officeSeatingFacingLocked && direction != _lockedOfficeSeatingDirection)
+                    RecordOfficeSeatingFacingViolation(direction);
+                return false;
+            }
             BeginOfficeSeatingClip(OfficeSeatingAnimationClip.SitDown, direction);
             return true;
         }
 
         public bool BeginSeatedWork()
         {
-            if (!HasOfficeSeatingFrames || !_seatingClip.HasValue) return false;
+            if (!HasOfficeSeatingFrames ||
+                !_officeSeatingFacingLocked ||
+                !_seatingClip.HasValue ||
+                _seatingClip.Value != OfficeSeatingAnimationClip.SitDown ||
+                !_seatingTransitionComplete)
+            {
+                return false;
+            }
             EndOfficeWorkSession();
             if (_officeWorkHook != null &&
-                _officeWorkHook.TryBegin(_lastDirection, out var session) &&
+                _officeWorkHook.TryBegin(_lockedOfficeSeatingDirection, out var session) &&
                 session != null)
             {
                 _officeWorkSession = session;
             }
-            BeginOfficeSeatingClip(OfficeSeatingAnimationClip.Work, _lastDirection);
+            BeginOfficeSeatingClip(
+                OfficeSeatingAnimationClip.Work,
+                _lockedOfficeSeatingDirection);
             return true;
         }
 
@@ -454,28 +562,77 @@ namespace FamilyCompany.Presentation.Unity
 
         public bool BeginStandUp()
         {
-            if (!HasOfficeSeatingFrames || !_seatingClip.HasValue || !IsOfficeWorkSafeToStand)
+            if (!HasOfficeSeatingFrames ||
+                !_officeSeatingFacingLocked ||
+                !_seatingClip.HasValue ||
+                _seatingClip.Value != OfficeSeatingAnimationClip.Work ||
+                !IsOfficeWorkSafeToStand)
                 return false;
             EndOfficeWorkSession();
-            BeginOfficeSeatingClip(OfficeSeatingAnimationClip.StandUp, _lastDirection);
+            BeginOfficeSeatingClip(
+                OfficeSeatingAnimationClip.StandUp,
+                _lockedOfficeSeatingDirection);
+            return true;
+        }
+
+        /// <summary>
+        /// Ends the StandUp pose but deliberately retains the seat-facing lock while the actor
+        /// traverses LeavingSeat. ReleaseOfficeSeatingFacingLock is the only normal unlock.
+        /// </summary>
+        public bool FinishOfficeSeatingPoseForLeavingSeat()
+        {
+            if (!_officeSeatingFacingLocked ||
+                !_seatingClip.HasValue ||
+                _seatingClip.Value != OfficeSeatingAnimationClip.StandUp ||
+                !_seatingTransitionComplete)
+            {
+                return false;
+            }
+
+            ClearOfficeSeatingPose();
+            ApplyFrame();
+            return true;
+        }
+
+        public bool ReleaseOfficeSeatingFacingLock()
+        {
+            if (!_officeSeatingFacingLocked) return true;
+            if (_seatingClip.HasValue) return false;
+            _officeSeatingFacingLocked = false;
+            _lockedOfficeSeatingDirection = -1;
+            ResetTileFacingState(_lastDirection);
+            ResetTileGaitState(_lastDirection);
+            ApplyFrame();
             return true;
         }
 
         public void ResumeWalkingAfterSeating()
         {
-            EndOfficeWorkSession();
-            _seatingClip = null;
-            _seatingElapsedSeconds = 0f;
-            _seatingProgress01 = 0f;
-            _seatingFrame = 0;
-            _seatingTransitionComplete = false;
-            ResetTileGaitState(_lastDirection);
+            ClearOfficeSeatingPose();
+            _officeSeatingFacingLocked = false;
+            _lockedOfficeSeatingDirection = -1;
+            ResetTileFacingState(_lastDirection);
             ApplyFrame();
+        }
+
+        public void ResumeWalkingAfterSeating(bool keepFacingLock)
+        {
+            if (!keepFacingLock)
+            {
+                ResumeWalkingAfterSeating();
+                return;
+            }
+            if (!FinishOfficeSeatingPoseForLeavingSeat())
+            {
+                throw new InvalidOperationException(
+                    "The facing lock can be retained only after a completed StandUp clip.");
+            }
         }
 
         public void Tick(float deltaTime)
         {
             if (targetRenderer == null) return;
+            EnforceOfficeSeatingFacingLock();
             if (_seatingClip.HasValue)
             {
                 if (!HasOfficeSeatingFrames) return;
@@ -516,7 +673,29 @@ namespace FamilyCompany.Presentation.Unity
                 _usedSemanticHeading = locomotion.UsedRequestedFacing;
                 _lastFacingAlignmentDot = locomotion.FacingAlignmentDot;
                 _lastFacingAngularErrorDegrees = locomotion.FacingAngularErrorDegrees;
-                _lastDirection = _tileGaitState.DisplayDirection;
+                if (_officeSeatingFacingLocked)
+                {
+                    // Seating is a planted transition, not free locomotion. Keep the chair-facing
+                    // direction authoritative until the reserved safe egress anchor is reached,
+                    // while still advancing the shared gait from actual travelled distance.
+                    _tileFacingState = OfficeLocomotionFacingState.Initial(
+                        _lockedOfficeSeatingDirection);
+                    _tileGaitState = OfficeLocomotionGaitRules.Resolve(
+                        _tileGaitState,
+                        locomotion.IsMoving ? _tileFrameTravelDistance : 0f,
+                        resolvedDeltaTime,
+                        locomotion.HasRequest,
+                        _lockedOfficeSeatingDirection,
+                        OfficeLocomotionGaitRules.DefaultStrideLength,
+                        WalkFrameCount);
+                    _lastDirection = _lockedOfficeSeatingDirection;
+                }
+                else
+                {
+                    _tileFacingState = locomotion.FacingState;
+                    _tileGaitState = locomotion.GaitState;
+                    _lastDirection = _tileGaitState.DisplayDirection;
+                }
                 _walkFrame = _tileGaitState.Frame;
                 _frameClock = 0f;
             }
@@ -524,10 +703,13 @@ namespace FamilyCompany.Presentation.Unity
             {
                 if (IsMoving)
                 {
-                    _lastDirection = ResolveDirection(
-                        _worldVelocity,
-                        _lastDirection,
-                        facingHysteresisDegrees);
+                    if (!_officeSeatingFacingLocked)
+                    {
+                        _lastDirection = ResolveDirection(
+                            _worldVelocity,
+                            _lastDirection,
+                            facingHysteresisDegrees);
+                    }
                     _frameClock += Mathf.Max(0f, deltaTime);
                     var effectiveFrameSeconds = ResolveEffectiveFrameSeconds();
                     while (_frameClock >= effectiveFrameSeconds)
@@ -615,6 +797,9 @@ namespace FamilyCompany.Presentation.Unity
         private void ApplyFrame()
         {
             if (targetRenderer == null) return;
+            EnforceOfficeSeatingFacingLock();
+            _currentAppliedSpriteDirection = -1;
+            _currentAppliedSpriteDirectionMatchesLock = true;
             if (_seatingClip.HasValue && HasOfficeSeatingFrames)
             {
                 bool safeStatic = seatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork;
@@ -622,12 +807,29 @@ namespace FamilyCompany.Presentation.Unity
                     ? OfficeSeatingAnimationClip.Work
                     : _seatingClip.Value;
                 int appliedFrame = safeStatic ? 0 : _seatingFrame;
-                var hookSprite = !safeStatic && _seatingClip.Value == OfficeSeatingAnimationClip.Work
+                bool applyingWorkHook =
+                    !safeStatic &&
+                    _seatingClip.Value == OfficeSeatingAnimationClip.Work &&
+                    _officeWorkSession != null;
+                var hookSprite = applyingWorkHook
                     ? _officeWorkSession?.CurrentSprite
                     : null;
+                if (hookSprite != null &&
+                    OfficeWorkActionFrameSet.TryResolveNamedDirection(
+                        hookSprite,
+                        out int hookDirection) &&
+                    hookDirection != _lockedOfficeSeatingDirection)
+                {
+                    _officeWorkSpriteDirectionViolationCount++;
+                    _maximumOfficeWorkSpriteDirectionDelta = Mathf.Max(
+                        _maximumOfficeWorkSpriteDirectionDelta,
+                        OctantDistance(_lockedOfficeSeatingDirection, hookDirection));
+                    hookSprite = null;
+                }
                 targetRenderer.sprite = hookSprite != null
                     ? hookSprite
                     : GetOfficeSeatingFrame(appliedClip, _lastDirection, appliedFrame);
+                CaptureAppliedSpriteDirection(targetRenderer.sprite);
                 OfficeFrameApplied?.Invoke(appliedClip, appliedFrame, targetRenderer.sprite);
                 return;
             }
@@ -638,6 +840,7 @@ namespace FamilyCompany.Presentation.Unity
                     _tileGaitState.Phase,
                     _lastDirection,
                     ResolveLocomotionTransitionPose());
+                CaptureAppliedSpriteDirection(targetRenderer.sprite);
                 return;
             }
             if (_tileDisplacementDirection &&
@@ -646,9 +849,11 @@ namespace FamilyCompany.Presentation.Unity
                 HasCompleteFrames(idleFrames, DirectionCount))
             {
                 targetRenderer.sprite = idleFrames[_lastDirection];
+                CaptureAppliedSpriteDirection(targetRenderer.sprite);
                 return;
             }
             targetRenderer.sprite = walkFrames[_walkFrame * DirectionCount + _lastDirection];
+            CaptureAppliedSpriteDirection(targetRenderer.sprite);
         }
 
         private int ResolveLocomotionTransitionPose()
@@ -691,6 +896,8 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (direction < 0 || direction >= DirectionCount)
                 throw new ArgumentOutOfRangeException(nameof(direction));
+            if (!_officeSeatingFacingLocked || direction != _lockedOfficeSeatingDirection)
+                throw new InvalidOperationException("Office seating clips require the immutable seat-facing lock.");
             _worldVelocity = Vector3.zero;
             _lastDirection = direction;
             ResetTileFacingState(direction);
@@ -763,13 +970,88 @@ namespace FamilyCompany.Presentation.Unity
 
         private void AbortOfficeSeatingPresentation()
         {
+            ClearOfficeSeatingPose();
+            _officeSeatingFacingLocked = false;
+            _lockedOfficeSeatingDirection = -1;
+            ApplyFrame();
+        }
+
+        private void ClearOfficeSeatingPose()
+        {
             EndOfficeWorkSession();
             _seatingClip = null;
             _seatingElapsedSeconds = 0f;
             _seatingProgress01 = 0f;
             _seatingFrame = 0;
             _seatingTransitionComplete = false;
-            ApplyFrame();
+            ResetTileGaitState(_lastDirection);
+        }
+
+        private void EnforceOfficeSeatingFacingLock()
+        {
+            if (!_officeSeatingFacingLocked) return;
+            if (_lastDirection != _lockedOfficeSeatingDirection)
+                RecordOfficeSeatingFacingViolation(_lastDirection);
+            _lastDirection = _lockedOfficeSeatingDirection;
+            if (!_tileFacingStateInitialized ||
+                _tileFacingState.VisualDirection != _lockedOfficeSeatingDirection)
+            {
+                ResetTileFacingState(_lockedOfficeSeatingDirection);
+            }
+        }
+
+        private void CaptureAppliedSpriteDirection(Sprite sprite)
+        {
+            if (!OfficeWorkActionFrameSet.TryResolveNamedDirection(
+                    sprite,
+                    out _currentAppliedSpriteDirection))
+            {
+                return;
+            }
+            if (!_officeSeatingFacingLocked) return;
+            _currentAppliedSpriteDirectionMatchesLock =
+                _currentAppliedSpriteDirection == _lockedOfficeSeatingDirection;
+            if (!_currentAppliedSpriteDirectionMatchesLock)
+            {
+                _officeAppliedSpriteDirectionViolationCount++;
+                _maximumOfficeAppliedSpriteDirectionDelta = Mathf.Max(
+                    _maximumOfficeAppliedSpriteDirectionDelta,
+                    OctantDistance(
+                        _lockedOfficeSeatingDirection,
+                        _currentAppliedSpriteDirection));
+            }
+        }
+
+        private void RecordOfficeSeatingFacingViolation(int requestedOrObservedDirection)
+        {
+            _officeSeatingFacingViolationCount++;
+            if (!_officeSeatingFacingLocked ||
+                requestedOrObservedDirection < 0 ||
+                requestedOrObservedDirection >= DirectionCount)
+            {
+                return;
+            }
+            _maximumOfficeSeatingFacingDelta = Mathf.Max(
+                _maximumOfficeSeatingFacingDelta,
+                OctantDistance(_lockedOfficeSeatingDirection, requestedOrObservedDirection));
+        }
+
+        private void ResetOfficeSeatingDirectionMetrics()
+        {
+            _officeSeatingFacingViolationCount = 0;
+            _maximumOfficeSeatingFacingDelta = 0;
+            _officeWorkSpriteDirectionViolationCount = 0;
+            _maximumOfficeWorkSpriteDirectionDelta = 0;
+            _officeAppliedSpriteDirectionViolationCount = 0;
+            _maximumOfficeAppliedSpriteDirectionDelta = 0;
+            _currentAppliedSpriteDirection = -1;
+            _currentAppliedSpriteDirectionMatchesLock = true;
+        }
+
+        private static int OctantDistance(int left, int right)
+        {
+            int direct = Mathf.Abs(left - right);
+            return Mathf.Min(direct, DirectionCount - direct);
         }
 
         private static bool HasCompleteFrames(Sprite[] frames, int expectedCount)

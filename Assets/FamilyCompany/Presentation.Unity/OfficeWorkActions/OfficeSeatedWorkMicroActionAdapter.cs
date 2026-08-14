@@ -21,6 +21,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
         public string MemberId => (memberId ?? string.Empty).Trim();
         public OfficeWorkActionFrameSet FrameSet => frameSet;
         public bool HasActiveSession => _activeSession != null && !_activeSession.IsDisposed;
+        public int ActiveLockedDirection => HasActiveSession ? _activeSession.LockedDirection : -1;
+        public int ActiveCurrentSpriteDirection =>
+            HasActiveSession ? _activeSession.CurrentSpriteDirection : -1;
+        public bool HasActiveCurrentSpriteDirectionMetadata =>
+            HasActiveSession && _activeSession.CurrentSpriteDirection >= 0;
+        public bool IsActiveCurrentSpriteDirectionLocked =>
+            !HasActiveSession || _activeSession.IsCurrentSpriteDirectionLocked;
+        public int ActiveSpriteDirectionMismatchCount =>
+            HasActiveSession ? _activeSession.SpriteDirectionMismatchCount : 0;
+        public int ActiveMaximumSpriteDirectionDelta =>
+            HasActiveSession ? _activeSession.MaximumSpriteDirectionDelta : 0;
 
         public void Configure(
             PrototypeBootstrap configuredBootstrap,
@@ -97,6 +108,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             private bool _stopRequested;
             private bool _disposed;
             private long _safeStopAtMilliseconds = -1L;
+            private int _currentSpriteDirection = -1;
+            private bool _currentSpriteDirectionLocked = true;
+            private int _spriteDirectionMismatchCount;
+            private int _maximumSpriteDirectionDelta;
 
             public Session(
                 int worldSeed,
@@ -117,6 +132,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             }
 
             public bool IsDisposed => _disposed;
+            public int LockedDirection => _lockedDirection;
+            public int CurrentSpriteDirection => _currentSpriteDirection;
+            public bool IsCurrentSpriteDirectionLocked => _currentSpriteDirectionLocked;
+            public int SpriteDirectionMismatchCount => _spriteDirectionMismatchCount;
+            public int MaximumSpriteDirectionDelta => _maximumSpriteDirectionDelta;
             public OfficeWorkMicroAction CurrentAction =>
                 _disposed ? OfficeWorkMicroAction.None : _machine.CurrentAction;
 
@@ -124,6 +144,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
             {
                 get
                 {
+                    _currentSpriteDirection = -1;
+                    _currentSpriteDirectionLocked = true;
                     if (_disposed || _frameSet == null) return null;
                     var action = _machine.CurrentAction;
                     if (action == OfficeWorkMicroAction.None ||
@@ -132,9 +154,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
                         return null;
                     }
 
-                    return clip.ResolveFrame(
+                    var sprite = clip.ResolveFrame(
                         _lockedDirection,
                         _machine.CurrentActionElapsedMilliseconds);
+                    if (!OfficeWorkActionFrameSet.TryResolveNamedDirection(
+                            sprite,
+                            out _currentSpriteDirection))
+                    {
+                        return sprite;
+                    }
+
+                    _currentSpriteDirectionLocked = _currentSpriteDirection == _lockedDirection;
+                    if (!_currentSpriteDirectionLocked)
+                    {
+                        _spriteDirectionMismatchCount++;
+                        _maximumSpriteDirectionDelta = Math.Max(
+                            _maximumSpriteDirectionDelta,
+                            OctantDistance(_lockedDirection, _currentSpriteDirection));
+                    }
+                    return sprite;
                 }
             }
 
@@ -188,6 +226,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeWorkActions
                 _stopRequested = true;
                 _safeStopAtMilliseconds = -1L;
                 _subMillisecondRemainder = 0d;
+            }
+
+            private static int OctantDistance(int left, int right)
+            {
+                var direct = Math.Abs(left - right);
+                return Math.Min(direct, OfficeWorkMicroActionAvailabilityRules.DirectionCount - direct);
             }
         }
     }
