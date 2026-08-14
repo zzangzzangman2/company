@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Simulation.OfficeLayout;
-using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.OfficeGridView
