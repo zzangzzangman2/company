@@ -1,5 +1,11 @@
 # DECISIONS
 
+## 2026-08-14 / 자판기 4방향은 additive Resources 정본으로 확정
+
+결정: 실패한 투명/체커 배경 ImageGen 결과는 자산으로 채택하지 않는다. 같은 2000년형 크림·민트 자판기를 SE/SW 조작면과 NW/NE 후면의 실제 4회전으로 다시 만들고, 공식 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 18 --opaque-threshold 210 --despill --edge-contract 1`만 사용해 alpha source를 만든다. `OfficeBuildVendingArtBuilder`는 이를 640×512 hard-alpha, 180 PPU, Point, mipmap 없음, ground pivot `(320,28)`의 방향별 Resources Sprite로 결정론적으로 승격한다.
+
+이유: 생성형 이미지의 불투명 체크무늬나 임의 alpha 추정은 테두리 오염과 흔들리는 충돌 기준을 만든다. 반면 source/chroma/runtime 단계를 분리하고 정확한 방향 Resource ID를 사용하면 공유 furniture catalog를 바꾸지 않으면서도 회전 결과, GUID, pivot, 반복 빌드 SHA를 자동 검증할 수 있다.
+
 ## 2026-08-14 / 건축·편집은 의미 layout + 소유 inventory + 복식부기 transaction으로 확정
 
 결정: 사무실 배치는 계속 `GameState.OfficeGrid`가 소유하고, 구매·보관·구매 basis는 새 `OfficeFurnitureInventoryState`가 소유한다. 모든 확정 명령은 먼저 immutable 후보 layout/inventory를 검증한 뒤 ledger를 한 번만 전기하고 두 상태를 함께 교체한다. Save schema v8은 inventory를 저장하며 v1-v7은 기존 grid 가구를 `LegacyIncluded`로 이관한다.

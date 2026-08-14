@@ -140,7 +140,8 @@ the stamina branch.
 Existing canonical PNGs were inspected and retained for desk/CRT, chair, reception, meeting,
 bookcase, fax/copier, water dispenser, sofa, coffee table, plant, partition, and filing cabinet.
 Only vending-machine kind art was absent. The built-in `image_gen` path was used (no CLI/API
-fallback) with the canonical water dispenser and fax/copier as style-only references.
+fallback). The canonical office target, water dispenser and fax/copier were inspected as local
+style/camera references; the accepted vending design was then rotated from one consistent design.
 
 Exact four-direction generation prompt template (the direction phrase was independently replaced
 with SE/SW/NW/NE):
@@ -155,36 +156,30 @@ with SE/SW/NW/NE):
 > references only; they are not edit targets and must not be copied as the requested object.
 > Composition: one machine only, fixed project 2:1 isometric camera, exactly one 1x1 floor-tile
 > footprint, centered ground pivot near the bottom-center, consistent apparent size with the
-> reference water dispenser, generous transparent padding on a landscape sprite canvas. Lighting:
+> reference water dispenser, generous padding on a landscape sprite canvas. Lighting:
 > upper-left soft office light consistent with references; rotate object geometry honestly while
-> keeping the world light fixed. Constraints: genuinely transparent RGBA background, no text, no
+> keeping the world light fixed. Constraints: a flat uniform magenta chroma field, no text, no
 > letters, no numbers, no brand, no logo, no watermark, no character, no floor or tile baked in, no
 > cast shadow outside its footprint, no scenery, no border, no other objects, clean readable
 > silhouette. Do not fake this rotation with a horizontal flip when buttons, product window, depth,
 > lighting, or perspective would be wrong.
 
-Generated source paths:
+The first transparency attempts were correctly rejected: their histograms were fully opaque or
+contained baked checker/white/black fields. The accepted retry used an opaque magenta-only field.
+The generator quantized the nominal `#FF00FF` field slightly per image, so no hand-authored alpha
+estimate was used. The repository's official border-key tool sampled each field and ran exactly:
 
-- SE `C:\Users\godho\.codex\generated_images\019ffe03-7dc2-7751-99e4-1806af95adc6\exec-7ae347ac-213e-4fc0-9ef9-9f9eb71b23d6.png`
-- SW `...\exec-b4b4510e-930c-4ec4-a0ce-1200e99ac1bb.png`
-- NW `...\exec-61edb167-1029-4971-a427-5ba6615a3fac.png`
-- NE `...\exec-d2c1df70-264b-4071-88c5-32f4a6f14e65.png`
-- per-direction alpha-removal edits:
-  `C:\Users\godho\.codex\generated_images\019ffe03-7dc2-7751-99e4-1806af95adc6\exec-70c0f69b-8d84-4570-9b7f-70856d7c93c4.png`,
-  `C:\Users\godho\.codex\generated_images\019ffe03-7dc2-7751-99e4-1806af95adc6\exec-c7bf7bf8-200a-49a7-967c-220e5505f0c2.png`,
-  `C:\Users\godho\.codex\generated_images\019ffe03-7dc2-7751-99e4-1806af95adc6\exec-98add20b-754a-4008-9988-1acd2c708dc4.png`,
-  `C:\Users\godho\.codex\generated_images\019ffe03-7dc2-7751-99e4-1806af95adc6\exec-82bd2fd3-f0c4-41ed-ae6f-65658b0437c2.png`
-- strict alpha probes:
-  `C:\Users\godho\.codex\generated_images\019ffe03-7dc2-7751-99e4-1806af95adc6\exec-3e47a8bb-ad8b-426e-9ae4-e378a3de9716.png`,
-  `C:\Users\godho\.codex\generated_images\019ffe03-7dc2-7751-99e4-1806af95adc6\exec-9fe3569e-6305-4048-819f-03218bf9e7dd.png`
+`remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 18 --opaque-threshold 210 --despill --edge-contract 1`
 
-All ten outputs were visually inspected. Alpha histograms were also measured: every output was
-`alpha min=255, max=255`, with zero transparent pixels. Checker/white/black backgrounds were baked
-in, so no generated image was accepted or copied into `Assets`; consequently there is no false
-claim of a clean alpha asset or stable image GUID. A small genuinely transparent procedural
-vending sprite is retained as a runtime safety guard, and exact Resources IDs
-`OfficeBuildFurniture/<kind>_<se|sw|nw|ne>` remain ready for approved PNGs. This art blocker must be
-closed before final-art approval; it does not block the semantic/runtime editor candidate.
+The four chroma and alpha sources are stored under
+`Assets/Art/Office/Tiles/Furniture/Source/office_drink_vending_machine_<se|sw|nw|ne>_*_v1.png`.
+`OfficeBuildVendingArtBuilder` deterministically creates exact Resources IDs
+`OfficeBuildFurniture/drink_vending_machine_<se|sw|nw|ne>` as 640×512 RGBA hard-alpha Sprites,
+180 PPU, Point, mipmap disabled, uncompressed, pivot `(320,28)`. SE/SW visibly expose opposing
+operating fronts; NW/NE expose the opposing rear+side surfaces, so none is a fake label or runtime
+flip. Visual inspection passed on the generated chroma sources and transparent runtime outputs;
+automated QA found zero visible magenta-fringe pixels. The procedural sprite remains only as a
+missing/corrupt-resource safety guard and is not selected by the accepted candidate.
 
 ## Canonical ground geometry and movement hand-off
 
@@ -231,6 +226,9 @@ Passed with Unity 6000.3.21f1:
   timescale/bootstrap pause, vending purchase and actor-preserving runtime rebuild, rendered Sprite
   at the semantic tile anchor, reachable `DrinkVending` capability, four canonical actors, and exact
   pause restoration on close;
+- `OFFICE_BUILD_VENDING_ART_QA: PASS`: four unique real rotations; exact directional Resources
+  selection; deterministic 640×512 RGBA hard-alpha runtime outputs; 180 PPU; `(320,28)` ground
+  pivot; Point/no mip/uncompressed importer; front/rear classification; magenta fringe zero;
 - `FAMILY_COMPANY_OFFICE_GRID_T1_VALIDATION: PASS`;
 - `OFFICE_FURNITURE_TILE_SNAP_VALIDATION: PASS`;
 - `OFFICE_ISOMETRIC_DEPTH_VALIDATION: PASS`;
@@ -248,7 +246,7 @@ also exercises the current contract/runtime path. PlayMode emitted one Unity Sea
 
 Candidate readiness: **ready for integration with declared owners**. The company-HUD owner still
 needs to call `OfficeBuildEditorNavigationAdapter`; the movement owner still needs to consume the
-read-only geometry query without changing its reservation/seat lifecycle. Approved transparent
-four-direction vending PNGs remain final-art polish; the runtime uses a transparent procedural
-fallback today. Starting base is `715ef105596df015903362fb01e140f987e8b52b`. No main merge,
-remote push, Windows release build, or user deployment was performed.
+read-only geometry query without changing its reservation/seat lifecycle. Four-direction vending
+art is complete and loaded through the exact additive Resources hook. Starting base is
+`715ef105596df015903362fb01e140f987e8b52b`. No main merge, remote push, Windows release build, or
+user deployment was performed.

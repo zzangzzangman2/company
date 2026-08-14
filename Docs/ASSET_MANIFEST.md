@@ -417,6 +417,16 @@
   - `office_swivel_chair_front_v3.png` — `22D60EF8FD3A7A33CF8B3226B8B3ACF46AAA15A519ACE6E8B20BDFCF3D939E73`
   - `office_workstation_front_v4.png` — `762B63AF9A583EDF1F9243D7F182BFDA7155C362E5A25067F07F405708006B36`
 
+### T4 건축·편집 자판기 4방향
+
+- 생성 모드: OpenAI 내장 ImageGen. 실패한 fully-opaque 투명/체커 결과는 폐기하고, 같은 2000년형 크림·민트 음료·간식 자판기를 마젠타 배경에서 실제 SE/SW/NW/NE 회전으로 생성했다. SE/SW는 서로 반대 조작면, NW/NE는 서로 반대 후면+측면이 보이며 단순 좌우 flip을 사용하지 않았다.
+- 원본 루트: `Assets/Art/Office/Tiles/Furniture/Source/office_drink_vending_machine_<direction>_{chroma|alpha}_v1.png`.
+- 공식 후처리: `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 18 --opaque-threshold 210 --despill --edge-contract 1`. 생성기가 명목상 `#FF00FF` 필드를 소폭 양자화했으므로 border key를 공식 도구가 직접 샘플했고, 생성형 원본에 임의 alpha를 추정하지 않았다.
+- alpha source SHA-256: SE `3C358B25B554106AC3DBC9E44B614A6C1FB7582C4B66421519A96FA32DD2E650`, SW `D85BE78235BCC94BABC663BC82761B3B98A363A3AFFA2F67819B0DB3AFEA1F2D`, NW `FCB1C4E00D0750847D8FC6201BF6B6B595D8C22ADF2DA56F4147A0812B1DAD22`, NE `C487F4C67B4EDAD974CD697B689F5E768B8CB190215382D028090468032B33BB`.
+- 런타임 루트: `Assets/FamilyCompany/Presentation.Unity/Resources/OfficeBuildFurniture/drink_vending_machine_<direction>.png`.
+- runtime SHA-256: SE `8AE66D1F6269B8559E7E2C84D451760FA5319F8E4C9D09265F6A8D32EBE54462`, SW `BD487C055EB4F62F506D9094B8FDD4CE2670CE7AD01B3C6773899F9AD06F7A6E`, NW `8D0E486A264B3A724C3104C81F6B5F95630744B9109F2880401973D28ADA8C36`, NE `24A806A0C301FD30EF2D8E985A6FA3483BD279C0A658C0431AACA8B42DDBCA9A`.
+- `OfficeBuildVendingArtBuilder` 정본 규격: 640×512 RGBA hard alpha, 180 PPU, Point, mipmap 없음, 무압축, ground pivot `(320,28)`, 24px 이상 safety margin. 반복 빌드 SHA, 방향별 고유성, front/rear 분류, Resources exact selection, visible magenta fringe 0을 Unity 6000.3.21f1에서 검증했다.
+
 ### T4 사용자 캡처 교정 자산
 
 - 생성 모드: OpenAI 내장 ImageGen. 기존 SIMUL-v3 팔레트와 2000년대 민트·우드 CRT 사무실 문법을 유지한 정밀 단일 소품 편집이다.
