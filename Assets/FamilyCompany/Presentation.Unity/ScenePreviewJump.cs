@@ -1903,10 +1903,10 @@ namespace FamilyCompany.Presentation.Unity
                             FindObjectsInactive.Exclude,
                             FindObjectsSortMode.None)
                         .FirstOrDefault(item => item != null &&
-                            string.Equals(item.gameObject.name, "Office Observation HUD", StringComparison.Ordinal));
+                            string.Equals(item.gameObject.name, "Main Navigation HUD V2", StringComparison.Ordinal));
                     if (officeHudCanvas == null)
                     {
-                        failure = "Office Observation HUD canvas is missing or inactive";
+                        failure = "Main Navigation HUD V2 canvas is missing or inactive";
                         return false;
                     }
                     previousCanvasMode = officeHudCanvas.renderMode;
