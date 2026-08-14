@@ -24,6 +24,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private readonly OfficeSeatingState _seatingState;
         private readonly Dictionary<string, OfficeSeatSlot> _seats =
             new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeWorkstationAssembly> _assembliesBySeat =
+            new Dictionary<string, OfficeWorkstationAssembly>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _assignedSeats =
             new Dictionary<string, string>(StringComparer.Ordinal);
         // StarterOfficeV1 has one entrance. Keep the authority here instead of treating every
@@ -43,6 +45,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _furniturePresenter = furniturePresenter ?? throw new ArgumentNullException(nameof(furniturePresenter));
             _occupancy = occupancy ?? throw new ArgumentNullException(nameof(occupancy));
             if (paths == null) throw new ArgumentNullException(nameof(paths));
+            LayoutRevision = grid.ComputeLayoutHash();
+            foreach (OfficeWorkstationAssembly assembly in OfficeWorkstationAssemblyQuery.ResolveAll(grid))
+                _assembliesBySeat.Add(assembly.Seat.SeatId, assembly);
             _seatingState = new OfficeSeatingState(grid.SeatSlots.Select(item =>
                 new FamilyCompany.Simulation.OfficeSeating.OfficeSeatDefinition(
                     item.SeatId,
@@ -50,7 +55,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (OfficeSeatSlot seat in grid.SeatSlots)
             {
                 _seats.Add(seat.SeatId, seat);
-                string memberId = MemberIdFromSeat(seat.SeatId);
+                string memberId = LegacyAssignedMemberHint(seat.SeatId);
                 if (memberId.Length == 0 || _assignedSeats.ContainsKey(memberId)) continue;
                 if (_seatingState.TryAssign(seat.SeatId, memberId, out _))
                     _assignedSeats.Add(memberId, seat.SeatId);
@@ -65,6 +70,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         }
 
         public OfficeSeatingState SeatingState => _seatingState;
+        public string LayoutRevision { get; }
+        public IReadOnlyCollection<OfficeWorkstationAssembly> Assemblies =>
+            _assembliesBySeat.Values.OrderBy(item => item.AssemblyId, StringComparer.Ordinal).ToArray();
         public OfficeRuntimeInteractionOfferResolver InteractionOffers => _offerResolver;
         public OfficeRuntimeInteractionLifecycleService InteractionLifecycle => _interactionLifecycle;
 
@@ -77,6 +85,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             PlacedOfficeFurniture furniture = _grid.Furniture.FirstOrDefault(item =>
                 string.Equals(item.FurnitureId, destination.FurnitureId, StringComparison.Ordinal));
             if (furniture == null) return false;
+
+            OfficeFurnitureWorldSocket access = OfficeFurnitureGeometryQuery.Shared.Resolve(furniture)
+                .InteractionAccessSockets
+                .Where(item => item.WorldCell.Equals(destination.Cell))
+                .OrderBy(item => item.SlotIndex)
+                .FirstOrDefault();
+            if (access != null)
+            {
+                OfficeGridCoordinate step = OfficeFurnitureRotationTransform.FacingStep(
+                    access.DesiredActorFacing);
+                Vector3 from = _presenter.CellCenterWorld(destination.Cell);
+                Vector3 to = _presenter.CellCenterWorld(new OfficeGridCoordinate(
+                    destination.Cell.X + step.X,
+                    destination.Cell.Y + step.Y));
+                direction = DirectionalSpriteAnimator.ResolveTileDirection(
+                    new Vector2(to.x - from.x, to.y - from.y));
+                return true;
+            }
 
             Vector3 actorWorld = _presenter.CellCenterWorld(destination.Cell);
             Vector3 furnitureWorld = _presenter.SubcellAnchorWorld(furniture.PlacementAnchor);
@@ -386,6 +412,30 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return result;
         }
 
+        public OfficeWorkstationAssembly RequiredAssembly(OfficeSeatSlot seat)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            if (!_assembliesBySeat.TryGetValue(seat.SeatId, out OfficeWorkstationAssembly assembly))
+                throw new InvalidOperationException("Seat is not a valid workstation assembly: " + seat.SeatId);
+            return assembly;
+        }
+
+        public IReadOnlyList<OfficeSeatEgressCandidate> ResolveEgressCandidates(OfficeSeatSlot seat)
+        {
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            if (!_assembliesBySeat.TryGetValue(seat.SeatId, out OfficeWorkstationAssembly assembly))
+                return OfficeSeatEgressRules.ResolveCandidates(seat);
+            return assembly.EgressSockets.Select(socket => new OfficeSeatEgressCandidate(
+                socket.Kind switch
+                {
+                    OfficeFurnitureGeometrySocketKind.SeatEgressFront => OfficeSeatEgressKind.Front,
+                    OfficeFurnitureGeometrySocketKind.SeatEgressLeft => OfficeSeatEgressKind.Left,
+                    OfficeFurnitureGeometrySocketKind.SeatEgressRight => OfficeSeatEgressKind.Right,
+                    _ => throw new InvalidOperationException("Unexpected workstation egress socket.")
+                },
+                socket.WorldCell)).ToArray();
+        }
+
         public OfficeRuntimeDestination DestinationForSeat(
             OfficeSeatSlot seat,
             OfficeRuntimeDestination requestedDestination)
@@ -610,10 +660,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return false;
         }
 
-        private static string MemberIdFromSeat(string seatId)
+        private static string LegacyAssignedMemberHint(string seatId)
         {
             const string prefix = "seat_";
-            return seatId != null && seatId.StartsWith(prefix, StringComparison.Ordinal)
+            return seatId != null &&
+                   !OfficeWorkstationPairingRules.IsDynamicSeat(seatId) &&
+                   seatId.StartsWith(prefix, StringComparison.Ordinal)
                 ? seatId.Substring(prefix.Length)
                 : string.Empty;
         }

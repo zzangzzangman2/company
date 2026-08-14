@@ -19,13 +19,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             public Vector3 AuthoredVisualLocalPosition;
             public SpriteRenderer BaseRenderer;
             public SpriteRenderer FrontRenderer;
-            public SpriteRenderer OccupiedLowerBodyRenderer;
-        }
-
-        private sealed class RuntimeForegroundSprite
-        {
-            public Sprite Sprite;
-            public Vector3 LocalPosition;
         }
 
         private readonly Dictionary<string, FurnitureVisual> _visuals =
@@ -36,10 +29,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             new Dictionary<string, PlacedOfficeFurniture>(StringComparer.Ordinal);
         private readonly Dictionary<string, SpriteRenderer> _frontOverlays =
             new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
-        private readonly Dictionary<string, SpriteRenderer> _occupiedChairLowerBodyOverlays =
-            new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
-        private readonly Dictionary<Sprite, RuntimeForegroundSprite> _occupiedChairForegrounds =
-            new Dictionary<Sprite, RuntimeForegroundSprite>();
         private OfficeGrid _semanticGrid;
         private OfficeGridTilemapPresenter _gridPresenter;
         private OfficeFurnitureVisualCatalog _visualCatalog;
@@ -47,8 +36,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
         public IReadOnlyDictionary<string, SpriteRenderer> Renderers => _renderers;
         public IReadOnlyDictionary<string, SpriteRenderer> FrontOverlayRenderers => _frontOverlays;
-        public IReadOnlyDictionary<string, SpriteRenderer> OccupiedChairLowerBodyRenderers =>
-            _occupiedChairLowerBodyOverlays;
         public Bounds RenderBounds => _renderBounds;
         public OfficeFurnitureVisualCatalog VisualCatalog => _visualCatalog;
 
@@ -294,14 +281,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (visual.FrontRenderer == null) return;
             visual.FrontRenderer.enabled = true;
             visual.FrontRenderer.sortingOrder = sortingOrder;
-            if (visual.OccupiedLowerBodyRenderer != null &&
-                visual.OccupiedLowerBodyRenderer.enabled)
-                visual.OccupiedLowerBodyRenderer.sortingOrder = sortingOrder;
         }
 
         /// <summary>
-        /// Keeps the complete authored foreground assigned and adds the canonical seat-rim crop
-        /// only while the pose upper-body protection plane is engaged.
+        /// Keeps the single authored chair-part foreground assigned for the complete reservation.
+        /// Depth, not a second rectangular crop, decides whether that mask is above the actor.
         /// </summary>
         public void ApplyOccupiedChairForeground(string furnitureId, bool foregroundEngaged)
         {
@@ -314,16 +298,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
             visual.FrontRenderer.sprite = visual.Definition.FrontOverlaySprite;
             visual.FrontRenderer.transform.localPosition = Vector3.zero;
-            if (!foregroundEngaged)
-            {
-                if (visual.OccupiedLowerBodyRenderer != null)
-                    visual.OccupiedLowerBodyRenderer.enabled = false;
-                return;
-            }
-
-            EnsureOccupiedLowerBodyRenderer(visual);
-            visual.OccupiedLowerBodyRenderer.enabled = true;
-            visual.OccupiedLowerBodyRenderer.sortingOrder = visual.FrontRenderer.sortingOrder;
+            visual.FrontRenderer.enabled = visual.Definition.FrontOverlayWhenOccupied;
         }
 
         public void ApplySeatOcclusion(OfficeSeatSlot seat, int characterSortingOrder)
@@ -336,8 +311,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             {
                 chair.FrontRenderer.enabled = chair.Definition.FrontOverlayWhenOccupied;
                 chair.FrontRenderer.sortingOrder = characterSortingOrder + 2;
-                if (chair.OccupiedLowerBodyRenderer != null)
-                    chair.OccupiedLowerBodyRenderer.sortingOrder = characterSortingOrder + 2;
             }
 
             if (!seat.HasWorkstationBinding) return;
@@ -367,10 +340,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (chair.FrontRenderer != null &&
                 (chair.FrontRenderer.enabled != chair.Definition.FrontOverlayWhenOccupied ||
                  chair.FrontRenderer.sortingOrder != characterSortingOrder + 2)) return false;
-            if (chair.OccupiedLowerBodyRenderer == null ||
-                !chair.OccupiedLowerBodyRenderer.enabled ||
-                chair.OccupiedLowerBodyRenderer.sortingOrder != characterSortingOrder + 2)
-                return false;
             if (!seat.HasWorkstationBinding) return true;
             FurnitureVisual desk = RequiredVisual(seat.WorkSurfaceFurnitureId);
             if (desk.BaseRenderer.sortingOrder != characterSortingOrder - 2) return false;
@@ -403,51 +372,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 visual.FrontRenderer.enabled = visual.Definition.FrontOverlayWhenOccupied;
                 visual.FrontRenderer.sortingOrder = visual.BaseRenderer.sortingOrder + 1;
             }
-            if (visual.OccupiedLowerBodyRenderer != null)
-                visual.OccupiedLowerBodyRenderer.enabled = false;
-        }
-
-        private void EnsureOccupiedLowerBodyRenderer(FurnitureVisual visual)
-        {
-            if (visual.OccupiedLowerBodyRenderer != null) return;
-            Sprite baseSprite = visual.Definition.BaseSprite;
-            if (!_occupiedChairForegrounds.TryGetValue(
-                    baseSprite,
-                    out RuntimeForegroundSprite occupiedForeground))
-            {
-                Rect textureRect =
-                    OfficeSeatedUpperBodyProtectionRules.ChairLowerTextureRect(baseSprite);
-                Sprite sprite = Sprite.Create(
-                    baseSprite.texture,
-                    textureRect,
-                    OfficeSeatedUpperBodyProtectionRules.ChairLowerNormalizedPivot(baseSprite),
-                    baseSprite.pixelsPerUnit,
-                    0u,
-                    SpriteMeshType.FullRect,
-                    Vector4.zero);
-                sprite.name = baseSprite.name + "_occupied_lower_body_runtime";
-                sprite.hideFlags = HideFlags.HideAndDontSave;
-                occupiedForeground = new RuntimeForegroundSprite
-                {
-                    Sprite = sprite,
-                    LocalPosition =
-                        OfficeSeatedUpperBodyProtectionRules.ChairLowerLocalPosition(baseSprite)
-                };
-                _occupiedChairForegrounds.Add(baseSprite, occupiedForeground);
-            }
-
-            var lowerBodyRoot = new GameObject("OccupiedLowerBodyOverlay");
-            lowerBodyRoot.transform.SetParent(visual.VisualRoot, false);
-            lowerBodyRoot.transform.localPosition = occupiedForeground.LocalPosition;
-            lowerBodyRoot.transform.localRotation = Quaternion.identity;
-            lowerBodyRoot.transform.localScale = Vector3.one;
-            SpriteRenderer renderer = lowerBodyRoot.AddComponent<SpriteRenderer>();
-            renderer.sprite = occupiedForeground.Sprite;
-            renderer.flipX = visual.BaseRenderer.flipX;
-            renderer.sortingLayerID = visual.FrontRenderer.sortingLayerID;
-            renderer.enabled = false;
-            visual.OccupiedLowerBodyRenderer = renderer;
-            _occupiedChairLowerBodyOverlays[visual.Furniture.FurnitureId] = renderer;
         }
 
         private void RecalculateRenderBounds()
@@ -474,30 +398,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             _renderers.Clear();
             _furniture.Clear();
             _frontOverlays.Clear();
-            _occupiedChairLowerBodyOverlays.Clear();
             for (int index = transform.childCount - 1; index >= 0; index--)
             {
                 GameObject child = transform.GetChild(index).gameObject;
                 if (Application.isPlaying) Destroy(child);
                 else DestroyImmediate(child);
             }
-            DestroyRuntimeForegroundSprites();
-        }
-
-        private void OnDestroy()
-        {
-            DestroyRuntimeForegroundSprites();
-        }
-
-        private void DestroyRuntimeForegroundSprites()
-        {
-            foreach (RuntimeForegroundSprite runtime in _occupiedChairForegrounds.Values)
-            {
-                if (runtime?.Sprite == null) continue;
-                if (Application.isPlaying) Destroy(runtime.Sprite);
-                else DestroyImmediate(runtime.Sprite);
-            }
-            _occupiedChairForegrounds.Clear();
         }
     }
 }

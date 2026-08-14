@@ -30,6 +30,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _mainBootstrapWasEnabled;
         private float _previousTimeScale = 1f;
         private Sprite _cellSprite;
+        private Material _facingLineMaterial;
         private GameObject _ghost;
         private string _selectedId = string.Empty;
         private PendingSource _pendingSource;
@@ -37,6 +38,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private string _pendingStoredInstanceId = string.Empty;
         private OfficeGridCoordinate _previewOrigin;
         private OfficeFurnitureFacing _previewRotation;
+        private bool _manualPreviewRotation;
         private OfficeLayoutEditResult _previewEdit;
         private string _previewMessage = string.Empty;
         private string _previewSignature = string.Empty;
@@ -147,6 +149,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ClearVisuals();
         }
 
+        private void OnDestroy()
+        {
+            if (_facingLineMaterial != null) Destroy(_facingLineMaterial);
+            _facingLineMaterial = null;
+        }
+
         private void HandleKeys()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -167,6 +175,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (_pendingSource != PendingSource.None || _selectedId.Length > 0)
                 {
                     _previewRotation = OfficeLayoutEditRules.QuarterTurnClockwise(_previewRotation);
+                    _manualPreviewRotation = true;
                     InvalidatePreview();
                 }
             }
@@ -185,7 +194,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeGridCoordinate cell = _runtime.World.Presenter.NearestCell(world);
             if (_pendingSource != PendingSource.None)
             {
-                _previewOrigin = cell;
+                if (!_previewOrigin.Equals(cell))
+                {
+                    _previewOrigin = cell;
+                    ApplyRecommendedChairFacing();
+                }
                 InvalidatePreview();
                 return;
             }
@@ -244,6 +257,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             _previewOrigin = instance.GridOrigin;
             _previewRotation = instance.Rotation;
+            _manualPreviewRotation = true;
             InvalidatePreview();
         }
 
@@ -259,7 +273,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _pendingSource = PendingSource.Purchase;
             _pendingDefinitionId = definition.DefinitionId;
             _previewRotation = definition.DesiredFacing;
+            _manualPreviewRotation = false;
             _previewOrigin = new OfficeGridCoordinate(6, 6);
+            ApplyRecommendedChairFacing();
             InvalidatePreview();
             Say("마우스로 위치 선택 · R 회전 · 확정 전에는 돈이 차감되지 않습니다");
         }
@@ -272,6 +288,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _pendingStoredInstanceId = instance.InstanceId;
             _previewOrigin = new OfficeGridCoordinate(6, 6);
             _previewRotation = instance.Rotation;
+            _manualPreviewRotation = true;
             InvalidatePreview();
         }
 
@@ -284,6 +301,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _pendingStoredInstanceId = string.Empty;
             _selectedId = string.Empty;
             _dragging = false;
+            _manualPreviewRotation = false;
             _previewEdit = null;
             _previewMessage = string.Empty;
             InvalidatePreview();
@@ -474,6 +492,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
             if (_pendingSource != PendingSource.None || HasPendingChange()) DrawGhost(valid);
+            if ((_pendingSource != PendingSource.None || HasPendingChange()) &&
+                string.Equals(TargetDefinitionId(), OfficeGridLayouts.SwivelChairKind, StringComparison.Ordinal))
+                DrawFacingArrow(valid);
         }
 
         private string TargetDefinitionId()
@@ -532,6 +553,51 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             renderer.sprite = _cellSprite;
             renderer.color = color;
             renderer.sortingOrder = 30000;
+            _overlay.Add(marker);
+        }
+
+        private void ApplyRecommendedChairFacing()
+        {
+            if (_manualPreviewRotation || Grid == null ||
+                !string.Equals(_pendingDefinitionId, OfficeGridLayouts.SwivelChairKind, StringComparison.Ordinal))
+                return;
+            if (OfficeWorkstationPairingRules.TryRecommendChairFacing(
+                    Grid, _previewOrigin, out OfficeFurnitureFacing facing))
+                _previewRotation = facing;
+        }
+
+        private void DrawFacingArrow(bool valid)
+        {
+            OfficeGridCoordinate step = OfficeFurnitureRotationTransform.FacingStep(_previewRotation);
+            Vector3 start = _runtime.World.Presenter.CellCenterWorld(_previewOrigin);
+            Vector3 full = _runtime.World.Presenter.CellCenterWorld(new OfficeGridCoordinate(
+                _previewOrigin.X + step.X, _previewOrigin.Y + step.Y)) - start;
+            Vector3 axis = full.normalized * Mathf.Min(0.55f, full.magnitude * 0.42f);
+            Vector3 tip = start + axis;
+            Vector3 normal = new Vector3(-axis.y, axis.x, 0f).normalized * 0.12f;
+            Color color = valid ? new Color(0.2f, 1f, 0.36f, 0.94f) : new Color(1f, 0.2f, 0.16f, 0.94f);
+            DrawArrowSegment(start, tip, color);
+            DrawArrowSegment(tip, tip - axis.normalized * 0.18f + normal, color);
+            DrawArrowSegment(tip, tip - axis.normalized * 0.18f - normal, color);
+        }
+
+        private void DrawArrowSegment(Vector3 start, Vector3 end, Color color)
+        {
+            var marker = new GameObject("OfficeBuildFacingArrow");
+            marker.transform.SetParent(transform, false);
+            LineRenderer line = marker.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.SetPosition(0, start);
+            line.SetPosition(1, end);
+            line.startWidth = 0.055f;
+            line.endWidth = 0.055f;
+            line.startColor = color;
+            line.endColor = color;
+            if (_facingLineMaterial == null)
+                _facingLineMaterial = new Material(Shader.Find("Sprites/Default"));
+            line.sharedMaterial = _facingLineMaterial;
+            line.sortingOrder = 30002;
             _overlay.Add(marker);
         }
 

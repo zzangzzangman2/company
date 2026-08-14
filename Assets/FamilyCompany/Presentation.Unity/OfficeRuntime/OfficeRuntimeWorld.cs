@@ -33,6 +33,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public OfficeRuntimeActorRegistry Registry => _registry;
         public int ReplanCount { get; private set; }
         public int ArrivalCount { get; private set; }
+        public string LayoutRevision { get; private set; } = string.Empty;
 
         public void Configure(
             OfficeGrid grid,
@@ -43,6 +44,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
             _furniturePresenter = furniturePresenter ?? throw new ArgumentNullException(nameof(furniturePresenter));
+            LayoutRevision = grid.ComputeLayoutHash();
             _occupancy = new OfficeRuntimeOccupancy();
             _occupancy.Rebuild(grid, presenter);
             _paths = new OfficeRuntimePathService(grid, _occupancy, presenter);
@@ -53,6 +55,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _occupancy,
                 _paths);
             _depthSorter = new OfficeRuntimeDepthSorter(grid, presenter, furniturePresenter);
+            if (!string.Equals(LayoutRevision, _occupancy.LayoutRevision, StringComparison.Ordinal) ||
+                !string.Equals(LayoutRevision, _paths.LayoutRevision, StringComparison.Ordinal) ||
+                !string.Equals(LayoutRevision, _workstations.LayoutRevision, StringComparison.Ordinal) ||
+                !string.Equals(LayoutRevision, _workstations.InteractionOffers.LayoutRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Office runtime services were rebuilt from different layout revisions.");
             _configured = true;
         }
 
@@ -112,6 +119,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             _workstations?.InteractionLifecycle.AbortAll();
             _occupancy.Rebuild(_grid, _presenter);
+            if (!string.Equals(LayoutRevision, _occupancy.LayoutRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Occupancy rebuild used a stale layout revision.");
             foreach (OfficeRuntimeAgent actor in _registry.Actors) actor.InvalidatePath();
         }
 

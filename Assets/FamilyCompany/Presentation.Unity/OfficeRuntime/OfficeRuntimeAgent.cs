@@ -1169,7 +1169,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 Position,
                 Vector2.zero,
                 0f,
-                destination.SeatId);
+                string.Empty);
             _destination = destination;
             _pendingDestination = null;
             _arrived = false;
@@ -1191,7 +1191,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _agentId,
                 start,
                 _destination.Value.Cell,
-                _destination.Value.SeatId,
+                string.Empty,
                 _stuckSeconds >= OfficeNavigationTrafficRules.ReplanThresholdSeconds,
                 AgentRadius);
             _path.Clear();
@@ -1225,7 +1225,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _agentId,
                 Position,
                 AgentRadius,
-                _destination.Value.SeatId);
+                string.Empty);
             _pathIndex = OfficeSemanticPathProgressRules.AdvanceThroughOccupiedCell(
                 _path,
                 _pathIndex,
@@ -1259,7 +1259,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 Position,
                 _desiredVelocity,
                 _stuckSeconds,
-                _seat?.SeatId ?? string.Empty);
+                string.Empty);
             if (!_world.Occupancy.TryReservePath(_agentId, currentCell, _upcomingPathCells))
             {
                 LastReservationBlocker = _world.Occupancy.DescribePathReservationBlocker(
@@ -1278,7 +1278,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         currentCell,
                         _upcomingPathCells,
                         deltaTime,
-                        _destination.Value.SeatId))
+                        string.Empty))
                 {
                     if (_stuckSeconds >= 2.0f) _world.Occupancy.ClearReservations(_agentId);
                     return;
@@ -1288,7 +1288,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     var recovery = new Vector2(
                         blockedTraffic.RecoveryDirection.X,
                         blockedTraffic.RecoveryDirection.Z) * (DefaultMoveSpeed * 0.72f);
-                    MoveWithCollision(recovery, deltaTime, _destination.Value.SeatId);
+                    MoveWithCollision(recovery, deltaTime, string.Empty);
                 }
                 else StopMotion(keepStuck: true);
                 if (blockedTraffic.ShouldReplan || _stuckSeconds >= 1.10f) _pathRevision = -1;
@@ -1325,7 +1325,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             MoveWithCollision(
                 targetVelocity,
                 deltaTime,
-                _destination.Value.SeatId,
+                string.Empty,
                 delta.magnitude,
                 presentationSemanticDirection * targetVelocity.magnitude);
         }
@@ -1752,7 +1752,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             Vector2 start = Position;
             IReadOnlyList<OfficeSeatEgressCandidate> candidates =
-                OfficeSeatEgressRules.ResolveCandidates(_seat);
+                _world.Workstations.ResolveEgressCandidates(_seat);
             for (var index = 0; index < candidates.Count; index++)
             {
                 OfficeSeatEgressCandidate candidate = candidates[index];

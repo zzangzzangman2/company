@@ -996,15 +996,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 failure = "required chair foreground overlay is missing or disabled";
                 return false;
             }
-            _runtime.World.FurniturePresenter.OccupiedChairLowerBodyRenderers.TryGetValue(
-                seat.ChairFurnitureId,
-                out SpriteRenderer lowerBodyOverlay);
-            if (depth.OcclusionEngaged &&
-                (lowerBodyOverlay == null || !lowerBodyOverlay.enabled))
-            {
-                failure = "required lower-body chair occluder is missing or disabled";
-                return false;
-            }
             SpriteRenderer actorRenderer = actor.PresentationRenderer;
             if (actorRenderer == null || actorRenderer.sprite == null || !actorRenderer.enabled)
             {
@@ -1108,8 +1099,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     out failure)) return false;
 
             bool previousEnabled = overlay.enabled;
-            bool previousLowerBodyEnabled =
-                lowerBodyOverlay != null && lowerBodyOverlay.enabled;
             bool previousActorEnabled = actorRenderer.enabled;
             SpriteRenderer upperBodyRenderer = actor.SeatedUpperBodyProtectionRenderer;
             bool previousUpperBodyEnabled =
@@ -1120,7 +1109,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             try
             {
                 overlay.enabled = false;
-                if (lowerBodyOverlay != null) lowerBodyOverlay.enabled = false;
                 if (!TryCaptureFrame(
                         string.Empty,
                         1024,
@@ -1142,7 +1130,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         out failure)) return false;
 
                 overlay.enabled = true;
-                if (lowerBodyOverlay != null) lowerBodyOverlay.enabled = previousLowerBodyEnabled;
                 if (!TryCaptureFrame(
                         string.Empty,
                         1024,
@@ -1155,8 +1142,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             finally
             {
                 overlay.enabled = previousEnabled;
-                if (lowerBodyOverlay != null)
-                    lowerBodyOverlay.enabled = previousLowerBodyEnabled;
                 actorRenderer.enabled = previousActorEnabled;
                 if (upperBodyRenderer != null)
                     upperBodyRenderer.enabled = previousUpperBodyEnabled;
@@ -1891,7 +1876,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             builder.AppendLine("egressMatrix=families4*rotations4*scenarios4=64");
             builder.AppendLine("captureManifest=seating-transition-frame-capture-manifest.txt");
             builder.AppendLine(
-                "chairForeground=canonical-9881px-continuous; upperBodyProtection=pose-pelvis-split");
+                "chairForeground=authored-curved-seat-rim-continuous; " +
+                "upperBodyProtection=pose-pelvis-split");
             builder.AppendLine(
                 "penetrationContract=filtered-core actor residual >5%=FAIL; <=5% allowed only for D3D11 bilinear/sRGB readback");
             foreach (string memberId in MemberIds)

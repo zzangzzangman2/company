@@ -10,7 +10,11 @@ namespace FamilyCompany.Simulation.OfficeLayout
         InteractionAccess = 0,
         SeatEgressFront = 1,
         SeatEgressLeft = 2,
-        SeatEgressRight = 3
+        SeatEgressRight = 3,
+        SeatContact = 4,
+        WorkstationOperator = 5,
+        KeyboardWork = 6,
+        MonitorCenter = 7
     }
 
     /// <summary>
@@ -146,11 +150,15 @@ namespace FamilyCompany.Simulation.OfficeLayout
             int footprintHeight,
             IEnumerable<OfficeFurnitureLocalPoint> solidGroundPolygon,
             OfficeFurnitureVisualOcclusionRegion visualOcclusion,
-            IEnumerable<OfficeFurnitureGeometrySocket> sockets)
+            IEnumerable<OfficeFurnitureGeometrySocket> sockets,
+            float clearancePaddingWorld = 0f)
         {
             if (footprintWidth <= 0) throw new ArgumentOutOfRangeException(nameof(footprintWidth));
             if (footprintHeight <= 0) throw new ArgumentOutOfRangeException(nameof(footprintHeight));
             if (solidGroundPolygon == null) throw new ArgumentNullException(nameof(solidGroundPolygon));
+            if (clearancePaddingWorld < 0f || float.IsNaN(clearancePaddingWorld) ||
+                float.IsInfinity(clearancePaddingWorld))
+                throw new ArgumentOutOfRangeException(nameof(clearancePaddingWorld));
             var polygon = solidGroundPolygon.ToArray();
             OfficeFurnitureVisualOcclusionRegion.ValidatePolygon(polygon, "solid ground");
             int maxX4 = checked(footprintWidth * SubcellsPerCell);
@@ -163,6 +171,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
             FootprintHeight = footprintHeight;
             SolidGroundPolygon = Array.AsReadOnly(polygon);
             VisualOcclusion = visualOcclusion ?? throw new ArgumentNullException(nameof(visualOcclusion));
+            ClearancePaddingWorld = clearancePaddingWorld;
             var socketArray = sockets == null ? Array.Empty<OfficeFurnitureGeometrySocket>() : sockets.ToArray();
             if (socketArray.Any(item => item == null))
                 throw new ArgumentException("Geometry sockets cannot contain null.", nameof(sockets));
@@ -171,6 +180,14 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.InteractionAccess)
                 .ToArray());
             SeatEgressSockets = Array.AsReadOnly(socketArray.Where(item => item.IsSeatEgress).ToArray());
+            SeatContactSockets = Array.AsReadOnly(socketArray
+                .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.SeatContact).ToArray());
+            WorkstationOperatorSockets = Array.AsReadOnly(socketArray
+                .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.WorkstationOperator).ToArray());
+            KeyboardWorkSockets = Array.AsReadOnly(socketArray
+                .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.KeyboardWork).ToArray());
+            MonitorCenterSockets = Array.AsReadOnly(socketArray
+                .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.MonitorCenter).ToArray());
             BakedSolidGroundRows = Array.AsReadOnly(BakeRows(polygon, footprintWidth, footprintHeight));
             SolidSubcellCount = BakedSolidGroundRows.Sum(row => row.Count(character => character == '#'));
             if (SolidSubcellCount == 0)
@@ -184,9 +201,14 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public IReadOnlyList<string> BakedSolidGroundRows { get; }
         public int SolidSubcellCount { get; }
         public OfficeFurnitureVisualOcclusionRegion VisualOcclusion { get; }
+        public float ClearancePaddingWorld { get; }
         public IReadOnlyList<OfficeFurnitureGeometrySocket> Sockets { get; }
         public IReadOnlyList<OfficeFurnitureGeometrySocket> InteractionAccessSockets { get; }
         public IReadOnlyList<OfficeFurnitureGeometrySocket> SeatEgressSockets { get; }
+        public IReadOnlyList<OfficeFurnitureGeometrySocket> SeatContactSockets { get; }
+        public IReadOnlyList<OfficeFurnitureGeometrySocket> WorkstationOperatorSockets { get; }
+        public IReadOnlyList<OfficeFurnitureGeometrySocket> KeyboardWorkSockets { get; }
+        public IReadOnlyList<OfficeFurnitureGeometrySocket> MonitorCenterSockets { get; }
 
         public bool IsSolidGroundSubcell(int subcellX, int subcellY)
         {
@@ -199,33 +221,36 @@ namespace FamilyCompany.Simulation.OfficeLayout
 
         internal OfficeFurnitureGeometryProfile RotateClockwise()
         {
-            int oldWidth4 = checked(FootprintWidth * SubcellsPerCell);
             OfficeFurnitureLocalPoint[] solid = SolidGroundPolygon
-                .Select(point => new OfficeFurnitureLocalPoint(point.Y4, oldWidth4 - point.X4))
+                .Select(point => OfficeFurnitureRotationTransform.RotateLocalPointClockwise(
+                    point, FootprintWidth))
                 .Reverse()
                 .ToArray();
             OfficeFurnitureLocalPoint[] occlusion = VisualOcclusion.GroundProjectionPolygon
-                .Select(point => new OfficeFurnitureLocalPoint(point.Y4, oldWidth4 - point.X4))
+                .Select(point => OfficeFurnitureRotationTransform.RotateLocalPointClockwise(
+                    point, FootprintWidth))
                 .Reverse()
                 .ToArray();
             OfficeFurnitureGeometrySocket[] rotatedSockets = Sockets.Select(socket =>
             {
-                int newCellX = socket.CellOffset.Y;
-                int newCellY = FootprintWidth - 1 - socket.CellOffset.X;
+                OfficeGridCoordinate cell = OfficeFurnitureRotationTransform.RotateCellOffsetClockwise(
+                    socket.CellOffset, FootprintWidth);
                 return new OfficeFurnitureGeometrySocket(
                     socket.Kind,
                     socket.SlotIndex,
-                    new OfficeGridCoordinate(newCellX, newCellY),
-                    new OfficeFurnitureLocalPoint(socket.Anchor.Y4, oldWidth4 - socket.Anchor.X4),
-                    QuarterTurnClockwise(socket.DesiredActorFacing));
+                    cell,
+                    OfficeFurnitureRotationTransform.RotateLocalPointClockwise(
+                        socket.Anchor, FootprintWidth),
+                    OfficeFurnitureRotationTransform.QuarterTurnClockwise(socket.DesiredActorFacing));
             }).ToArray();
             return new OfficeFurnitureGeometryProfile(
-                QuarterTurnClockwise(Facing),
+                OfficeFurnitureRotationTransform.QuarterTurnClockwise(Facing),
                 FootprintHeight,
                 FootprintWidth,
                 solid,
                 new OfficeFurnitureVisualOcclusionRegion(occlusion, VisualOcclusion.HeightPixels),
-                rotatedSockets);
+                rotatedSockets,
+                ClearancePaddingWorld);
         }
 
         private static string[] BakeRows(
@@ -263,8 +288,6 @@ namespace FamilyCompany.Simulation.OfficeLayout
             return inside;
         }
 
-        private static OfficeFurnitureFacing QuarterTurnClockwise(OfficeFurnitureFacing facing) =>
-            (OfficeFurnitureFacing)(((int)facing + 1) & 3);
     }
 
     public sealed class OfficeFurnitureGeometryDefinition
@@ -294,15 +317,13 @@ namespace FamilyCompany.Simulation.OfficeLayout
 
         public OfficeFurnitureGeometryProfile ForFacing(OfficeFurnitureFacing facing) => _profiles[facing];
 
-        public static OfficeFurnitureGeometryDefinition FromSouthEast(
+        public static OfficeFurnitureGeometryDefinition FromCanonical(
             string definitionId,
-            OfficeFurnitureGeometryProfile southEast)
+            OfficeFurnitureGeometryProfile canonical)
         {
-            if (southEast == null) throw new ArgumentNullException(nameof(southEast));
-            if (southEast.Facing != OfficeFurnitureFacing.SouthEast)
-                throw new ArgumentException("Canonical geometry must face SouthEast.", nameof(southEast));
+            if (canonical == null) throw new ArgumentNullException(nameof(canonical));
             var profiles = new Dictionary<OfficeFurnitureFacing, OfficeFurnitureGeometryProfile>();
-            OfficeFurnitureGeometryProfile current = southEast;
+            OfficeFurnitureGeometryProfile current = canonical;
             for (var turn = 0; turn < 4; turn++)
             {
                 profiles.Add(current.Facing, current);
@@ -360,6 +381,14 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.InteractionAccess)
                 .ToArray());
             SeatEgressSockets = Array.AsReadOnly(WorldSockets.Where(item => item.Source.IsSeatEgress).ToArray());
+            SeatContactSockets = Array.AsReadOnly(WorldSockets
+                .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.SeatContact).ToArray());
+            WorkstationOperatorSockets = Array.AsReadOnly(WorldSockets
+                .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.WorkstationOperator).ToArray());
+            KeyboardWorkSockets = Array.AsReadOnly(WorldSockets
+                .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.KeyboardWork).ToArray());
+            MonitorCenterSockets = Array.AsReadOnly(WorldSockets
+                .Where(item => item.Kind == OfficeFurnitureGeometrySocketKind.MonitorCenter).ToArray());
         }
 
         public string DefinitionId { get; }
@@ -370,6 +399,10 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public IReadOnlyList<OfficeFurnitureWorldSocket> WorldSockets { get; }
         public IReadOnlyList<OfficeFurnitureWorldSocket> InteractionAccessSockets { get; }
         public IReadOnlyList<OfficeFurnitureWorldSocket> SeatEgressSockets { get; }
+        public IReadOnlyList<OfficeFurnitureWorldSocket> SeatContactSockets { get; }
+        public IReadOnlyList<OfficeFurnitureWorldSocket> WorkstationOperatorSockets { get; }
+        public IReadOnlyList<OfficeFurnitureWorldSocket> KeyboardWorkSockets { get; }
+        public IReadOnlyList<OfficeFurnitureWorldSocket> MonitorCenterSockets { get; }
     }
 
     /// <summary>
@@ -436,35 +469,41 @@ namespace FamilyCompany.Simulation.OfficeLayout
             int height,
             OfficeFurnitureCapability capabilities,
             int capacity,
-            OfficeFurnitureAccessPolicy accessPolicy)
+            OfficeFurnitureAccessPolicy accessPolicy,
+            OfficeFurnitureFacing canonicalFacing)
         {
             OfficeFurnitureLocalPoint[] solid = SolidPolygon(definitionId, width, height);
             var occlusion = new OfficeFurnitureVisualOcclusionRegion(
                 Rectangle(width, height),
                 OcclusionHeightPixels(definitionId));
             OfficeFurnitureGeometrySocket[] sockets = BuildSockets(
+                definitionId,
                 width,
                 height,
                 capabilities,
                 capacity,
-                accessPolicy).ToArray();
-            return OfficeFurnitureGeometryDefinition.FromSouthEast(
+                accessPolicy,
+                canonicalFacing).ToArray();
+            return OfficeFurnitureGeometryDefinition.FromCanonical(
                 definitionId,
                 new OfficeFurnitureGeometryProfile(
-                    OfficeFurnitureFacing.SouthEast,
+                    canonicalFacing,
                     width,
                     height,
                     solid,
                     occlusion,
-                    sockets));
+                    sockets,
+                    ClearancePaddingWorld(definitionId)));
         }
 
         private static IEnumerable<OfficeFurnitureGeometrySocket> BuildSockets(
+            string definitionId,
             int width,
             int height,
             OfficeFurnitureCapability capabilities,
             int capacity,
-            OfficeFurnitureAccessPolicy accessPolicy)
+            OfficeFurnitureAccessPolicy accessPolicy,
+            OfficeFurnitureFacing canonicalFacing)
         {
             var result = new List<OfficeFurnitureGeometrySocket>();
             if (accessPolicy != OfficeFurnitureAccessPolicy.None &&
@@ -493,22 +532,63 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 for (var seat = 0; seat < seats; seat++)
                 {
                     int seatX = Math.Min(width - 1, seat % width);
+                    var seatCell = new OfficeGridCoordinate(seatX, 0);
+                    OfficeFurnitureFacing away = OfficeFurnitureRotationTransform.Opposite(canonicalFacing);
+                    OfficeGridCoordinate frontStep = OfficeFurnitureRotationTransform.FacingStep(away);
+                    OfficeGridCoordinate leftStep = OfficeFurnitureRotationTransform.FacingStep(
+                        OfficeFurnitureRotationTransform.QuarterTurnClockwise(away));
+                    OfficeGridCoordinate rightStep = OfficeFurnitureRotationTransform.FacingStep(
+                        OfficeFurnitureRotationTransform.QuarterTurnClockwise(
+                            OfficeFurnitureRotationTransform.QuarterTurnClockwise(
+                                OfficeFurnitureRotationTransform.QuarterTurnClockwise(away))));
+                    OfficeGridCoordinate frontCell = Add(seatCell, frontStep);
+                    OfficeGridCoordinate leftCell = Add(seatCell, leftStep);
+                    OfficeGridCoordinate rightCell = Add(seatCell, rightStep);
+                    result.Add(Socket(
+                        OfficeFurnitureGeometrySocketKind.SeatContact,
+                        seat,
+                        seatCell,
+                        canonicalFacing));
                     result.Add(Socket(
                         OfficeFurnitureGeometrySocketKind.SeatEgressFront,
                         seat,
-                        new OfficeGridCoordinate(seatX, -1),
-                        OfficeFurnitureFacing.NorthWest));
+                        frontCell,
+                        FacingTowardFootprint(frontCell, width, height)));
                     result.Add(Socket(
                         OfficeFurnitureGeometrySocketKind.SeatEgressLeft,
                         seat,
-                        new OfficeGridCoordinate(-1, Math.Min(height - 1, seat / width)),
-                        OfficeFurnitureFacing.NorthEast));
+                        leftCell,
+                        FacingTowardFootprint(leftCell, width, height)));
                     result.Add(Socket(
                         OfficeFurnitureGeometrySocketKind.SeatEgressRight,
                         seat,
-                        new OfficeGridCoordinate(width, Math.Min(height - 1, seat / width)),
-                        OfficeFurnitureFacing.SouthWest));
+                        rightCell,
+                        FacingTowardFootprint(rightCell, width, height)));
                 }
+            }
+
+            if (string.Equals(definitionId, OfficeGridLayouts.DeskWithPcKind, StringComparison.Ordinal))
+            {
+                // SouthEast is the canonical desk orientation. Its operator chair occupies the
+                // explicit front socket at local (0,-1) and faces NorthWest. All other directions
+                // are generated by the same quarter-turn transform as collision and egress.
+                result.Add(Socket(
+                    OfficeFurnitureGeometrySocketKind.WorkstationOperator,
+                    0,
+                    new OfficeGridCoordinate(0, -1),
+                    OfficeFurnitureFacing.NorthWest));
+                result.Add(new OfficeFurnitureGeometrySocket(
+                    OfficeFurnitureGeometrySocketKind.KeyboardWork,
+                    0,
+                    new OfficeGridCoordinate(0, 0),
+                    new OfficeFurnitureLocalPoint(2, 1),
+                    OfficeFurnitureFacing.NorthWest));
+                result.Add(new OfficeFurnitureGeometrySocket(
+                    OfficeFurnitureGeometrySocketKind.MonitorCenter,
+                    0,
+                    new OfficeGridCoordinate(0, 0),
+                    new OfficeFurnitureLocalPoint(2, 3),
+                    OfficeFurnitureFacing.NorthWest));
             }
             return result;
         }
@@ -539,6 +619,9 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 desiredFacing);
         }
 
+        private static OfficeGridCoordinate Add(OfficeGridCoordinate left, OfficeGridCoordinate right) =>
+            new OfficeGridCoordinate(left.X + right.X, left.Y + right.Y);
+
         private static OfficeFurnitureFacing FacingTowardFootprint(
             OfficeGridCoordinate cell,
             int width,
@@ -554,6 +637,9 @@ namespace FamilyCompany.Simulation.OfficeLayout
         {
             int width4 = checked(width * OfficeFurnitureGeometryProfile.SubcellsPerCell);
             int height4 = checked(height * OfficeFurnitureGeometryProfile.SubcellsPerCell);
+            // These orthogonal contours are traced around the approved 4x4-per-cell ground-contact
+            // rows. Unlike a mathematical diamond sampled on its boundary, they bake symmetrically
+            // on both axes and therefore reproduce the exact collision profile consumed by runtime.
             if (string.Equals(id, OfficeGridLayouts.PottedPlantKind, StringComparison.Ordinal))
                 return new[]
                 {
@@ -570,11 +656,37 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     new OfficeFurnitureLocalPoint(1, 3), new OfficeFurnitureLocalPoint(0, 3),
                     new OfficeFurnitureLocalPoint(0, 2), new OfficeFurnitureLocalPoint(1, 2)
                 };
+            if (string.Equals(id, OfficeGridLayouts.MeetingTableKind, StringComparison.Ordinal))
+                return new[]
+                {
+                    new OfficeFurnitureLocalPoint(1, 0), new OfficeFurnitureLocalPoint(7, 0),
+                    new OfficeFurnitureLocalPoint(7, 4), new OfficeFurnitureLocalPoint(1, 4)
+                };
+            if (string.Equals(id, OfficeGridLayouts.CoffeeTableKind, StringComparison.Ordinal))
+                return new[]
+                {
+                    new OfficeFurnitureLocalPoint(2, 0), new OfficeFurnitureLocalPoint(6, 0),
+                    new OfficeFurnitureLocalPoint(6, 1), new OfficeFurnitureLocalPoint(7, 1),
+                    new OfficeFurnitureLocalPoint(7, 3), new OfficeFurnitureLocalPoint(6, 3),
+                    new OfficeFurnitureLocalPoint(6, 4), new OfficeFurnitureLocalPoint(2, 4),
+                    new OfficeFurnitureLocalPoint(2, 3), new OfficeFurnitureLocalPoint(1, 3),
+                    new OfficeFurnitureLocalPoint(1, 1), new OfficeFurnitureLocalPoint(2, 1)
+                };
+            if (string.Equals(id, OfficeGridLayouts.PartitionKind, StringComparison.Ordinal))
+                return new[]
+                {
+                    new OfficeFurnitureLocalPoint(1, 0), new OfficeFurnitureLocalPoint(3, 0),
+                    new OfficeFurnitureLocalPoint(3, height4), new OfficeFurnitureLocalPoint(1, height4)
+                };
             if (width4 == 4 && height4 == 4)
                 return new[]
                 {
-                    new OfficeFurnitureLocalPoint(2, 0), new OfficeFurnitureLocalPoint(4, 2),
-                    new OfficeFurnitureLocalPoint(2, 4), new OfficeFurnitureLocalPoint(0, 2)
+                    new OfficeFurnitureLocalPoint(1, 0), new OfficeFurnitureLocalPoint(3, 0),
+                    new OfficeFurnitureLocalPoint(3, 1), new OfficeFurnitureLocalPoint(4, 1),
+                    new OfficeFurnitureLocalPoint(4, 3), new OfficeFurnitureLocalPoint(3, 3),
+                    new OfficeFurnitureLocalPoint(3, 4), new OfficeFurnitureLocalPoint(1, 4),
+                    new OfficeFurnitureLocalPoint(1, 3), new OfficeFurnitureLocalPoint(0, 3),
+                    new OfficeFurnitureLocalPoint(0, 1), new OfficeFurnitureLocalPoint(1, 1)
                 };
             if (width4 == 4)
                 return new[]
@@ -586,9 +698,12 @@ namespace FamilyCompany.Simulation.OfficeLayout
             if (height4 == 4)
                 return new[]
                 {
-                    new OfficeFurnitureLocalPoint(2, 0), new OfficeFurnitureLocalPoint(width4 - 2, 0),
-                    new OfficeFurnitureLocalPoint(width4, 2), new OfficeFurnitureLocalPoint(width4 - 2, 4),
-                    new OfficeFurnitureLocalPoint(2, 4), new OfficeFurnitureLocalPoint(0, 2)
+                    new OfficeFurnitureLocalPoint(1, 0), new OfficeFurnitureLocalPoint(width4 - 1, 0),
+                    new OfficeFurnitureLocalPoint(width4 - 1, 1), new OfficeFurnitureLocalPoint(width4, 1),
+                    new OfficeFurnitureLocalPoint(width4, 3), new OfficeFurnitureLocalPoint(width4 - 1, 3),
+                    new OfficeFurnitureLocalPoint(width4 - 1, 4), new OfficeFurnitureLocalPoint(1, 4),
+                    new OfficeFurnitureLocalPoint(1, 3), new OfficeFurnitureLocalPoint(0, 3),
+                    new OfficeFurnitureLocalPoint(0, 1), new OfficeFurnitureLocalPoint(1, 1)
                 };
             if (width4 >= 4 && height4 >= 4)
                 return new[]
@@ -599,6 +714,15 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     new OfficeFurnitureLocalPoint(0, height4 - 1), new OfficeFurnitureLocalPoint(0, 1)
                 };
             return Rectangle(width, height);
+        }
+
+        private static float ClearancePaddingWorld(string id)
+        {
+            if (string.Equals(id, OfficeGridLayouts.SwivelChairKind, StringComparison.Ordinal) ||
+                string.Equals(id, OfficeGridLayouts.CoffeeTableKind, StringComparison.Ordinal) ||
+                string.Equals(id, OfficeGridLayouts.PottedPlantKind, StringComparison.Ordinal))
+                return 0.01f;
+            return 0.02f;
         }
 
         private static OfficeFurnitureLocalPoint[] Rectangle(int width, int height)

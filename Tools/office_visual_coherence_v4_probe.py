@@ -42,6 +42,10 @@ RUNTIME_CHARACTER_SCALE = 1.69          # the pre-V4 constant, kept to render th
 SHIPPED_CHARACTER_SCALE = 1.55          # OfficeGridCharacterMover.UniformVisualScale
 MEMBERS = ("player", "older_sister", "father", "mother")
 CHARACTER_CANVAS = 256
+MODEL_UPPER_BODY_REDRAW = True
+PROTECTION_BELOW_PELVIS_PX = 12
+UNMAPPED_FURNITURE_KINDS = set()
+_UPPER_BODY_CACHE = {}
 
 SEAT_DIRECTION = "northwest"            # SafeStaticWork direction 3
 
@@ -126,16 +130,27 @@ def read_pose_catalog():
     result = {}
     for block in blocks:
         member = block.splitlines()[0].strip()
+        clip = int(re.search(r"clip: (\d+)", block).group(1))
+        frame = int(re.search(r"frameIndex: (\d+)", block).group(1))
+        # This diagnostic renders one representative Work frame.  The catalog
+        # contains SitDown, Work, and StandUp rows for every member; allowing a
+        # later StandUp row to overwrite the Work calibration made the reported
+        # Sprite hash say NO even when the catalog was correct.
+        if clip != 1 or frame != 3:
+            continue
         result[member] = dict(
             direction=int(re.search(r"directionIndex: (\d+)", block).group(1)),
-            clip=int(re.search(r"clip: (\d+)", block).group(1)),
-            frame=int(re.search(r"frameIndex: (\d+)", block).group(1)),
+            clip=clip,
+            frame=frame,
             pelvis=_vec(re.search(r"pelvisAnchorPx: .*", block).group(0)),
             hand=_vec(re.search(r"deskInteractionAnchorPx: .*", block).group(0)),
             scale=float(re.search(r"uniformScale: ([\d.]+)", block).group(1)),
             approved=re.search(r"humanApproved: (\d)", block).group(1) == "1",
             sha=re.search(r"sourceSpriteSha256: (\w+)", block).group(1),
         )
+    missing = sorted(set(MEMBERS) - set(result))
+    if missing:
+        raise RuntimeError("Missing representative Work[3] pose profiles: " + ", ".join(missing))
     return result
 
 
@@ -266,6 +281,52 @@ def frame_path(member, clip, frame):
     return os.path.join(CHARACTER_DIR[member], f"{member}_{SEAT_DIRECTION}_{clip}_{frame}.png")
 
 
+def upper_body_frame_path(member, clip, frame, pelvis_anchor_y):
+    """Mirror OfficeSeatedUpperBodyProtectionRules on the original full canvas."""
+    cutoff_source_y = max(
+        0,
+        min(CHARACTER_CANVAS - 1, math.floor(pelvis_anchor_y) - PROTECTION_BELOW_PELVIS_PX),
+    )
+    key = (member, clip, frame, cutoff_source_y)
+    cached = _UPPER_BODY_CACHE.get(key)
+    if cached:
+        return cached
+    source = Image.open(frame_path(member, clip, frame)).convert("RGBA")
+    pixels = source.load()
+    first_lower_row = source.height - cutoff_source_y
+    for y in range(first_lower_row, source.height):
+        for x in range(source.width):
+            pixels[x, y] = (0, 0, 0, 0)
+    path = os.path.join(
+        OUT,
+        f"_runtime-upper-{member}-{clip}-{frame}-cutoff-{cutoff_source_y}.png",
+    )
+    source.save(path)
+    _UPPER_BODY_CACHE[key] = path
+    return path
+
+
+def validate_protection_constant():
+    path = os.path.join(
+        ROOT,
+        "Assets",
+        "FamilyCompany",
+        "Presentation.Unity",
+        "OfficeRuntime",
+        "OfficeSeatedUpperBodyProtectionRules.cs",
+    )
+    text = open(path, encoding="utf-8").read()
+    match = re.search(r"ProtectionBelowPelvisPx\s*=\s*(\d+)", text)
+    if not match:
+        raise RuntimeError("Could not read ProtectionBelowPelvisPx from runtime source.")
+    runtime_value = int(match.group(1))
+    if runtime_value != PROTECTION_BELOW_PELVIS_PX:
+        raise RuntimeError(
+            "Probe/runtime ProtectionBelowPelvisPx drift: "
+            f"{PROTECTION_BELOW_PELVIS_PX} != {runtime_value}"
+        )
+
+
 
 def depth_relation(a, b):
     """Mirror of Simulation/OfficeGrid/OfficeIsometricDepth.Compare."""
@@ -343,7 +404,11 @@ def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CH
     for item in layout["furniture"]:
         definition = catalog[item["kind"]]
         root = subcell_px(item["px2"], item["py2"])
-        png = os.path.join(FURNITURE_ROOT, FURNITURE_PNG[item["kind"]])
+        png_name = FURNITURE_PNG.get(item["kind"])
+        if not png_name:
+            UNMAPPED_FURNITURE_KINDS.add(item["kind"])
+            continue
+        png = os.path.join(FURNITURE_ROOT, png_name)
         sort_world = sprite_point(root, definition["ground"], definition["sort"], definition["scale"])
         base_order = sorting_order(sort_world[1])
         # Shipped rule: every object keeps its own ground-anchor order. Nothing is re-sorted
@@ -351,7 +416,8 @@ def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CH
         scene.add(png, root, definition["ground"], definition["scale"], base_order,
                   key=item["px2"] + item["py2"])
         front = FURNITURE_FRONT_PNG.get(item["kind"])
-        if front and definition["front_when_occupied"] and item["id"] in occupied_chairs:
+        if (front and definition["front_when_occupied"] and
+                (item["id"] in occupied_chairs or item["id"] in occupied_desks)):
             scene.add(os.path.join(FURNITURE_ROOT, front), root, definition["ground"],
                       definition["scale"], base_order + 2)
 
@@ -378,6 +444,14 @@ def build_office(layout, catalog, poses, seated=True, character_scale=RUNTIME_CH
                                             chair_def["scale"])
             scene.add(frame_path(member, clip_name, frame), visual_root, pivot, character_scale,
                       sorting_order(chair_sort_world[1]) + 1)
+            if MODEL_UPPER_BODY_REDRAW:
+                scene.add(
+                    upper_body_frame_path(member, clip_name, frame, pose[0][1]),
+                    visual_root,
+                    pivot,
+                    character_scale,
+                    sorting_order(chair_sort_world[1]) + 3,
+                )
             marks.append(dict(member=member, seat=seat_world, work=work_world, opseat=opseat_world,
                               hand=hand_world, visual_root=visual_root, chair=chair_root, desk=desk_root))
     return scene, marks
@@ -393,6 +467,7 @@ def crop_to(scene_image, scene, world_centre, size):
 # --------------------------------------------------------------------------- main
 def main():
     os.makedirs(OUT, exist_ok=True)
+    validate_protection_constant()
     catalog = read_furniture_catalog()
     poses = read_pose_catalog()
     layout = read_layout()
@@ -406,6 +481,8 @@ def main():
     say(f"layout {layout['width']}x{layout['height']} furniture={len(layout['furniture'])} "
         f"seats={len(layout['seats'])}")
     say(f"character scale (runtime constant) = {RUNTIME_CHARACTER_SCALE}")
+    say(f"MODEL_UPPER_BODY_REDRAW = {MODEL_UPPER_BODY_REDRAW}")
+    say(f"PROTECTION_BELOW_PELVIS_PX = {PROTECTION_BELOW_PELVIS_PX} (runtime drift=0)")
     say("")
 
     # ---- furniture geometry facts
@@ -419,6 +496,9 @@ def main():
     say("")
 
     scene, marks = build_office(layout, catalog, poses)
+    say("unmapped furniture skipped = " +
+        (", ".join(sorted(UNMAPPED_FURNITURE_KINDS))
+         if UNMAPPED_FURNITURE_KINDS else "none"))
     overview = scene.draw().convert("RGB")
     overview.save(os.path.join(OUT, "00-current-main-overview.png"))
 
@@ -466,7 +546,7 @@ def main():
 
     # ---- silhouette + sha per member
     say("[work frame silhouettes and SHA]")
-    say("| member | frame | bbox | height | area | catalog SHA matches |")
+    say("| member | frame | bbox | height | area | selected Work[3] catalog SHA matches |")
     say("|---|---:|---|---:|---:|---|")
     anatomy_auto = {}
     for member in MEMBERS:

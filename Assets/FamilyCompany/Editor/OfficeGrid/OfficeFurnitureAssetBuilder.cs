@@ -44,7 +44,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Vector2[] sourceForegroundExclusionPolygon = null,
                 Vector2? sourceOperatorSeatSocketPx = null,
                 int semanticFootprintWidth = 1,
-                int semanticFootprintHeight = 1)
+                int semanticFootprintHeight = 1,
+                bool authoredRuntimeAssets = false)
             {
                 KindId = kindId;
                 Stem = stem;
@@ -62,6 +63,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 SourceOperatorSeatSocketPx = sourceOperatorSeatSocketPx;
                 SemanticFootprintWidth = semanticFootprintWidth;
                 SemanticFootprintHeight = semanticFootprintHeight;
+                AuthoredRuntimeAssets = authoredRuntimeAssets;
             }
 
             public string KindId { get; }
@@ -80,6 +82,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
             public Vector2? SourceOperatorSeatSocketPx { get; }
             public int SemanticFootprintWidth { get; }
             public int SemanticFootprintHeight { get; }
+            public bool AuthoredRuntimeAssets { get; }
+            public bool HasForeground =>
+                AuthoredRuntimeAssets || SourceForegroundPolygon.Length > 0;
             public string SourcePath => $"{SourceFolder}/{SourceStem}_alpha_{Version}.png";
             public string RuntimePath => $"{RuntimeFolder}/{Stem}_{Version}.png";
             public string FrontPath => $"{RuntimeFolder}/{Stem}_front_{Version}.png";
@@ -135,14 +140,10 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "v3",
                 "office_swivel_chair_northwest",
                 new Vector2(600f, 650f),
-                // Preserve the limited foreground introduced with the canonical V3 chair.
-                // In the baked 640x512 Sprite this is exactly base alpha where x >= 317
-                // and y >= 98: the right/backrest edge and near armrest, not the cushion.
-                sourceForegroundPolygon: new[]
-                {
-                    new Vector2(610f, 468f), new Vector2(904f, 468f),
-                    new Vector2(904f, 934f), new Vector2(610f, 934f)
-                }),
+                // The runtime chair and occupied foreground are pixel-authored together by
+                // Tools/build_office_chair_foreground_v1.py. The bulk furniture resampler must
+                // never replace that component mask with a source-space rectangle.
+                authoredRuntimeAssets: true),
             new FurnitureSpec(OfficeGridLayouts.ReceptionCounterKind, "office_reception_counter", 500, 340,
                 OfficeFurnitureFacing.SouthEast, new Vector2(834f, 180f), new Vector2(834f, 162f),
                 semanticFootprintWidth: 2),
@@ -198,7 +199,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             foreach (FurnitureSpec spec in Specs)
             {
                 ConfigureImporter(spec.RuntimePath, spec.RuntimeGroundAnchorPx);
-                if (spec.SourceForegroundPolygon.Length > 0)
+                if (spec.HasForeground)
                     ConfigureImporter(spec.FrontPath, spec.RuntimeGroundAnchorPx);
             }
 
@@ -279,8 +280,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
             AssetDatabase.ImportAsset(chair.FrontPath, ImportAssetOptions.ForceSynchronousImport);
             OfficeChairForegroundValidation.Validate();
             Debug.Log(
-                "OFFICE_CHAIR_FOREGROUND_ONLY_BUILD: PASS sourcePixels=9881 " +
-                "otherFurnitureWrites=0 catalogWrites=0");
+                "OFFICE_CHAIR_FOREGROUND_ONLY_BUILD: PASS sourcePixels=2141 " +
+                "mask=authored-curved-seat-rim otherFurnitureWrites=0 catalogWrites=0");
         }
 
         public static void RebuildChairForegroundOnlyBatch()
@@ -406,7 +407,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     throw new InvalidOperationException("Duplicate furniture kind: " + spec.KindId);
                 ValidateSourceSafetyMargin(spec);
                 ValidateRuntimeTexture(spec.RuntimePath, spec, false);
-                if (spec.SourceForegroundPolygon.Length > 0)
+                if (spec.HasForeground)
                     ValidateRuntimeTexture(spec.FrontPath, spec, true);
                 if (Mathf.Abs(spec.SourceAspect - spec.RuntimeAspect) / spec.SourceAspect > 0.005f)
                     throw new InvalidOperationException($"Furniture aspect drift exceeds 0.5%: {spec.RuntimePath}.");
@@ -478,7 +479,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             foreach (FurnitureSpec spec in Specs)
             {
                 yield return spec.RuntimePath;
-                if (spec.SourceForegroundPolygon.Length > 0) yield return spec.FrontPath;
+                if (spec.HasForeground) yield return spec.FrontPath;
             }
         }
 
@@ -548,9 +549,19 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     spec.SemanticFootprintWidth,
                     spec.SemanticFootprintHeight);
 
-                if (writeBase) WritePng(spec.RuntimePath, output);
-                if (writeFront && spec.SourceForegroundPolygon.Length > 0)
-                    WritePng(spec.FrontPath, front);
+                if (!spec.AuthoredRuntimeAssets)
+                {
+                    if (writeBase) WritePng(spec.RuntimePath, output);
+                    if (writeFront && spec.SourceForegroundPolygon.Length > 0)
+                        WritePng(spec.FrontPath, front);
+                }
+                else
+                {
+                    if (!File.Exists(spec.RuntimePath) || !File.Exists(spec.FrontPath))
+                        throw new FileNotFoundException(
+                            "Authored runtime chair assets are missing. Run " +
+                            "Tools/build_office_chair_foreground_v1.py before the Unity build.");
+                }
             }
             finally
             {
@@ -572,7 +583,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     spec.KindId,
                     spec.Facing,
                     RequiredSprite(spec.RuntimePath),
-                    spec.SourceForegroundPolygon.Length == 0 ? null : RequiredSprite(spec.FrontPath),
+                    spec.HasForeground ? RequiredSprite(spec.FrontPath) : null,
                     spec.RuntimeGroundAnchorPx,
                     spec.RuntimeSortAnchorPx,
                     spec.RuntimeSeatAnchorPx,
@@ -580,7 +591,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     1f,
                     spec.SourceSeatAnchorPx.HasValue,
                     spec.SourceWorkSurfaceAnchorPx.HasValue,
-                    spec.SourceForegroundPolygon.Length > 0,
+                    spec.HasForeground,
                     spec.RuntimeGroundFootprintPolygonPx,
                     spec.SemanticFootprintWidth,
                     spec.SemanticFootprintHeight,
@@ -645,7 +656,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 spec.KindId,
                 spec.Facing,
                 RequiredSprite(spec.RuntimePath),
-                spec.SourceForegroundPolygon.Length == 0 ? null : RequiredSprite(spec.FrontPath),
+                spec.HasForeground ? RequiredSprite(spec.FrontPath) : null,
                 spec.RuntimeGroundAnchorPx,
                 spec.RuntimeSortAnchorPx,
                 spec.RuntimeSeatAnchorPx,
@@ -653,7 +664,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 1f,
                 spec.SourceSeatAnchorPx.HasValue,
                 spec.SourceWorkSurfaceAnchorPx.HasValue,
-                spec.SourceForegroundPolygon.Length > 0,
+                spec.HasForeground,
                 spec.RuntimeGroundFootprintPolygonPx,
                 spec.SemanticFootprintWidth,
                 spec.SemanticFootprintHeight,
@@ -780,7 +791,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 Vector2 expectedPivot = spec.RuntimeGroundAnchorPx;
                 if (Vector2.Distance(sprite.pivot, expectedPivot) > 0.01f)
                     throw new InvalidOperationException($"Furniture sprite ground pivot is invalid: {path}, {sprite.pivot} != {expectedPivot}.");
-                if (overlay && spec.SourceForegroundPolygon.Length == 0)
+                if (overlay && !spec.HasForeground)
                     throw new InvalidOperationException("Unexpected furniture foreground overlay: " + path);
             }
             finally

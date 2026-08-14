@@ -29,7 +29,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _occupancy = occupancy ?? throw new ArgumentNullException(nameof(occupancy));
             _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
+            LayoutRevision = grid.ComputeLayoutHash();
+            if (!string.Equals(LayoutRevision, occupancy.LayoutRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Path/occupancy layout revisions differ.");
         }
+
+        public string LayoutRevision { get; }
 
         public IReadOnlyList<OfficeGridCoordinate> FindPath(
             string agentId,

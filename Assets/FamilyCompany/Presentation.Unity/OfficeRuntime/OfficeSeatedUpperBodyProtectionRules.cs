@@ -4,60 +4,17 @@ using UnityEngine;
 namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 {
     /// <summary>
-    /// Owns the complete three-layer seated occlusion contract: the chair keeps its canonical
-    /// foreground, a narrow seat-rim crop reinforces lower-body contact, and a pose-defined actor
-    /// crop restores the torso, hands and head above both chair layers.
+    /// Owns the final plane of the canonical seated occlusion contract: the base chair stays behind
+    /// the actor, the single authored chair-part foreground provides complete lower-body contact,
+    /// and this pose-defined actor crop restores the torso, hands and head above that foreground.
     /// </summary>
     public static class OfficeSeatedUpperBodyProtectionRules
     {
-        public const int ChairLowerMinimumSourceX = 300;
-        public const int ChairLowerMaximumSourceX = 342;
-        public const int ChairLowerMinimumSourceY = 98;
-        public const int ChairLowerMaximumSourceY = 140;
-        public const int ExpectedChairLowerOpaquePixelCount = 1816;
-
         // The pelvis anchor sits at the anatomical joint, while the visible waist/upper thigh must
         // remain in front of the chair back. Starting the redraw exactly at the joint produces a
         // straight chair-coloured band through the waist. This shared inset moves the seam down to
         // the physical seat contact without introducing character-specific coordinates.
         public const int ProtectionBelowPelvisPx = 12;
-
-        public static Rect ChairLowerTextureRect(Sprite baseSprite)
-        {
-            ValidateSprite(baseSprite, "Chair base");
-            Rect source = baseSprite.rect;
-            if (source.width <= ChairLowerMaximumSourceX ||
-                source.height <= ChairLowerMaximumSourceY)
-                throw new InvalidOperationException(
-                    $"Chair base Sprite is too small for the lower-body redraw: {source.size}.");
-            return new Rect(
-                source.x + ChairLowerMinimumSourceX,
-                source.y + ChairLowerMinimumSourceY,
-                ChairLowerMaximumSourceX - ChairLowerMinimumSourceX + 1,
-                ChairLowerMaximumSourceY - ChairLowerMinimumSourceY + 1);
-        }
-
-        public static Vector2 ChairLowerNormalizedPivot(Sprite baseSprite)
-        {
-            Rect crop = ChairLowerTextureRect(baseSprite);
-            return new Vector2(
-                (baseSprite.pivot.x - ChairLowerMinimumSourceX) / crop.width,
-                0f);
-        }
-
-        public static Vector3 ChairLowerLocalPosition(Sprite baseSprite)
-        {
-            ValidateSprite(baseSprite, "Chair base");
-            return new Vector3(
-                0f,
-                (ChairLowerMinimumSourceY - baseSprite.pivot.y) /
-                baseSprite.pixelsPerUnit,
-                0f);
-        }
-
-        public static bool IncludesChairLowerSourcePixel(int x, int y) =>
-            x >= ChairLowerMinimumSourceX && x <= ChairLowerMaximumSourceX &&
-            y >= ChairLowerMinimumSourceY && y <= ChairLowerMaximumSourceY;
 
         public static int ResolveCutoffSourceY(Sprite source, Vector2 pelvisAnchorPx)
         {

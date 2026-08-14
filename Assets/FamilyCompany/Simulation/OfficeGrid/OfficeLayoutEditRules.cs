@@ -160,7 +160,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     OfficeLayoutEditFailure.UnknownTarget, $"가구 '{furnitureId}'가 없습니다.");
             OfficeSeatSlot owner = grid.SeatSlots.FirstOrDefault(seat =>
                 Same(seat.ChairFurnitureId, furnitureId) || Same(seat.WorkSurfaceFurnitureId, furnitureId));
-            if (owner != null)
+            if (owner != null && !OfficeWorkstationPairingRules.IsDynamicSeat(owner.SeatId))
                 return OfficeLayoutEditResult.Fail(
                     OfficeLayoutEditFailure.RequiredWorkstation,
                     "가족 4명의 지정 워크스테이션은 보관하거나 판매할 수 없습니다.");
@@ -168,7 +168,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
             return Rebuild(
                 grid,
                 grid.Furniture.Where(item => !dropFurniture.Contains(item.FurnitureId)).ToList(),
-                grid.SeatSlots.ToList());
+                grid.SeatSlots.Where(item => owner == null || !Same(item.SeatId, owner.SeatId)).ToList());
         }
 
         /// <summary>
@@ -187,7 +187,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
         }
 
         public static OfficeFurnitureFacing QuarterTurnClockwise(OfficeFurnitureFacing facing) =>
-            (OfficeFurnitureFacing)(((int)facing + 1) & 3);
+            OfficeFurnitureRotationTransform.QuarterTurnClockwise(facing);
 
         /// <summary>
         /// Turns a free-standing piece by 90 degrees, including its footprint. Workstation members
@@ -328,13 +328,22 @@ namespace FamilyCompany.Simulation.OfficeLayout
 
             try
             {
-                var candidate = new OfficeGrid(
+                var provisional = new OfficeGrid(
                     source.Width,
                     source.Height,
                     source.CopyFloorTiles(),
                     walkable,
                     furniture,
                     seats);
+                IReadOnlyList<OfficeSeatSlot> synchronizedSeats =
+                    OfficeWorkstationPairingRules.Synchronize(provisional);
+                var candidate = new OfficeGrid(
+                    source.Width,
+                    source.Height,
+                    source.CopyFloorTiles(),
+                    walkable,
+                    furniture,
+                    synchronizedSeats);
                 OfficeLayoutEditResult topology = ValidateTopology(candidate);
                 return topology.Success ? OfficeLayoutEditResult.Ok(candidate) : topology;
             }
@@ -391,6 +400,16 @@ namespace FamilyCompany.Simulation.OfficeLayout
 
         private static OfficeLayoutEditResult ValidateTopology(OfficeGrid grid)
         {
+            try
+            {
+                OfficeWorkstationAssemblyQuery.ResolveAll(grid);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return OfficeLayoutEditResult.Fail(
+                    OfficeLayoutEditFailure.SeatBroken,
+                    "워크스테이션 축이 올바르지 않습니다: " + exception.Message);
+            }
             if (!grid.Contains(CanonicalInteriorEntrance) || !grid.IsWalkable(CanonicalInteriorEntrance))
                 return OfficeLayoutEditResult.Fail(
                     OfficeLayoutEditFailure.EntranceBlocked, "유일한 외부 출입구 안쪽 셀을 막을 수 없습니다.");
@@ -533,7 +552,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 new OfficeGridCoordinate(minX, minY),
                 maxX - minX + 1,
                 maxY - minY + 1,
-                QuarterTurnClockwise(item.Facing),
+                OfficeFurnitureRotationTransform.QuarterTurnClockwise(item.Facing),
                 item.BlocksMovement);
         }
 
@@ -550,8 +569,10 @@ namespace FamilyCompany.Simulation.OfficeLayout
             OfficeGridSubcellAnchor anchor,
             OfficeGridCoordinate pivot)
         {
-            int pivotX2 = pivot.X * 2;
-            int pivotY2 = pivot.Y * 2;
+            // Subcell anchors are expressed around cell centres, not lower-left cell corners.
+            // Rotating around the corner moved a planted pelvis by a half cell every quarter turn.
+            int pivotX2 = checked(pivot.X * 2 + 1);
+            int pivotY2 = checked(pivot.Y * 2 + 1);
             int dx2 = anchor.X2 - pivotX2;
             int dy2 = anchor.Y2 - pivotY2;
             return new OfficeGridSubcellAnchor(pivotX2 + dy2, pivotY2 - dx2);

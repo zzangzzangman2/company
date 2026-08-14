@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
-using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
@@ -21,7 +20,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private sealed class FurnitureObstacle
         {
             public PlacedOfficeFurniture Furniture;
-            public OfficeFurnitureCollisionProfile Profile;
+            public OfficeFurnitureGeometryProfile Profile;
             public OfficeRuntimeOccupancyLayer Layer;
             public string InteractionSeatId = string.Empty;
             public readonly HashSet<string> PermittedWorkSurfaceSeatIds =
@@ -122,6 +121,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeGridTilemapPresenter _presenter;
 
         public int Revision { get; private set; }
+        public string LayoutRevision { get; private set; } = string.Empty;
         public int StaticViolationCount { get; private set; }
         public int InteractionViolationCount { get; private set; }
         public int AgentPenetrationCount { get; private set; }
@@ -170,10 +170,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _hardFloor.Add(cell);
             }
 
-            OfficeFurnitureCollisionCatalog catalog =
-                Resources.Load<OfficeFurnitureCollisionCatalog>(
-                    OfficeFurnitureCollisionCatalog.DefaultResourcePath);
-            if (catalog != null) catalog.Validate();
             var obstaclesByFurnitureId = new Dictionary<string, FurnitureObstacle>(StringComparer.Ordinal);
             foreach (PlacedOfficeFurniture furniture in grid.Furniture)
             {
@@ -181,8 +177,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 var obstacle = CreateObstacle(
                     furniture,
                     OfficeRuntimeOccupancyLayer.StaticHard,
-                    string.Empty,
-                    catalog);
+                    string.Empty);
                 _furnitureObstacles.Add(obstacle);
                 obstaclesByFurnitureId[furniture.FurnitureId] = obstacle;
             }
@@ -197,8 +192,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _furnitureObstacles.Add(CreateObstacle(
                         seatFurniture,
                         OfficeRuntimeOccupancyLayer.Interaction,
-                        seat.SeatId,
-                        catalog));
+                        seat.SeatId));
                     _profiledInteractionSeatIds.Add(seat.SeatId);
                 }
                 if (!seat.HasWorkstationBinding) continue;
@@ -209,6 +203,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             BuildNarrowCorridorComponents();
             foreach (var actor in _actors.Values) actor.Reservations.Clear();
+            LayoutRevision = grid.ComputeLayoutHash();
             Revision++;
         }
 
@@ -499,7 +494,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (FurnitureObstacle obstacle in _furnitureObstacles)
             {
                 if (obstacle.IsPermitted(permitted)) continue;
-                float expandedRadius = radius + (obstacle.Profile?.ClearancePadding ?? 0f);
+                float expandedRadius = radius + (obstacle.Profile?.ClearancePaddingWorld ?? 0f);
                 foreach (Vector2 direction in CollisionDirections)
                 {
                     Vector2 samplePoint = point + direction * expandedRadius;
@@ -732,7 +727,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (FurnitureObstacle obstacle in _furnitureObstacles)
             {
                 if (obstacle.IsPermitted(permitted)) continue;
-                float expandedRadius = radius + (obstacle.Profile?.ClearancePadding ?? 0f);
+                float expandedRadius = radius + (obstacle.Profile?.ClearancePaddingWorld ?? 0f);
                 foreach (Vector2 direction in CollisionDirections)
                 {
                     Vector2 samplePoint = point + direction * expandedRadius;
@@ -748,16 +743,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private static FurnitureObstacle CreateObstacle(
             PlacedOfficeFurniture furniture,
             OfficeRuntimeOccupancyLayer layer,
-            string interactionSeatId,
-            OfficeFurnitureCollisionCatalog catalog)
+            string interactionSeatId)
         {
-            OfficeFurnitureCollisionProfile profile = null;
-            catalog?.TryResolve(
-                furniture.KindId,
-                furniture.Facing,
-                furniture.Width,
-                furniture.Height,
-                out profile);
+            OfficeFurnitureGeometryProfile profile = null;
+            if (OfficeFurnitureGeometryQuery.Shared.TryResolve(
+                    furniture.KindId,
+                    furniture.Origin,
+                    furniture.Facing,
+                    out OfficeFurnitureGeometrySnapshot geometry) &&
+                geometry.Profile.FootprintWidth == furniture.Width &&
+                geometry.Profile.FootprintHeight == furniture.Height)
+                profile = geometry.Profile;
             return new FurnitureObstacle
             {
                 Furniture = furniture,
@@ -781,12 +777,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return false;
             if (obstacle.Profile == null) return true;
             int subcellX = Mathf.Min(
-                furniture.Width * OfficeFurnitureCollisionCatalog.SubcellsPerCell - 1,
-                Mathf.FloorToInt(localX * OfficeFurnitureCollisionCatalog.SubcellsPerCell));
+                furniture.Width * OfficeFurnitureGeometryProfile.SubcellsPerCell - 1,
+                Mathf.FloorToInt(localX * OfficeFurnitureGeometryProfile.SubcellsPerCell));
             int subcellY = Mathf.Min(
-                furniture.Height * OfficeFurnitureCollisionCatalog.SubcellsPerCell - 1,
-                Mathf.FloorToInt(localY * OfficeFurnitureCollisionCatalog.SubcellsPerCell));
-            return obstacle.Profile.IsOccupied(subcellX, subcellY);
+                furniture.Height * OfficeFurnitureGeometryProfile.SubcellsPerCell - 1,
+                Mathf.FloorToInt(localY * OfficeFurnitureGeometryProfile.SubcellsPerCell));
+            return obstacle.Profile.IsSolidGroundSubcell(subcellX, subcellY);
         }
 
         private ContinuousGridTransform CaptureContinuousGridTransform()

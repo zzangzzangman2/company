@@ -103,7 +103,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     baseHeight,
                     capabilities,
                     capacity,
-                    accessPolicy)
+                    accessPolicy,
+                    desiredFacing)
                 : null;
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text;
 
 namespace FamilyCompany.Simulation.OfficeLayout
@@ -458,6 +459,29 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     nearestWorkCell.Y - seat.Cell.Y);
                 if (expectedFacing != seat.Facing)
                     throw new ArgumentException($"Seat does not face its work surface: {seat.SeatId}.", nameof(seats));
+
+                OfficeFurnitureDefinition chairDefinition = OfficeFurnitureCatalog.Find(seatFurniture.KindId);
+                OfficeFurnitureDefinition deskDefinition = OfficeFurnitureCatalog.Find(workSurface.KindId);
+                if (chairDefinition?.IsPlayerEditable == true || deskDefinition?.IsPlayerEditable == true)
+                {
+                    if (workSurface.Facing != OfficeFurnitureRotationTransform.Opposite(seat.Facing))
+                        throw new ArgumentException(
+                            $"Work surface does not oppose the seat facing: {seat.SeatId}.", nameof(seats));
+                    OfficeFurnitureGeometrySnapshot chairGeometry =
+                        OfficeFurnitureGeometryQuery.Shared.Resolve(seatFurniture);
+                    OfficeFurnitureGeometrySnapshot deskGeometry =
+                        OfficeFurnitureGeometryQuery.Shared.Resolve(workSurface);
+                    OfficeFurnitureWorldSocket seatContact = chairGeometry.SeatContactSockets
+                        .FirstOrDefault(item => item.SlotIndex == 0);
+                    OfficeFurnitureWorldSocket operatorSocket = deskGeometry.WorkstationOperatorSockets
+                        .FirstOrDefault(item => item.SlotIndex == 0 &&
+                            item.WorldCell.Equals(seat.Cell) && item.DesiredActorFacing == seat.Facing);
+                    if (seatContact == null || operatorSocket == null ||
+                        !seat.OperatorAnchor.Equals(
+                            OfficeWorkstationAssemblyQuery.ToHalfCellAnchor(seatContact.WorldAnchor)))
+                        throw new ArgumentException(
+                            $"Seat/workstation sockets are not aligned: {seat.SeatId}.", nameof(seats));
+                }
             }
         }
 

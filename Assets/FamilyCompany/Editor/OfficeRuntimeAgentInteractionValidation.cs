@@ -34,8 +34,9 @@ namespace FamilyCompany.Editor
                 "public void ClearAutonomousDestination()");
             Require(autonomy.Contains("if (!sameRequest && HasAssignedTask)"),
                 "Contract-owned actors must cache a changed autonomy request without claiming it.");
-            Require(autonomy.Contains("if (!HasAssignedTask) TryStartAutonomyRequest();"),
-                "Only an available actor may begin its cached autonomy request.");
+            Require(autonomy.Contains(
+                    "if (!HasAssignedTask && !_attendanceArrivalActive) TryStartAutonomyRequest();"),
+                "Only an available actor outside attendance arrival may begin its cached autonomy request.");
             Require(autonomy.Contains("OfficeRuntimeInteractionTermination.Completed"),
                 "Advancing an arrived intent must complete its presentation interaction.");
             Require(autonomy.Contains("OfficeRuntimeInteractionTermination.Aborted"),
@@ -99,9 +100,16 @@ namespace FamilyCompany.Editor
             Require(seating.IndexOf("AccumulateStandingFacingRequest(_seatDirection", StringComparison.Ordinal) <
                     seating.IndexOf("_seatClaim.TryOccupy", StringComparison.Ordinal),
                 "An actor must finish a planted seat-facing pivot before occupying and sitting.");
+            int leavingCase = seating.IndexOf(
+                "case OfficeRuntimeAgentPhase.LeavingSeat:", StringComparison.Ordinal);
+            int leavingRelease = leavingCase < 0
+                ? -1
+                : seating.IndexOf(
+                    "ReleaseSeatImmediately();",
+                    leavingCase,
+                    StringComparison.Ordinal);
             Require(agent.Contains("Phase == OfficeRuntimeAgentPhase.LeavingSeat") &&
-                    seating.IndexOf("ReleaseSeatImmediately();", StringComparison.Ordinal) >
-                    seating.IndexOf("case OfficeRuntimeAgentPhase.LeavingSeat:", StringComparison.Ordinal),
+                    leavingRelease > leavingCase,
                 "Chair occlusion and the seat claim must remain active throughout the exit step.");
 
             Require(starterBootstrap.Contains("CacheWorkActionFrameSets();") &&
@@ -126,9 +134,10 @@ namespace FamilyCompany.Editor
                 agent,
                 "private void TickNavigation(float deltaTime)",
                 "private bool TryTickGridYield(");
-            Require(navigation.Contains("desiredDirection = candidate;") &&
-                    navigation.Contains("_desiredVelocity = desiredDirection"),
-                "Corner anticipation must round actual root motion, not only semantic facing.");
+            Require(navigation.Contains("Stay on the semantic segment until its exact cell-center arrival") &&
+                    navigation.Contains("_desiredVelocity = desiredDirection *") &&
+                    navigation.Contains("presentationSemanticDirection * targetVelocity.magnitude"),
+                "Root motion must stay on the validated semantic segment while presentation keeps its facing vector.");
 
             string assignedWork = Section(
                 agent,

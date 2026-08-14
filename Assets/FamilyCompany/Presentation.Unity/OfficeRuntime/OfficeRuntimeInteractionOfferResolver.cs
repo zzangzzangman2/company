@@ -40,7 +40,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _occupancy = occupancy ?? throw new ArgumentNullException(nameof(occupancy));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _assignedSeat = assignedSeat ?? throw new ArgumentNullException(nameof(assignedSeat));
+            LayoutRevision = grid.ComputeLayoutHash();
+            if (!string.Equals(LayoutRevision, occupancy.LayoutRevision, StringComparison.Ordinal) ||
+                !string.Equals(LayoutRevision, paths.LayoutRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Interaction/path/occupancy layout revisions differ.");
         }
+
+        public string LayoutRevision { get; }
 
         public IReadOnlyList<OfficeInteractionOffer> ResolveReachableOffers(
             OfficeInteractionDefinition definition,

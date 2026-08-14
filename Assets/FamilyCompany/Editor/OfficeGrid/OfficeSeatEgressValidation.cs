@@ -139,8 +139,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "if(!TryPrepareSeatEgressReservation()){_seatEgressWaiting=true;return;}",
                 "An all-blocked egress must remain in seated FinishingWork and retry.");
 
-            RequireContains(agent, "OfficeSeatEgressRules.ResolveCandidates(_seat)",
-                "Runtime does not consume the shared seat-local candidate rule.");
+            RequireContains(agent, "_world.Workstations.ResolveEgressCandidates(_seat)",
+                "Runtime does not consume the rotation-aware workstation geometry candidates.");
             RequireContains(agent, "_world.Occupancy.IsCellPassable(",
                 "Runtime does not check destination walkability/dynamic occupancy.");
             RequireContains(agent, "_world.Occupancy.CanTraverseStatic(",

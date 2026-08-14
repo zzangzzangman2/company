@@ -68,9 +68,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
             Debug.Log(
                 "OFFICE_SEAT_OCCLUSION_DEPTH_VALIDATION: PASS phases=9 exitDirections=8 " +
                 "safeAnchorRelease=atomic depthStacks=engaged+sitEntryReleased hybridQ=256 " +
-                "sitEntryGate=frame0-released chairForeground=canonical-continuous " +
-                $"lowerOccluder=" +
-                $"{OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount} " +
+                "sitEntryGate=frame0-released chairForeground=authored-components-continuous " +
+                "lowerOccluder=single-authored-mask " +
                 "upperBodyPlane=pose-split " +
                 "semanticFrontFootprints=preserved sourceBindings=present");
         }
@@ -488,7 +487,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
             RequireContains(
                 presenter,
                 "frontRenderer.sprite=definition.FrontOverlaySprite;",
-                "Chairs do not retain the canonical 9,881-pixel foreground Sprite.");
+                "Chairs do not retain the canonical authored component foreground Sprite.");
             RequireContains(
                 sorter,
                 "UpperActorPrefix+actor.AgentId",
@@ -501,10 +500,14 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 presenter,
                 "visual.FrontRenderer.sprite=occupiedForeground.Sprite;",
                 "The canonical chair foreground is still replaced by a cropped Sprite.");
-            RequireContains(
+            RequireNotContains(
                 presenter,
                 "OccupiedLowerBodyRenderer",
-                "Furniture presenter has no dedicated lower-body seat-rim occluder.");
+                "A second runtime lower-body crop competes with the authored chair mask.");
+            RequireNotContains(
+                presenter,
+                "_occupied_lower_body_runtime",
+                "A runtime rectangular chair crop was reintroduced.");
             RequireNotContains(
                 sorter,
                 "minX=maxX=seat.Cell.X;",
