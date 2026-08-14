@@ -687,7 +687,7 @@ namespace FamilyCompany.Presentation.Unity
             OfficeRuntimeAgent firstEntrant = _starterRuntime.Actors.Single(item => !item.IsPresentationAway);
             if (!_starterRuntime.World.Presenter.NearestCell(firstEntrant.transform.position).Equals(expectedEntranceCell))
             {
-                FailPlayerQa(35, "first attendance actor did not enter through the canonical open passage");
+                FailPlayerQa(35, "first attendance actor was not aligned with the canonical open passage entrance");
                 yield break;
             }
             string entranceCapturePath = QaArtifactPath(
@@ -756,7 +756,7 @@ namespace FamilyCompany.Presentation.Unity
             Debug.Log(
                 "STARTER_OFFICE_ATTENDANCE_FLOW_QA_PASS | start=08:50 hidden=4 " +
                 "openPassage=(8,0) oneTile=true nonBlocking=true doorAnimation=false " +
-                "entrance=(8,1) firstActorAtEntrance=true entry=09:00..09:03 present=4 " +
+                "entrance=(8,1) firstActorAlignedEntrance=true entry=09:00..09:03 present=4 " +
                 "doorOpenSfx=1 doorCloseSfx=0 duplicateSfx=0 assignedSeatArrivals=4 " +
                 "stagingStops=0 exit=18:00 captures=1920x1080");
         }
@@ -2014,6 +2014,8 @@ namespace FamilyCompany.Presentation.Unity
             const int qaSaveSlot = 3;
             string savedLayoutHash = bootstrap.State.OfficeGrid.ComputeLayoutHash();
             long savedMinutes = bootstrap.State.Time.ElapsedMinutes;
+            int doorOpenSfxBeforeLoad = GameAudioCoordinator.Instance.DoorOpenSfxPlayCount;
+            int doorCloseSfxBeforeLoad = GameAudioCoordinator.Instance.DoorCloseSfxPlayCount;
             if (!bootstrap.SaveSlotNow(qaSaveSlot))
             {
                 FailPlayerQa(62, "slot 3 save failed: " + bootstrap.WorldNotice);
@@ -2037,10 +2039,16 @@ namespace FamilyCompany.Presentation.Unity
                     $"stateHash={restoredStateHash} runtimeHash={_starterRuntime.LayoutHash} expected={savedLayoutHash}");
                 yield break;
             }
+            if (GameAudioCoordinator.Instance.DoorOpenSfxPlayCount != doorOpenSfxBeforeLoad ||
+                GameAudioCoordinator.Instance.DoorCloseSfxPlayCount != doorCloseSfxBeforeLoad)
+            {
+                FailPlayerQa(64, "same-shift save/load emitted a duplicate attendance door cue");
+                yield break;
+            }
             Debug.Log(
                 "STARTER_OFFICE_CONTRACT_SAVE_LOAD_QA_PASS | offer=" + offer.OfferId +
                 " | member=mother | slot=3 | layoutHash=" + savedLayoutHash +
-                " | elapsedMinutes=" + savedMinutes);
+                " | elapsedMinutes=" + savedMinutes + " | attendanceDoorCueDelta=0");
         }
 
         private IEnumerator WaitForRuntimeReady(int exitCode, string label)
