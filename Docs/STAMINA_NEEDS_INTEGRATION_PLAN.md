@@ -1,8 +1,8 @@
 # Shared Stamina and Recovery Integration Plan
 
-Status: independent implementation phase on `codex/stamina-needs-sim`. This document does not
-authorize integration, Unity builds, deployment, commit, or push before the wall/door and seating
-branches have landed on `main`.
+Status: implementation candidate complete on `codex/stamina-needs-sim`, based on `9ad8eb7` and
+validated locally after build-editor candidates `e056812` and `a7bdc7`. It has not been merged or
+pushed.
 
 ## Canonical ownership
 
@@ -27,7 +27,7 @@ branches have landed on `main`.
 | caution color threshold | remaining 50% (5,000 units) |
 | Idle / OffDuty / Sleep | 0 units per GameTime minute |
 | Walking | 4 units per GameTime minute |
-| DeskWork / Typing / Meeting | 12 / 14 / 16 units per GameTime minute |
+| DeskWork / Typing / Meeting | 12 / 16 / 16 units per GameTime minute |
 | Administration / Reception / Printing | 11 / 10 / 10 units per GameTime minute |
 | OutsideWork | 14 units per GameTime minute |
 | Water | 4 GameTime minutes, 3,500 units on successful Complete |
@@ -107,11 +107,11 @@ rebuild, disable, destroy, and path failure must leave zero claims.
 
 ## Save/load boundary
 
-- Proposed top-level save version: v8 with a distinct nested `staminaState` roster. Do not reuse the
+- Top-level save version is v9 with a distinct nested `staminaState` roster. Do not reuse the
   existing `stamina` field, which is the static `EmployeeStats.Stamina` value.
-- v1-v7 migration converts legacy `energy` percent into profile units and seeds processed time from
+- v1-v8 migration converts legacy `energy` percent into profile units and seeds processed time from
   save `elapsedMinutes`, preventing historical drain replay.
-- v8 stores semantic units, current activity, processed minute, recovery phase/progress, request and
+- v9 stores semantic units, current activity, processed minute, recovery phase/progress, request and
   retry counters, and the exact profile fingerprint. It never stores claims, concrete facilities,
   queried capabilities/instances, paths, transforms, or scene objects.
 - Because runtime claims are transient, load normalizes SafeStopping through Performing to
@@ -119,14 +119,12 @@ rebuild, disable, destroy, and path failure must leave zero claims.
   arrival, facing, Performing, and Complete. A recovery already successfully completed may retain
   `ReturningToAssignedSeat` and reacquire the assigned-seat route.
 
-## Restroom integration after wall/door work
+## Restroom future capability
 
-The current office has a claimable water dispenser and sofa but no restroom semantic location,
-interaction, or furniture. Those current locations are not stamina defaults and are not hardcoded in
-the adapter. After A lands, use the final office layout to add an internal-only minimal
-restroom door/facility with a reachable approach cell, facing direction, exclusive/shared capacity,
-and `restroom-use` interaction. Do not edit perimeter-wall or entrance construction. Final coordinates
-must be selected and validated against the post-A immutable `OfficeGrid`.
+The current office has claimable water/vending and sofa facilities but no restroom definition or
+placed facility. The adapter therefore exposes no restroom candidate and never teleports to a
+synthetic location. `Restroom` remains a fail-closed future capability until a separate placed,
+reachable, capacity-owning facility is implemented.
 
 ## Overhead presentation
 
@@ -159,8 +157,8 @@ atomic roster clocks, semantic planning, all three completion-only lifecycles, s
 abort/reselection, return retry, runtime-loss save normalization, profile fingerprints, legacy
 migration, future employee fallback, transient-state exclusion, and large-value overflow guards.
 
-After A/B integration, required gates remain Unity 6000.3.21f1 compile, real reservation-book
-concurrency/leak tests, contract pause/resume, all runtime transition correlations, layout rebuild,
-assigned-seat return, four-of-four overhead bars and away hiding, save v8 migration/roundtrip,
-actual D3D11 Windows player QA, and 1920x1080 captures. Build deployment, commit, and push are final
-steps only.
+Unity 6000.3.21f1 gates pass for pure stamina, GameState 1x/2x/4x partitions and v9 roundtrip,
+prototype/micro-action determinism, furniture build/query, and PlayMode runtime integration. The
+runtime QA proves claim visibility, deletion fail-closed behavior, sticky recovery across three
+routine-autonomy refreshes, Performing-only completion/release, exact assigned-seat/task return,
+and four visible family bars; its capture and summary are in `Artifacts/StaminaRuntimeQa/`.

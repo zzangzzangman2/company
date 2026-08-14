@@ -169,6 +169,9 @@ namespace FamilyCompany.Presentation.Unity.Stamina
             ClearEntries();
         }
 
+        /// <summary>Creates the production canvas in edit-mode validation where OnEnable is not ticked.</summary>
+        public void EnsureCanvasForQa() => EnsureCanvas();
+
         public bool TryGetDebugSnapshot(
             string characterId,
             out OverheadStaminaBarDebugSnapshot snapshot)

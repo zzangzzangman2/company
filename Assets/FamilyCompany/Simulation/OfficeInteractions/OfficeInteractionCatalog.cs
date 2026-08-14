@@ -166,6 +166,19 @@ namespace FamilyCompany.Simulation.OfficeInteractions
                     OfficeInteractionCandidateScope.StandardOfficeMacro, 7, null,
                     AutonomousOfficeAction.ShortBreak, AutonomousOfficeAction.DeepRest,
                     AutonomousOfficeAction.BurnoutRecovery),
+                // Runtime-only stamina options. Zero affinity keeps the legacy WeightedPick and
+                // shadow parity unchanged while the existing interaction lifecycle can still
+                // resolve, reserve, validate, complete, and release these placed capabilities.
+                Define("vending-drink", OfficeMicroAction.DrinkingWater, OfficeSemanticLocation.Water,
+                    "vending:runtime", "drink_vending_machine", 4, 4, 1, 0,
+                    true, false, false, OfficeInteractionApproachPolicy.AdjacentCardinal,
+                    OfficeInteractionReservationPolicy.ExclusiveFurniture,
+                    OfficeInteractionCandidateScope.StandardOfficeMacro, 0, null),
+                Define("lounge-rest", OfficeMicroAction.LookingAround, OfficeSemanticLocation.Lounge,
+                    "lounge-rest:runtime", "sofa", 20, 20, 2, 0,
+                    true, false, false, OfficeInteractionApproachPolicy.AdjacentOrTwoCells,
+                    OfficeInteractionReservationPolicy.SharedFurnitureCapacity,
+                    OfficeInteractionCandidateScope.StandardOfficeMacro, 0, null),
                 Define("lounge-chat", OfficeMicroAction.ShortConversation, OfficeSemanticLocation.Lounge,
                     "conversation:pending", "sofa", 4, 8, 2, OfficeMicroActionRules.ConversationCooldownMinutes,
                     true, false, false, OfficeInteractionApproachPolicy.SharedLoungeArea,

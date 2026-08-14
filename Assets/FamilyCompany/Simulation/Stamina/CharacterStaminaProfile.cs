@@ -47,13 +47,15 @@ namespace FamilyCompany.Simulation.Stamina
     public sealed class StaminaRecoveryDefinition
     {
         private readonly int _maximumRecoveryUnits;
+        private readonly string[] _interactionIds;
 
         public StaminaRecoveryDefinition(
             StaminaRecoveryActivity activity,
             string interactionId,
             int durationGameMinutes,
             int recoveryUnitsPerGameMinute,
-            int selectionWeight)
+            int selectionWeight,
+            IEnumerable<string> additionalInteractionIds = null)
         {
             if (!Enum.IsDefined(typeof(StaminaRecoveryActivity), activity) ||
                 activity == StaminaRecoveryActivity.None)
@@ -72,6 +74,15 @@ namespace FamilyCompany.Simulation.Stamina
 
             Activity = activity;
             InteractionId = interactionId.Trim();
+            _interactionIds = new[] { InteractionId }
+                .Concat(additionalInteractionIds ?? Enumerable.Empty<string>())
+                .Select(item => (item ?? string.Empty).Trim())
+                .ToArray();
+            if (_interactionIds.Any(string.IsNullOrWhiteSpace) ||
+                _interactionIds.Distinct(StringComparer.Ordinal).Count() != _interactionIds.Length)
+                throw new ArgumentException(
+                    "Recovery interaction IDs must be non-empty and unique.",
+                    nameof(additionalInteractionIds));
             DurationGameMinutes = durationGameMinutes;
             RecoveryUnitsPerGameMinute = recoveryUnitsPerGameMinute;
             SelectionWeight = selectionWeight;
@@ -84,6 +95,11 @@ namespace FamilyCompany.Simulation.Stamina
         public int RecoveryUnitsPerGameMinute { get; }
         public int SelectionWeight { get; }
         public int MaximumRecoveryUnits => _maximumRecoveryUnits;
+        public IReadOnlyList<string> InteractionIds => Array.AsReadOnly(_interactionIds);
+
+        public bool SupportsInteractionId(string interactionId) =>
+            !string.IsNullOrWhiteSpace(interactionId) &&
+            _interactionIds.Contains(interactionId.Trim(), StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -240,7 +256,8 @@ namespace FamilyCompany.Simulation.Stamina
             string drains = string.Join(",", _drains.Select(item =>
                 $"{(int)item.Activity}:{item.UnitsPerGameMinute}"));
             string recoveries = string.Join(",", _recoveries.Select(item =>
-                $"{(int)item.Activity}:{Encode(item.InteractionId)}:{item.DurationGameMinutes}:" +
+                $"{(int)item.Activity}:{string.Join(";", item.InteractionIds.Select(Encode))}:" +
+                $"{item.DurationGameMinutes}:" +
                 $"{item.RecoveryUnitsPerGameMinute}:{item.SelectionWeight}"));
             return $"stamina-profile-v1|{MaxUnits}|{InitialUnits}|" +
                    $"{RecoveryThresholdBasisPoints}|{ResumeThresholdBasisPoints}|" +
@@ -318,7 +335,10 @@ namespace FamilyCompany.Simulation.Stamina
                     new StaminaDrainDefinition(StaminaActivityKind.Idle, 0),
                     new StaminaDrainDefinition(StaminaActivityKind.Walking, 4),
                     new StaminaDrainDefinition(StaminaActivityKind.DeskWork, 12),
-                    new StaminaDrainDefinition(StaminaActivityKind.Typing, 14),
+                    // 16 units/minute reaches the 25% threshold after 469 minutes of focused
+                    // work: 75% of the common bar is consumed within a normal office day while
+                    // still leaving time for a placed-facility recovery before attendance ends.
+                    new StaminaDrainDefinition(StaminaActivityKind.Typing, 16),
                     new StaminaDrainDefinition(StaminaActivityKind.Meeting, 16),
                     new StaminaDrainDefinition(StaminaActivityKind.Administration, 11),
                     new StaminaDrainDefinition(StaminaActivityKind.Reception, 10),
@@ -334,7 +354,8 @@ namespace FamilyCompany.Simulation.Stamina
                         "water-drink",
                         4,
                         875,
-                        35),
+                        35,
+                        new[] { "vending-drink" }),
                     new StaminaRecoveryDefinition(
                         StaminaRecoveryActivity.Restroom,
                         "restroom-use",

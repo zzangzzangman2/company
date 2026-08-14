@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
@@ -6,6 +7,7 @@ using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Market;
 using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Simulation.Stamina;
 
 namespace FamilyCompany.Simulation.Game
 {
@@ -21,7 +23,8 @@ namespace FamilyCompany.Simulation.Game
             CompanyGrowthState growth = null,
             StockMarketSessionStateDto stockMarket = null,
             OfficeGrid officeGrid = null,
-            OfficeFurnitureInventoryState officeFurnitureInventory = null)
+            OfficeFurnitureInventoryState officeFurnitureInventory = null,
+            CharacterStaminaRoster stamina = null)
         {
             WorldSeed = worldSeed;
             Time = time ?? throw new ArgumentNullException(nameof(time));
@@ -34,6 +37,15 @@ namespace FamilyCompany.Simulation.Game
             OfficeGrid = officeGrid ?? OfficeGridLayouts.CreateStarterOfficeV1();
             OfficeFurnitureInventory = officeFurnitureInventory ??
                                        OfficeFurnitureInventoryState.MigrateFromGrid(OfficeGrid, Time.ElapsedMinutes);
+            Stamina = stamina ?? new CharacterStaminaRoster(
+                WorldSeed,
+                CharacterStaminaCatalog.CreateCommonDefault(),
+                Family.Members.Select(member => member.MemberId),
+                Time.ElapsedMinutes);
+            if (Stamina.WorldSeed != WorldSeed || Stamina.LastProcessedMinute != Time.ElapsedMinutes)
+                throw new InvalidOperationException(
+                    "Stamina roster must match the GameState seed and authoritative minute.");
+            RefreshLegacyEnergyProjection();
         }
 
         public int WorldSeed { get; }
@@ -46,6 +58,28 @@ namespace FamilyCompany.Simulation.Game
         public StockMarketSessionStateDto StockMarket { get; private set; }
         public OfficeGrid OfficeGrid { get; private set; }
         public OfficeFurnitureInventoryState OfficeFurnitureInventory { get; private set; }
+        public CharacterStaminaRoster Stamina { get; }
+        public ICharacterStaminaRuntimeBridge StaminaRuntimeBridge { get; private set; }
+
+        public void BindStaminaRuntimeBridge(ICharacterStaminaRuntimeBridge bridge)
+        {
+            StaminaRuntimeBridge = bridge;
+        }
+
+        public void UnbindStaminaRuntimeBridge(ICharacterStaminaRuntimeBridge bridge)
+        {
+            if (ReferenceEquals(StaminaRuntimeBridge, bridge)) StaminaRuntimeBridge = null;
+        }
+
+        public void RefreshLegacyEnergyProjection()
+        {
+            foreach (FamilyMemberState member in Family.Members)
+            {
+                if (Stamina.TryGetSimulation(member.MemberId, out CharacterStaminaSimulation simulation))
+                    member.SetEnergyProjection(simulation.Profile.LegacyPercent(
+                        simulation.State.CurrentUnits));
+            }
+        }
 
         public void ReplaceStockMarketState(StockMarketSessionStateDto state)
         {

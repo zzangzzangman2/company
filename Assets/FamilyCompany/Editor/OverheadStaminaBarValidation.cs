@@ -22,6 +22,7 @@ namespace FamilyCompany.Editor
                 root = new GameObject("OverheadStaminaBarValidation");
                 OverheadStaminaBarPresenter presenter =
                     root.AddComponent<OverheadStaminaBarPresenter>();
+                presenter.EnsureCanvasForQa();
                 Canvas[] canvases = root.GetComponentsInChildren<Canvas>(true);
                 AssertEqual(1, canvases.Length, "one shared world canvas");
                 AssertEqual(RenderMode.WorldSpace, canvases[0].renderMode,

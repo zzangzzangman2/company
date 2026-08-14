@@ -63,6 +63,7 @@ namespace FamilyCompany.Simulation.Family
         }
 
         public void ChangeEnergy(int delta) => Energy = Clamp100(Energy + delta);
+        internal void SetEnergyProjection(int percent) => Energy = Clamp100(percent);
         public void ChangeTrust(int delta) => Trust = Clamp100(Trust + delta);
         public void ChangeStress(int delta) => Stress = Clamp100(Stress + delta);
 

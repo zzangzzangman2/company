@@ -142,7 +142,7 @@ namespace FamilyCompany.Editor
         private static void ValidateCurrentSaveRoundTrip(GameState source, int seed)
         {
             var dto = GameSaveMapper.ToDto(source);
-            AssertEqual(8, dto.schemaVersion, $"seed {seed} save schema");
+            AssertEqual(9, dto.schemaVersion, $"seed {seed} save schema");
             var restored = GameSaveMapper.FromDto(dto);
             AssertStateEqual(source, restored, $"seed {seed} save v8 round trip");
         }

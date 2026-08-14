@@ -75,7 +75,7 @@ namespace FamilyCompany.Editor
                 AssertEqual(true, state.Growth.ProductProject.Resolved, "product resolved");
 
                 var dto = GameSaveMapper.ToDto(state);
-                AssertEqual(8, dto.schemaVersion, "save schema");
+                AssertEqual(9, dto.schemaVersion, "save schema");
                 var restored = GameSaveMapper.FromDto(dto);
                 AssertEqual(true, restored.Growth.ResearchCenterUnlocked, "research center round trip");
                 AssertEqual(true, restored.Growth.HasTechnology(ResearchTechnologyIds.MarketAnalysis), "research round trip");

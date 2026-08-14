@@ -11,6 +11,7 @@ using FamilyCompany.Simulation.Market;
 using FamilyCompany.Save.OfficeGrid;
 using FamilyCompany.Save.OfficeFurniture;
 using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Simulation.Stamina;
 
 namespace FamilyCompany.Save
 {
@@ -19,6 +20,7 @@ namespace FamilyCompany.Save
         public static GameSaveDto ToDto(GameState state)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
+            state.RefreshLegacyEnergyProjection();
             return new GameSaveDto
             {
                 worldSeed = state.WorldSeed,
@@ -186,14 +188,15 @@ namespace FamilyCompany.Save
                 },
                 stockMarket = ToStockMarketSaveDto(state.StockMarket),
                 officeGrid = OfficeGridSaveAdapter.ToDto(state.OfficeGrid),
-                officeFurnitureInventory = OfficeFurnitureInventorySaveAdapter.ToDto(state.OfficeFurnitureInventory)
+                officeFurnitureInventory = OfficeFurnitureInventorySaveAdapter.ToDto(state.OfficeFurnitureInventory),
+                staminaState = state.Stamina.ExportSnapshot()
             };
         }
 
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5 && save.schemaVersion != 6 && save.schemaVersion != 7 && save.schemaVersion != 8)
+            if (save.schemaVersion != 1 && save.schemaVersion != 2 && save.schemaVersion != 3 && save.schemaVersion != 4 && save.schemaVersion != 5 && save.schemaVersion != 6 && save.schemaVersion != 7 && save.schemaVersion != 8 && save.schemaVersion != 9)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -395,6 +398,19 @@ namespace FamilyCompany.Save
                     ? throw new InvalidOperationException("Office furniture inventory data is incomplete.")
                     : OfficeFurnitureInventorySaveAdapter.Restore(save.officeFurnitureInventory)
                 : OfficeFurnitureInventoryState.MigrateFromGrid(officeGrid, save.elapsedMinutes);
+            CharacterStaminaCatalog staminaCatalog = CharacterStaminaCatalog.CreateCommonDefault();
+            CharacterStaminaRoster stamina = save.schemaVersion >= 9
+                ? save.staminaState == null
+                    ? throw new InvalidOperationException("Stamina state is incomplete.")
+                    : CharacterStaminaRoster.Restore(save.staminaState, staminaCatalog)
+                : CharacterStaminaRoster.MigrateLegacyEnergyPercents(
+                    save.worldSeed,
+                    staminaCatalog,
+                    family.Members.Select(member =>
+                        new System.Collections.Generic.KeyValuePair<string, int>(
+                            member.MemberId,
+                            member.Energy)),
+                    save.elapsedMinutes);
             return new GameState(
                 save.worldSeed,
                 new GameTime(save.elapsedMinutes),
@@ -405,7 +421,8 @@ namespace FamilyCompany.Save
                 growth,
                 stockMarket,
                 officeGrid,
-                officeFurnitureInventory);
+                officeFurnitureInventory,
+                stamina);
         }
 
         private static StockMarketSessionSaveDto ToStockMarketSaveDto(StockMarketSessionStateDto state)

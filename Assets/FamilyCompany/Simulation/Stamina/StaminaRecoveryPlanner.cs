@@ -142,10 +142,8 @@ namespace FamilyCompany.Simulation.Stamina
 
             StaminaRecoveryCandidate[] usable = items
                 .Where(item => item.IsUsable)
-                .Where(item => string.Equals(
-                    item.InteractionId,
-                    simulation.Profile.Recovery(item.Activity).InteractionId,
-                    StringComparison.Ordinal))
+                .Where(item => simulation.Profile.Recovery(item.Activity)
+                    .SupportsInteractionId(item.InteractionId))
                 .OrderBy(item => item.Activity)
                 .ThenBy(item => item.RuntimeFurnitureInstanceId, StringComparer.Ordinal)
                 .ThenBy(item => item.InteractionId, StringComparer.Ordinal)

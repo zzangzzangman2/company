@@ -77,8 +77,11 @@ namespace FamilyCompany.Editor
             AssertEqual(2_500, common.RecoveryThresholdUnits, "default 25 percent threshold");
             AssertEqual(3_500, common.ResumeThresholdUnits, "default 35 percent resume floor");
             AssertEqual(5_000, common.CautionThresholdUnits, "default caution threshold");
-            AssertEqual(14, common.DrainUnitsPerGameMinute(StaminaActivityKind.Typing),
+            AssertEqual(16, common.DrainUnitsPerGameMinute(StaminaActivityKind.Typing),
                 "typing drain");
+            AssertTrue(common.Recovery(StaminaRecoveryActivity.Water)
+                    .SupportsInteractionId("vending-drink"),
+                "water recovery supports placed DrinkVending capability");
             AssertEqual(16, common.DrainUnitsPerGameMinute(StaminaActivityKind.Meeting),
                 "meeting drain");
             AssertEqual(3_500,
@@ -237,7 +240,7 @@ namespace FamilyCompany.Editor
             StaminaAdvanceResult boundary = jump.AdvanceTo(1_000);
             AssertTrue(boundary.RequiresRuntimeDecision, "long jump yields for recovery intent");
             AssertFalse(boundary.ReachedRequestedMinute, "long jump stops at first decision");
-            AssertEqual(8L, boundary.ProcessedToMinute, "threshold crossing minute");
+            AssertEqual(7L, boundary.ProcessedToMinute, "threshold crossing minute");
             AssertEqual(2_488, jump.State.CurrentUnits, "threshold crossing drain");
 
             CharacterStaminaSimulation minuteSteps = CharacterStaminaSimulation.CreateAt(

@@ -5,6 +5,7 @@ using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeSeating.UI;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Presentation.Unity.Stamina;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
@@ -405,6 +406,12 @@ namespace FamilyCompany.Presentation.Unity
                         "사무실 업무 · 기분 좋음");
                     continue;
                 }
+                // Attendance and contract ownership are evaluated above/before this routine
+                // autonomy projection. While stamina owns a correlated claim/return session,
+                // defer only the replaceable family-autonomy intent so it cannot supersede the
+                // live facility handle or restart its path every refresh.
+                if (StaminaRecoveryRuntimeCoordinator.BlocksRoutineAutonomy(agent.AgentId))
+                    continue;
                 if (agent.IsPlayerControlled)
                 {
                     agent.ClearAutonomousDestination();

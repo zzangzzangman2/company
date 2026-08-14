@@ -2,6 +2,22 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-14 / Shared stamina + placed-facility recovery candidate
+
+- All four family members start from one 10,000-unit profile. Integer GameTime drains 75% across a
+  normal typing workday and creates recovery intent only at the 25% remaining threshold; profile
+  overrides remain data-driven for later character differentiation.
+- Recovery consumes the build editor's live capability query and existing runtime claim lifecycle.
+  Only placed, reachable, available water/vending/lounge offers are selectable. Restroom remains
+  fail closed because no definition/facility exists.
+- A sticky stamina session gates routine autonomy refreshes while preserving attendance/mandatory
+  and contract priority. Successful Performing completion releases the facility, returns to the
+  exact assigned seat, and resumes the exact task/remaining minutes. Save schema v9 stores semantic
+  stamina only and migrates v1-v8 legacy energy at the saved integer minute.
+- Unity 6000.3.21f1 pure, 1x/2x/4x, save/load, prototype/micro-action, build capability, and PlayMode
+  integration QA pass. `Artifacts/StaminaRuntimeQa/four-family-overhead-bars.png` captures all four
+  bars and `summary.txt` records the completed runtime round trip.
+
 ## 기준선과 릴리스 판정
 
 | 항목 | 현재 값 |

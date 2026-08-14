@@ -10,6 +10,21 @@
 
 이유: public adapter를 경계로 사용하면 UI가 건축·계약·시장 상태를 복제하지 않으며, 사용자는 모든 카드에서 클릭 결과와 일관된 ESC/back 스택을 확인할 수 있다.
 
+## 2026-08-14 / 체력은 GameTime 정수 상태와 실제 시설 claim으로 확정
+
+결정: 모든 캐릭터는 공용 기본 profile(10,000/10,000, 회복 threshold 25%, resume floor 35%)로
+시작하고 ID별 profile override만 허용한다. Typing은 GameTime 분당 16 unit을 소모해 정상 근무일에
+약 75%가 소모된다. Save v9은 이 정수 상태를 별도 `staminaState`로 저장하며 v1-v8은 저장 시점의
+legacy energy를 이관한다.
+
+결정: 회복은 build editor의 배치·도달·capacity query가 제공하는 WaterSource, DrinkVending,
+RestSeat만 기존 interaction claim으로 실행한다. 화장실은 시설 definition이 생길 때까지 fail closed다.
+활성 회복 session은 일반 autonomy refresh만 보류하고 출근/필수 일정과 계약 우선순위는 유지한다.
+Performing 성공과 claim release 뒤에만 회복을 반영하고, 정확한 지정 좌석과 남은 업무로 복귀한다.
+
+이유: 순수 상태와 transient scene claim을 분리하면 시간 배속·save/load가 결과를 바꾸지 않으며,
+없는 시설 순간이동과 refresh마다 이동을 abort/reclaim하는 보상 루프를 함께 막을 수 있다.
+
 ## 2026-08-14 / 자판기 4방향은 additive Resources 정본으로 확정
 
 결정: 실패한 투명/체커 배경 ImageGen 결과는 자산으로 채택하지 않는다. 같은 2000년형 크림·민트 자판기를 SE/SW 조작면과 NW/NE 후면의 실제 4회전으로 다시 만들고, 공식 `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 18 --opaque-threshold 210 --despill --edge-contract 1`만 사용해 alpha source를 만든다. `OfficeBuildVendingArtBuilder`는 이를 640×512 hard-alpha, 180 PPU, Point, mipmap 없음, ground pivot `(320,28)`의 방향별 Resources Sprite로 결정론적으로 승격한다.

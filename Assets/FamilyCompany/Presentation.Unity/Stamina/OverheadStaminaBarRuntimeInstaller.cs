@@ -16,14 +16,22 @@ namespace FamilyCompany.Presentation.Unity.Stamina
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallAfterSceneLoad()
         {
-            if (_instance != null) return;
-            _instance = UnityEngine.Object.FindFirstObjectByType<OverheadStaminaBarPresenter>(
-                FindObjectsInactive.Include);
-            if (_instance != null) return;
-
-            var root = new GameObject("~OverheadStaminaUi");
-            UnityEngine.Object.DontDestroyOnLoad(root);
-            _instance = root.AddComponent<OverheadStaminaBarPresenter>();
+            if (_instance == null)
+                _instance = UnityEngine.Object.FindFirstObjectByType<OverheadStaminaBarPresenter>(
+                    FindObjectsInactive.Include);
+            GameObject root;
+            if (_instance == null)
+            {
+                root = new GameObject("~OverheadStaminaUi");
+                UnityEngine.Object.DontDestroyOnLoad(root);
+                _instance = root.AddComponent<OverheadStaminaBarPresenter>();
+            }
+            else
+            {
+                root = _instance.gameObject;
+            }
+            if (root.GetComponent<StaminaRecoveryRuntimeCoordinator>() == null)
+                root.AddComponent<StaminaRecoveryRuntimeCoordinator>();
         }
     }
 }

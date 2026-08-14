@@ -553,7 +553,7 @@ namespace FamilyCompany.Simulation.Stamina
                 throw new InvalidOperationException(
                     "Recovery plan cannot be accepted before its deterministic retry minute.");
             StaminaRecoveryDefinition definition = _profile.Recovery(plan.Activity);
-            if (!string.Equals(definition.InteractionId, plan.InteractionId, StringComparison.Ordinal))
+            if (!definition.SupportsInteractionId(plan.InteractionId))
                 throw new InvalidOperationException("Recovery plan interaction does not match its profile.");
             State.RecoveryActivity = plan.Activity;
             State.RecoveryMinutesApplied = 0;
