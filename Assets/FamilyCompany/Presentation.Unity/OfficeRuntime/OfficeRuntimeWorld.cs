@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
+using FamilyCompany.Presentation.Unity.OfficeRuntime.Qa;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
@@ -38,6 +39,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _configured;
         private float[] _frameMotionDeltas = Array.Empty<float>();
         private int[] _frameStepCounts = Array.Empty<int>();
+        private OfficeRuntimeTraceCoordinator _traceCoordinator;
 
         public OfficeGrid Grid => _grid;
         public OfficeGridTilemapPresenter Presenter => _presenter;
@@ -49,6 +51,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _workstations?.InteractionLifecycle;
         public OfficeRuntimeDepthSorter DepthSorter => _depthSorter;
         public OfficeRuntimeActorRegistry Registry => _registry;
+        internal OfficeRuntimeTraceCoordinator R5eTraceCoordinator => _traceCoordinator;
         public int ReplanCount { get; private set; }
         public int ArrivalCount { get; private set; }
         public float LastFrameDeltaTime { get; private set; }
@@ -114,6 +117,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _occupancy,
                 _paths);
             _depthSorter = new OfficeRuntimeDepthSorter(grid, presenter, furniturePresenter);
+            _traceCoordinator = new OfficeRuntimeTraceCoordinator(
+                1UL,
+                0UL,
+                OfficeRuntimeTraceCoordinator.MaximumActors,
+                OfficeSeatDockingR5eRuntimeQaContract.IsRequested(
+                    Environment.GetCommandLineArgs()));
             MotionTimeDebtSeconds = 0f;
             _configured = true;
         }
@@ -123,6 +132,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!_configured) throw new InvalidOperationException("Starter Office world is not configured.");
             _registry.Register(actor);
             _occupancy.RegisterActor(actor.AgentId, actor.Position, actor.AgentRadius);
+            actor.BindR5eTrace(
+                _traceCoordinator,
+                _traceCoordinator.RegisterActor(actor, _registry.Actors.Count - 1));
         }
 
         public void ValidateCanonicalActors()
@@ -229,15 +241,53 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                             _frameMotionDeltas[index],
                             step,
                             actorSteps);
+                        R5eAgentStepSnapshot preStep = actor.CaptureR5eStepSnapshot();
+                        Vector2 beforePosition = actor.Position;
+                        OfficeRuntimeStepTraceContext traceContext =
+                            _traceCoordinator.BeginActorStep(
+                                actor,
+                                Time.frameCount,
+                                index,
+                                step,
+                                actorSteps,
+                                _frameMotionDeltas[index],
+                                stepDelta);
+                        actor.BeginR5eRuntimeStep(traceContext, beforePosition, preStep);
                         actor.TickRuntime(stepDelta);
+                        R5eAgentStepSnapshot preClear = actor.CaptureR5eStepSnapshot();
+                        bool expectedSeatedPreClear = actor.IsR5eSeatedPostState;
+                        _traceCoordinator.CountExpectedPreClear(
+                            traceContext,
+                            expectedSeatedPreClear);
+                        actor.AppendObservedPreClear(traceContext, preStep, preClear);
                         actor.ClearInactiveVisibleMotionDebt();
+                        R5eAgentStepSnapshot postClear = actor.CaptureR5eStepSnapshot();
+                        bool expectedSeatedPostClear = actor.IsR5eSeatedPostState;
+                        bool expectedMoving =
+                            !actor.AtomicPlacementOccurred(traceContext.ActorRuntimeTick) &&
+                            Vector2.Distance(actor.Position, beforePosition) >
+                            OfficeRuntimeTraceCoordinator.StationaryEpsilon;
+                        _traceCoordinator.CountExpectedPostClearAndMoving(
+                            traceContext,
+                            expectedSeatedPostClear,
+                            expectedMoving);
+                        actor.FinalizeR5eRuntimeStepPostClear(
+                            traceContext,
+                            preStep,
+                            preClear,
+                            postClear,
+                            expectedMoving);
                     }
                 }
                 for (var index = 0; index < actors.Count; index++)
                 {
                     OfficeRuntimeAgent actor = actors[index];
                     if (actor != null && actor.isActiveAndEnabled)
+                    {
                         actor.TickPresentation(_frameMotionDeltas[index]);
+                        _traceCoordinator.CountExpectedRender(actor);
+                        _traceCoordinator.AppendRenderAdapter(actor, Time.frameCount);
+                    }
                 }
                 MotionTimeDebtSeconds = 0f;
                 for (var index = 0; index < actors.Count; index++)

@@ -587,6 +587,84 @@ namespace FamilyCompany.Presentation.Unity
             return frames[OfficeSeatingAnimationFrames.FlattenedIndex(clip, direction, frame)];
         }
 
+        public bool CanEnterCompletedSeatedWorkAfterAtomicPlacement(int direction)
+        {
+            if (!HasOfficeSeatingFrames || targetRenderer == null ||
+                direction < 0 || direction >= DirectionCount ||
+                _seatingClip.HasValue ||
+                _lastDirection != direction ||
+                !IsOfficeSeatingEntryPlanted) return false;
+            return seatingPresentationMode != OfficeSeatingPresentationMode.SafeStaticWork || direction == 3;
+        }
+
+        public void EnterCompletedSeatedWorkAfterAtomicPlacement(int direction)
+        {
+            EndOfficeWorkSession();
+            _worldVelocity = Vector3.zero;
+            _lastDirection = direction;
+            _officeSeatingFacingLocked = true;
+            _lockedOfficeSeatingDirection = direction;
+            ResetOfficeSeatingDirectionMetrics();
+            ResetTileFacingState(direction);
+            ResetTileGaitState(direction);
+            _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
+            _seatingClip = OfficeSeatingAnimationClip.Work;
+            _seatingElapsedSeconds = 0f;
+            _seatingProgress01 = 1f;
+            _seatingFrame = 0;
+            _seatingTransitionComplete = false;
+            targetRenderer.flipX = false;
+            targetRenderer.sprite = GetOfficeSeatingFrame(
+                OfficeSeatingAnimationClip.Work,
+                direction,
+                0);
+            CaptureAppliedSpriteDirection(targetRenderer.sprite);
+        }
+
+        public bool CanLeaveCompletedSeatedWorkAfterAtomicPlacement =>
+            HasOfficeSeatingFrames &&
+            targetRenderer != null &&
+            _officeSeatingFacingLocked &&
+            _seatingClip.HasValue &&
+            _seatingClip.Value == OfficeSeatingAnimationClip.Work &&
+            IsOfficeWorkSafeToStand;
+
+        public void LeaveCompletedSeatedWorkAfterAtomicPlacement(int standingDirection)
+        {
+            EndOfficeWorkSession();
+            _seatingClip = null;
+            _seatingElapsedSeconds = 0f;
+            _seatingProgress01 = 0f;
+            _seatingFrame = 0;
+            _seatingTransitionComplete = false;
+            _officeSeatingFacingLocked = false;
+            _lockedOfficeSeatingDirection = -1;
+            _worldVelocity = Vector3.zero;
+            _lastDirection = Mathf.Clamp(standingDirection, 0, DirectionCount - 1);
+            _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
+            ResetTileFacingState(_lastDirection);
+            ResetTileGaitState(_lastDirection);
+            ApplyFrame();
+        }
+
+        internal void RebaseTileMotionAfterAtomicPlacement(int direction)
+        {
+            _tileDisplacementDirection = true;
+            _tileFrameDisplacement = Vector2.zero;
+            _tileFrameTravelDistance = 0f;
+            _tileSemanticDisplacement = Vector2.zero;
+            _tileFrameDeltaTime = 0f;
+            _tileActualSpeed = 0f;
+            _tileIsMoving = false;
+            _tileFrameCollisionProjected = false;
+            _worldVelocity = Vector3.zero;
+            _usedSemanticHeading = false;
+            _lastFacingAlignmentDot = 1f;
+            _lastFacingAngularErrorDegrees = 0f;
+            ResetTileFacingState(Mathf.Clamp(direction, 0, DirectionCount - 1));
+            ResetTileGaitState(Mathf.Clamp(direction, 0, DirectionCount - 1));
+        }
+
         public bool BeginSitDown(int direction)
         {
             if (!HasOfficeSeatingFrames ||

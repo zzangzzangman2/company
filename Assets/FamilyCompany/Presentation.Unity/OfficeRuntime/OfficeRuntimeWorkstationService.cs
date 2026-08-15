@@ -26,6 +26,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _assignedSeats =
             new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeSeatDockingPlan> _dockingPlans =
+            new Dictionary<string, OfficeSeatDockingPlan>(StringComparer.Ordinal);
         // StarterOfficeV1 has one entrance. Keep the authority here instead of treating every
         // open cell along the south edge as an interchangeable/random door.
         public static readonly OfficeGridCoordinate StarterEntranceCell =
@@ -62,6 +64,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 paths,
                 AssignedSeat);
             _interactionLifecycle = new OfficeRuntimeInteractionLifecycleService(_offerResolver);
+            foreach (OfficeSeatSlot seat in grid.SeatSlots)
+                _dockingPlans.Add(seat.SeatId, BuildDockingPlan(seat));
         }
 
         public OfficeSeatingState SeatingState => _seatingState;
@@ -465,6 +469,73 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 seat.HasWorkstationBinding,
                 seat.HasWorkstationBinding ? DeskWorkSocketWorld(seat) : pelvis,
                 egress);
+        }
+
+        internal bool TryResolveDockingPlan(
+            OfficeSeatSlot seat,
+            out OfficeSeatDockingPlan plan)
+        {
+            plan = default;
+            return seat != null &&
+                   _dockingPlans.TryGetValue(seat.SeatId, out plan) &&
+                   IsDockingPlanCurrent(plan);
+        }
+
+        internal bool IsDockingPlanCurrent(in OfficeSeatDockingPlan plan)
+        {
+            return plan.Seat != null &&
+                   plan.AnchorRevision == _occupancy.Revision &&
+                   plan.ChairSnapshot.MatchesCurrent(_occupancy.Revision) &&
+                   _seats.TryGetValue(plan.Seat.SeatId, out OfficeSeatSlot current) &&
+                   ReferenceEquals(current, plan.Seat);
+        }
+
+        private OfficeSeatDockingPlan BuildDockingPlan(OfficeSeatSlot seat)
+        {
+            PlacedOfficeFurniture chair = _grid.Furniture.FirstOrDefault(item =>
+                string.Equals(item.FurnitureId, seat.ChairFurnitureId, StringComparison.Ordinal));
+            if (chair == null)
+                throw new InvalidOperationException("Seat has no chair furniture: " + seat.SeatId);
+            if (!_furniturePresenter.TryGetSemanticRoot(seat.ChairFurnitureId, out Transform semanticRoot) ||
+                semanticRoot == null ||
+                !_furniturePresenter.TryGetVisualRoot(seat.ChairFurnitureId, out Transform visualRoot) ||
+                visualRoot == null)
+                throw new InvalidOperationException("Seat chair Transform roots are unavailable: " + seat.SeatId);
+
+            Vector3 approach3 = SeatApproachWorld(seat);
+            Vector3 seatRoot3 = ChairFloorAnchorWorld(seat);
+            Vector3 pelvis3 = ChairSeatAnchorWorld(seat);
+            IReadOnlyList<OfficeSeatEgressCandidate> candidates =
+                OfficeSeatEgressRules.ResolveCandidates(seat);
+            var resolved = new OfficeSeatEgressAnchor[OfficeSeatEgressRules.CandidateCount];
+            for (var index = 0; index < candidates.Count; index++)
+            {
+                OfficeSeatEgressCandidate candidate = candidates[index];
+                resolved[index] = new OfficeSeatEgressAnchor(
+                    candidate.Kind,
+                    candidate.TargetCell,
+                    _presenter.CellCenterWorld(candidate.TargetCell));
+            }
+
+            // Dock is the authored approach-cell center. It is a real valid floor point outside
+            // the chair collision profile; the atomic state swap is the only path to SeatRoot.
+            var approach = new Vector2(approach3.x, approach3.y);
+            return new OfficeSeatDockingPlan(
+                seat,
+                approach,
+                approach,
+                new Vector2(seatRoot3.x, seatRoot3.y),
+                new Vector2(pelvis3.x, pelvis3.y),
+                resolved[0],
+                resolved[1],
+                resolved[2],
+                _occupancy.Revision,
+                new R5eFurnitureTransformSnapshot(
+                    semanticRoot,
+                    visualRoot,
+                    _occupancy.Revision,
+                    seat,
+                    chair));
         }
 
         /// <summary>

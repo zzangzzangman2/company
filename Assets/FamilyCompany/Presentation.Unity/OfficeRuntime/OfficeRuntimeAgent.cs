@@ -9,6 +9,7 @@ using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeInteractions;
 using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Simulation.OfficeSeating;
 using FamilyCompany.Simulation.OfficeWorkActions;
 using UnityEngine;
 
@@ -168,6 +169,32 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private Vector2 _lastCompletedSeatEgressWorld;
         private bool _lastCompletedSeatEgressClearanceValid;
         private string _lastSeatEgressBlocker = string.Empty;
+        private OfficeRuntimeTraceCoordinator _r5eTraceCoordinator;
+        private OfficeRuntimeActorTraceState _r5eTraceState;
+        private ulong _r5eRuntimeTick;
+        private ulong _r5eRouteGenerationId;
+        private ulong _r5eSeatedSessionId;
+        private ulong _r5eLastClosedSeatedSessionId;
+        private ulong _r5ePendingMovementHandoffId;
+        private ulong _r5eActiveMovementHandoffId;
+        private ulong _r5eTurnCompleteTick;
+        private ulong _r5eAtomicPlacementTick;
+        private ulong _r5eEntryTransactionId;
+        private ulong _r5eExitTransactionId;
+        private ulong _r5eAwaitingFirstWalkTransactionId;
+        private bool _r5eExitTurnPending;
+        private bool _r5eAtomicPlacementThisStep;
+        private int _r5eExitTurnDirection = -1;
+        private float _r5eExitRetrySeconds;
+        private Vector2 _r5eVisualBaselineWorld;
+        private Vector2 _r5ePreviousLogicalWorld;
+        private Vector2 _r5ePreviousVisualWorld;
+        private Vector2 _r5ePreviousWorld;
+        private Vector2 _r5ePreviousRenderedWorld;
+        private Vector2 _r5eCollisionSweepOrigin;
+        private OfficeSeatDockingPlan _r5eActiveDockingPlan;
+        private R5ePendingRuntimeStep _r5ePendingStep;
+        private bool _r5ePublishActive;
 
         public event Action<IOfficeRuntimeAgent, string> AssignedTaskCompleted;
 
@@ -235,10 +262,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _attendanceIngressActive ||
             (_playerControlled && _playerInput.sqrMagnitude > 0.0001f) ||
             (_destination.HasValue && !_arrived) ||
-            IsEnteringSeat ||
-            Phase == OfficeRuntimeAgentPhase.SittingDown ||
-            Phase == OfficeRuntimeAgentPhase.StandingUp ||
-            Phase == OfficeRuntimeAgentPhase.LeavingSeat;
+             IsEnteringSeat ||
+             Phase == OfficeRuntimeAgentPhase.SittingDown ||
+             Phase == OfficeRuntimeAgentPhase.StandingUp ||
+             (Phase == OfficeRuntimeAgentPhase.LeavingSeat && !_r5eExitTurnPending);
         public Vector2 AccumulatedFrameDisplacement => _animator == null
             ? Vector2.zero
             : _animator.AccumulatedTileDisplacement;
@@ -329,6 +356,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public Vector2 LastCompletedSeatEgressWorld => _lastCompletedSeatEgressWorld;
         public bool LastCompletedSeatEgressClearanceValid => _lastCompletedSeatEgressClearanceValid;
         public string LastSeatEgressBlocker => _lastSeatEgressBlocker;
+        internal ulong NextR5eRuntimeTick => _r5eRuntimeTick == ulong.MaxValue
+            ? throw new OverflowException("R5e actor runtime tick cannot wrap.")
+            : _r5eRuntimeTick + 1UL;
+        internal ulong R5eRouteGenerationId => _r5eRouteGenerationId;
+        internal ulong R5eMovementHandoffId => _r5eActiveMovementHandoffId;
+        internal OfficeRuntimeActorTraceState R5eTraceState =>
+            _r5eTraceState ?? throw new InvalidOperationException("R5e trace state is not bound.");
+        internal bool IsR5eSeatedPostState =>
+            _seat != null &&
+            _seatClaim != null &&
+            !_seatClaim.IsReleased &&
+            (Phase == OfficeRuntimeAgentPhase.Working ||
+             Phase == OfficeRuntimeAgentPhase.FinishingWork);
         public bool IsSeatForegroundOcclusionEngaged
         {
             get
@@ -429,6 +469,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ClearVisibleMotionDebt();
             Phase = OfficeRuntimeAgentPhase.Idle;
             _pathRevision = _world.Occupancy.Revision;
+            Vector2 initial = Position;
+            _r5eVisualBaselineWorld = initial;
+            _r5ePreviousLogicalWorld = initial;
+            _r5ePreviousVisualWorld = initial;
+            _r5ePreviousWorld = initial;
+            _r5ePreviousRenderedWorld = initial;
+            _r5eCollisionSweepOrigin = initial;
+        }
+
+        internal void BindR5eTrace(
+            OfficeRuntimeTraceCoordinator coordinator,
+            OfficeRuntimeActorTraceState traceState)
+        {
+            _r5eTraceCoordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
+            _r5eTraceState = traceState ?? throw new ArgumentNullException(nameof(traceState));
+            if (!string.Equals(traceState.ActorId, _agentId, StringComparison.Ordinal))
+                throw new InvalidOperationException("R5e trace binding belongs to another actor.");
         }
 
         public bool AssignOfficeTask(string taskId, OfficeActivity activity, float workMinutes)
@@ -905,6 +962,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public void TickRuntime(float deltaTime)
         {
             if (deltaTime <= 0f) return;
+            try
+            {
+                TickRuntimeDispatch(deltaTime);
+            }
+            finally
+            {
+                SealR5eRuntimeStepDispatch();
+            }
+        }
+
+        private void TickRuntimeDispatch(float deltaTime)
+        {
+            if (deltaTime <= 0f) return;
             _world.Occupancy.UpdateActor(
                 _agentId,
                 Position,
@@ -968,6 +1038,192 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             StopMotion();
             TickArrivedWork(deltaTime);
+        }
+
+        internal R5eAgentStepSnapshot CaptureR5eStepSnapshot()
+        {
+            Vector2 visual = _visualRoot == null
+                ? Position
+                : new Vector2(_visualRoot.position.x, _visualRoot.position.y);
+            return new R5eAgentStepSnapshot(
+                Phase,
+                Position,
+                visual,
+                _r5eVisualBaselineWorld,
+                _r5ePreviousLogicalWorld,
+                _r5ePreviousVisualWorld,
+                _r5ePreviousWorld,
+                _r5ePreviousRenderedWorld,
+                _r5eCollisionSweepOrigin,
+                _currentVelocity,
+                _desiredVelocity,
+                _visibleMotionDebtSeconds,
+                _visibleFrameMovementBudgetWorld,
+                _lastActualDisplacement,
+                SemanticFrameDisplacement,
+                AccumulatedFrameDisplacement,
+                GaitDistance,
+                GaitPhase01,
+                CurrentWalkFrame,
+                CurrentDirection,
+                _r5eRouteGenerationId,
+                _r5eActiveMovementHandoffId,
+                _pathIndex,
+                IsR5eSeatedPostState,
+                _r5eExitTurnPending);
+        }
+
+        internal void BeginR5eRuntimeStep(
+            in OfficeRuntimeStepTraceContext context,
+            Vector2 beforePosition,
+            in R5eAgentStepSnapshot preStep)
+        {
+            if (_r5eTraceCoordinator == null || _r5eTraceState == null)
+                throw new InvalidOperationException("R5e runtime trace was not preloaded.");
+            if (_r5ePendingStep.Began && !_r5ePendingStep.PostClearAppended)
+                throw new InvalidOperationException("Previous R5e actor step did not reach its epilogue.");
+            if (context.ActorRuntimeTick != NextR5eRuntimeTick)
+                throw new InvalidOperationException("R5e actor runtime tick is not one-to-one with scheduler steps.");
+            _r5eRuntimeTick = context.ActorRuntimeTick;
+            _r5eAtomicPlacementThisStep = false;
+            _r5ePendingStep = new R5ePendingRuntimeStep
+            {
+                Context = context,
+                PreStep = preStep,
+                WorldBefore = beforePosition,
+                Began = true
+            };
+        }
+
+        private void SealR5eRuntimeStepDispatch()
+        {
+            if (!_r5ePendingStep.Began ||
+                _r5ePendingStep.Context.ActorRuntimeTick != _r5eRuntimeTick)
+                throw new InvalidOperationException("R5e TickRuntime dispatch has no scheduler context.");
+            // Observation only: a seated TickRuntime mutation must remain visible to the
+            // immediate PreClear sample. Clearing it here would create a masked pass before
+            // ClearInactiveVisibleMotionDebt and defeat clearMaskedViolationCount.
+            _r5ePendingStep.DispatchSealed = true;
+        }
+
+        internal void AppendObservedPreClear(
+            in OfficeRuntimeStepTraceContext context,
+            in R5eAgentStepSnapshot preStep,
+            in R5eAgentStepSnapshot preClear)
+        {
+            RequirePendingR5eStep(context, requirePreClear: false);
+            if (!_r5ePendingStep.DispatchSealed)
+                throw new InvalidOperationException("R5e pre-clear sample preceded TickRuntime epilogue.");
+            if (IsR5eSeatedPostState)
+            {
+                OfficeRuntimeOccupancy.CanonicalActorSnapshot occupancy =
+                    _world.Occupancy.CaptureCanonicalActorSnapshot(_agentId);
+                _r5eTraceState.AppendSeated(
+                    R5eSeatedSamplePhase.PreClear,
+                    context,
+                    ActiveSeatId,
+                    preStep,
+                    preClear,
+                    occupancy);
+            }
+            _r5ePendingStep.PreClearAppended = true;
+        }
+
+        internal void FinalizeR5eRuntimeStepPostClear(
+            in OfficeRuntimeStepTraceContext context,
+            in R5eAgentStepSnapshot preStep,
+            in R5eAgentStepSnapshot preClear,
+            in R5eAgentStepSnapshot postClear,
+            bool expectedMoving)
+        {
+            RequirePendingR5eStep(context, requirePreClear: true);
+            if (IsR5eSeatedPostState)
+            {
+                OfficeRuntimeOccupancy.CanonicalActorSnapshot occupancy =
+                    _world.Occupancy.CaptureCanonicalActorSnapshot(_agentId);
+                _r5eTraceState.AppendSeated(
+                    R5eSeatedSamplePhase.PostClear,
+                    context,
+                    ActiveSeatId,
+                    preStep,
+                    postClear,
+                    occupancy);
+                _r5eTraceState.RecordClearMask(preClear, postClear);
+            }
+
+            bool observedMoving =
+                !_r5eAtomicPlacementThisStep &&
+                Vector2.Distance(Position, _r5ePendingStep.WorldBefore) >
+                OfficeRuntimeTraceCoordinator.StationaryEpsilon;
+            bool firstWalk =
+                observedMoving &&
+                _r5eAwaitingFirstWalkTransactionId != 0 &&
+                _r5eRuntimeTick > _r5eTurnCompleteTick;
+            var locomotion = new R5eLocomotionAdapterRow(
+                context,
+                _agentId,
+                _r5eRouteGenerationId,
+                _r5eActiveMovementHandoffId,
+                preStep,
+                postClear,
+                _r5eAtomicPlacementThisStep,
+                expectedMoving,
+                observedMoving,
+                firstWalk);
+            _r5eTraceState.AppendLocomotion(locomotion);
+
+            if (firstWalk)
+            {
+                AppendR5eTransition(
+                    _r5eAwaitingFirstWalkTransactionId,
+                    R5eSeatTransitionEventKind.FirstWalk,
+                    R5eSeatTransitionKind.Exit,
+                    preStep,
+                    postClear,
+                    _r5eActiveDockingPlan,
+                    _lastCompletedSeatEgressWorld,
+                    true,
+                    false,
+                    false);
+                _r5eAwaitingFirstWalkTransactionId = 0;
+                _r5ePendingMovementHandoffId = 0;
+                _r5eLastClosedSeatedSessionId = 0;
+            }
+
+            _r5ePreviousLogicalWorld = Position;
+            _r5ePreviousVisualWorld = _r5eVisualBaselineWorld;
+            _r5ePreviousWorld = Position;
+            _r5ePreviousRenderedWorld = Position;
+            _r5eCollisionSweepOrigin = Position;
+            _r5ePendingStep.PostClearAppended = true;
+        }
+
+        internal bool AtomicPlacementOccurred(ulong runtimeTick) =>
+            _r5eAtomicPlacementThisStep && _r5eAtomicPlacementTick == runtimeTick;
+
+        internal DirectionalLocomotionFrameTrace CaptureR5eAcceptedLocomotionFrameTrace() =>
+            _animator.CaptureLocomotionFrameTrace();
+
+        private void RequirePendingR5eStep(
+            in OfficeRuntimeStepTraceContext context,
+            bool requirePreClear)
+        {
+            if (!_r5ePendingStep.Began ||
+                _r5ePendingStep.Context.ActorStepOrdinal != context.ActorStepOrdinal ||
+                _r5ePendingStep.Context.ActorRuntimeTick != context.ActorRuntimeTick ||
+                (requirePreClear && !_r5ePendingStep.PreClearAppended))
+                throw new InvalidOperationException("R5e actor step phase pair is missing or mismatched.");
+        }
+
+        private void AdvanceR5eRouteGeneration()
+        {
+            if (_r5eRouteGenerationId == ulong.MaxValue)
+                throw new OverflowException("R5e route generation cannot wrap.");
+            _r5eRouteGenerationId++;
+            if (_r5ePendingMovementHandoffId != 0)
+            {
+                _r5eActiveMovementHandoffId = _r5ePendingMovementHandoffId;
+            }
         }
 
         public void BeginPresentationFrame()
@@ -1238,6 +1494,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _pathIndex = 1;
             _presentationPathIndex = _pathIndex;
             _pathRevision = _world.Occupancy.Revision;
+            AdvanceR5eRouteGeneration();
             return true;
         }
 
@@ -1254,6 +1511,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         internal void ClearInactiveVisibleMotionDebt()
         {
             if (!HasActiveVisibleMotionIntent) ClearVisibleMotionDebt();
+        }
+
+        internal void PrepareR5eStationaryFrameAfterAcceptedMotionBudget()
+        {
+            if (!IsR5eSeatedPostState && !_r5eExitTurnPending) return;
+            _visibleMotionDebtSeconds = 0f;
+            _visibleFrameMovementBudgetWorld = 0f;
+            _visibleFrameMovementWorld = 0f;
         }
 
         private void ClearVisibleMotionDebt()
@@ -1405,6 +1670,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _presentationPathIndex = _pathIndex;
             _pathRevision = _world.Occupancy.Revision;
             if (_path.Count == 0) return false;
+            AdvanceR5eRouteGeneration();
             if (_path.Count == 1) CompleteNavigation();
             return true;
         }
@@ -1733,10 +1999,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         ResumeAutonomy();
                         return;
                     }
-                    OfficeSeatInteractionAnchors anchors =
-                        _world.Workstations.ResolveInteractionAnchors(_seat);
-                    Vector3 target3 = anchors.AlignmentWorld;
-                    Vector2 target = new Vector2(target3.x, target3.y);
+                    if (!_world.Workstations.TryResolveDockingPlan(
+                            _seat,
+                            out _r5eActiveDockingPlan))
+                    {
+                        StopMotion();
+                        return;
+                    }
+                    Vector2 target = _r5eActiveDockingPlan.DockWorld;
                     Vector2 delta = target - Position;
                     if (delta.magnitude > ArrivalDistance)
                     {
@@ -1765,56 +2035,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     }
                     if (!_animator.IsOfficeSeatingEntryPlanted ||
                         !_seatAlignmentComplete) return;
-                    _sitTransitionInitialized = false;
-                    _standTransitionInitialized = false;
-                    _hasTransitionPelvisSample = false;
-                    if (!_seatClaim.TryOccupy(out _) ||
-                        !_animator.TryLockOfficeSeatingFacingAfterPlantedRotation(_seatDirection) ||
-                        !_animator.BeginSitDown(_seatDirection))
-                    {
-                        EndInteraction(
-                            OfficeRuntimeInteractionTermination.Aborted,
-                            OfficeRuntimeInteractionEndReason.SeatUnavailable);
-                        Phase = OfficeRuntimeAgentPhase.Idle;
-                        ReleaseSeatImmediately();
-                        ResumeAutonomy();
-                        return;
-                    }
-                    _seatFacingAlignedBeforeSitDown = true;
-                    Phase = OfficeRuntimeAgentPhase.SittingDown;
-                    CurrentActivity = _destination.HasValue
-                        ? _destination.Value.Activity
-                        : OfficeActivity.Work;
+                    TryPublishR5eAtomicSeat();
                     break;
                 }
                 case OfficeRuntimeAgentPhase.SittingDown:
+                    // R5e never selects the deprecated pelvis-descend clip path.
                     StopMotion();
-                    if (!_animator.IsOfficeSeatingTransitionComplete || _sitPlacementProgress01 < 0.9999f)
-                        return;
-                    if (!_animator.BeginSeatedWork())
-                    {
-                        EndInteraction(
-                            OfficeRuntimeInteractionTermination.Aborted,
-                            OfficeRuntimeInteractionEndReason.SeatUnavailable);
-                        Phase = OfficeRuntimeAgentPhase.Idle;
-                        ReleaseSeatImmediately();
-                        ResumeAutonomy();
-                        return;
-                    }
-                    Phase = OfficeRuntimeAgentPhase.Working;
-                    _arrived = true;
-                    if (_attendanceArrivalActive)
-                    {
-                        _attendanceArrivalActive = false;
-                        _attendanceSeatArrivalCount++;
-                        Debug.Log(
-                            "STARTER_OFFICE_ATTENDANCE_SEATED | member=" + _agentId +
-                            " | count=" + _attendanceSeatArrivalCount);
-                    }
-                    if (_interactionPhase == OfficeRuntimeInteractionPhase.Aligning)
-                        _interactionPhase = OfficeRuntimeInteractionPhase.Performing;
+                    _seatEgressUnsafePhaseTransitionCount++;
                     break;
                 case OfficeRuntimeAgentPhase.Working:
+                    PrepareR5eStationaryFrameAfterAcceptedMotionBudget();
                     StopMotion();
                     TrackWorkstationMetrics();
                     if (HasAssignedTask && _assignedActivity == CurrentActivity)
@@ -1822,85 +2052,432 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (_releaseSeatRequested) BeginSafeStand();
                     break;
                 case OfficeRuntimeAgentPhase.FinishingWork:
+                    PrepareR5eStationaryFrameAfterAcceptedMotionBudget();
                     StopMotion();
                     if (!_finishingWorkPresentationObserved) return;
                     if (!_animator.IsOfficeWorkSafeToStand) return;
-                    if (!TryPrepareSeatEgressReservation())
-                    {
-                        _seatEgressWaiting = true;
-                        return;
-                    }
-                    _seatEgressWaiting = false;
-                    if (!_animator.BeginStandUp())
-                    {
-                        _seatEgressUnsafePhaseTransitionCount++;
-                        ClearSeatEgressReservation();
-                        _seatEgressWaiting = true;
-                        return;
-                    }
-                    _standTransitionInitialized = false;
-                    _hasTransitionPelvisSample = false;
-                    Phase = OfficeRuntimeAgentPhase.StandingUp;
+                    _r5eExitRetrySeconds += deltaTime;
+                    if (_seatEgressWaiting && _r5eExitRetrySeconds < 0.5f) return;
+                    _r5eExitRetrySeconds = 0f;
+                    TryPublishR5eAtomicExit();
                     break;
                 case OfficeRuntimeAgentPhase.StandingUp:
+                    // R5e never selects the deprecated pelvis-rise clip path.
                     StopMotion();
-                    if (!_seatEgressReservationActive ||
-                        !_world.Occupancy.HasReservation(
-                            _agentId,
-                            _seatEgressCandidate.TargetCell))
-                    {
-                        _seatEgressUnsafePhaseTransitionCount++;
-                        return;
-                    }
-                    if (!_animator.IsOfficeSeatingTransitionComplete || _standPlacementProgress01 < 0.9999f)
-                        return;
-                    ResetVisualPose();
-                    if (!_animator.FinishOfficeSeatingPoseForLeavingSeat())
-                    {
-                        _seatEgressUnsafePhaseTransitionCount++;
-                        return;
-                    }
-                    Phase = OfficeRuntimeAgentPhase.LeavingSeat;
+                    _seatEgressUnsafePhaseTransitionCount++;
                     break;
                 case OfficeRuntimeAgentPhase.LeavingSeat:
                 {
-                    if (!_seatEgressReservationActive)
-                    {
-                        _seatEgressUnsafePhaseTransitionCount++;
-                        StopMotion();
-                        return;
-                    }
-
-                    if (!_seatEgressReachedSafeAnchor)
-                    {
-                        TickSeatEgressDismount(deltaTime);
-                        return;
-                    }
-
+                    PrepareR5eStationaryFrameAfterAcceptedMotionBudget();
                     StopMotion();
-                    _hasCompletedSeatEgress = true;
-                    _lastCompletedSeatEgressKind = _seatEgressCandidate.Kind;
-                    _lastCompletedSeatEgressCell = _seatEgressCandidate.TargetCell;
-                    _lastCompletedSeatEgressWorld = _seatEgressTargetWorld;
-                    _lastCompletedSeatEgressClearanceValid = true;
-                    ReleaseSeatImmediately();
-                    // Releasing the claim also releases the seat-facing lock, so LeavingSeat has
-                    // ended at this exact point. Do not expose a one-frame unlocked LeavingSeat
-                    // state to presentation/depth consumers before the next simulation tick.
-                    Phase = OfficeRuntimeAgentPhase.Idle;
-                    if (_pendingDestination.HasValue)
+                    if (!_r5eExitTurnPending) return;
+                    if (_animator.CurrentDirection != _r5eExitTurnDirection ||
+                        !_animator.IsReadyForInteractionFacing(_r5eExitTurnDirection))
                     {
-                        OfficeRuntimeDestination pending = _pendingDestination.Value;
-                        _pendingDestination = null;
-                        if (!BeginDestination(pending) &&
-                            _interactionPhase != OfficeRuntimeInteractionPhase.None)
-                            AbortInteractionAttempt(
-                                OfficeRuntimeInteractionEndReason.PathUnavailable);
+                        _animator.AccumulateStandingFacingRequest(
+                            _r5eExitTurnDirection,
+                            deltaTime);
+                        return;
                     }
-                    else ResumeAutonomy();
+                    CompleteR5eExitTurnAndPublishRoute();
                     break;
                 }
             }
+        }
+
+        private bool TryPublishR5eAtomicSeat()
+        {
+            if (_seat == null || _seatClaim == null || _seatClaim.IsReleased ||
+                !_world.Workstations.TryResolveDockingPlan(
+                    _seat,
+                    out OfficeSeatDockingPlan plan)) return false;
+
+            ulong transactionId = _r5eTraceCoordinator.AllocateTransactionId();
+            ulong sessionId = _r5eTraceCoordinator.AllocateSeatedSessionId();
+            R5eAgentStepSnapshot before = CaptureR5eStepSnapshot();
+            AppendR5eTransition(
+                transactionId,
+                R5eSeatTransitionEventKind.Prepare,
+                R5eSeatTransitionKind.Entry,
+                before,
+                before,
+                plan,
+                Vector2.zero,
+                false,
+                false,
+                false);
+
+            bool posePrepared = false;
+            OfficeCharacterSeatPoseProfile workProfile = null;
+            try
+            {
+                workProfile = _poseCatalog.ResolveApproved(
+                    _agentId,
+                    _seatDirection,
+                    OfficeSeatingAnimationClip.Work,
+                    0);
+                posePrepared = workProfile != null;
+            }
+            catch (Exception)
+            {
+                posePrepared = false;
+            }
+
+            OfficeSeatingState.PreparedRuntimeMutation preparedClaim = default;
+            OfficeRuntimeOccupancy.PreparedAtomicActorPlacement preparedPlacement = default;
+            bool prepared =
+                posePrepared &&
+                _animator.CanEnterCompletedSeatedWorkAfterAtomicPlacement(_seatDirection) &&
+                _seatClaim.TryPrepareOccupy(out preparedClaim) &&
+                _world.Occupancy.TryPrepareAtomicActorPlacement(
+                    _agentId,
+                    plan.SeatRootWorld,
+                    _seat.Cell,
+                    AgentRadius,
+                    _seat.SeatId,
+                    string.Empty,
+                    plan.AnchorRevision,
+                    out preparedPlacement);
+            if (!prepared ||
+                !_world.Workstations.IsDockingPlanCurrent(plan) ||
+                !_seatClaim.IsPreparedMutationCurrent(preparedClaim) ||
+                !_world.Occupancy.IsPreparedAtomicActorPlacementCurrent(preparedPlacement))
+            {
+                AppendR5eTransition(
+                    transactionId,
+                    R5eSeatTransitionEventKind.Rollback,
+                    R5eSeatTransitionKind.Entry,
+                    before,
+                    CaptureR5eStepSnapshot(),
+                    plan,
+                    Vector2.zero,
+                    false,
+                    true,
+                    false);
+                return false;
+            }
+
+            _r5ePublishActive = true;
+            _r5eTraceCoordinator.EnterPublish();
+            try
+            {
+                _seatClaim.CommitPreparedOccupy(preparedClaim);
+                _world.Occupancy.CommitPreparedAtomicActorPlacement(preparedPlacement);
+                transform.position = new Vector3(
+                    plan.SeatRootWorld.x,
+                    plan.SeatRootWorld.y,
+                    transform.position.z);
+                ResetVisualPose();
+                _animator.EnterCompletedSeatedWorkAfterAtomicPlacement(_seatDirection);
+                ApplySeatAnchorPlacement(
+                    workProfile,
+                    new Vector3(plan.SeatPelvisWorld.x, plan.SeatPelvisWorld.y, 0f));
+                RebaseAfterAtomicPlacement(plan.SeatRootWorld, _seatDirection);
+                Phase = OfficeRuntimeAgentPhase.Working;
+                CurrentActivity = _destination.HasValue
+                    ? _destination.Value.Activity
+                    : OfficeActivity.Work;
+                _arrived = true;
+                _seatFacingAlignedBeforeSitDown = true;
+                _r5eSeatedSessionId = sessionId;
+                _r5eLastClosedSeatedSessionId = 0;
+                _r5eEntryTransactionId = transactionId;
+                _r5eActiveDockingPlan = plan;
+                _r5eTraceState.OpenSeatedSession(sessionId, transactionId);
+            }
+            finally
+            {
+                _r5eTraceCoordinator.ExitPublish();
+                _r5ePublishActive = false;
+            }
+
+            R5eAgentStepSnapshot after = CaptureR5eStepSnapshot();
+            AppendR5eTransition(
+                transactionId,
+                R5eSeatTransitionEventKind.Commit,
+                R5eSeatTransitionKind.Entry,
+                before,
+                after,
+                plan,
+                Vector2.zero,
+                true,
+                false,
+                false);
+            AppendR5eTransition(
+                transactionId,
+                R5eSeatTransitionEventKind.Rebase,
+                R5eSeatTransitionKind.Entry,
+                before,
+                after,
+                plan,
+                Vector2.zero,
+                true,
+                false,
+                false);
+            if (_attendanceArrivalActive)
+            {
+                _attendanceArrivalActive = false;
+                _attendanceSeatArrivalCount++;
+                Debug.Log(
+                    "STARTER_OFFICE_ATTENDANCE_SEATED | member=" + _agentId +
+                    " | count=" + _attendanceSeatArrivalCount);
+            }
+            if (_interactionPhase == OfficeRuntimeInteractionPhase.Aligning)
+                _interactionPhase = OfficeRuntimeInteractionPhase.Performing;
+            return true;
+        }
+
+        private bool TryPublishR5eAtomicExit()
+        {
+            if (_seat == null || _seatClaim == null || _seatClaim.IsReleased ||
+                !_world.Workstations.TryResolveDockingPlan(
+                    _seat,
+                    out OfficeSeatDockingPlan plan)) return false;
+
+            ulong transactionId = _r5eTraceCoordinator.AllocateTransactionId();
+            R5eAgentStepSnapshot before = CaptureR5eStepSnapshot();
+            AppendR5eTransition(
+                transactionId,
+                R5eSeatTransitionEventKind.Prepare,
+                R5eSeatTransitionKind.Exit,
+                before,
+                before,
+                plan,
+                Vector2.zero,
+                false,
+                false,
+                false);
+
+            if (!TryPrepareSeatEgressReservation(plan))
+            {
+                _seatEgressWaiting = true;
+                AppendR5eTransition(
+                    transactionId,
+                    R5eSeatTransitionEventKind.Rollback,
+                    R5eSeatTransitionKind.Exit,
+                    before,
+                    CaptureR5eStepSnapshot(),
+                    plan,
+                    Vector2.zero,
+                    false,
+                    true,
+                    false);
+                return false;
+            }
+
+            OfficeSeatEgressAnchor exitAnchor = plan.Exit(_seatEgressCandidate.Kind);
+            Vector2 exitWorld = new Vector2(exitAnchor.World.x, exitAnchor.World.y);
+            int exitDirection = DirectionalSpriteAnimator.ResolveTileDirection(
+                exitWorld - plan.SeatRootWorld,
+                _seatDirection);
+            OfficeSeatingState.PreparedRuntimeMutation preparedClaim = default;
+            OfficeRuntimeOccupancy.PreparedAtomicActorPlacement preparedPlacement = default;
+            bool prepared =
+                _animator.CanLeaveCompletedSeatedWorkAfterAtomicPlacement &&
+                _seatClaim.TryPrepareRelease(out preparedClaim) &&
+                _world.Occupancy.TryPrepareAtomicActorPlacement(
+                    _agentId,
+                    exitWorld,
+                    exitAnchor.Cell,
+                    AgentRadius,
+                    string.Empty,
+                    _agentId,
+                    plan.AnchorRevision,
+                    out preparedPlacement);
+            if (!prepared ||
+                !_world.Workstations.IsDockingPlanCurrent(plan) ||
+                !_seatClaim.IsPreparedMutationCurrent(preparedClaim) ||
+                !_world.Occupancy.IsPreparedAtomicActorPlacementCurrent(preparedPlacement))
+            {
+                ClearSeatEgressReservation();
+                _seatEgressWaiting = true;
+                AppendR5eTransition(
+                    transactionId,
+                    R5eSeatTransitionEventKind.Rollback,
+                    R5eSeatTransitionKind.Exit,
+                    before,
+                    CaptureR5eStepSnapshot(),
+                    plan,
+                    exitWorld,
+                    false,
+                    true,
+                    false);
+                return false;
+            }
+
+            ulong handoffId = _r5eTraceCoordinator.AllocateMovementHandoffId();
+            OfficeSeatSlot releasedSeat = _seat;
+            _r5ePublishActive = true;
+            _r5eTraceCoordinator.EnterPublish();
+            try
+            {
+                _world.Occupancy.CommitPreparedAtomicActorPlacement(preparedPlacement);
+                transform.position = new Vector3(exitWorld.x, exitWorld.y, transform.position.z);
+                ResetVisualPose();
+                _animator.LeaveCompletedSeatedWorkAfterAtomicPlacement(exitDirection);
+                RebaseAfterAtomicPlacement(exitWorld, exitDirection);
+                _seatClaim.CommitPreparedRelease(preparedClaim);
+                _seat = null;
+                _seatClaim = null;
+                _releaseSeatRequested = false;
+                _alignedClip = null;
+                _alignedFrame = -1;
+                _seatedUpperBodyCutoffPx = float.NaN;
+                ClearSeatedUpperBodyProtection();
+                _seatPresentationPrepared = false;
+                _seatAlignmentComplete = false;
+                _finishingWorkPresentationObserved = false;
+                _seatEgressReservationActive = false;
+                _seatEgressWaiting = false;
+                _seatEgressReachedSafeAnchor = true;
+                _hasCompletedSeatEgress = true;
+                _lastCompletedSeatEgressKind = exitAnchor.Kind;
+                _lastCompletedSeatEgressCell = exitAnchor.Cell;
+                _lastCompletedSeatEgressWorld = exitWorld;
+                _lastCompletedSeatEgressClearanceValid = true;
+                _r5ePendingMovementHandoffId = handoffId;
+                _r5eActiveMovementHandoffId = 0;
+                _r5eExitTransactionId = transactionId;
+                _r5eExitTurnDirection = exitDirection;
+                _r5eExitTurnPending = true;
+                _r5eTurnCompleteTick = 0;
+                _r5eLastClosedSeatedSessionId = _r5eSeatedSessionId;
+                _r5eSeatedSessionId = 0;
+                _r5eTraceState.CloseSeatedSession();
+                Phase = OfficeRuntimeAgentPhase.LeavingSeat;
+                CurrentActivity = OfficeActivity.Break;
+            }
+            finally
+            {
+                _r5eTraceCoordinator.ExitPublish();
+                _r5ePublishActive = false;
+            }
+
+            _world.Workstations.ClearOcclusion(releasedSeat);
+            R5eAgentStepSnapshot after = CaptureR5eStepSnapshot();
+            AppendR5eTransition(
+                transactionId,
+                R5eSeatTransitionEventKind.Commit,
+                R5eSeatTransitionKind.Exit,
+                before,
+                after,
+                plan,
+                exitWorld,
+                true,
+                false,
+                false);
+            AppendR5eTransition(
+                transactionId,
+                R5eSeatTransitionEventKind.Rebase,
+                R5eSeatTransitionKind.Exit,
+                before,
+                after,
+                plan,
+                exitWorld,
+                true,
+                false,
+                false);
+            return true;
+        }
+
+        private void RebaseAfterAtomicPlacement(Vector2 anchor, int direction)
+        {
+            _currentVelocity = Vector2.zero;
+            _desiredVelocity = Vector2.zero;
+            _lastActualDisplacement = Vector2.zero;
+            _stuckSeconds = 0f;
+            _visibleMotionDebtSeconds = 0f;
+            _visibleFrameMovementBudgetWorld = 0f;
+            _visibleFrameMovementWorld = 0f;
+            _seatEgressFrameMovementBudgetWorld = 0f;
+            _seatEgressFrameMovementWorld = 0f;
+            _path.Clear();
+            _pathIndex = 0;
+            _presentationPathIndex = -1;
+            _pathRevision = _world.Occupancy.Revision;
+            _yieldCell = null;
+            _r5eVisualBaselineWorld = anchor;
+            _r5ePreviousLogicalWorld = anchor;
+            _r5ePreviousVisualWorld = anchor;
+            _r5ePreviousWorld = anchor;
+            _r5ePreviousRenderedWorld = anchor;
+            _r5eCollisionSweepOrigin = anchor;
+            _animator.RebaseTileMotionAfterAtomicPlacement(direction);
+            _r5eAtomicPlacementThisStep = true;
+            _r5eAtomicPlacementTick = _r5eRuntimeTick;
+        }
+
+        private void CompleteR5eExitTurnAndPublishRoute()
+        {
+            R5eAgentStepSnapshot before = CaptureR5eStepSnapshot();
+            _r5eExitTurnPending = false;
+            _r5eTurnCompleteTick = _r5eRuntimeTick;
+            StopMotion();
+            R5eAgentStepSnapshot after = CaptureR5eStepSnapshot();
+            AppendR5eTransition(
+                _r5eExitTransactionId,
+                R5eSeatTransitionEventKind.TurnComplete,
+                R5eSeatTransitionKind.Exit,
+                before,
+                after,
+                _r5eActiveDockingPlan,
+                _lastCompletedSeatEgressWorld,
+                true,
+                false,
+                false);
+            _r5eAwaitingFirstWalkTransactionId = _r5eExitTransactionId;
+
+            Phase = OfficeRuntimeAgentPhase.Idle;
+            if (_pendingDestination.HasValue)
+            {
+                OfficeRuntimeDestination pending = _pendingDestination.Value;
+                _pendingDestination = null;
+                if (!BeginDestination(pending) &&
+                    _interactionPhase != OfficeRuntimeInteractionPhase.None)
+                    AbortInteractionAttempt(OfficeRuntimeInteractionEndReason.PathUnavailable);
+            }
+            else
+            {
+                ResumeAutonomy();
+            }
+        }
+
+        private void AppendR5eTransition(
+            ulong transactionId,
+            R5eSeatTransitionEventKind eventKind,
+            R5eSeatTransitionKind transitionKind,
+            in R5eAgentStepSnapshot before,
+            in R5eAgentStepSnapshot after,
+            in OfficeSeatDockingPlan plan,
+            Vector2 chosenExit,
+            bool commitSucceeded,
+            bool rollbackSucceeded,
+            bool locomotionSample)
+        {
+            if (_r5ePublishActive || _r5eTraceCoordinator.PublishActive)
+                throw new InvalidOperationException("R5e trace cannot observe a half-published transaction.");
+            ulong seatedSessionId = transitionKind == R5eSeatTransitionKind.Exit
+                ? (_r5eSeatedSessionId != 0
+                    ? _r5eSeatedSessionId
+                    : _r5eLastClosedSeatedSessionId)
+                : _r5eSeatedSessionId;
+            var row = new R5eSeatTransitionTraceRow(
+                _r5ePendingStep.Context,
+                _agentId,
+                plan.Seat == null ? string.Empty : plan.Seat.SeatId,
+                transactionId,
+                seatedSessionId,
+                eventKind,
+                transitionKind,
+                before,
+                after,
+                plan,
+                chosenExit,
+                commitSucceeded,
+                rollbackSucceeded,
+                locomotionSample,
+                0);
+            _r5eTraceState.AppendTransition(row);
         }
 
         private void TickArrivedWork(float deltaTime)
@@ -1982,7 +2559,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Phase = OfficeRuntimeAgentPhase.FinishingWork;
         }
 
-        private bool TryPrepareSeatEgressReservation()
+        private bool TryPrepareSeatEgressReservation(in OfficeSeatDockingPlan plan)
         {
             if (_seatEgressReservationActive)
             {
@@ -2005,12 +2582,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
 
             Vector2 start = Position;
-            IReadOnlyList<OfficeSeatEgressCandidate> candidates =
-                OfficeSeatEgressRules.ResolveCandidates(_seat);
-            for (var index = 0; index < candidates.Count; index++)
+            for (var index = 0; index < OfficeSeatEgressRules.CandidateCount; index++)
             {
-                OfficeSeatEgressCandidate candidate = candidates[index];
-                OfficeGridCoordinate cell = candidate.TargetCell;
+                OfficeSeatEgressAnchor anchor = index switch
+                {
+                    0 => plan.FrontExit,
+                    1 => plan.LeftExit,
+                    _ => plan.RightExit
+                };
+                var candidate = new OfficeSeatEgressCandidate(anchor.Kind, anchor.Cell);
+                OfficeGridCoordinate cell = anchor.Cell;
                 if (!_world.Grid.Contains(cell) || !_world.Grid.IsWalkable(cell))
                 {
                     _lastSeatEgressBlocker = candidate.Kind + ":floor-not-walkable:" + cell;
@@ -2052,10 +2633,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _lastSeatEgressBlocker = candidate.Kind + ":dynamic-clearance:" + cell;
                     continue;
                 }
-                if (!_world.Occupancy.TryReservePath(
+                if (!_world.Occupancy.TryReserveSingleCell(
                         _agentId,
                         _seat.Cell,
-                        new[] { cell }))
+                        cell))
                 {
                     _lastSeatEgressBlocker = candidate.Kind + ":reservation:" + cell;
                     continue;
