@@ -2,6 +2,13 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-15 / Management UI validator Windows argv P1 후보
+
+- `Validate-ManagementUiV2.ps1`의 full-runtime Roslyn compile은 source 파일 234개를 Windows argv로 직접 펼치지 않고, compiler identity·reference/options·source-root/발견 순서를 보존한 UTF-8 no-BOM response file을 사용한다.
+- response와 validator output은 각각 GUID 기반 시스템 temp fence를 사용하며, path escaping, missing input, compiler failure, stale response, 동시 실행에서도 자기 temp만 `finally` 정리한다. Assets·UI runtime/layout·font·art는 변경하지 않았다.
+- 수정 전 89,515자 direct argv는 Win32 error 206으로 재현됐고 같은 425개 argument의 91,434-byte response compile은 통과했다. exact-base contract, 공백·한글·`@`·quote/backslash, deterministic bytes, deliberate CS1513, missing compiler/reference, stale response, concurrent 2-run, cleanup을 포함한 12개 외부 fixture가 통과했다.
+- non-Unity layout/contrast harness, full runtime compile, editor-validator compile, static structure를 통과했다. `ManagementUiV2Validation.Run` 안의 AssetDatabase/font rasterization/GUID/meta/Sprite header 검사는 이번 작업의 Unity 실행 금지 때문에 실행하지 않았으며, 향후 승인된 단일 Unity slot에서 별도 실행해야 한다.
+
 ## 2026-08-15 / clean integration HEAD Windows 자동 배포 준비
 
 - 기존 `BUILD_WINDOWS.cmd` → `Build-FamilyCompanyWindows.ps1` → `WindowsPlayerBuild.BuildWindowsX64`의
