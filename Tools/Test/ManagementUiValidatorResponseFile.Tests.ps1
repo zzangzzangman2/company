@@ -81,7 +81,6 @@ try {
     $escapingCases = [ordered]@{
         'plain' = '"plain"'
         'space value' = '"space value"'
-        '@leading' = '"@leading"'
         'C:\한글 space\@leading\file.cs' = '"C:\한글 space\@leading\file.cs"'
         'a"b' = '"a\"b"'
         'C:\trailing\' = '"C:\trailing\\"'
@@ -93,7 +92,33 @@ try {
     $lineBreakRejected = $false
     try { [void](ConvertTo-ManagementUiCSharpResponseToken "bad`nargument") } catch { $lineBreakRejected = $true }
     Assert-Fixture $lineBreakRejected 'A response argument containing LF was not rejected.'
-    Add-Fixture 'ESCAPE-01' 'space/non-ASCII/@/quote/trailing-backslash exact; LF rejected'
+    $leadingAtRejected = $false
+    try { [void](ConvertTo-ManagementUiCSharpResponseToken '@leading') } catch {
+        $leadingAtRejected = $_.Exception.Message -ceq "C# response-file arguments must not begin with '@'; Roslyn treats them as nested response directives."
+    }
+    Assert-Fixture $leadingAtRejected 'A leading @ response directive was not deterministically rejected.'
+    Add-Fixture 'ESCAPE-01' 'space/non-ASCII/@-component/quote/trailing-backslash exact; LF and leading @ rejected'
+
+    $nestedMissing = Join-Path $fixtureRoot 'definitely-not-a-real-response.rsp'
+    $legacyLeadingResponse = Join-Path $fixtureRoot 'legacy-leading-at.rsp'
+    Write-Utf8Fixture $legacyLeadingResponse ('"@{0}"' -f $nestedMissing)
+    $legacyLeadingOutput = @(& $dotnet $csc "@$legacyLeadingResponse" 2>&1)
+    $legacyLeadingExit = $LASTEXITCODE
+    Assert-Fixture ($legacyLeadingExit -ne 0 -and ($legacyLeadingOutput -join "`n") -match 'CS2011') `
+        'Actual Roslyn did not reproduce quoted leading-@ as a nested response directive.'
+    $residueBeforeLeadingAt = @(Get-ResponseResidue)
+    $helperLeadingRejected = $false
+    try {
+        [void](Invoke-ManagementUiCSharpResponseCompile `
+            -DotNetPath $dotnet -CompilerPath $csc `
+            -Arguments @('@definitely-not-a-real-response.rsp') -RequiredInputPaths @())
+    }
+    catch {
+        $helperLeadingRejected = $_.Exception.Message -ceq "C# response-file arguments must not begin with '@'; Roslyn treats them as nested response directives."
+    }
+    Assert-Fixture $helperLeadingRejected 'Production helper did not reject a raw leading-@ argument before compiler launch.'
+    Assert-Fixture (@(Get-ResponseResidue).Count -eq $residueBeforeLeadingAt.Count) 'Leading-@ rejection created response residue.'
+    Add-Fixture 'DIRECTIVE-01' "actual Roslyn quoted token failed CS2011 exit=$legacyLeadingExit; helper prelaunch rejection exact; residue delta0"
 
     $specialSource = Join-Path $fixtureRoot '한글 space\@leading\special source.cs'
     $specialOutput = Join-Path $fixtureRoot '한글 space\@leading\special output.dll'
@@ -108,6 +133,23 @@ try {
     Assert-Fixture ($special.ResponseLineCount -eq $specialArguments.Count) 'Response line count did not preserve the argument count.'
     Assert-Fixture (-not (Test-Path -LiteralPath $special.ResponseDirectory)) 'Special-path response directory was not cleaned.'
     Add-Fixture 'PATH-01' "Korean/space/@ path compiled; rspBytes=$($special.ResponseLength); bom=false; cleanup=true"
+
+    $relativeAtSourceName = '@leading canonical source.cs'
+    $relativeAtSource = Join-Path $fixtureRoot $relativeAtSourceName
+    $relativeAtOutput = Join-Path $fixtureRoot 'leading-at-canonical-output.dll'
+    Write-Utf8Fixture $relativeAtSource 'public static class CanonicalLeadingAtFixture { public const int Value = 1; }'
+    Push-Location $fixtureRoot
+    try {
+        $relativeAt = Invoke-ManagementUiCSharpResponseCompile `
+            -DotNetPath $dotnet -CompilerPath $csc `
+            -Arguments @('-nologo','-target:library','-nostdlib+',"-out:$relativeAtOutput","-r:$netstandard",$relativeAtSourceName) `
+            -RequiredInputPaths @($netstandard,$relativeAtSourceName)
+    }
+    finally { Pop-Location }
+    Assert-Fixture ($relativeAt.ExitCode -eq 0 -and (Test-Path -LiteralPath $relativeAtOutput -PathType Leaf)) `
+        'A declared relative file beginning with @ was not canonicalized to an absolute path before serialization.'
+    Assert-Fixture (-not (Test-Path -LiteralPath $relativeAt.ResponseDirectory)) 'Canonical leading-@ path response directory was not cleaned.'
+    Add-Fixture 'PATH-02' 'declared relative @ source canonicalized to absolute drive path; actual Roslyn compile PASS; cleanup=true'
 
     $specialRepeat = Invoke-ManagementUiCSharpResponseCompile $dotnet $csc $specialArguments @($netstandard, $specialSource)
     Assert-Fixture ($specialRepeat.ExitCode -eq 0) 'Repeated identical response compilation failed.'
@@ -184,6 +226,19 @@ try {
     Assert-Fixture (@(Get-ResponseResidue).Count -eq $residueBeforeMissing.Count) 'Missing reference fixture created response residue.'
     Add-Fixture 'MISSING-02' 'missing reference rejected before response creation'
 
+    $invalidHost = Join-Path $fixtureRoot 'invalid compiler host.exe'
+    Write-Utf8Fixture $invalidHost 'not a Windows executable'
+    $residueBeforeLaunchException = @(Get-ResponseResidue)
+    $launchExceptionObserved = $false
+    try {
+        [void](Invoke-ManagementUiCSharpResponseCompile `
+            -DotNetPath $invalidHost -CompilerPath $csc -Arguments @('-nologo') -RequiredInputPaths @())
+    }
+    catch { $launchExceptionObserved = $true }
+    Assert-Fixture $launchExceptionObserved 'Invalid compiler host did not produce a launch exception.'
+    Assert-Fixture (@(Get-ResponseResidue).Count -eq $residueBeforeLaunchException.Count) 'Launch exception leaked a response directory.'
+    Add-Fixture 'LAUNCH-01' 'actual compiler launch exception propagated; finally cleanup residue delta0'
+
     $stalePath = Join-Path $fixtureRoot 'runtime.rsp'
     Write-Utf8Fixture $stalePath '/this-stale-response-must-not-run'
     $staleHashBefore = (Get-FileHash -Algorithm SHA256 -LiteralPath $stalePath).Hash
@@ -242,7 +297,7 @@ $summary = [pscustomobject][ordered]@{
     startedUtc = $started.ToString('o')
     completedUtc = [DateTime]::UtcNow.ToString('o')
     fixtureCount = $results.Count
-    expectedFixtureCount = 12
+    expectedFixtureCount = 15
     unityLaunched = $false
     playerLaunched = $false
     buildExecuted = $false
@@ -256,8 +311,8 @@ if (-not [string]::IsNullOrWhiteSpace($ResultPath)) {
     if (-not (Test-Path -LiteralPath $resultParent)) { New-Item -ItemType Directory -Path $resultParent -Force | Out-Null }
     [IO.File]::WriteAllText($resultFull, ($summary | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
 }
-if ($status -ne 'PASS' -or $results.Count -ne 12) {
+if ($status -ne 'PASS' -or $results.Count -ne 15) {
     Write-Error "MANAGEMENT_UI_VALIDATOR_RESPONSE_FIXTURES: FAIL count=$($results.Count) $failure" -ErrorAction Continue
     exit 1
 }
-Write-Output 'MANAGEMENT_UI_VALIDATOR_RESPONSE_FIXTURES: PASS count=12'
+Write-Output 'MANAGEMENT_UI_VALIDATOR_RESPONSE_FIXTURES: PASS count=15'
