@@ -390,6 +390,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return result;
         }
 
+        internal OfficeSeatSlot AssignedSeatForQa(string memberId) => AssignedSeat(memberId);
+
         public OfficeRuntimeDestination DestinationForSeat(
             OfficeSeatSlot seat,
             OfficeRuntimeDestination requestedDestination)
@@ -490,6 +492,111 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                    ReferenceEquals(current, plan.Seat);
         }
 
+        internal bool TryCaptureLiveChairSnapshot(
+            in OfficeSeatDockingPlan plan,
+            out R5eFurnitureTransformSnapshot snapshot)
+        {
+            snapshot = default;
+            if (plan.Seat == null ||
+                !_seats.TryGetValue(plan.Seat.SeatId, out OfficeSeatSlot current) ||
+                !ReferenceEquals(current, plan.Seat) ||
+                !_furniturePresenter.TryGetSemanticRoot(
+                    plan.Seat.ChairFurnitureId,
+                    out Transform semanticRoot) || semanticRoot == null ||
+                !_furniturePresenter.TryGetVisualRoot(
+                    plan.Seat.ChairFurnitureId,
+                    out Transform visualRoot) || visualRoot == null) return false;
+            PlacedOfficeFurniture chair = null;
+            for (var index = 0; index < _grid.Furniture.Count; index++)
+            {
+                PlacedOfficeFurniture item = _grid.Furniture[index];
+                if (!string.Equals(
+                        item.FurnitureId,
+                        plan.Seat.ChairFurnitureId,
+                        StringComparison.Ordinal)) continue;
+                chair = item;
+                break;
+            }
+            if (chair == null) return false;
+            snapshot = new R5eFurnitureTransformSnapshot(
+                semanticRoot,
+                visualRoot,
+                _occupancy.Revision,
+                plan.Seat,
+                chair);
+            return true;
+        }
+
+        internal bool TryCaptureFurnitureTransformAggregate(out ulong hash, out int count)
+        {
+            unchecked
+            {
+                hash = 14695981039346656037UL;
+                count = 0;
+                for (var index = 0; index < _grid.Furniture.Count; index++)
+                {
+                    PlacedOfficeFurniture item = _grid.Furniture[index];
+                    if (!_furniturePresenter.TryGetSemanticRoot(
+                            item.FurnitureId,
+                            out Transform semanticRoot) || semanticRoot == null ||
+                        !_furniturePresenter.TryGetVisualRoot(
+                            item.FurnitureId,
+                            out Transform visualRoot) || visualRoot == null)
+                        return false;
+                    AddR5eFurnitureHash(ref hash, item.FurnitureId);
+                    AddR5eFurnitureTransform(ref hash, semanticRoot);
+                    AddR5eFurnitureTransform(ref hash, visualRoot);
+                    count++;
+                }
+                return count == _grid.Furniture.Count && count > 0;
+            }
+        }
+
+        private static void AddR5eFurnitureTransform(ref ulong hash, Transform transform)
+        {
+            AddR5eFurnitureHash(ref hash, transform.parent == null
+                ? 0
+                : transform.parent.GetInstanceID());
+            AddR5eFurnitureHash(ref hash, transform.position);
+            AddR5eFurnitureHash(ref hash, transform.rotation);
+            AddR5eFurnitureHash(ref hash, transform.lossyScale);
+        }
+
+        private static void AddR5eFurnitureHash(ref ulong hash, string value)
+        {
+            if (value == null)
+            {
+                AddR5eFurnitureHash(ref hash, 0);
+                return;
+            }
+            for (var index = 0; index < value.Length; index++)
+                AddR5eFurnitureHash(ref hash, value[index]);
+        }
+
+        private static void AddR5eFurnitureHash(ref ulong hash, Vector3 value)
+        {
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.x));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.y));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.z));
+        }
+
+        private static void AddR5eFurnitureHash(ref ulong hash, Quaternion value)
+        {
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.x));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.y));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.z));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.w));
+        }
+
+        private static void AddR5eFurnitureHash(ref ulong hash, int value)
+        {
+            unchecked
+            {
+                hash ^= (uint)value;
+                hash *= 1099511628211UL;
+            }
+        }
+
         private OfficeSeatDockingPlan BuildDockingPlan(OfficeSeatSlot seat)
         {
             PlacedOfficeFurniture chair = _grid.Furniture.FirstOrDefault(item =>
@@ -562,6 +669,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void ClearOcclusion(OfficeSeatSlot seat) =>
             _furniturePresenter.ClearSeatOcclusion(seat);
+
+        internal void ClearOcclusionAfterCommittedExitNoThrow(OfficeSeatSlot seat)
+        {
+            if (seat == null) return;
+            try
+            {
+                _furniturePresenter.ClearSeatOcclusion(seat);
+            }
+            catch (Exception exception)
+            {
+                // The authoritative actor/claim/occupancy transaction is already committed.
+                // Presentation cleanup is observed by the fail-closed visual producer and may
+                // never interrupt token completion or leave a half-published transaction.
+                Debug.LogException(exception);
+            }
+        }
 
         private OfficeSeatSlot AssignedSeat(string memberId)
         {

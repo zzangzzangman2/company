@@ -24,7 +24,7 @@ namespace FamilyCompany.Editor
             RunAllOrThrow();
             Debug.Log(
                 "FAMILY_COMPANY_CHAIR_R5E_STATIC: PASS | schemas=253/110/74/118/20" +
-                " | negativeFixtures=8 | legacyClipOracle=unused");
+                " | negativeFixtures=20 | legacyClipOracle=unused");
         }
 
         public static void RunAllOrThrow()
@@ -34,6 +34,7 @@ namespace FamilyCompany.Editor
             ValidateVersionMismatchIsPrecommitNoOp();
             ValidateLifecycleOracleFixtures();
             ValidateDirectCompletedPoseApi();
+            ValidateProductionGateSurface();
         }
 
         private static void ValidateTraceSchemasAndCapacities()
@@ -108,6 +109,30 @@ namespace FamilyCompany.Editor
                 "direct completed seated API");
             Require(animator.GetMethod("LeaveCompletedSeatedWorkAfterAtomicPlacement") != null,
                 "direct completed standing API");
+        }
+
+        private static void ValidateProductionGateSurface()
+        {
+            Assembly presentation = typeof(DirectionalSpriteAnimator).Assembly;
+            Type archive = RequireType(
+                presentation,
+                "FamilyCompany.Presentation.Unity.OfficeRuntime.OfficeRuntimeTraceArchive");
+            Type writer = RequireType(
+                presentation,
+                "FamilyCompany.Presentation.Unity.OfficeRuntime.OfficeSeatDockingR5eTraceWriter");
+            Type observation = RequireType(
+                presentation,
+                "FamilyCompany.Presentation.Unity.OfficeRuntime.R5eProductionObservation");
+            Type transition = RequireType(
+                presentation,
+                "FamilyCompany.Presentation.Unity.OfficeRuntime.R5eSeatTransitionTraceRow");
+            Require(archive.GetMethod("TryImportCompletedScenario") != null,
+                "production scenario archive import");
+            Require(writer.GetMethod("WriteArchive") != null,
+                "post-window archive writer");
+            Require(observation.GetMethod("Detached") != null &&
+                    transition.GetMethod("Detached") != null,
+                "detached value-only trace snapshots");
         }
 
         private static void AssertLifecycle(string[] actual, bool success, bool exit)

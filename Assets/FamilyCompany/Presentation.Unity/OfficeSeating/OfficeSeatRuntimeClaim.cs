@@ -112,12 +112,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             IsOccupied = true;
         }
 
+        public void RollbackPreparedOccupy(
+            in OfficeSeatingState.PreparedRuntimeMutation prepared)
+        {
+            _state.RollbackPreparedRuntimeOccupy(prepared);
+            IsOccupied = false;
+        }
+
         public void CommitPreparedRelease(
             in OfficeSeatingState.PreparedRuntimeMutation prepared)
         {
             _state.CommitPreparedRuntimeRelease(prepared);
             IsOccupied = false;
             IsReleased = true;
+        }
+
+        public void RollbackPreparedRelease(
+            in OfficeSeatingState.PreparedRuntimeMutation prepared)
+        {
+            _state.RollbackPreparedRuntimeRelease(prepared);
+            IsOccupied = true;
+            IsReleased = false;
         }
 
         public bool TryRelease(out OfficeSeatOperationResult result)

@@ -25,6 +25,8 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         "Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/OfficeSeatDockingR5eTraceWriter.cs";
     private const string ScenarioCatalogSource =
         "Assets/FamilyCompany/Presentation.Unity/Resources/OfficeSeatDockingR5eScenarioCatalog.json";
+    private const string ScenarioParserSource =
+        "Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/Qa/OfficeSeatDockingR5eScenarioCatalog.cs";
     private const string StaticAggregatorSource =
         "Assets/FamilyCompany/Editor/OfficeSeatDockingR5eStaticValidation.cs";
 
@@ -56,7 +58,7 @@ internal static class OfficeSeatDockingR5eOfflineHarness
                 "OFFICE_SEAT_DOCKING_R5E_OFFLINE: PASS " +
                 "schemas=253/110/74/118/20 transitionCapacity=512 " +
                 "seatedCapacity=49152 locomotionCapacity=24576 visualCapacity=2048 " +
-                "negativeFixtures=12 legacyClipOracle=unused");
+                "negativeFixtures=20 scenarioCases=158 legacyClipOracle=unused");
             return 0;
         }
         catch (Exception exception)
@@ -135,7 +137,7 @@ internal static class OfficeSeatDockingR5eOfflineHarness
             "OfficeNavigationMotionIntegrator.CalculateStepCount(actorDelta);",
             "step >= actorSteps) continue;",
             "OfficeNavigationMotionIntegrator.ResolveStepDelta(",
-            "_traceCoordinator.BeginActorStep(",
+            "_traceCoordinator.TryBeginActorStep(",
             "actor.BeginR5eRuntimeStep(",
             "actor.TickRuntime(stepDelta);",
             "R5eAgentStepSnapshot preClear",
@@ -143,6 +145,8 @@ internal static class OfficeSeatDockingR5eOfflineHarness
             "actor.ClearInactiveVisibleMotionDebt();",
             "R5eAgentStepSnapshot postClear",
             "actor.FinalizeR5eRuntimeStepPostClear(",
+            "_traceCoordinator.TryPreflightRender(actor)",
+            "_traceCoordinator.BeginRenderFrame(actor, Time.frameCount);",
             "actor.TickPresentation(_frameMotionDeltas[index]);",
             "_traceCoordinator.AppendRenderAdapter(actor, Time.frameCount);",
             "_depthSorter.Apply(actors);");
@@ -188,6 +192,12 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         Require(agent.Contains("CommitPreparedAtomicActorPlacement", StringComparison.Ordinal) &&
                 agent.Contains("RebaseAfterAtomicPlacement", StringComparison.Ordinal),
             "same-tick canonical placement/rebase is absent");
+        Require(agent.Contains("R5eAtomicAgentSnapshot", StringComparison.Ordinal) &&
+                agent.Contains("RollbackPreparedAtomicActorPlacement", StringComparison.Ordinal) &&
+                agent.Contains("RollbackPreparedOccupy", StringComparison.Ordinal) &&
+                agent.Contains("RollbackPreparedRelease", StringComparison.Ordinal) &&
+                agent.Contains("RestoreAtomicReservationScope", StringComparison.Ordinal),
+            "production atomic publish does not expose an exact rollback journal");
 
         string animator = Read(root, AnimatorSource);
         Require(animator.Contains("EnterCompletedSeatedWorkAfterAtomicPlacement", StringComparison.Ordinal),
@@ -208,7 +218,16 @@ internal static class OfficeSeatDockingR5eOfflineHarness
                 runner.Contains("GameplayMeasureBegin", StringComparison.Ordinal) &&
                 runner.Contains("FlushPostWindow", StringComparison.Ordinal) &&
                 runner.Contains("frameOver50MsCount", StringComparison.Ordinal) &&
-                !runner.Contains("OfficeSeatingTransitionPlayerQa", StringComparison.Ordinal),
+                !runner.Contains("OfficeSeatingTransitionPlayerQa", StringComparison.Ordinal) &&
+                runner.Contains("RunScenarioCase(_scenarioPlan.Cases[index])", StringComparison.Ordinal) &&
+                 runner.Contains("RunContentionScenario", StringComparison.Ordinal) &&
+                 runner.Contains("QaArmR5eFault", StringComparison.Ordinal) &&
+                 runner.Contains("QaInvalidateNextAtomicVersion", StringComparison.Ordinal) &&
+                 runner.Contains("OfficeRuntimeTraceArchive", StringComparison.Ordinal) &&
+                 runner.Contains("TryCaptureFurnitureTransformAggregate", StringComparison.Ordinal) &&
+                 runner.Contains("gameplayAllocationFrameCount", StringComparison.Ordinal) &&
+                 !runner.Contains("_scenarioCoordinators", StringComparison.Ordinal) &&
+                 runner.Contains("PENDING_POSTPROCESS", StringComparison.Ordinal),
             "atomic Release observer/visual runner contract is incomplete or stale");
         string writer = Read(root, TraceWriterSource);
         Require(writer.Contains("Post-window only serializer", StringComparison.Ordinal) &&
@@ -228,6 +247,27 @@ internal static class OfficeSeatDockingR5eOfflineHarness
                 catalog.Contains("contentionPermutations", StringComparison.Ordinal) &&
                 catalog.Contains("58193017", StringComparison.Ordinal),
             "deterministic 4x4x8/contention/blocked/seeded catalog is incomplete");
+        string parser = Read(root, ScenarioParserSource);
+        Require(parser.Contains("ParseAndValidate", StringComparison.Ordinal) &&
+                parser.Contains("ExpectedSha256", StringComparison.Ordinal) &&
+                parser.Contains("BaseCaseCount = 128", StringComparison.Ordinal) &&
+                parser.Contains("TotalCaseCount = 158", StringComparison.Ordinal) &&
+                parser.Contains("CreateLayoutForCase", StringComparison.Ordinal),
+            "scenario catalog is not fail-closed typed production input");
+        string expectedCatalogSha = Regex.Match(
+            parser,
+            "ExpectedSha256\\s*=\\s*\"(?<sha>[0-9A-F]{64})\"").Groups["sha"].Value;
+        Require(expectedCatalogSha.Length == 64 &&
+                string.Equals(expectedCatalogSha, Sha256File(Path.Combine(root, ScenarioCatalogSource)),
+                    StringComparison.OrdinalIgnoreCase),
+            "scenario catalog file does not match the compiled fail-closed hash");
+        Require(writer.Contains("observedAfter.ProducerValid", StringComparison.Ordinal) &&
+                writer.Contains("observedBefore.Chair.Hash != observedAfter.Chair.Hash", StringComparison.Ordinal) &&
+                writer.Contains("row.Observation.AllocationBytes", StringComparison.Ordinal) &&
+                writer.Contains("TransactionSnapshotHash", StringComparison.Ordinal) &&
+                writer.Contains("row.RenderTrace.ActualDisplacement", StringComparison.Ordinal) &&
+                writer.Contains("PENDING", StringComparison.Ordinal),
+            "trace writer uses default declarations instead of live producer values/PENDING visual state");
     }
 
     private static void ValidateLifecycleFixtures()
@@ -302,6 +342,8 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         ValidateLocomotionCsv(Path.Combine(directory, Schemas[2].FileName), headers["LocomotionAdapterHeader"]);
         ValidateDecodedCsv(Path.Combine(directory, Schemas[3].FileName), headers["DecodedFrameHeader"]);
         ValidateHumanCsv(Path.Combine(directory, Schemas[4].FileName), headers["HumanReviewHeader"]);
+        ValidateVisualMetadataCsv(Path.Combine(directory, "visual-capture-metadata-r5e.csv"));
+        ValidateScenarioResultsCsv(Path.Combine(directory, "chair-r5e-scenario-results.csv"));
         ValidateRuntimeEnvelope(directory);
     }
 
@@ -312,6 +354,50 @@ internal static class OfficeSeatDockingR5eOfflineHarness
                                 Value(row, "actorId").Length > 0), "transition stable IDs missing");
         Require(rows.All(row => IsFalse(row, "locomotionSample")),
             "transition event entered locomotion sample denominator");
+        Require(rows.All(row => IsTrue(row, "producerCoverageValid") &&
+                                ParseInt(row, "droppedRowCount") == 0 &&
+                                ParseInt(row, "overflowCount") == 0 &&
+                                IsFalse(row, "overflowed") &&
+                                ParseLong(row, "gcAllocBytes") == 0 &&
+                                ParseLong(row, "traceProducerAllocBytes") == 0 &&
+                                ParseInt(row, "forbiddenColliderCount") == 0 &&
+                                ParseInt(row, "forbiddenCollider2DCount") == 0 &&
+                                ParseInt(row, "forbiddenRigidbodyCount") == 0 &&
+                                ParseInt(row, "forbiddenRigidbody2DCount") == 0 &&
+                                ParseInt(row, "forbiddenNavMeshAgentCount") == 0 &&
+                                IsFalse(row, "observedChairMutation")),
+            "transition producer reported allocation/overflow/physics/chair mutation");
+        foreach (Dictionary<string, string> row in rows)
+        {
+            string eventKind = Value(row, "event");
+            if (eventKind == "Commit" || eventKind == "Rebase")
+            {
+                Require(IsTrue(row, "commitSucceeded") && IsTrue(row, "floorValid") &&
+                        IsFalse(row, "staticOverlap") && IsFalse(row, "chairOverlap"),
+                    "committed atomic placement did not occupy validated clear floor");
+                string[] zeroAfter =
+                {
+                    "velocityAfterX", "velocityAfterY", "motionDebtAfterX", "motionDebtAfterY",
+                    "movementBudgetAfter", "actualDisplacementAfterX", "actualDisplacementAfterY",
+                    "semanticDisplacementAfterX", "semanticDisplacementAfterY",
+                    "accumulatedDisplacementAfterX", "accumulatedDisplacementAfterY",
+                    "gaitDistanceAfter", "gaitPhaseAfter"
+                };
+                Require(zeroAfter.All(column => AbsFloat(row, column) <= 0.000001f) &&
+                        ParseInt(row, "walkFrameAfter") == 0,
+                    "atomic placement leaked locomotion/gait/debt state");
+            }
+            if (eventKind == "Rollback")
+                Require(Value(row, "actorTransactionSnapshotHashBefore") ==
+                        Value(row, "actorTransactionSnapshotHashAfter") &&
+                        IsTrue(row, "rollbackSucceeded") && IsFalse(row, "commitSucceeded"),
+                    "rollback was not byte-equivalent for actor transaction state");
+            if (eventKind == "TurnComplete")
+                Require(AbsFloat(row, "turnDisplacement") <= 0.000001f &&
+                        AbsFloat(row, "actualDisplacementAfterX") <= 0.000001f &&
+                        AbsFloat(row, "actualDisplacementAfterY") <= 0.000001f,
+                    "turn-in-place translated the actor");
+        }
         foreach (IGrouping<string, Dictionary<string, string>> group in rows.GroupBy(
                      row => Value(row, "runId") + "|" + Value(row, "actorId") + "|" + Value(row, "transactionId")))
         {
@@ -403,14 +489,115 @@ internal static class OfficeSeatDockingR5eOfflineHarness
     {
         List<Dictionary<string, string>> rows = ReadRows(path, header);
         Require(rows.Count > 0, "locomotion adapter coverage is zero");
-        foreach (Dictionary<string, string> row in rows.Where(row => IsTrue(row, "observedMoving")))
+        Require(rows.All(row => IsTrue(row, "producerValid") &&
+                                ParseInt(row, "droppedRowCount") == 0 &&
+                                ParseInt(row, "overflowCount") == 0),
+            "locomotion producer invalid/dropped/overflowed");
+        foreach (Dictionary<string, string> row in rows.Where(IsActuallyMoving))
         {
             Require(Value(row, "renderedFacing") == Value(row, "quantizedVelocityFacing"),
                 "moving facing mismatch");
             Require(Float(row, "forwardDot") >= 0.92f, "moving forward dot below 0.92");
             Require(NonZero(row, "routeGenerationId"), "moving route ID missing");
+            Require(ParseInt(row, "wrongFacingCount") == 0 &&
+                    ParseInt(row, "strafeCount") == 0 &&
+                    ParseInt(row, "frontFacingLateralCount") == 0 &&
+                    ParseInt(row, "backwardLookingCount") == 0,
+                "moving row reported wrong-facing/strafe/backward presentation");
         }
-        Require(rows.All(row => ParseInt(row, "overflowCount") == 0), "locomotion buffer overflow");
+        foreach (Dictionary<string, string> row in rows.Where(row => Value(row, "rowKind") == "Step"))
+        {
+            Require(NonZero(row, "actorStepOrdinal") && NonZero(row, "runtimeTick"),
+                "step adapter stable IDs missing");
+            if (!IsTrue(row, "atomicPlacement"))
+                Require(Math.Sqrt(
+                            Float(row, "rootDeltaX") * Float(row, "rootDeltaX") +
+                            Float(row, "rootDeltaY") * Float(row, "rootDeltaY")) <= 0.099001f,
+                    "accepted per-step displacement exceeded e36875 bound");
+            if (IsTrue(row, "expectedMoving"))
+                Require(IsTrue(row, "observedMoving") && NonZero(row, "movementHandoffId"),
+                    "expected moving step was missing its actual producer/handoff");
+        }
+
+        foreach (IGrouping<string, Dictionary<string, string>> group in rows.GroupBy(
+                     row => Value(row, "runId") + "|" + Value(row, "scenarioId") + "|" +
+                            Value(row, "actorId") + "|" + Value(row, "frame")))
+        {
+            Dictionary<string, string>[] render = group
+                .Where(row => Value(row, "rowKind") == "Render").ToArray();
+            Require(render.Length == 1, "accepted render row missing/duplicated for actor/frame");
+            Dictionary<string, string> accepted = render[0];
+            Require(IsTrue(accepted, "renderJoinValid") &&
+                    IsTrue(accepted, "renderDisplacementMatchesStepSum") &&
+                    IsTrue(accepted, "acceptedTraceOneToOneValid") &&
+                    ParseInt(accepted, "duplicateRenderedTraceCount") == 0,
+                "render adapter did not join accepted presentation one-to-one");
+            float sumX = group.Where(row => Value(row, "rowKind") == "Step" &&
+                                           !IsTrue(row, "atomicPlacement"))
+                .Sum(row => Float(row, "rootDeltaX"));
+            float sumY = group.Where(row => Value(row, "rowKind") == "Step" &&
+                                           !IsTrue(row, "atomicPlacement"))
+                .Sum(row => Float(row, "rootDeltaY"));
+            Require(Math.Abs(sumX - Float(accepted, "renderActualDisplacementX")) <= 0.000001f &&
+                    Math.Abs(sumY - Float(accepted, "renderActualDisplacementY")) <= 0.000001f,
+                "accepted presentation displacement was not produced by the joined actual steps");
+        }
+
+        foreach (IGrouping<string, Dictionary<string, string>> actor in rows.GroupBy(
+                     row => Value(row, "runId") + "|" + Value(row, "scenarioId") + "|" + Value(row, "actorId")))
+        {
+            Dictionary<string, string> final = actor.Last();
+            Require(ParseInt(final, "expectedMovingCount") == ParseInt(final, "observedMovingCount") &&
+                    ParseInt(final, "missingMovingCount") == 0 &&
+                    ParseInt(final, "expectedRenderedTraceCount") ==
+                    ParseInt(final, "observedRenderedTraceCount") &&
+                    ParseInt(final, "missingRenderedTraceCount") == 0,
+                "locomotion expected/observed coverage mismatch");
+        }
+    }
+
+    private static bool IsActuallyMoving(Dictionary<string, string> row) =>
+        Value(row, "rowKind") == "Render" ? IsTrue(row, "renderIsMoving") : IsTrue(row, "observedMoving");
+
+    private static void ValidateVisualMetadataCsv(string path)
+    {
+        Require(File.Exists(path), "visual metadata producer file missing");
+        string[] expected =
+        {
+            "schemaVersion", "runId", "scenarioId", "frame", "runtimeTick", "actorId",
+            "transactionId", "seatedSessionId", "cleanFrameObserved",
+            "evidenceAtlasObserved", "postProcessStatus"
+        };
+        List<Dictionary<string, string>> rows = ReadRows(path, expected);
+        Require(rows.Count > 0 && rows.All(row => NonZero(row, "runId") &&
+                                                 NonZero(row, "scenarioId") &&
+                                                 Value(row, "actorId").Length > 0 &&
+                                                 (Value(row, "postProcessStatus") == "PENDING" ||
+                                                  Value(row, "postProcessStatus") == "READY")),
+            "visual capture producer hook is unreachable/default-only");
+    }
+
+    private static void ValidateScenarioResultsCsv(string path)
+    {
+        Require(File.Exists(path), "production scenario result file missing");
+        string[] header =
+            { "schemaVersion", "scenarioId", "caseId", "kind", "terminalObserved", "passed", "detail" };
+        List<Dictionary<string, string>> rows = ReadRows(path, header);
+        Require(rows.Count == 158, "production scenario coverage count is not 158");
+        Require(rows.Select(row => Value(row, "scenarioId")).Distinct(StringComparer.Ordinal).Count() == 158 &&
+                rows.Select(row => Value(row, "caseId")).Distinct(StringComparer.Ordinal).Count() == 158,
+            "production scenario IDs/case IDs are duplicated");
+        Require(rows.All(row => IsTrue(row, "terminalObserved") && IsTrue(row, "passed") &&
+                                Value(row, "detail").Length > 0),
+            "production scenario terminal/oracle failed");
+        Require(rows.Count(row => Value(row, "kind") == "BaseMatrix") == 128 &&
+                rows.Any(row => Value(row, "kind") == "AllExitsBlocked") &&
+                rows.Any(row => Value(row, "kind") == "Contention") &&
+                rows.Any(row => Value(row, "kind") == "FaultEntry") &&
+                rows.Any(row => Value(row, "kind") == "FaultExit") &&
+                rows.Any(row => Value(row, "kind") == "VersionEntry") &&
+                rows.Any(row => Value(row, "kind") == "VersionExit"),
+            "production scenario family coverage is incomplete");
     }
 
     private static void ValidateDecodedCsv(string path, string[] header)
@@ -490,7 +677,12 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         string[] frameHeader = ParseCsv(frameLines[0]).ToArray();
         RequireColumns(frameHeader, "frame", "frame_ms", "gc_alloc_bytes", "mono_used_bytes",
             "active_body_sprites", "actor_collider_count", "actor_collider2d_count",
-            "actor_rigidbody_count", "actor_rigidbody2d_count", "actor_navmeshagent_count");
+            "actor_rigidbody_count", "actor_rigidbody2d_count", "actor_navmeshagent_count",
+            "furniture_transform_hash", "furniture_count", "furniture_snapshot_valid",
+            "furniture_transform_mutation", "floor_invalid_count", "static_overlap_count",
+            "dynamic_overlap_count", "collision_violation_count", "legacy_sit_frame_mask",
+            "legacy_stand_frame_mask", "maximum_stuck_seconds", "maximum_seated_debt",
+            "maximum_seated_velocity", "maximum_seated_displacement");
         var frameRows = new List<Dictionary<string, string>>();
         for (var index = 1; index < frameLines.Length; index++)
         {
@@ -515,6 +707,24 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         Require(p95 <= p95Limit, "p95 " + p95 + " exceeds " + p95Limit);
         Require(frameRows.All(row => ParseInt(row, "active_body_sprites") == 4),
             "active body sprite count changed from four");
+        Require(frameRows.All(row => ParseLong(row, "gc_alloc_bytes") == 0),
+            "gameplay allocation observed");
+        Require(frameRows.All(row => IsTrue(row, "furniture_snapshot_valid") &&
+                                     IsFalse(row, "furniture_transform_mutation") &&
+                                     NonZero(row, "furniture_transform_hash") &&
+                                     ParseInt(row, "furniture_count") > 0),
+            "furniture transform producer missing or mutation observed");
+        string[] runtimeZeroCounters =
+        {
+            "floor_invalid_count", "static_overlap_count", "dynamic_overlap_count",
+            "collision_violation_count", "legacy_sit_frame_mask", "legacy_stand_frame_mask"
+        };
+        Require(frameRows.All(row => runtimeZeroCounters.All(column => ParseInt(row, column) == 0) &&
+                                     AbsFloat(row, "maximum_stuck_seconds") <= 0.000001f &&
+                                     AbsFloat(row, "maximum_seated_debt") <= 0.000001f &&
+                                     AbsFloat(row, "maximum_seated_velocity") <= 0.000001f &&
+                                     AbsFloat(row, "maximum_seated_displacement") <= 0.000001f),
+            "runtime collision/debt/legacy transition invariant failed");
         string[] forbidden =
         {
             "actor_collider_count", "actor_collider2d_count", "actor_rigidbody_count",
@@ -583,7 +793,9 @@ internal static class OfficeSeatDockingR5eOfflineHarness
     {
         var result = new List<Dictionary<string, string>>();
         using var reader = new StreamReader(path, Encoding.UTF8, true);
-        reader.ReadLine();
+        string first = reader.ReadLine() ?? string.Empty;
+        Require(ParseCsv(first).SequenceEqual(header, StringComparer.Ordinal),
+            Path.GetFileName(path) + " header/order mismatch");
         string line;
         while ((line = reader.ReadLine()) != null)
         {
@@ -725,6 +937,9 @@ internal static class OfficeSeatDockingR5eOfflineHarness
 
     private static int ParseInt(Dictionary<string, string> row, string name) =>
         int.Parse(Value(row, name), NumberStyles.Integer, CultureInfo.InvariantCulture);
+
+    private static long ParseLong(Dictionary<string, string> row, string name) =>
+        long.Parse(Value(row, name), NumberStyles.Integer, CultureInfo.InvariantCulture);
 
     private static float Float(Dictionary<string, string> row, string name) =>
         float.Parse(Value(row, name), NumberStyles.Float, CultureInfo.InvariantCulture);

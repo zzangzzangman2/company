@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.OfficeSeating;
@@ -26,6 +27,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     {
         PreClear = 0,
         PostClear = 1
+    }
+
+    internal enum R5eFaultInjectionPoint
+    {
+        None = 0,
+        BeforeClaim = 1,
+        AfterClaim = 2,
+        AfterOccupancy = 3,
+        AfterRoot = 4,
+        AfterRenderer = 5,
+        AfterRebase = 6
     }
 
     /// <summary>
@@ -216,6 +228,29 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 chair);
         }
 
+        private R5eFurnitureTransformSnapshot(in R5eFurnitureTransformSnapshot source)
+        {
+            SemanticRoot = null;
+            VisualRoot = null;
+            SemanticParentId = source.SemanticParentId;
+            VisualParentId = source.VisualParentId;
+            SemanticPosition = source.SemanticPosition;
+            SemanticRotation = source.SemanticRotation;
+            SemanticScale = source.SemanticScale;
+            VisualPosition = source.VisualPosition;
+            VisualRotation = source.VisualRotation;
+            VisualScale = source.VisualScale;
+            LayoutRevision = source.LayoutRevision;
+            SeatId = source.SeatId;
+            ChairId = source.ChairId;
+            ChairKind = source.ChairKind;
+            ChairFacing = source.ChairFacing;
+            ChairOrigin = source.ChairOrigin;
+            ChairWidth = source.ChairWidth;
+            ChairHeight = source.ChairHeight;
+            Hash = source.Hash;
+        }
+
         public Transform SemanticRoot { get; }
         public Transform VisualRoot { get; }
         public int SemanticParentId { get; }
@@ -235,6 +270,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public int ChairWidth { get; }
         public int ChairHeight { get; }
         public ulong Hash { get; }
+
+        public R5eFurnitureTransformSnapshot Detached() => new R5eFurnitureTransformSnapshot(this);
 
         public bool MatchesCurrent(int layoutRevision)
         {
@@ -348,6 +385,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeSeatEgressKind.Right => RightExit,
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
+
+        public OfficeSeatDockingPlan Detached() => new OfficeSeatDockingPlan(
+            null,
+            ApproachWorld,
+            DockWorld,
+            SeatRootWorld,
+            SeatPelvisWorld,
+            FrontExit,
+            LeftExit,
+            RightExit,
+            AnchorRevision,
+            ChairSnapshot.Detached());
     }
 
     internal readonly struct R5eSeatTransitionTraceRow
@@ -367,7 +416,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             bool commitSucceeded,
             bool rollbackSucceeded,
             bool locomotionSample,
-            int faultInjectionId)
+            int faultInjectionId,
+            in R5eProductionObservation beforeObservation,
+            in R5eProductionObservation afterObservation)
         {
             Context = context;
             ActorId = actorId;
@@ -384,6 +435,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             RollbackSucceeded = rollbackSucceeded;
             LocomotionSample = locomotionSample;
             FaultInjectionId = faultInjectionId;
+            BeforeObservation = beforeObservation;
+            AfterObservation = afterObservation;
         }
 
         public OfficeRuntimeStepTraceContext Context { get; }
@@ -401,6 +454,114 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public bool RollbackSucceeded { get; }
         public bool LocomotionSample { get; }
         public int FaultInjectionId { get; }
+        public R5eProductionObservation BeforeObservation { get; }
+        public R5eProductionObservation AfterObservation { get; }
+
+        public R5eSeatTransitionTraceRow Detached() => new R5eSeatTransitionTraceRow(
+            Context,
+            ActorId,
+            SeatId,
+            TransactionId,
+            SeatedSessionId,
+            EventKind,
+            TransitionKind,
+            Before,
+            After,
+            Plan.Detached(),
+            ChosenExit,
+            CommitSucceeded,
+            RollbackSucceeded,
+            LocomotionSample,
+            FaultInjectionId,
+            BeforeObservation.Detached(),
+            AfterObservation.Detached());
+    }
+
+    /// <summary>
+    /// Values read from the live production objects at the event boundary. A producer-valid bit is
+    /// mandatory: an unavailable measurement is serialized as PENDING and can never become PASS by
+    /// inheriting a numeric default.
+    /// </summary>
+    internal readonly struct R5eProductionObservation
+    {
+        public R5eProductionObservation(
+            in OfficeRuntimeOccupancy.CanonicalActorSnapshot occupancy,
+            in R5eFurnitureTransformSnapshot chair,
+            bool chairSnapshotValid,
+            bool floorValid,
+            bool staticOverlap,
+            bool dynamicOverlap,
+            bool exitReserved,
+            bool seatReserved,
+            bool seatOccupied,
+            int forbiddenColliderCount,
+            int forbiddenCollider2DCount,
+            int forbiddenRigidbodyCount,
+            int forbiddenRigidbody2DCount,
+            int forbiddenNavMeshAgentCount,
+            int visibleBodyCount,
+            long allocationBytes,
+            float frameMs,
+            bool producerValid)
+        {
+            Occupancy = occupancy;
+            Chair = chair;
+            ChairSnapshotValid = chairSnapshotValid;
+            FloorValid = floorValid;
+            StaticOverlap = staticOverlap;
+            DynamicOverlap = dynamicOverlap;
+            ExitReserved = exitReserved;
+            SeatReserved = seatReserved;
+            SeatOccupied = seatOccupied;
+            ForbiddenColliderCount = forbiddenColliderCount;
+            ForbiddenCollider2DCount = forbiddenCollider2DCount;
+            ForbiddenRigidbodyCount = forbiddenRigidbodyCount;
+            ForbiddenRigidbody2DCount = forbiddenRigidbody2DCount;
+            ForbiddenNavMeshAgentCount = forbiddenNavMeshAgentCount;
+            VisibleBodyCount = visibleBodyCount;
+            AllocationBytes = allocationBytes;
+            FrameMs = frameMs;
+            ProducerValid = producerValid;
+        }
+
+        public OfficeRuntimeOccupancy.CanonicalActorSnapshot Occupancy { get; }
+        public R5eFurnitureTransformSnapshot Chair { get; }
+        public bool ChairSnapshotValid { get; }
+        public bool FloorValid { get; }
+        public bool StaticOverlap { get; }
+        public bool DynamicOverlap { get; }
+        public bool ExitReserved { get; }
+        public bool SeatReserved { get; }
+        public bool SeatOccupied { get; }
+        public int ForbiddenColliderCount { get; }
+        public int ForbiddenCollider2DCount { get; }
+        public int ForbiddenRigidbodyCount { get; }
+        public int ForbiddenRigidbody2DCount { get; }
+        public int ForbiddenNavMeshAgentCount { get; }
+        public int VisibleBodyCount { get; }
+        public long AllocationBytes { get; }
+        public float FrameMs { get; }
+        public bool ProducerValid { get; }
+
+        public R5eProductionObservation Detached() => new R5eProductionObservation(
+            Occupancy,
+            Chair.Detached(),
+            ChairSnapshotValid,
+            FloorValid,
+            StaticOverlap,
+            DynamicOverlap,
+            ExitReserved,
+            SeatReserved,
+            SeatOccupied,
+            ForbiddenColliderCount,
+            ForbiddenCollider2DCount,
+            ForbiddenRigidbodyCount,
+            ForbiddenRigidbody2DCount,
+            ForbiddenNavMeshAgentCount,
+            VisibleBodyCount,
+            AllocationBytes,
+            FrameMs,
+            ProducerValid);
     }
 
     internal readonly struct R5eSeatedSessionSampleRow
@@ -415,6 +576,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             in R5eAgentStepSnapshot preStep,
             in R5eAgentStepSnapshot sample,
             in OfficeRuntimeOccupancy.CanonicalActorSnapshot occupancy,
+            in R5eProductionObservation observation,
+            int expectedOrdinal,
+            int observedOrdinal,
             bool producerValid,
             bool aggregateUpdated)
         {
@@ -427,6 +591,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             PreStep = preStep;
             Sample = sample;
             Occupancy = occupancy;
+            Observation = observation;
+            ExpectedOrdinal = expectedOrdinal;
+            ObservedOrdinal = observedOrdinal;
             ProducerValid = producerValid;
             AggregateUpdated = aggregateUpdated;
         }
@@ -440,8 +607,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public R5eAgentStepSnapshot PreStep { get; }
         public R5eAgentStepSnapshot Sample { get; }
         public OfficeRuntimeOccupancy.CanonicalActorSnapshot Occupancy { get; }
+        public R5eProductionObservation Observation { get; }
+        public int ExpectedOrdinal { get; }
+        public int ObservedOrdinal { get; }
         public bool ProducerValid { get; }
         public bool AggregateUpdated { get; }
+
+        public R5eSeatedSessionSampleRow Detached() => new R5eSeatedSessionSampleRow(
+            Context,
+            SamplePhase,
+            SeatedSessionId,
+            EntryTransactionId,
+            ActorId,
+            SeatId,
+            PreStep,
+            Sample,
+            Occupancy,
+            Observation.Detached(),
+            ExpectedOrdinal,
+            ObservedOrdinal,
+            ProducerValid,
+            AggregateUpdated);
     }
 
     internal readonly struct R5eLocomotionAdapterRow
@@ -475,6 +661,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             LastStepOrdinal = context.ActorStepOrdinal;
             FirstRuntimeTick = context.ActorRuntimeTick;
             LastRuntimeTick = context.ActorRuntimeTick;
+            StepDisplacementSum = after.LogicalRoot - before.LogicalRoot;
+            JoinedStepCount = 1;
+            RenderJoinValid = true;
+            DuplicateJoinCount = 0;
         }
 
         public R5eLocomotionAdapterRow(
@@ -489,7 +679,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ulong lastStepOrdinal,
             ulong firstRuntimeTick,
             ulong lastRuntimeTick,
-            DirectionalLocomotionFrameTrace renderTrace)
+            DirectionalLocomotionFrameTrace renderTrace,
+            Vector2 stepDisplacementSum,
+            int joinedStepCount,
+            bool renderJoinValid,
+            int duplicateJoinCount)
         {
             Context = new OfficeRuntimeStepTraceContext(
                 runId,
@@ -518,6 +712,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             LastStepOrdinal = lastStepOrdinal;
             FirstRuntimeTick = firstRuntimeTick;
             LastRuntimeTick = lastRuntimeTick;
+            StepDisplacementSum = stepDisplacementSum;
+            JoinedStepCount = joinedStepCount;
+            RenderJoinValid = renderJoinValid;
+            DuplicateJoinCount = duplicateJoinCount;
         }
 
         public OfficeRuntimeStepTraceContext Context { get; }
@@ -537,6 +735,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public ulong LastStepOrdinal { get; }
         public ulong FirstRuntimeTick { get; }
         public ulong LastRuntimeTick { get; }
+        public Vector2 StepDisplacementSum { get; }
+        public int JoinedStepCount { get; }
+        public bool RenderJoinValid { get; }
+        public int DuplicateJoinCount { get; }
     }
 
     internal readonly struct R5eVisualCaptureMetadataRow
@@ -604,6 +806,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _rows[Count++] = row;
             return true;
         }
+
+        public void Reset()
+        {
+            Array.Clear(_rows, 0, Count);
+            Count = 0;
+            DroppedRowCount = 0;
+            OverflowCount = 0;
+        }
     }
 
     internal sealed class OfficeRuntimeActorTraceState
@@ -650,13 +860,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public ulong HandoffThisRender { get; private set; }
         public int RenderFrame { get; private set; } = -1;
         public bool Failed { get; private set; }
+        public Vector2 StepDisplacementSumThisRender { get; private set; }
+        public int StepRowsThisRender { get; private set; }
+        public int DuplicateStepJoinCount { get; private set; }
+        private ulong _lastJoinedStepOrdinal;
 
         public void BeginStep(in OfficeRuntimeStepTraceContext context, ulong routeGeneration, ulong handoff)
         {
             if (!CaptureEnabled) return;
             if (RenderFrame != context.RenderFrame)
             {
-                RenderFrame = context.RenderFrame;
+                BeginRenderFrame(
+                    context.RenderFrame,
+                    routeGeneration,
+                    handoff,
+                    context.ActorStepOrdinal,
+                    context.ActorRuntimeTick);
+            }
+            if (StepRowsThisRender == 0)
+            {
                 FirstStepOrdinalThisRender = context.ActorStepOrdinal;
                 FirstRuntimeTickThisRender = context.ActorRuntimeTick;
             }
@@ -664,7 +886,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             LastRuntimeTickThisRender = context.ActorRuntimeTick;
             RouteGenerationThisRender = routeGeneration;
             HandoffThisRender = handoff;
-            if (!SeatedRows.HasCapacity(2)) Failed = true;
+        }
+
+        public void BeginRenderFrame(
+            int renderFrame,
+            ulong routeGeneration,
+            ulong handoff,
+            ulong firstStepOrdinal = 0,
+            ulong firstRuntimeTick = 0)
+        {
+            if (!CaptureEnabled || RenderFrame == renderFrame) return;
+            RenderFrame = renderFrame;
+            FirstStepOrdinalThisRender = firstStepOrdinal;
+            LastStepOrdinalThisRender = firstStepOrdinal;
+            FirstRuntimeTickThisRender = firstRuntimeTick;
+            LastRuntimeTickThisRender = firstRuntimeTick;
+            RouteGenerationThisRender = routeGeneration;
+            HandoffThisRender = handoff;
+            StepDisplacementSumThisRender = Vector2.zero;
+            StepRowsThisRender = 0;
+            DuplicateStepJoinCount = 0;
+            _lastJoinedStepOrdinal = 0;
         }
 
         public void OpenSeatedSession(ulong seatedSessionId, ulong entryTransactionId)
@@ -678,6 +920,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             SeatedSessionId = seatedSessionId;
             EntryTransactionId = entryTransactionId;
         }
+
+        public bool CanOpenSeatedSession(ulong seatedSessionId, ulong entryTransactionId) =>
+            !CaptureEnabled ||
+            (seatedSessionId != 0 && entryTransactionId != 0 && SeatedSessionId == 0);
 
         public void CloseSeatedSession()
         {
@@ -705,7 +951,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string seatId,
             in R5eAgentStepSnapshot preStep,
             in R5eAgentStepSnapshot sample,
-            in OfficeRuntimeOccupancy.CanonicalActorSnapshot occupancy)
+            in OfficeRuntimeOccupancy.CanonicalActorSnapshot occupancy,
+            in R5eProductionObservation observation)
         {
             if (!CaptureEnabled) return;
             if (SeatedSessionId == 0)
@@ -715,6 +962,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             bool stationary = sample.IsStationary(OfficeRuntimeTraceCoordinator.StationaryEpsilon);
             if (!stationary) SeatedViolationCount++;
+            int expectedOrdinal = phase == R5eSeatedSamplePhase.PreClear
+                ? ExpectedPreClearCount
+                : ExpectedPostClearCount;
+            int observedOrdinal = phase == R5eSeatedSamplePhase.PreClear
+                ? ObservedPreClearCount + 1
+                : ObservedPostClearCount + 1;
             var row = new R5eSeatedSessionSampleRow(
                 context,
                 phase,
@@ -725,7 +978,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 preStep,
                 sample,
                 occupancy,
-                true,
+                observation,
+                expectedOrdinal,
+                observedOrdinal,
+                observation.ProducerValid,
                 true);
             if (!SeatedRows.TryAppend(row)) Failed = true;
             if (phase == R5eSeatedSamplePhase.PreClear) ObservedPreClearCount++;
@@ -745,6 +1001,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!CaptureEnabled) return;
             if (!LocomotionRows.TryAppend(row)) Failed = true;
             if (row.ExpectedMoving && row.ObservedMoving) ObservedMovingCount++;
+            if (_lastJoinedStepOrdinal != 0 && row.Context.ActorStepOrdinal <= _lastJoinedStepOrdinal)
+                DuplicateStepJoinCount++;
+            _lastJoinedStepOrdinal = row.Context.ActorStepOrdinal;
+            if (!row.AtomicPlacement)
+                StepDisplacementSumThisRender += row.After.LogicalRoot - row.Before.LogicalRoot;
+            StepRowsThisRender++;
+        }
+
+        public void RecordExpectedExceptionPair(bool seated)
+        {
+            if (!CaptureEnabled || !seated) return;
+            ExpectedPreClearCount++;
+            ExpectedPostClearCount++;
+            Failed = true;
         }
 
         public void CountExpectedRender()
@@ -764,6 +1034,176 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (!CaptureEnabled) return;
             if (!TransitionRows.TryAppend(row)) Failed = true;
+        }
+
+        public bool HasStepCapacity(bool seated) =>
+            LocomotionRows.HasCapacity(1) && (!seated || SeatedRows.HasCapacity(2));
+
+        public bool HasRenderCapacity() => LocomotionRows.HasCapacity(1);
+        public bool HasTransitionCapacity(int rows) => TransitionRows.HasCapacity(rows);
+        public bool HasVisualCapacity() => VisualRows.HasCapacity(1);
+
+        public void AppendVisual(in R5eVisualCaptureMetadataRow row)
+        {
+            if (!CaptureEnabled) return;
+            if (!VisualRows.TryAppend(row)) Failed = true;
+        }
+
+        public bool CanImportCompletedScenario(OfficeRuntimeActorTraceState source)
+        {
+            if (source == null || !string.Equals(ActorId, source.ActorId, StringComparison.Ordinal))
+                return false;
+            if (source.Failed || source.TransitionRows.Overflowed || source.SeatedRows.Overflowed ||
+                source.LocomotionRows.Overflowed || source.VisualRows.Overflowed) return false;
+            int locomotionRequired = 0;
+            for (var index = 0; index < source.LocomotionRows.Count; index++)
+            {
+                R5eLocomotionAdapterRow row = source.LocomotionRows.Rows[index];
+                if (ShouldArchiveLocomotionRow(source, row)) locomotionRequired++;
+            }
+            return TransitionRows.HasCapacity(source.TransitionRows.Count) &&
+                   SeatedRows.HasCapacity(source.SeatedRows.Count) &&
+                   LocomotionRows.HasCapacity(locomotionRequired) &&
+                   VisualRows.HasCapacity(source.VisualRows.Count);
+        }
+
+        public bool TryImportCompletedScenario(OfficeRuntimeActorTraceState source)
+        {
+            if (!CanImportCompletedScenario(source)) return false;
+
+            for (var index = 0; index < source.TransitionRows.Count; index++)
+                if (!TransitionRows.TryAppend(source.TransitionRows.Rows[index].Detached())) return false;
+            for (var index = 0; index < source.SeatedRows.Count; index++)
+                if (!SeatedRows.TryAppend(source.SeatedRows.Rows[index].Detached())) return false;
+            for (var index = 0; index < source.LocomotionRows.Count; index++)
+            {
+                R5eLocomotionAdapterRow row = source.LocomotionRows.Rows[index];
+                if (!ShouldArchiveLocomotionRow(source, row)) continue;
+                if (!LocomotionRows.TryAppend(row)) return false;
+                if (row.IsRenderRow)
+                {
+                    ExpectedRenderedTraceCount++;
+                    ObservedRenderedTraceCount++;
+                    DuplicateStepJoinCount += row.DuplicateJoinCount;
+                }
+                else
+                {
+                    if (row.ExpectedMoving) ExpectedMovingCount++;
+                    if (row.ExpectedMoving && row.ObservedMoving) ObservedMovingCount++;
+                }
+            }
+            for (var index = 0; index < source.VisualRows.Count; index++)
+                if (!VisualRows.TryAppend(source.VisualRows.Rows[index])) return false;
+
+            ExpectedPreClearCount += source.ExpectedPreClearCount;
+            ObservedPreClearCount += source.ObservedPreClearCount;
+            ExpectedPostClearCount += source.ExpectedPostClearCount;
+            ObservedPostClearCount += source.ObservedPostClearCount;
+            ClearMaskedViolationCount += source.ClearMaskedViolationCount;
+            SeatedViolationCount += source.SeatedViolationCount;
+            return !Failed;
+        }
+
+        private static bool ShouldArchiveLocomotionRow(
+            OfficeRuntimeActorTraceState source,
+            in R5eLocomotionAdapterRow row)
+        {
+            if (!row.IsRenderRow)
+                return row.ExpectedMoving || row.ObservedMoving || row.AtomicPlacement || row.FirstWalk;
+            if (row.RenderTrace.IsMoving ||
+                row.RenderTrace.ActualDisplacement.sqrMagnitude >
+                OfficeRuntimeTraceCoordinator.StationaryEpsilon *
+                OfficeRuntimeTraceCoordinator.StationaryEpsilon) return true;
+            for (var index = 0; index < source.LocomotionRows.Count; index++)
+            {
+                R5eLocomotionAdapterRow step = source.LocomotionRows.Rows[index];
+                if (step.IsRenderRow || step.Context.RenderFrame != row.Context.RenderFrame) continue;
+                if (step.ExpectedMoving || step.ObservedMoving || step.AtomicPlacement || step.FirstWalk)
+                    return true;
+            }
+            return false;
+        }
+
+        public void ResetForQaCapture()
+        {
+            TransitionRows.Reset();
+            SeatedRows.Reset();
+            LocomotionRows.Reset();
+            VisualRows.Reset();
+            SeatedSessionId = 0;
+            EntryTransactionId = 0;
+            ExpectedPreClearCount = 0;
+            ObservedPreClearCount = 0;
+            ExpectedPostClearCount = 0;
+            ObservedPostClearCount = 0;
+            ClearMaskedViolationCount = 0;
+            SeatedViolationCount = 0;
+            ExpectedMovingCount = 0;
+            ObservedMovingCount = 0;
+            ExpectedRenderedTraceCount = 0;
+            ObservedRenderedTraceCount = 0;
+            FirstStepOrdinalThisRender = 0;
+            LastStepOrdinalThisRender = 0;
+            FirstRuntimeTickThisRender = 0;
+            LastRuntimeTickThisRender = 0;
+            RouteGenerationThisRender = 0;
+            HandoffThisRender = 0;
+            RenderFrame = -1;
+            Failed = false;
+            StepDisplacementSumThisRender = Vector2.zero;
+            StepRowsThisRender = 0;
+            DuplicateStepJoinCount = 0;
+            _lastJoinedStepOrdinal = 0;
+        }
+    }
+
+    internal sealed class OfficeRuntimeTraceArchive
+    {
+        private readonly OfficeRuntimeActorTraceState[] _states;
+
+        public OfficeRuntimeTraceArchive(IReadOnlyList<OfficeRuntimeAgent> actors)
+        {
+            if (actors == null || actors.Count != OfficeRuntimeTraceCoordinator.MaximumActors)
+                throw new ArgumentException("R5e archive requires four canonical actors.", nameof(actors));
+            _states = new OfficeRuntimeActorTraceState[actors.Count];
+            for (var index = 0; index < actors.Count; index++)
+                _states[index] = new OfficeRuntimeActorTraceState(
+                    index,
+                    actors[index].AgentId,
+                    true);
+        }
+
+        public IReadOnlyList<OfficeRuntimeActorTraceState> States => _states;
+        public int ImportedScenarioCount { get; private set; }
+        public int FailureCount { get; private set; }
+
+        public bool TryImportCompletedScenario(OfficeRuntimeTraceCoordinator coordinator)
+        {
+            if (coordinator == null || coordinator.FatalAbort ||
+                coordinator.RegisteredActorCount != _states.Length)
+            {
+                FailureCount++;
+                return false;
+            }
+            for (var index = 0; index < _states.Length; index++)
+            {
+                if (!_states[index].CanImportCompletedScenario(coordinator.ActorStateAt(index)))
+                {
+                    FailureCount++;
+                    return false;
+                }
+            }
+            for (var index = 0; index < _states.Length; index++)
+            {
+                if (!_states[index].TryImportCompletedScenario(coordinator.ActorStateAt(index)))
+                {
+                    FailureCount++;
+                    return false;
+                }
+            }
+            FailureCount += coordinator.FailureCount;
+            ImportedScenarioCount++;
+            return coordinator.FailureCount == 0;
         }
     }
 
@@ -803,12 +1243,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _actorStates = new OfficeRuntimeActorTraceState[maximumActors];
         }
 
-        public ulong RunId { get; }
-        public ulong ScenarioId { get; }
+        public ulong RunId { get; private set; }
+        public ulong ScenarioId { get; private set; }
         public bool CaptureEnabled { get; }
         public bool PublishActive { get; private set; }
         public int RegisteredActorCount { get; private set; }
         public int FailureCount { get; private set; }
+        public bool FatalAbort { get; private set; }
+        public string FatalReason { get; private set; } = string.Empty;
+        private string _faultActorId = string.Empty;
+        private R5eFaultInjectionPoint _faultPoint;
 
         internal OfficeRuntimeActorTraceState ActorStateAt(int index)
         {
@@ -858,6 +1302,30 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return context;
         }
 
+        public bool TryBeginActorStep(
+            OfficeRuntimeAgent actor,
+            int renderFrame,
+            int actorIndex,
+            int actorStepIndex,
+            int actorStepCount,
+            float actorMotionDelta,
+            float stepDelta,
+            out OfficeRuntimeStepTraceContext context)
+        {
+            context = default;
+            if (FatalAbort) return false;
+            OfficeRuntimeActorTraceState state = RequiredState(actorIndex, actor);
+            if (CaptureEnabled && !state.HasStepCapacity(actor.IsR5eSeatedPostState))
+            {
+                AbortFatal("actor-step-capacity-preflight");
+                return false;
+            }
+            context = BeginActorStep(
+                actor, renderFrame, actorIndex, actorStepIndex, actorStepCount,
+                actorMotionDelta, stepDelta);
+            return true;
+        }
+
         public void CountExpectedPreClear(
             in OfficeRuntimeStepTraceContext context,
             bool expectedSeated)
@@ -883,6 +1351,98 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public ulong AllocateTransactionId() => NextNonZero(ref _nextTransactionId);
         public ulong AllocateSeatedSessionId() => NextNonZero(ref _nextSessionId);
         public ulong AllocateMovementHandoffId() => NextNonZero(ref _nextHandoffId);
+
+        public bool TryReserveTransitionRows(OfficeRuntimeAgent actor, int rows)
+        {
+            if (FatalAbort) return false;
+            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
+            if (!CaptureEnabled || state.HasTransitionCapacity(rows)) return true;
+            AbortFatal("transition-capacity-preflight");
+            return false;
+        }
+
+        public bool TryPreflightRender(OfficeRuntimeAgent actor)
+        {
+            if (FatalAbort) return false;
+            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
+            if (!CaptureEnabled || state.HasRenderCapacity()) return true;
+            AbortFatal("render-capacity-preflight");
+            return false;
+        }
+
+        public void BeginRenderFrame(OfficeRuntimeAgent actor, int renderFrame)
+        {
+            if (!CaptureEnabled || FatalAbort) return;
+            actor.R5eTraceState.BeginRenderFrame(
+                renderFrame,
+                actor.R5eRouteGenerationId,
+                actor.R5eMovementHandoffId);
+        }
+
+        public bool TryPreflightVisual(OfficeRuntimeAgent actor)
+        {
+            if (FatalAbort) return false;
+            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
+            if (!CaptureEnabled || state.HasVisualCapacity()) return true;
+            AbortFatal("visual-capacity-preflight");
+            return false;
+        }
+
+        public void BeginQaCapture(ulong runId)
+        {
+            if (runId == 0) throw new ArgumentOutOfRangeException(nameof(runId));
+            RunId = runId;
+            ScenarioId = 0;
+            _nextActorStepOrdinal = 0;
+            _nextTransactionId = 0;
+            _nextSessionId = 0;
+            _nextHandoffId = 0;
+            _nextRenderOrdinal = 0;
+            FailureCount = 0;
+            FatalAbort = false;
+            FatalReason = string.Empty;
+            _faultActorId = string.Empty;
+            _faultPoint = R5eFaultInjectionPoint.None;
+            for (var index = 0; index < RegisteredActorCount; index++)
+                _actorStates[index].ResetForQaCapture();
+        }
+
+        public void SetScenarioId(ulong scenarioId)
+        {
+            if (scenarioId == 0) throw new ArgumentOutOfRangeException(nameof(scenarioId));
+            ScenarioId = scenarioId;
+        }
+
+        public void ArmFault(string actorId, R5eFaultInjectionPoint point)
+        {
+            _faultActorId = actorId ?? string.Empty;
+            _faultPoint = point;
+        }
+
+        public bool ConsumeFault(string actorId, R5eFaultInjectionPoint point)
+        {
+            if (_faultPoint != point ||
+                !string.Equals(_faultActorId, actorId, StringComparison.Ordinal)) return false;
+            _faultActorId = string.Empty;
+            _faultPoint = R5eFaultInjectionPoint.None;
+            return true;
+        }
+
+        public void AbortFatal(string reason)
+        {
+            if (FatalAbort) return;
+            FatalAbort = true;
+            FatalReason = reason ?? "r5e-fatal";
+            FailureCount++;
+        }
+
+        public void RecordActorStepException(
+            in OfficeRuntimeStepTraceContext context,
+            bool seatedBeforeException)
+        {
+            RequiredState(context.ActorIndex, null).RecordExpectedExceptionPair(seatedBeforeException);
+            AbortFatal("actor-step-exception:" + context.ActorIndex);
+        }
 
         public void EnterPublish()
         {
@@ -914,9 +1474,40 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 state.LastStepOrdinalThisRender,
                 state.FirstRuntimeTickThisRender,
                 state.LastRuntimeTickThisRender,
-                accepted);
+                accepted,
+                state.StepDisplacementSumThisRender,
+                state.StepRowsThisRender,
+                state.DuplicateStepJoinCount == 0 &&
+                Vector2.Distance(
+                    accepted.ActualDisplacement,
+                    state.StepDisplacementSumThisRender) <= StationaryEpsilon,
+                state.DuplicateStepJoinCount);
             state.AppendRender(row);
-            if (state.Failed) FailureCount++;
+            if (state.Failed) AbortFatal("render-append-failed");
+        }
+
+        public bool TryAppendVisualMetadata(OfficeRuntimeAgent actor, int renderFrame)
+        {
+            if (!CaptureEnabled) return true;
+            if (!TryPreflightVisual(actor)) return false;
+            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
+            var row = new R5eVisualCaptureMetadataRow(
+                RunId,
+                ScenarioId,
+                renderFrame,
+                actor.R5eRuntimeTick,
+                actor.AgentId,
+                actor.R5eCurrentTransitionTransactionId,
+                state.SeatedSessionId,
+                false,
+                false);
+            state.AppendVisual(row);
+            if (state.Failed)
+            {
+                AbortFatal("visual-append-failed");
+                return false;
+            }
+            return true;
         }
 
         private OfficeRuntimeActorTraceState RequiredState(int actorIndex, OfficeRuntimeAgent actor)

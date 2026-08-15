@@ -14,6 +14,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             int transitions,
             int seatedRows,
             int locomotionRows,
+            int visualRows,
             int overflowCount,
             int droppedRowCount,
             int producerFailureCount)
@@ -21,6 +22,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             TransitionRows = transitions;
             SeatedRows = seatedRows;
             LocomotionRows = locomotionRows;
+            VisualRows = visualRows;
             OverflowCount = overflowCount;
             DroppedRowCount = droppedRowCount;
             ProducerFailureCount = producerFailureCount;
@@ -29,11 +31,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public int TransitionRows { get; }
         public int SeatedRows { get; }
         public int LocomotionRows { get; }
+        public int VisualRows { get; }
         public int OverflowCount { get; }
         public int DroppedRowCount { get; }
         public int ProducerFailureCount { get; }
-        public bool Passed => TransitionRows > 0 && SeatedRows > 0 && LocomotionRows > 0 &&
-                              OverflowCount == 0 && DroppedRowCount == 0 && ProducerFailureCount == 0;
+        public bool ReadyForPostProcess => TransitionRows > 0 && SeatedRows > 0 &&
+                               LocomotionRows > 0 && VisualRows > 0 &&
+                               OverflowCount == 0 && DroppedRowCount == 0 && ProducerFailureCount == 0;
+        public bool Passed => false;
     }
 
     /// <summary>
@@ -47,12 +52,46 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string directory)
         {
             if (coordinator == null) throw new ArgumentNullException(nameof(coordinator));
-            if (string.IsNullOrWhiteSpace(directory)) throw new ArgumentException("Artifact directory is required.", nameof(directory));
-            Directory.CreateDirectory(directory);
-
             var actorStates = new List<OfficeRuntimeActorTraceState>(coordinator.RegisteredActorCount);
             for (var index = 0; index < coordinator.RegisteredActorCount; index++)
                 actorStates.Add(coordinator.ActorStateAt(index));
+            return WriteStates(actorStates, coordinator.FailureCount, directory);
+        }
+
+        public static OfficeSeatDockingR5eTraceWriteSummary WriteMany(
+            IReadOnlyList<OfficeRuntimeTraceCoordinator> coordinators,
+            string directory)
+        {
+            if (coordinators == null) throw new ArgumentNullException(nameof(coordinators));
+            var actorStates = new List<OfficeRuntimeActorTraceState>(coordinators.Count * 4);
+            int coordinatorFailures = 0;
+            for (var coordinatorIndex = 0; coordinatorIndex < coordinators.Count; coordinatorIndex++)
+            {
+                OfficeRuntimeTraceCoordinator coordinator = coordinators[coordinatorIndex];
+                if (coordinator == null) throw new InvalidOperationException(
+                    "R5e scenario coordinator packet contains a null entry.");
+                coordinatorFailures += coordinator.FailureCount;
+                for (var actorIndex = 0; actorIndex < coordinator.RegisteredActorCount; actorIndex++)
+                    actorStates.Add(coordinator.ActorStateAt(actorIndex));
+            }
+            return WriteStates(actorStates, coordinatorFailures, directory);
+        }
+
+        public static OfficeSeatDockingR5eTraceWriteSummary WriteArchive(
+            OfficeRuntimeTraceArchive archive,
+            string directory)
+        {
+            if (archive == null) throw new ArgumentNullException(nameof(archive));
+            return WriteStates(archive.States, archive.FailureCount, directory);
+        }
+
+        private static OfficeSeatDockingR5eTraceWriteSummary WriteStates(
+            IReadOnlyList<OfficeRuntimeActorTraceState> actorStates,
+            int coordinatorFailures,
+            string directory)
+        {
+            if (string.IsNullOrWhiteSpace(directory)) throw new ArgumentException("Artifact directory is required.", nameof(directory));
+            Directory.CreateDirectory(directory);
 
             string[] transitionHeader = OfficeSeatDockingTraceSchemas.TransitionHeader.Split(',');
             string[] seatedHeader = OfficeSeatDockingTraceSchemas.SeatedSessionHeader.Split(',');
@@ -70,6 +109,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 Path.Combine(directory, "locomotion-step-adapter-r5e.csv"),
                 locomotionHeader,
                 actorStates);
+            int visualRows = WriteVisualMetadata(
+                Path.Combine(directory, "visual-capture-metadata-r5e.csv"),
+                actorStates);
 
             int overflow = actorStates.Sum(state =>
                 state.TransitionRows.OverflowCount + state.SeatedRows.OverflowCount +
@@ -77,11 +119,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             int dropped = actorStates.Sum(state =>
                 state.TransitionRows.DroppedRowCount + state.SeatedRows.DroppedRowCount +
                 state.LocomotionRows.DroppedRowCount + state.VisualRows.DroppedRowCount);
-            int failures = coordinator.FailureCount + actorStates.Count(state => state.Failed);
+            int failures = coordinatorFailures + actorStates.Count(state => state.Failed);
             return new OfficeSeatDockingR5eTraceWriteSummary(
                 transitionRows,
                 seatedRows,
                 locomotionRows,
+                visualRows,
                 overflow,
                 dropped,
                 failures);
@@ -104,7 +147,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     R5eAgentStepSnapshot before = row.Before;
                     R5eAgentStepSnapshot after = row.After;
                     OfficeRuntimeStepTraceContext context = row.Context;
-                    R5eFurnitureTransformSnapshot chair = row.Plan.ChairSnapshot;
+                    R5eProductionObservation observedBefore = row.BeforeObservation;
+                    R5eProductionObservation observedAfter = row.AfterObservation;
+                    R5eFurnitureTransformSnapshot chair = observedBefore.ChairSnapshotValid
+                        ? observedBefore.Chair
+                        : row.Plan.ChairSnapshot;
+                    R5eFurnitureTransformSnapshot chairAfter = observedAfter.ChairSnapshotValid
+                        ? observedAfter.Chair
+                        : default;
                     string transactionKey = context.RunId + "|" + row.ActorId + "|" + row.TransactionId;
                     sequences.TryGetValue(transactionKey, out int eventSequence);
                     sequences[transactionKey] = ++eventSequence;
@@ -121,18 +171,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(values, "locomotionSample", row.LocomotionSample);
                     Set(values, "stateBefore", before.Phase);
                     Set(values, "stateAfter", after.Phase);
-                    Set(values, "claimBefore", before.Seated ? "occupied" : "reserved-or-released");
-                    Set(values, "claimAfter", after.Seated ? "occupied" : "released");
-                    Set(values, "occupancyBefore", before.Seated ? "seat" : "floor");
-                    Set(values, "occupancyAfter", after.Seated ? "seat" : "floor");
-                    Set(values, "chairSnapshotVersion", row.Plan.AnchorRevision);
-                    Set(values, "chairCommitVersion", row.Plan.AnchorRevision);
+                    Set(values, "claimBefore", ClaimState(observedBefore));
+                    Set(values, "claimAfter", ClaimState(observedAfter));
+                    Set(values, "occupancyBefore", observedBefore.Occupancy.CurrentCell);
+                    Set(values, "occupancyAfter", observedAfter.Occupancy.CurrentCell);
+                    Set(values, "chairSnapshotVersion", chair.LayoutRevision);
+                    Set(values, "chairCommitVersion", observedAfter.ChairSnapshotValid
+                        ? chairAfter.LayoutRevision : -1);
                     SetVector3(values, "chairPosBefore", chair.SemanticPosition);
                     SetQuaternion(values, "chairRotBefore", chair.SemanticRotation);
                     SetVector3(values, "chairScaleBefore", chair.SemanticScale);
-                    SetVector3(values, "chairPosAfter", chair.SemanticPosition);
-                    SetQuaternion(values, "chairRotAfter", chair.SemanticRotation);
-                    SetVector3(values, "chairScaleAfter", chair.SemanticScale);
+                    if (observedAfter.ChairSnapshotValid)
+                    {
+                        SetVector3(values, "chairPosAfter", chairAfter.SemanticPosition);
+                        SetQuaternion(values, "chairRotAfter", chairAfter.SemanticRotation);
+                        SetVector3(values, "chairScaleAfter", chairAfter.SemanticScale);
+                    }
                     SetVector(values, "dock", row.Plan.DockWorld);
                     SetVector(values, "seat", row.Plan.SeatPelvisWorld);
                     SetVector(values, "exit", row.ChosenExit);
@@ -142,16 +196,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(values, "quantizedVelocityFacing", ResolveFacing(after.CurrentVelocity, after.RenderedFacing));
                     Set(values, "forwardDot", ForwardDot(after.CurrentVelocity, after.RenderedFacing));
                     bool commit = row.CommitSucceeded;
-                    Set(values, "floorValid", commit);
-                    Set(values, "staticOverlap", false);
-                    Set(values, "chairOverlap", false);
-                    Set(values, "exitReservationOwner", row.TransitionKind == R5eSeatTransitionKind.Exit ? row.ActorId : string.Empty);
-                    Set(values, "preconditionMask", commit ? "all" : "precommit-failed");
+                    Set(values, "floorValid", observedAfter.FloorValid);
+                    Set(values, "staticOverlap", observedAfter.StaticOverlap);
+                    Set(values, "chairOverlap",
+                        observedAfter.StaticOverlap || observedAfter.DynamicOverlap);
+                    Set(values, "exitReservationOwner", observedAfter.ExitReserved ? row.ActorId : string.Empty);
+                    Set(values, "preconditionMask", observedAfter.ProducerValid
+                        ? (commit ? "measured" : "measured-no-commit") : "PENDING");
                     Set(values, "faultInjectionId", row.FaultInjectionId);
                     Set(values, "commitSucceeded", row.CommitSucceeded);
                     Set(values, "rollbackSucceeded", row.RollbackSucceeded);
-                    Set(values, "gcAllocBytes", 0);
-                    Set(values, "frameMs", 0f);
+                    Set(values, "gcAllocBytes", observedAfter.AllocationBytes);
+                    Set(values, "frameMs", observedAfter.FrameMs);
                     Set(values, "render_frame", context.RenderFrame);
                     Set(values, "sim_step", context.ActorStepOrdinal);
                     Set(values, "member", row.ActorId);
@@ -185,37 +241,43 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(values, "chairFacing", chair.ChairFacing);
                     Set(values, "chairRotation", chair.ChairFacing);
                     Set(values, "footprintRevision", chair.LayoutRevision);
-                    Set(values, "layoutRevisionBefore", chair.LayoutRevision);
-                    Set(values, "layoutRevisionPrecommit", chair.LayoutRevision);
+                    Set(values, "layoutRevisionBefore", observedBefore.Occupancy.Revision);
+                    Set(values, "layoutRevisionPrecommit", observedAfter.Occupancy.Revision);
+                    Set(values, "occupancyRevisionBefore", observedBefore.Occupancy.Revision);
+                    Set(values, "occupancyRevisionPrecommit", observedAfter.Occupancy.Revision);
                     Set(values, "anchorRevisionBefore", row.Plan.AnchorRevision);
                     Set(values, "anchorRevisionPrecommit", row.Plan.AnchorRevision);
                     Set(values, "chairParentIdBefore", chair.SemanticParentId);
-                    Set(values, "chairParentIdPrecommit", chair.SemanticParentId);
+                    Set(values, "chairParentIdPrecommit", observedAfter.ChairSnapshotValid
+                        ? chairAfter.SemanticParentId : 0);
                     Set(values, "chairVisualParentIdBefore", chair.VisualParentId);
-                    Set(values, "chairVisualParentIdPrecommit", chair.VisualParentId);
-                    SetVector3(values, "chairPosPrecommit", chair.SemanticPosition);
-                    SetQuaternion(values, "chairRotPrecommit", chair.SemanticRotation);
-                    SetVector3(values, "chairScalePrecommit", chair.SemanticScale);
+                    Set(values, "chairVisualParentIdPrecommit", observedAfter.ChairSnapshotValid
+                        ? chairAfter.VisualParentId : 0);
+                    if (observedAfter.ChairSnapshotValid)
+                    {
+                        SetVector3(values, "chairPosPrecommit", chairAfter.SemanticPosition);
+                        SetQuaternion(values, "chairRotPrecommit", chairAfter.SemanticRotation);
+                        SetVector3(values, "chairScalePrecommit", chairAfter.SemanticScale);
+                    }
                     Set(values, "chairSnapshotHashBefore", chair.Hash);
-                    Set(values, "chairSnapshotHashPrecommit", chair.Hash);
+                    Set(values, "chairSnapshotHashPrecommit", observedAfter.ChairSnapshotValid
+                        ? chairAfter.Hash : 0UL);
                     SetVector(values, "approach", row.Plan.ApproachWorld);
                     SetVector(values, "seatRoot", row.Plan.SeatRootWorld);
-                    Set(values, "staticClearance", commit ? 1f : 0f);
-                    Set(values, "dynamicClearance", commit ? 1f : 0f);
-                    Set(values, "seatReservedBefore", row.TransitionKind == R5eSeatTransitionKind.Entry);
-                    Set(values, "seatReservedAfter", after.Seated);
-                    Set(values, "seatOccupiedBefore", before.Seated);
-                    Set(values, "seatOccupiedAfter", after.Seated);
-                    Set(values, "exitReservedBefore", false);
-                    Set(values, "exitReservedAfter", false);
-                    Set(values, "forbiddenColliderCount", 0);
-                    Set(values, "forbiddenCollider2DCount", 0);
-                    Set(values, "forbiddenRigidbodyCount", 0);
-                    Set(values, "forbiddenRigidbody2DCount", 0);
-                    Set(values, "forbiddenNavMeshAgentCount", 0);
-                    Set(values, "forbiddenAvoidanceCount", 0);
-                    Set(values, "visibleBodyCount", 1);
-                    Set(values, "actualFurnitureOcclusionExternalPixels", 0);
+                    Set(values, "staticClearance", observedAfter.StaticOverlap ? 0f : 1f);
+                    Set(values, "dynamicClearance", observedAfter.DynamicOverlap ? 0f : 1f);
+                    Set(values, "seatReservedBefore", observedBefore.SeatReserved);
+                    Set(values, "seatReservedAfter", observedAfter.SeatReserved);
+                    Set(values, "seatOccupiedBefore", observedBefore.SeatOccupied);
+                    Set(values, "seatOccupiedAfter", observedAfter.SeatOccupied);
+                    Set(values, "exitReservedBefore", observedBefore.ExitReserved);
+                    Set(values, "exitReservedAfter", observedAfter.ExitReserved);
+                    Set(values, "forbiddenColliderCount", observedAfter.ForbiddenColliderCount);
+                    Set(values, "forbiddenCollider2DCount", observedAfter.ForbiddenCollider2DCount);
+                    Set(values, "forbiddenRigidbodyCount", observedAfter.ForbiddenRigidbodyCount);
+                    Set(values, "forbiddenRigidbody2DCount", observedAfter.ForbiddenRigidbody2DCount);
+                    Set(values, "forbiddenNavMeshAgentCount", observedAfter.ForbiddenNavMeshAgentCount);
+                    Set(values, "visibleBodyCount", observedAfter.VisibleBodyCount);
                     Set(values, "preSnapshotHash", SnapshotHash(before));
                     Set(values, "postSnapshotHash", SnapshotHash(after));
                     Set(values, "eventSequence", eventSequence);
@@ -238,40 +300,46 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(values, "traceWindowExceeded", actor.TransitionRows.Overflowed);
                     Set(values, "runtimeStepIndex", context.ActorStepIndex);
                     Set(values, "runtimeStepCount", context.ActorStepCount);
-                    Set(values, "gcProfilerValid", true);
-                    Set(values, "mainThreadProfilerValid", true);
+                    Set(values, "gcProfilerValid", observedAfter.ProducerValid);
+                    Set(values, "mainThreadProfilerValid", observedAfter.ProducerValid);
                     Set(values, "profilerFrame", context.RenderFrame);
-                    Set(values, "traceProducerAllocBytes", 0);
-                    Set(values, "floorCellX", row.TransitionKind == R5eSeatTransitionKind.Exit ? row.Plan.Exit(ResolveExitKind(row.Plan, row.ChosenExit)).Cell.X : row.Plan.Seat.Cell.X);
-                    Set(values, "floorCellY", row.TransitionKind == R5eSeatTransitionKind.Exit ? row.Plan.Exit(ResolveExitKind(row.Plan, row.ChosenExit)).Cell.Y : row.Plan.Seat.Cell.Y);
-                    Set(values, "chairClearance", commit ? 1f : 0f);
+                    Set(values, "traceProducerAllocBytes", observedAfter.AllocationBytes);
+                    Set(values, "floorCellX", observedAfter.Occupancy.CurrentCell.X);
+                    Set(values, "floorCellY", observedAfter.Occupancy.CurrentCell.Y);
+                    Set(values, "chairClearance", observedAfter.StaticOverlap ? 0f : 1f);
                     Set(values, "actualFurnitureOcclusionEvidenceValid", false);
-                    Set(values, "actualFurnitureOcclusionMaskPixels", 0);
-                    Set(values, "actorTransactionSnapshotHashBefore", SnapshotHash(before));
-                    Set(values, "actorTransactionSnapshotHashAfter", SnapshotHash(after));
-                    Set(values, "observedChairSnapshotHashBefore", chair.Hash);
-                    Set(values, "observedChairSnapshotHashPrecommit", chair.Hash);
-                    Set(values, "observedChairMutation", false);
+                    Set(values, "actorTransactionSnapshotHashBefore",
+                        TransactionSnapshotHash(before, observedBefore));
+                    Set(values, "actorTransactionSnapshotHashAfter",
+                        TransactionSnapshotHash(after, observedAfter));
+                    Set(values, "observedChairSnapshotHashBefore", observedBefore.ChairSnapshotValid
+                        ? observedBefore.Chair.Hash : 0UL);
+                    Set(values, "observedChairSnapshotHashPrecommit", observedAfter.ChairSnapshotValid
+                        ? observedAfter.Chair.Hash : 0UL);
+                    Set(values, "observedChairMutation",
+                        observedBefore.ChairSnapshotValid && observedAfter.ChairSnapshotValid &&
+                        observedBefore.Chair.Hash != observedAfter.Chair.Hash);
                     Set(values, "candidateKind", row.TransitionKind == R5eSeatTransitionKind.Exit ? ResolveExitKind(row.Plan, row.ChosenExit).ToString() : "Dock");
                     Set(values, "turnCompleted", row.EventKind == R5eSeatTransitionEventKind.TurnComplete || row.EventKind == R5eSeatTransitionEventKind.FirstWalk);
                     Set(values, "turnTargetFacing", after.RenderedFacing);
                     Set(values, "turnDisplacement", row.EventKind == R5eSeatTransitionEventKind.TurnComplete ? after.ActualDisplacement.magnitude : 0f);
                     Set(values, "movementHandoffId", after.MovementHandoffId);
                     Set(values, "locomotionTraceRowId", context.ActorStepOrdinal);
-                    Set(values, "locomotionJoinFound", context.ActorStepOrdinal != 0);
+                    Set(values, "locomotionJoinFound", HasLocomotionStep(
+                        actor,
+                        context.RunId,
+                        context.ActorStepOrdinal));
                     Set(values, "movingTickExpectedCount", actor.ExpectedMovingCount);
                     Set(values, "movingTickObservedCount", actor.ObservedMovingCount);
                     Set(values, "movingTickMissingCount", Math.Max(0, actor.ExpectedMovingCount - actor.ObservedMovingCount));
-                    Set(values, "wrongFacingCount", 0);
-                    Set(values, "strafeCount", 0);
-                    Set(values, "frontFacingLateralCount", 0);
-                    Set(values, "backwardLookingCount", 0);
-                    Set(values, "standWhileMovingCount", 0);
-                    Set(values, "chairFootOnSeatCount", 0);
-                    Set(values, "bodyDescendRiseCount", 0);
-                    Set(values, "bodyPopCount", 0);
-                    Set(values, "chairDeskPenetrationCount", 0);
-                    Set(values, "defaultOnlyFieldMask", 0);
+                    R5eLocomotionCounts motionCounts = CountLocomotion(actor);
+                    Set(values, "wrongFacingCount", motionCounts.WrongFacing);
+                    Set(values, "strafeCount", motionCounts.Strafe);
+                    Set(values, "frontFacingLateralCount", motionCounts.FrontLateral);
+                    Set(values, "backwardLookingCount", motionCounts.Backward);
+                    // Pixel/mask/video fields are deliberately PENDING until the reachable
+                    // post-process writes decoded and human-review packets.
+                    Set(values, "defaultOnlyFieldMask", observedAfter.ProducerValid ? 511 : 1023);
                     lines.Add(CsvLine(header, values));
                 }
             }
@@ -314,17 +382,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     SetVector(values, "occupancyPosition", row.Occupancy.Position);
                     Set(values, "occupancyCellX", row.Occupancy.CurrentCell.X);
                     Set(values, "occupancyCellY", row.Occupancy.CurrentCell.Y);
-                    Set(values, "claimState", "occupied");
-                    Set(values, "occupancyState", "seat");
-                    Set(values, "seatReserved", true);
-                    Set(values, "seatOccupied", true);
+                    Set(values, "chairSnapshotVersion", row.Observation.ChairSnapshotValid
+                        ? row.Observation.Chair.LayoutRevision : 0);
+                    Set(values, "chairSnapshotHash", row.Observation.ChairSnapshotValid
+                        ? row.Observation.Chair.Hash : 0UL);
+                    Set(values, "claimState", row.Observation.SeatOccupied
+                        ? "occupied"
+                        : row.Observation.SeatReserved ? "reserved" : "released");
+                    Set(values, "occupancyState", row.Observation.Occupancy.IsPresent
+                        ? (row.Observation.SeatOccupied ? "seat" : "floor")
+                        : "absent");
+                    Set(values, "seatReserved", row.Observation.SeatReserved);
+                    Set(values, "seatOccupied", row.Observation.SeatOccupied);
                     Set(values, "locomotionSample", false);
-                    Set(values, "expectedOrdinal", index + 1);
-                    Set(values, "observedOrdinal", index + 1);
-                    Set(values, "phasePairValid", true);
-                    Set(values, "producerValid", row.ProducerValid);
+                    Set(values, "expectedOrdinal", row.ExpectedOrdinal);
+                    Set(values, "observedOrdinal", row.ObservedOrdinal);
+                    Set(values, "phasePairValid", row.ExpectedOrdinal == row.ObservedOrdinal);
+                    Set(values, "producerValid", row.ProducerValid &&
+                        row.Observation.ChairSnapshotValid &&
+                        row.Observation.Occupancy.IsPresent);
                     Set(values, "aggregateUpdated", row.AggregateUpdated);
-                    Set(values, "traceProducerAllocBytes", 0);
+                    Set(values, "traceProducerAllocBytes", row.Observation.AllocationBytes);
                     Set(values, "expectedPreClearSampleCount", actor.ExpectedPreClearCount);
                     Set(values, "observedPreClearSampleCount", actor.ObservedPreClearCount);
                     Set(values, "expectedPostClearSampleCount", actor.ExpectedPostClearCount);
@@ -353,33 +431,53 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(summary, "schemaVersion", OfficeSeatDockingTraceSchemas.SchemaVersion);
                     Set(summary, "runId", first.Context.RunId);
                     Set(summary, "scenarioId", first.Context.ScenarioId);
-                    Set(summary, "rowKind", "SessionSummary");
+                    Set(summary, "rowKind", "Summary");
                     Set(summary, "actorId", first.ActorId);
                     Set(summary, "seatedSessionId", group.Key);
                     Set(summary, "entryTransactionId", first.EntryTransactionId);
                     Set(summary, "seatId", first.SeatId);
                     int pre = group.Count(row => row.SamplePhase == R5eSeatedSamplePhase.PreClear);
                     int post = group.Count(row => row.SamplePhase == R5eSeatedSamplePhase.PostClear);
-                    Set(summary, "expectedPreClearSampleCount", pre);
+                    int expectedPre = group
+                        .Where(row => row.SamplePhase == R5eSeatedSamplePhase.PreClear)
+                        .Select(row => row.ExpectedOrdinal)
+                        .DefaultIfEmpty(0)
+                        .Max();
+                    int expectedPost = group
+                        .Where(row => row.SamplePhase == R5eSeatedSamplePhase.PostClear)
+                        .Select(row => row.ExpectedOrdinal)
+                        .DefaultIfEmpty(0)
+                        .Max();
+                    int ordinalMismatch = group.Count(row => row.ExpectedOrdinal != row.ObservedOrdinal);
+                    int duplicatePairs = group.GroupBy(row =>
+                            row.Context.ActorRuntimeTick + ":" + row.SamplePhase)
+                        .Sum(rows => Math.Max(0, rows.Count() - 1));
+                    Set(summary, "expectedPreClearSampleCount", expectedPre);
                     Set(summary, "observedPreClearSampleCount", pre);
-                    Set(summary, "expectedPostClearSampleCount", post);
+                    Set(summary, "expectedPostClearSampleCount", expectedPost);
                     Set(summary, "observedPostClearSampleCount", post);
-                    Set(summary, "expectedStepPairCount", Math.Min(pre, post));
+                    Set(summary, "expectedStepPairCount", Math.Min(expectedPre, expectedPost));
                     Set(summary, "observedStepPairCount", Math.Min(pre, post));
-                    Set(summary, "missingPhasePairCount", Math.Abs(pre - post));
-                    Set(summary, "duplicatePhasePairCount", 0);
+                    Set(summary, "missingPhasePairCount",
+                        Math.Abs(expectedPre - pre) + Math.Abs(expectedPost - post));
+                    Set(summary, "duplicatePhasePairCount", duplicatePairs);
                     Set(summary, "firstTick", group.Min(row => row.Context.ActorRuntimeTick));
                     Set(summary, "lastTick", group.Max(row => row.Context.ActorRuntimeTick));
-                    Set(summary, "sequenceGapCount", 0);
+                    Set(summary, "sequenceGapCount", ordinalMismatch);
                     Set(summary, "droppedRowCount", actor.SeatedRows.DroppedRowCount);
                     Set(summary, "overflowCount", actor.SeatedRows.OverflowCount);
                     Set(summary, "violationCount", actor.SeatedViolationCount);
                     Set(summary, "clearMaskedViolationCount", actor.ClearMaskedViolationCount);
                     Set(summary, "maxAbsVelocity", group.Max(row => row.Sample.CurrentVelocity.magnitude));
                     Set(summary, "maxAbsDebt", group.Max(row => Mathf.Abs(row.Sample.VisibleMotionDebtSeconds)));
-                    Set(summary, "producerValid", group.All(row => row.ProducerValid));
+                    Set(summary, "producerValid", group.All(row =>
+                        row.ProducerValid && row.Observation.ChairSnapshotValid &&
+                        row.Observation.Occupancy.IsPresent &&
+                        row.Observation.AllocationBytes == 0));
                     Set(summary, "aggregateUpdated", group.All(row => row.AggregateUpdated));
-                    Set(summary, "phasePairValid", pre == post && pre > 0);
+                    Set(summary, "phasePairValid",
+                        expectedPre == pre && expectedPost == post && pre == post && pre > 0 &&
+                        ordinalMismatch == 0 && duplicatePairs == 0);
                     lines.Add(CsvLine(header, summary));
                 }
             }
@@ -417,7 +515,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(values, "stepDelta", row.Context.StepDelta);
                     SetVector(values, "positionBefore", row.Before.LogicalRoot);
                     SetVector(values, "positionAfter", row.After.LogicalRoot);
-                    Vector2 delta = row.After.LogicalRoot - row.Before.LogicalRoot;
+                    Vector2 delta = row.IsRenderRow
+                        ? row.StepDisplacementSum
+                        : row.After.LogicalRoot - row.Before.LogicalRoot;
                     SetVector(values, "rootDelta", delta);
                     Set(values, "atomicPlacement", row.AtomicPlacement);
                     SetVector(values, "agentLastActualDisplacement", row.After.ActualDisplacement);
@@ -427,10 +527,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(values, "expectedMoving", row.ExpectedMoving);
                     Set(values, "observedMoving", row.ObservedMoving);
                     Set(values, "firstWalk", row.FirstWalk);
-                    int quantized = ResolveFacing(row.After.CurrentVelocity, row.After.RenderedFacing);
+                    Vector2 facingMotion = row.IsRenderRow
+                        ? row.RenderTrace.ActualDisplacement
+                        : delta;
+                    int renderedFacing = row.IsRenderRow
+                        ? row.RenderTrace.DisplayDirection
+                        : row.After.RenderedFacing;
+                    int quantized = ResolveFacing(facingMotion, renderedFacing);
                     Set(values, "quantizedVelocityFacing", quantized);
-                    Set(values, "renderedFacing", row.After.RenderedFacing);
-                    Set(values, "forwardDot", ForwardDot(row.After.CurrentVelocity, row.After.RenderedFacing));
+                    Set(values, "renderedFacing", renderedFacing);
+                    Set(values, "forwardDot", ForwardDot(facingMotion, renderedFacing));
                     Set(values, "renderAdapterOrdinal", row.RenderOrdinal);
                     Set(values, "renderFirstActorStepOrdinal", row.FirstStepOrdinal);
                     Set(values, "renderLastActorStepOrdinal", row.LastStepOrdinal);
@@ -445,9 +551,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(values, "renderSprite", row.RenderTrace.SpriteName);
                     Set(values, "renderFlipX", row.RenderTrace.FlipX);
                     Set(values, "renderIsMoving", row.RenderTrace.IsMoving);
-                    SetVector(values, "stepDisplacementSum", delta);
-                    Set(values, "renderDisplacementMatchesStepSum", !row.IsRenderRow || row.FirstStepOrdinal != 0);
-                    Set(values, "renderJoinValid", !row.IsRenderRow || row.FirstStepOrdinal != 0);
+                    SetVector(values, "stepDisplacementSum", row.StepDisplacementSum);
+                    Set(values, "renderDisplacementMatchesStepSum", !row.IsRenderRow ||
+                        Vector2.Distance(row.RenderTrace.ActualDisplacement, row.StepDisplacementSum) <= 0.000001f);
+                    Set(values, "renderJoinValid", !row.IsRenderRow || row.RenderJoinValid);
                     Set(values, "expectedMovingCount", actor.ExpectedMovingCount);
                     Set(values, "observedMovingCount", actor.ObservedMovingCount);
                     Set(values, "joinedMovingCount", actor.ObservedMovingCount);
@@ -455,16 +562,58 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Set(values, "expectedRenderedTraceCount", actor.ExpectedRenderedTraceCount);
                     Set(values, "observedRenderedTraceCount", actor.ObservedRenderedTraceCount);
                     Set(values, "missingRenderedTraceCount", Math.Max(0, actor.ExpectedRenderedTraceCount - actor.ObservedRenderedTraceCount));
-                    Set(values, "duplicateRenderedTraceCount", 0);
-                    Set(values, "acceptedTraceOneToOneValid", actor.ExpectedRenderedTraceCount == actor.ObservedRenderedTraceCount);
-                    bool wrong = row.ObservedMoving && (quantized != row.After.RenderedFacing || ForwardDot(row.After.CurrentVelocity, row.After.RenderedFacing) < 0.92f);
+                    Set(values, "duplicateRenderedTraceCount", row.DuplicateJoinCount);
+                    Set(values, "acceptedTraceOneToOneValid",
+                        actor.ExpectedRenderedTraceCount == actor.ObservedRenderedTraceCount &&
+                        (!row.IsRenderRow || row.RenderJoinValid));
+                    bool moving = row.IsRenderRow ? row.RenderTrace.IsMoving : row.ObservedMoving;
+                    float forwardDot = ForwardDot(facingMotion, renderedFacing);
+                    bool wrong = moving && (quantized != renderedFacing || forwardDot < 0.92f);
                     Set(values, "wrongFacingCount", wrong ? 1 : 0);
                     Set(values, "strafeCount", wrong ? 1 : 0);
-                    Set(values, "frontFacingLateralCount", 0);
-                    Set(values, "backwardLookingCount", 0);
+                    Set(values, "frontFacingLateralCount",
+                        moving && (renderedFacing == 0 || renderedFacing == 4) &&
+                        Mathf.Abs(facingMotion.x) > Mathf.Abs(facingMotion.y) ? 1 : 0);
+                    Set(values, "backwardLookingCount", moving && forwardDot < 0f ? 1 : 0);
                     Set(values, "producerValid", !actor.Failed);
                     Set(values, "droppedRowCount", actor.LocomotionRows.DroppedRowCount);
                     Set(values, "overflowCount", actor.LocomotionRows.OverflowCount);
+                    lines.Add(CsvLine(header, values));
+                }
+            }
+            WriteLines(path, header, lines);
+            return lines.Count;
+        }
+
+        private static int WriteVisualMetadata(
+            string path,
+            IReadOnlyList<OfficeRuntimeActorTraceState> actors)
+        {
+            string[] header =
+            {
+                "schemaVersion", "runId", "scenarioId", "frame", "runtimeTick", "actorId",
+                "transactionId", "seatedSessionId", "cleanFrameObserved",
+                "evidenceAtlasObserved", "postProcessStatus"
+            };
+            var lines = new List<string>();
+            foreach (OfficeRuntimeActorTraceState actor in actors)
+            {
+                for (var index = 0; index < actor.VisualRows.Count; index++)
+                {
+                    R5eVisualCaptureMetadataRow row = actor.VisualRows.Rows[index];
+                    var values = NewRow(header);
+                    Set(values, "schemaVersion", OfficeSeatDockingTraceSchemas.SchemaVersion);
+                    Set(values, "runId", row.RunId);
+                    Set(values, "scenarioId", row.ScenarioId);
+                    Set(values, "frame", row.Frame);
+                    Set(values, "runtimeTick", row.RuntimeTick);
+                    Set(values, "actorId", row.ActorId);
+                    Set(values, "transactionId", row.TransactionId);
+                    Set(values, "seatedSessionId", row.SeatedSessionId);
+                    Set(values, "cleanFrameObserved", row.CleanFrameObserved);
+                    Set(values, "evidenceAtlasObserved", row.EvidenceAtlasObserved);
+                    Set(values, "postProcessStatus",
+                        row.CleanFrameObserved && row.EvidenceAtlasObserved ? "READY" : "PENDING");
                     lines.Add(CsvLine(header, values));
                 }
             }
@@ -499,6 +648,53 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             sessionId != 0 && counts.TryGetValue(SessionKey(runId, actorId, sessionId), out SessionCount count)
                 ? count
                 : default;
+
+        private static string ClaimState(in R5eProductionObservation observation)
+        {
+            if (observation.SeatOccupied) return "occupied";
+            if (observation.SeatReserved) return "reserved";
+            return "released";
+        }
+
+        private static bool HasLocomotionStep(
+            OfficeRuntimeActorTraceState actor,
+            ulong runId,
+            ulong ordinal)
+        {
+            if (ordinal == 0) return false;
+            for (var index = 0; index < actor.LocomotionRows.Count; index++)
+            {
+                R5eLocomotionAdapterRow row = actor.LocomotionRows.Rows[index];
+                if (!row.IsRenderRow && row.Context.RunId == runId &&
+                    row.Context.ActorStepOrdinal == ordinal) return true;
+            }
+            return false;
+        }
+
+        private static R5eLocomotionCounts CountLocomotion(OfficeRuntimeActorTraceState actor)
+        {
+            var result = new R5eLocomotionCounts();
+            for (var index = 0; index < actor.LocomotionRows.Count; index++)
+            {
+                R5eLocomotionAdapterRow row = actor.LocomotionRows.Rows[index];
+                Vector2 motion = row.IsRenderRow
+                    ? row.RenderTrace.ActualDisplacement
+                    : row.After.LogicalRoot - row.Before.LogicalRoot;
+                bool moving = row.IsRenderRow ? row.RenderTrace.IsMoving : row.ObservedMoving;
+                if (!moving) continue;
+                int rendered = row.IsRenderRow
+                    ? row.RenderTrace.DisplayDirection
+                    : row.After.RenderedFacing;
+                int quantized = ResolveFacing(motion, rendered);
+                float dot = ForwardDot(motion, rendered);
+                if (quantized != rendered || dot < 0.92f) result.WrongFacing++;
+                if (quantized != rendered) result.Strafe++;
+                if ((rendered == 0 || rendered == 4) &&
+                    Mathf.Abs(motion.x) > Mathf.Abs(motion.y)) result.FrontLateral++;
+                if (dot < 0f) result.Backward++;
+            }
+            return result;
+        }
 
         private static string SessionKey(ulong runId, string actorId, ulong sessionId) =>
             runId + "|" + actorId + "|" + sessionId;
@@ -612,6 +808,30 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
         }
 
+        private static ulong TransactionSnapshotHash(
+            in R5eAgentStepSnapshot snapshot,
+            in R5eProductionObservation observation)
+        {
+            unchecked
+            {
+                ulong hash = SnapshotHash(snapshot);
+                Add(ref hash, observation.Occupancy.Position.x);
+                Add(ref hash, observation.Occupancy.Position.y);
+                Add(ref hash, observation.Occupancy.DesiredVelocity.x);
+                Add(ref hash, observation.Occupancy.DesiredVelocity.y);
+                Add(ref hash, observation.Occupancy.StuckSeconds);
+                Add(ref hash, observation.Occupancy.CurrentCell.X);
+                Add(ref hash, observation.Occupancy.CurrentCell.Y);
+                Add(ref hash, observation.Occupancy.ReservationCount);
+                Add(ref hash, (int)(observation.Occupancy.Epoch & uint.MaxValue));
+                Add(ref hash, (int)(observation.Occupancy.Epoch >> 32));
+                Add(ref hash, observation.Occupancy.IsPresent ? 1 : 0);
+                Add(ref hash, observation.SeatReserved ? 1 : 0);
+                Add(ref hash, observation.SeatOccupied ? 1 : 0);
+                return hash;
+            }
+        }
+
         private static void Add(ref ulong hash, float value) => Add(ref hash, BitConverter.SingleToInt32Bits(value));
 
         private static void Add(ref ulong hash, int value)
@@ -694,6 +914,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             public int ExpectedPairs { get; }
             public int ObservedPairs { get; }
+        }
+
+        private struct R5eLocomotionCounts
+        {
+            public int WrongFacing;
+            public int Strafe;
+            public int FrontLateral;
+            public int Backward;
         }
     }
 }

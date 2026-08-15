@@ -220,6 +220,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 PrepareAttendanceArrivals();
                 BindCoordinators();
+                foreach (OfficeRuntimeAgent actor in Actors)
+                    actor?.PreloadR5eSeatPresentation();
                 IsReady = true;
                 _building = false;
                 _layoutSnapshots.Clear();

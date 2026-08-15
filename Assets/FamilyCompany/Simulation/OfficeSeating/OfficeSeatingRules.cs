@@ -536,12 +536,18 @@ namespace FamilyCompany.Simulation.OfficeSeating
 
         public void CommitPreparedRuntimeOccupy(in PreparedRuntimeMutation prepared)
         {
+            if (!IsPreparedRuntimeMutationCurrent(prepared) ||
+                prepared.Kind != PreparedRuntimeMutationKind.Occupy)
+                throw new InvalidOperationException("Prepared seat occupy mutation is stale.");
             prepared._seat.RuntimeState = OfficeSeatMeaningState.Occupied;
             _runtimeMutationVersion++;
         }
 
         public void CommitPreparedRuntimeRelease(in PreparedRuntimeMutation prepared)
         {
+            if (!IsPreparedRuntimeMutationCurrent(prepared) ||
+                prepared.Kind != PreparedRuntimeMutationKind.Release)
+                throw new InvalidOperationException("Prepared seat release mutation is stale.");
             string releasedToken = prepared._seat.Token;
             prepared._seat.RuntimeMemberId = null;
             prepared._seat.Token = null;
@@ -549,6 +555,32 @@ namespace FamilyCompany.Simulation.OfficeSeating
             _activeSeatByMember.Remove(prepared.MemberId);
             _activeSeatByToken.Remove(releasedToken);
             _runtimeMutationVersion++;
+        }
+
+        public void RollbackPreparedRuntimeOccupy(in PreparedRuntimeMutation prepared)
+        {
+            if (!ReferenceEquals(prepared._owner, this) || prepared._seat == null ||
+                prepared.Kind != PreparedRuntimeMutationKind.Occupy ||
+                _runtimeMutationVersion != prepared.Version + 1UL ||
+                prepared._seat.RuntimeState != OfficeSeatMeaningState.Occupied)
+                throw new InvalidOperationException("Committed seat occupy mutation cannot be rolled back exactly.");
+            prepared._seat.RuntimeState = OfficeSeatMeaningState.Reserved;
+            _runtimeMutationVersion = prepared.Version;
+        }
+
+        public void RollbackPreparedRuntimeRelease(in PreparedRuntimeMutation prepared)
+        {
+            if (!ReferenceEquals(prepared._owner, this) || prepared._seat == null ||
+                prepared.Kind != PreparedRuntimeMutationKind.Release ||
+                _runtimeMutationVersion != prepared.Version + 1UL ||
+                prepared._seat.RuntimeState != OfficeSeatMeaningState.Unassigned)
+                throw new InvalidOperationException("Committed seat release mutation cannot be rolled back exactly.");
+            prepared._seat.RuntimeMemberId = prepared.MemberId;
+            prepared._seat.Token = prepared.Token;
+            prepared._seat.RuntimeState = OfficeSeatMeaningState.Occupied;
+            _activeSeatByMember[prepared.MemberId] = prepared._seat.SeatId;
+            _activeSeatByToken[prepared.Token] = prepared._seat.SeatId;
+            _runtimeMutationVersion = prepared.Version;
         }
 
         public bool TryRelease(string token, out OfficeSeatOperationResult result)
