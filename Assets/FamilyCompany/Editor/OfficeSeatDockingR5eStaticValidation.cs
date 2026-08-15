@@ -126,6 +126,12 @@ namespace FamilyCompany.Editor
             Type transition = RequireType(
                 presentation,
                 "FamilyCompany.Presentation.Unity.OfficeRuntime.R5eSeatTransitionTraceRow");
+            Type atomicPrimitive = RequireType(
+                presentation,
+                "FamilyCompany.Presentation.Unity.OfficeRuntime.OfficeSeatDockingAtomicPublishPrimitive");
+            Type productionFixture = RequireType(
+                presentation,
+                "FamilyCompany.Presentation.Unity.OfficeRuntime.Qa.OfficeSeatDockingR5eProductionStaticFixture");
             Require(archive.GetMethod("TryImportCompletedScenario") != null,
                 "production scenario archive import");
             Require(writer.GetMethod("WriteArchive") != null,
@@ -133,6 +139,10 @@ namespace FamilyCompany.Editor
             Require(observation.GetMethod("Detached") != null &&
                     transition.GetMethod("Detached") != null,
                 "detached value-only trace snapshots");
+            Require(atomicPrimitive.GetMethod("TryPublish") != null,
+                "shared allocation-free production atomic primitive");
+            Require(productionFixture.GetMethod("Run") != null,
+                "executable production writer/transaction fixture");
         }
 
         private static void AssertLifecycle(string[] actual, bool success, bool exit)

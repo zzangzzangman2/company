@@ -659,6 +659,73 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _qaInvalidatedAtomicAgentId = agentId;
         }
 
+        /// <summary>
+        /// Creates an engine-object-free occupancy owner for the executable production transaction
+        /// fixture. The fixture then calls the same current/commit/rollback/complete methods as the
+        /// game; it cannot enter navigation or collision code without a real presenter.
+        /// </summary>
+        internal static OfficeRuntimeOccupancy CreateProductionTransactionFixture(
+            string agentId,
+            Vector2 position,
+            OfficeGridCoordinate cell,
+            float radius,
+            int revision)
+        {
+            if (revision <= 0) throw new ArgumentOutOfRangeException(nameof(revision));
+            string canonical = RequiredId(agentId);
+            if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
+                throw new ArgumentOutOfRangeException(nameof(radius));
+            var result = new OfficeRuntimeOccupancy { Revision = revision };
+            result._actors.Add(canonical, new ActorState
+            {
+                AgentId = canonical,
+                Position = position,
+                DesiredVelocity = Vector2.zero,
+                Radius = radius,
+                StuckSeconds = 0f,
+                CurrentCell = cell,
+                IsPresent = true,
+                Epoch = 1
+            });
+            return result;
+        }
+
+        internal bool TryPrepareProductionTransactionFixturePlacement(
+            string agentId,
+            Vector2 targetWorld,
+            OfficeGridCoordinate targetCell,
+            out PreparedAtomicActorPlacement prepared)
+        {
+            prepared = default;
+            ActorState actor = RequiredActor(agentId);
+            if (!actor.IsPresent || actor.PlacementBackupActive ||
+                actor.Reservations.Count > ActorState.AtomicReservationCapacity) return false;
+            actor.PlacementBackupCount = 0;
+            foreach (OfficeGridCoordinate cell in actor.Reservations)
+                actor.PlacementBackup[actor.PlacementBackupCount++] = cell;
+            actor.PlacementCorridorCount = CaptureOwnedCorridors(
+                actor.AgentId,
+                actor.PlacementCorridorBackup);
+            actor.PlacementPosition = actor.Position;
+            actor.PlacementDesiredVelocity = actor.DesiredVelocity;
+            actor.PlacementStuckSeconds = actor.StuckSeconds;
+            actor.PlacementCell = actor.CurrentCell;
+            actor.PlacementEpoch = actor.Epoch;
+            actor.PlacementBackupActive = true;
+            prepared = new PreparedAtomicActorPlacement(
+                actor,
+                targetWorld,
+                targetCell,
+                Revision,
+                actor.Epoch,
+                false,
+                0,
+                0,
+                0,
+                0);
+            return true;
+        }
+
         public void ClearReservations(string agentId)
         {
             if (_actors.TryGetValue(agentId ?? string.Empty, out ActorState actor))

@@ -29,6 +29,12 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         "Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/Qa/OfficeSeatDockingR5eScenarioCatalog.cs";
     private const string StaticAggregatorSource =
         "Assets/FamilyCompany/Editor/OfficeSeatDockingR5eStaticValidation.cs";
+    private const string ProductionFixtureSource =
+        "Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/Qa/OfficeSeatDockingR5eProductionStaticFixture.cs";
+    private const string PostProcessorSource = "Tools/OfficeSeatDockingR5ePostProcessor.cs";
+    private const string MaskAnalyzerSource = "Tools/OfficeSeatDockingR5eMaskAnalyzer.cs";
+    private const string StaticSelfTestSource = "Tools/Invoke-OfficeSeatDockingR5eStaticSelfTest.ps1";
+    private const string PostProcessEntrypointSource = "Tools/Invoke-OfficeSeatDockingR5ePostProcess.ps1";
 
     private static readonly SchemaContract[] Schemas =
     {
@@ -58,7 +64,8 @@ internal static class OfficeSeatDockingR5eOfflineHarness
                 "OFFICE_SEAT_DOCKING_R5E_OFFLINE: PASS " +
                 "schemas=253/110/74/118/20 transitionCapacity=512 " +
                 "seatedCapacity=49152 locomotionCapacity=24576 visualCapacity=2048 " +
-                "negativeFixtures=20 scenarioCases=158 legacyClipOracle=unused");
+                "legacyModelNegativeFixtures=20 actualPacketNegativeFixtures=5 " +
+                "scenarioCases=158 legacyClipOracle=unused");
             return 0;
         }
         catch (Exception exception)
@@ -229,6 +236,9 @@ internal static class OfficeSeatDockingR5eOfflineHarness
                  !runner.Contains("_scenarioCoordinators", StringComparison.Ordinal) &&
                  runner.Contains("PENDING_POSTPROCESS", StringComparison.Ordinal),
             "atomic Release observer/visual runner contract is incomplete or stale");
+        Require(!runner.Contains("if (!_visualOwner) yield break;", StringComparison.Ordinal) &&
+                runner.Contains("yield return RunVisualCycle();", StringComparison.Ordinal),
+            "observer flag installs an inert zero-denominator runner");
         string writer = Read(root, TraceWriterSource);
         Require(writer.Contains("Post-window only serializer", StringComparison.Ordinal) &&
                 writer.Contains("seat-transition-events-r5e.csv", StringComparison.Ordinal) &&
@@ -268,6 +278,52 @@ internal static class OfficeSeatDockingR5eOfflineHarness
                 writer.Contains("row.RenderTrace.ActualDisplacement", StringComparison.Ordinal) &&
                 writer.Contains("PENDING", StringComparison.Ordinal),
             "trace writer uses default declarations instead of live producer values/PENDING visual state");
+
+        string productionFixture = Read(root, ProductionFixtureSource);
+        Require(productionFixture.Contains(
+                    "OfficeSeatDockingR5eScenarioCatalog.ParseAndValidateJson", StringComparison.Ordinal) &&
+                productionFixture.Contains("for (var index = 0; index < plan.Cases.Length; index++)",
+                    StringComparison.Ordinal) &&
+                productionFixture.Contains("TryPrepareProductionTransactionFixturePlacement",
+                    StringComparison.Ordinal) &&
+                productionFixture.Contains("CommitPreparedAtomicActorPlacement", StringComparison.Ordinal) &&
+                productionFixture.Contains("RollbackPreparedAtomicActorPlacement", StringComparison.Ordinal) &&
+                productionFixture.Contains("OfficeSeatDockingAtomicPublishPrimitive.TryPublish",
+                    StringComparison.Ordinal) &&
+                productionFixture.Contains("OfficeSeatDockingR5eTraceWriter.WriteProductionStaticFixture",
+                    StringComparison.Ordinal),
+            "executable 158-case production transaction/writer fixture is absent");
+        Require(agent.Contains("OfficeSeatDockingAtomicPublishPrimitive.TryPublish", StringComparison.Ordinal) &&
+                CountOccurrences(agent, "OfficeSeatDockingAtomicPublishPrimitive.TryPublish") == 2,
+            "live entry/exit do not share the source-compiled atomic primitive with the fixture");
+        string postProcessor = Read(root, PostProcessorSource);
+        Require(postProcessor.Contains("status=PENDING_POSTPROCESS", StringComparison.Ordinal) &&
+                postProcessor.Contains("ProbeVideo", StringComparison.Ordinal) &&
+                postProcessor.Contains("expectedFrameSampleCount", StringComparison.Ordinal) &&
+                postProcessor.Contains("chair-r5e-static-fixture-complete.marker", StringComparison.Ordinal) &&
+                postProcessor.Contains("chair-r5e-complete.marker", StringComparison.Ordinal),
+            "deterministic decoded/human completion producer is absent");
+        string maskAnalyzer = Read(root, MaskAnalyzerSource);
+        Require(maskAnalyzer.Contains("ReadPgm", StringComparison.Ordinal) &&
+                maskAnalyzer.Contains("Intersection", StringComparison.Ordinal) &&
+                maskAnalyzer.Contains("CountLargeComponents", StringComparison.Ordinal) &&
+                maskAnalyzer.Contains("source-frame identity mismatch", StringComparison.Ordinal) &&
+                maskAnalyzer.Contains("mask-analyzer-complete.marker", StringComparison.Ordinal),
+            "decoded semantic-mask producer is absent or default-only");
+        string staticSelfTest = Read(root, StaticSelfTestSource);
+        Require(staticSelfTest.Contains("OfficeSeatDockingR5eProductionFixtureRunner", StringComparison.Ordinal) &&
+                staticSelfTest.Contains("OfficeSeatDockingR5ePostProcessor", StringComparison.Ordinal) &&
+                staticSelfTest.Contains("-TraceDirectory $productionFixtureTrace", StringComparison.Ordinal) &&
+                staticSelfTest.Contains("SCENARIO_NEGATIVE", StringComparison.Ordinal) &&
+                staticSelfTest.Contains("MASK_NEGATIVE", StringComparison.Ordinal) &&
+                staticSelfTest.Contains("POSTPROCESS_NEGATIVE", StringComparison.Ordinal),
+            "static gate does not execute production writer/parser/postprocessor roundtrip");
+        string postProcessEntrypoint = Read(root, PostProcessEntrypointSource);
+        Require(postProcessEntrypoint.Contains("OfficeSeatDockingR5eMaskAnalyzer", StringComparison.Ordinal) &&
+                postProcessEntrypoint.Contains("OfficeSeatDockingR5ePostProcessor", StringComparison.Ordinal) &&
+                postProcessEntrypoint.Contains("process0", StringComparison.Ordinal) &&
+                postProcessEntrypoint.Contains("POSTPROCESS_ENTRYPOINT: PASS", StringComparison.Ordinal),
+            "offline postprocess gate has no deterministic executable entrypoint");
     }
 
     private static void ValidateLifecycleFixtures()
@@ -325,7 +381,11 @@ internal static class OfficeSeatDockingR5eOfflineHarness
     private static void ValidateTraceDirectory(string directory, Dictionary<string, string[]> headers)
     {
         Require(Directory.Exists(directory), "trace directory does not exist: " + directory);
-        foreach (SchemaContract schema in Schemas)
+        bool staticProductionPacket = IsStaticProductionPacket(directory);
+        IEnumerable<SchemaContract> requiredSchemas = staticProductionPacket
+            ? Schemas.Take(3)
+            : Schemas;
+        foreach (SchemaContract schema in requiredSchemas)
         {
             string path = Path.Combine(directory, schema.FileName);
             Require(File.Exists(path), "missing trace file: " + schema.FileName);
@@ -340,11 +400,151 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         ValidateTransitionCsv(Path.Combine(directory, Schemas[0].FileName), headers["TransitionHeader"]);
         ValidateSeatedCsv(Path.Combine(directory, Schemas[1].FileName), headers["SeatedSessionHeader"]);
         ValidateLocomotionCsv(Path.Combine(directory, Schemas[2].FileName), headers["LocomotionAdapterHeader"]);
+        ValidateVisualMetadataCsv(
+            Path.Combine(directory, "visual-capture-metadata-r5e.csv"),
+            !staticProductionPacket);
+        ValidateScenarioResultsCsv(Path.Combine(directory, "chair-r5e-scenario-results.csv"));
+        if (staticProductionPacket)
+        {
+            ValidateDecodedCsv(Path.Combine(directory, Schemas[3].FileName), headers["DecodedFrameHeader"]);
+            ValidateHumanCsv(Path.Combine(directory, Schemas[4].FileName), headers["HumanReviewHeader"]);
+            ValidateStaticProductionEnvelope(directory);
+            ValidateActualPacketNegativeFixtures(directory, headers);
+            return;
+        }
         ValidateDecodedCsv(Path.Combine(directory, Schemas[3].FileName), headers["DecodedFrameHeader"]);
         ValidateHumanCsv(Path.Combine(directory, Schemas[4].FileName), headers["HumanReviewHeader"]);
-        ValidateVisualMetadataCsv(Path.Combine(directory, "visual-capture-metadata-r5e.csv"));
-        ValidateScenarioResultsCsv(Path.Combine(directory, "chair-r5e-scenario-results.csv"));
         ValidateRuntimeEnvelope(directory);
+    }
+
+    private static bool IsStaticProductionPacket(string directory)
+    {
+        string path = Path.Combine(directory, "chair-r5e-runtime-result.txt");
+        return File.Exists(path) && File.ReadAllText(path).Contains(
+            "fixtureKind=production-static",
+            StringComparison.Ordinal);
+    }
+
+    private static void ValidateStaticProductionEnvelope(string directory)
+    {
+        string path = Path.Combine(directory, "chair-r5e-runtime-result.txt");
+        Require(File.Exists(path), "production static result missing");
+        string text = File.ReadAllText(path);
+        Require(text.Contains("status=PENDING_POSTPROCESS", StringComparison.Ordinal) &&
+                text.Contains("fixtureKind=production-static", StringComparison.Ordinal) &&
+                text.Contains("scenarioExpected=158", StringComparison.Ordinal) &&
+                text.Contains("scenarioObserved=158", StringComparison.Ordinal) &&
+                text.Contains("legacyClipOracle=unused", StringComparison.Ordinal),
+            "production static packet escaped PENDING or lost coverage identity");
+        string marker = Path.Combine(directory, "chair-r5e-static-fixture-complete.marker");
+        Require(File.Exists(marker) && File.ReadAllText(marker).Contains(
+                "complete=true", StringComparison.Ordinal),
+            "static postprocessor completion marker missing");
+    }
+
+    private static void ValidateActualPacketNegativeFixtures(
+        string directory,
+        Dictionary<string, string[]> headers)
+    {
+        string scratch = Path.Combine(
+            Path.GetTempPath(),
+            "chair-r5e-actual-negative-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        try
+        {
+            string transition = Path.Combine(directory, Schemas[0].FileName);
+            string seated = Path.Combine(directory, Schemas[1].FileName);
+            string locomotion = Path.Combine(directory, Schemas[2].FileName);
+
+            string missingColumn = Path.Combine(scratch, "missing-column.csv");
+            string[] transitionLines = File.ReadAllLines(transition);
+            transitionLines[0] = string.Join(",", ParseCsv(transitionLines[0]).Take(252));
+            File.WriteAllLines(missingColumn, transitionLines, new UTF8Encoding(false));
+            ExpectFailureContains(
+                () => ValidateTransitionCsv(missingColumn, headers["TransitionHeader"]),
+                "header/order mismatch",
+                "actual transition missing column");
+
+            string missingWalk = Path.Combine(scratch, "missing-first-walk.csv");
+            File.WriteAllLines(
+                missingWalk,
+                File.ReadAllLines(transition)
+                    .Where(line => !line.Contains(",FirstWalk,", StringComparison.Ordinal)),
+                new UTF8Encoding(false));
+            ExpectFailureContains(
+                () => ValidateTransitionCsv(missingWalk, headers["TransitionHeader"]),
+                "lifecycle mismatch",
+                "actual transition missing FirstWalk");
+
+            string rollbackMismatch = Path.Combine(scratch, "rollback-hash.csv");
+            MutateFirstRow(
+                transition,
+                rollbackMismatch,
+                headers["TransitionHeader"],
+                row => Value(row, "event") == "Rollback",
+                "actorTransactionSnapshotHashAfter",
+                "18446744073709551614");
+            ExpectFailureContains(
+                () => ValidateTransitionCsv(rollbackMismatch, headers["TransitionHeader"]),
+                "rollback was not byte-equivalent",
+                "actual rollback snapshot hash");
+
+            string clearMasked = Path.Combine(scratch, "clear-masked.csv");
+            MutateFirstRow(
+                seated,
+                clearMasked,
+                headers["SeatedSessionHeader"],
+                row => Value(row, "rowKind") == "Sample" && Value(row, "samplePhase") == "PreClear",
+                "visibleMotionDebtSeconds",
+                "0.25");
+            ExpectFailureContains(
+                () => ValidateSeatedCsv(clearMasked, headers["SeatedSessionHeader"]),
+                "seated stationary invariant",
+                "actual pre-clear debt");
+
+            string duplicateRender = Path.Combine(scratch, "duplicate-render.csv");
+            string[] locomotionLines = File.ReadAllLines(locomotion);
+            string renderLine = locomotionLines.First(line => line.Contains(",Render,", StringComparison.Ordinal));
+            File.WriteAllLines(
+                duplicateRender,
+                locomotionLines.Concat(new[] { renderLine }),
+                new UTF8Encoding(false));
+            ExpectFailureContains(
+                () => ValidateLocomotionCsv(duplicateRender, headers["LocomotionAdapterHeader"]),
+                "render row missing/duplicated",
+                "actual duplicate render");
+        }
+        finally
+        {
+            if (Directory.Exists(scratch)) Directory.Delete(scratch, true);
+        }
+    }
+
+    private static void MutateFirstRow(
+        string source,
+        string target,
+        string[] header,
+        Func<Dictionary<string, string>, bool> predicate,
+        string column,
+        string replacement)
+    {
+        string[] lines = File.ReadAllLines(source);
+        int columnIndex = Array.IndexOf(header, column);
+        Require(columnIndex >= 0, "negative mutation column missing: " + column);
+        bool changed = false;
+        for (var index = 1; index < lines.Length; index++)
+        {
+            List<string> values = ParseCsv(lines[index]);
+            Require(values.Count == header.Length, "negative source row width mismatch");
+            var row = new Dictionary<string, string>(StringComparer.Ordinal);
+            for (var item = 0; item < header.Length; item++) row.Add(header[item], values[item]);
+            if (changed || !predicate(row)) continue;
+            values[columnIndex] = replacement;
+            lines[index] = string.Join(",", values.Select(EscapeCsv));
+            changed = true;
+        }
+        Require(changed, "negative mutation target row missing: " + column);
+        File.WriteAllLines(target, lines, new UTF8Encoding(false));
     }
 
     private static void ValidateTransitionCsv(string path, string[] header)
@@ -559,7 +759,7 @@ internal static class OfficeSeatDockingR5eOfflineHarness
     private static bool IsActuallyMoving(Dictionary<string, string> row) =>
         Value(row, "rowKind") == "Render" ? IsTrue(row, "renderIsMoving") : IsTrue(row, "observedMoving");
 
-    private static void ValidateVisualMetadataCsv(string path)
+    private static void ValidateVisualMetadataCsv(string path, bool requireReady)
     {
         Require(File.Exists(path), "visual metadata producer file missing");
         string[] expected =
@@ -575,6 +775,11 @@ internal static class OfficeSeatDockingR5eOfflineHarness
                                                  (Value(row, "postProcessStatus") == "PENDING" ||
                                                   Value(row, "postProcessStatus") == "READY")),
             "visual capture producer hook is unreachable/default-only");
+        if (requireReady)
+            Require(rows.All(row => IsTrue(row, "cleanFrameObserved") &&
+                                    IsTrue(row, "evidenceAtlasObserved") &&
+                                    Value(row, "postProcessStatus") == "READY"),
+                "runtime PASS retained PENDING/unobserved visual metadata");
     }
 
     private static void ValidateScenarioResultsCsv(string path)
@@ -837,6 +1042,14 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         return values;
     }
 
+    private static string EscapeCsv(string value)
+    {
+        string text = value ?? string.Empty;
+        return text.IndexOfAny(new[] { ',', '"', '\r', '\n' }) < 0
+            ? text
+            : "\"" + text.Replace("\"", "\"\"") + "\"";
+    }
+
     private static string ExtractLiteral(string source, string constantName)
     {
         Match declaration = Regex.Match(source,
@@ -955,6 +1168,23 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         catch (InvalidOperationException)
         {
             return;
+        }
+        throw new InvalidOperationException("negative fixture unexpectedly passed: " + name);
+    }
+
+    private static void ExpectFailureContains(Action action, string expected, string name)
+    {
+        try
+        {
+            action();
+        }
+        catch (InvalidOperationException exception)
+        {
+            if (exception.Message.Contains(expected, StringComparison.Ordinal)) return;
+            throw new InvalidOperationException(
+                "negative fixture failed at the wrong oracle: " + name +
+                " expected='" + expected + "' actual='" + exception.Message + "'",
+                exception);
         }
         throw new InvalidOperationException("negative fixture unexpectedly passed: " + name);
     }

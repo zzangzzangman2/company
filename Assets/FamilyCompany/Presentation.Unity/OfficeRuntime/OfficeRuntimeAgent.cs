@@ -2383,53 +2383,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return false;
             }
 
-            bool claimCommitted = false;
-            bool placementCommitted = false;
-            bool publishSucceeded = false;
+            var publisher = new R5eEntryAtomicPublisher(
+                this,
+                preparedClaim,
+                preparedPlacement,
+                agentSnapshot,
+                plan,
+                workProfile,
+                sessionId,
+                transactionId);
+            bool publishSucceeded;
             _r5ePublishActive = true;
             _r5eTraceCoordinator.EnterPublish();
             try
             {
-                ThrowIfR5eFault(R5eFaultInjectionPoint.BeforeClaim);
-                _seatClaim.CommitPreparedOccupy(preparedClaim);
-                claimCommitted = true;
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterClaim);
-                _world.Occupancy.CommitPreparedAtomicActorPlacement(preparedPlacement);
-                placementCommitted = true;
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterOccupancy);
-                transform.position = new Vector3(
-                    plan.SeatRootWorld.x,
-                    plan.SeatRootWorld.y,
-                    transform.position.z);
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterRoot);
-                ResetVisualPose();
-                _animator.EnterCompletedSeatedWorkAfterAtomicPlacement(_seatDirection);
-                ApplySeatAnchorPlacement(
-                    workProfile,
-                    new Vector3(plan.SeatPelvisWorld.x, plan.SeatPelvisWorld.y, 0f));
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterRenderer);
-                RebaseAfterAtomicPlacement(plan.SeatRootWorld, _seatDirection);
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterRebase);
-                Phase = OfficeRuntimeAgentPhase.Working;
-                CurrentActivity = _destination.HasValue
-                    ? _destination.Value.Activity
-                    : OfficeActivity.Work;
-                _arrived = true;
-                _seatFacingAlignedBeforeSitDown = true;
-                _r5eSeatedSessionId = sessionId;
-                _r5eLastClosedSeatedSessionId = 0;
-                _r5eEntryTransactionId = transactionId;
-                _r5eActiveDockingPlan = plan;
-                publishSucceeded = true;
-            }
-            catch (Exception)
-            {
-                if (placementCommitted)
-                    _world.Occupancy.RollbackPreparedAtomicActorPlacement(preparedPlacement);
-                else
-                    _world.Occupancy.CancelPreparedAtomicActorPlacement(preparedPlacement);
-                if (claimCommitted) _seatClaim.RollbackPreparedOccupy(preparedClaim);
-                RestoreR5eAtomicAgentSnapshot(agentSnapshot);
+                publishSucceeded = OfficeSeatDockingAtomicPublishPrimitive.TryPublish(ref publisher);
             }
             finally
             {
@@ -2606,69 +2574,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ulong handoffId = _r5eTraceCoordinator.AllocateMovementHandoffId();
             OfficeSeatSlot releasedSeat = _seat;
             OfficeSeatRuntimeClaim releasedClaim = _seatClaim;
-            bool claimCommitted = false;
-            bool placementCommitted = false;
-            bool publishSucceeded = false;
+            var publisher = new R5eExitAtomicPublisher(
+                this,
+                releasedClaim,
+                preparedClaim,
+                preparedPlacement,
+                reservationScope,
+                agentSnapshot,
+                exitAnchor,
+                exitWorld,
+                exitDirection,
+                handoffId,
+                transactionId,
+                preparedQaOutward);
+            bool publishSucceeded;
             _r5ePublishActive = true;
             _r5eTraceCoordinator.EnterPublish();
             try
             {
-                ThrowIfR5eFault(R5eFaultInjectionPoint.BeforeClaim);
-                releasedClaim.CommitPreparedRelease(preparedClaim);
-                claimCommitted = true;
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterClaim);
-                _world.Occupancy.CommitPreparedAtomicActorPlacement(preparedPlacement);
-                placementCommitted = true;
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterOccupancy);
-                transform.position = new Vector3(exitWorld.x, exitWorld.y, transform.position.z);
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterRoot);
-                ResetVisualPose();
-                _animator.LeaveCompletedSeatedWorkAfterAtomicPlacement(exitDirection);
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterRenderer);
-                RebaseAfterAtomicPlacement(exitWorld, exitDirection);
-                ThrowIfR5eFault(R5eFaultInjectionPoint.AfterRebase);
-                _seat = null;
-                _seatClaim = null;
-                _releaseSeatRequested = false;
-                _alignedClip = null;
-                _alignedFrame = -1;
-                _seatedUpperBodyCutoffPx = float.NaN;
-                ClearSeatedUpperBodyProtection();
-                _seatPresentationPrepared = false;
-                _seatAlignmentComplete = false;
-                _finishingWorkPresentationObserved = false;
-                _seatEgressReservationActive = false;
-                _seatEgressWaiting = false;
-                _seatEgressReachedSafeAnchor = true;
-                _hasCompletedSeatEgress = true;
-                _lastCompletedSeatEgressKind = exitAnchor.Kind;
-                _lastCompletedSeatEgressCell = exitAnchor.Cell;
-                _lastCompletedSeatEgressWorld = exitWorld;
-                _lastCompletedSeatEgressClearanceValid = true;
-                _r5ePendingMovementHandoffId = handoffId;
-                _r5eActiveMovementHandoffId = 0;
-                _r5eExitTransactionId = transactionId;
-                _r5eExitTurnDirection = exitDirection;
-                _r5eExitTurnPending = true;
-                _r5eQaPreparedOutwardRoute = preparedQaOutward.HasValue;
-                if (preparedQaOutward.HasValue) _pendingDestination = preparedQaOutward;
-                _r5eQaOutwardRouteRequested = false;
-                _r5eTurnCompleteTick = 0;
-                _r5eLastClosedSeatedSessionId = _r5eSeatedSessionId;
-                _r5eSeatedSessionId = 0;
-                Phase = OfficeRuntimeAgentPhase.LeavingSeat;
-                CurrentActivity = OfficeActivity.Break;
-                publishSucceeded = true;
-            }
-            catch (Exception)
-            {
-                if (placementCommitted)
-                    _world.Occupancy.RollbackPreparedAtomicActorPlacement(preparedPlacement);
-                else
-                    _world.Occupancy.CancelPreparedAtomicActorPlacement(preparedPlacement);
-                if (claimCommitted) releasedClaim.RollbackPreparedRelease(preparedClaim);
-                _world.Occupancy.RestoreAtomicReservationScope(reservationScope);
-                RestoreR5eAtomicAgentSnapshot(agentSnapshot);
+                publishSucceeded = OfficeSeatDockingAtomicPublishPrimitive.TryPublish(ref publisher);
             }
             finally
             {
@@ -2979,6 +2903,183 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public Vector3 LocalPosition { get; }
             public Quaternion LocalRotation { get; }
             public Vector3 LocalScale { get; }
+        }
+
+        private struct R5eEntryAtomicPublisher : IR5eAtomicPublishSteps
+        {
+            private readonly OfficeRuntimeAgent _owner;
+            private readonly OfficeSeatingState.PreparedRuntimeMutation _claim;
+            private readonly OfficeRuntimeOccupancy.PreparedAtomicActorPlacement _placement;
+            private readonly R5eAtomicAgentSnapshot _snapshot;
+            private readonly OfficeSeatDockingPlan _plan;
+            private readonly OfficeCharacterSeatPoseProfile _workProfile;
+            private readonly ulong _sessionId;
+            private readonly ulong _transactionId;
+
+            public R5eEntryAtomicPublisher(
+                OfficeRuntimeAgent owner,
+                in OfficeSeatingState.PreparedRuntimeMutation claim,
+                in OfficeRuntimeOccupancy.PreparedAtomicActorPlacement placement,
+                in R5eAtomicAgentSnapshot snapshot,
+                in OfficeSeatDockingPlan plan,
+                OfficeCharacterSeatPoseProfile workProfile,
+                ulong sessionId,
+                ulong transactionId)
+            {
+                _owner = owner;
+                _claim = claim;
+                _placement = placement;
+                _snapshot = snapshot;
+                _plan = plan;
+                _workProfile = workProfile;
+                _sessionId = sessionId;
+                _transactionId = transactionId;
+            }
+
+            public void ThrowIfFault(R5eFaultInjectionPoint point) => _owner.ThrowIfR5eFault(point);
+            public void CommitClaim() => _owner._seatClaim.CommitPreparedOccupy(_claim);
+            public void CommitOccupancy() =>
+                _owner._world.Occupancy.CommitPreparedAtomicActorPlacement(_placement);
+            public void CommitRoot() => _owner.transform.position = new Vector3(
+                _plan.SeatRootWorld.x,
+                _plan.SeatRootWorld.y,
+                _owner.transform.position.z);
+            public void CommitRenderer()
+            {
+                _owner.ResetVisualPose();
+                _owner._animator.EnterCompletedSeatedWorkAfterAtomicPlacement(_owner._seatDirection);
+                _owner.ApplySeatAnchorPlacement(
+                    _workProfile,
+                    new Vector3(_plan.SeatPelvisWorld.x, _plan.SeatPelvisWorld.y, 0f));
+            }
+            public void CommitRebase() =>
+                _owner.RebaseAfterAtomicPlacement(_plan.SeatRootWorld, _owner._seatDirection);
+            public void CommitState()
+            {
+                _owner.Phase = OfficeRuntimeAgentPhase.Working;
+                _owner.CurrentActivity = _owner._destination.HasValue
+                    ? _owner._destination.Value.Activity
+                    : OfficeActivity.Work;
+                _owner._arrived = true;
+                _owner._seatFacingAlignedBeforeSitDown = true;
+                _owner._r5eSeatedSessionId = _sessionId;
+                _owner._r5eLastClosedSeatedSessionId = 0;
+                _owner._r5eEntryTransactionId = _transactionId;
+                _owner._r5eActiveDockingPlan = _plan;
+            }
+            public void Rollback(bool claimCommitted, bool occupancyCommitted)
+            {
+                if (occupancyCommitted)
+                    _owner._world.Occupancy.RollbackPreparedAtomicActorPlacement(_placement);
+                else
+                    _owner._world.Occupancy.CancelPreparedAtomicActorPlacement(_placement);
+                if (claimCommitted) _owner._seatClaim.RollbackPreparedOccupy(_claim);
+                _owner.RestoreR5eAtomicAgentSnapshot(_snapshot);
+            }
+        }
+
+        private struct R5eExitAtomicPublisher : IR5eAtomicPublishSteps
+        {
+            private readonly OfficeRuntimeAgent _owner;
+            private readonly OfficeSeatRuntimeClaim _releasedClaim;
+            private readonly OfficeSeatingState.PreparedRuntimeMutation _claim;
+            private readonly OfficeRuntimeOccupancy.PreparedAtomicActorPlacement _placement;
+            private readonly OfficeRuntimeOccupancy.PreparedAtomicReservationScope _reservation;
+            private readonly R5eAtomicAgentSnapshot _snapshot;
+            private readonly OfficeSeatEgressAnchor _exitAnchor;
+            private readonly Vector2 _exitWorld;
+            private readonly int _exitDirection;
+            private readonly ulong _handoffId;
+            private readonly ulong _transactionId;
+            private readonly OfficeRuntimeDestination? _preparedOutward;
+
+            public R5eExitAtomicPublisher(
+                OfficeRuntimeAgent owner,
+                OfficeSeatRuntimeClaim releasedClaim,
+                in OfficeSeatingState.PreparedRuntimeMutation claim,
+                in OfficeRuntimeOccupancy.PreparedAtomicActorPlacement placement,
+                in OfficeRuntimeOccupancy.PreparedAtomicReservationScope reservation,
+                in R5eAtomicAgentSnapshot snapshot,
+                in OfficeSeatEgressAnchor exitAnchor,
+                Vector2 exitWorld,
+                int exitDirection,
+                ulong handoffId,
+                ulong transactionId,
+                OfficeRuntimeDestination? preparedOutward)
+            {
+                _owner = owner;
+                _releasedClaim = releasedClaim;
+                _claim = claim;
+                _placement = placement;
+                _reservation = reservation;
+                _snapshot = snapshot;
+                _exitAnchor = exitAnchor;
+                _exitWorld = exitWorld;
+                _exitDirection = exitDirection;
+                _handoffId = handoffId;
+                _transactionId = transactionId;
+                _preparedOutward = preparedOutward;
+            }
+
+            public void ThrowIfFault(R5eFaultInjectionPoint point) => _owner.ThrowIfR5eFault(point);
+            public void CommitClaim() => _releasedClaim.CommitPreparedRelease(_claim);
+            public void CommitOccupancy() =>
+                _owner._world.Occupancy.CommitPreparedAtomicActorPlacement(_placement);
+            public void CommitRoot() => _owner.transform.position = new Vector3(
+                _exitWorld.x,
+                _exitWorld.y,
+                _owner.transform.position.z);
+            public void CommitRenderer()
+            {
+                _owner.ResetVisualPose();
+                _owner._animator.LeaveCompletedSeatedWorkAfterAtomicPlacement(_exitDirection);
+            }
+            public void CommitRebase() =>
+                _owner.RebaseAfterAtomicPlacement(_exitWorld, _exitDirection);
+            public void CommitState()
+            {
+                _owner._seat = null;
+                _owner._seatClaim = null;
+                _owner._releaseSeatRequested = false;
+                _owner._alignedClip = null;
+                _owner._alignedFrame = -1;
+                _owner._seatedUpperBodyCutoffPx = float.NaN;
+                _owner.ClearSeatedUpperBodyProtection();
+                _owner._seatPresentationPrepared = false;
+                _owner._seatAlignmentComplete = false;
+                _owner._finishingWorkPresentationObserved = false;
+                _owner._seatEgressReservationActive = false;
+                _owner._seatEgressWaiting = false;
+                _owner._seatEgressReachedSafeAnchor = true;
+                _owner._hasCompletedSeatEgress = true;
+                _owner._lastCompletedSeatEgressKind = _exitAnchor.Kind;
+                _owner._lastCompletedSeatEgressCell = _exitAnchor.Cell;
+                _owner._lastCompletedSeatEgressWorld = _exitWorld;
+                _owner._lastCompletedSeatEgressClearanceValid = true;
+                _owner._r5ePendingMovementHandoffId = _handoffId;
+                _owner._r5eActiveMovementHandoffId = 0;
+                _owner._r5eExitTransactionId = _transactionId;
+                _owner._r5eExitTurnDirection = _exitDirection;
+                _owner._r5eExitTurnPending = true;
+                _owner._r5eQaPreparedOutwardRoute = _preparedOutward.HasValue;
+                if (_preparedOutward.HasValue) _owner._pendingDestination = _preparedOutward;
+                _owner._r5eQaOutwardRouteRequested = false;
+                _owner._r5eTurnCompleteTick = 0;
+                _owner._r5eLastClosedSeatedSessionId = _owner._r5eSeatedSessionId;
+                _owner._r5eSeatedSessionId = 0;
+                _owner.Phase = OfficeRuntimeAgentPhase.LeavingSeat;
+                _owner.CurrentActivity = OfficeActivity.Break;
+            }
+            public void Rollback(bool claimCommitted, bool occupancyCommitted)
+            {
+                if (occupancyCommitted)
+                    _owner._world.Occupancy.RollbackPreparedAtomicActorPlacement(_placement);
+                else
+                    _owner._world.Occupancy.CancelPreparedAtomicActorPlacement(_placement);
+                if (claimCommitted) _releasedClaim.RollbackPreparedRelease(_claim);
+                _owner._world.Occupancy.RestoreAtomicReservationScope(_reservation);
+                _owner.RestoreR5eAtomicAgentSnapshot(_snapshot);
+            }
         }
 
         private readonly struct R5eAtomicAgentSnapshot

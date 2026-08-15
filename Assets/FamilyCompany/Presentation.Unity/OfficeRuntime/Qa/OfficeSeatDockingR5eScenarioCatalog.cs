@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.OfficeSeating;
 using UnityEngine;
@@ -145,11 +146,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         public static OfficeSeatDockingR5eScenarioPlan ParseAndValidate(TextAsset asset)
         {
             if (asset == null) throw new ArgumentNullException(nameof(asset));
-            string normalized = asset.text.Replace("\r\n", "\n").Replace('\r', '\n');
+            return ParseAndValidateJson(asset.text);
+        }
+
+        /// <summary>
+        /// Pure counterpart used by the no-Unity-process production fixture. Runtime and the
+        /// fixture deliberately share this exact hash/schema/seed parser and case generator.
+        /// </summary>
+        public static OfficeSeatDockingR5eScenarioPlan ParseAndValidateJson(string json)
+        {
+            if (json == null) throw new ArgumentNullException(nameof(json));
+            string normalized = json.Replace("\r\n", "\n").Replace('\r', '\n');
             string sha = Sha256(normalized);
             if (!string.Equals(sha, ExpectedSha256, StringComparison.Ordinal))
                 throw new InvalidOperationException("R5e scenario catalog SHA-256 mismatch: " + sha);
-            R5eScenarioCatalogDto dto = JsonUtility.FromJson<R5eScenarioCatalogDto>(normalized);
+            R5eScenarioCatalogDto dto = ParseExactDto(normalized);
             if (dto == null || dto.schemaVersion != SchemaVersion || dto.seed != Seed ||
                 dto.baseMatrixCaseCount != BaseCaseCount || dto.expectedTotalCaseCount != TotalCaseCount)
                 throw new InvalidOperationException("R5e scenario catalog identity/count mismatch.");
@@ -224,6 +235,173 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 throw new InvalidOperationException("R5e generated scenario count mismatch: " + cursor);
             return new OfficeSeatDockingR5eScenarioPlan(
                 sha, dto.seed, (string[])dto.actors.Clone(), dto.contentionPermutations, cases);
+        }
+
+        private static R5eScenarioCatalogDto ParseExactDto(string json)
+        {
+            var dto = new R5eScenarioCatalogDto
+            {
+                schemaVersion = RequiredString(json, "schemaVersion"),
+                seed = RequiredInt(json, "seed"),
+                actors = RequiredStringArray(json, "actors"),
+                chairRotations = RequiredIntArray(json, "chairRotations"),
+                directions = RequiredStringArray(json, "directions"),
+                baseMatrixCaseCount = RequiredInt(json, "baseMatrixCaseCount"),
+                expectedTotalCaseCount = RequiredInt(json, "expectedTotalCaseCount"),
+                faultInjectionIds = RequiredIntArray(json, "faultInjectionIds"),
+                requiredEvents = RequiredStringArray(json, "requiredEvents")
+            };
+
+            string layoutsBody = RequiredArrayBody(json, "layouts");
+            MatchCollection layoutMatches = Regex.Matches(
+                layoutsBody,
+                "\\{\\s*\\\"id\\\"\\s*:\\s*\\\"(?<id>[^\\\"]+)\\\"\\s*,\\s*" +
+                "\\\"kind\\\"\\s*:\\s*\\\"(?<kind>[^\\\"]+)\\\"\\s*,\\s*" +
+                "\\\"seed\\\"\\s*:\\s*(?<seed>-?[0-9]+)\\s*\\}",
+                RegexOptions.CultureInvariant);
+            dto.layouts = new R5eLayoutDto[layoutMatches.Count];
+            for (var index = 0; index < layoutMatches.Count; index++)
+            {
+                Match item = layoutMatches[index];
+                dto.layouts[index] = new R5eLayoutDto
+                {
+                    id = item.Groups["id"].Value,
+                    kind = item.Groups["kind"].Value,
+                    seed = int.Parse(item.Groups["seed"].Value)
+                };
+            }
+
+            string contentionBody = RequiredArrayBody(json, "contentionPermutations");
+            MatchCollection contentionMatches = Regex.Matches(
+                contentionBody,
+                "\\{\\s*\\\"order\\\"\\s*:\\s*\\[(?<order>[^\\]]*)\\]\\s*\\}",
+                RegexOptions.CultureInvariant);
+            dto.contentionPermutations = new R5eContentionPermutation[contentionMatches.Count];
+            for (var index = 0; index < contentionMatches.Count; index++)
+            {
+                dto.contentionPermutations[index] = new R5eContentionPermutation
+                {
+                    order = ParseQuotedValues(contentionMatches[index].Groups["order"].Value)
+                };
+            }
+
+            string acceptance = RequiredObjectBody(json, "acceptance");
+            dto.acceptance = new R5eAcceptanceDto
+            {
+                allExitsBlockedCommitCount = RequiredInt(acceptance, "allExitsBlockedCommitCount"),
+                duplicateOccupancyCount = RequiredInt(acceptance, "duplicateOccupancyCount"),
+                clearMaskedViolationCount = RequiredInt(acceptance, "clearMaskedViolationCount"),
+                wrongFacingCount = RequiredInt(acceptance, "wrongFacingCount"),
+                strafeCount = RequiredInt(acceptance, "strafeCount"),
+                minimumForwardDot = RequiredFloat(acceptance, "minimumForwardDot"),
+                maximumRenderedDisplacementWorld = RequiredFloat(acceptance, "maximumRenderedDisplacementWorld"),
+                maximumGameplayFrameMs = RequiredFloat(acceptance, "maximumGameplayFrameMs")
+            };
+            return dto;
+        }
+
+        private static string RequiredString(string json, string name)
+        {
+            Match match = Regex.Match(
+                json,
+                "\\\"" + Regex.Escape(name) + "\\\"\\s*:\\s*\\\"(?<value>[^\\\"]*)\\\"",
+                RegexOptions.CultureInvariant);
+            if (!match.Success) throw new InvalidOperationException("R5e catalog field missing: " + name);
+            return match.Groups["value"].Value;
+        }
+
+        private static int RequiredInt(string json, string name)
+        {
+            Match match = Regex.Match(
+                json,
+                "\\\"" + Regex.Escape(name) + "\\\"\\s*:\\s*(?<value>-?[0-9]+)",
+                RegexOptions.CultureInvariant);
+            if (!match.Success) throw new InvalidOperationException("R5e catalog integer missing: " + name);
+            return int.Parse(match.Groups["value"].Value);
+        }
+
+        private static float RequiredFloat(string json, string name)
+        {
+            Match match = Regex.Match(
+                json,
+                "\\\"" + Regex.Escape(name) + "\\\"\\s*:\\s*(?<value>-?[0-9]+(?:\\.[0-9]+)?)",
+                RegexOptions.CultureInvariant);
+            if (!match.Success) throw new InvalidOperationException("R5e catalog number missing: " + name);
+            return float.Parse(
+                match.Groups["value"].Value,
+                System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private static string[] RequiredStringArray(string json, string name) =>
+            ParseQuotedValues(RequiredArrayBody(json, name));
+
+        private static int[] RequiredIntArray(string json, string name)
+        {
+            string body = RequiredArrayBody(json, name);
+            MatchCollection matches = Regex.Matches(body, "-?[0-9]+", RegexOptions.CultureInvariant);
+            var result = new int[matches.Count];
+            for (var index = 0; index < matches.Count; index++)
+                result[index] = int.Parse(matches[index].Value);
+            return result;
+        }
+
+        private static string[] ParseQuotedValues(string body)
+        {
+            MatchCollection matches = Regex.Matches(
+                body,
+                "\\\"(?<value>[^\\\"]*)\\\"",
+                RegexOptions.CultureInvariant);
+            var result = new string[matches.Count];
+            for (var index = 0; index < matches.Count; index++)
+                result[index] = matches[index].Groups["value"].Value;
+            return result;
+        }
+
+        private static string RequiredArrayBody(string json, string name)
+        {
+            return RequiredDelimitedBody(json, name, '[', ']', "array");
+        }
+
+        private static string RequiredObjectBody(string json, string name)
+        {
+            return RequiredDelimitedBody(json, name, '{', '}', "object");
+        }
+
+        private static string RequiredDelimitedBody(
+            string json,
+            string name,
+            char open,
+            char close,
+            string kind)
+        {
+            int key = json.IndexOf("\"" + name + "\"", StringComparison.Ordinal);
+            if (key < 0) throw new InvalidOperationException("R5e catalog " + kind + " missing: " + name);
+            int colon = json.IndexOf(':', key + name.Length + 2);
+            int start = colon < 0 ? -1 : json.IndexOf(open, colon + 1);
+            if (start < 0) throw new InvalidOperationException("R5e catalog " + kind + " missing: " + name);
+            int depth = 0;
+            bool quoted = false;
+            bool escaped = false;
+            for (var index = start; index < json.Length; index++)
+            {
+                char value = json[index];
+                if (quoted)
+                {
+                    if (escaped) escaped = false;
+                    else if (value == '\\') escaped = true;
+                    else if (value == '"') quoted = false;
+                    continue;
+                }
+                if (value == '"')
+                {
+                    quoted = true;
+                    continue;
+                }
+                if (value == open) depth++;
+                else if (value == close && --depth == 0)
+                    return json.Substring(start + 1, index - start - 1);
+            }
+            throw new InvalidOperationException("R5e catalog " + kind + " is unterminated: " + name);
         }
 
         public static OfficeGrid RotateLayout(OfficeGrid source, int quarterTurns)

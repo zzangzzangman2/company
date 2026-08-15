@@ -40,6 +40,56 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         AfterRebase = 6
     }
 
+    internal interface IR5eAtomicPublishSteps
+    {
+        void ThrowIfFault(R5eFaultInjectionPoint point);
+        void CommitClaim();
+        void CommitOccupancy();
+        void CommitRoot();
+        void CommitRenderer();
+        void CommitRebase();
+        void CommitState();
+        void Rollback(bool claimCommitted, bool occupancyCommitted);
+    }
+
+    /// <summary>
+    /// Single allocation-free stage/fault/rollback primitive used by both live agents and the
+    /// no-Unity-process production fixture. Concrete publishers remain structs, so constrained
+    /// generic calls do not allocate delegates, closures or interface boxes on the gameplay path.
+    /// </summary>
+    internal static class OfficeSeatDockingAtomicPublishPrimitive
+    {
+        public static bool TryPublish<TPublisher>(ref TPublisher publisher)
+            where TPublisher : struct, IR5eAtomicPublishSteps
+        {
+            bool claimCommitted = false;
+            bool occupancyCommitted = false;
+            try
+            {
+                publisher.ThrowIfFault(R5eFaultInjectionPoint.BeforeClaim);
+                publisher.CommitClaim();
+                claimCommitted = true;
+                publisher.ThrowIfFault(R5eFaultInjectionPoint.AfterClaim);
+                publisher.CommitOccupancy();
+                occupancyCommitted = true;
+                publisher.ThrowIfFault(R5eFaultInjectionPoint.AfterOccupancy);
+                publisher.CommitRoot();
+                publisher.ThrowIfFault(R5eFaultInjectionPoint.AfterRoot);
+                publisher.CommitRenderer();
+                publisher.ThrowIfFault(R5eFaultInjectionPoint.AfterRenderer);
+                publisher.CommitRebase();
+                publisher.ThrowIfFault(R5eFaultInjectionPoint.AfterRebase);
+                publisher.CommitState();
+                return true;
+            }
+            catch (Exception)
+            {
+                publisher.Rollback(claimCommitted, occupancyCommitted);
+                return false;
+            }
+        }
+    }
+
     /// <summary>
     /// Immutable identity allocated at the actual actor-specific interleaved scheduler boundary.
     /// It never decorates an old render sample by guessing a tick, route or handoff later.
@@ -249,6 +299,75 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ChairWidth = source.ChairWidth;
             ChairHeight = source.ChairHeight;
             Hash = source.Hash;
+        }
+
+        private R5eFurnitureTransformSnapshot(
+            int semanticParentId,
+            int visualParentId,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            int layoutRevision,
+            string seatId,
+            string chairId,
+            string chairKind,
+            OfficeFurnitureFacing chairFacing,
+            OfficeGridCoordinate chairOrigin,
+            int chairWidth,
+            int chairHeight,
+            ulong hash)
+        {
+            SemanticRoot = null;
+            VisualRoot = null;
+            SemanticParentId = semanticParentId;
+            VisualParentId = visualParentId;
+            SemanticPosition = position;
+            SemanticRotation = rotation;
+            SemanticScale = scale;
+            VisualPosition = position;
+            VisualRotation = rotation;
+            VisualScale = scale;
+            LayoutRevision = layoutRevision;
+            SeatId = seatId;
+            ChairId = chairId;
+            ChairKind = chairKind;
+            ChairFacing = chairFacing;
+            ChairOrigin = chairOrigin;
+            ChairWidth = chairWidth;
+            ChairHeight = chairHeight;
+            Hash = hash;
+        }
+
+        internal static R5eFurnitureTransformSnapshot CreateDetachedProductionFixture(
+            int layoutRevision,
+            string seatId,
+            string chairId,
+            OfficeFurnitureFacing facing,
+            OfficeGridCoordinate origin)
+        {
+            if (layoutRevision <= 0) throw new ArgumentOutOfRangeException(nameof(layoutRevision));
+            if (string.IsNullOrWhiteSpace(seatId)) throw new ArgumentException("Fixture seat ID is required.", nameof(seatId));
+            if (string.IsNullOrWhiteSpace(chairId)) throw new ArgumentException("Fixture chair ID is required.", nameof(chairId));
+            ulong hash = 14695981039346656037UL;
+            Add(ref hash, layoutRevision);
+            Add(ref hash, origin.X);
+            Add(ref hash, origin.Y);
+            Add(ref hash, (int)facing);
+            return new R5eFurnitureTransformSnapshot(
+                71,
+                73,
+                new Vector3(origin.X, origin.Y, 0f),
+                Quaternion.identity,
+                Vector3.one,
+                layoutRevision,
+                seatId.Trim(),
+                chairId.Trim(),
+                "chair",
+                facing,
+                origin,
+                1,
+                1,
+                hash);
         }
 
         public Transform SemanticRoot { get; }
@@ -1530,7 +1649,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     }
 
     /// <summary>Literal post-window CSV contracts. Gameplay never formats or writes them.</summary>
-    internal static class OfficeSeatDockingTraceSchemas
+    public static class OfficeSeatDockingTraceSchemas
     {
         public const string SchemaVersion = "classic-seat-docking-r5e-v1";
 

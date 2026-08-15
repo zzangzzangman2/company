@@ -141,7 +141,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 Screen.SetResolution(1920, 1080, FullScreenMode.Windowed);
                 Time.timeScale = _fourTimes ? 4f : 1f;
             }
-            if (!_visualOwner) yield break;
+            // Observer and visual-owner flags both own the deterministic 158-case measurement.
+            // Only the visual owner changes window/time-scale; neither mode may silently install
+            // an inert observer that later flushes a zero-denominator packet.
             yield return RunVisualCycle();
             _measurementOpen = false;
             RecordBoundary("GameplayMeasureEnd");

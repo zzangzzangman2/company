@@ -85,6 +85,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return WriteStates(archive.States, archive.FailureCount, directory);
         }
 
+        internal static OfficeSeatDockingR5eTraceWriteSummary WriteProductionStaticFixture(
+            IReadOnlyList<OfficeRuntimeActorTraceState> actorStates,
+            string directory)
+        {
+            if (actorStates == null || actorStates.Count == 0)
+                throw new ArgumentException("Production fixture requires observed actor rows.", nameof(actorStates));
+            return WriteStates(actorStates, 0, directory);
+        }
+
         private static OfficeSeatDockingR5eTraceWriteSummary WriteStates(
             IReadOnlyList<OfficeRuntimeActorTraceState> actorStates,
             int coordinatorFailures,
