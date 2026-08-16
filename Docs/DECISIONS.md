@@ -14,6 +14,11 @@ runtime 256px frame과 4×6 sheet는 `Tools/build_mother_north_walk_v2.py`로 �
 확정한 V2는 상체 30.1%·치마 29.2%·발 78.2%, 인접 median/worst 20.6%/26.1%이며 전용 회귀 5/5와
 전체 walk 96/96를 함께 통과한다.
 
+결정: 최종 아트 판정은 source PNG 비교에서 끝내지 않고 clean Release Player의 실제 정북 변위가
+`mother_north_walk_0..5`를 모두 렌더한 closeup으로 닫는다. 이 검증에서 QA는 sprite/frame을 직접 지정하지
+않고 기존 직접이동·충돌·거리 기반 gait를 사용한다. NPC 직접입력 허용은 `BeginQaControl` 뒤 command-line
+opt-in 검사에서만 활성화하며 정상 일정·경로·좌석 observer 증거와 섞지 않는다.
+
 ## 2026-08-16 / 일반 새 게임 observer가 출근 계약의 최종 판정자다
 
 결정: seating 전용 QA는 좌석·전환·가림의 국소 계약을 검증하지만 일반 새 게임 출근 회귀의 최종 증거로

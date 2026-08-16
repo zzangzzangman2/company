@@ -318,6 +318,9 @@
 - `Tools/test_mother_north_walk_v2.py` 5/5 PASS: 지지발 순서 `R,R,L,L,L,R`, 0/3 exact mirror, 0/3 상체 30.1%·
   치마 29.2%·발 78.2% 변화, 6개 고유 frame, y=247, sheet/frame 일치를 고정한다. 기존 animation gate 9/9,
   전체 walk 12명·96 loops·576 frames, mother 48-frame split verify도 모두 PASS다.
+- Unity `6000.3.21f1` clean Release Player 실제 정북 이동 closeup에서 imported
+  `mother_north_walk_0..5` 여섯 장을 모두 확인했다. 0/3 지지발·반대 팔 반전, 1/4 회수, 2/5 반대 통과,
+  치마 밑단 하중 변화와 발 하단 잘림 0이 실제 렌더에서도 유지된다.
 
 ## 가족 4인 사무실 착석 애니메이션 OfficeSeating V1
 

@@ -2,7 +2,7 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-17 / 엄마 북쪽 보행 V2 검증 중
+## 2026-08-17 / 엄마 북쪽 보행 V2 검증 완료·배포 후보
 
 - 기존 엄마 북쪽 6프레임은 0/3 상체 실루엣 차이 5.6%, 발 영역 중심 `128.17→128.11px`로 팔·치마가 거의
   고정되어 있었다. 파일 수와 기존 coherence gate는 통과했지만 사용자 화면에서는 발을 끄는 동작으로 읽혔다.
@@ -11,8 +11,19 @@
 - 생성 원본은 `ArtSources/MotherNorthWalkV2/`, 재현 도구는 `Tools/build_mother_north_walk_v2.py`, 의미 회귀는
   `Tools/test_mother_north_walk_v2.py`다. 전용 5/5, generic animation 9/9, 전체 walk 96/96, 엄마 sheet/frame
   48/48 일치를 통과했다.
-- 아직 Unity Player 임포트·실제 EXE 북쪽 보행·normal new-game·FAST_QA 재검증 전이다. 이 검증이 끝나기 전에는
-  Downloads 승격이나 push를 하지 않는다.
+- Unity `6000.3.21f1` clean Release Player가 정북 실제 이동에서
+  `mother_north_walk_0..5` 여섯 imported sprite를 모두 정확한 이름으로 렌더했다. 0/3은 지지발·반대 팔이
+  좌우 반전되고, 1/4는 회수, 2/5는 반대 통과 포즈이며 치마 밑단 변화와 발 하단 잘림 0을 실제 D3D12
+  768px closeup으로 확인했다. QA는 프레임/스프라이트를 강제하지 않고 기존 직접이동·충돌·거리 기반 gait를
+  사용하며 command-line opt-in 밖에서는 NPC 제어에 영향이 없다.
+- 같은 clean Release의 observer-only 일반 새 게임은 1x·2x·4x 모두 08:50→09:50 PASS다.
+  `actorQaControl=false`, route injection=false, clock jump=false, docking force=false이며 네 가족 모두 seat
+  arrival 1회·Work 6/6·20 game-minute stall 0이다. 커밋된 clean HEAD의 `FAST_QA player-scripts`도
+  37.966초로 SLO 60초를 충족했다.
+- runtime/art는 `5e3cf8efd54cda4223af51bfd682b7690ba3e34f`, 실제 Player 검증기는
+  `104547967959b1728973cd9bf53a910fb39cb553`에 기록했다. warm Library를 같은 worktree에서 보존해 최종
+  clean Release는 약 26초, 반복 `player-scripts`는 약 25~38초 범위다. Downloads 승격과 `main` push는
+  이 문서를 포함한 clean HEAD의 최종 동일성 검증을 통과한 뒤에만 실행한다.
 
 ## 2026-08-16 / 일반 새 게임 좌석 정지·타일 보행 수정·배포 완료
 
