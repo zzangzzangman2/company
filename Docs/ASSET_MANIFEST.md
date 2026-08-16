@@ -306,6 +306,19 @@
   silhouette median<=30%, worst<=40%, unique 6, foot drift<=1px, stable root drift<=4px, closure<=2px다.
   `Tools/test_animation_coherence_gate.py` 9/9 PASS이며 발·팔을 포함한 full-body silhouette pop 회귀를 검사한다.
 
+### 2026-08-17 엄마 북쪽 보행 V2
+
+- 기존 승인 원본도 엄마 북쪽에서는 충분하지 않았다. 0/3 접지 포즈의 상체 실루엣 차이가 5.6%이고 발 영역
+  무게중심이 `128.17→128.11px`로 사실상 같아, 6개 파일이 있어도 팔·치마가 고정된 채 발만 끌려 보였다.
+- ImageGen으로 북쪽 뒷모습 반 주기 `contact→recoil→passing` 3장을 포즈 가이드와 함께 새로 만들었다. 생성 원본과
+  최종 프롬프트·SHA는 `ArtSources/MotherNorthWalkV2/`에 보존하며 Unity `Assets/` 밖이라 반복 임포트 비용이 없다.
+- `Tools/build_mother_north_walk_v2.py`가 녹색 크로마를 제거하고 225px 전신·y=247 발 기준선으로 정규화한다.
+  후반 3장은 전반 3장의 픽셀 정확 좌우 반전이므로 지지발과 반대 팔 위상이 틀어질 수 없다. 엄마 B 시트는
+  기존 북동·동·남동 runtime frame을 그대로 사용해 marker-authored 4×6 그리드로 재조립했다.
+- `Tools/test_mother_north_walk_v2.py` 5/5 PASS: 지지발 순서 `R,R,L,L,L,R`, 0/3 exact mirror, 0/3 상체 30.1%·
+  치마 29.2%·발 78.2% 변화, 6개 고유 frame, y=247, sheet/frame 일치를 고정한다. 기존 animation gate 9/9,
+  전체 walk 12명·96 loops·576 frames, mother 48-frame split verify도 모두 PASS다.
+
 ## 가족 4인 사무실 착석 애니메이션 OfficeSeating V1
 
 - 상태: **448/448 GENERATED · SOURCE/FRAME/META/VISUAL QA PASS · 런타임 미연결**
