@@ -1435,7 +1435,9 @@ namespace FamilyCompany.Presentation.Unity
                         $"player translated during planted pivot for {QaDirectionNames[direction]}");
                     yield break;
                 }
-                int expected = DirectionalSpriteAnimator.ResolveTileDirection(observedDisplacement);
+                Vector2 expectedFacingDisplacement =
+                    OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(observedDisplacement);
+                int expected = DirectionalSpriteAnimator.ResolveTileDirection(expectedFacingDisplacement);
                 int expectedWalkFrame = OfficeLocomotionGaitRules.DistanceFrame(
                     observedGaitDistance,
                     player.StrideLength,
@@ -1443,9 +1445,9 @@ namespace FamilyCompany.Presentation.Unity
                 float expectedGaitPhase = OfficeLocomotionGaitRules.Phase01(
                     observedGaitDistance,
                     player.StrideLength);
-                if (expected != direction || player.CurrentDirection != direction ||
-                    observedSemanticDirection != direction || observedMotionDirection != direction ||
-                    observedVisualDirection != direction || observedProjection ||
+                if (player.CurrentDirection != expected ||
+                    observedSemanticDirection != expected || observedMotionDirection != expected ||
+                    observedVisualDirection != expected || observedProjection ||
                     observedSpeed < OfficeRuntimeAgent.DefaultMoveSpeed * 0.75f ||
                     observedWalkFrame != expectedWalkFrame ||
                     Mathf.Abs(Mathf.DeltaAngle(observedGaitPhase * 360f, expectedGaitPhase * 360f)) > 0.05f ||
@@ -1456,7 +1458,8 @@ namespace FamilyCompany.Presentation.Unity
                         52,
                         $"direction mismatch {QaDirectionNames[direction]}: vector={observedDisplacement} " +
                         $"frame={observedFrameDisplacement} semantic={observedSemanticDisplacement} " +
-                        $"expected={direction} math={expected} semanticDir={observedSemanticDirection} " +
+                        $"inputIndex={direction} expectedFacing={expected} " +
+                        $"facingVector={expectedFacingDisplacement} semanticDir={observedSemanticDirection} " +
                         $"motionDir={observedMotionDirection} visualDir={observedVisualDirection} " +
                         $"projected={observedProjection} speed={observedSpeed:F3} " +
                         $"locomotion={observedLocomotionPhase} gaitDistance={observedGaitDistance:F3} " +
