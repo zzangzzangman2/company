@@ -897,6 +897,23 @@ namespace FamilyCompany.Presentation.Unity
                 }
             }
 
+            // Attendance now correctly keeps the player in Work until a real transition asks them
+            // to leave.  The old QA assumed this chair had become empty by elapsed minute 47 and
+            // therefore tested an occupied chair as though it were released.  Make the QA premise
+            // explicit without changing production autonomy: reset only the QA player onto the
+            // canonical entrance, wait for presentation cleanup, then inspect the empty chair.
+            OfficeRuntimeAgent qaPlayer = actors["player"];
+            if (qaPlayer.IsOccupyingSeat)
+            {
+                qaPlayer.QaTeleportToCell(OfficeRuntimeWorkstationService.StarterEntranceCell);
+                yield return new WaitForEndOfFrame();
+            }
+            if (qaPlayer.IsOccupyingSeat || qaPlayer.ActiveSeatId.Length != 0)
+            {
+                FailPlayerQa(39, "player chair could not be released for empty-chair presentation QA");
+                yield break;
+            }
+
             OfficeSeatSlot emptyPlayerSeat = _starterRuntime.World.Workstations.RequiredSeat("seat_player");
             if (!_starterRuntime.World.FurniturePresenter.TryGetRenderer(
                     emptyPlayerSeat.ChairFurnitureId,
