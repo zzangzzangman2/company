@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -18,6 +19,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
     public sealed class NormalNewGameSeatStallObserver : MonoBehaviour
     {
         public const string CommandLineFlag = "-familyCompanyNormalSeatStallObserver";
+        public const string EmptyOfficeCommandLineFlag = "-familyCompanyNormalEmptyOfficeObserver";
         public const string ArtifactDirectoryArgument = "-familyCompanyNormalSeatStallArtifacts";
         public const string SpeedArgument = "-familyCompanyNormalSeatStallSpeed";
         public const string NoCaptureCommandLineFlag = "-familyCompanyNormalSeatStallNoCapture";
@@ -53,6 +55,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private int _burstCaptureCount;
         private bool _delaySpeedUntilAttendance;
         private bool _requestedSpeedApplied;
+        private bool _emptyOfficeMode;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState() => _instance = null;
@@ -60,7 +63,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoInstall()
         {
-            if (_instance != null || !HasCommandLineFlag(CommandLineFlag)) return;
+            if (_instance != null ||
+                (!HasCommandLineFlag(CommandLineFlag) &&
+                 !HasCommandLineFlag(EmptyOfficeCommandLineFlag))) return;
             var host = new GameObject("~NormalNewGameSeatStallObserver");
             DontDestroyOnLoad(host);
             _instance = host.AddComponent<NormalNewGameSeatStallObserver>();
@@ -70,6 +75,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         {
             _artifactDirectory = ResolveArtifactDirectory();
             _requestedSpeed = ResolveSpeed();
+            _emptyOfficeMode = HasCommandLineFlag(EmptyOfficeCommandLineFlag);
             _captureEnabled = !HasCommandLineFlag(NoCaptureCommandLineFlag);
             _burstCaptureEnabled = HasCommandLineFlag(BurstCaptureCommandLineFlag);
             _delaySpeedUntilAttendance = HasCommandLineFlag(DelaySpeedUntilAttendanceCommandLineFlag);
@@ -100,7 +106,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         {
             Directory.CreateDirectory(_artifactDirectory);
             Debug.Log(
-                "FAMILY_COMPANY_NORMAL_SEAT_STALL_OBSERVER: START | observerOnly=true" +
+                (_emptyOfficeMode
+                    ? "FAMILY_COMPANY_NORMAL_EMPTY_OFFICE_OBSERVER: START | observerOnly=true"
+                    : "FAMILY_COMPANY_NORMAL_SEAT_STALL_OBSERVER: START | observerOnly=true") +
                 " | actorQaControl=false | routeInjection=false | clockJump=false | dockingForce=false" +
                 " | requestedSpeed=" + _requestedSpeed.ToString("0", CultureInfo.InvariantCulture) +
                 " | artifacts=" + _artifactDirectory);
@@ -140,6 +148,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 Finish(92, "canonical actor set incomplete", bootstrap, runtime);
                 yield break;
+            }
+
+            if (_emptyOfficeMode)
+            {
+                int editableFurniture = runtime.World.Grid.Furniture.Count(item =>
+                    OfficeFurnitureCatalog.Find(item.KindId)?.IsPlayerEditable == true);
+                if (runtime.World.Grid.SeatSlots.Count != 0 || editableFurniture != 0 ||
+                    bootstrap.State.OfficeFurnitureInventory.Instances.Count != 0)
+                {
+                    Finish(
+                        94,
+                        "normal new game was not empty:seats=" + runtime.World.Grid.SeatSlots.Count +
+                        ";editable=" + editableFurniture +
+                        ";inventory=" + bootstrap.State.OfficeFurnitureInventory.Instances.Count,
+                        bootstrap,
+                        runtime);
+                    yield break;
+                }
             }
 
             foreach (string memberId in MemberIds)
@@ -234,7 +260,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             foreach (string memberId in MemberIds)
             {
                 OfficeRuntimeAgent actor = actors[memberId];
-                if (actor.AttendanceSeatArrivalCount < 1)
+                if (_emptyOfficeMode)
+                {
+                    if (!_observations[memberId].EnteredEmptyOffice)
+                        RecordFirstFailure(
+                            bootstrap.State.Time.ElapsedMinutes,
+                            actor,
+                            "attendance-never-entered-empty-office");
+                    else if (actor.IsPresentationAway || actor.Phase == OfficeRuntimeAgentPhase.Outside)
+                        RecordFirstFailure(
+                            bootstrap.State.Time.ElapsedMinutes,
+                            actor,
+                            "attendance-left-empty-office-before-09:50");
+                }
+                else if (actor.AttendanceSeatArrivalCount < 1)
                     RecordFirstFailure(bootstrap.State.Time.ElapsedMinutes, actor, "attendance-never-atomically-seated");
                 else if (actor.ObservedWorkFrameCount < 6)
                     RecordFirstFailure(
@@ -249,11 +288,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     "requested-speed-was-not-applied");
 
             int exitCode = _firstFailure.Length == 0 ? 0 : 21;
-            Finish(exitCode, exitCode == 0 ? "normal-new-game-seat-stall-zero" : _firstFailure, bootstrap, runtime);
+            Finish(
+                exitCode,
+                exitCode == 0
+                    ? (_emptyOfficeMode
+                        ? "normal-new-game-empty-office-arrival-stall-zero"
+                        : "normal-new-game-seat-stall-zero")
+                    : _firstFailure,
+                bootstrap,
+                runtime);
         }
 
         private void ObserveActor(long minute, OfficeRuntimeAgent actor, ActorObservation observation)
         {
+            if (_emptyOfficeMode && minute >= 10L && !observation.EnteredEmptyOffice &&
+                !actor.IsPresentationAway && actor.Phase != OfficeRuntimeAgentPhase.Outside)
+            {
+                observation.EnteredEmptyOffice = true;
+                AppendEvent(minute, actor, "EMPTY_OFFICE_ATTENDANCE_ENTERED");
+            }
+
             if (actor.AttendanceSeatArrivalCount > observation.ArrivalCount)
             {
                 observation.ArrivalCount = actor.AttendanceSeatArrivalCount;
@@ -401,12 +455,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         {
             try
             {
-                File.WriteAllText(ArtifactPath("normal-new-game-seat-trace.csv"), _trace.ToString());
-                File.WriteAllText(ArtifactPath("normal-new-game-seat-events.log"), _events.ToString());
+                string artifactPrefix = _emptyOfficeMode
+                    ? "normal-new-game-empty"
+                    : "normal-new-game-seat";
+                File.WriteAllText(ArtifactPath(artifactPrefix + "-trace.csv"), _trace.ToString());
+                File.WriteAllText(ArtifactPath(artifactPrefix + "-events.log"), _events.ToString());
                 var result = new StringBuilder();
-                result.AppendLine(exitCode == 0
-                    ? "FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: PASS"
-                    : "FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: FAIL");
+                result.AppendLine(_emptyOfficeMode
+                    ? (exitCode == 0
+                        ? "FAMILY_COMPANY_NORMAL_NEW_GAME_EMPTY_OFFICE: PASS"
+                        : "FAMILY_COMPANY_NORMAL_NEW_GAME_EMPTY_OFFICE: FAIL")
+                    : (exitCode == 0
+                        ? "FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: PASS"
+                        : "FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: FAIL"));
+                result.AppendLine("mode=" + (_emptyOfficeMode ? "empty-office" : "furnished-seat"));
                 result.AppendLine("observerOnly=true");
                 result.AppendLine("actorQaControl=false");
                 result.AppendLine("routeInjection=false");
@@ -443,7 +505,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             actor.DiagnosticPendingDestinationId, actor.DiagnosticPathIndex,
                             actor.SemanticPathLength));
                 }
-                File.WriteAllText(ArtifactPath("normal-new-game-seat-result.txt"), result.ToString());
+                File.WriteAllText(ArtifactPath(artifactPrefix + "-result.txt"), result.ToString());
             }
             catch (Exception exception)
             {
@@ -451,10 +513,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 if (exitCode == 0) exitCode = 93;
             }
 
+            string resultMarker = _emptyOfficeMode
+                ? "FAMILY_COMPANY_NORMAL_NEW_GAME_EMPTY_OFFICE"
+                : "FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL";
             if (exitCode == 0)
-                Debug.Log("FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: PASS | " + reason);
+                Debug.Log(resultMarker + ": PASS | " + reason);
             else
-                Debug.LogError("FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: FAIL | code=" + exitCode + " | " + reason);
+                Debug.LogError(resultMarker + ": FAIL | code=" + exitCode + " | " + reason);
             Application.Quit(exitCode);
         }
 
@@ -581,6 +646,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public int ArrivalCount { get; set; }
             public bool AwaitingFirstWorkLoop { get; set; }
             public bool CompletedFirstWorkLoop { get; set; }
+            public bool EnteredEmptyOffice { get; set; }
             public ulong SeatArrivalTick { get; set; }
             public Vector2 LastPosition { get; set; }
             public long LastProgressMinute { get; set; }

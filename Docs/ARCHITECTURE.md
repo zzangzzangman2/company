@@ -63,7 +63,7 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 ## 등각 도트 프레젠테이션과 OfficeGrid
 
 - `FamilyCompany.Simulation.OfficeLayout.OfficeGrid`가 폭·높이·바닥·통행 가능 셀·배치 가구·좌석 슬롯을 의미 상태로 소유한다. Unity Transform과 화면 픽셀은 저장 정본이 아니다.
-- `StarterOfficeV1`은 13×13, 실내 가구 17개와 외곽 bay 52개, 가족 workstation 4개를 가진 실제 새 게임 레이아웃이다. `CreateMigrationPreview()`는 회귀 fixture일 뿐 게임 기본값이 아니다.
+- 실제 새 게임은 `CreateNewGameEmptyOfficeV1()`의 13×13 바닥과 외곽 bay 52개만 사용하며 플레이어 배치 가구·좌석·워크스테이션은 0개다. furnished `StarterOfficeV1`과 `CreateMigrationPreview()`는 기존 저장 호환 및 회귀 fixture이며 게임 기본값이 아니다.
 - `OfficeGridTilemapPresenter`는 320×160, 180 PPU 등각 Tile을 투영하고 `OfficeGridFurniturePresenter`는 같은 placement anchor/footprint를 렌더한다.
 - 전체 저장은 v10이며 `officeGrid` 하위 스키마 v4와 가구 재고 하위 스키마 v1을 보존한다. v1~v9 이관 뒤 `ComputeLayoutHash()`가 같아야 한다.
 - 가구 시각 정본은 `OfficeFurnitureVisualCatalog` calibration v3, 착석 정본은 `OfficeCharacterSeatPoseCatalog` v5다. 의미 root는 scale 1이며 가구 보정은 승인된 균등 scale/socket, 착석 보정은 실제 pelvis/hand 기반 translation만 허용한다.
@@ -127,6 +127,7 @@ PrototypeBootstrap / GameState.OfficeGrid
 - 좌석 셀은 일반 경로에서 Interaction Occupancy다. claim된 seatId만 접근 경로와 최종 operator anchor 이동에 허용된다.
 - 레이아웃 변경은 semantic `OfficeGrid`를 교체하고 Starter Runtime을 staged rebuild한다. 이전 Actor/path/reservation은 폐기되고 새 Occupancy revision과 레이아웃 해시에 맞춰 다시 바인딩된다.
 - `PlacedOfficeFurniture.PlacementAnchor`가 의미·시각·충돌·저장의 공통 좌표다. `OfficeGridFurniturePresenter`는 책상 소켓에 맞추기 위해 VisualRoot만 따로 이동하지 않는다.
+- 구매/이동 배치는 정수 `OfficeGridCoordinate`만 영속화한다. 1×1은 한 타일 중심, 다중 타일은 회전된 전체 footprint 중심에서 `PlacementAnchor`를 결정하며 임의 world/pointer 위치는 저장·충돌·렌더 권한이 아니다.
 - Starter Runtime의 착석 표현은 `OfficeSeatingV1`의 사람 승인 `NorthWest` 14프레임과 `OfficeCharacterSeatPoseCatalog` v5를 사용한다. Work는 pelvis를 cushion에 고정하고 SitDown/StandUp은 서 있는 pelvis와 cushion 사이를 승인 프레임 순서대로 보간한다. 회전·pose 확대·member별 scale은 없으며 렌더 틱당 한 프레임만 전진해 장시간 프레임이나 배속에서도 원화를 건너뛰지 않는다.
 - Windows player 빌드 전 OfficeGrid schema/migration, semantic layout hash/save round-trip, 8방향 수학, 방향 승인 32개와 개별 보행 프레임 승인 192개를 검증한다. 숨김 player QA는 4명 각각 SitDown 4 + Work 6 + StandUp 4의 실제 적용, 접점 오차, 정렬과 그래픽 합성을 확인한다.
 

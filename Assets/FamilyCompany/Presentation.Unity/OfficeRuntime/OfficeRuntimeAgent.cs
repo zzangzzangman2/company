@@ -902,9 +902,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         }
 
         /// <summary>
-        /// Resolves the family's canonical door-to-desk route while the loading presentation is
-        /// visible. The 09:00 arrival then only reserves its already assigned seat and adopts this
-        /// route, avoiding a synchronous path search or a temporary corridor stop on entry.
+        /// Resolves the family's canonical arrival route while the loading presentation is visible.
+        /// A furnished office targets the assigned desk; a legitimate empty new office targets a
+        /// deterministic open tile until the player buys furniture. The 09:00 arrival adopts this
+        /// prewarmed route, avoiding a synchronous path search or a temporary corridor stop.
         /// </summary>
         public bool PrepareAttendanceArrival()
         {
@@ -916,7 +917,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     OfficeSemanticLocation.Desk,
                     _agentId,
                     "attendance-desk:" + _agentId,
-                    out OfficeRuntimeDestination destination)) return false;
+                    out OfficeRuntimeDestination destination) &&
+                !_world.Workstations.TryResolveDestination(
+                    OfficeSemanticLocation.OpenArea,
+                    _agentId,
+                    "attendance-empty-office:" + _agentId,
+                    out destination)) return false;
             IReadOnlyList<OfficeGridCoordinate> route = _world.Paths.FindPath(
                 _agentId,
                 entrance,
@@ -1741,7 +1747,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeRuntimeDestination destination,
             IReadOnlyList<OfficeGridCoordinate> route)
         {
-            if (!destination.RequiresSeat || route == null || route.Count < 2) return false;
+            if (route == null || route.Count < 2) return false;
             if (!route[0].Equals(OfficeRuntimeWorkstationService.StarterEntranceCell) ||
                 !route[route.Count - 1].Equals(destination.Cell)) return false;
 
@@ -1762,17 +1768,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             _standingFacingDirection = -1;
             ReleaseSeatImmediately();
-            if (!_world.Workstations.TryReserveSeat(
-                    _agentId,
-                    destination.SeatId,
-                    _seatReservationToken,
-                    out _seat,
-                    out _seatClaim))
+            if (destination.RequiresSeat)
             {
-                _world.Occupancy.ReleaseAttendanceIngress(_agentId);
-                return false;
+                if (!_world.Workstations.TryReserveSeat(
+                        _agentId,
+                        destination.SeatId,
+                        _seatReservationToken,
+                        out _seat,
+                        out _seatClaim))
+                {
+                    _world.Occupancy.ReleaseAttendanceIngress(_agentId);
+                    return false;
+                }
+                destination = _world.Workstations.DestinationForSeat(_seat, destination);
             }
-            destination = _world.Workstations.DestinationForSeat(_seat, destination);
 
             transform.position = new Vector3(exteriorWorld.x, exteriorWorld.y, transform.position.z);
             _attendanceIngressExteriorWorld = exteriorWorld;

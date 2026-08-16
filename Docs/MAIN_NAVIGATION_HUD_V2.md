@@ -34,7 +34,7 @@
 
 ## 실제 어댑터 연동
 
-- 회사 허브 `건축·편집`은 route `company.hub.build_editor`에서 `OfficeBuildEditorNavigationAdapter.EntryId/TryOpen`을 호출한다. 편집기가 열린 동안만 시뮬레이션을 일시정지하고 메인 HUD를 숨기며, 편집기 닫기 뒤 회사 허브로 복귀한다.
+- 회사 허브 `사무실 관리`는 route `company.hub.build_editor`에서 `OfficeBuildEditorNavigationAdapter.EntryId/TryOpen`을 호출한다. 카테고리별 구매와 타일 중심 배치를 제공하며, 편집기가 열린 동안만 시뮬레이션을 일시정지하고 메인 HUD를 숨기고 닫기 뒤 회사 허브로 복귀한다.
 - 사업 허브 `하청 계약`과 `자체 제품`은 `ContractBusinessRuntimeAdapter`를 `KoreaHistoryV1RuntimeCatalog`와 함께 구성하고 각각 `business.contracts`, `business.products`를 연다.
 - 고객사명, 제안, 제품 진행도는 adapter가 공개한 view data만 TMP로 표시한다. UI 브랜치에 기업 목록·계약·보상·해금·저장 로직을 복제하지 않는다.
 - 인사, 연구, 그 밖의 회사·투자 카드는 모두 클릭 가능한 전용 화면으로 진입하고 현재 미구현임을 `준비 중`으로 명시한다.

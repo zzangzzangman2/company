@@ -2,6 +2,29 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-17 / 빈 타일 사무실·타일 중심 배치·가족 전체 보행 V2 최종 후보
+
+- 실제 새 게임은 13×13 외곽 구조물 52개와 비어 있는 11×11 실내 타일만 생성한다. 좌석·업무 가구·구매
+  inventory는 모두 0이며, 기존 4인 가구 배치는 save migration과 출근/좌석 QA 전용 fixture로 분리했다. 빈
+  사무실의 가족은 09:00에 actor별 결정적 open-area 타일로 출근하므로 책상이 없다는 이유로 문 밖에서 멈추지
+  않는다. `FAST_QA`는 빈 실제 상태를 먼저 단언한 뒤에만 furnished fixture를 설치한다.
+- 회사 허브의 기존 `건축·편집` 진입은 `사무실 관리`로 명확히 이름을 바꿨다. 업무·좌석·기기·수납·음료 등
+  기존 카테고리별 구매/회전/보관/판매/배치 흐름은 유지하며, 배치 origin은 항상 정수 타일이다. 1×1 가구는
+  그 타일의 정중앙, 다중 타일 가구는 점유 footprint 전체의 정중앙만 semantic/render anchor로 허용한다.
+- 가족 4명×8방향 32개 행을 `0·1·2` 반 주기와 반대 지지발 `3·4·5`로 다시 제작했다. 지지발과 반대 팔이
+  함께 바뀌고 전신 바닥선 y=247과 hard alpha를 유지한다. 모든 행의 0↔3 실루엣 변화율은 30% 이상이며,
+  런타임 192프레임과 8개 sheet는 `ArtSources/FamilyWalkHalfCyclesV2/`에서 결정적으로 재생성된다. 생산 이동은
+  기존 cardinal cell-centre path와 한 타일당 두 걸음 계약을 계속 사용하므로 정북 이동은 대각선 원화를 쓰지
+  않고, 화면 오른쪽 이동은 머리·몸통·팔·다리가 모두 오른쪽을 향한다.
+- warm rebind와 cold 준비 모두 실제 `NavigationPrewarmProgress`를 따른다. 표시 진행률은 raw 값으로 우회하지
+  않고 30fps 한 프레임당 최대 0.0127만 전진하며, runtime `IsReady` 전에는 로딩을 닫지 않는다. 준비가 30초
+  동안 막히면 원인 경고를 남기고 빠져나오는 fail-open 계약은 유지한다.
+- 현재 같은 warm worktree의 Unity `6000.3.21f1`에서 `editor-broad` 14.188초 PASS, 새 게임 empty/editor
+  런타임 purchase·tile-anchor·4 actor route PASS, 가구 13종 구매와 canonical footprint-center PASS,
+  보행 V2 재현/의미 검사 4/4와 32/32 행 PASS다. 다음 단계는 clean commit의 Release Player에서 observer-only
+  빈 새 게임 1x·2x·4x 08:50→09:50, furnished FAST_QA seat/Work, loading telemetry를 모두 다시 통과한 뒤
+  그 동일 HEAD만 Downloads와 `origin/main`에 승격하는 것이다.
+
 ## 2026-08-17 / 엄마 북쪽 보행 V2 검증 완료·배포 후보
 
 - 기존 엄마 북쪽 6프레임은 0/3 상체 실루엣 차이 5.6%, 발 영역 중심 `128.17→128.11px`로 팔·치마가 거의

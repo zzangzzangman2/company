@@ -22,6 +22,12 @@ namespace FamilyCompany.Editor.OfficeGrid
         {
             var failures = new List<string>();
             GameState state = PrototypeStateFactory.Create(20000103);
+            OfficeGridState furnishedQaGrid = OfficeGridLayouts.CreateStarterOfficeV1();
+            state.ReplaceOfficeState(
+                furnishedQaGrid,
+                OfficeFurnitureInventoryState.MigrateFromGrid(
+                    furnishedQaGrid,
+                    state.Time.ElapsedMinutes));
             string[] familyIds = state.Family.Members.Select(item => item.MemberId).ToArray();
             int[] energy = state.Family.Members.Select(item => item.Energy).ToArray();
             string originalHash = state.OfficeGrid.ComputeLayoutHash();
@@ -333,6 +339,16 @@ namespace FamilyCompany.Editor.OfficeGrid
                 Require(failures,
                     bought.Success && bought.ChargedWon == price && state.Company.CashWon == cashBefore - price,
                     definition.DefinitionId + " exact purchase debit");
+                PlacedOfficeFurniture centered = state.OfficeGrid.Furniture.Single(item =>
+                    string.Equals(item.FurnitureId, instanceId, StringComparison.Ordinal));
+                Require(failures,
+                    centered.HasCanonicalPlacementAnchor &&
+                    centered.PlacementAnchor.Equals(
+                        PlacedOfficeFurniture.DefaultPlacementAnchor(
+                            centered.Origin,
+                            centered.Width,
+                            centered.Height)),
+                    definition.DefinitionId + " exact tile-footprint center anchor");
 
                 OfficeFurnitureCommandResult rotated = OfficeFurnitureTransactionService.Rotate(state, instanceId);
                 Require(failures, rotated.Success, definition.DefinitionId + " 90-degree rotation");
@@ -404,7 +420,14 @@ namespace FamilyCompany.Editor.OfficeGrid
                 poor.Company.CashWon == cash && poor.OfficeFurnitureInventory.Find("qa-poor-plant") == null,
                 "insufficient funds is atomic");
 
-            GameSaveDto legacy = GameSaveMapper.ToDto(PrototypeStateFactory.Create(20000106));
+            GameState legacyState = PrototypeStateFactory.Create(20000106);
+            OfficeGridState legacyFurnishedGrid = OfficeGridLayouts.CreateStarterOfficeV1();
+            legacyState.ReplaceOfficeState(
+                legacyFurnishedGrid,
+                OfficeFurnitureInventoryState.MigrateFromGrid(
+                    legacyFurnishedGrid,
+                    legacyState.Time.ElapsedMinutes));
+            GameSaveDto legacy = GameSaveMapper.ToDto(legacyState);
             legacy.schemaVersion = 7;
             legacy.officeFurnitureInventory = null;
             GameState migrated = GameSaveMapper.FromDto(legacy);

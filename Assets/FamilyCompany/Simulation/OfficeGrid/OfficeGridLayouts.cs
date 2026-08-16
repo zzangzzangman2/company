@@ -28,15 +28,27 @@ namespace FamilyCompany.Simulation.OfficeLayout
 
         public static OfficeGrid CreateMigrationPreview()
         {
-            return CreateOfficeLayout(includeMigrationPartition: true);
+            return CreateOfficeLayout(includeMigrationPartition: true, includeInteriorFurniture: true);
         }
 
         public static OfficeGrid CreateStarterOfficeV1()
         {
-            return CreateOfficeLayout(includeMigrationPartition: false);
+            return CreateOfficeLayout(includeMigrationPartition: false, includeInteriorFurniture: true);
         }
 
-        private static OfficeGrid CreateOfficeLayout(bool includeMigrationPartition)
+        /// <summary>
+        /// New companies receive only the finished floor and perimeter shell.  All player-editable
+        /// furniture is bought from Office Management and enters the world through placement mode.
+        /// The furnished StarterOfficeV1 fixture remains available for save migration and QA.
+        /// </summary>
+        public static OfficeGrid CreateNewGameEmptyOfficeV1()
+        {
+            return CreateOfficeLayout(includeMigrationPartition: false, includeInteriorFurniture: false);
+        }
+
+        private static OfficeGrid CreateOfficeLayout(
+            bool includeMigrationPartition,
+            bool includeInteriorFurniture)
         {
             var width = StarterOfficeWidth;
             var height = StarterOfficeHeight;
@@ -55,22 +67,25 @@ namespace FamilyCompany.Simulation.OfficeLayout
 
             var furniture = new List<PlacedOfficeFurniture>();
             var seats = new List<OfficeSeatSlot>();
-            AddWorkstation(furniture, seats, "player", 2, 4, 2, 3);
-            AddWorkstation(furniture, seats, "older_sister", 7, 4, 7, 3);
-            AddWorkstation(furniture, seats, "father", 2, 8, 2, 7);
-            AddWorkstation(furniture, seats, "mother", 7, 8, 7, 7);
+            if (includeInteriorFurniture)
+            {
+                AddWorkstation(furniture, seats, "player", 2, 4, 2, 3);
+                AddWorkstation(furniture, seats, "older_sister", 7, 4, 7, 3);
+                AddWorkstation(furniture, seats, "father", 2, 8, 2, 7);
+                AddWorkstation(furniture, seats, "mother", 7, 8, 7, 7);
 
-            AddBlocking(furniture, "reception", ReceptionCounterKind, 4, 1, 2, 1, OfficeFurnitureFacing.SouthEast);
-            AddBlocking(furniture, "meeting", MeetingTableKind, 4, 10, 2, 1, OfficeFurnitureFacing.SouthEast);
-            AddBlocking(furniture, "bookcase", DocumentBookcaseKind, 1, 10, 1, 1, OfficeFurnitureFacing.SouthEast);
-            AddBlocking(furniture, "copier", FaxCopierKind, 10, 2, 1, 1, OfficeFurnitureFacing.SouthEast);
-            AddBlocking(furniture, "water", WaterDispenserKind, 11, 5, 1, 1, OfficeFurnitureFacing.SouthEast);
-            AddBlocking(furniture, "sofa", SofaKind, 9, 10, 2, 1, OfficeFurnitureFacing.SouthEast);
-            AddBlocking(furniture, "coffee", CoffeeTableKind, 9, 8, 2, 1, OfficeFurnitureFacing.SouthEast);
-            AddBlocking(furniture, "plant", PottedPlantKind, 11, 10, 1, 1, OfficeFurnitureFacing.SouthEast);
-            if (includeMigrationPartition)
-                AddBlocking(furniture, "partition", PartitionKind, 6, 6, 1, 2, OfficeFurnitureFacing.NorthWest);
-            AddBlocking(furniture, "filing", FilingCabinetKind, 11, 8, 1, 1, OfficeFurnitureFacing.SouthEast);
+                AddBlocking(furniture, "reception", ReceptionCounterKind, 4, 1, 2, 1, OfficeFurnitureFacing.SouthEast);
+                AddBlocking(furniture, "meeting", MeetingTableKind, 4, 10, 2, 1, OfficeFurnitureFacing.SouthEast);
+                AddBlocking(furniture, "bookcase", DocumentBookcaseKind, 1, 10, 1, 1, OfficeFurnitureFacing.SouthEast);
+                AddBlocking(furniture, "copier", FaxCopierKind, 10, 2, 1, 1, OfficeFurnitureFacing.SouthEast);
+                AddBlocking(furniture, "water", WaterDispenserKind, 11, 5, 1, 1, OfficeFurnitureFacing.SouthEast);
+                AddBlocking(furniture, "sofa", SofaKind, 9, 10, 2, 1, OfficeFurnitureFacing.SouthEast);
+                AddBlocking(furniture, "coffee", CoffeeTableKind, 9, 8, 2, 1, OfficeFurnitureFacing.SouthEast);
+                AddBlocking(furniture, "plant", PottedPlantKind, 11, 10, 1, 1, OfficeFurnitureFacing.SouthEast);
+                if (includeMigrationPartition)
+                    AddBlocking(furniture, "partition", PartitionKind, 6, 6, 1, 2, OfficeFurnitureFacing.NorthWest);
+                AddBlocking(furniture, "filing", FilingCabinetKind, 11, 8, 1, 1, OfficeFurnitureFacing.SouthEast);
+            }
             AddPerimeterWalls(furniture, width, height);
 
             foreach (var item in furniture)

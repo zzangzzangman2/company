@@ -2,9 +2,10 @@
 
 ## Current integration status
 
-- Local main 기준선 `4cf6e50`에 build editor 구현 `7baac22`와 MainNavigation route `bc19d0c`가 통합되어 있다.
-- 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v9이며 v1~v8을 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
-- 진입점은 `사무실 → 회사 → 건축·편집`이다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
+- Build editor와 MainNavigation adapter는 현재 main 계보에 통합되어 있다.
+- 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v10이며 v1~v9를 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
+- 진입점은 `사무실 → 회사 → 사무실 관리`다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
+- 실제 새 게임은 바닥·외곽만 있는 빈 13×13 사무실로 시작하고 카테고리별 가구를 여기서 구매·배치한다. furnished `StarterOfficeV1`은 기존 저장/QA fixture다.
 - 배치 geometry는 `OfficeRuntimeOccupancy`가 read-only query로 직접 소비한다. 알려진 가구는 canonical 4방향 profile, 이전 저장의 미등록 콘텐츠는 부분 legacy profile 없이 전체 셀 차단 fallback을 사용한다. 최종 seating/stamina 결합과 portable build 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
 
 ## Audit: canonical versus legacy
@@ -87,6 +88,9 @@ cancel, insufficient funds, and repeated command IDs change cash by zero.
 - Buildable cells are restored interior walkable-floor cells only. Visible non-walkable perimeter
   floor and structural wall cells never become buildable.
 - Entire rotated footprint must fit; player furniture cannot overlap another player furniture.
+- Placement origin is always an integer tile. A 1x1 item is anchored at that tile center and a
+  multi-tile item at the exact center of its complete rotated footprint; pointer/world coordinates
+  never become persistent placement state.
 - The canonical interior entrance `(8,1)` must remain open.
 - BFS from the entrance must reach all four assigned seat approaches and at least one access cell
   for every capability-bearing facility.
@@ -116,7 +120,7 @@ if (!OfficeBuildEditorNavigationAdapter.TryOpen(id, out string failure))
     ShowToast(failure);
 ```
 
-`MainNavigationV2`가 route `office world -> 회사 -> company hub -> 건축·편집 card`를 소유하고 위 adapter를 호출한다. 편집기가 열린 동안만 시뮬레이션을 멈추고 닫으면 회사 허브로 돌아간다.
+`MainNavigationV2`가 route `office world -> 회사 -> company hub -> 사무실 관리 card`를 소유하고 위 adapter를 호출한다. 편집기가 열린 동안만 시뮬레이션을 멈추고 닫으면 회사 허브로 돌아간다.
 
 Stamina/needs integration:
 

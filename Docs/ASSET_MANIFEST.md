@@ -1,6 +1,15 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-14
+최종 갱신: 2026-08-17
+
+## Family Walk Half-Cycles V2 (2026-08-17)
+
+- Runtime: 가족 4명 각각 `Assets/Art/Characters/<Member>/Pixel/HighMotion/Frames/`의 8방향×6프레임 192장과 A/B 시트 8장.
+- Source: `ArtSources/FamilyWalkHalfCyclesV2/`의 방향별 contact/recoil/passing 반 주기 96장. 승인된 ImageGen 원 strip은 `RawImageGen/`에 보존한다.
+- Generation mode: OpenAI built-in ImageGen의 identity-preserving game-production raster generation. 기존 승인 캐릭터를 정체성·카메라 참조로 사용했고 제3자 자산은 추가하지 않았다.
+- Prompt/derivation ledger: `ArtSources/FamilyWalkHalfCyclesV2/README.md`. 반대 반 주기는 정확한 좌우 반전과 방향쌍 교차 반전으로 결정론적으로 만들며 런타임에서 임의 보간하지 않는다.
+- Runtime contract: 256×256 RGBA hard alpha, 바닥선 y=247, 6장 unique, 0↔3 전체 실루엣 변화율 30% 이상, 반대 발과 반대 팔의 동시 교차. 엄마는 치마 밑단 변화도 포함한다.
+- Reproduction/gate: `Tools/build_family_walk_half_cycles_v2.py`, `Tools/test_family_walk_half_cycles_v2.py`, `Tools/audit_family_walk_half_cycles_v2.py`. 테스트는 32/32 방향 행, 192 runtime frame, 8 sheet의 source 일치를 검사한다.
 
 ## Main Navigation HUD V2 (2026-08-14)
 
@@ -514,9 +523,9 @@
 ## Starter Office Runtime V1 semantic assets
 
 - `Assets/FamilyCompany/Content/Resources/OfficeLayouts/StarterOfficeV1.asset`
-  - 상태: CANONICAL SEMANTIC STARTER LAYOUT V1
+  - 상태: FURNISHED LEGACY/QA SEMANTIC FIXTURE V1
   - 내용: 13×13 floor/walkability, 17 furniture records, placement subcell anchors, 네 workstation/seat/approach binding
-  - 용도: 새 게임의 `GameState.OfficeGrid`, Runtime 렌더·충돌·좌석, Save layout hash의 공통 입력
+  - 용도: 기존 저장 호환과 출근·좌석 회귀 QA. 실제 새 게임은 코드의 `CreateNewGameEmptyOfficeV1()` 바닥·외곽 shell을 사용한다.
 - `Assets/FamilyCompany/Content/Resources/HighMotion/HighMotionDirectionManifest.asset`
   - 상태: CANONICAL DIRECTION IMPORT MANIFEST V1
   - 내용: 12 캐릭터 source→canonical 8방향 순열, 가족 네 명의 32개 사람 승인 플래그

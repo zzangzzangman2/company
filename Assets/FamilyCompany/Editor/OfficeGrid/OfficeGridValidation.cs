@@ -18,6 +18,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
         {
             ValidatePreviewIntegrity();
             ValidateStarterOfficeIntegrity();
+            ValidateNewGameOfficeStartsEmpty();
             ValidateLayoutSaveRoundTrip();
             ValidateFurnitureAndSeatRoundTrip();
             ValidateSchemaOneSeatMigration();
@@ -110,6 +111,33 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
             foreach (var item in grid.Furniture)
                 AssertEqual(true, item.HasCanonicalPlacementAnchor, item.FurnitureId + " canonical floor anchor");
+        }
+
+        private static void ValidateNewGameOfficeStartsEmpty()
+        {
+            OfficeGridState grid = OfficeGridLayouts.CreateNewGameEmptyOfficeV1();
+            AssertEqual(13, grid.Width, "new-game empty width");
+            AssertEqual(13, grid.Height, "new-game empty height");
+            AssertEqual(52, grid.Furniture.Count, "new-game perimeter record count");
+            AssertEqual(0, grid.SeatSlots.Count, "new-game seat count");
+            AssertEqual(0, grid.Workstations.Count, "new-game workstation count");
+            AssertEqual(
+                0,
+                grid.Furniture.Count(item =>
+                    OfficeFurnitureCatalog.Find(item.KindId)?.IsPlayerEditable == true),
+                "new-game player-editable furniture count");
+            for (var y = 1; y < grid.Height - 1; y++)
+            for (var x = 1; x < grid.Width - 1; x++)
+                AssertEqual(
+                    true,
+                    grid.IsWalkable(new OfficeGridCoordinate(x, y)),
+                    $"new-game empty walkable cell ({x},{y})");
+
+            var state = PrototypeStateFactory.Create(778899);
+            AssertEqual(grid.ComputeLayoutHash(), state.OfficeGrid.ComputeLayoutHash(),
+                "prototype new-game empty layout hash");
+            AssertEqual(0, state.OfficeFurnitureInventory.Instances.Count,
+                "prototype new-game empty furniture inventory");
         }
 
         private static void ValidateLayoutSaveRoundTrip()

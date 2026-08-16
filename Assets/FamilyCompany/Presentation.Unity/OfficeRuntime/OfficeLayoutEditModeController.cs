@@ -108,7 +108,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             ClearPending();
             failure = string.Empty;
-            Say("건축·편집 모드 · 게임 시간과 AI를 안전하게 정지했습니다");
+            Say("사무실 관리 · 배치 중에는 게임 시간과 AI가 정지됩니다");
             return true;
         }
 
@@ -120,7 +120,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ClearVisuals();
             if (_mainBootstrap != null) _mainBootstrap.enabled = _mainBootstrapWasEnabled;
             Time.timeScale = _previousTimeScale;
-            Say("건축·편집 모드를 닫았습니다");
+            Say("사무실 관리를 닫았습니다");
         }
 
         private GameState State => _mainBootstrap == null ? null : _mainBootstrap.State;
@@ -604,7 +604,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Rect panel = PanelRect();
             GUI.DrawTexture(new Rect(panel.x + 4, panel.y + 6, panel.width, panel.height), _skin.ShadowTexture);
             GUI.Box(panel, GUIContent.none, _skin.PanelStyle);
-            GUI.Box(new Rect(panel.x, panel.y, panel.width, _skin.Round(46)), "  건축·편집", _skin.HeaderStyle);
+            GUI.Box(new Rect(panel.x, panel.y, panel.width, _skin.Round(46)), "  사무실 관리 · 구매/배치", _skin.HeaderStyle);
             float pad = _skin.Round(14);
             float x = panel.x + pad;
             float y = panel.y + _skin.Round(58);
@@ -688,7 +688,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 GUI.Label(new Rect(x, y, width, _skin.Round(24)), "가구를 선택하거나 카탈로그에서 구매하세요", _skin.BodyStyle);
                 GUI.Label(new Rect(x, y + _skin.Round(29), width, _skin.Round(42)),
-                    "선택/집기 · ghost preview · 격자 스냅 · R 90° 회전\nESC/우클릭 취소 · 확정 전에는 차감 없음",
+                    "선택/집기 · 미리보기 · 타일 중심 스냅 · R 90° 회전\nESC/우클릭 취소 · 확정 전에는 차감 없음",
                     _skin.HintStyle);
                 if (Button(new Rect(x, rect.yMax - _skin.Round(42), width, _skin.Round(34)), "뒤로가기", true)) Close();
                 return;

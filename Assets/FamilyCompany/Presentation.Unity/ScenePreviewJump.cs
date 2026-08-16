@@ -33,6 +33,8 @@ namespace FamilyCompany.Presentation.Unity
         private bool _loading;
         private float _loadingProgress;
         private float _loadingDisplayedProgress;
+        private float _loadingMaximumDisplayedStep;
+        private int _loadingDisplayedSamples;
         private float _loadingStartedAt;
         private string _loadingStage = "출근 준비를 시작하는 중";
         private bool _loadingUiLogged;
@@ -141,10 +143,15 @@ namespace FamilyCompany.Presentation.Unity
                 // thread, so the next Update reports the whole stall as one delta; at 0.38/s a 1.3 s
                 // stall moved the bar half its length in a single frame, which is why the first
                 // value the player ever saw was already near the middle.
+                float previousDisplayedProgress = _loadingDisplayedProgress;
                 _loadingDisplayedProgress = Mathf.MoveTowards(
                     _loadingDisplayedProgress,
                     Mathf.Max(_loadingDisplayedProgress, _loadingProgress),
                     Mathf.Min(Time.unscaledDeltaTime, 1f / 30f) * 0.38f);
+                _loadingMaximumDisplayedStep = Mathf.Max(
+                    _loadingMaximumDisplayedStep,
+                    _loadingDisplayedProgress - previousDisplayedProgress);
+                _loadingDisplayedSamples++;
                 var bootstrap = Object.FindFirstObjectByType<PrototypeBootstrap>();
                 if (_loadingUiCapturePending && bootstrap != null &&
                     bootstrap.UiScreen == PrototypeUiScreen.Playing)
@@ -194,7 +201,10 @@ namespace FamilyCompany.Presentation.Unity
             GUI.Label(layout.Title, "출근 준비 중", _loadingTitleStyle);
             GUI.Label(layout.Status, _loadingStage, _loadingBodyStyle);
 
-            var progress = Mathf.Clamp01(Mathf.Max(_loadingProgress, _loadingDisplayedProgress));
+            // The displayed value is the rate-limited presentation authority.  Taking Max with
+            // the raw producer value here bypassed the clamp in Update and made synchronous warm
+            // stages jump visually even though _loadingDisplayedProgress itself was smooth.
+            var progress = Mathf.Clamp01(_loadingDisplayedProgress);
             GUI.Box(layout.Track, GUIContent.none, _loadingTrackStyle);
             if (progress > 0.001f)
             {
@@ -311,6 +321,8 @@ namespace FamilyCompany.Presentation.Unity
                     _loading = true;
                     _loadingProgress = 0.12f;
                     _loadingDisplayedProgress = 0f;
+                    _loadingMaximumDisplayedStep = 0f;
+                    _loadingDisplayedSamples = 0;
                     _loadingStartedAt = Time.unscaledTime;
                     _loadingStage = "가족 네 명의 출근 준비를 확인하는 중";
                     _loadingUiLogged = false;
@@ -329,6 +341,8 @@ namespace FamilyCompany.Presentation.Unity
             _loading = true;
             _loadingProgress = 0.02f;
             _loadingDisplayedProgress = 0f;
+            _loadingMaximumDisplayedStep = 0f;
+            _loadingDisplayedSamples = 0;
             _loadingStartedAt = Time.unscaledTime;
             _loadingStage = "오늘의 사무실을 확인하는 중";
             _loadingUiLogged = false;
@@ -379,13 +393,19 @@ namespace FamilyCompany.Presentation.Unity
 
             _loadingProgress = 1f;
             _loadingStage = "09:00 출근 준비 완료";
-            yield return null;
+            float displayDeadline = Time.unscaledTime + 3f;
+            while (_loadingDisplayedProgress < 0.995f && Time.unscaledTime < displayDeadline)
+                yield return null;
+            _loadingDisplayedProgress = 1f;
             float loadingCaptureDeadline = Time.unscaledTime + 2f;
             while (!_loadingUiCaptureComplete && Time.unscaledTime < loadingCaptureDeadline)
                 yield return null;
             Debug.Log(
                 "STARTER_OFFICE_LOADING_UI_COMPLETE | mode=WarmRebind elapsed=" +
-                (Time.unscaledTime - _loadingStartedAt).ToString("F2") + "s");
+                (Time.unscaledTime - _loadingStartedAt).ToString("F2") +
+                "s maxDisplayedStep=" + _loadingMaximumDisplayedStep.ToString("F4") +
+                " samples=" + _loadingDisplayedSamples +
+                " ready=" + (_starterRuntime != null && _starterRuntime.IsReady));
             _loading = false;
         }
 
@@ -509,10 +529,17 @@ namespace FamilyCompany.Presentation.Unity
             }
             _tileOfficeActive = true;
             _loadingProgress = 1f;
+            _loadingStage = "09:00 출근 준비 완료";
+            float displayDeadline = Time.unscaledTime + 3f;
+            while (_loadingDisplayedProgress < 0.995f && Time.unscaledTime < displayDeadline)
+                yield return null;
             _loadingDisplayedProgress = 1f;
             Debug.Log(
                 "STARTER_OFFICE_LOADING_UI_COMPLETE | elapsed=" +
-                (Time.unscaledTime - _loadingStartedAt).ToString("F2") + "s");
+                (Time.unscaledTime - _loadingStartedAt).ToString("F2") +
+                "s maxDisplayedStep=" + _loadingMaximumDisplayedStep.ToString("F4") +
+                " samples=" + _loadingDisplayedSamples +
+                " ready=" + _starterRuntime.IsReady);
             _loading = false;
             Debug.Log(
                 "[StarterOfficeTileRuntime] PASS · StarterOfficeV1 기본 표시 · " +
@@ -656,6 +683,33 @@ namespace FamilyCompany.Presentation.Unity
             {
                 Debug.LogError("FAMILY_COMPANY_STARTER_TILE_MAIN_FLOW: FAIL | loading UI D3D capture missing or black");
                 Application.Quit(34);
+                yield break;
+            }
+
+            int editableAtNewGame = _starterRuntime.World.Grid.Furniture.Count(item =>
+                OfficeFurnitureCatalog.Find(item.KindId)?.IsPlayerEditable == true);
+            if (editableAtNewGame != 0 || _starterRuntime.World.Grid.SeatSlots.Count != 0 ||
+                bootstrap.State.OfficeFurnitureInventory.Instances.Count != 0)
+            {
+                Debug.LogError(
+                    "FAMILY_COMPANY_NEW_GAME_EMPTY_OFFICE_QA: FAIL | editable=" + editableAtNewGame +
+                    " seats=" + _starterRuntime.World.Grid.SeatSlots.Count +
+                    " inventory=" + bootstrap.State.OfficeFurnitureInventory.Instances.Count);
+                Application.Quit(34);
+                yield break;
+            }
+            Debug.Log(
+                "FAMILY_COMPANY_NEW_GAME_EMPTY_OFFICE_QA: PASS | editable=0 seats=0 inventory=0 " +
+                "perimeter=" + _starterRuntime.World.Grid.Furniture.Count);
+
+            // The legacy route/docking stress suite intentionally installs its furnished fixture
+            // only after proving that the real new-game state is empty.  This keeps FAST_QA from
+            // masquerading as evidence for the normal new-game layout.
+            _starterRuntime.ApplyLayoutForQa(OfficeGridLayouts.CreateStarterOfficeV1());
+            yield return WaitForRuntimeReady(34, "install furnished attendance QA fixture");
+            if (_playerQaFailure.Length > 0)
+            {
+                Application.Quit(_playerQaExitCode == 0 ? 34 : _playerQaExitCode);
                 yield break;
             }
 

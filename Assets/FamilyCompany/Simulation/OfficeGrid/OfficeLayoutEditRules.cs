@@ -79,6 +79,9 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 return OfficeLayoutEditResult.Fail(
                     OfficeLayoutEditFailure.InvalidDefinition, "구매·배치할 수 없는 가구 종류입니다.");
             OfficeGridCoordinate footprint = definition.FootprintFor(facing);
+            // Placement origin is an integer tile.  The constructor derives the only allowed
+            // semantic anchor: the exact center of that one tile or of the complete multi-tile
+            // footprint.  Pointer/world coordinates never enter persisted layout state.
             var placed = new PlacedOfficeFurniture(
                 instanceId,
                 definition.DefinitionId,

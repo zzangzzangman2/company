@@ -112,8 +112,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 Feature("company-daily-profit", "일일 수익", "오늘의 매출·비용·순수익 흐름을 확인합니다."),
                 Feature(
                     "company-building-editor",
-                    "건축·편집",
-                    "사무실 확장과 가구 구매·배치 화면으로 들어갑니다.",
+                    "사무실 관리",
+                    "업무·좌석·기기·수납·음료 등 분류별 가구를 사고 타일에 배치합니다.",
                     "이용 가능 · 열기",
                     MainNavigationFeatureAction.OpenBuildingEditor,
                     MainNavigationRouteIds.BuildingEditor)),

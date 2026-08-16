@@ -34,7 +34,7 @@ namespace FamilyCompany.Simulation.Game
             Contracts = contracts ?? new ContractPortfolio(Family.Members.Count);
             Growth = growth ?? new CompanyGrowthState();
             StockMarket = stockMarket ?? StockMarketSessionStateDto.Uninitialized();
-            OfficeGrid = officeGrid ?? OfficeGridLayouts.CreateStarterOfficeV1();
+            OfficeGrid = officeGrid ?? OfficeGridLayouts.CreateNewGameEmptyOfficeV1();
             OfficeFurnitureInventory = officeFurnitureInventory ??
                                        OfficeFurnitureInventoryState.MigrateFromGrid(OfficeGrid, Time.ElapsedMinutes);
             Stamina = stamina ?? new CharacterStaminaRoster(

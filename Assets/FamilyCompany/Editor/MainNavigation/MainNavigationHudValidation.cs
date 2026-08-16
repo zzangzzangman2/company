@@ -136,7 +136,7 @@ namespace FamilyCompany.Editor
                 .ToArray();
             Require(buildingRoutes.Length == 1 && buildingRoutes[0].TabId == MainNavigationTabId.Company &&
                     buildingRoutes[0].Feature.Action == MainNavigationFeatureAction.OpenBuildingEditor &&
-                    buildingRoutes[0].Feature.DisplayNameKo == "건축·편집",
+                    buildingRoutes[0].Feature.DisplayNameKo == "사무실 관리",
                 "Building editor must consume one active adapter route inside Company.");
             var businessRoutes = MainNavigationCatalog.All
                 .SelectMany(tab => tab.Features.Select(feature => new { tab.TabId, Feature = feature }))

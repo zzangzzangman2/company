@@ -55,8 +55,9 @@
 
 ### 현재 타일 사무실 정본
 
-- `Prototype01`은 `StarterOfficeV1`의 13×13 의미 격자를 Unity Isometric Tilemap으로 렌더한다.
+- `Prototype01`은 `GameState.OfficeGrid`의 13×13 의미 격자를 Unity Isometric Tilemap으로 렌더한다. 새 게임은 바닥·외곽만 있는 빈 사무실이고, furnished `StarterOfficeV1`은 기존 저장/QA fixture다.
 - 바닥은 320×160·180 PPU, 가구와 벽은 hard alpha·Point·균등 scale을 사용한다.
+- 모든 배치 가구는 회전된 의미 footprint의 정확한 타일 중심 anchor를 사용한다. 화면 포인터의 자유 좌표나 Sprite별 숨은 위치 보정은 허용하지 않는다.
 - `OfficeVisualV2` 통짜 PNG와 3D collider/waypoint 화면은 폐기된 렌더 경로이며 fallback 정본이 아니다.
 - 사무실 편집기는 Sprite Transform이 아니라 의미 footprint/anchor를 편집하고 같은 상태를 저장·경로·상호작용에 전달한다.
 
