@@ -1860,29 +1860,20 @@ namespace FamilyCompany.Presentation.Unity
         {
             Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
             if (actors == null) yield break;
-            var initiallySeated = QaMemberIds.ToDictionary(
-                memberId => memberId,
-                memberId => actors[memberId].IsSeated,
-                StringComparer.Ordinal);
+            // BeginQaControl deliberately resets runtime state, including any production seat.
+            // The former setup recorded who was seated, called that reset, then waited for an
+            // outward walk that could no longer exist.  Establish the actual pre-dock premise at
+            // each actor's distinct approach tile; the real reserved atomic exit is exercised and
+            // asserted later in this same scenario after all four have docked.
             foreach (string memberId in QaMemberIds)
             {
-                actors[memberId].BeginQaControl();
-                if (!actors[memberId].IsSeated ||
-                    actors[memberId].QaRequestStandWithOutwardRoute()) continue;
-                FailPlayerQa(54, "could not establish a standing pre-dock state for " + memberId);
-                yield break;
+                OfficeSeatSlot assignedSeat =
+                    _starterRuntime.World.Workstations.RequiredSeat("seat_" + memberId);
+                actors[memberId].QaTeleportToCell(assignedSeat.ApproachCell);
             }
-            float resetStarted = Time.time;
-            while (Time.time - resetStarted < 12f && QaMemberIds.Any(memberId =>
-                       initiallySeated[memberId] &&
-                       (actors[memberId].IsOccupyingSeat ||
-                        !TryObserveClassicFirstWalk(actors[memberId], out _))))
-                yield return null;
-            if (QaMemberIds.Any(memberId =>
-                    initiallySeated[memberId] &&
-                    (actors[memberId].IsOccupyingSeat ||
-                     !TryObserveClassicFirstWalk(actors[memberId], out int direction) ||
-                     direction != actors[memberId].R5eLastAtomicExitDirection)))
+            yield return new WaitForEndOfFrame();
+            if (QaMemberIds.Any(memberId => actors[memberId].IsOccupyingSeat ||
+                                               actors[memberId].ActiveSeatId.Length != 0))
             {
                 FailPlayerQa(54, "could not complete the standing pre-dock reset for all actors");
                 yield break;
