@@ -611,3 +611,24 @@ clean 빌드보다 worktree를 새로 만드는 쪽이 5배 이상 비싸다. �
 `OfficeInteractionSelectionTrace.TraceRecorded` 세 지점의 런타임 가변 static이 Play 사이에 초기화되지 않는 문제를
 먼저 해결하고 Unity 실행 검증을 통과해야 한다. 후자는 별도 설치와 엔드포인트 취급 규칙이 필요하다. 검증 전까지
 둘 다 현재 상태가 아니다.
+
+## 2026-08-16 / 90도 코너는 멈추지 않고 지나간다
+
+결정: `OfficeSharedLocomotionRules.RequiresStationaryPivot`의 정지 회전 임계값을 2옥탄트에서 3옥탄트로
+올린다. 90도 사분 회전은 걷는 속도를 유지한 채 지나가고, 135도 이상의 되돌아가기에서만 발을 심고 회전한다.
+
+이유: cell-centre 4방향 routing으로 바뀐 뒤 일반 코너는 예외 없이 정확히 2옥탄트가 되었다. 기존 `>= 2`
+임계값은 그래서 모든 코너에서 액터를 완전히 정지시키고 45도씩 두 번 회전시킨 뒤에야 재출발시켰다. 사용자가
+보고한 "방향전환할 때 흔들리면서 한 번 되고 다시 전환한다"는 이 정지-회전-회전-재출발 시퀀스이며, 코너에
+정지 프레임이 끼는지에 따라 회전이 보이기도 안 보이기도 한 것도 같은 원인이다. 되돌아가기는 사람도 실제로
+멈춰서 돌기 때문에 3옥탄트 이상은 그대로 둔다.
+
+검증: `FAST_QA_WINDOWS.cmd -Profile editor-broad` PASS 18.561초, `-Profile player-scripts` PASS 23.565초
+(SLO 60초 충족). 기존 안전 지표는 완화하지 않았고 그대로 유지된다. seeds=128, paths=1152,
+movingFrames=1970, reverseFacingFrames=0, movingDuringPivot=0, maxFacingError=29.2740도(한계 30.5도),
+unnecessaryCornerStops=0.
+
+보류: 이동 중 표시 방향은 여전히 한 프레임에 스냅한다. 옥탄트당 고정 시간으로 몸을 돌리는 blending 후보는
+`DisplayDirection == MotionDirection`을 이동 프레임마다 강제하는 런타임 불변식과 QA 단언 7곳을 함께 바꿔야
+하고, 그중 `ReverseFacingFrames == 0`과 `MaximumFacingErrorDegrees` 같은 집계 지표를 느슨하게 만들어야 한다.
+과거 역방향 버그를 잡던 그물이므로 이번에는 적용하지 않았다.

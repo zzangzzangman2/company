@@ -38,6 +38,18 @@
   최종 release identity는 Downloads의 `BUILD_INFO.txt`/`DEPLOY_MANIFEST.json`을 정본으로 하며 검증된 clean
   HEAD만 `origin/main`과 `C:\Users\godho\Downloads\FamilyCompany_Playtest`에 함께 승격한다.
 
+## 2026-08-16 / 90도 코너 정지 제거
+
+- `RequiresStationaryPivot` 임계값을 2옥탄트에서 3옥탄트로 올렸다. cell-centre 4방향 routing에서 일반 코너는
+  항상 정확히 2옥탄트라 기존 임계값이 모든 코너에서 액터를 정지시키고 45도씩 두 번 회전시킨 뒤 재출발시켰다.
+  이제 90도 코너는 걷는 속도를 유지하고 135도 이상만 발을 심고 회전한다. 근거는
+  [DECISIONS.md](DECISIONS.md)의 같은 날짜 항목에 있다.
+- `editor-broad` PASS 18.561초, `player-scripts` PASS 23.565초(SLO 60초 충족). 기존 안전 지표를 완화하지
+  않았다: seeds=128, paths=1152, movingFrames=1970, reverseFacingFrames=0, movingDuringPivot=0,
+  maxFacingError=29.2740도, unnecessaryCornerStops=0.
+- 이동 중 표시 방향은 여전히 한 프레임에 스냅한다. 옥탄트당 고정 시간 blending은 런타임 불변식과 QA 단언
+  7곳, 그리고 `ReverseFacingFrames == 0` 같은 집계 지표를 함께 바꿔야 해서 적용하지 않았다. 미완료 항목이다.
+
 ## 2026-08-16 / 반복 개발 루프 정본화
 
 - [ITERATION_LOOP.md](ITERATION_LOOP.md)를 짧은 반복 루프의 정본으로 추가했다. 변경 종류별 명령, warm 캐시

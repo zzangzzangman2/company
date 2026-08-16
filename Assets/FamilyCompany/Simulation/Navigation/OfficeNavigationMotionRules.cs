@@ -852,10 +852,14 @@ namespace FamilyCompany.Simulation.Navigation
                 throw new ArgumentOutOfRangeException(nameof(displayDirection));
             if (requestedDirection < 0 || requestedDirection >= OfficeFacingHysteresisRules.DirectionCount)
                 throw new ArgumentOutOfRangeException(nameof(requestedDirection));
+            // Cell-centre routing makes every ordinary corner exactly two octants, so a >= 2 threshold
+            // planted the actor dead at each corner and then rotated it in two visible steps before
+            // it could resume. Quarter turns now keep walking; only near-reversals plant and turn,
+            // which is what a person actually does when doubling back.
             return phase == OfficeLocomotionPhase.Pivot ||
                    OfficeLocomotionGaitRules.DirectionDistance(
                        displayDirection,
-                       requestedDirection) >= 2;
+                       requestedDirection) >= 3;
         }
 
         public static bool IsInteractionFacingReady(
