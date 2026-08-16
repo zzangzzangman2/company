@@ -314,19 +314,17 @@ namespace FamilyCompany.Presentation.Unity
 
         public void UnbindStarterOfficeRuntime()
         {
-            _starterOfficeRuntimeAgents = Array.Empty<IOfficeRuntimeAgent>();
-
             if (_contractTaskCoordinator == null)
                 _contractTaskCoordinator = GetComponent<OfficeContractTaskCoordinator>();
             if (_contractTaskCoordinator != null)
             {
                 _contractTaskCoordinator.enabled = false;
+                RunStarterOfficeUnbindStepNoThrow(_contractTaskCoordinator.ResetAssignments);
                 RunStarterOfficeUnbindStepNoThrow(() =>
                     _contractTaskCoordinator.Configure(
                         this,
                         Array.Empty<OfficeWorkerAgent>(),
                         Array.Empty<OfficeWaypoint>()));
-                RunStarterOfficeUnbindStepNoThrow(_contractTaskCoordinator.ResetAssignments);
             }
 
             if (_officeAutonomyCoordinator == null)
@@ -340,6 +338,8 @@ namespace FamilyCompany.Presentation.Unity
                         Array.Empty<OfficeWorkerAgent>(),
                         Array.Empty<OfficeWaypoint>()));
             }
+
+            _starterOfficeRuntimeAgents = Array.Empty<IOfficeRuntimeAgent>();
         }
 
         private static void RunStarterOfficeUnbindStepNoThrow(Action step)
