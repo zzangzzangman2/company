@@ -2,6 +2,14 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-16 / 회귀·실패 실행본 영구 삭제 정책
+
+- [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)를 build/deploy의 영구 fail-closed 정본으로 추가했다. user-visible regression, failed gate, stale/unverified provenance, self-PASS-only candidate는 current 또는 Downloads에 존재할 수 없다.
+- 판정 시 exact-root fence와 unrelated build 보호를 먼저 확인하고, SHA/log/manifest 같은 비실행 evidence를 payload 밖에 보존한 뒤 EXE, `*_Data`, `UnityPlayer.dll`을 포함한 전체 실행 payload를 즉시 삭제한다. 이름 변경·격리·LKG suffix만으로 회귀 payload를 보존하지 않는다.
+- 회귀 payload의 재승격은 금지한다. 수정 뒤 모든 관련 regression oracle, 기존 필수 gate, 독립 gate를 통과하고 새 commit/input fingerprint/build ID를 가진 새 payload만 처음부터 빌드할 수 있다.
+- Windows release의 독립 필수 oracle은 fresh 08:50에서 네 가족이 `player` 09:00, `older_sister` 09:01, `father` 09:02, `mother` 09:03에 실제 입장·이동·assigned seat 착석을 증명해야 한다.
+- 이번 변경은 문서 계약만 추가했다. 기존 build/deploy 자동화가 regression 발견 시 evidence→전체 payload 삭제→검증된 정상 build rollback/없으면 empty를 실제 구현하고 독립 테스트로 증명하기 전에는 current/Downloads 실제 배포에 사용하지 않는다.
+
 ## 2026-08-15 / Management UI validator Windows argv P2 후보
 
 - `Validate-ManagementUiV2.ps1`의 full-runtime Roslyn compile은 source 파일 234개를 Windows argv로 직접 펼치지 않고, compiler identity·reference/options·source-root/발견 순서를 보존한 UTF-8 no-BOM response file을 사용한다.
@@ -200,7 +208,8 @@
 1. `git diff --check`, C# compiler, 순수 검증 harness, Unity D3D PlayMode/render QA를 통과한다.
 2. 저장 v1~v9→v10, 새 게임 v10, 편집 재고, 계약 성장, 주식 계좌, 출퇴근, 실제 변위 회귀를 확인한다.
 3. `BUILD_WINDOWS.cmd`로 새 실행본을 만들고 `BUILD_INFO.txt`와 현재 HEAD가 같은지 확인한다.
-4. 검증된 폴더 전체를 `C:\Users\godho\Downloads\Family\FamilyCompany_Playtest`에 배포한다.
+4. [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)의 네 가족 09:00/09:01/09:02/09:03 oracle과 독립 gate를 통과시킨다.
+5. 검증된 새 identity의 폴더 전체만 `C:\Users\godho\Downloads\Family\FamilyCompany_Playtest`에 배포한다. FAIL/UNKNOWN이면 evidence 보존 후 해당 payload를 삭제하고 rollback하거나 current를 비워 둔다.
 
 ## 다른 PC에서 이어하기
 
@@ -214,10 +223,13 @@ git pull --ff-only origin main
 
 빌드가 이미 있더라도 `Builds/Windows/FamilyCompany_Playtest/BUILD_INFO.txt`의 commit이 `git rev-parse HEAD`와 다르면 최신 실행본으로 간주하지 않는다. 상세 절차는 [HOME_PC_CONTINUATION_GUIDE.md](HOME_PC_CONTINUATION_GUIDE.md)와 [PLAYTEST_BUILD.md](PLAYTEST_BUILD.md)를 따른다.
 
+회귀·실패·출처 불명·self-PASS-only 실행본의 처리와 재빌드 조건은 [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)를 반드시 따른다.
+
 ## 정본 문서 경계
 
 - 인물·출퇴근·사무실 시각: [CANON.md](CANON.md), [ART_STYLE.md](ART_STYLE.md)
 - 구조·저장·Unity 경계: [ARCHITECTURE.md](ARCHITECTURE.md)
+- build/deploy 회귀 삭제: [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)
 - 내비게이션·편집: [MAIN_NAVIGATION_HUD_V2.md](MAIN_NAVIGATION_HUD_V2.md), [OFFICE_BUILD_EDITOR_V1.md](OFFICE_BUILD_EDITOR_V1.md)
 - 계약: [CONTRACTS_V0_3.md](CONTRACTS_V0_3.md), [CONTRACT_CLIENT_PROGRESSION_V1.md](CONTRACT_CLIENT_PROGRESSION_V1.md)
 - 주식: [SIMUL_MARKET_PORT.md](SIMUL_MARKET_PORT.md), [STOCK_MARKET_LANDSCAPE_V1.md](STOCK_MARKET_LANDSCAPE_V1.md)

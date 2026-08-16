@@ -35,6 +35,8 @@ git rev-parse HEAD
 
 저장소 루트에서 실행한다.
 
+빌드·실행 전에 [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)를 읽고 현재 local/Downloads payload의 `BUILD_INFO.txt`, manifest, 독립 gate evidence를 확인한다. user-visible regression, failed gate, stale/unverified provenance, self-PASS-only candidate는 실행하지 않는다. exact-root fence로 해당 payload만 확정하고 SHA/log/manifest 같은 비실행 evidence를 먼저 보존한 뒤 EXE, `*_Data`, `UnityPlayer.dll`을 포함한 전체 실행 payload를 즉시 삭제한다. 이름 변경이나 quarantine만으로 current에 남기지 않는다.
+
 ```powershell
 .\BUILD_WINDOWS.cmd
 .\RUN_WINDOWS.cmd
@@ -44,8 +46,11 @@ git rev-parse HEAD
 - 출처 파일: `Builds/Windows/FamilyCompany_Playtest/BUILD_INFO.txt`
 - `BUILD_INFO.txt`의 commit이 `git rev-parse HEAD`와 같은지 확인한다.
 - `Builds/`는 Git에 포함되지 않으므로 다른 PC의 오래된 EXE가 자동 갱신되지 않는다.
+- provenance나 gate 결과가 없거나 `PENDING`이면 실행하지 말고 정책에 따라 evidence 보존 후 해당 payload만 삭제한다. unrelated build, source, AppData save는 삭제하지 않는다.
 
 상세 옵션과 오류 해결은 [PLAYTEST_BUILD.md](PLAYTEST_BUILD.md)를 따른다.
+
+새 build는 관련 regression oracle 전부, 기존 필수 gate, 독립 gate를 통과하고 새 build identity를 발급받아야 한다. 필수 출근 oracle은 fresh 08:50 state에서 `player` 09:00, `older_sister` 09:01, `father` 09:02, `mother` 09:03의 실제 release·이동·assigned seat 착석을 확인한다. 실패한 payload를 재승격하거나 staging/cache에서 재사용하지 않는다.
 
 ## 4. Unity Editor로 열기
 
@@ -63,6 +68,7 @@ git rev-parse HEAD
 2. [PROJECT_STATE.md](PROJECT_STATE.md)
 3. [CANON.md](CANON.md)
 4. 작업 분야의 정본 문서
+5. build·실행·배포 작업이면 [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)
 
 현재 통합 완료와 대기 상태는 `PROJECT_STATE.md`만 따른다. `History/Reports/`의 완료 보고서는 당시 증거이며 최신 완료 선언이 아니다.
 
@@ -79,3 +85,5 @@ git push origin main
 ```
 
 push 전 검증 결과와 남은 작업을 `PROJECT_STATE.md`의 현재 항목에 반영한다. 다른 작업자의 파일이나 `Library`, `Temp`, `Logs`, `Builds`를 commit하지 않는다.
+
+build/deploy 자동화는 regression을 발견하면 fail closed하고, evidence 보존 뒤 해당 실행 payload 삭제와 검증된 정상 build rollback(없으면 current empty)을 완료해야 한다. 이 계약의 구현·독립 테스트가 확인되지 않은 자동화로 current/Downloads를 갱신하지 않는다.

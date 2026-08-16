@@ -30,6 +30,7 @@ Unity `6000.3.21f1`이 설치된 저장소 루트에서 다음 명령을 사용�
 - 빌드 출처: 같은 폴더의 `BUILD_INFO.txt`에서 commit SHA와 Unity 버전을 현재 `git rev-parse HEAD`와 비교합니다.
 - `Builds/`는 Git에 포함되지 않습니다. 다른 PC에서는 pull 후 직접 빌드하거나 검증된 빌드 폴더 전체를 복사해야 합니다.
 - 상세 절차와 오류 해결은 [PLAYTEST_BUILD.md](Docs/PLAYTEST_BUILD.md)를 따릅니다.
+- user-visible regression, failed gate, stale/unverified provenance, self-PASS-only candidate는 current/Downloads에 둘 수 없습니다. 비실행 evidence를 먼저 보존한 뒤 해당 실행 payload 전체를 즉시 삭제하는 강제 규칙은 [REGRESSION_BUILD_POLICY.md](Docs/REGRESSION_BUILD_POLICY.md)를 따릅니다.
 
 Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 열고 Play를 누릅니다.
 
@@ -47,6 +48,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 | 주식 | [SIMUL_MARKET_PORT.md](Docs/SIMUL_MARKET_PORT.md), [STOCK_MARKET_LANDSCAPE_V1.md](Docs/STOCK_MARKET_LANDSCAPE_V1.md) | 시장 코어와 가로형 UI |
 | 실제 회사 역사 | [CLAUDE_HANDOFF_HISTORY_DATA.md](Docs/CLAUDE_HANDOFF_HISTORY_DATA.md), [CLAUDE_HISTORY_PROGRESS.md](Docs/CLAUDE_HISTORY_PROGRESS.md) | History 전용 경로와 데이터 상태 |
 | 다른 PC 재개 | [HOME_PC_CONTINUATION_GUIDE.md](Docs/HOME_PC_CONTINUATION_GUIDE.md) | pull·빌드·실행·검증 순서 |
+| 빌드 회귀 삭제 | [REGRESSION_BUILD_POLICY.md](Docs/REGRESSION_BUILD_POLICY.md) | 실패/회귀 실행본의 evidence·삭제·rollback·재빌드 강제 계약 |
 
 `Docs/History/Reports/`의 문서는 당시 구현 증거를 보존한 역사 보고서이며 현재 상태를 덮어쓰지 않습니다.
 
@@ -56,6 +58,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 - `Library`, `Temp`, `Logs`, `work`, `Builds`는 Git에 넣지 않고 `Assets`의 `.meta`는 반드시 추적합니다.
 - 회사 PC에서는 Unity/EXE를 전면 실행하지 않습니다. 컴파일·순수 로직 검증은 숨김 batchmode, 실제 렌더·IMGUI 캡처는 숨김 또는 비활성 오프스크린 Windows D3D11 창을 사용합니다.
 - 제안서나 완료 보고서는 자동으로 정본이 아닙니다. 구현과 검증 후 `PROJECT_STATE.md`에 반영된 내용만 현재 상태입니다.
+- 회귀·실패·출처 미검증·self-PASS-only 실행본은 이름 변경이나 격리로 보존하지 않습니다. exact-root fence와 evidence-before-delete를 지키며 관련 payload만 삭제하고, 모든 regression oracle과 독립 gate를 통과한 새 build identity만 새로 빌드·승격합니다.
 
 ## 기본 자동화
 
