@@ -39,6 +39,7 @@ try {
     $referencePaths = @(
     $netstandard,
     (Join-Path $unityModules 'UnityEngine.CoreModule.dll'),
+    (Join-Path $unityModules 'UnityEngine.AIModule.dll'),
     (Join-Path $unityModules 'UnityEngine.PhysicsModule.dll'),
     (Join-Path $unityModules 'UnityEngine.Physics2DModule.dll'),
     (Join-Path $unityModules 'UnityEngine.AnimationModule.dll'),
