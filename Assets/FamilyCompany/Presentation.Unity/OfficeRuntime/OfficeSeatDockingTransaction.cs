@@ -937,6 +937,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
     internal sealed class OfficeRuntimeActorTraceState
     {
+        private bool _captureSuppressed;
+
         public OfficeRuntimeActorTraceState(int actorIndex, string actorId, bool captureEnabled)
         {
             ActorIndex = actorIndex;
@@ -955,6 +957,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public int ActorIndex { get; }
         public string ActorId { get; }
         public bool CaptureEnabled { get; }
+        public bool IsCaptureActive => CaptureEnabled && !_captureSuppressed;
         public R5eFixedBuffer<R5eSeatTransitionTraceRow> TransitionRows { get; }
         public R5eFixedBuffer<R5eSeatedSessionSampleRow> SeatedRows { get; }
         public R5eFixedBuffer<R5eLocomotionAdapterRow> LocomotionRows { get; }
@@ -986,7 +989,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void BeginStep(in OfficeRuntimeStepTraceContext context, ulong routeGeneration, ulong handoff)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (RenderFrame != context.RenderFrame)
             {
                 BeginRenderFrame(
@@ -1014,7 +1017,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ulong firstStepOrdinal = 0,
             ulong firstRuntimeTick = 0)
         {
-            if (!CaptureEnabled || RenderFrame == renderFrame) return;
+            if (!IsCaptureActive || RenderFrame == renderFrame) return;
             RenderFrame = renderFrame;
             FirstStepOrdinalThisRender = firstStepOrdinal;
             LastStepOrdinalThisRender = firstStepOrdinal;
@@ -1030,7 +1033,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void OpenSeatedSession(ulong seatedSessionId, ulong entryTransactionId)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (seatedSessionId == 0 || entryTransactionId == 0 || SeatedSessionId != 0)
             {
                 Failed = true;
@@ -1041,25 +1044,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         }
 
         public bool CanOpenSeatedSession(ulong seatedSessionId, ulong entryTransactionId) =>
-            !CaptureEnabled ||
+            !IsCaptureActive ||
             (seatedSessionId != 0 && entryTransactionId != 0 && SeatedSessionId == 0);
 
         public void CloseSeatedSession()
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             SeatedSessionId = 0;
             EntryTransactionId = 0;
         }
 
         public void CountExpectedPreClear(bool expected)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (expected) ExpectedPreClearCount++;
         }
 
         public void CountExpectedPostClear(bool expected, bool expectedMoving)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (expected) ExpectedPostClearCount++;
             if (expectedMoving) ExpectedMovingCount++;
         }
@@ -1073,7 +1076,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             in OfficeRuntimeOccupancy.CanonicalActorSnapshot occupancy,
             in R5eProductionObservation observation)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (SeatedSessionId == 0)
             {
                 Failed = true;
@@ -1109,7 +1112,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void RecordClearMask(in R5eAgentStepSnapshot preClear, in R5eAgentStepSnapshot postClear)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             bool preViolation = !preClear.IsStationary(OfficeRuntimeTraceCoordinator.StationaryEpsilon);
             bool postPass = postClear.IsStationary(OfficeRuntimeTraceCoordinator.StationaryEpsilon);
             if (preViolation && postPass) ClearMaskedViolationCount++;
@@ -1117,7 +1120,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void AppendLocomotion(in R5eLocomotionAdapterRow row)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (!LocomotionRows.TryAppend(row)) Failed = true;
             if (row.ExpectedMoving && row.ObservedMoving) ObservedMovingCount++;
             if (_lastJoinedStepOrdinal != 0 && row.Context.ActorStepOrdinal <= _lastJoinedStepOrdinal)
@@ -1130,7 +1133,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void RecordExpectedExceptionPair(bool seated)
         {
-            if (!CaptureEnabled || !seated) return;
+            if (!IsCaptureActive || !seated) return;
             ExpectedPreClearCount++;
             ExpectedPostClearCount++;
             Failed = true;
@@ -1138,20 +1141,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void CountExpectedRender()
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             ExpectedRenderedTraceCount++;
         }
 
         public void AppendRender(in R5eLocomotionAdapterRow row)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (!LocomotionRows.TryAppend(row)) Failed = true;
             ObservedRenderedTraceCount++;
         }
 
         public void AppendTransition(in R5eSeatTransitionTraceRow row)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (!TransitionRows.TryAppend(row)) Failed = true;
         }
 
@@ -1164,8 +1167,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void AppendVisual(in R5eVisualCaptureMetadataRow row)
         {
-            if (!CaptureEnabled) return;
+            if (!IsCaptureActive) return;
             if (!VisualRows.TryAppend(row)) Failed = true;
+        }
+
+        public void SuppressCapture()
+        {
+            if (CaptureEnabled) _captureSuppressed = true;
         }
 
         public bool CanImportCompletedScenario(OfficeRuntimeActorTraceState source)
@@ -1269,6 +1277,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             HandoffThisRender = 0;
             RenderFrame = -1;
             Failed = false;
+            _captureSuppressed = false;
             StepDisplacementSumThisRender = Vector2.zero;
             StepRowsThisRender = 0;
             DuplicateStepJoinCount = 0;
@@ -1306,7 +1315,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             for (var index = 0; index < _states.Length; index++)
             {
-                if (!_states[index].CanImportCompletedScenario(coordinator.ActorStateAt(index)))
+                if (!coordinator.TryGetActorState(_states[index].ActorId, out var source) ||
+                    !_states[index].CanImportCompletedScenario(source))
                 {
                     FailureCount++;
                     return false;
@@ -1314,7 +1324,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             for (var index = 0; index < _states.Length; index++)
             {
-                if (!_states[index].TryImportCompletedScenario(coordinator.ActorStateAt(index)))
+                if (!coordinator.TryGetActorState(_states[index].ActorId, out var source) ||
+                    !_states[index].TryImportCompletedScenario(source))
                 {
                     FailureCount++;
                     return false;
@@ -1328,7 +1339,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
     /// <summary>
     /// All allocations happen when the world and actors are configured. Gameplay append paths are
-    /// bounded array writes; buffers never wrap or overwrite evidence.
+    /// bounded array writes; buffers never wrap or overwrite evidence. Actor IDs are the live
+    /// lookup authority; the array index is only the immutable registration ordinal written to
+    /// trace rows. A fatal observer result suppresses later evidence writes, never gameplay.
     /// </summary>
     internal sealed class OfficeRuntimeTraceCoordinator
     {
@@ -1341,6 +1354,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public const float StationaryEpsilon = 0.000001f;
 
         private readonly OfficeRuntimeActorTraceState[] _actorStates;
+        private readonly Dictionary<string, OfficeRuntimeActorTraceState> _actorStatesById;
         private ulong _nextActorStepOrdinal;
         private ulong _nextTransactionId;
         private ulong _nextSessionId;
@@ -1360,6 +1374,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ScenarioId = scenarioId;
             CaptureEnabled = captureEnabled;
             _actorStates = new OfficeRuntimeActorTraceState[maximumActors];
+            _actorStatesById = new Dictionary<string, OfficeRuntimeActorTraceState>(
+                maximumActors,
+                StringComparer.Ordinal);
         }
 
         public ulong RunId { get; private set; }
@@ -1380,15 +1397,29 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return _actorStates[index];
         }
 
-        public OfficeRuntimeActorTraceState RegisterActor(OfficeRuntimeAgent actor, int actorIndex)
+        internal bool TryGetActorState(
+            string actorId,
+            out OfficeRuntimeActorTraceState state) =>
+            _actorStatesById.TryGetValue(actorId ?? string.Empty, out state);
+
+        public OfficeRuntimeActorTraceState RegisterActor(OfficeRuntimeAgent actor)
         {
             if (actor == null) throw new ArgumentNullException(nameof(actor));
-            if (actorIndex < 0 || actorIndex >= _actorStates.Length)
-                throw new ArgumentOutOfRangeException(nameof(actorIndex));
-            if (_actorStates[actorIndex] != null)
-                throw new InvalidOperationException("R5e trace actor index is already registered.");
-            var state = new OfficeRuntimeActorTraceState(actorIndex, actor.AgentId, CaptureEnabled);
+            return RegisterActorIdentity(actor.AgentId);
+        }
+
+        internal OfficeRuntimeActorTraceState RegisterActorIdentity(string actorId)
+        {
+            if (string.IsNullOrWhiteSpace(actorId))
+                throw new ArgumentException("R5e trace actor ID is required.", nameof(actorId));
+            if (RegisteredActorCount >= _actorStates.Length)
+                throw new InvalidOperationException("R5e trace actor capacity is exhausted.");
+            if (_actorStatesById.ContainsKey(actorId))
+                throw new InvalidOperationException("R5e trace actor ID is already registered.");
+            int actorIndex = RegisteredActorCount;
+            var state = new OfficeRuntimeActorTraceState(actorIndex, actorId, CaptureEnabled);
             _actorStates[actorIndex] = state;
+            _actorStatesById.Add(actorId, state);
             RegisteredActorCount++;
             return state;
         }
@@ -1396,20 +1427,39 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public OfficeRuntimeStepTraceContext BeginActorStep(
             OfficeRuntimeAgent actor,
             int renderFrame,
-            int actorIndex,
             int actorStepIndex,
             int actorStepCount,
             float actorMotionDelta,
             float stepDelta)
         {
-            OfficeRuntimeActorTraceState state = RequiredState(actorIndex, actor);
+            if (!TryResolveActorState(actor, out OfficeRuntimeActorTraceState state))
+                throw new InvalidOperationException("R5e trace actor is not bound.");
+            return BeginActorStep(
+                actor,
+                state,
+                renderFrame,
+                actorStepIndex,
+                actorStepCount,
+                actorMotionDelta,
+                stepDelta);
+        }
+
+        private OfficeRuntimeStepTraceContext BeginActorStep(
+            OfficeRuntimeAgent actor,
+            OfficeRuntimeActorTraceState state,
+            int renderFrame,
+            int actorStepIndex,
+            int actorStepCount,
+            float actorMotionDelta,
+            float stepDelta)
+        {
             ulong stepOrdinal = NextNonZero(ref _nextActorStepOrdinal);
             ulong runtimeTick = actor.NextR5eRuntimeTick;
             var context = new OfficeRuntimeStepTraceContext(
                 RunId,
                 ScenarioId,
                 renderFrame,
-                actorIndex,
+                state.ActorIndex,
                 stepOrdinal,
                 runtimeTick,
                 actorStepIndex,
@@ -1417,14 +1467,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 actorMotionDelta,
                 stepDelta);
             state.BeginStep(context, actor.R5eRouteGenerationId, actor.R5eMovementHandoffId);
-            if (state.Failed) FailureCount++;
+            if (state.Failed) AbortFatal("actor-step-append-failed:" + state.ActorId);
             return context;
         }
 
         public bool TryBeginActorStep(
             OfficeRuntimeAgent actor,
             int renderFrame,
-            int actorIndex,
             int actorStepIndex,
             int actorStepCount,
             float actorMotionDelta,
@@ -1432,15 +1481,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             out OfficeRuntimeStepTraceContext context)
         {
             context = default;
-            if (FatalAbort) return false;
-            OfficeRuntimeActorTraceState state = RequiredState(actorIndex, actor);
-            if (CaptureEnabled && !state.HasStepCapacity(actor.IsR5eSeatedPostState))
+            if (actor == null) return false;
+            if (!TryResolveActorState(actor, out OfficeRuntimeActorTraceState state)) return false;
+            if (state.IsCaptureActive && !state.HasStepCapacity(actor.IsR5eSeatedPostState))
             {
-                AbortFatal("actor-step-capacity-preflight");
-                return false;
+                AbortFatal("actor-step-capacity-preflight:" + state.ActorId);
             }
             context = BeginActorStep(
-                actor, renderFrame, actorIndex, actorStepIndex, actorStepCount,
+                actor, state, renderFrame, actorStepIndex, actorStepCount,
                 actorMotionDelta, stepDelta);
             return true;
         }
@@ -1449,7 +1497,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             in OfficeRuntimeStepTraceContext context,
             bool expectedSeated)
         {
-            RequiredState(context.ActorIndex, null).CountExpectedPreClear(expectedSeated);
+            if (TryGetActorStateAt(context.ActorIndex, out var state))
+                state.CountExpectedPreClear(expectedSeated);
+            else
+                AbortFatal("actor-step-context-mismatch:" + context.ActorIndex);
         }
 
         public void CountExpectedPostClearAndMoving(
@@ -1457,14 +1508,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             bool expectedSeated,
             bool expectedMoving)
         {
-            RequiredState(context.ActorIndex, null).CountExpectedPostClear(
-                expectedSeated,
-                expectedMoving);
+            if (TryGetActorStateAt(context.ActorIndex, out var state))
+                state.CountExpectedPostClear(expectedSeated, expectedMoving);
+            else
+                AbortFatal("actor-step-context-mismatch:" + context.ActorIndex);
         }
 
         public void CountExpectedRender(OfficeRuntimeAgent actor)
         {
-            actor.R5eTraceState.CountExpectedRender();
+            if (TryResolveActorState(actor, out var state)) state.CountExpectedRender();
         }
 
         public ulong AllocateTransactionId() => NextNonZero(ref _nextTransactionId);
@@ -1473,26 +1525,40 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public bool TryReserveTransitionRows(OfficeRuntimeAgent actor, int rows)
         {
-            if (FatalAbort) return false;
-            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
-            if (!CaptureEnabled || state.HasTransitionCapacity(rows)) return true;
-            AbortFatal("transition-capacity-preflight");
-            return false;
+            return !TryResolveActorState(actor, out var state) ||
+                   TryReserveTransitionRows(state, rows);
+        }
+
+        internal bool TryReserveTransitionRows(string actorId, int rows)
+        {
+            if (!TryGetActorState(actorId, out OfficeRuntimeActorTraceState state))
+            {
+                AbortFatal("transition-actor-id-mismatch:" + (actorId ?? string.Empty));
+                return true;
+            }
+            return TryReserveTransitionRows(state, rows);
+        }
+
+        private bool TryReserveTransitionRows(OfficeRuntimeActorTraceState state, int rows)
+        {
+            if (!state.IsCaptureActive || state.HasTransitionCapacity(rows)) return true;
+            AbortFatal("transition-capacity-preflight:" + state.ActorId);
+            return true;
         }
 
         public bool TryPreflightRender(OfficeRuntimeAgent actor)
         {
-            if (FatalAbort) return false;
-            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
-            if (!CaptureEnabled || state.HasRenderCapacity()) return true;
-            AbortFatal("render-capacity-preflight");
-            return false;
+            if (!TryResolveActorState(actor, out OfficeRuntimeActorTraceState state)) return true;
+            if (!state.IsCaptureActive || state.HasRenderCapacity()) return true;
+            AbortFatal("render-capacity-preflight:" + state.ActorId);
+            return true;
         }
 
         public void BeginRenderFrame(OfficeRuntimeAgent actor, int renderFrame)
         {
-            if (!CaptureEnabled || FatalAbort) return;
-            actor.R5eTraceState.BeginRenderFrame(
+            if (!TryResolveActorState(actor, out OfficeRuntimeActorTraceState state) ||
+                !state.IsCaptureActive) return;
+            state.BeginRenderFrame(
                 renderFrame,
                 actor.R5eRouteGenerationId,
                 actor.R5eMovementHandoffId);
@@ -1500,11 +1566,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public bool TryPreflightVisual(OfficeRuntimeAgent actor)
         {
-            if (FatalAbort) return false;
-            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
-            if (!CaptureEnabled || state.HasVisualCapacity()) return true;
-            AbortFatal("visual-capacity-preflight");
-            return false;
+            if (!TryResolveActorState(actor, out OfficeRuntimeActorTraceState state)) return true;
+            if (!state.IsCaptureActive || state.HasVisualCapacity()) return true;
+            AbortFatal("visual-capacity-preflight:" + state.ActorId);
+            return true;
         }
 
         public void BeginQaCapture(ulong runId)
@@ -1549,17 +1614,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void AbortFatal(string reason)
         {
-            if (FatalAbort) return;
+            if (!CaptureEnabled || FatalAbort) return;
             FatalAbort = true;
             FatalReason = reason ?? "r5e-fatal";
             FailureCount++;
+            for (var index = 0; index < RegisteredActorCount; index++)
+                _actorStates[index].SuppressCapture();
         }
 
         public void RecordActorStepException(
             in OfficeRuntimeStepTraceContext context,
             bool seatedBeforeException)
         {
-            RequiredState(context.ActorIndex, null).RecordExpectedExceptionPair(seatedBeforeException);
+            if (TryGetActorStateAt(context.ActorIndex, out var state))
+                state.RecordExpectedExceptionPair(seatedBeforeException);
             AbortFatal("actor-step-exception:" + context.ActorIndex);
         }
 
@@ -1577,39 +1645,47 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void AppendRenderAdapter(OfficeRuntimeAgent actor, int renderFrame)
         {
-            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
-            if (!CaptureEnabled) return;
-            DirectionalLocomotionFrameTrace accepted = actor.CaptureR5eAcceptedLocomotionFrameTrace();
-            ulong ordinal = NextNonZero(ref _nextRenderOrdinal);
-            var row = new R5eLocomotionAdapterRow(
-                RunId,
-                ScenarioId,
-                renderFrame,
-                actor.AgentId,
-                state.RouteGenerationThisRender,
-                state.HandoffThisRender,
-                ordinal,
-                state.FirstStepOrdinalThisRender,
-                state.LastStepOrdinalThisRender,
-                state.FirstRuntimeTickThisRender,
-                state.LastRuntimeTickThisRender,
-                accepted,
-                state.StepDisplacementSumThisRender,
-                state.StepRowsThisRender,
-                state.DuplicateStepJoinCount == 0 &&
-                Vector2.Distance(
-                    accepted.ActualDisplacement,
-                    state.StepDisplacementSumThisRender) <= StationaryEpsilon,
-                state.DuplicateStepJoinCount);
-            state.AppendRender(row);
-            if (state.Failed) AbortFatal("render-append-failed");
+            if (!TryResolveActorState(actor, out OfficeRuntimeActorTraceState state)) return;
+            if (!state.IsCaptureActive) return;
+            try
+            {
+                DirectionalLocomotionFrameTrace accepted = actor.CaptureR5eAcceptedLocomotionFrameTrace();
+                ulong ordinal = NextNonZero(ref _nextRenderOrdinal);
+                var row = new R5eLocomotionAdapterRow(
+                    RunId,
+                    ScenarioId,
+                    renderFrame,
+                    actor.AgentId,
+                    state.RouteGenerationThisRender,
+                    state.HandoffThisRender,
+                    ordinal,
+                    state.FirstStepOrdinalThisRender,
+                    state.LastStepOrdinalThisRender,
+                    state.FirstRuntimeTickThisRender,
+                    state.LastRuntimeTickThisRender,
+                    accepted,
+                    state.StepDisplacementSumThisRender,
+                    state.StepRowsThisRender,
+                    state.DuplicateStepJoinCount == 0 &&
+                    Vector2.Distance(
+                        accepted.ActualDisplacement,
+                        state.StepDisplacementSumThisRender) <= StationaryEpsilon,
+                    state.DuplicateStepJoinCount);
+                state.AppendRender(row);
+                if (state.Failed) AbortFatal("render-append-failed");
+            }
+            catch (Exception exception)
+            {
+                AbortFatal("render-observer-exception:" + exception.GetType().Name);
+            }
         }
 
         public bool TryAppendVisualMetadata(OfficeRuntimeAgent actor, int renderFrame)
         {
-            if (!CaptureEnabled) return true;
-            if (!TryPreflightVisual(actor)) return false;
-            OfficeRuntimeActorTraceState state = actor.R5eTraceState;
+            if (!TryResolveActorState(actor, out OfficeRuntimeActorTraceState state)) return true;
+            if (!state.IsCaptureActive) return true;
+            TryPreflightVisual(actor);
+            if (!state.IsCaptureActive) return true;
             var row = new R5eVisualCaptureMetadataRow(
                 RunId,
                 ScenarioId,
@@ -1624,20 +1700,39 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (state.Failed)
             {
                 AbortFatal("visual-append-failed");
-                return false;
             }
             return true;
         }
 
-        private OfficeRuntimeActorTraceState RequiredState(int actorIndex, OfficeRuntimeAgent actor)
+        private bool TryResolveActorState(
+            OfficeRuntimeAgent actor,
+            out OfficeRuntimeActorTraceState state)
         {
-            if (actorIndex < 0 || actorIndex >= _actorStates.Length ||
-                _actorStates[actorIndex] == null)
-                throw new InvalidOperationException("R5e trace actor is not registered at the scheduler boundary.");
-            OfficeRuntimeActorTraceState state = _actorStates[actorIndex];
-            if (actor != null && !string.Equals(state.ActorId, actor.AgentId, StringComparison.Ordinal))
-                throw new InvalidOperationException("R5e trace actor/index identity mismatch.");
-            return state;
+            state = null;
+            if (actor == null) return false;
+            OfficeRuntimeActorTraceState bound = actor.R5eBoundTraceState;
+            if (bound == null ||
+                !string.Equals(bound.ActorId, actor.AgentId, StringComparison.Ordinal))
+            {
+                AbortFatal("actor-trace-binding-mismatch:" + actor.AgentId);
+                return false;
+            }
+            if (_actorStatesById.TryGetValue(actor.AgentId, out state) &&
+                ReferenceEquals(state, bound)) return true;
+            AbortFatal("actor-id-registry-mismatch:" + actor.AgentId);
+            state = bound;
+            return true;
+        }
+
+        private bool TryGetActorStateAt(
+            int actorIndex,
+            out OfficeRuntimeActorTraceState state)
+        {
+            state = null;
+            if (actorIndex < 0 || actorIndex >= RegisteredActorCount ||
+                _actorStates[actorIndex] == null) return false;
+            state = _actorStates[actorIndex];
+            return true;
         }
 
         private static ulong NextNonZero(ref ulong value)

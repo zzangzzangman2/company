@@ -134,7 +134,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _occupancy.RegisterActor(actor.AgentId, actor.Position, actor.AgentRadius);
             actor.BindR5eTrace(
                 _traceCoordinator,
-                _traceCoordinator.RegisterActor(actor, _registry.Actors.Count - 1));
+                _traceCoordinator.RegisterActor(actor));
         }
 
         public void ValidateCanonicalActors()
@@ -191,7 +191,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void Update()
         {
-            if (_traceCoordinator != null && _traceCoordinator.FatalAbort) return;
             using (OfficePerformanceTelemetry.Measure(OfficePerformancePath.RuntimeWorldUpdate))
             {
                 if (!_configured) return;
@@ -247,12 +246,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         if (!_traceCoordinator.TryBeginActorStep(
                                 actor,
                                 Time.frameCount,
-                                index,
                                 step,
                                 actorSteps,
                                 _frameMotionDeltas[index],
                                 stepDelta,
-                                out OfficeRuntimeStepTraceContext traceContext)) return;
+                                out OfficeRuntimeStepTraceContext traceContext)) continue;
                         actor.BeginR5eRuntimeStep(traceContext, beforePosition, preStep);
                         try
                         {
@@ -265,7 +263,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                                 traceContext,
                                 actor.IsR5eSeatedPostState || preStep.Seated);
                             if (!_traceCoordinator.CaptureEnabled) throw;
-                            return;
+                            continue;
                         }
                         R5eAgentStepSnapshot preClear = actor.CaptureR5eStepSnapshot();
                         bool expectedSeatedPreClear = actor.IsR5eSeatedPostState;
@@ -297,7 +295,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     OfficeRuntimeAgent actor = actors[index];
                     if (actor != null && actor.isActiveAndEnabled)
                     {
-                        if (!_traceCoordinator.TryPreflightRender(actor)) return;
+                        _traceCoordinator.TryPreflightRender(actor);
                         _traceCoordinator.BeginRenderFrame(actor, Time.frameCount);
                         actor.TickPresentation(_frameMotionDeltas[index]);
                         _traceCoordinator.CountExpectedRender(actor);

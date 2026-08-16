@@ -11,6 +11,62 @@ using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 {
+    public enum StarterOfficeRuntimePreparationState
+    {
+        NotStarted = 0,
+        Preparing = 1,
+        Ready = 2,
+        Failed = 3
+    }
+
+    internal sealed class StarterOfficeRuntimePreparationGate
+    {
+        private bool _preloadSucceeded;
+        private bool _coordinatorAttached;
+
+        public StarterOfficeRuntimePreparationState State { get; private set; }
+        public string FailureReason { get; private set; } = string.Empty;
+
+        public void Begin()
+        {
+            _preloadSucceeded = false;
+            _coordinatorAttached = false;
+            FailureReason = string.Empty;
+            State = StarterOfficeRuntimePreparationState.Preparing;
+        }
+
+        public void MarkPreloadSucceeded()
+        {
+            if (State != StarterOfficeRuntimePreparationState.Preparing)
+                throw new InvalidOperationException("Runtime preload completed outside preparation.");
+            _preloadSucceeded = true;
+        }
+
+        public void MarkCoordinatorAttached()
+        {
+            if (State != StarterOfficeRuntimePreparationState.Preparing || !_preloadSucceeded)
+                throw new InvalidOperationException(
+                    "Runtime coordinator cannot attach before successful preload.");
+            _coordinatorAttached = true;
+        }
+
+        public void PublishReady()
+        {
+            if (State != StarterOfficeRuntimePreparationState.Preparing ||
+                !_preloadSucceeded || !_coordinatorAttached)
+                throw new InvalidOperationException(
+                    "Runtime ready cannot publish before preload and coordinator attach.");
+            State = StarterOfficeRuntimePreparationState.Ready;
+            FailureReason = string.Empty;
+        }
+
+        public void Fail(string reason)
+        {
+            State = StarterOfficeRuntimePreparationState.Failed;
+            FailureReason = string.IsNullOrWhiteSpace(reason) ? "unknown" : reason;
+        }
+    }
+
     [DisallowMultipleComponent]
     public sealed class StarterOfficeRuntimeBootstrap : MonoBehaviour
     {
@@ -44,9 +100,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new Dictionary<string, OfficeRuntimeAgentLayoutSnapshot>(StringComparer.Ordinal);
         private OfficeSeatingPresentationMode _seatingPresentationMode =
             OfficeSeatingPresentationMode.SafeStaticWork;
+        private readonly StarterOfficeRuntimePreparationGate _preparationGate =
+            new StarterOfficeRuntimePreparationGate();
 
         public bool IsReady { get; private set; }
         public bool IsPreparing => _building;
+        public StarterOfficeRuntimePreparationState PreparationState => _preparationGate.State;
+        public string PreparationFailureReason => _preparationGate.FailureReason;
         public float NavigationPrewarmProgress { get; private set; }
         public OfficeRuntimeWorld World => _world;
         public static bool IsLayoutRebuilding => _activeLayoutRebuilds > 0;
@@ -116,6 +176,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ApplyStarterDefinitionWhenStateUsesCodeDefault();
             _building = true;
             IsReady = false;
+            _preparationGate.Begin();
             CacheWorkActionFrameSets();
             _assetSource.DestroyGeneratedPreview();
             if (_generated != null)
@@ -207,9 +268,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
                 catch (Exception exception)
                 {
-                    Debug.LogException(exception);
-                    _building = false;
-                    IsReady = false;
+                    FailRuntimePreparation("navigation-prewarm", exception);
                     yield break;
                 }
                 if (!hasNext) break;
@@ -218,11 +277,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             timer.Stop();
             try
             {
-                PrepareAttendanceArrivals();
-                BindCoordinators();
                 foreach (OfficeRuntimeAgent actor in Actors)
                     actor?.PreloadR5eSeatPresentation();
-                IsReady = true;
+                _preparationGate.MarkPreloadSucceeded();
+                PrepareAttendanceArrivals();
+                BindCoordinators();
+                _preparationGate.MarkCoordinatorAttached();
+                _preparationGate.PublishReady();
+                IsReady = PreparationState == StarterOfficeRuntimePreparationState.Ready;
                 _building = false;
                 _layoutSnapshots.Clear();
                 Debug.Log(
@@ -235,10 +297,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             catch (Exception exception)
             {
-                Debug.LogException(exception);
-                _building = false;
-                IsReady = false;
+                FailRuntimePreparation("preload-or-attach", exception);
             }
+        }
+
+        private void FailRuntimePreparation(string stage, Exception exception)
+        {
+            _building = false;
+            IsReady = false;
+            _preparationGate.Fail(stage + ":" +
+                                  (exception == null
+                                      ? "unknown"
+                                      : exception.GetType().Name + ":" + exception.Message));
+            Debug.LogError(
+                "STARTER_OFFICE_PREPARATION_FAILED | stage=" + stage +
+                " | reason=" + PreparationFailureReason +
+                " | retry=rebind-or-rebuild");
+            if (exception != null) Debug.LogException(exception);
         }
 
         private void PrepareAttendanceArrivals()

@@ -391,6 +391,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         internal ulong R5eMovementHandoffId => _r5eActiveMovementHandoffId;
         internal OfficeRuntimeActorTraceState R5eTraceState =>
             _r5eTraceState ?? throw new InvalidOperationException("R5e trace state is not bound.");
+        internal OfficeRuntimeActorTraceState R5eBoundTraceState => _r5eTraceState;
         internal bool IsR5eSeatedPostState =>
             _seat != null &&
             _seatClaim != null &&
@@ -4046,8 +4047,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (_r5eSeatPresentationPreloaded)
                 {
                     _r5eTraceCoordinator?.AbortFatal("seated-upper-body-preload-miss:" + _agentId);
-                    ClearSeatedUpperBodyProtection();
-                    return;
                 }
                 upperBody = OfficeSeatedUpperBodyProtectionRules.CreateUpperBodySprite(source, cutoff);
                 _seatedUpperBodySprites.Add(key, upperBody);
@@ -4072,20 +4071,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (_r5eSeatPresentationPreloaded) return;
             EnsureSeatedUpperBodyRenderer();
-            for (var direction = 0; direction < OfficeSeatingAnimationFrames.DirectionCount; direction++)
-            for (var frame = 0; frame < OfficeSeatingAnimationFrames.WorkFrameCount; frame++)
+            OfficeCharacterSeatPoseProfile[] preloadProfiles =
+                BuildR5eSeatPresentationPreloadPlan(_poseCatalog.Profiles, _agentId);
+            foreach (OfficeCharacterSeatPoseProfile profile in preloadProfiles)
             {
                 Sprite source = _animator.GetOfficeSeatingFrame(
                     OfficeSeatingAnimationClip.Work,
-                    direction,
-                    frame);
+                    profile.DirectionIndex,
+                    profile.FrameIndex);
                 if (source == null) throw new InvalidOperationException(
-                    "R5e work sprite preload missing: " + _agentId + "/" + direction + "/" + frame);
-                OfficeCharacterSeatPoseProfile profile = _poseCatalog.ResolveApproved(
-                    _agentId,
-                    direction,
-                    OfficeSeatingAnimationClip.Work,
-                    frame);
+                    "R5e work sprite preload missing: " + _agentId + "/" +
+                    profile.DirectionIndex + "/" + profile.FrameIndex);
                 int cutoff = OfficeSeatedUpperBodyProtectionRules.ResolveCutoffSourceY(
                     source,
                     new Vector2(0f, profile.PelvisAnchorPx.y));
@@ -4097,6 +4093,55 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             _seatedUpperBodyRenderer.enabled = false;
             _r5eSeatPresentationPreloaded = true;
+        }
+
+        internal static OfficeCharacterSeatPoseProfile[] BuildR5eSeatPresentationPreloadPlan(
+            IReadOnlyList<OfficeCharacterSeatPoseProfile> profiles,
+            string memberId)
+        {
+            if (profiles == null) throw new ArgumentNullException(nameof(profiles));
+            if (string.IsNullOrWhiteSpace(memberId))
+                throw new ArgumentException("Preload member ID is required.", nameof(memberId));
+            int frameCount = OfficeSeatingAnimationFrames.WorkFrameCount;
+            var result = new List<OfficeCharacterSeatPoseProfile>();
+            var framesByDirection = new Dictionary<int, bool[]>();
+            foreach (OfficeCharacterSeatPoseProfile profile in profiles)
+            {
+                if (profile == null || !profile.HumanApproved ||
+                    profile.Clip != OfficeSeatingAnimationClip.Work ||
+                    !string.Equals(profile.MemberId, memberId, StringComparison.Ordinal)) continue;
+                if (profile.DirectionIndex < 0 ||
+                    profile.DirectionIndex >= OfficeSeatingAnimationFrames.DirectionCount)
+                    throw new InvalidOperationException(
+                        "Invalid preload pose direction: " + memberId + "/" +
+                        profile.DirectionIndex);
+                if (!framesByDirection.TryGetValue(profile.DirectionIndex, out bool[] frames))
+                {
+                    frames = new bool[frameCount];
+                    framesByDirection.Add(profile.DirectionIndex, frames);
+                }
+                if (profile.FrameIndex < 0 || profile.FrameIndex >= frameCount ||
+                    frames[profile.FrameIndex])
+                    throw new InvalidOperationException(
+                        "Invalid or duplicate preload pose: " + memberId + "/" +
+                        profile.DirectionIndex + "/Work/" + profile.FrameIndex);
+                frames[profile.FrameIndex] = true;
+                result.Add(profile);
+            }
+            if (result.Count == 0)
+                throw new InvalidOperationException("No approved preload poses exist: " + memberId);
+            foreach (KeyValuePair<int, bool[]> direction in framesByDirection)
+            for (var frame = 0; frame < direction.Value.Length; frame++)
+                if (!direction.Value[frame])
+                    throw new InvalidOperationException(
+                        "Incomplete preload pose direction: " + memberId + "/" +
+                        direction.Key + "/Work/" + frame);
+            result.Sort((left, right) =>
+            {
+                int direction = left.DirectionIndex.CompareTo(right.DirectionIndex);
+                return direction != 0 ? direction : left.FrameIndex.CompareTo(right.FrameIndex);
+            });
+            return result.ToArray();
         }
 
         public void ClearSeatedUpperBodyProtection()

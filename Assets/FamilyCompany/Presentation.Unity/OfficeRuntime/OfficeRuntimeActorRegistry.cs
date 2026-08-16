@@ -8,10 +8,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private static readonly string[] CanonicalFamilyIds =
             { "player", "older_sister", "father", "mother" };
         private static readonly Comparison<OfficeRuntimeAgent> AgentOrder =
-            (left, right) => string.Compare(
-                left.AgentId,
-                right.AgentId,
-                StringComparison.Ordinal);
+            (left, right) => CompareActorIds(left.AgentId, right.AgentId);
         private readonly Dictionary<string, OfficeRuntimeAgent> _actors =
             new Dictionary<string, OfficeRuntimeAgent>(StringComparer.Ordinal);
         private readonly List<OfficeRuntimeAgent> _orderedActors =
@@ -31,6 +28,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public bool TryGet(string memberId, out OfficeRuntimeAgent actor) =>
             _actors.TryGetValue(memberId ?? string.Empty, out actor);
+
+        internal static int CompareActorIds(string left, string right) =>
+            string.Compare(left, right, StringComparison.Ordinal);
 
         public void ValidateCanonicalFamily()
         {
