@@ -716,6 +716,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (phase == OfficeRuntimeAgentPhase.RotatingToSeat)
                 trace.SawRotatingToSeat = true;
             if (phase == OfficeRuntimeAgentPhase.RotatingToSeat &&
+                !string.IsNullOrEmpty(actor.ActiveSeatId) &&
                 TryResolveClaimedSeatDirection(actor, out int movingSeatDirection) &&
                 actor.ExpectedSeatDirection == movingSeatDirection &&
                 actor.CurrentDirection == movingSeatDirection &&
@@ -730,6 +731,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 trace.SawAlignedBeforeSitDown = true;
                 if (trace.PreDockRuntimeTick == 0)
                 {
+                    trace.SeatId = actor.ActiveSeatId;
                     trace.PreDockRuntimeTick = actor.R5eRuntimeTick;
                     trace.PreDockWorld = actor.Position;
                     trace.PreDockSpriteName = actor.CurrentSpriteName;
