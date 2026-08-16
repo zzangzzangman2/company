@@ -400,8 +400,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _seat != null &&
             _seatClaim != null &&
             !_seatClaim.IsReleased &&
-            (Phase == OfficeRuntimeAgentPhase.Working ||
-             Phase == OfficeRuntimeAgentPhase.FinishingWork);
+            (Phase == OfficeRuntimeAgentPhase.SittingDown ||
+             Phase == OfficeRuntimeAgentPhase.Working ||
+             Phase == OfficeRuntimeAgentPhase.FinishingWork ||
+             Phase == OfficeRuntimeAgentPhase.StandingUp);
         internal int R5eFirstWalkCount => _r5eFirstWalkCount;
         internal ulong R5eLastFirstWalkTick => _r5eLastFirstWalkTick;
         internal ulong R5eTurnCompleteTick => _r5eTurnCompleteTick;
@@ -2251,9 +2253,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     break;
                 }
                 case OfficeRuntimeAgentPhase.SittingDown:
-                    // R5e never selects the deprecated pelvis-descend clip path.
                     StopMotion();
-                    _seatEgressUnsafePhaseTransitionCount++;
+                    if (_animator.IsOfficeSeatingTransitionComplete)
+                        TryCompleteR5eSitDownPresentation();
                     break;
                 case OfficeRuntimeAgentPhase.Working:
                     PrepareR5eStationaryFrameAfterAcceptedMotionBudget();
@@ -2268,15 +2270,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     StopMotion();
                     if (!_finishingWorkPresentationObserved) return;
                     if (!_animator.IsOfficeWorkSafeToStand) return;
+                    TryBeginR5eStandUpPresentation();
+                    break;
+                case OfficeRuntimeAgentPhase.StandingUp:
+                    StopMotion();
+                    if (!_animator.IsOfficeSeatingTransitionComplete) return;
                     _r5eExitRetrySeconds += deltaTime;
                     if (_seatEgressWaiting && _r5eExitRetrySeconds < 0.5f) return;
                     _r5eExitRetrySeconds = 0f;
                     TryPublishR5eAtomicExit();
-                    break;
-                case OfficeRuntimeAgentPhase.StandingUp:
-                    // R5e never selects the deprecated pelvis-rise clip path.
-                    StopMotion();
-                    _seatEgressUnsafePhaseTransitionCount++;
                     break;
                 case OfficeRuntimeAgentPhase.LeavingSeat:
                 {
@@ -2491,6 +2493,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        private bool TryCompleteR5eSitDownPresentation()
+        {
+            if (!_animator.BeginSeatedWork()) return false;
+            Phase = OfficeRuntimeAgentPhase.Working;
+            return true;
+        }
+
+        private bool TryBeginR5eStandUpPresentation()
+        {
+            if (!_animator.BeginStandUp()) return false;
+            Phase = OfficeRuntimeAgentPhase.StandingUp;
+            return true;
+        }
+
         private bool TryPublishR5eAtomicExit()
         {
             if (_seat == null || _seatClaim == null || _seatClaim.IsReleased ||
@@ -2575,7 +2591,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeSeatingState.PreparedRuntimeMutation preparedClaim = default;
             OfficeRuntimeOccupancy.PreparedAtomicActorPlacement preparedPlacement = default;
             bool prepared =
-                _animator.CanLeaveCompletedSeatedWorkAfterAtomicPlacement &&
+                _animator.IsOfficeSeatingFacingLocked &&
+                _animator.CurrentOfficeSeatingClip == OfficeSeatingAnimationClip.StandUp &&
+                _animator.IsOfficeSeatingTransitionComplete &&
                 _seatClaim.TryPrepareRelease(out preparedClaim) &&
                 _world.Occupancy.TryPrepareAtomicActorPlacement(
                     _agentId,
@@ -2995,16 +3013,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public void CommitRenderer()
             {
                 _owner.ResetVisualPose();
-                _owner._animator.EnterCompletedSeatedWorkAfterAtomicPlacement(_owner._seatDirection);
                 _owner.ApplySeatAnchorPlacement(
                     _workProfile,
                     new Vector3(_plan.SeatPelvisWorld.x, _plan.SeatPelvisWorld.y, 0f));
+                if (!_owner._animator.TryLockOfficeSeatingFacingAfterPlantedRotation(
+                        _owner._seatDirection) ||
+                    !_owner._animator.BeginSitDown(_owner._seatDirection))
+                    throw new InvalidOperationException(
+                        "R5e SitDown presentation could not begin after atomic placement.");
             }
             public void CommitRebase() =>
                 _owner.RebaseAfterAtomicPlacement(_plan.SeatRootWorld, _owner._seatDirection);
             public void CommitState()
             {
-                _owner.Phase = OfficeRuntimeAgentPhase.Working;
+                _owner.Phase = OfficeRuntimeAgentPhase.SittingDown;
                 _owner.CurrentActivity = _owner._destination.HasValue
                     ? _owner._destination.Value.Activity
                     : OfficeActivity.Work;
@@ -3080,6 +3102,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public void CommitRenderer()
             {
                 _owner.ResetVisualPose();
+                if (!_owner._animator.FinishOfficeSeatingPoseForLeavingSeat())
+                    throw new InvalidOperationException(
+                        "R5e StandUp presentation could not complete before atomic exit.");
                 _owner._animator.LeaveCompletedSeatedWorkAfterAtomicPlacement(_exitDirection);
             }
             public void CommitRebase() =>
@@ -4235,6 +4260,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             else if (_animator.SeatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork)
             {
                 ApplySeatedContactPlacement(profile);
+            }
+            else if ((clip == OfficeSeatingAnimationClip.SitDown &&
+                      (_r5ePublishActive || Phase == OfficeRuntimeAgentPhase.SittingDown)) ||
+                     (clip == OfficeSeatingAnimationClip.StandUp &&
+                      (Phase == OfficeRuntimeAgentPhase.FinishingWork ||
+                       Phase == OfficeRuntimeAgentPhase.StandingUp)))
+            {
+                ApplySeatAnchorPlacement(profile, _workPresentationTargetPelvisWorld);
             }
             else
             {
