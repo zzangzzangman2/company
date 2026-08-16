@@ -117,6 +117,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private float _maxTypingHandWorkErrorPx;
         private int _typingContactSampleCount;
         private bool _qaControl;
+        private bool _qaDirectMovementControl;
         private Vector2 _lastActualDisplacement;
         private float _visibleMotionDebtSeconds;
         private float _visibleFrameMovementBudgetWorld;
@@ -299,7 +300,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public float VisibleFrameMovementWorld => _visibleFrameMovementWorld;
         public bool HasActiveVisibleMotionIntent =>
             _attendanceIngressActive ||
-            (_playerControlled && _playerInput.sqrMagnitude > 0.0001f) ||
+            (HasDirectMovementControl && _playerInput.sqrMagnitude > 0.0001f) ||
             (_destination.HasValue && !_arrived) ||
             IsEnteringSeat ||
             Phase == OfficeRuntimeAgentPhase.SittingDown ||
@@ -941,18 +942,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _playerInput = Vector2.ClampMagnitude(input, 1f);
         }
 
+        /// <summary>
+        /// Opt-in Player-QA hook that exercises the normal direct movement, collision and gait
+        /// pipeline on a non-player family member. It is inert unless BeginQaControl has already
+        /// isolated the actor and never changes normal NPC control.
+        /// </summary>
+        public void QaSetDirectMovementInput(Vector2 input)
+        {
+            if (!_qaControl) return;
+            _qaDirectMovementControl = true;
+            _playerInput = Vector2.ClampMagnitude(input, 1f);
+        }
+
         public void BeginQaControl()
         {
             _qaControl = true;
+            _qaDirectMovementControl = false;
             ResetRuntimeState();
         }
 
         public void EndQaControl()
         {
             _qaControl = false;
+            _qaDirectMovementControl = false;
             _playerInput = Vector2.zero;
             ResetRuntimeState();
         }
+
+        private bool HasDirectMovementControl =>
+            _playerControlled || (_qaControl && _qaDirectMovementControl);
 
         public void QaTeleportToCell(OfficeGridCoordinate cell)
         {
@@ -1249,7 +1267,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return;
             }
 
-            if (_playerControlled && !_attendanceDepartureActive && !_attendanceArrivalActive &&
+            if (HasDirectMovementControl && !_attendanceDepartureActive && !_attendanceArrivalActive &&
                 _playerInput.sqrMagnitude > 0.0001f)
             {
                 if (Phase == OfficeRuntimeAgentPhase.Working ||
@@ -1267,7 +1285,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
 
-            if (_playerControlled && _playerInput.sqrMagnitude <= 0.0001f &&
+            if (HasDirectMovementControl && _playerInput.sqrMagnitude <= 0.0001f &&
                 !_destination.HasValue && Phase == OfficeRuntimeAgentPhase.Navigating)
             {
                 Phase = OfficeRuntimeAgentPhase.Idle;
