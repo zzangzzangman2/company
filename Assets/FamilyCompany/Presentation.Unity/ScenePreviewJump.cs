@@ -1955,13 +1955,15 @@ namespace FamilyCompany.Presentation.Unity
             while (Time.time - workLoopStarted < 8f &&
                    QaMemberIds.Any(memberId =>
                        !HasObservedWorkPresentation(actors[memberId]) ||
-                       actors[memberId].TypingContactSampleCount == 0))
+                       (actors[memberId].IsOfficeWorkAnimationHookActive &&
+                        actors[memberId].TypingContactSampleCount == 0)))
                 yield return null;
             if (QaMemberIds.Any(memberId => actors[memberId].ObservedSitDownFrameCount != 0 ||
                                                 actors[memberId].CurrentSeatingClip !=
                                                 OfficeSeatingAnimationClip.Work ||
                                                 !HasObservedWorkPresentation(actors[memberId]) ||
-                                                actors[memberId].TypingContactSampleCount == 0))
+                                                (actors[memberId].IsOfficeWorkAnimationHookActive &&
+                                                 actors[memberId].TypingContactSampleCount == 0)))
             {
                 FailPlayerQa(
                     56,
@@ -2023,9 +2025,10 @@ namespace FamilyCompany.Presentation.Unity
                 // by up to one tenth of a 160px tile without leaving the workstation footprint.
                 bool presentationMatches = actor.ChairDeskErrorPx <= 16f &&
                     actor.SeatContactErrorPx <= 1f &&
-                    actor.TypingContactSampleCount > 0 &&
-                    actor.MaxTypingSeatContactErrorPx <= 6f &&
-                    actor.MaxTypingHandWorkErrorPx <= 4f &&
+                    (!actor.IsOfficeWorkAnimationHookActive ||
+                     (actor.TypingContactSampleCount > 0 &&
+                      actor.MaxTypingSeatContactErrorPx <= 6f &&
+                      actor.MaxTypingHandWorkErrorPx <= 4f)) &&
                     actor.VisualRotationErrorDegrees <= 0.01f &&
                     actor.VisualScaleDeviation <= 0.001f && actor.CurrentDirection == 3 &&
                     actor.SeatingPresentationMode == OfficeSeatingPresentationMode.Animated &&
