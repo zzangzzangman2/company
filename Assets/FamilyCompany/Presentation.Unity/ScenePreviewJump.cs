@@ -7,10 +7,12 @@ using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.UIRemaster;
+using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Simulation.Workforce;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Unity.Profiling;
@@ -2635,9 +2637,16 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
             // AssignContractWorkNow queues one four-person-hour chunk, not the entire offer.
-            // Advance exactly that authoritative duration so the worker remains inside the
-            // 09:00-18:00 attendance window while proving that frames alone produce no work.
-            long assignedMinutes = Math.Min(4, contract.RemainingPersonHours) * 60L;
+            // Runtime task duration is capability- and specialty-weighted, so advance the same
+            // authoritative minutes that OfficeContractTaskCoordinator assigned to the actor.
+            int assignedHours = Math.Min(4, contract.RemainingPersonHours);
+            FamilyMemberState mother = bootstrap.State.Family.Get("mother");
+            WorkTaskProfile task = ContractWorkTaskProfiles.Resolve(
+                LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
+            long assignedMinutes = (long)assignedHours *
+                                   WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
+                                       mother.Capability,
+                                       task);
             bootstrap.AdvanceTimeNow(assignedMinutes);
             started = Time.time;
             while (Time.time - started < 45f && coordinator.CompletedTaskCount == completedBefore)
