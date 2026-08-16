@@ -137,10 +137,14 @@ namespace FamilyCompany.Presentation.Unity
             if (Input.GetKeyDown(JumpKey)) BeginShowStarterOffice();
             if (_loading)
             {
+                // Clamp the catch-up step to one nominal frame. A synchronous stage stalls the main
+                // thread, so the next Update reports the whole stall as one delta; at 0.38/s a 1.3 s
+                // stall moved the bar half its length in a single frame, which is why the first
+                // value the player ever saw was already near the middle.
                 _loadingDisplayedProgress = Mathf.MoveTowards(
                     _loadingDisplayedProgress,
                     Mathf.Max(_loadingDisplayedProgress, _loadingProgress),
-                    Time.unscaledDeltaTime * 0.38f);
+                    Mathf.Min(Time.unscaledDeltaTime, 1f / 30f) * 0.38f);
                 var bootstrap = Object.FindFirstObjectByType<PrototypeBootstrap>();
                 if (_loadingUiCapturePending && bootstrap != null &&
                     bootstrap.UiScreen == PrototypeUiScreen.Playing)
@@ -342,12 +346,38 @@ namespace FamilyCompany.Presentation.Unity
             // Always present one real frame before the synchronous rebind. This prevents the New
             // Game click from looking frozen even when the additive office was warmed at title.
             yield return null;
-            _loadingProgress = 0.62f;
-            _loadingStage = "문에서 지정 좌석까지 출근 동선을 미리 계산하는 중";
+            _loadingProgress = 0.08f;
+            _loadingStage = "오늘의 사무실을 확인하는 중";
             yield return null;
             _starterRuntime?.Rebind(bootstrap);
+
+            // Rebind either finishes synchronously or hands the rest to the preparation coroutine.
+            // This path used to publish a fixed 0.62 and then jump straight to 1, so the warm start
+            // reported three values and none of them described real work. Follow the runtime's own
+            // prewarm progress instead, exactly as the cold path already does, and hold the loading
+            // screen until the runtime actually reports ready.
+            // Bounded: a stuck preparation must not trap the player on the loading screen forever.
+            // Falling through with the office not ready is still better than an unrecoverable hang,
+            // and the existing runtime-ready guards keep the rest of the scene fail-closed.
+            float readyDeadline = Time.unscaledTime + 30f;
+            while (_starterRuntime != null &&
+                   !_starterRuntime.IsReady &&
+                   Time.unscaledTime < readyDeadline)
+            {
+                _loadingProgress = Mathf.Lerp(
+                    0.12f,
+                    0.94f,
+                    Mathf.Clamp01(_starterRuntime.NavigationPrewarmProgress));
+                _loadingStage = "문에서 지정 좌석까지 출근 동선을 미리 계산하는 중";
+                yield return null;
+            }
+
+            if (_starterRuntime != null && !_starterRuntime.IsReady)
+                Debug.LogWarning(
+                    "STARTER_OFFICE_LOADING_UI_READY_TIMEOUT | prewarm=" +
+                    _starterRuntime.NavigationPrewarmProgress.ToString("F3"));
+
             _loadingProgress = 1f;
-            _loadingDisplayedProgress = 1f;
             _loadingStage = "09:00 출근 준비 완료";
             yield return null;
             float loadingCaptureDeadline = Time.unscaledTime + 2f;
