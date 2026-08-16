@@ -182,6 +182,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private ulong _r5eAtomicPlacementTick;
         private ulong _r5eEntryTransactionId;
         private ulong _r5eExitTransactionId;
+        private ulong _r5eSuppressedTransitionObservationId;
         private ulong _r5eAwaitingFirstWalkTransactionId;
         private bool _r5eExitTurnPending;
         private bool _r5eAtomicPlacementThisStep;
@@ -2303,24 +2304,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _seat,
                     out OfficeSeatDockingPlan plan)) return false;
 
-            bool observeTransition = HasActiveR5eStepObservation;
-            if (observeTransition && !_r5eTraceCoordinator.TryReserveTransitionRows(this, 3))
-                return false;
-            BeginR5eTransitionObservation(plan);
-            ulong transactionId = _r5eTraceCoordinator.AllocateTransactionId();
-            ulong sessionId = _r5eTraceCoordinator.AllocateSeatedSessionId();
-            R5eAgentStepSnapshot before = CaptureR5eStepSnapshot();
-            AppendR5eTransition(
-                transactionId,
-                R5eSeatTransitionEventKind.Prepare,
-                R5eSeatTransitionKind.Entry,
-                before,
-                before,
+            bool observeTransition = TryBeginR5eTransitionObservation(
                 plan,
-                Vector2.zero,
-                false,
-                false,
-                false);
+                3,
+                allocateSeatedSession: true,
+                allocateMovementHandoff: false,
+                out ulong transactionId,
+                out ulong sessionId,
+                out _);
+            R5eAgentStepSnapshot before = CaptureR5eStepSnapshot();
+            if (observeTransition)
+                observeTransition = AppendR5eTransition(
+                    transactionId,
+                    R5eSeatTransitionEventKind.Prepare,
+                    R5eSeatTransitionKind.Entry,
+                    before,
+                    before,
+                    plan,
+                    Vector2.zero,
+                    false,
+                    false,
+                    false);
+
+            if (observeTransition && !CanOpenR5eSeatedSessionNoThrow(sessionId, transactionId))
+                observeTransition = false;
+            if (!observeTransition)
+            {
+                transactionId = 0;
+                sessionId = 0;
+            }
 
             bool posePrepared = false;
             OfficeCharacterSeatPoseProfile workProfile = null;
@@ -2343,8 +2355,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             bool prepared =
                 posePrepared &&
                 _animator.CanEnterCompletedSeatedWorkAfterAtomicPlacement(_seatDirection) &&
-                (!HasActiveR5eStepObservation ||
-                 _r5eTraceState.CanOpenSeatedSession(sessionId, transactionId)) &&
                 _seatClaim.TryPrepareOccupy(out preparedClaim) &&
                 _world.Occupancy.TryPrepareAtomicActorPlacement(
                     _agentId,
@@ -2397,6 +2407,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return false;
             }
 
+            bool publishSucceeded;
+            _r5ePublishActive = true;
+            bool publishObservationEntered =
+                TryEnterR5ePublishObservationNoThrow(observeTransition, transactionId);
+            if (observeTransition && !publishObservationEntered)
+            {
+                observeTransition = false;
+                transactionId = 0;
+                sessionId = 0;
+            }
             var publisher = new R5eEntryAtomicPublisher(
                 this,
                 preparedClaim,
@@ -2406,16 +2426,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 workProfile,
                 sessionId,
                 transactionId);
-            bool publishSucceeded;
-            _r5ePublishActive = true;
-            if (observeTransition) _r5eTraceCoordinator.EnterPublish();
             try
             {
                 publishSucceeded = OfficeSeatDockingAtomicPublishPrimitive.TryPublish(ref publisher);
             }
             finally
             {
-                if (observeTransition) _r5eTraceCoordinator.ExitPublish();
+                ExitR5ePublishObservationNoThrow(publishObservationEntered, transactionId);
                 _r5ePublishActive = false;
             }
 
@@ -2436,8 +2453,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
 
             _world.Occupancy.CompletePreparedAtomicActorPlacement(preparedPlacement);
-            if (HasActiveR5eStepObservation)
-                _r5eTraceState.OpenSeatedSession(sessionId, transactionId);
+            OpenR5eSeatedSessionNoThrow(observeTransition, sessionId, transactionId);
 
             R5eAgentStepSnapshot after = CaptureR5eStepSnapshot();
             AppendR5eTransition(
@@ -2482,23 +2498,32 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _seat,
                     out OfficeSeatDockingPlan plan)) return false;
 
-            bool observeTransition = HasActiveR5eStepObservation;
-            if (observeTransition && !_r5eTraceCoordinator.TryReserveTransitionRows(this, 5))
-                return false;
-            BeginR5eTransitionObservation(plan);
-            ulong transactionId = _r5eTraceCoordinator.AllocateTransactionId();
-            R5eAgentStepSnapshot before = CaptureR5eStepSnapshot();
-            AppendR5eTransition(
-                transactionId,
-                R5eSeatTransitionEventKind.Prepare,
-                R5eSeatTransitionKind.Exit,
-                before,
-                before,
+            bool observeTransition = TryBeginR5eTransitionObservation(
                 plan,
-                Vector2.zero,
-                false,
-                false,
-                false);
+                5,
+                allocateSeatedSession: false,
+                allocateMovementHandoff: true,
+                out ulong transactionId,
+                out _,
+                out ulong handoffId);
+            R5eAgentStepSnapshot before = CaptureR5eStepSnapshot();
+            if (observeTransition)
+                observeTransition = AppendR5eTransition(
+                    transactionId,
+                    R5eSeatTransitionEventKind.Prepare,
+                    R5eSeatTransitionKind.Exit,
+                    before,
+                    before,
+                    plan,
+                    Vector2.zero,
+                    false,
+                    false,
+                    false);
+            if (!observeTransition)
+            {
+                transactionId = 0;
+                handoffId = 0;
+            }
 
             if (!TryCaptureR5eAtomicAgentSnapshot(out R5eAtomicAgentSnapshot agentSnapshot))
             {
@@ -2588,9 +2613,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return false;
             }
 
-            ulong handoffId = _r5eTraceCoordinator.AllocateMovementHandoffId();
             OfficeSeatSlot releasedSeat = _seat;
             OfficeSeatRuntimeClaim releasedClaim = _seatClaim;
+            bool publishSucceeded;
+            _r5ePublishActive = true;
+            bool publishObservationEntered =
+                TryEnterR5ePublishObservationNoThrow(observeTransition, transactionId);
+            if (observeTransition && !publishObservationEntered)
+            {
+                observeTransition = false;
+                transactionId = 0;
+                handoffId = 0;
+            }
             var publisher = new R5eExitAtomicPublisher(
                 this,
                 releasedClaim,
@@ -2604,16 +2638,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 handoffId,
                 transactionId,
                 preparedQaOutward);
-            bool publishSucceeded;
-            _r5ePublishActive = true;
-            if (observeTransition) _r5eTraceCoordinator.EnterPublish();
             try
             {
                 publishSucceeded = OfficeSeatDockingAtomicPublishPrimitive.TryPublish(ref publisher);
             }
             finally
             {
-                if (observeTransition) _r5eTraceCoordinator.ExitPublish();
+                ExitR5ePublishObservationNoThrow(publishObservationEntered, transactionId);
                 _r5ePublishActive = false;
             }
 
@@ -2637,7 +2668,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _world.Occupancy.CompletePreparedAtomicActorPlacement(preparedPlacement);
             _world.Occupancy.CompleteAtomicReservationScope(reservationScope);
             _animator.CompleteAtomicPresentationSessionNoThrow();
-            if (HasActiveR5eStepObservation) _r5eTraceState.CloseSeatedSession();
+            CloseR5eSeatedSessionNoThrow(observeTransition, transactionId);
             R5eAgentStepSnapshot after = CaptureR5eStepSnapshot();
             AppendR5eTransition(
                 transactionId,
@@ -3317,7 +3348,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
-        private void AppendR5eTransition(
+        private bool AppendR5eTransition(
             ulong transactionId,
             R5eSeatTransitionEventKind eventKind,
             R5eSeatTransitionKind transitionKind,
@@ -3329,43 +3360,218 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             bool rollbackSucceeded,
             bool locomotionSample)
         {
-            if (!HasActiveR5eStepObservation) return;
-            if (_r5ePublishActive || _r5eTraceCoordinator.PublishActive)
-                throw new InvalidOperationException("R5e trace cannot observe a half-published transaction.");
-            ulong seatedSessionId = transitionKind == R5eSeatTransitionKind.Exit
-                ? (_r5eSeatedSessionId != 0
-                    ? _r5eSeatedSessionId
-                    : _r5eLastClosedSeatedSessionId)
-                : _r5eSeatedSessionId;
-            R5eProductionObservation afterObservation = CaptureR5eProductionObservation(plan);
-            var row = new R5eSeatTransitionTraceRow(
-                _r5ePendingStep.Context,
-                _agentId,
-                plan.Seat == null ? string.Empty : plan.Seat.SeatId,
-                transactionId,
-                seatedSessionId,
-                eventKind,
-                transitionKind,
-                before,
-                after,
-                plan,
-                chosenExit,
-                commitSucceeded,
-                rollbackSucceeded,
-                locomotionSample,
-                _r5eActiveFaultInjectionId,
-                _r5eTransitionBeforeObservation,
-                afterObservation);
-            _r5eTraceState.AppendTransition(row);
-            if (_r5eTraceState.Failed) _r5eTraceCoordinator.AbortFatal("transition-append-failed");
+            if (!IsR5eTransitionObservationActive(transactionId)) return false;
+            try
+            {
+                if (_r5ePublishActive || _r5eTraceCoordinator.PublishActive)
+                    throw new InvalidOperationException(
+                        "R5e trace cannot observe a half-published transaction.");
+                ulong seatedSessionId = transitionKind == R5eSeatTransitionKind.Exit
+                    ? (_r5eSeatedSessionId != 0
+                        ? _r5eSeatedSessionId
+                        : _r5eLastClosedSeatedSessionId)
+                    : _r5eSeatedSessionId;
+                R5eProductionObservation afterObservation = CaptureR5eProductionObservation(plan);
+                var row = new R5eSeatTransitionTraceRow(
+                    _r5ePendingStep.Context,
+                    _agentId,
+                    plan.Seat == null ? string.Empty : plan.Seat.SeatId,
+                    transactionId,
+                    seatedSessionId,
+                    eventKind,
+                    transitionKind,
+                    before,
+                    after,
+                    plan,
+                    chosenExit,
+                    commitSucceeded,
+                    rollbackSucceeded,
+                    locomotionSample,
+                    _r5eActiveFaultInjectionId,
+                    _r5eTransitionBeforeObservation,
+                    afterObservation);
+                _r5eTraceState.AppendTransition(row);
+                if (!_r5eTraceState.Failed) return true;
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "append-failed",
+                    null);
+            }
+            catch (Exception exception)
+            {
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "append-exception",
+                    exception);
+            }
+            return false;
         }
 
-        private void BeginR5eTransitionObservation(in OfficeSeatDockingPlan plan)
+        private bool TryBeginR5eTransitionObservation(
+            in OfficeSeatDockingPlan plan,
+            int transitionRowCount,
+            bool allocateSeatedSession,
+            bool allocateMovementHandoff,
+            out ulong transactionId,
+            out ulong seatedSessionId,
+            out ulong movementHandoffId)
         {
+            transactionId = 0;
+            seatedSessionId = 0;
+            movementHandoffId = 0;
+            if (!HasActiveR5eStepObservation || !_r5eTraceState.IsCaptureActive) return false;
             _r5eActiveFaultInjectionId = 0;
-            if (!HasActiveR5eStepObservation) return;
-            _r5eTransitionAllocationStart = GC.GetAllocatedBytesForCurrentThread();
-            _r5eTransitionBeforeObservation = CaptureR5eProductionObservation(plan);
+            _r5eSuppressedTransitionObservationId = 0;
+            try
+            {
+                if (!_r5eTraceCoordinator.TryReserveTransitionRows(this, transitionRowCount) ||
+                    !_r5eTraceState.IsCaptureActive)
+                {
+                    SuppressR5eTransitionObservationNoThrow(0, "reserve-failed", null);
+                    return false;
+                }
+                _r5eTransitionAllocationStart = GC.GetAllocatedBytesForCurrentThread();
+                _r5eTransitionBeforeObservation = CaptureR5eProductionObservation(plan);
+                transactionId = _r5eTraceCoordinator.AllocateTransactionId();
+                if (allocateSeatedSession)
+                    seatedSessionId = _r5eTraceCoordinator.AllocateSeatedSessionId();
+                if (allocateMovementHandoff)
+                    movementHandoffId = _r5eTraceCoordinator.AllocateMovementHandoffId();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "begin-exception",
+                    exception);
+                transactionId = 0;
+                seatedSessionId = 0;
+                movementHandoffId = 0;
+                return false;
+            }
+        }
+
+        private bool CanOpenR5eSeatedSessionNoThrow(ulong sessionId, ulong transactionId)
+        {
+            if (!IsR5eTransitionObservationActive(transactionId)) return false;
+            try
+            {
+                if (_r5eTraceState.CanOpenSeatedSession(sessionId, transactionId)) return true;
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "session-preflight-failed",
+                    null);
+            }
+            catch (Exception exception)
+            {
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "session-preflight-exception",
+                    exception);
+            }
+            return false;
+        }
+
+        private void OpenR5eSeatedSessionNoThrow(
+            bool observeTransition,
+            ulong sessionId,
+            ulong transactionId)
+        {
+            if (!observeTransition || !IsR5eTransitionObservationActive(transactionId)) return;
+            try
+            {
+                _r5eTraceState.OpenSeatedSession(sessionId, transactionId);
+                if (!_r5eTraceState.Failed) return;
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "session-open-failed",
+                    null);
+            }
+            catch (Exception exception)
+            {
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "session-open-exception",
+                    exception);
+            }
+        }
+
+        private void CloseR5eSeatedSessionNoThrow(bool observeTransition, ulong transactionId)
+        {
+            if (!observeTransition || !IsR5eTransitionObservationActive(transactionId)) return;
+            try
+            {
+                _r5eTraceState.CloseSeatedSession();
+            }
+            catch (Exception exception)
+            {
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "session-close-exception",
+                    exception);
+            }
+        }
+
+        private bool TryEnterR5ePublishObservationNoThrow(
+            bool observeTransition,
+            ulong transactionId)
+        {
+            if (!observeTransition || !IsR5eTransitionObservationActive(transactionId)) return false;
+            try
+            {
+                _r5eTraceCoordinator.EnterPublish();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "publish-enter-exception",
+                    exception);
+                return false;
+            }
+        }
+
+        private void ExitR5ePublishObservationNoThrow(bool entered, ulong transactionId)
+        {
+            if (!entered) return;
+            try
+            {
+                _r5eTraceCoordinator.ExitPublish();
+            }
+            catch (Exception exception)
+            {
+                SuppressR5eTransitionObservationNoThrow(
+                    transactionId,
+                    "publish-exit-exception",
+                    exception);
+            }
+        }
+
+        private bool IsR5eTransitionObservationActive(ulong transactionId) =>
+            transactionId != 0 &&
+            HasActiveR5eStepObservation &&
+            _r5eTraceState.IsCaptureActive &&
+            _r5eSuppressedTransitionObservationId != transactionId;
+
+        private void SuppressR5eTransitionObservationNoThrow(
+            ulong transactionId,
+            string stage,
+            Exception exception)
+        {
+            if (transactionId != 0)
+                _r5eSuppressedTransitionObservationId = transactionId;
+            try
+            {
+                _r5eTraceCoordinator?.AbortFatal(
+                    "transition-observer-" + (stage ?? "failure") +
+                    (exception == null ? string.Empty : ":" + exception.GetType().Name));
+            }
+            catch
+            {
+                // Observation failure evidence cannot replace the gameplay transition.
+            }
         }
 
         private void ThrowIfR5eFault(R5eFaultInjectionPoint point)

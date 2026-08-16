@@ -447,6 +447,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void CleanupFailedRuntimePreparation()
         {
+            _bootstrap?.UnbindStarterOfficeRuntime();
             foreach (OfficeRuntimeAgent actor in Actors)
             {
                 if (actor == null) continue;
