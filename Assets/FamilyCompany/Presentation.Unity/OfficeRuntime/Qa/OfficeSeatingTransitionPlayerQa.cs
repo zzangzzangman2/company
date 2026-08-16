@@ -271,7 +271,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
-            yield return new WaitForEndOfFrame();
+            float outwardEndpointDeadline = Time.realtimeSinceStartup + 60f;
+            const int maximumOutwardEndpointPresentationFrames = 3600;
+            int outwardEndpointPresentationFrames = 0;
+            while (Time.realtimeSinceStartup < outwardEndpointDeadline &&
+                   outwardEndpointPresentationFrames < maximumOutwardEndpointPresentationFrames &&
+                   MemberIds.Any(memberId => !ReadyForSafeEgressCapture(
+                       actors[memberId],
+                       _traces[memberId])))
+            {
+                yield return new WaitForEndOfFrame();
+                outwardEndpointPresentationFrames++;
+                if (!SampleAll(actors))
+                {
+                    FinishFailure(_failureCode, _failure);
+                    yield break;
+                }
+            }
+
+            if (MemberIds.Any(memberId => !ReadyForSafeEgressCapture(
+                    actors[memberId],
+                    _traces[memberId])))
+            {
+                FinishFailure(
+                    95,
+                    "Post-first-walk outward endpoint did not settle before capture: " +
+                    BuildPostFirstWalkOutwardEndpointSummary(actors));
+                yield break;
+            }
+
             if (!CaptureOverview(
                     "seating-transition-egress-after-overview-1920x1080.png",
                     out string egressOverviewFailure))
@@ -1267,11 +1295,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             out string failure)
         {
             failure = string.Empty;
-            if (actor == null || actor.PresentationRenderer == null ||
-                actor.Phase != OfficeRuntimeAgentPhase.Idle || actor.IsOccupyingSeat ||
-                !actor.HasCompletedSeatEgress || !actor.LastCompletedSeatEgressClearanceValid)
+            if (actor == null || actor.PresentationRenderer == null)
             {
-                failure = "actor is not stationary at a completed safe egress anchor";
+                failure = "post-first-walk actor or presentation renderer is missing";
+                return false;
+            }
+            if (!ReadyForSafeEgressCapture(actor, trace))
+            {
+                failure = "post-first-walk outward endpoint is not capture-safe: " +
+                          DescribePostFirstWalkOutwardEndpoint(actor, trace);
                 return false;
             }
             if (trace == null || trace.SeatId.Length == 0)
@@ -1374,6 +1406,63 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 for (var index = 0; index < chairRenderers.Length; index++)
                     chairRenderers[index].enabled = chairEnabled[index];
             }
+        }
+
+        private static bool ReadyForSafeEgressCapture(
+            OfficeRuntimeAgent actor,
+            ActorTrace trace)
+        {
+            if (actor == null || trace == null) return false;
+            const float stationaryEpsilon = 0.0001f;
+            return trace.FirstWalkObserved &&
+                   actor.R5eFirstWalkCount > trace.FirstWalkCountBaseline &&
+                   actor.R5eLastFirstWalkTick > actor.R5eTurnCompleteTick &&
+                   actor.Phase == OfficeRuntimeAgentPhase.Idle &&
+                   actor.R5eCurrentVelocityMagnitude <= stationaryEpsilon &&
+                   actor.DesiredVelocity.magnitude <= stationaryEpsilon &&
+                   actor.R5eLastActualDisplacementMagnitude <= stationaryEpsilon &&
+                   actor.VisibleFrameMovementWorld <= stationaryEpsilon &&
+                   actor.VisibleMotionDebtSeconds <= stationaryEpsilon &&
+                   !actor.IsOccupyingSeat &&
+                   actor.ActiveSeatId.Length == 0 &&
+                   actor.HasCompletedSeatEgress &&
+                   actor.LastCompletedSeatEgressClearanceValid &&
+                   Vector2.Distance(actor.Position, actor.LastCompletedSeatEgressWorld) >
+                   OfficeRuntimeTraceCoordinator.StationaryEpsilon;
+        }
+
+        private string BuildPostFirstWalkOutwardEndpointSummary(
+            IReadOnlyDictionary<string, OfficeRuntimeAgent> actors)
+        {
+            return string.Join(
+                ", ",
+                MemberIds.Select(memberId => DescribePostFirstWalkOutwardEndpoint(
+                    actors != null && actors.TryGetValue(memberId, out OfficeRuntimeAgent actor)
+                        ? actor
+                        : null,
+                    _traces.TryGetValue(memberId, out ActorTrace trace) ? trace : null)));
+        }
+
+        private static string DescribePostFirstWalkOutwardEndpoint(
+            OfficeRuntimeAgent actor,
+            ActorTrace trace)
+        {
+            if (actor == null) return (trace?.MemberId ?? "unknown") + "=actor:null";
+            string memberId = trace?.MemberId ?? actor.AgentId;
+            float outwardDistance = Vector2.Distance(
+                actor.Position,
+                actor.LastCompletedSeatEgressWorld);
+            return $"{memberId}=phase:{actor.Phase} firstWalk:" +
+                   $"{trace?.FirstWalkObserved}/{trace?.FirstWalkCountBaseline}/" +
+                   $"{actor.R5eFirstWalkCount} ticks:{actor.R5eTurnCompleteTick}/" +
+                   $"{actor.R5eLastFirstWalkTick} outwardDistance:{outwardDistance:F6} " +
+                   $"motion:{actor.R5eCurrentVelocityMagnitude:F6}/" +
+                   $"{actor.DesiredVelocity.magnitude:F6}/" +
+                   $"{actor.R5eLastActualDisplacementMagnitude:F6}/" +
+                   $"{actor.VisibleFrameMovementWorld:F6}/" +
+                   $"{actor.VisibleMotionDebtSeconds:F6} occupying:{actor.IsOccupyingSeat} " +
+                   $"seat:{actor.ActiveSeatId} completed:{actor.HasCompletedSeatEgress}/" +
+                   actor.LastCompletedSeatEgressClearanceValid;
         }
 
         private static bool TryMeasureSafeEgressOverlap(
