@@ -2099,11 +2099,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         {
             frameIndex = -1;
             if (string.IsNullOrWhiteSpace(spriteName)) return false;
-            const string marker = "_typing_";
+            string marker = "_typing_";
             int start = spriteName.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (start < 0)
+            {
+                marker = "_sit_work_";
+                start = spriteName.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            }
             if (start < 0) return false;
             start += marker.Length;
             int end = spriteName.IndexOf('_', start);
+            if (end < 0) end = spriteName.Length;
             if (end <= start) return false;
             return int.TryParse(
                 spriteName.Substring(start, end - start),
