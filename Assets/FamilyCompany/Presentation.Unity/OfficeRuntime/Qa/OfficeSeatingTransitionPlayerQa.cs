@@ -295,7 +295,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 }
             }
 
-            const int expectedPrimaryCaptureCount = 4 * (1 + 6);
+            int expectedPrimaryCaptureCount = MemberIds.Sum(memberId =>
+                1 + 6 + CountBits(_traces[memberId].TypingEvidenceFrameMask));
             if (_frameEvidenceRecords.Count != expectedPrimaryCaptureCount ||
                 _frameEvidenceKeys.Count != expectedPrimaryCaptureCount)
             {
@@ -860,6 +861,58 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 !string.IsNullOrWhiteSpace(actor.CurrentSpriteName))
             {
                 trace.SawWorkHookActive = true;
+                bool hasWorkMarker = actor.CurrentSpriteName.IndexOf(
+                    "_sit_work_",
+                    StringComparison.OrdinalIgnoreCase) >= 0;
+                if (TryParseWorkFrameIndex(actor.CurrentSpriteName, out int workFrame))
+                {
+                    if (workFrame < 0 || workFrame >= 6 || workFrame != frame)
+                        return Fail(
+                            95,
+                            $"{trace.MemberId} Work sprite/runtime frame mismatch: " +
+                            $"sprite={actor.CurrentSpriteName} parsed={workFrame} runtime={frame}");
+                    int workBit = 1 << workFrame;
+                    string previousWorkSprite = trace.WorkSpriteNames[workFrame];
+                    if (!string.IsNullOrEmpty(previousWorkSprite) &&
+                        !string.Equals(
+                            previousWorkSprite,
+                            actor.CurrentSpriteName,
+                            StringComparison.Ordinal))
+                        return Fail(
+                            95,
+                            $"{trace.MemberId} Work frame {workFrame} mixed sprites " +
+                            $"'{previousWorkSprite}' and '{actor.CurrentSpriteName}'.");
+                    trace.WorkSpriteNames[workFrame] = actor.CurrentSpriteName;
+                    trace.WorkHookSprites.Add(actor.CurrentSpriteName);
+                    trace.DepthWorkHookSprites.Add(actor.CurrentSpriteName);
+                    if ((trace.WorkEvidenceFrameMask & workBit) == 0)
+                    {
+                        if (workFrame != trace.NextExpectedWorkEvidenceFrame)
+                            return Fail(
+                                95,
+                                $"{trace.MemberId} Work capture sequence skipped/reordered: " +
+                                $"expected={trace.NextExpectedWorkEvidenceFrame} actual={workFrame}");
+                        if (!CaptureSeatingFrameEvidence(
+                                actor,
+                                trace,
+                                FrameEvidenceKind.Work,
+                                OfficeSeatingAnimationClip.Work,
+                                workFrame,
+                                depth,
+                                out string captureFailure))
+                            return Fail(95, trace.MemberId + " Work evidence failed: " + captureFailure);
+                        trace.WorkEvidenceFrameMask |= workBit;
+                        trace.NextExpectedWorkEvidenceFrame++;
+                        trace.WorkCloseupCaptured = true;
+                    }
+                }
+                else if (hasWorkMarker)
+                {
+                    return Fail(
+                        95,
+                        $"{trace.MemberId} has an unparseable Work sprite: {actor.CurrentSpriteName}");
+                }
+
                 if (actor.CurrentOfficeWorkMicroAction == OfficeWorkMicroAction.Typing)
                 {
                     if (!TryParseTypingFrameIndex(actor.CurrentSpriteName, out int typingFrame) ||
@@ -876,8 +929,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             $"{trace.MemberId} typing frame {typingFrame} mixed sprites " +
                             $"'{previousSprite}' and '{actor.CurrentSpriteName}'.");
                     trace.TypingSpriteNames[typingFrame] = actor.CurrentSpriteName;
-                    trace.WorkHookSprites.Add(actor.CurrentSpriteName);
-                    trace.DepthWorkHookSprites.Add(actor.CurrentSpriteName);
                     if ((trace.TypingEvidenceFrameMask & bit) == 0)
                     {
                         if (typingFrame != trace.NextExpectedTypingEvidenceFrame)
@@ -896,7 +947,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             return Fail(95, trace.MemberId + " Typing evidence failed: " + captureFailure);
                         trace.TypingEvidenceFrameMask |= bit;
                         trace.NextExpectedTypingEvidenceFrame++;
-                        trace.WorkCloseupCaptured = true;
                     }
                 }
             }
@@ -978,7 +1028,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                    actor.ObservedSitDownFrameCount == 0 &&
                    actor.ObservedStandUpFrameCount == 0 &&
                    actor.IsOfficeWorkAnimationHookActive &&
-                   trace.TypingEvidenceFrameMask == 0x3f &&
+                   actor.ObservedWorkFrameCount == 6 &&
+                   trace.WorkEvidenceFrameMask == 0x3f &&
                    trace.WorkHookSprites.Count == 6 && trace.DepthWorkHookSprites.Count == 6;
         }
 
@@ -1026,15 +1077,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (trace.SawWorkHookActive)
             {
                 if (trace.WorkHookSprites.Count != 6 || trace.DepthWorkHookSprites.Count != 6 ||
-                    trace.TypingEvidenceFrameMask != 0x3f)
+                    trace.WorkEvidenceFrameMask != 0x3f || actor.ObservedWorkFrameCount != 6)
                     failures.Add(
-                        $"typingHook={trace.WorkHookSprites.Count}/" +
+                        $"workHook={trace.WorkHookSprites.Count}/" +
                         $"{trace.DepthWorkHookSprites.Count}/" +
-                        $"{CountBits(trace.TypingEvidenceFrameMask)}");
+                        $"{CountBits(trace.WorkEvidenceFrameMask)}/" +
+                        actor.ObservedWorkFrameCount);
             }
             else
             {
-                failures.Add("Typing work hook was not sampled");
+                failures.Add("Work hook was not sampled");
             }
             if (!trace.SawFinishingWork) failures.Add("FinishingWork was not sampled");
             if (!trace.SawLeavingSeat || trace.LeavingSeatSampleCount == 0)
@@ -1101,11 +1153,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 failures.Add("facing lock was not released after LeavingSeat");
             if (!trace.SitCloseupCaptured || !trace.WorkCloseupCaptured || !trace.StandCloseupCaptured)
                 failures.Add("required 1024x1024 closeup is missing");
-            if (trace.EvidenceRecordCount != 7)
-                failures.Add("primaryEvidence=" + trace.EvidenceRecordCount + "/7");
-            if (trace.NextExpectedTypingEvidenceFrame != 6)
+            int expectedEvidenceCount = 7 + CountBits(trace.TypingEvidenceFrameMask);
+            if (trace.EvidenceRecordCount != expectedEvidenceCount)
+                failures.Add("primaryEvidence=" + trace.EvidenceRecordCount + "/" + expectedEvidenceCount);
+            if (trace.NextExpectedWorkEvidenceFrame != 6)
                 failures.Add(
-                    $"continuousWorkCapture={trace.NextExpectedTypingEvidenceFrame}/6");
+                    $"continuousWorkCapture={trace.NextExpectedWorkEvidenceFrame}/6");
             foreach (FrameEvidenceRecord record in _frameEvidenceRecords.Where(
                          item => string.Equals(item.MemberId, trace.MemberId, StringComparison.Ordinal)))
             {
@@ -1118,7 +1171,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     failures.Add(
                         $"{frameLabel} lowerOccluded={evidence.LowerBodyOccludedPixels}/" +
                         evidence.LowerBodyOverlapCandidatePixels);
-                if (record.Kind == FrameEvidenceKind.Typing &&
+                if ((record.Kind == FrameEvidenceKind.Work ||
+                     record.Kind == FrameEvidenceKind.Typing) &&
                     evidence.LowerBodyOverlapCandidatePixels == 0)
                     failures.Add(frameLabel + " has no lower-body/chair foreground overlap");
                 if (evidence.ForegroundPenetrationPixels != 0)
@@ -1146,10 +1200,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         $"{frameLabel} pelvisSeat={evidence.PelvisSeatErrorPx:F3}px");
             }
             if (trace.SitLowerBodyOccludedPixels <= 0 ||
-                trace.TypingLowerBodyOccludedPixels <= 0)
+                trace.WorkLowerBodyOccludedPixels <= 0)
                 failures.Add(
                     $"classicSeatWorkLowerOcclusion={trace.SitLowerBodyOccludedPixels}/" +
-                    trace.TypingLowerBodyOccludedPixels);
+                    trace.WorkLowerBodyOccludedPixels);
 
             failure = string.Join("; ", failures);
             return failures.Count == 0;
@@ -1479,6 +1533,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             string phaseToken = kind switch
             {
                 FrameEvidenceKind.AtomicSeat => "atomic-seated-key-pose",
+                FrameEvidenceKind.Work => "canonical-seated-work",
                 FrameEvidenceKind.Typing => "typing-work-hook",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind))
             };
@@ -2099,13 +2154,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         {
             frameIndex = -1;
             if (string.IsNullOrWhiteSpace(spriteName)) return false;
-            string marker = "_typing_";
+            const string marker = "_typing_";
             int start = spriteName.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            if (start < 0)
-            {
-                marker = "_sit_work_";
-                start = spriteName.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-            }
+            if (start < 0) return false;
+            start += marker.Length;
+            int end = spriteName.IndexOf('_', start);
+            if (end < 0) end = spriteName.Length;
+            if (end <= start) return false;
+            return int.TryParse(
+                spriteName.Substring(start, end - start),
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out frameIndex);
+        }
+
+        private static bool TryParseWorkFrameIndex(string spriteName, out int frameIndex)
+        {
+            frameIndex = -1;
+            if (string.IsNullOrWhiteSpace(spriteName)) return false;
+            const string marker = "_sit_work_";
+            int start = spriteName.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
             if (start < 0) return false;
             start += marker.Length;
             int end = spriteName.IndexOf('_', start);
@@ -2207,7 +2275,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 var builder = new StringBuilder();
                 builder.AppendLine("FAMILY_COMPANY_SEATING_FRAME_CAPTURE_MANIFEST");
-                builder.AppendLine("primaryExpected=28 (AtomicSeat1 + Typing6 per actor)");
+                builder.AppendLine("primaryExpected=28 chair frames (AtomicSeat1 + Work6 per actor) + optional Typing evidence");
                 builder.AppendLine("primaryActual=" + _frameEvidenceRecords.Count);
                 builder.AppendLine("primaryResolution=1024x1024");
                 builder.AppendLine("captureDeltaTime=0.016667 (fixed 60Hz presentation delta)");
@@ -2234,7 +2302,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 builder.AppendLine(
                     "transitionZeroOverlap=allowed only when lowerCandidates=0; noOverlapReason is pose/mask geometry");
                 builder.AppendLine(
-                    "phaseAggregate=each member AtomicSeat/Typing lowerOccluded sum must be >0");
+                    "phaseAggregate=each member AtomicSeat/Work lowerOccluded sum must be >0");
                 builder.AppendLine(
                     "invalidOcclusion=upper foreground overlap must be 0 in all 28 frames; hand overlap must be 0 in Typing 6/6");
                 builder.AppendLine(
@@ -2251,9 +2319,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     if (!_traces.TryGetValue(memberId, out ActorTrace trace)) continue;
                     builder.Append("coverage member=").Append(memberId)
                         .Append(" atomicSeat=").Append(trace.AtomicSeatEvidenceCaptured)
+                        .Append(" workMask=0x").Append(trace.WorkEvidenceFrameMask.ToString("X2"))
                         .Append(" typingMask=0x").Append(trace.TypingEvidenceFrameMask.ToString("X2"))
-                        .Append(" continuousWork=").Append(trace.NextExpectedTypingEvidenceFrame)
-                        .Append(" unique=").Append(trace.EvidenceRecordCount).Append("/7")
+                        .Append(" continuousWork=").Append(trace.NextExpectedWorkEvidenceFrame)
+                        .Append(" unique=").Append(trace.EvidenceRecordCount).Append('/')
+                        .Append(7 + CountBits(trace.TypingEvidenceFrameMask))
                         .AppendLine();
                 }
                 File.WriteAllText(
@@ -2277,8 +2347,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             builder.AppendLine("artifacts=" + _artifactDirectory);
             builder.AppendLine("overviewResolution=1920x1080");
             builder.AppendLine("closeupResolution=1024x1024");
-            builder.AppendLine("primaryCloseups=" + _frameEvidenceRecords.Count + "/28");
-            builder.AppendLine("primaryUniqueKeys=" + _frameEvidenceKeys.Count + "/28");
+            int expectedPrimaryCaptureCount = _traces.Values.Sum(trace =>
+                7 + CountBits(trace.TypingEvidenceFrameMask));
+            builder.AppendLine("primaryCloseups=" + _frameEvidenceRecords.Count + "/" +
+                               expectedPrimaryCaptureCount);
+            builder.AppendLine("primaryUniqueKeys=" + _frameEvidenceKeys.Count + "/" +
+                               expectedPrimaryCaptureCount);
             builder.AppendLine("safeEgressCloseups=" +
                                _traces.Values.Count(trace => trace.SafeEgressCloseupCaptured) + "/4");
             builder.AppendLine("egressMatrix=families4*rotations4*scenarios4=64");
@@ -2307,9 +2381,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     .Append(" workHook=").Append(trace.WorkHookSprites.Count).Append("/6")
                     .Append(" forbiddenClips=").Append(actor == null ? -1 :
                         actor.ObservedSitDownFrameCount + actor.ObservedStandUpFrameCount)
+                    .Append(" workMask=0x").Append(trace.WorkEvidenceFrameMask.ToString("X2"))
                     .Append(" typingMask=0x").Append(trace.TypingEvidenceFrameMask.ToString("X2"))
-                    .Append(" continuousWork=").Append(trace.NextExpectedTypingEvidenceFrame)
-                    .Append(" evidence=").Append(trace.EvidenceRecordCount).Append("/7")
+                    .Append(" continuousWork=").Append(trace.NextExpectedWorkEvidenceFrame)
+                    .Append(" evidence=").Append(trace.EvidenceRecordCount).Append('/')
+                    .Append(7 + CountBits(trace.TypingEvidenceFrameMask))
                     .Append(" lifecycleTicks=").Append(trace.PreDockRuntimeTick)
                     .Append('/').Append(trace.EntryAtomicTick)
                     .Append('/').Append(actor == null ? 0UL : actor.R5eLastAtomicExitTick)
@@ -2325,6 +2401,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     .Append(" lowerCandidates=").Append(trace.LowerBodyOverlapCandidatePixels)
                     .Append(" lowerOccluded=").Append(trace.LowerBodyOccludedPixels)
                     .Append(" phaseLowerOccluded=").Append(trace.SitLowerBodyOccludedPixels)
+                    .Append('/').Append(trace.WorkLowerBodyOccludedPixels)
                     .Append('/').Append(trace.TypingLowerBodyOccludedPixels)
                     .Append(" penetration=").Append(trace.ForegroundPenetrationPixels)
                     .Append(" filteredEdgeResidual=").Append(trace.FilteredEdgeResidualPixels)
@@ -2402,6 +2479,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private enum FrameEvidenceKind
         {
             AtomicSeat,
+            Work,
             Typing
         }
 
@@ -2580,6 +2658,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public int ExpectedDirection { get; set; } = -1;
             public int TypingEvidenceFrameMask { get; set; }
             public int NextExpectedTypingEvidenceFrame { get; set; }
+            public int WorkEvidenceFrameMask { get; set; }
+            public int NextExpectedWorkEvidenceFrame { get; set; }
             public ulong PreDockRuntimeTick { get; set; }
             public Vector2 PreDockWorld { get; set; }
             public string PreDockSpriteName { get; set; } = string.Empty;
@@ -2615,6 +2695,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public int SeatCellMismatchCount { get; set; }
             public int NoLowerBodyOverlapFrameCount { get; private set; }
             public int SitLowerBodyOccludedPixels { get; private set; }
+            public int WorkLowerBodyOccludedPixels { get; private set; }
             public int TypingLowerBodyOccludedPixels { get; private set; }
             public bool SawApproachingSeat { get; set; }
             public bool SawAligningSeat { get; set; }
@@ -2631,6 +2712,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public bool WorkCloseupCaptured { get; set; }
             public bool StandCloseupCaptured { get; set; }
             public string[] TypingSpriteNames { get; } = new string[6];
+            public string[] WorkSpriteNames { get; } = new string[6];
             public HashSet<OfficeRuntimeAgentPhase> Phases { get; } =
                 new HashSet<OfficeRuntimeAgentPhase>();
             public HashSet<string> WorkHookSprites { get; } =
@@ -2676,6 +2758,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 {
                     case FrameEvidenceKind.AtomicSeat:
                         SitLowerBodyOccludedPixels += evidence.LowerBodyOccludedPixels;
+                        break;
+                    case FrameEvidenceKind.Work:
+                        WorkLowerBodyOccludedPixels += evidence.LowerBodyOccludedPixels;
                         break;
                     case FrameEvidenceKind.Typing:
                         TypingLowerBodyOccludedPixels += evidence.LowerBodyOccludedPixels;
