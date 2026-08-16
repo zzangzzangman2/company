@@ -6,10 +6,10 @@
 
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
 - 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고, GitHub history·tags·Releases·Actions 감사 결과 executable payload는 0입니다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`에서 도입한 CI guard가 향후 tracked Windows Player payload를 fail-closed 차단합니다.
-- 최종 Windows build와 Downloads 배포는 2026-08-16에 완료되었습니다. 배포본
-  `%USERPROFILE%\Downloads\FamilyCompany_Playtest`의 `BUILD_INFO.txt`가 기록한 `commit=8b9e3313...`은
-  `origin/main` HEAD와 일치합니다. 다만 이 배포본이 남긴 QA 증거는 seating transition QA 하나이며, 네 가족
-  09:00~09:03 독립 oracle 결과는 배포본 옆에 기록되어 있지 않습니다.
+- 일반 새 게임 좌석 정지와 가족 타일 보행 수정은 2026-08-16에 검증·배포되었습니다. 배포본
+  `%USERPROFILE%\Downloads\FamilyCompany_Playtest`의 `BUILD_INFO.txt`와 `DEPLOY_MANIFEST.json`이 최종 commit과
+  Unity `6000.3.21f1` identity를 기록하며 `origin/main`과 일치합니다. 일반 새 게임 observer 1x·2x·4x,
+  seating transition Player, FAST_QA, 보행 asset strict gate를 모두 통과한 identity만 승격합니다.
 
 ## 현재 플레이 가능한 기준선
 

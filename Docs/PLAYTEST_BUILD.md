@@ -7,8 +7,12 @@
 
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0을 통과해 integration에 단일 merge되었다. 가족 4명의 Work 0..5, atomic seat/root/pelvis, microslide 0, exit/turn/first-walk, stationary endpoint, safe egress와 furniture 0이 실제 Player에서 확인되었다.
 - 과거·회귀 실행 payload는 evidence 보존 뒤 허용 root에서 제거되었고, 이전 GitHub history·tags·Releases·Actions 감사의 executable payload는 0이다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`의 tracked Player payload CI guard를 build 전 필수 gate로 유지한다.
-- 최종 Windows build와 Downloads 배포는 2026-08-16에 수행되었다. 배포본 `%USERPROFILE%\Downloads\FamilyCompany_Playtest`의 `BUILD_INFO.txt`는 `commit=8b9e3313928545f98b4fc60427da76901271fc96`, `unity=6000.3.21f1 c02631ffc030`, `qa=FAMILY_COMPANY_SEATING_TRANSITION_QA PASS exit0`을 기록하며 이 SHA는 `origin/main` HEAD와 같다. 이후 build/deploy도 clean 최종 HEAD의 새 `BUILD_INFO.txt` identity로만 수행한다.
-- 이 배포본이 남긴 QA 증거는 seating transition QA 하나다. [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)가 요구하는 네 가족 09:00/09:01/09:02/09:03 독립 oracle 결과는 배포본 옆에 기록되어 있지 않으므로, 다음 배포에서는 그 결과를 비실행 evidence로 함께 남긴다.
+- 일반 새 게임 좌석 정지·가족 타일 보행 수정의 최종 Windows build와 Downloads 배포는 2026-08-16에
+  수행했다. `%USERPROFILE%\Downloads\FamilyCompany_Playtest`의 `BUILD_INFO.txt`와 `DEPLOY_MANIFEST.json`은
+  clean 최종 HEAD·Unity `6000.3.21f1`·Release build를 기록하며 이 SHA는 `origin/main`과 같다.
+- 배포 전 candidate와 배포 후 Downloads EXE에서 observer-only 일반 새 게임 1x·2x·4x 08:50→09:50을 각각
+  통과했다. 네 가족 seat arrival 1회·Work 6/6·20분 stall 0이며 route injection·clock jump·docking force는
+  모두 false다. 같은 identity의 seating transition Player, FAST_QA, animation strict gate도 통과했다.
 
 ## 반복 확인에는 이 문서를 쓰지 않는다
 

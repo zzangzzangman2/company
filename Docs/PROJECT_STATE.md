@@ -2,7 +2,7 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-16 / 일반 새 게임 좌석 정지·타일 보행 수정 후보
+## 2026-08-16 / 일반 새 게임 좌석 정지·타일 보행 수정·배포 완료
 
 - Downloads의 `8b9e3313928545f98b4fc60427da76901271fc96` 배포본은 일반 새 게임 09:07의 첫
   `FinishingWork`에서 플레이어 컨트롤러가 출근 좌석을 해제해 캐릭터가 의자 앞에 서는 회귀를 재현했다.
@@ -31,9 +31,12 @@
   6프레임 Work loop를 완료했다. 같은 후보의 seating transition FAST_QA도 4인 atomic seat/Work 6/6,
   primary 28/28, safe egress 4/4, penetration 0으로 통과했다. 가족 프레임 복원 뒤 animation asset strict
   gate는 12명·96 walk loops·576 frames 전부 PASS다.
-- 이 후보는 아직 커밋·배포되지 않았다. Downloads는 계속 이전 `8b9e331` 배포본이다. 다음 작업은 이번 수정과
-  무관한 UI `.meta` 변경을 별도 보존한 뒤 clean committed HEAD로 release build하고, 실제 candidate EXE에서
-  일반 새 게임 1x·2x·4x와 FAST_QA를 다시 통과한 경우에만 Downloads 승격과 `main` push를 수행하는 것이다.
+- runtime 수정은 `44702af0d40f255bb598d62c3b09a1e3cd25d752`에 커밋했다. Unity `6000.3.21f1`
+  Release candidate와 Downloads 승격본을 각각 별도로 실행해 일반 새 게임 1x·2x·4x를 모두 재검증했고,
+  observer-only·route injection false·clock jump false·docking force false 상태에서 네 가족이 모두 seat arrival
+  1회·Work 6/6·20 game-minute stall 0을 기록했다. `FAST_QA player-scripts`는 44.647초로 SLO 60초를 지켰다.
+  최종 release identity는 Downloads의 `BUILD_INFO.txt`/`DEPLOY_MANIFEST.json`을 정본으로 하며 검증된 clean
+  HEAD만 `origin/main`과 `C:\Users\godho\Downloads\FamilyCompany_Playtest`에 함께 승격한다.
 
 ## 2026-08-16 / 반복 개발 루프 정본화
 
