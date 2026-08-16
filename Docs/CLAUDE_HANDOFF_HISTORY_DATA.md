@@ -6,6 +6,8 @@
 
 두 번째 통합은 좌석 에셋·Stock 회사계좌/Save·Office 정적 교정의 Codex 전용 경로만 갱신한다. Claude History 전용 데이터의 완료 판정과 소유권은 바뀌지 않으며, 런타임 완료·미완료는 `Docs/PROJECT_STATE.md`를 정본으로 본다.
 
+2026-08-16 R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static 및 Unity `6000.3.21f1` capture-free Player exit 0 검증 뒤 integration에 반영되었다. 이 런타임 통합은 Claude History 전용 경로를 변경하지 않는다. 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고 GitHub history·tags·Releases·Actions executable payload 감사 결과는 0이며, `da5c6e7f9f9d48f0eada245cff727435536c91dd` CI guard가 재유입을 차단한다. 최종 Windows build/Downloads 배포는 대기 중이고 PC shutdown은 취소되었다.
+
 ## 작업 분리
 
 Claude는 **국내 실제 회사 역사 조사·정규화·출처·데이터 검증**만 맡는다. Codex는 **Unity 런타임, 소형 하청 계약, 경쟁/M&A 시뮬레이션, `simul` 시장 이식, 씬과 자동 테스트**를 맡는다.

@@ -2,6 +2,14 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-16 / R18 최종 arrival 통합 및 배포 대기
+
+- 최종 arrival descendant `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`를 payload guard·UI·tooling이 포함된 clean integration `d2fa777373e8f0376a5aca4899fdfe0c0fecd43a`에 한 번만 통합했다. merge-base는 `45f22430168cf3b3def1f50b147583a0cc3eb624`, 누적 R18 변경은 `OfficeRuntimeAgent.cs`와 `OfficeSeatingTransitionPlayerQa.cs` 2개이며 overlap/conflict는 0이다.
+- R18은 독립 static PASS와 Unity `6000.3.21f1` capture-free Windows Player exit 0 PASS를 받았다. 네 actor 모두 Work 0..5를 관측했고, 같은 좌석의 atomic seat/root/pelvis 정렬과 microslide는 0이며 exit·turn·first-walk·endpoint stationary·safe-egress·furniture drift/penetration도 0이다.
+- 통합 tree에서 Roslyn Simulation/Save/Infrastructure/Presentation/Editor compile, production fixture 158 scenarios·15 controls, negative oracle, offline/simulation, Management UI full compile, payload guard 14 fixtures와 tracked-tree 0위반을 다시 통과했다. R18 first-parent 범위 밖 UI·guard·tooling blob은 그대로다.
+- 과거·회귀 Windows 실행 payload는 repo 밖 text/hash evidence를 먼저 보존하고 허용된 payload root에서 Recycle Bin 우선 방식으로 제거했으며, 이전 GitHub 감사의 history·tags·Releases·Actions executable payload는 모두 0이다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`의 fail-closed CI guard가 `git add -f`와 이름·확장자 변경 Player bundle의 재유입을 차단한다.
+- 최종 Windows build와 Downloads 승격은 아직 수행하지 않았다. clean 최종 HEAD로 별도 승인된 build/deploy gate를 실행해야 하며, PC shutdown 요청은 취소된 상태다.
+
 ## 2026-08-16 / Git tracked Windows Player payload 예방 guard 후보
 
 - `.gitignore`가 canonical/nested `Builds/Windows`, known `FamilyCompany`/legacy `Company` Player 이름과 Playtest archive의 일반 accidental add를 막는다. 이는 보안 경계가 아니며 `git add -f`는 아래 CI가 별도로 검사한다.

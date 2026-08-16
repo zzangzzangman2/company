@@ -2,6 +2,12 @@
 
 14살 플레이어가 엄마·아빠·누나와 2000년의 작은 사무실에서 시작해, 하청을 버티고 자체 사업을 세우며 실제 기업들과 경쟁하는 싱글플레이 생활 경영 RPG입니다.
 
+## 최종 통합 후보 상태
+
+- R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
+- 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고, GitHub history·tags·Releases·Actions 감사 결과 executable payload는 0입니다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`에서 도입한 CI guard가 향후 tracked Windows Player payload를 fail-closed 차단합니다.
+- 최종 Windows build와 Downloads 배포는 아직 대기 중이며, PC shutdown은 취소되었습니다.
+
 ## 현재 플레이 가능한 기준선
 
 - 새 게임은 `2000-01-03 08:50`, 가족 4명, 자본금 500만 원으로 시작합니다.

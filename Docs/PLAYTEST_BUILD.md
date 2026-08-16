@@ -3,6 +3,12 @@
 저장소를 받은 Windows PC에서 Unity 편집기를 직접 열지 않고 플레이테스트 실행본을 만드는 절차다.
 빌드 결과물 자체는 매우 크기 때문에 Git에 넣지 않고, 재현 가능한 빌드 명령만 저장소에서 관리한다.
 
+## 현재 최종 build handoff
+
+- R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0을 통과해 integration에 단일 merge되었다. 가족 4명의 Work 0..5, atomic seat/root/pelvis, microslide 0, exit/turn/first-walk, stationary endpoint, safe egress와 furniture 0이 실제 Player에서 확인되었다.
+- 과거·회귀 실행 payload는 evidence 보존 뒤 허용 root에서 제거되었고, 이전 GitHub history·tags·Releases·Actions 감사의 executable payload는 0이다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`의 tracked Player payload CI guard를 build 전 필수 gate로 유지한다.
+- 최종 Windows build와 Downloads 배포는 아직 수행하지 않았다. 현재 clean 최종 HEAD의 새 `BUILD_INFO.txt` identity로만 build/deploy하며, PC shutdown은 취소 상태다.
+
 ## 가장 간단한 사용법
 
 1. Unity Hub에서 프로젝트 버전과 같은 `6000.3.21f1` 및 Windows Build Support를 설치한다.
