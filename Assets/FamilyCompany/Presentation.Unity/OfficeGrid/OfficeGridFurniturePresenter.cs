@@ -115,6 +115,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                 var baseRenderer = baseRoot.AddComponent<SpriteRenderer>();
                 baseRenderer.sprite = definition.BaseSprite;
                 baseRenderer.flipX = flipX;
+                // Seat the art on the cell by its authored floor contact point rather than by the
+                // sprite's centre pivot. Every module is imported with pivot (0.5, 0.5), so leaving
+                // this at zero floated each piece by half its sprite height - the swivel chair sat
+                // 0.695 world units above its tile, which is 78% of the 0.889-unit tile height, and
+                // taller modules drifted further. The offset is data-driven from GroundAnchorPx.
+                Vector3 groundOffset = GroundAnchorLocalOffset(baseRenderer, definition.GroundAnchorPx);
+                baseRoot.transform.localPosition = groundOffset;
                 baseRenderer.sortingLayerName = "Default";
                 Vector3 sortAnchorWorld = OfficeGridAlignmentMetrics.SpriteAnchorWorld(
                     baseRenderer,
@@ -132,6 +139,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
                     frontRenderer = frontRoot.AddComponent<SpriteRenderer>();
                     frontRenderer.sprite = definition.FrontOverlaySprite;
                     frontRenderer.flipX = flipX;
+                    // The overlay is authored in the same sprite space as the base, so it has to take
+                    // the same floor-contact offset or the near edge separates from the body.
+                    frontRoot.transform.localPosition =
+                        GroundAnchorLocalOffset(frontRenderer, definition.GroundAnchorPx);
                     frontRenderer.sortingLayerName = "Default";
                     frontRenderer.sortingOrder = baseRenderer.sortingOrder + 1;
                     // The front sprite also contains the visible chair back/near edge, so hiding
@@ -183,6 +194,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             if (!hasBounds) _renderBounds = new Bounds(transform.position, Vector3.zero);
             if (!ValidateTransformInvariants(out string failure))
                 throw new InvalidOperationException(failure);
+        }
+
+        /// <summary>
+        /// Local offset that moves a sprite so its authored floor contact point lands on the parent
+        /// origin - the semantic cell anchor - instead of the sprite's centre pivot. This is the
+        /// inverse of <see cref="OfficeGridAlignmentMetrics.SpriteAnchorWorld"/>, so the two stay in
+        /// the same pixel-space convention and remain flip-aware.
+        /// </summary>
+        private static Vector3 GroundAnchorLocalOffset(SpriteRenderer renderer, Vector2 groundAnchorPx)
+        {
+            if (renderer == null) throw new ArgumentNullException(nameof(renderer));
+            Sprite sprite = renderer.sprite;
+            if (sprite == null) return Vector3.zero;
+            Vector2 localPixels = groundAnchorPx - sprite.pivot;
+            if (renderer.flipX) localPixels.x = -localPixels.x;
+            if (renderer.flipY) localPixels.y = -localPixels.y;
+            return new Vector3(
+                -localPixels.x / sprite.pixelsPerUnit,
+                -localPixels.y / sprite.pixelsPerUnit,
+                0f);
         }
 
         public bool TryGetRenderer(string furnitureId, out SpriteRenderer renderer) =>
