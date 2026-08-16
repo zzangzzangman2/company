@@ -866,6 +866,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 if (!trace.SawAlignedBeforeSitDown || trace.PreDockRuntimeTick == 0 ||
                     actor.R5eAtomicPlacementTick <= trace.PreDockRuntimeTick ||
                     clip != OfficeSeatingAnimationClip.Work ||
+                    actor.CurrentSeatingFrame != 0 ||
                     actor.SeatContactErrorPx > MaximumSeatResidualPx ||
                     actor.R5eCurrentVelocityMagnitude > 0.0001f ||
                     actor.R5eLastActualDisplacementMagnitude > 0.0001f ||
@@ -890,7 +891,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 if (clip != OfficeSeatingAnimationClip.Work ||
                     actor.SeatContactErrorPx > MaximumSeatResidualPx ||
                     actor.R5eAtomicPlacementTick != trace.EntryAtomicTick ||
-                    actor.R5eLastActualDisplacementMagnitude > 0.0001f)
+                    actor.R5eCurrentVelocityMagnitude > 0.0001f ||
+                    actor.R5eLastActualDisplacementMagnitude > 0.0001f ||
+                    actor.VisibleFrameMovementWorld > 0.0001f)
                     return Fail(93, trace.MemberId +
                         " corrected or popped after the classic atomic seated frame.");
                 trace.AtomicSeatFollowupSampled = true;
@@ -1115,24 +1118,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             out string failure)
         {
             var failures = new List<string>();
-            if (!trace.SawApproachingSeat || !trace.SawAligningSeat ||
-                !trace.SawRotatingToSeat || !trace.SawAlignedBeforeSitDown)
+            if (!trace.SawApproachingSeat || !trace.SawRotatingToSeat ||
+                !trace.SawAlignedBeforeSitDown)
                 failures.Add(
-                    $"seatEntry={trace.SawApproachingSeat}/" +
-                    $"{trace.SawAligningSeat}/{trace.SawRotatingToSeat}/" +
-                    trace.SawAlignedBeforeSitDown);
+                    $"durableSeatEntry=approach:{trace.SawApproachingSeat}/" +
+                    $"rotating:{trace.SawRotatingToSeat}/" +
+                    $"facingPlantedMotion0:{trace.SawAlignedBeforeSitDown}");
             if (!actor.WasSeatFacingAlignedBeforeSitDown)
                 failures.Add("seat-facing rotation was not confirmed before atomic dock");
             if (!trace.AtomicSeatEvidenceCaptured || !trace.AtomicSeatFollowupSampled ||
+                trace.PreDockRuntimeTick == 0 ||
                 trace.EntryAtomicTick <= trace.PreDockRuntimeTick ||
+                trace.SeatId.Length == 0 ||
                 actor.ObservedSitDownFrameCount != 0 ||
                 actor.ObservedStandUpFrameCount != 0 ||
                 trace.Phases.Contains(OfficeRuntimeAgentPhase.SittingDown) ||
                 trace.Phases.Contains(OfficeRuntimeAgentPhase.StandingUp))
                 failures.Add(
-                    $"classicDock={trace.AtomicSeatEvidenceCaptured}/" +
+                    $"durableAtomicDock={trace.AtomicSeatEvidenceCaptured}/" +
                     $"{trace.AtomicSeatFollowupSampled} ticks={trace.PreDockRuntimeTick}/" +
-                    $"{trace.EntryAtomicTick} clips={actor.ObservedSitDownFrameCount}/" +
+                    $"{trace.EntryAtomicTick} seat={trace.SeatId} " +
+                    $"clips={actor.ObservedSitDownFrameCount}/" +
                     actor.ObservedStandUpFrameCount);
             if (trace.SawWorkEvidence)
             {
