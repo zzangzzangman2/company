@@ -2224,14 +2224,16 @@ namespace FamilyCompany.Presentation.Unity
             direction = -1;
             if (actor == null || !actor.HasCompletedSeatEgress ||
                 actor.R5eTurnCompleteTick <= actor.R5eLastAtomicExitTick ||
-                actor.R5eRuntimeTick <= actor.R5eTurnCompleteTick) return false;
+                actor.R5eRuntimeTick <= actor.R5eTurnCompleteTick ||
+                actor.R5eLastFirstWalkTick <= actor.R5eTurnCompleteTick) return false;
             Vector2 displacement = actor.Position - actor.LastCompletedSeatEgressWorld;
             if (displacement.magnitude <= OfficeRuntimeTraceCoordinator.StationaryEpsilon)
                 return false;
-            direction = DirectionalSpriteAnimator.ResolveTileDirection(
-                displacement,
-                actor.R5eLastAtomicExitDirection);
-            return true;
+            // The actor records this through ResolveConfiguredTileDirection, which applies the
+            // production world-to-visual facing-axis transform. Re-resolving the world vector with
+            // the legacy static helper mirrored east/west and reported 7 for a recorded direction 1.
+            direction = actor.R5eLastFirstWalkDirection;
+            return direction >= 0;
         }
 
         private static string QaArtifactPath(string fileName)
