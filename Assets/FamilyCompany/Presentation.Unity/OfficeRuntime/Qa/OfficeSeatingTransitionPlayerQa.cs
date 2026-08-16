@@ -364,7 +364,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             WriteFrameEvidenceManifest();
             Debug.Log(
                 "FAMILY_COMPANY_CHAIR_SEAT_STABILITY_QA: PASS | " +
-                "family=4 classicAtomicDock=4/4 workHook=6/6 reservedAtomicExit=4/4 " +
+                "family=4 classicAtomicDock=4/4 workEvidence=6/6 reservedAtomicExit=4/4 " +
                 "transitionClips=0 directionMismatch=0 maxOctantDelta=0 " +
                 "seatResidual<=0.9px logicalRoot<=0.001px " +
                 "primaryCloseups=28/28 atomicSeat+work penetration=0 " +
@@ -873,10 +873,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             if ((phase == OfficeRuntimeAgentPhase.Working ||
                   phase == OfficeRuntimeAgentPhase.FinishingWork) &&
-                actor.IsOfficeWorkAnimationHookActive &&
+                clip == OfficeSeatingAnimationClip.Work &&
                 !string.IsNullOrWhiteSpace(actor.CurrentSpriteName))
             {
-                trace.SawWorkHookActive = true;
+                trace.SawWorkEvidence = true;
                 bool hasWorkMarker = actor.CurrentSpriteName.IndexOf(
                     "_sit_work_",
                     StringComparison.OrdinalIgnoreCase) >= 0;
@@ -899,8 +899,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             $"{trace.MemberId} Work frame {workFrame} mixed sprites " +
                             $"'{previousWorkSprite}' and '{actor.CurrentSpriteName}'.");
                     trace.WorkSpriteNames[workFrame] = actor.CurrentSpriteName;
-                    trace.WorkHookSprites.Add(actor.CurrentSpriteName);
-                    trace.DepthWorkHookSprites.Add(actor.CurrentSpriteName);
+                    trace.WorkEvidenceSprites.Add(actor.CurrentSpriteName);
+                    trace.DepthWorkEvidenceSprites.Add(actor.CurrentSpriteName);
                     if ((trace.WorkEvidenceFrameMask & workBit) == 0)
                     {
                         if (workFrame != trace.NextExpectedWorkEvidenceFrame)
@@ -1047,10 +1047,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                    actor.CurrentSeatingClip == OfficeSeatingAnimationClip.Work &&
                    actor.ObservedSitDownFrameCount == 0 &&
                    actor.ObservedStandUpFrameCount == 0 &&
-                   actor.IsOfficeWorkAnimationHookActive &&
                    actor.ObservedWorkFrameCount == 6 &&
                    trace.WorkEvidenceFrameMask == 0x3f &&
-                   trace.WorkHookSprites.Count == 6 && trace.DepthWorkHookSprites.Count == 6;
+                   trace.WorkEvidenceSprites.Count == 6 &&
+                   trace.DepthWorkEvidenceSprites.Count == 6;
         }
 
         private static bool CompletedSeatExit(OfficeRuntimeAgent actor, ActorTrace trace)
@@ -1094,19 +1094,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     $"{trace.AtomicSeatFollowupSampled} ticks={trace.PreDockRuntimeTick}/" +
                     $"{trace.EntryAtomicTick} clips={actor.ObservedSitDownFrameCount}/" +
                     actor.ObservedStandUpFrameCount);
-            if (trace.SawWorkHookActive)
+            if (trace.SawWorkEvidence)
             {
-                if (trace.WorkHookSprites.Count != 6 || trace.DepthWorkHookSprites.Count != 6 ||
+                if (trace.WorkEvidenceSprites.Count != 6 ||
+                    trace.DepthWorkEvidenceSprites.Count != 6 ||
                     trace.WorkEvidenceFrameMask != 0x3f || actor.ObservedWorkFrameCount != 6)
                     failures.Add(
-                        $"workHook={trace.WorkHookSprites.Count}/" +
-                        $"{trace.DepthWorkHookSprites.Count}/" +
+                        $"workEvidence={trace.WorkEvidenceSprites.Count}/" +
+                        $"{trace.DepthWorkEvidenceSprites.Count}/" +
                         $"{CountBits(trace.WorkEvidenceFrameMask)}/" +
                         actor.ObservedWorkFrameCount);
             }
             else
             {
-                failures.Add("Work hook was not sampled");
+                failures.Add("Work evidence was not sampled");
             }
             if (!trace.SawFinishingWork) failures.Add("FinishingWork was not sampled");
             if (!trace.SawLeavingSeat || trace.LeavingSeatSampleCount == 0)
@@ -2402,7 +2403,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     .Append(" direction=").Append(trace.ExpectedDirection)
                     .Append(" atomicSeat=").Append(trace.AtomicSeatEvidenceCaptured)
                     .Append('/').Append(trace.AtomicSeatFollowupSampled)
-                    .Append(" workHook=").Append(trace.WorkHookSprites.Count).Append("/6")
+                    .Append(" workEvidence=").Append(trace.WorkEvidenceSprites.Count).Append("/6")
                     .Append(" forbiddenClips=").Append(actor == null ? -1 :
                         actor.ObservedSitDownFrameCount + actor.ObservedStandUpFrameCount)
                     .Append(" workMask=0x").Append(trace.WorkEvidenceFrameMask.ToString("X2"))
@@ -2732,7 +2733,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public bool SawAligningSeat { get; set; }
             public bool SawRotatingToSeat { get; set; }
             public bool SawAlignedBeforeSitDown { get; set; }
-            public bool SawWorkHookActive { get; set; }
+            public bool SawWorkEvidence { get; set; }
             public bool SawTypingMicroAction { get; set; }
             public bool SawFinishingWork { get; set; }
             public bool SawLeavingSeat { get; set; }
@@ -2747,9 +2748,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public string[] WorkSpriteNames { get; } = new string[6];
             public HashSet<OfficeRuntimeAgentPhase> Phases { get; } =
                 new HashSet<OfficeRuntimeAgentPhase>();
-            public HashSet<string> WorkHookSprites { get; } =
+            public HashSet<string> WorkEvidenceSprites { get; } =
                 new HashSet<string>(StringComparer.Ordinal);
-            public HashSet<string> DepthWorkHookSprites { get; } =
+            public HashSet<string> DepthWorkEvidenceSprites { get; } =
                 new HashSet<string>(StringComparer.Ordinal);
             public string TypingDiagnostic { get; private set; } = string.Empty;
             public HashSet<string> LoggedSamples { get; } =
