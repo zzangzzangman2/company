@@ -5,9 +5,9 @@
 ## 2026-08-16 / Git tracked Windows Player payload 예방 guard 후보
 
 - `.gitignore`가 canonical/nested `Builds/Windows`, known `FamilyCompany`/legacy `Company` Player 이름과 Playtest archive의 일반 accidental add를 막는다. 이는 보안 경계가 아니며 `git add -f`는 아래 CI가 별도로 검사한다.
-- `Tools/Verify-NoTrackedPlayerPayload.ps1`은 `git ls-files -z`의 tracked index를 대소문자 무시로 검사한다. 알려진 배포 루트·EXE·Data·archive는 단독 차단하고, 이름을 바꾼 bundle은 같은 디렉터리의 `name.exe + UnityPlayer.dll + name_Data` 조합으로만 차단한다. 일반 Unity package/plugin/source/art/font/audio, 단독 DLL, 임의 `*_Data`, DGGL은 차단하지 않는다.
-- ZIP은 .NET으로, 7z/RAR은 7z 또는 bsdtar로 tracked blob 내부 경로를 검사한다. archive를 검사할 수 없거나 512 MiB inspection limit을 넘으면 fail-closed한다. 전용 GitHub Actions workflow는 PR, push, 수동 실행에서 self-test와 현재 tracked tree 검사를 모두 수행한다.
-- temp Git repo self-test는 공백·한글·대소문자와 `git add -f`, 각 known signature 단독 실패, renamed unpacked/ZIP bundle 실패, legitimate DLL/Data/DGGL/source archive PASS를 검증한다. Unity, Player, build/deploy는 이 guard 검증에 사용하지 않는다.
+- `Tools/Verify-NoTrackedPlayerPayload.ps1`은 NUL 종료 `git ls-files -s -z` index와 `git cat-file --batch` blob bytes를 대소문자 무시 경로 검사와 함께 사용한다. 알려진 배포 루트·EXE·Data·archive뿐 아니라 실제 Unity Windows Player PE, `UnityPlayer.dll`, CrashHandler identity와 실제 `*_Data` serialized/boot/Managed topology를 이름·확장자와 무관하게 차단한다. 일반 Unity package/plugin/source/art/font/audio, 임의 DLL·`*_Data`, DGGL은 차단하지 않는다.
+- archive는 확장자가 아니라 ZIP/7z/RAR magic을 우선 식별한다. ZIP은 .NET으로, 7z/RAR은 7z 또는 bsdtar로 member bytes까지 검사하며, 확장자를 `.bin`으로 바꾼 Player bundle도 차단한다. archive를 검사할 수 없거나 512 MiB inspection limit을 넘으면 fail-closed한다. 전용 GitHub Actions workflow는 PR, push, 수동 실행에서 self-test와 현재 tracked tree 검사를 모두 수행한다.
+- temp Git repo self-test 14건은 모든 target을 `git add -f`하고 각 baseline PASS→target 단독 oracle→index restore PASS를 검증한다. faithful PE/serialized/archive bytes로 standalone Player EXE·DLL·CrashHandler·Data, conventional/surface-renamed unpacked bundle, ZIP/7z와 `.bin` rename, malformed RAR, 공백·한글·대소문자·특수 선행 경로를 다루며 legitimate plugin/DGGL/source/art/font/audio/source archive 오탐은 0이다. 실제 Unity 6000.3.21f1 template 3종과 실제 `globalgamemanagers` identity probe, 현재 tracked tree 6,592개 0위반, workflow negative exit 1 전달도 통과했다. Unity, Player, build/deploy는 실행하지 않았다.
 - 이전 remote audit에서 origin/main/history/tags/Releases/Actions executable payload가 모두 0이었으므로 history rewrite/force-push는 계속 불필요하며 이 후보도 remote ref/release/history를 수정하지 않는다. 서버 차단을 완결하려면 merge 후 repository ruleset에서 `No tracked Windows Player payload / Verify tracked Player payload is absent`를 required check로 지정해야 한다.
 
 ## 2026-08-16 / 회귀·실패 실행본 영구 삭제 정책
