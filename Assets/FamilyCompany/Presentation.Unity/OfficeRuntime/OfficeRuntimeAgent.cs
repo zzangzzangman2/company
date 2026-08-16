@@ -187,6 +187,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private ulong _r5eExitTransactionId;
         private ulong _r5eSuppressedTransitionObservationId;
         private ulong _r5eAwaitingFirstWalkTransactionId;
+        private bool _r5eAwaitingFirstWalk;
         private bool _r5eExitTurnPending;
         private bool _r5eAtomicPlacementThisStep;
         private int _r5eExitTurnDirection = -1;
@@ -211,6 +212,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _r5eSeatPresentationPreloaded;
         private int _r5eFirstWalkCount;
         private ulong _r5eLastFirstWalkTick;
+        private int _r5eLastFirstWalkDirection = -1;
         private bool _r5eQaOutwardRouteRequested;
         private bool _r5eQaPreparedOutwardRoute;
         private bool _r5eQaInvalidateAtomicVersion;
@@ -407,6 +409,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
              Phase == OfficeRuntimeAgentPhase.FinishingWork);
         internal int R5eFirstWalkCount => _r5eFirstWalkCount;
         internal ulong R5eLastFirstWalkTick => _r5eLastFirstWalkTick;
+        internal int R5eLastFirstWalkDirection => _r5eLastFirstWalkDirection;
         internal ulong R5eTurnCompleteTick => _r5eTurnCompleteTick;
         internal ulong R5eRuntimeTick => _r5eRuntimeTick;
         internal ulong R5eAtomicPlacementTick => _r5eAtomicPlacementTick;
@@ -763,6 +766,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _pendingDestination = null;
             _r5eQaOutwardRouteRequested = false;
             _r5eQaPreparedOutwardRoute = false;
+            _r5eAwaitingFirstWalk = false;
+            _r5eLastFirstWalkDirection = -1;
             _path.Clear();
             _pathIndex = 0;
             _presentationPathIndex = -1;
@@ -1164,8 +1169,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             finally
             {
+                PublishDurableR5eFirstWalk();
                 if (HasActiveR5eStepObservation) SealR5eRuntimeStepDispatch();
             }
+        }
+
+        private void PublishDurableR5eFirstWalk()
+        {
+            if (!_r5eAwaitingFirstWalk ||
+                !(_r5eRuntimeTick > _r5eTurnCompleteTick) ||
+                _r5eAtomicPlacementThisStep ||
+                _lastActualDisplacement.magnitude <=
+                OfficeRuntimeTraceCoordinator.StationaryEpsilon) return;
+
+            _r5eAwaitingFirstWalk = false;
+            _r5eFirstWalkCount++;
+            _r5eLastFirstWalkTick = _r5eRuntimeTick;
+            _r5eLastFirstWalkDirection = DirectionalSpriteAnimator.ResolveTileDirection(
+                _lastActualDisplacement,
+                _r5eLastAtomicExitDirection);
         }
 
         private void TickRuntimeDispatch(float deltaTime)
@@ -1373,8 +1395,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 OfficeRuntimeTraceCoordinator.StationaryEpsilon;
             bool firstWalk =
                 observedMoving &&
-                _r5eAwaitingFirstWalkTransactionId != 0 &&
-                _r5eRuntimeTick > _r5eTurnCompleteTick;
+                _r5eLastFirstWalkTick == _r5eRuntimeTick;
             var locomotion = new R5eLocomotionAdapterRow(
                 context,
                 _agentId,
@@ -1390,19 +1411,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             if (firstWalk)
             {
-                _r5eFirstWalkCount++;
-                _r5eLastFirstWalkTick = _r5eRuntimeTick;
-                AppendR5eTransition(
-                    _r5eAwaitingFirstWalkTransactionId,
-                    R5eSeatTransitionEventKind.FirstWalk,
-                    R5eSeatTransitionKind.Exit,
-                    preStep,
-                    postClear,
-                    _r5eActiveDockingPlan,
-                    _lastCompletedSeatEgressWorld,
-                    true,
-                    false,
-                    false);
+                if (_r5eAwaitingFirstWalkTransactionId != 0)
+                    AppendR5eTransition(
+                        _r5eAwaitingFirstWalkTransactionId,
+                        R5eSeatTransitionEventKind.FirstWalk,
+                        R5eSeatTransitionKind.Exit,
+                        preStep,
+                        postClear,
+                        _r5eActiveDockingPlan,
+                        _lastCompletedSeatEgressWorld,
+                        true,
+                        false,
+                        false);
                 _r5eAwaitingFirstWalkTransactionId = 0;
                 _r5ePendingMovementHandoffId = 0;
                 _r5eLastClosedSeatedSessionId = 0;
@@ -3288,6 +3308,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 false,
                 false);
             _r5eAwaitingFirstWalkTransactionId = _r5eExitTransactionId;
+            _r5eAwaitingFirstWalk = true;
+            _r5eLastFirstWalkDirection = -1;
 
             Phase = OfficeRuntimeAgentPhase.Idle;
             if (_pendingDestination.HasValue)
@@ -3716,6 +3738,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (Phase == OfficeRuntimeAgentPhase.FinishingWork ||
                 Phase == OfficeRuntimeAgentPhase.StandingUp) return;
+            _r5eAwaitingFirstWalk = false;
+            _r5eLastFirstWalkDirection = -1;
             ClearSeatEgressReservation();
             _seatEgressWaiting = false;
             _seatEgressReachedSafeAnchor = false;
