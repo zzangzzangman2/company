@@ -31,3 +31,19 @@ crashlytics-build.properties
 # Python bytecode from Tools scripts
 __pycache__/
 *.pyc
+
+# Standalone Windows Player payloads. The CI guard is the enforcement boundary;
+# these patterns only prevent ordinary accidental staging.
+**/[Bb]uilds/[Ww]indows/
+**/[Ff]amily[Cc]ompany_[Pp]laytest*/
+**/[Cc]ompany_[Pp]laytest*/
+**/[Ff]amily[Cc]ompany.exe
+**/[Cc]ompany.exe
+**/[Ff]amily[Cc]ompany_[Dd]ata/
+**/[Cc]ompany_[Dd]ata/
+**/[Ff]amily[Cc]ompany_[Pp]laytest*.[Zz][Ii][Pp]
+**/[Ff]amily[Cc]ompany_[Pp]laytest*.[7][Zz]
+**/[Ff]amily[Cc]ompany_[Pp]laytest*.[Rr][Aa][Rr]
+**/[Cc]ompany_[Pp]laytest*.[Zz][Ii][Pp]
+**/[Cc]ompany_[Pp]laytest*.[7][Zz]
+**/[Cc]ompany_[Pp]laytest*.[Rr][Aa][Rr]

@@ -1,0 +1,34 @@
+name: No tracked Windows Player payload
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify tracked Player payload is absent
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the exact candidate tree
+        uses: actions/checkout@v4
+
+      - name: Make 7z and RAR inspection available
+        shell: bash
+        run: |
+          if ! command -v 7z >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes p7zip-full
+          fi
+
+      - name: Prove fail-closed fixtures
+        shell: pwsh
+        run: ./Tools/Verify-NoTrackedPlayerPayload.ps1 -SelfTest
+
+      - name: Reject tracked Windows Player payloads
+        shell: pwsh
+        run: ./Tools/Verify-NoTrackedPlayerPayload.ps1 -RepositoryRoot "$env:GITHUB_WORKSPACE"
