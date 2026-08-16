@@ -59,6 +59,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 - 회사 PC에서는 Unity/EXE를 전면 실행하지 않습니다. 컴파일·순수 로직 검증은 숨김 batchmode, 실제 렌더·IMGUI 캡처는 숨김 또는 비활성 오프스크린 Windows D3D11 창을 사용합니다.
 - 제안서나 완료 보고서는 자동으로 정본이 아닙니다. 구현과 검증 후 `PROJECT_STATE.md`에 반영된 내용만 현재 상태입니다.
 - 회귀·실패·출처 미검증·self-PASS-only 실행본은 이름 변경이나 격리로 보존하지 않습니다. exact-root fence와 evidence-before-delete를 지키며 관련 payload만 삭제하고, 모든 regression oracle과 독립 gate를 통과한 새 build identity만 새로 빌드·승격합니다.
+- 최종 push 전에는 `.gitignore`와 tracked tree뿐 아니라 `origin/main`, 모든 active branch/tag tree, remote release asset에서 회귀·구 executable payload와 unknown identity가 0인지 확인합니다. tracked build는 일반 cleanup commit으로 제거하되, history rewrite/force-push는 exact audit·검증된 backup·collaborator re-clone 영향 승인 전에는 금지합니다.
 
 ## 기본 자동화
 

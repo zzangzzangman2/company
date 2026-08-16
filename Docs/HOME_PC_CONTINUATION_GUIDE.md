@@ -74,7 +74,19 @@ git rev-parse HEAD
 
 실제 회사 History 데이터는 사용자가 명시적으로 요청한 경우에만 [CLAUDE_HANDOFF_HISTORY_DATA.md](CLAUDE_HANDOFF_HISTORY_DATA.md)의 전용 경계를 따른다.
 
-## 6. 작업 종료
+## 6. 최종 push 전 remote zero-inventory
+
+다른 PC의 checkout/pull/tag/release 다운로드로 회귀·구 실행본이 다시 들어오지 않도록 [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)의 remote zero-inventory gate를 먼저 수행한다.
+
+- repository root `.gitignore`가 실제 build/deploy output root와 representative EXE/`*_Data`/`UnityPlayer.dll`/archive 경로를 막는지 확인한다.
+- `.gitignore`와 별개로 local candidate tree와 tracked file에 build payload가 없는지 확인한다. 이미 tracked된 payload는 exact 일반 cleanup commit으로 삭제한다.
+- fresh remote observation으로 `origin/main`, 모든 active remote branch, 모든 tag tree, draft/prerelease를 포함한 모든 release asset을 끝까지 inventory한다.
+- prohibited payload와 unknown identity가 각각 0이고 ref/tree/release asset 목록이 비실행 manifest에 기록되어야 PASS다.
+- remote current ref에 payload가 있으면 feature/release push를 중단하고 별도 승인된 cleanup 작업 후 remote를 다시 검사한다.
+
+history rewrite나 force-push는 이 정리의 단축 경로가 아니다. exact object/ref reachability audit, 검증된 offline backup과 restore rehearsal, collaborator의 clone/worktree/CI 및 미push 변경 조사, re-clone 영향·중단 시간·rollback 계획을 승인받기 전에는 수행하지 않는다.
+
+## 7. 작업 종료
 
 ```powershell
 git status --short
@@ -87,3 +99,5 @@ git push origin main
 push 전 검증 결과와 남은 작업을 `PROJECT_STATE.md`의 현재 항목에 반영한다. 다른 작업자의 파일이나 `Library`, `Temp`, `Logs`, `Builds`를 commit하지 않는다.
 
 build/deploy 자동화는 regression을 발견하면 fail closed하고, evidence 보존 뒤 해당 실행 payload 삭제와 검증된 정상 build rollback(없으면 current empty)을 완료해야 한다. 이 계약의 구현·독립 테스트가 확인되지 않은 자동화로 current/Downloads를 갱신하지 않는다.
+
+zero-inventory manifest가 없거나 remote branch/tag/release pagination이 불완전하면 최종 push를 진행하지 않는다. history rewrite/force-push 승인은 일반 cleanup commit이나 일반 push 승인으로 갈음할 수 없다.

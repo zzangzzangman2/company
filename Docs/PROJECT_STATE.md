@@ -9,6 +9,8 @@
 - 회귀 payload의 재승격은 금지한다. 수정 뒤 모든 관련 regression oracle, 기존 필수 gate, 독립 gate를 통과하고 새 commit/input fingerprint/build ID를 가진 새 payload만 처음부터 빌드할 수 있다.
 - Windows release의 독립 필수 oracle은 fresh 08:50에서 네 가족이 `player` 09:00, `older_sister` 09:01, `father` 09:02, `mother` 09:03에 실제 입장·이동·assigned seat 착석을 증명해야 한다.
 - 이번 변경은 문서 계약만 추가했다. 기존 build/deploy 자동화가 regression 발견 시 evidence→전체 payload 삭제→검증된 정상 build rollback/없으면 empty를 실제 구현하고 독립 테스트로 증명하기 전에는 current/Downloads 실제 배포에 사용하지 않는다.
+- 최종 push 전 remote zero-inventory gate는 `.gitignore`와 local tracked tree, `origin/main` current tree, 모든 active branch/tag tree, draft/prerelease 포함 release asset을 검사해 회귀·구 executable payload와 unknown identity가 각각 0임을 manifest로 증명해야 한다. tracked build는 exact 일반 cleanup commit으로 제거하며 `.gitignore`만 추가하거나 `git rm --cached`만 하는 것으로 끝내지 않는다.
+- 과거 object까지 제거하는 history rewrite/force-push는 일반 payload 삭제가 아니다. exact object/ref/release reachability audit, 검증된 offline backup/restore, collaborator clone·worktree·CI 영향과 re-clone 계획에 대한 별도 승인이 있기 전에는 수행하지 않는다. 이번 문서 follow-up은 remote fetch/삭제/push나 rewrite를 수행하지 않는다.
 
 ## 2026-08-15 / Management UI validator Windows argv P2 후보
 
