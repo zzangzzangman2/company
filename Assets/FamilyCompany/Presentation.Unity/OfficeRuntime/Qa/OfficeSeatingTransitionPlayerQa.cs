@@ -65,8 +65,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private string _artifactDirectory = string.Empty;
         private string _failure = string.Empty;
         private int _failureCode;
-        private bool _sitOverviewCaptured;
-        private bool _standOverviewCaptured;
+        private bool _atomicDockBeforeOverviewCaptured;
         private float _maximumFurnitureWorldPositionErrorPx;
         private float _maximumFurnitureWorldRotationErrorDegrees;
         private float _maximumFurnitureWorldScaleError;
@@ -124,7 +123,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             Time.timeScale = 1f;
             // Camera.Render/ReadPixels/PNG encoding is intentionally synchronous. A fixed capture
             // delta prevents that wall-clock cost from advancing the next presentation tick far
-            // enough to skip one of the required 4/6/4 rendered sprites.
+            // enough to hide an atomic before/after frame or skip a Work-hook sprite.
             Time.captureDeltaTime = 1f / 60f;
             _timingOverrideActive = true;
             Debug.Log(
@@ -229,7 +228,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 FinishFailure(
                     94,
-                    "SitDown/work evidence timed out: " + BuildActorSummary(actors));
+                    "Classic atomic dock/Work evidence timed out: " + BuildActorSummary(actors));
                 yield break;
             }
 
@@ -241,8 +240,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             foreach (string memberId in MemberIds)
             {
-                if (actors[memberId].QaRequestStand()) continue;
-                FinishFailure(96, "Could not begin StandUp for " + memberId + ".");
+                if (actors[memberId].QaRequestStandWithOutwardRoute()) continue;
+                FinishFailure(96, "Could not begin classic atomic exit for " + memberId + ".");
                 yield break;
             }
 
@@ -264,7 +263,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             if (MemberIds.Any(memberId => !CompletedSeatExit(actors[memberId], _traces[memberId])))
             {
-                FinishFailure(96, "StandUp/LeavingSeat evidence timed out: " + BuildActorSummary(actors));
+                FinishFailure(96, "Classic atomic exit/FirstWalk evidence timed out: " +
+                                  BuildActorSummary(actors));
                 yield break;
             }
 
@@ -295,7 +295,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 }
             }
 
-            const int expectedPrimaryCaptureCount = 4 * (4 + 6 + 4);
+            const int expectedPrimaryCaptureCount = 4 * (1 + 6);
             if (_frameEvidenceRecords.Count != expectedPrimaryCaptureCount ||
                 _frameEvidenceKeys.Count != expectedPrimaryCaptureCount)
             {
@@ -353,13 +353,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             WriteFrameEvidenceManifest();
             Debug.Log(
                 "FAMILY_COMPANY_CHAIR_SEAT_STABILITY_QA: PASS | " +
-                "family=4 sit=4/4 workHook=6/6 stand=4/4 directionMismatch=0 " +
-                "maxOctantDelta=0 facingLocked=SitDown..LeavingSeat depth=perFrame " +
-                "pelvisStep<=2px seatResidual<=0.9px logicalRoot<=0.001px " +
-                "primaryCloseups=56/56 continuous=4/6/4 penetration=0 " +
+                "family=4 classicAtomicDock=4/4 workHook=6/6 reservedAtomicExit=4/4 " +
+                "transitionClips=0 directionMismatch=0 maxOctantDelta=0 " +
+                "seatResidual<=0.9px logicalRoot<=0.001px " +
+                "primaryCloseups=28/28 atomicSeat+work penetration=0 " +
                 "invalidUpperForegroundOverlap=0 typingHandForegroundOverlap=0 " +
                 "chairTransform=semantic+visual+parent immutable chairForeground=seat-rim-only " +
-                "egress=reserved-before-stand/safe-anchor/overlap0/maxStep<=0.9px " +
+                "egress=reserved-before-publish/safe-anchor/overlap0/turn/laterFirstWalk " +
                 "arbitraryLayoutRefresh=PASS " +
                 "captures=1920x1080+1024x1024");
             if (handAlignmentPass)
@@ -672,19 +672,72 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 actor.ExpectedSeatDirection == movingSeatDirection &&
                 actor.CurrentDirection == movingSeatDirection &&
                 actor.IsSeatEntryPresentationPlanted)
+            {
+                if (actor.CurrentSeatingClip.HasValue ||
+                    actor.R5eCurrentVelocityMagnitude > 0.0001f ||
+                    actor.R5eLastActualDisplacementMagnitude > 0.0001f ||
+                    actor.VisibleFrameMovementWorld > 0.0001f)
+                    return Fail(93, trace.MemberId +
+                        " was not planted/motion0 before classic atomic docking.");
                 trace.SawAlignedBeforeSitDown = true;
+                if (trace.PreDockRuntimeTick == 0)
+                {
+                    trace.PreDockRuntimeTick = actor.R5eRuntimeTick;
+                    trace.PreDockWorld = actor.Position;
+                    trace.PreDockSpriteName = actor.CurrentSpriteName;
+                    if (trace.MemberId == "older_sister" && !_atomicDockBeforeOverviewCaptured)
+                    {
+                        if (!CaptureOverview(
+                                "seating-transition-atomic-dock-before-overview-1920x1080.png",
+                                out string beforeCaptureFailure))
+                            return Fail(95, "Atomic dock before-overview failed: " +
+                                            beforeCaptureFailure);
+                        _atomicDockBeforeOverviewCaptured = true;
+                    }
+                }
+            }
 
-            bool engaged = phase == OfficeRuntimeAgentPhase.SittingDown ||
-                           phase == OfficeRuntimeAgentPhase.Working ||
-                           phase == OfficeRuntimeAgentPhase.FinishingWork ||
-                           phase == OfficeRuntimeAgentPhase.StandingUp ||
-                           phase == OfficeRuntimeAgentPhase.LeavingSeat;
+            OfficeSeatingAnimationClip? clip = actor.CurrentSeatingClip;
+            if (phase == OfficeRuntimeAgentPhase.SittingDown ||
+                phase == OfficeRuntimeAgentPhase.StandingUp ||
+                clip == OfficeSeatingAnimationClip.SitDown ||
+                clip == OfficeSeatingAnimationClip.StandUp ||
+                actor.ObservedSitDownFrameCount != 0 ||
+                actor.ObservedStandUpFrameCount != 0 ||
+                IsForbiddenClassicTransitionSprite(actor.CurrentSpriteName))
+                return Fail(93, trace.MemberId +
+                    " rendered a forbidden SitDown/StandUp state on the classic atomic path: " +
+                    $"phase={phase} clip={clip} sprite={actor.CurrentSpriteName} " +
+                    $"frames={actor.ObservedSitDownFrameCount}/{actor.ObservedStandUpFrameCount}");
+
+            if (phase == OfficeRuntimeAgentPhase.LeavingSeat)
+            {
+                if (!actor.R5eLastAtomicExitReservationBacked ||
+                    actor.R5eLastAtomicExitTick <= trace.EntryAtomicTick ||
+                    !actor.HasCompletedSeatEgress ||
+                    !actor.LastCompletedSeatEgressClearanceValid ||
+                    actor.IsOccupyingSeat || actor.IsOfficeSeatingFacingLocked ||
+                    actor.R5eCurrentVelocityMagnitude > 0.0001f ||
+                    actor.R5eLastActualDisplacementMagnitude > 0.0001f ||
+                    actor.VisibleFrameMovementWorld > 0.0001f ||
+                    Vector2.Distance(actor.Position, actor.LastCompletedSeatEgressWorld) > 0.0001f)
+                    return Fail(93, trace.MemberId +
+                        " classic atomic exit was partial, unreserved, or moving before turn completion.");
+                trace.SawLeavingSeat = true;
+                trace.LeavingSeatSampleCount++;
+                trace.Phases.Add(phase);
+                return true;
+            }
+
+            bool engaged = phase == OfficeRuntimeAgentPhase.Working ||
+                           phase == OfficeRuntimeAgentPhase.FinishingWork;
             if (trace.SawLeavingSeat && !actor.HasCompletedSeatEgress &&
                 phase != OfficeRuntimeAgentPhase.LeavingSeat)
                 return Fail(
                     93,
                     trace.MemberId + " entered " + phase +
                     " before the reserved safe egress anchor was completed.");
+            if (!ObserveClassicFirstWalk(actor, trace)) return false;
             if (!engaged) return true;
 
             if (!TryResolveClaimedSeatDirection(actor, out int expectedDirection))
@@ -703,40 +756,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (!string.Equals(trace.SeatId, actor.ActiveSeatId, StringComparison.Ordinal))
                 return Fail(93, trace.MemberId + " changed seat claim during the transition.");
 
-            if (phase != OfficeRuntimeAgentPhase.LeavingSeat)
-            {
-                OfficeSeatSlot fixedSeat =
-                    _runtime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
-                OfficeSeatInteractionAnchors anchors =
-                    _runtime.World.Workstations.ResolveInteractionAnchors(fixedSeat);
-                Camera camera = Camera.main;
-                if (camera == null)
-                    return Fail(93, trace.MemberId + " has no camera for logical-root validation.");
-                trace.MaximumLogicalRootErrorPx = Mathf.Max(
-                    trace.MaximumLogicalRootErrorPx,
-                    OfficeGridAlignmentMetrics.ScreenDistance(
-                        camera,
-                        actor.transform.position,
-                        anchors.AlignmentWorld));
-                if (!_runtime.World.Presenter.NearestCell(actor.transform.position)
-                        .Equals(fixedSeat.Cell))
-                    trace.SeatCellMismatchCount++;
-            }
+            OfficeSeatSlot fixedSeat =
+                _runtime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
+            OfficeSeatInteractionAnchors anchors =
+                _runtime.World.Workstations.ResolveInteractionAnchors(fixedSeat);
+            Camera camera = Camera.main;
+            if (camera == null)
+                return Fail(93, trace.MemberId + " has no camera for logical-root validation.");
+            trace.MaximumLogicalRootErrorPx = Mathf.Max(
+                trace.MaximumLogicalRootErrorPx,
+                OfficeGridAlignmentMetrics.ScreenDistance(
+                    camera,
+                    actor.transform.position,
+                    anchors.AlignmentWorld));
+            if (!_runtime.World.Presenter.NearestCell(actor.transform.position)
+                    .Equals(fixedSeat.Cell))
+                trace.SeatCellMismatchCount++;
 
             trace.DirectionSampleCount++;
             trace.Phases.Add(phase);
             if (phase == OfficeRuntimeAgentPhase.FinishingWork) trace.SawFinishingWork = true;
-            if ((phase == OfficeRuntimeAgentPhase.StandingUp ||
-                 phase == OfficeRuntimeAgentPhase.LeavingSeat) &&
-                !actor.HasSeatEgressReservation)
-                return Fail(93, trace.MemberId + " lost its pre-StandUp egress reservation.");
-            if (phase == OfficeRuntimeAgentPhase.StandingUp)
-                trace.SawReservedBeforeStandUp = true;
-            if (phase == OfficeRuntimeAgentPhase.LeavingSeat)
-            {
-                trace.SawLeavingSeat = true;
-                trace.LeavingSeatSampleCount++;
-            }
 
             int parsedSpriteDirection = ParseSpriteDirection(actor.CurrentSpriteName);
             if (!actor.IsOfficeSeatingFacingLocked ||
@@ -755,16 +794,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             OfficeSeatingDepthSnapshot depth = actor.LastSeatingDepthSample;
             trace.DepthSampleCount++;
-            OfficeSeatingAnimationClip? clip = actor.CurrentSeatingClip;
             int frame = actor.CurrentSeatingFrame;
-            bool plantedSitEntry = phase == OfficeRuntimeAgentPhase.SittingDown &&
-                                   clip == OfficeSeatingAnimationClip.SitDown &&
-                                   frame == 0;
-            bool mustEngageForeground = !plantedSitEntry;
             if (!depth.IsValid || depth.Phase != phase || depth.Clip != actor.CurrentSeatingClip ||
                 depth.Frame != actor.CurrentSeatingFrame ||
-                (mustEngageForeground && !depth.OcclusionEngaged) ||
-                (plantedSitEntry && depth.OcclusionEngaged) || !depth.HasChairFront ||
+                !depth.OcclusionEngaged || !depth.HasChairFront ||
                 !depth.HasDeskFront || !depth.IsValidStack)
             {
                 return Fail(
@@ -777,83 +810,48 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     $"orders=desk{depth.DeskBaseOrder}<chair{depth.ChairBaseOrder}<" +
                     $"actor{depth.ActorOrder}<deskFront{depth.DeskFrontOrder}<chairFront{depth.ChairFrontOrder}");
             }
-            if ((mustEngageForeground && !actor.IsSeatedUpperBodyProtectionVisible) ||
-                (plantedSitEntry && actor.IsSeatedUpperBodyProtectionVisible))
+            if (!actor.IsSeatedUpperBodyProtectionVisible)
             {
                 return Fail(
                     93,
                     $"{trace.MemberId} upper-body protection mismatch in {phase}: " +
-                    $"required={mustEngageForeground} visible=" +
+                    "required=True visible=" +
                     actor.IsSeatedUpperBodyProtectionVisible);
             }
 
-            if (clip == OfficeSeatingAnimationClip.SitDown && frame >= 0 && frame < 4)
+            if (!trace.AtomicSeatEvidenceCaptured && phase == OfficeRuntimeAgentPhase.Working)
             {
-                int bit = 1 << frame;
-                trace.SitDownFrameMask |= bit;
-                trace.DepthSitDownFrameMask |= bit;
-                if ((trace.SitEvidenceFrameMask & bit) == 0)
-                {
-                    if (frame != trace.NextExpectedSitEvidenceFrame)
-                        return Fail(
-                            95,
-                            $"{trace.MemberId} SitDown capture sequence skipped/reordered: " +
-                            $"expected={trace.NextExpectedSitEvidenceFrame} actual={frame}");
-                    if (!CaptureSeatingFrameEvidence(
-                            actor,
-                            trace,
-                            FrameEvidenceKind.SitDown,
-                            OfficeSeatingAnimationClip.SitDown,
-                            frame,
-                            depth,
-                            out string captureFailure))
-                        return Fail(95, trace.MemberId + " SitDown evidence failed: " + captureFailure);
-                    trace.SitEvidenceFrameMask |= bit;
-                    trace.NextExpectedSitEvidenceFrame++;
-                }
-                if (frame == 1) trace.SitCloseupCaptured = true;
-                if (trace.MemberId == "older_sister" && frame == 1 && !_sitOverviewCaptured)
-                {
-                    if (!CaptureOverview(
-                            "seating-transition-sitdown-mid-overview-1920x1080.png",
-                            out string captureFailure))
-                        return Fail(95, "SitDown overview capture failed: " + captureFailure);
-                    _sitOverviewCaptured = true;
-                }
+                if (!trace.SawAlignedBeforeSitDown || trace.PreDockRuntimeTick == 0 ||
+                    actor.R5eAtomicPlacementTick <= trace.PreDockRuntimeTick ||
+                    clip != OfficeSeatingAnimationClip.Work ||
+                    actor.SeatContactErrorPx > MaximumSeatResidualPx ||
+                    actor.R5eCurrentVelocityMagnitude > 0.0001f ||
+                    actor.R5eLastActualDisplacementMagnitude > 0.0001f ||
+                    actor.VisibleFrameMovementWorld > 0.0001f)
+                    return Fail(93, trace.MemberId +
+                        " did not enter the exact seated Work key pose in one motion0 atomic dock.");
+                if (!CaptureSeatingFrameEvidence(
+                        actor,
+                        trace,
+                        FrameEvidenceKind.AtomicSeat,
+                        OfficeSeatingAnimationClip.Work,
+                        0,
+                        depth,
+                        out string captureFailure))
+                    return Fail(95, trace.MemberId + " atomic seat evidence failed: " + captureFailure);
+                trace.AtomicSeatEvidenceCaptured = true;
+                trace.SitCloseupCaptured = true;
+                trace.EntryAtomicTick = actor.R5eAtomicPlacementTick;
             }
-            else if (clip == OfficeSeatingAnimationClip.StandUp && frame >= 0 && frame < 4)
+            else if (phase == OfficeRuntimeAgentPhase.Working)
             {
-                int bit = 1 << frame;
-                trace.StandUpFrameMask |= bit;
-                trace.DepthStandUpFrameMask |= bit;
-                if ((trace.StandEvidenceFrameMask & bit) == 0)
-                {
-                    if (frame != trace.NextExpectedStandEvidenceFrame)
-                        return Fail(
-                            95,
-                            $"{trace.MemberId} StandUp capture sequence skipped/reordered: " +
-                            $"expected={trace.NextExpectedStandEvidenceFrame} actual={frame}");
-                    if (!CaptureSeatingFrameEvidence(
-                            actor,
-                            trace,
-                            FrameEvidenceKind.StandUp,
-                            OfficeSeatingAnimationClip.StandUp,
-                            frame,
-                            depth,
-                            out string captureFailure))
-                        return Fail(95, trace.MemberId + " StandUp evidence failed: " + captureFailure);
-                    trace.StandEvidenceFrameMask |= bit;
-                    trace.NextExpectedStandEvidenceFrame++;
-                }
-                if (frame == 2) trace.StandCloseupCaptured = true;
-                if (trace.MemberId == "older_sister" && frame == 2 && !_standOverviewCaptured)
-                {
-                    if (!CaptureOverview(
-                            "seating-transition-standup-mid-overview-1920x1080.png",
-                            out string captureFailure))
-                        return Fail(95, "StandUp overview capture failed: " + captureFailure);
-                    _standOverviewCaptured = true;
-                }
+                if (clip != OfficeSeatingAnimationClip.Work ||
+                    actor.SeatContactErrorPx > MaximumSeatResidualPx ||
+                    actor.R5eAtomicPlacementTick != trace.EntryAtomicTick ||
+                    actor.R5eLastActualDisplacementMagnitude > 0.0001f)
+                    return Fail(93, trace.MemberId +
+                        " corrected or popped after the classic atomic seated frame.");
+                trace.AtomicSeatFollowupSampled = true;
             }
 
             if ((phase == OfficeRuntimeAgentPhase.Working ||
@@ -938,11 +936,47 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             return direction >= 0;
         }
 
+        private static bool IsForbiddenClassicTransitionSprite(string spriteName)
+        {
+            if (string.IsNullOrWhiteSpace(spriteName)) return false;
+            return spriteName.IndexOf("sit_down", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   spriteName.IndexOf("sitdown", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   spriteName.IndexOf("stand_up", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   spriteName.IndexOf("standup", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private bool ObserveClassicFirstWalk(OfficeRuntimeAgent actor, ActorTrace trace)
+        {
+            if (!trace.SawLeavingSeat || trace.FirstWalkObserved ||
+                !actor.HasCompletedSeatEgress) return true;
+            Vector2 displacement = actor.Position - actor.LastCompletedSeatEgressWorld;
+            if (displacement.magnitude <= OfficeRuntimeTraceCoordinator.StationaryEpsilon)
+                return true;
+            int direction = DirectionalSpriteAnimator.ResolveTileDirection(
+                displacement,
+                actor.R5eLastAtomicExitDirection);
+            if (actor.Phase != OfficeRuntimeAgentPhase.Navigating ||
+                actor.R5eRuntimeTick <= actor.R5eTurnCompleteTick ||
+                direction != actor.R5eLastAtomicExitDirection)
+                return Fail(
+                    93,
+                    $"{trace.MemberId} first walk was early or misdirected: " +
+                    $"phase={actor.Phase} ticks={actor.R5eTurnCompleteTick}/" +
+                    $"{actor.R5eRuntimeTick} direction=" +
+                    $"{actor.R5eLastAtomicExitDirection}/{direction}");
+            trace.FirstWalkObserved = true;
+            trace.FirstWalkTick = actor.R5eRuntimeTick;
+            trace.FirstWalkDirection = direction;
+            return true;
+        }
+
         private static bool ReadyForWorkEvidence(OfficeRuntimeAgent actor, ActorTrace trace)
         {
             return actor != null && actor.Phase == OfficeRuntimeAgentPhase.Working &&
-                   trace.SitDownFrameMask == 0x0f && trace.DepthSitDownFrameMask == 0x0f &&
-                   trace.SitEvidenceFrameMask == 0x0f &&
+                   trace.AtomicSeatEvidenceCaptured && trace.AtomicSeatFollowupSampled &&
+                   actor.CurrentSeatingClip == OfficeSeatingAnimationClip.Work &&
+                   actor.ObservedSitDownFrameCount == 0 &&
+                   actor.ObservedStandUpFrameCount == 0 &&
                    actor.IsOfficeWorkAnimationHookActive &&
                    trace.TypingEvidenceFrameMask == 0x3f &&
                    trace.WorkHookSprites.Count == 6 && trace.DepthWorkHookSprites.Count == 6;
@@ -954,8 +988,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                    actor.HasCompletedSeatEgress &&
                    actor.LastCompletedSeatEgressClearanceValid &&
                    actor.Phase == OfficeRuntimeAgentPhase.Idle &&
-                   trace.StandUpFrameMask == 0x0f && trace.DepthStandUpFrameMask == 0x0f &&
-                   trace.StandEvidenceFrameMask == 0x0f;
+                   actor.R5eLastAtomicExitReservationBacked &&
+                   actor.R5eLastAtomicExitTick > trace.EntryAtomicTick &&
+                   actor.R5eTurnCompleteTick > actor.R5eLastAtomicExitTick &&
+                   trace.FirstWalkObserved &&
+                   trace.FirstWalkTick > actor.R5eTurnCompleteTick &&
+                   trace.FirstWalkDirection == actor.R5eLastAtomicExitDirection &&
+                   actor.ObservedSitDownFrameCount == 0 &&
+                   actor.ObservedStandUpFrameCount == 0;
         }
 
         private bool ValidateFinalActor(
@@ -971,10 +1011,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     $"{trace.SawAligningSeat}/{trace.SawRotatingToSeat}/" +
                     trace.SawAlignedBeforeSitDown);
             if (!actor.WasSeatFacingAlignedBeforeSitDown)
-                failures.Add("seat-facing rotation was not confirmed before SitDown");
-            if (trace.SitDownFrameMask != 0x0f || trace.SitEvidenceFrameMask != 0x0f ||
-                actor.ObservedSitDownFrameCount != 4)
-                failures.Add($"SitDown={CountBits(trace.SitDownFrameMask)}/{actor.ObservedSitDownFrameCount}");
+                failures.Add("seat-facing rotation was not confirmed before atomic dock");
+            if (!trace.AtomicSeatEvidenceCaptured || !trace.AtomicSeatFollowupSampled ||
+                trace.EntryAtomicTick <= trace.PreDockRuntimeTick ||
+                actor.ObservedSitDownFrameCount != 0 ||
+                actor.ObservedStandUpFrameCount != 0 ||
+                trace.Phases.Contains(OfficeRuntimeAgentPhase.SittingDown) ||
+                trace.Phases.Contains(OfficeRuntimeAgentPhase.StandingUp))
+                failures.Add(
+                    $"classicDock={trace.AtomicSeatEvidenceCaptured}/" +
+                    $"{trace.AtomicSeatFollowupSampled} ticks={trace.PreDockRuntimeTick}/" +
+                    $"{trace.EntryAtomicTick} clips={actor.ObservedSitDownFrameCount}/" +
+                    actor.ObservedStandUpFrameCount);
             if (trace.SawWorkHookActive)
             {
                 if (trace.WorkHookSprites.Count != 6 || trace.DepthWorkHookSprites.Count != 6 ||
@@ -988,14 +1036,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 failures.Add("Typing work hook was not sampled");
             }
-            if (trace.StandUpFrameMask != 0x0f || trace.StandEvidenceFrameMask != 0x0f ||
-                actor.ObservedStandUpFrameCount != 4)
-                failures.Add($"StandUp={CountBits(trace.StandUpFrameMask)}/{actor.ObservedStandUpFrameCount}");
             if (!trace.SawFinishingWork) failures.Add("FinishingWork was not sampled");
             if (!trace.SawLeavingSeat || trace.LeavingSeatSampleCount == 0)
                 failures.Add("LeavingSeat was not sampled");
-            if (!trace.SawReservedBeforeStandUp)
-                failures.Add("egress anchor was not observed reserved before StandUp");
+            if (!actor.R5eLastAtomicExitReservationBacked ||
+                actor.R5eLastAtomicExitTick <= trace.EntryAtomicTick)
+                failures.Add(
+                    $"reservationBeforeAtomicExit={actor.R5eLastAtomicExitReservationBacked} " +
+                    $"ticks={trace.EntryAtomicTick}/{actor.R5eLastAtomicExitTick}");
+            if (actor.R5eTurnCompleteTick <= actor.R5eLastAtomicExitTick ||
+                !trace.FirstWalkObserved ||
+                trace.FirstWalkTick <= actor.R5eTurnCompleteTick ||
+                trace.FirstWalkDirection != actor.R5eLastAtomicExitDirection)
+                failures.Add(
+                    $"exitTurnFirstWalk={actor.R5eLastAtomicExitTick}/" +
+                    $"{actor.R5eTurnCompleteTick}/{trace.FirstWalkTick} " +
+                    $"observed={trace.FirstWalkObserved} direction=" +
+                    $"{actor.R5eLastAtomicExitDirection}/{trace.FirstWalkDirection}");
             if (!actor.HasCompletedSeatEgress || !actor.LastCompletedSeatEgressClearanceValid)
                 failures.Add("safe egress was not completed with clearance");
             if (actor.LastCompletedSeatEgressKind == OfficeSeatEgressKind.None)
@@ -1020,7 +1077,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 failures.Add("maxOctantDelta=" + actor.MaximumSeatingSpriteDirectionOctantDelta);
             if (actor.SeatingDepthViolationCount != 0)
                 failures.Add("depthViolations=" + actor.SeatingDepthViolationCount);
-            if (actor.MaxTransitionPelvisStepPx > 2f)
+            if (actor.MaxTransitionPelvisStepPx > 0.001f)
                 failures.Add($"pelvisStep={actor.MaxTransitionPelvisStepPx:F3}px");
             if (actor.TransitionMonotonicViolationCount != 0)
                 failures.Add("transitionReversals=" + actor.TransitionMonotonicViolationCount);
@@ -1042,19 +1099,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 failures.Add($"scaleDeviation={actor.VisualScaleDeviation:P3}");
             if (actor.IsOfficeSeatingFacingLocked)
                 failures.Add("facing lock was not released after LeavingSeat");
-            if (trace.DepthSitDownFrameMask != 0x0f || trace.DepthStandUpFrameMask != 0x0f)
-                failures.Add("per-frame transition depth coverage is incomplete");
             if (!trace.SitCloseupCaptured || !trace.WorkCloseupCaptured || !trace.StandCloseupCaptured)
                 failures.Add("required 1024x1024 closeup is missing");
-            if (trace.EvidenceRecordCount != 14)
-                failures.Add("primaryEvidence=" + trace.EvidenceRecordCount + "/14");
-            if (trace.NextExpectedSitEvidenceFrame != 4 ||
-                trace.NextExpectedTypingEvidenceFrame != 6 ||
-                trace.NextExpectedStandEvidenceFrame != 4)
+            if (trace.EvidenceRecordCount != 7)
+                failures.Add("primaryEvidence=" + trace.EvidenceRecordCount + "/7");
+            if (trace.NextExpectedTypingEvidenceFrame != 6)
                 failures.Add(
-                    $"continuousCapture={trace.NextExpectedSitEvidenceFrame}/" +
-                    $"{trace.NextExpectedTypingEvidenceFrame}/" +
-                    $"{trace.NextExpectedStandEvidenceFrame}");
+                    $"continuousWorkCapture={trace.NextExpectedTypingEvidenceFrame}/6");
             foreach (FrameEvidenceRecord record in _frameEvidenceRecords.Where(
                          item => string.Equals(item.MemberId, trace.MemberId, StringComparison.Ordinal)))
             {
@@ -1079,10 +1130,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         $"{frameLabel} upper={evidence.UpperBodyVisiblePixels}/" +
                         $"{evidence.UpperBodyActorPixels} retention={evidence.UpperBodyRetention:F3} " +
                         $"invalidOverlap={evidence.UpperBodyInvalidForegroundOverlapPixels}");
-                // Only Work profiles define a hand-to-keyboard contract. Sit/Stand serialize the
-                // same field for pose continuity, but it can point at a transparent pixel or a
-                // naturally chair-hidden near edge and is therefore diagnostic rather than a hand
-                // segmentation ground truth.
+                // Only Typing evidence defines a hand-to-keyboard contract. The atomic seated key
+                // pose records the same field only as diagnostic evidence.
                 if (record.Kind == FrameEvidenceKind.Typing &&
                     (evidence.HandActorPixels <= 0 || evidence.HandVisiblePixels <= 0 ||
                      evidence.HandRetention < MinimumHandRetention ||
@@ -1097,12 +1146,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         $"{frameLabel} pelvisSeat={evidence.PelvisSeatErrorPx:F3}px");
             }
             if (trace.SitLowerBodyOccludedPixels <= 0 ||
-                trace.TypingLowerBodyOccludedPixels <= 0 ||
-                trace.StandLowerBodyOccludedPixels <= 0)
+                trace.TypingLowerBodyOccludedPixels <= 0)
                 failures.Add(
-                    $"phaseLowerOcclusion={trace.SitLowerBodyOccludedPixels}/" +
-                    $"{trace.TypingLowerBodyOccludedPixels}/" +
-                    $"{trace.StandLowerBodyOccludedPixels}");
+                    $"classicSeatWorkLowerOcclusion={trace.SitLowerBodyOccludedPixels}/" +
+                    trace.TypingLowerBodyOccludedPixels);
 
             failure = string.Join("; ", failures);
             return failures.Count == 0;
@@ -1236,6 +1283,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         out int embeddedOverlapPixels,
                         out failure)) return false;
                 trace.SafeEgressCloseupCaptured = true;
+                trace.StandCloseupCaptured = true;
                 trace.SafeEgressActorPixels = actorPixels;
                 trace.SafeEgressChairPixels = chairPixels;
                 trace.SafeEgressEmbeddedOverlapPixels = embeddedOverlapPixels;
@@ -1430,18 +1478,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             string stem = trace.MemberId.Replace('_', '-');
             string phaseToken = kind switch
             {
-                FrameEvidenceKind.SitDown => "sitdown",
+                FrameEvidenceKind.AtomicSeat => "atomic-seated-key-pose",
                 FrameEvidenceKind.Typing => "typing-work-hook",
-                FrameEvidenceKind.StandUp => "standup",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind))
             };
-            string midToken = kind == FrameEvidenceKind.SitDown && evidenceFrame == 1 ||
-                              kind == FrameEvidenceKind.StandUp && evidenceFrame == 2
-                ? "-mid"
-                : string.Empty;
             string spriteToken = SanitizeFileToken(actor.CurrentSpriteName);
             string fileName =
-                $"{stem}-{phaseToken}-frame-{evidenceFrame:D2}{midToken}-{spriteToken}-" +
+                $"{stem}-{phaseToken}-frame-{evidenceFrame:D2}-{spriteToken}-" +
                 "closeup-1024x1024.png";
             string onPath = ArtifactPath(fileName);
             if (!TryCaptureFrame(
@@ -2158,7 +2201,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 var builder = new StringBuilder();
                 builder.AppendLine("FAMILY_COMPANY_SEATING_FRAME_CAPTURE_MANIFEST");
-                builder.AppendLine("primaryExpected=56");
+                builder.AppendLine("primaryExpected=28 (AtomicSeat1 + Typing6 per actor)");
                 builder.AppendLine("primaryActual=" + _frameEvidenceRecords.Count);
                 builder.AppendLine("primaryResolution=1024x1024");
                 builder.AppendLine("captureDeltaTime=0.016667 (fixed 60Hz presentation delta)");
@@ -2169,7 +2212,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 builder.AppendLine(
                     "upperProtectedRegion=all actor-bound pixels above max(pelvis+32 source px, hand-anchor height)");
                 builder.AppendLine(
-                    "handProtectedRegion=7 source-px radius around the approved Work pose hand anchor; strict for Typing 6/6, diagnostic for SitDown/StandUp");
+                    "handProtectedRegion=7 source-px radius around the approved Work pose hand anchor; strict for Typing 6/6, diagnostic for AtomicSeat");
                 builder.AppendLine(
                     "filteredCoreCandidate=runtime-visible chair-foreground effect on actor (A-B) eroded by a 3x3 neighborhood to exclude bilinear-filtered edges");
                 builder.AppendLine(
@@ -2185,9 +2228,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 builder.AppendLine(
                     "transitionZeroOverlap=allowed only when lowerCandidates=0; noOverlapReason is pose/mask geometry");
                 builder.AppendLine(
-                    "phaseAggregate=each member SitDown/Typing/StandUp lowerOccluded sum must be >0");
+                    "phaseAggregate=each member AtomicSeat/Typing lowerOccluded sum must be >0");
                 builder.AppendLine(
-                    "invalidOcclusion=upper foreground overlap must be 0 in all 56 frames; hand overlap must be 0 in Typing 6/6");
+                    "invalidOcclusion=upper foreground overlap must be 0 in all 28 frames; hand overlap must be 0 in Typing 6/6");
                 builder.AppendLine(
                     "typingSockets=1920x1080 main-camera pelvis-to-chair<=1.05px and hand-to-desk-work<=4.05px");
                 builder.AppendLine(
@@ -2201,13 +2244,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 {
                     if (!_traces.TryGetValue(memberId, out ActorTrace trace)) continue;
                     builder.Append("coverage member=").Append(memberId)
-                        .Append(" sitMask=0x").Append(trace.SitEvidenceFrameMask.ToString("X2"))
+                        .Append(" atomicSeat=").Append(trace.AtomicSeatEvidenceCaptured)
                         .Append(" typingMask=0x").Append(trace.TypingEvidenceFrameMask.ToString("X2"))
-                        .Append(" standMask=0x").Append(trace.StandEvidenceFrameMask.ToString("X2"))
-                        .Append(" continuous=").Append(trace.NextExpectedSitEvidenceFrame)
-                        .Append('/').Append(trace.NextExpectedTypingEvidenceFrame)
-                        .Append('/').Append(trace.NextExpectedStandEvidenceFrame)
-                        .Append(" unique=").Append(trace.EvidenceRecordCount).Append("/14")
+                        .Append(" continuousWork=").Append(trace.NextExpectedTypingEvidenceFrame)
+                        .Append(" unique=").Append(trace.EvidenceRecordCount).Append("/7")
                         .AppendLine();
                 }
                 File.WriteAllText(
@@ -2231,8 +2271,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             builder.AppendLine("artifacts=" + _artifactDirectory);
             builder.AppendLine("overviewResolution=1920x1080");
             builder.AppendLine("closeupResolution=1024x1024");
-            builder.AppendLine("primaryCloseups=" + _frameEvidenceRecords.Count + "/56");
-            builder.AppendLine("primaryUniqueKeys=" + _frameEvidenceKeys.Count + "/56");
+            builder.AppendLine("primaryCloseups=" + _frameEvidenceRecords.Count + "/28");
+            builder.AppendLine("primaryUniqueKeys=" + _frameEvidenceKeys.Count + "/28");
             builder.AppendLine("safeEgressCloseups=" +
                                _traces.Values.Count(trace => trace.SafeEgressCloseupCaptured) + "/4");
             builder.AppendLine("egressMatrix=families4*rotations4*scenarios4=64");
@@ -2256,16 +2296,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 if (actors != null) actors.TryGetValue(memberId, out actor);
                 builder.Append(memberId)
                     .Append(" direction=").Append(trace.ExpectedDirection)
-                    .Append(" sit=").Append(CountBits(trace.SitDownFrameMask)).Append("/4")
+                    .Append(" atomicSeat=").Append(trace.AtomicSeatEvidenceCaptured)
+                    .Append('/').Append(trace.AtomicSeatFollowupSampled)
                     .Append(" workHook=").Append(trace.WorkHookSprites.Count).Append("/6")
-                    .Append(" stand=").Append(CountBits(trace.StandUpFrameMask)).Append("/4")
-                    .Append(" evidenceMasks=0x").Append(trace.SitEvidenceFrameMask.ToString("X2"))
-                    .Append("/0x").Append(trace.TypingEvidenceFrameMask.ToString("X2"))
-                    .Append("/0x").Append(trace.StandEvidenceFrameMask.ToString("X2"))
-                    .Append(" continuous=").Append(trace.NextExpectedSitEvidenceFrame)
-                    .Append('/').Append(trace.NextExpectedTypingEvidenceFrame)
-                    .Append('/').Append(trace.NextExpectedStandEvidenceFrame)
-                    .Append(" evidence=").Append(trace.EvidenceRecordCount).Append("/14")
+                    .Append(" forbiddenClips=").Append(actor == null ? -1 :
+                        actor.ObservedSitDownFrameCount + actor.ObservedStandUpFrameCount)
+                    .Append(" typingMask=0x").Append(trace.TypingEvidenceFrameMask.ToString("X2"))
+                    .Append(" continuousWork=").Append(trace.NextExpectedTypingEvidenceFrame)
+                    .Append(" evidence=").Append(trace.EvidenceRecordCount).Append("/7")
+                    .Append(" lifecycleTicks=").Append(trace.PreDockRuntimeTick)
+                    .Append('/').Append(trace.EntryAtomicTick)
+                    .Append('/').Append(actor == null ? 0UL : actor.R5eLastAtomicExitTick)
+                    .Append('/').Append(actor == null ? 0UL : actor.R5eTurnCompleteTick)
+                    .Append('/').Append(trace.FirstWalkTick)
+                    .Append(" lifecycleDirections=").Append(actor == null ? -1 :
+                        actor.R5eLastAtomicExitDirection)
+                    .Append('/').Append(trace.FirstWalkDirection)
                     .Append(" directionSamples=").Append(trace.DirectionSampleCount)
                     .Append(" leavingSamples=").Append(trace.LeavingSeatSampleCount)
                     .Append(" depthSamples=").Append(trace.DepthSampleCount)
@@ -2274,7 +2320,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     .Append(" lowerOccluded=").Append(trace.LowerBodyOccludedPixels)
                     .Append(" phaseLowerOccluded=").Append(trace.SitLowerBodyOccludedPixels)
                     .Append('/').Append(trace.TypingLowerBodyOccludedPixels)
-                    .Append('/').Append(trace.StandLowerBodyOccludedPixels)
                     .Append(" penetration=").Append(trace.ForegroundPenetrationPixels)
                     .Append(" filteredEdgeResidual=").Append(trace.FilteredEdgeResidualPixels)
                     .Append(" invalidUpperForegroundOverlap=")
@@ -2350,9 +2395,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
         private enum FrameEvidenceKind
         {
-            SitDown,
-            Typing,
-            StandUp
+            AtomicSeat,
+            Typing
         }
 
         private readonly struct CapturedFrame
@@ -2528,16 +2572,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public string MemberId { get; }
             public string SeatId { get; set; } = string.Empty;
             public int ExpectedDirection { get; set; } = -1;
-            public int SitDownFrameMask { get; set; }
-            public int StandUpFrameMask { get; set; }
-            public int DepthSitDownFrameMask { get; set; }
-            public int DepthStandUpFrameMask { get; set; }
-            public int SitEvidenceFrameMask { get; set; }
             public int TypingEvidenceFrameMask { get; set; }
-            public int StandEvidenceFrameMask { get; set; }
-            public int NextExpectedSitEvidenceFrame { get; set; }
             public int NextExpectedTypingEvidenceFrame { get; set; }
-            public int NextExpectedStandEvidenceFrame { get; set; }
+            public ulong PreDockRuntimeTick { get; set; }
+            public Vector2 PreDockWorld { get; set; }
+            public string PreDockSpriteName { get; set; } = string.Empty;
+            public ulong EntryAtomicTick { get; set; }
+            public bool AtomicSeatEvidenceCaptured { get; set; }
+            public bool AtomicSeatFollowupSampled { get; set; }
+            public bool FirstWalkObserved { get; set; }
+            public ulong FirstWalkTick { get; set; }
+            public int FirstWalkDirection { get; set; } = -1;
             public int DirectionSampleCount { get; set; }
             public int DepthSampleCount { get; set; }
             public int LeavingSeatSampleCount { get; set; }
@@ -2565,7 +2610,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public int NoLowerBodyOverlapFrameCount { get; private set; }
             public int SitLowerBodyOccludedPixels { get; private set; }
             public int TypingLowerBodyOccludedPixels { get; private set; }
-            public int StandLowerBodyOccludedPixels { get; private set; }
             public bool SawApproachingSeat { get; set; }
             public bool SawAligningSeat { get; set; }
             public bool SawRotatingToSeat { get; set; }
@@ -2573,7 +2617,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public bool SawWorkHookActive { get; set; }
             public bool SawFinishingWork { get; set; }
             public bool SawLeavingSeat { get; set; }
-            public bool SawReservedBeforeStandUp { get; set; }
             public bool SafeEgressCloseupCaptured { get; set; }
             public int SafeEgressActorPixels { get; set; }
             public int SafeEgressChairPixels { get; set; }
@@ -2625,14 +2668,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 if (evidence.NoLowerBodyOverlapExpected) NoLowerBodyOverlapFrameCount++;
                 switch (kind)
                 {
-                    case FrameEvidenceKind.SitDown:
+                    case FrameEvidenceKind.AtomicSeat:
                         SitLowerBodyOccludedPixels += evidence.LowerBodyOccludedPixels;
                         break;
                     case FrameEvidenceKind.Typing:
                         TypingLowerBodyOccludedPixels += evidence.LowerBodyOccludedPixels;
-                        break;
-                    case FrameEvidenceKind.StandUp:
-                        StandLowerBodyOccludedPixels += evidence.LowerBodyOccludedPixels;
                         break;
                 }
             }

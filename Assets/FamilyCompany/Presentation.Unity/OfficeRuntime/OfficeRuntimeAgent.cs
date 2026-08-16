@@ -155,6 +155,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _seatEgressReservationActive;
         private bool _seatEgressWaiting;
         private bool _seatEgressReachedSafeAnchor;
+        private bool _r5eLastAtomicExitReservationBacked;
+        private ulong _r5eLastAtomicExitTick;
+        private int _r5eLastAtomicExitDirection = -1;
         private OfficeSeatEgressCandidate _seatEgressCandidate;
         private Vector2 _seatEgressTargetWorld;
         private float _seatEgressFrameMovementBudgetWorld;
@@ -400,14 +403,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _seat != null &&
             _seatClaim != null &&
             !_seatClaim.IsReleased &&
-            (Phase == OfficeRuntimeAgentPhase.SittingDown ||
-             Phase == OfficeRuntimeAgentPhase.Working ||
-             Phase == OfficeRuntimeAgentPhase.FinishingWork ||
-             Phase == OfficeRuntimeAgentPhase.StandingUp);
+            (Phase == OfficeRuntimeAgentPhase.Working ||
+             Phase == OfficeRuntimeAgentPhase.FinishingWork);
         internal int R5eFirstWalkCount => _r5eFirstWalkCount;
         internal ulong R5eLastFirstWalkTick => _r5eLastFirstWalkTick;
         internal ulong R5eTurnCompleteTick => _r5eTurnCompleteTick;
         internal ulong R5eRuntimeTick => _r5eRuntimeTick;
+        internal ulong R5eAtomicPlacementTick => _r5eAtomicPlacementTick;
+        internal bool R5eLastAtomicExitReservationBacked =>
+            _r5eLastAtomicExitReservationBacked;
+        internal ulong R5eLastAtomicExitTick => _r5eLastAtomicExitTick;
+        internal int R5eLastAtomicExitDirection => _r5eLastAtomicExitDirection;
         internal ulong R5eCurrentTransitionTransactionId =>
             _r5eExitTransactionId != 0 ? _r5eExitTransactionId : _r5eEntryTransactionId;
         public bool IsSeatForegroundOcclusionEngaged
@@ -2253,9 +2259,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     break;
                 }
                 case OfficeRuntimeAgentPhase.SittingDown:
+                    // Classic R5e docking never selects the crouching SitDown clip path.
                     StopMotion();
-                    if (_animator.IsOfficeSeatingTransitionComplete)
-                        TryCompleteR5eSitDownPresentation();
+                    _seatEgressUnsafePhaseTransitionCount++;
                     break;
                 case OfficeRuntimeAgentPhase.Working:
                     PrepareR5eStationaryFrameAfterAcceptedMotionBudget();
@@ -2270,15 +2276,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     StopMotion();
                     if (!_finishingWorkPresentationObserved) return;
                     if (!_animator.IsOfficeWorkSafeToStand) return;
-                    TryBeginR5eStandUpPresentation();
-                    break;
-                case OfficeRuntimeAgentPhase.StandingUp:
-                    StopMotion();
-                    if (!_animator.IsOfficeSeatingTransitionComplete) return;
                     _r5eExitRetrySeconds += deltaTime;
                     if (_seatEgressWaiting && _r5eExitRetrySeconds < 0.5f) return;
                     _r5eExitRetrySeconds = 0f;
                     TryPublishR5eAtomicExit();
+                    break;
+                case OfficeRuntimeAgentPhase.StandingUp:
+                    // Classic R5e egress never selects the crouching StandUp clip path.
+                    StopMotion();
+                    _seatEgressUnsafePhaseTransitionCount++;
                     break;
                 case OfficeRuntimeAgentPhase.LeavingSeat:
                 {
@@ -2493,20 +2499,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
-        private bool TryCompleteR5eSitDownPresentation()
-        {
-            if (!_animator.BeginSeatedWork()) return false;
-            Phase = OfficeRuntimeAgentPhase.Working;
-            return true;
-        }
-
-        private bool TryBeginR5eStandUpPresentation()
-        {
-            if (!_animator.BeginStandUp()) return false;
-            Phase = OfficeRuntimeAgentPhase.StandingUp;
-            return true;
-        }
-
         private bool TryPublishR5eAtomicExit()
         {
             if (_seat == null || _seatClaim == null || _seatClaim.IsReleased ||
@@ -2591,9 +2583,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeSeatingState.PreparedRuntimeMutation preparedClaim = default;
             OfficeRuntimeOccupancy.PreparedAtomicActorPlacement preparedPlacement = default;
             bool prepared =
-                _animator.IsOfficeSeatingFacingLocked &&
-                _animator.CurrentOfficeSeatingClip == OfficeSeatingAnimationClip.StandUp &&
-                _animator.IsOfficeSeatingTransitionComplete &&
+                _animator.CanLeaveCompletedSeatedWorkAfterAtomicPlacement &&
                 _seatClaim.TryPrepareRelease(out preparedClaim) &&
                 _world.Occupancy.TryPrepareAtomicActorPlacement(
                     _agentId,
@@ -2631,6 +2621,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return false;
             }
 
+            bool reservationPreparedBeforePublish = _seatEgressReservationActive;
             OfficeSeatSlot releasedSeat = _seat;
             OfficeSeatRuntimeClaim releasedClaim = _seatClaim;
             bool publishSucceeded;
@@ -2682,6 +2673,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return false;
             }
 
+            _r5eLastAtomicExitReservationBacked = reservationPreparedBeforePublish;
+            _r5eLastAtomicExitTick = _r5eAtomicPlacementTick;
+            _r5eLastAtomicExitDirection = exitDirection;
             _world.Workstations.ClearOcclusionAfterCommittedExitNoThrow(releasedSeat);
             _world.Occupancy.CompletePreparedAtomicActorPlacement(preparedPlacement);
             _world.Occupancy.CompleteAtomicReservationScope(reservationScope);
@@ -3013,20 +3007,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public void CommitRenderer()
             {
                 _owner.ResetVisualPose();
+                _owner._animator.EnterCompletedSeatedWorkAfterAtomicPlacement(_owner._seatDirection);
                 _owner.ApplySeatAnchorPlacement(
                     _workProfile,
                     new Vector3(_plan.SeatPelvisWorld.x, _plan.SeatPelvisWorld.y, 0f));
-                if (!_owner._animator.TryLockOfficeSeatingFacingAfterPlantedRotation(
-                        _owner._seatDirection) ||
-                    !_owner._animator.BeginSitDown(_owner._seatDirection))
-                    throw new InvalidOperationException(
-                        "R5e SitDown presentation could not begin after atomic placement.");
             }
             public void CommitRebase() =>
                 _owner.RebaseAfterAtomicPlacement(_plan.SeatRootWorld, _owner._seatDirection);
             public void CommitState()
             {
-                _owner.Phase = OfficeRuntimeAgentPhase.SittingDown;
+                _owner.Phase = OfficeRuntimeAgentPhase.Working;
                 _owner.CurrentActivity = _owner._destination.HasValue
                     ? _owner._destination.Value.Activity
                     : OfficeActivity.Work;
@@ -3102,9 +3092,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public void CommitRenderer()
             {
                 _owner.ResetVisualPose();
-                if (!_owner._animator.FinishOfficeSeatingPoseForLeavingSeat())
-                    throw new InvalidOperationException(
-                        "R5e StandUp presentation could not complete before atomic exit.");
                 _owner._animator.LeaveCompletedSeatedWorkAfterAtomicPlacement(_exitDirection);
             }
             public void CommitRebase() =>
@@ -3732,6 +3719,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _seatEgressWaiting = false;
             _seatEgressReachedSafeAnchor = false;
             _lastSeatEgressBlocker = string.Empty;
+            _r5eLastAtomicExitReservationBacked = false;
+            _r5eLastAtomicExitTick = 0;
+            _r5eLastAtomicExitDirection = -1;
             _releaseSeatRequested = true;
             _finishingWorkPresentationObserved = false;
             _animator.RequestOfficeWorkSafeStop();
@@ -4260,14 +4250,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             else if (_animator.SeatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork)
             {
                 ApplySeatedContactPlacement(profile);
-            }
-            else if ((clip == OfficeSeatingAnimationClip.SitDown &&
-                      (_r5ePublishActive || Phase == OfficeRuntimeAgentPhase.SittingDown)) ||
-                     (clip == OfficeSeatingAnimationClip.StandUp &&
-                      (Phase == OfficeRuntimeAgentPhase.FinishingWork ||
-                       Phase == OfficeRuntimeAgentPhase.StandingUp)))
-            {
-                ApplySeatAnchorPlacement(profile, _workPresentationTargetPelvisWorld);
             }
             else
             {
