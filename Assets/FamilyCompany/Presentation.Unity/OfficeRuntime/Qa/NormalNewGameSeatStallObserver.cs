@@ -348,15 +348,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 observation.LastPosition = actor.Position;
             }
 
+            bool idleIntentHasDestination =
+                !actor.IsPlayerControlled &&
+                actor.Phase == OfficeRuntimeAgentPhase.Idle &&
+                actor.DiagnosticAutonomyIntentId.Length > 0 &&
+                (actor.DiagnosticAutonomyDestinationId.Length > 0 ||
+                 actor.DiagnosticDestinationId.Length > 0 ||
+                 actor.DiagnosticPendingDestinationId.Length > 0 ||
+                 actor.SemanticPathLength > 0);
             bool transitionShouldProgress = actor.Phase == OfficeRuntimeAgentPhase.Navigating ||
                                             actor.IsEnteringSeat ||
                                             actor.Phase == OfficeRuntimeAgentPhase.SittingDown ||
                                             actor.Phase == OfficeRuntimeAgentPhase.FinishingWork ||
                                             actor.Phase == OfficeRuntimeAgentPhase.StandingUp ||
                                             actor.Phase == OfficeRuntimeAgentPhase.LeavingSeat ||
-                                            (!actor.IsPlayerControlled &&
-                                             actor.DiagnosticAutonomyIntentId.Length > 0 &&
-                                             actor.Phase == OfficeRuntimeAgentPhase.Idle);
+                                            idleIntentHasDestination;
             if (transitionShouldProgress && minute - observation.LastProgressMinute >= 20L)
             {
                 RecordFirstFailure(
