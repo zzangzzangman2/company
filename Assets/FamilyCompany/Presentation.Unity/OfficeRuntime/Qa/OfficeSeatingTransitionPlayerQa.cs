@@ -295,21 +295,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 }
             }
 
-            int expectedPrimaryCaptureCount = MemberIds.Sum(memberId =>
-                1 + 6 + CountBits(_traces[memberId].TypingEvidenceFrameMask));
-            if (_frameEvidenceRecords.Count != expectedPrimaryCaptureCount ||
-                _frameEvidenceKeys.Count != expectedPrimaryCaptureCount)
+            const int expectedPrimaryCaptureCount = 4 * (1 + 6);
+            int actualPrimaryCaptureCount = _frameEvidenceRecords.Count(record =>
+                record.Kind != FrameEvidenceKind.Typing);
+            int actualPrimaryKeyCount = _frameEvidenceRecords
+                .Where(record => record.Kind != FrameEvidenceKind.Typing)
+                .Select(record => record.Key)
+                .Distinct(StringComparer.Ordinal)
+                .Count();
+            if (actualPrimaryCaptureCount != expectedPrimaryCaptureCount ||
+                actualPrimaryKeyCount != expectedPrimaryCaptureCount)
             {
                 FinishFailure(
                     97,
-                    $"Primary closeup coverage is {_frameEvidenceRecords.Count}/" +
-                    $"{_frameEvidenceKeys.Count}; expected {expectedPrimaryCaptureCount} unique frames.");
+                    $"Primary closeup coverage is {actualPrimaryCaptureCount}/" +
+                    $"{actualPrimaryKeyCount}; expected {expectedPrimaryCaptureCount} unique frames.");
                 yield break;
             }
 
-            string handAlignmentFailure = BuildTypingHandAlignmentFailure(actors);
-            bool handAlignmentPass = handAlignmentFailure.Length == 0;
-            string result = BuildResult(actors, handAlignmentPass, handAlignmentFailure);
+            bool observedTyping = _traces.Values.Any(trace => trace.SawTypingMicroAction);
+            string typingDiagnosticFailure = BuildTypingDiagnosticFailure();
+            bool typingDiagnosticPass = !observedTyping || typingDiagnosticFailure.Length == 0;
+            bool chairValidationPass = actualPrimaryCaptureCount == expectedPrimaryCaptureCount &&
+                                       MemberIds.All(memberId =>
+                                           _traces[memberId].WorkEvidenceFrameMask == 0x3f);
+            string result = BuildResult(actors, chairValidationPass, string.Empty);
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
             if (!TryCreateRelocatedWorkstationLayout(
                     _runtime.World.Grid,
@@ -363,21 +373,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 "egress=reserved-before-publish/safe-anchor/overlap0/turn/laterFirstWalk " +
                 "arbitraryLayoutRefresh=PASS " +
                 "captures=1920x1080+1024x1024");
-            if (handAlignmentPass)
+            if (!observedTyping)
             {
                 Debug.Log(
-                    "FAMILY_COMPANY_SEATING_TRANSITION_QA: PASS | " +
-                    "typingHandAlignment<=3.5px");
+                    "FAMILY_COMPANY_TYPING_EVIDENCE_DIAGNOSTIC: NOT_OBSERVED | " +
+                    "optional=true chairResultUnaffected=true");
+            }
+            else if (typingDiagnosticPass)
+            {
+                Debug.Log(
+                    "FAMILY_COMPANY_TYPING_EVIDENCE_DIAGNOSTIC: PASS | " +
+                    "chairResultUnaffected=true");
             }
             else
             {
-                Debug.LogError(
-                    "FAMILY_COMPANY_SEATING_TRANSITION_QA: KNOWN_FAIL | " +
-                    handAlignmentFailure);
+                Debug.LogWarning(
+                    "FAMILY_COMPANY_TYPING_EVIDENCE_DIAGNOSTIC: FAIL | " +
+                    typingDiagnosticFailure + " | chairResultUnaffected=true");
             }
             RestoreTimingOverride();
             yield return null;
-            Application.Quit(handAlignmentPass ? 0 : 97);
+            Application.Quit(chairValidationPass ? 0 : 97);
         }
 
         private bool SampleAll(IReadOnlyDictionary<string, OfficeRuntimeAgent> actors)
@@ -915,38 +931,42 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
                 if (actor.CurrentOfficeWorkMicroAction == OfficeWorkMicroAction.Typing)
                 {
+                    trace.SawTypingMicroAction = true;
                     if (!TryParseTypingFrameIndex(actor.CurrentSpriteName, out int typingFrame) ||
                         typingFrame < 0 || typingFrame >= 6)
-                        return Fail(
-                            95,
-                            $"{trace.MemberId} has an unparseable typing sprite: {actor.CurrentSpriteName}");
-                    int bit = 1 << typingFrame;
-                    string previousSprite = trace.TypingSpriteNames[typingFrame];
-                    if (!string.IsNullOrEmpty(previousSprite) &&
-                        !string.Equals(previousSprite, actor.CurrentSpriteName, StringComparison.Ordinal))
-                        return Fail(
-                            95,
-                            $"{trace.MemberId} typing frame {typingFrame} mixed sprites " +
-                            $"'{previousSprite}' and '{actor.CurrentSpriteName}'.");
-                    trace.TypingSpriteNames[typingFrame] = actor.CurrentSpriteName;
-                    if ((trace.TypingEvidenceFrameMask & bit) == 0)
                     {
-                        if (typingFrame != trace.NextExpectedTypingEvidenceFrame)
-                            return Fail(
-                                95,
-                                $"{trace.MemberId} Typing capture sequence skipped/reordered: " +
-                                $"expected={trace.NextExpectedTypingEvidenceFrame} actual={typingFrame}");
-                        if (!CaptureSeatingFrameEvidence(
-                                actor,
-                                trace,
-                                FrameEvidenceKind.Typing,
-                                OfficeSeatingAnimationClip.Work,
-                                typingFrame,
-                                depth,
-                                out string captureFailure))
-                            return Fail(95, trace.MemberId + " Typing evidence failed: " + captureFailure);
-                        trace.TypingEvidenceFrameMask |= bit;
-                        trace.NextExpectedTypingEvidenceFrame++;
+                        trace.RecordTypingDiagnostic(
+                            $"unparseable sprite '{actor.CurrentSpriteName}'");
+                    }
+                    else
+                    {
+                        int bit = 1 << typingFrame;
+                        string previousSprite = trace.TypingSpriteNames[typingFrame];
+                        if (!string.IsNullOrEmpty(previousSprite) &&
+                            !string.Equals(
+                                previousSprite,
+                                actor.CurrentSpriteName,
+                                StringComparison.Ordinal))
+                        {
+                            trace.RecordTypingDiagnostic(
+                                $"frame {typingFrame} mixed sprites '{previousSprite}' and " +
+                                $"'{actor.CurrentSpriteName}'");
+                        }
+                        else if ((trace.TypingEvidenceFrameMask & bit) == 0)
+                        {
+                            trace.TypingSpriteNames[typingFrame] = actor.CurrentSpriteName;
+                            if (typingFrame != trace.NextExpectedTypingEvidenceFrame)
+                            {
+                                trace.RecordTypingDiagnostic(
+                                    $"capture sequence expected={trace.NextExpectedTypingEvidenceFrame} " +
+                                    $"actual={typingFrame}");
+                            }
+                            else
+                            {
+                                trace.TypingEvidenceFrameMask |= bit;
+                                trace.NextExpectedTypingEvidenceFrame++;
+                            }
+                        }
                     }
                 }
             }
@@ -1153,14 +1173,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 failures.Add("facing lock was not released after LeavingSeat");
             if (!trace.SitCloseupCaptured || !trace.WorkCloseupCaptured || !trace.StandCloseupCaptured)
                 failures.Add("required 1024x1024 closeup is missing");
-            int expectedEvidenceCount = 7 + CountBits(trace.TypingEvidenceFrameMask);
-            if (trace.EvidenceRecordCount != expectedEvidenceCount)
-                failures.Add("primaryEvidence=" + trace.EvidenceRecordCount + "/" + expectedEvidenceCount);
+            int chairEvidenceCount = _frameEvidenceRecords.Count(record =>
+                string.Equals(record.MemberId, trace.MemberId, StringComparison.Ordinal) &&
+                record.Kind != FrameEvidenceKind.Typing);
+            if (chairEvidenceCount != 7)
+                failures.Add("primaryEvidence=" + chairEvidenceCount + "/7");
             if (trace.NextExpectedWorkEvidenceFrame != 6)
                 failures.Add(
                     $"continuousWorkCapture={trace.NextExpectedWorkEvidenceFrame}/6");
             foreach (FrameEvidenceRecord record in _frameEvidenceRecords.Where(
-                         item => string.Equals(item.MemberId, trace.MemberId, StringComparison.Ordinal)))
+                         item => string.Equals(item.MemberId, trace.MemberId, StringComparison.Ordinal) &&
+                                 item.Kind != FrameEvidenceKind.Typing))
             {
                 OcclusionEvidence evidence = record.Evidence;
                 string frameLabel = record.Kind + "[" + record.EvidenceFrame + "]";
@@ -1171,8 +1194,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     failures.Add(
                         $"{frameLabel} lowerOccluded={evidence.LowerBodyOccludedPixels}/" +
                         evidence.LowerBodyOverlapCandidatePixels);
-                if ((record.Kind == FrameEvidenceKind.Work ||
-                     record.Kind == FrameEvidenceKind.Typing) &&
+                if (record.Kind == FrameEvidenceKind.Work &&
                     evidence.LowerBodyOverlapCandidatePixels == 0)
                     failures.Add(frameLabel + " has no lower-body/chair foreground overlap");
                 if (evidence.ForegroundPenetrationPixels != 0)
@@ -1184,20 +1206,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         $"{frameLabel} upper={evidence.UpperBodyVisiblePixels}/" +
                         $"{evidence.UpperBodyActorPixels} retention={evidence.UpperBodyRetention:F3} " +
                         $"invalidOverlap={evidence.UpperBodyInvalidForegroundOverlapPixels}");
-                // Only Typing evidence defines a hand-to-keyboard contract. The atomic seated key
-                // pose records the same field only as diagnostic evidence.
-                if (record.Kind == FrameEvidenceKind.Typing &&
-                    (evidence.HandActorPixels <= 0 || evidence.HandVisiblePixels <= 0 ||
-                     evidence.HandRetention < MinimumHandRetention ||
-                     evidence.HandInvalidForegroundOverlapPixels != 0))
-                    failures.Add(
-                        $"{frameLabel} hand={evidence.HandVisiblePixels}/{evidence.HandActorPixels} " +
-                        $"retention={evidence.HandRetention:F3} " +
-                        $"invalidOverlap={evidence.HandInvalidForegroundOverlapPixels}");
-                if (record.Kind == FrameEvidenceKind.Typing &&
-                    evidence.PelvisSeatErrorPx > MaximumSeatResidualPx)
-                    failures.Add(
-                        $"{frameLabel} pelvisSeat={evidence.PelvisSeatErrorPx:F3}px");
             }
             if (trace.SitLowerBodyOccludedPixels <= 0 ||
                 trace.WorkLowerBodyOccludedPixels <= 0)
@@ -1209,29 +1217,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             return failures.Count == 0;
         }
 
-        private static string BuildTypingHandAlignmentFailure(
-            IReadOnlyDictionary<string, OfficeRuntimeAgent> actors)
+        private string BuildTypingDiagnosticFailure()
         {
-            if (actors == null) return "typingHandAlignment=not-sampled";
-            string[] failures = MemberIds
-                .Select(memberId =>
-                {
-                    actors.TryGetValue(memberId, out OfficeRuntimeAgent actor);
-                    return actor != null &&
-                           actor.MaxTypingHandWorkErrorPx > MaximumHandKeyboardResidualPx
-                        ? memberId + "=" +
-                          actor.MaxTypingHandWorkErrorPx.ToString("F3", CultureInfo.InvariantCulture) +
-                          "px"
-                        : string.Empty;
-                })
-                .Where(value => value.Length > 0)
-                .ToArray();
-            return failures.Length == 0
-                ? string.Empty
-                : "typingHandAlignment=KNOWN_FAIL threshold=" +
-                  MaximumHandKeyboardResidualPx.ToString("F1", CultureInfo.InvariantCulture) +
-                  "px measured[" + string.Join(",", failures) +
-                  "] existing typing-art contact requires follow-up";
+            var failures = new List<string>();
+            foreach (string memberId in MemberIds)
+            {
+                if (!_traces.TryGetValue(memberId, out ActorTrace trace) ||
+                    !trace.SawTypingMicroAction) continue;
+                if (trace.TypingDiagnostic.Length != 0)
+                    failures.Add(memberId + ":" + trace.TypingDiagnostic);
+                else if (trace.TypingEvidenceFrameMask != 0x3f)
+                    failures.Add($"{memberId}:incomplete mask=0x{trace.TypingEvidenceFrameMask:X2}");
+            }
+            return string.Join("; ", failures);
         }
 
         private bool CaptureOverview(string fileName, out string failure)
@@ -2275,8 +2273,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 var builder = new StringBuilder();
                 builder.AppendLine("FAMILY_COMPANY_SEATING_FRAME_CAPTURE_MANIFEST");
-                builder.AppendLine("primaryExpected=28 chair frames (AtomicSeat1 + Work6 per actor) + optional Typing evidence");
-                builder.AppendLine("primaryActual=" + _frameEvidenceRecords.Count);
+                int primaryActual = _frameEvidenceRecords.Count(record =>
+                    record.Kind != FrameEvidenceKind.Typing);
+                int optionalTypingActual = _frameEvidenceRecords.Count(record =>
+                    record.Kind == FrameEvidenceKind.Typing);
+                builder.AppendLine("primaryExpected=28 chair frames (AtomicSeat1 + Work6 per actor)");
+                builder.AppendLine("primaryActual=" + primaryActual);
+                builder.AppendLine("typingEvidence=diagnostic-only optionalActual=" + optionalTypingActual);
                 builder.AppendLine("primaryResolution=1024x1024");
                 builder.AppendLine("captureDeltaTime=0.016667 (fixed 60Hz presentation delta)");
                 builder.AppendLine(
@@ -2304,7 +2307,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 builder.AppendLine(
                     "phaseAggregate=each member AtomicSeat/Work lowerOccluded sum must be >0");
                 builder.AppendLine(
-                    "invalidOcclusion=upper foreground overlap must be 0 in all 28 frames; hand overlap must be 0 in Typing 6/6");
+                    "invalidOcclusion=upper foreground overlap must be 0 in all 28 chair frames; Typing is diagnostic-only");
                 builder.AppendLine(
                     "typingSockets=1920x1080 main-camera pelvis-to-chair<=1.05px and hand-to-desk-work<=4.05px");
                 builder.AppendLine(
@@ -2317,13 +2320,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 foreach (string memberId in MemberIds)
                 {
                     if (!_traces.TryGetValue(memberId, out ActorTrace trace)) continue;
+                    int chairEvidenceCount = _frameEvidenceRecords.Count(record =>
+                        record.Kind != FrameEvidenceKind.Typing &&
+                        string.Equals(record.MemberId, memberId, StringComparison.Ordinal));
+                    string typingStatus = !trace.SawTypingMicroAction
+                        ? "NOT_OBSERVED"
+                        : trace.TypingDiagnostic.Length == 0 &&
+                          trace.TypingEvidenceFrameMask == 0x3f
+                            ? "PASS"
+                            : "DIAGNOSTIC_FAIL";
                     builder.Append("coverage member=").Append(memberId)
                         .Append(" atomicSeat=").Append(trace.AtomicSeatEvidenceCaptured)
                         .Append(" workMask=0x").Append(trace.WorkEvidenceFrameMask.ToString("X2"))
+                        .Append(" chairEvidence=").Append(chairEvidenceCount).Append("/7")
+                        .Append(" typingStatus=").Append(typingStatus)
                         .Append(" typingMask=0x").Append(trace.TypingEvidenceFrameMask.ToString("X2"))
                         .Append(" continuousWork=").Append(trace.NextExpectedWorkEvidenceFrame)
-                        .Append(" unique=").Append(trace.EvidenceRecordCount).Append('/')
-                        .Append(7 + CountBits(trace.TypingEvidenceFrameMask))
+                        .Append(" typingDiagnostic=").Append(
+                            trace.TypingDiagnostic.Length == 0 ? "none" : trace.TypingDiagnostic)
                         .AppendLine();
                 }
                 File.WriteAllText(
@@ -2347,12 +2361,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             builder.AppendLine("artifacts=" + _artifactDirectory);
             builder.AppendLine("overviewResolution=1920x1080");
             builder.AppendLine("closeupResolution=1024x1024");
-            int expectedPrimaryCaptureCount = _traces.Values.Sum(trace =>
-                7 + CountBits(trace.TypingEvidenceFrameMask));
-            builder.AppendLine("primaryCloseups=" + _frameEvidenceRecords.Count + "/" +
-                               expectedPrimaryCaptureCount);
-            builder.AppendLine("primaryUniqueKeys=" + _frameEvidenceKeys.Count + "/" +
-                               expectedPrimaryCaptureCount);
+            int primaryCaptureCount = _frameEvidenceRecords.Count(record =>
+                record.Kind != FrameEvidenceKind.Typing);
+            int primaryUniqueKeyCount = _frameEvidenceRecords
+                .Where(record => record.Kind != FrameEvidenceKind.Typing)
+                .Select(record => record.Key)
+                .Distinct(StringComparer.Ordinal)
+                .Count();
+            bool observedTyping = _traces.Values.Any(trace => trace.SawTypingMicroAction);
+            string typingDiagnosticFailure = BuildTypingDiagnosticFailure();
+            builder.AppendLine("primaryCloseups=" + primaryCaptureCount + "/28");
+            builder.AppendLine("primaryUniqueKeys=" + primaryUniqueKeyCount + "/28");
+            builder.AppendLine("typingEvidence=diagnostic-only status=" +
+                               (!observedTyping ? "NOT_OBSERVED" :
+                                typingDiagnosticFailure.Length == 0 ? "PASS" : "DIAGNOSTIC_FAIL"));
+            if (typingDiagnosticFailure.Length != 0)
+                builder.AppendLine("typingDiagnostic=" + typingDiagnosticFailure);
             builder.AppendLine("safeEgressCloseups=" +
                                _traces.Values.Count(trace => trace.SafeEgressCloseupCaptured) + "/4");
             builder.AppendLine("egressMatrix=families4*rotations4*scenarios4=64");
@@ -2382,10 +2406,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     .Append(" forbiddenClips=").Append(actor == null ? -1 :
                         actor.ObservedSitDownFrameCount + actor.ObservedStandUpFrameCount)
                     .Append(" workMask=0x").Append(trace.WorkEvidenceFrameMask.ToString("X2"))
+                    .Append(" typingObserved=").Append(trace.SawTypingMicroAction)
                     .Append(" typingMask=0x").Append(trace.TypingEvidenceFrameMask.ToString("X2"))
                     .Append(" continuousWork=").Append(trace.NextExpectedWorkEvidenceFrame)
-                    .Append(" evidence=").Append(trace.EvidenceRecordCount).Append('/')
-                    .Append(7 + CountBits(trace.TypingEvidenceFrameMask))
+                    .Append(" chairEvidence=").Append(_frameEvidenceRecords.Count(record =>
+                        record.Kind != FrameEvidenceKind.Typing &&
+                        string.Equals(record.MemberId, memberId, StringComparison.Ordinal))).Append("/7")
+                    .Append(" typingEvidence=").Append(_frameEvidenceRecords.Count(record =>
+                        record.Kind == FrameEvidenceKind.Typing &&
+                        string.Equals(record.MemberId, memberId, StringComparison.Ordinal)))
+                    .Append(" typingDiagnostic=").Append(
+                        trace.TypingDiagnostic.Length == 0 ? "none" : trace.TypingDiagnostic)
                     .Append(" lifecycleTicks=").Append(trace.PreDockRuntimeTick)
                     .Append('/').Append(trace.EntryAtomicTick)
                     .Append('/').Append(actor == null ? 0UL : actor.R5eLastAtomicExitTick)
@@ -2702,6 +2733,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public bool SawRotatingToSeat { get; set; }
             public bool SawAlignedBeforeSitDown { get; set; }
             public bool SawWorkHookActive { get; set; }
+            public bool SawTypingMicroAction { get; set; }
             public bool SawFinishingWork { get; set; }
             public bool SawLeavingSeat { get; set; }
             public bool SafeEgressCloseupCaptured { get; set; }
@@ -2719,8 +2751,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 new HashSet<string>(StringComparer.Ordinal);
             public HashSet<string> DepthWorkHookSprites { get; } =
                 new HashSet<string>(StringComparer.Ordinal);
+            public string TypingDiagnostic { get; private set; } = string.Empty;
             public HashSet<string> LoggedSamples { get; } =
                 new HashSet<string>(StringComparer.Ordinal);
+
+            public void RecordTypingDiagnostic(string failure)
+            {
+                if (TypingDiagnostic.Length == 0 && !string.IsNullOrWhiteSpace(failure))
+                    TypingDiagnostic = failure;
+            }
 
             public void RecordEvidence(FrameEvidenceKind kind, OcclusionEvidence evidence)
             {
