@@ -83,8 +83,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         }
 
-        private sealed class ActorState
+        internal sealed class ActorState
         {
+            public const int AtomicReservationCapacity = 16;
             public string AgentId;
             public Vector2 Position;
             public Vector2 DesiredVelocity;
@@ -92,8 +93,117 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public float StuckSeconds;
             public OfficeGridCoordinate CurrentCell;
             public bool IsPresent = true;
+            public ulong Epoch;
             public readonly HashSet<OfficeGridCoordinate> Reservations =
                 new HashSet<OfficeGridCoordinate>();
+            public readonly OfficeGridCoordinate[] ReservationScopeBackup =
+                new OfficeGridCoordinate[AtomicReservationCapacity];
+            public readonly int[] ReservationScopeCorridorBackup = new int[3];
+            public int ReservationScopeBackupCount;
+            public int ReservationScopeCorridorCount;
+            public ulong ReservationScopeEpoch;
+            public bool ReservationScopeActive;
+            public readonly OfficeGridCoordinate[] PlacementBackup =
+                new OfficeGridCoordinate[AtomicReservationCapacity];
+            public readonly int[] PlacementCorridorBackup = new int[3];
+            public int PlacementBackupCount;
+            public int PlacementCorridorCount;
+            public Vector2 PlacementPosition;
+            public Vector2 PlacementDesiredVelocity;
+            public float PlacementStuckSeconds;
+            public OfficeGridCoordinate PlacementCell;
+            public ulong PlacementEpoch;
+            public bool PlacementBackupActive;
+        }
+
+        internal readonly struct CanonicalActorSnapshot
+        {
+            public CanonicalActorSnapshot(
+                string actorId,
+                Vector2 position,
+                Vector2 desiredVelocity,
+                float stuckSeconds,
+                float radius,
+                OfficeGridCoordinate currentCell,
+                bool isPresent,
+                int reservationCount,
+                ulong epoch,
+                int revision)
+            {
+                ActorId = actorId;
+                Position = position;
+                DesiredVelocity = desiredVelocity;
+                StuckSeconds = stuckSeconds;
+                Radius = radius;
+                CurrentCell = currentCell;
+                IsPresent = isPresent;
+                ReservationCount = reservationCount;
+                Epoch = epoch;
+                Revision = revision;
+            }
+
+            public string ActorId { get; }
+            public Vector2 Position { get; }
+            public Vector2 DesiredVelocity { get; }
+            public float StuckSeconds { get; }
+            public float Radius { get; }
+            public OfficeGridCoordinate CurrentCell { get; }
+            public bool IsPresent { get; }
+            public int ReservationCount { get; }
+            public ulong Epoch { get; }
+            public int Revision { get; }
+        }
+
+        internal readonly struct PreparedAtomicActorPlacement
+        {
+            internal readonly ActorState _actor;
+
+            internal PreparedAtomicActorPlacement(
+                ActorState actor,
+                Vector2 targetWorld,
+                OfficeGridCoordinate targetCell,
+                int capturedRevision,
+                ulong capturedEpoch,
+                bool reservationRequired,
+                int corridor0,
+                int corridor1,
+                int corridor2,
+                int corridorCount)
+            {
+                _actor = actor;
+                TargetWorld = targetWorld;
+                TargetCell = targetCell;
+                CapturedRevision = capturedRevision;
+                CapturedEpoch = capturedEpoch;
+                ReservationRequired = reservationRequired;
+                Corridor0 = corridor0;
+                Corridor1 = corridor1;
+                Corridor2 = corridor2;
+                CorridorCount = corridorCount;
+            }
+
+            public Vector2 TargetWorld { get; }
+            public OfficeGridCoordinate TargetCell { get; }
+            public int CapturedRevision { get; }
+            public ulong CapturedEpoch { get; }
+            public bool ReservationRequired { get; }
+            internal int Corridor0 { get; }
+            internal int Corridor1 { get; }
+            internal int Corridor2 { get; }
+            internal int CorridorCount { get; }
+        }
+
+        internal readonly struct PreparedAtomicReservationScope
+        {
+            internal PreparedAtomicReservationScope(ActorState actor, ulong epoch)
+            {
+                _actor = actor;
+                CapturedEpoch = epoch;
+            }
+
+            internal readonly ActorState _actor;
+            public ulong CapturedEpoch { get; }
+            public bool IsValid => _actor != null;
         }
 
         private static readonly Vector2[] CollisionDirections =
@@ -129,6 +239,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new List<OfficeTrafficAgentState>(12);
         private readonly List<OfficeGridCoordinate> _reservationRequestBuffer =
             new List<OfficeGridCoordinate>(3);
+        private readonly List<OfficeGridCoordinate> _singleUpcomingReservationBuffer =
+            new List<OfficeGridCoordinate>(1);
         private readonly List<int> _corridorClaimBuffer = new List<int>(3);
         private readonly List<int> _corridorReleaseBuffer = new List<int>(4);
         private readonly Dictionary<OfficeGridCoordinate, int> _narrowCorridorIds =
@@ -138,6 +250,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeGrid _grid;
         private OfficeGridTilemapPresenter _presenter;
         private string _attendanceIngressOwner = string.Empty;
+        private string _qaInvalidatedAtomicAgentId = string.Empty;
         private Vector2 _attendanceIngressExterior;
         private Vector2 _attendanceIngressInterior;
         private float _attendanceIngressRadius;
@@ -179,6 +292,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _narrowCorridorIds.Clear();
             _narrowCorridorOwners.Clear();
             _attendanceIngressOwner = string.Empty;
+            _qaInvalidatedAtomicAgentId = string.Empty;
             _attendanceIngressExterior = Vector2.zero;
             _attendanceIngressInterior = Vector2.zero;
             _attendanceIngressRadius = 0f;
@@ -278,6 +392,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 state.DesiredVelocity = Vector2.zero;
                 state.StuckSeconds = 0f;
                 state.Reservations.Clear();
+                state.Epoch++;
                 ReleaseNarrowCorridors(state.AgentId);
                 return;
             }
@@ -290,6 +405,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             state.DesiredVelocity = Vector2.zero;
             state.StuckSeconds = 0f;
             state.IsPresent = true;
+            state.Epoch++;
         }
 
         public void UpdateActor(
@@ -306,6 +422,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 state.DesiredVelocity = desiredVelocity;
                 state.StuckSeconds = Mathf.Max(0f, stuckSeconds);
                 state.CurrentCell = _presenter.NearestCell(new Vector3(position.x, position.y, 0f));
+                state.Epoch++;
                 return;
             }
             bool insideClaimedIngress =
@@ -325,6 +442,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             state.DesiredVelocity = desiredVelocity;
             state.StuckSeconds = Mathf.Max(0f, stuckSeconds);
             state.CurrentCell = _presenter.NearestCell(new Vector3(position.x, position.y, 0f));
+            state.Epoch++;
             ReleaseExitedNarrowCorridors(state);
             foreach (ActorState peer in _actors.Values)
             {
@@ -476,11 +594,348 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        public bool TryReserveSingleCell(
+            string agentId,
+            OfficeGridCoordinate current,
+            OfficeGridCoordinate upcoming)
+        {
+            _singleUpcomingReservationBuffer.Clear();
+            _singleUpcomingReservationBuffer.Add(upcoming);
+            bool reserved = TryReservePath(agentId, current, _singleUpcomingReservationBuffer);
+            if (reserved) RequiredActor(agentId).Epoch++;
+            return reserved;
+        }
+
+        internal bool TryBeginAtomicReservationScope(
+            string agentId,
+            out PreparedAtomicReservationScope scope)
+        {
+            scope = default;
+            ActorState actor = RequiredActor(agentId);
+            if (actor.ReservationScopeActive ||
+                actor.Reservations.Count > ActorState.AtomicReservationCapacity)
+                return false;
+            actor.ReservationScopeBackupCount = 0;
+            foreach (OfficeGridCoordinate cell in actor.Reservations)
+                actor.ReservationScopeBackup[actor.ReservationScopeBackupCount++] = cell;
+            actor.ReservationScopeCorridorCount = CaptureOwnedCorridors(
+                actor.AgentId,
+                actor.ReservationScopeCorridorBackup);
+            if (actor.ReservationScopeCorridorCount > actor.ReservationScopeCorridorBackup.Length)
+            {
+                actor.ReservationScopeBackupCount = 0;
+                actor.ReservationScopeCorridorCount = 0;
+                return false;
+            }
+            actor.ReservationScopeEpoch = actor.Epoch;
+            actor.ReservationScopeActive = true;
+            scope = new PreparedAtomicReservationScope(actor, actor.Epoch);
+            return true;
+        }
+
+        internal void RestoreAtomicReservationScope(in PreparedAtomicReservationScope scope)
+        {
+            ActorState actor = scope._actor;
+            if (actor == null || !actor.ReservationScopeActive) return;
+            RestoreReservationsAndCorridors(
+                actor,
+                actor.ReservationScopeBackup,
+                actor.ReservationScopeBackupCount,
+                actor.ReservationScopeCorridorBackup,
+                actor.ReservationScopeCorridorCount,
+                actor.ReservationScopeEpoch);
+            actor.ReservationScopeActive = false;
+        }
+
+        internal void CompleteAtomicReservationScope(in PreparedAtomicReservationScope scope)
+        {
+            ActorState actor = scope._actor;
+            if (actor != null) actor.ReservationScopeActive = false;
+        }
+
+        internal void InvalidateAtomicTokenForQa(string agentId)
+        {
+            RequiredActor(agentId);
+            _qaInvalidatedAtomicAgentId = agentId;
+        }
+
+        /// <summary>
+        /// Creates an engine-object-free occupancy owner for the executable production transaction
+        /// fixture. The fixture then calls the same current/commit/rollback/complete methods as the
+        /// game; it cannot enter navigation or collision code without a real presenter.
+        /// </summary>
+        internal static OfficeRuntimeOccupancy CreateProductionTransactionFixture(
+            string agentId,
+            Vector2 position,
+            OfficeGridCoordinate cell,
+            float radius,
+            int revision)
+        {
+            if (revision <= 0) throw new ArgumentOutOfRangeException(nameof(revision));
+            string canonical = RequiredId(agentId);
+            if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
+                throw new ArgumentOutOfRangeException(nameof(radius));
+            var result = new OfficeRuntimeOccupancy { Revision = revision };
+            result._actors.Add(canonical, new ActorState
+            {
+                AgentId = canonical,
+                Position = position,
+                DesiredVelocity = Vector2.zero,
+                Radius = radius,
+                StuckSeconds = 0f,
+                CurrentCell = cell,
+                IsPresent = true,
+                Epoch = 1
+            });
+            return result;
+        }
+
+        internal bool TryPrepareProductionTransactionFixturePlacement(
+            string agentId,
+            Vector2 targetWorld,
+            OfficeGridCoordinate targetCell,
+            out PreparedAtomicActorPlacement prepared)
+        {
+            prepared = default;
+            ActorState actor = RequiredActor(agentId);
+            if (!actor.IsPresent || actor.PlacementBackupActive ||
+                actor.Reservations.Count > ActorState.AtomicReservationCapacity) return false;
+            actor.PlacementBackupCount = 0;
+            foreach (OfficeGridCoordinate cell in actor.Reservations)
+                actor.PlacementBackup[actor.PlacementBackupCount++] = cell;
+            actor.PlacementCorridorCount = CaptureOwnedCorridors(
+                actor.AgentId,
+                actor.PlacementCorridorBackup);
+            actor.PlacementPosition = actor.Position;
+            actor.PlacementDesiredVelocity = actor.DesiredVelocity;
+            actor.PlacementStuckSeconds = actor.StuckSeconds;
+            actor.PlacementCell = actor.CurrentCell;
+            actor.PlacementEpoch = actor.Epoch;
+            actor.PlacementBackupActive = true;
+            prepared = new PreparedAtomicActorPlacement(
+                actor,
+                targetWorld,
+                targetCell,
+                Revision,
+                actor.Epoch,
+                false,
+                0,
+                0,
+                0,
+                0);
+            return true;
+        }
+
         public void ClearReservations(string agentId)
         {
             if (_actors.TryGetValue(agentId ?? string.Empty, out ActorState actor))
+            {
                 actor.Reservations.Clear();
+                actor.Epoch++;
+            }
             ReleaseNarrowCorridors(agentId ?? string.Empty);
+        }
+
+        internal bool TryPrepareAtomicActorPlacement(
+            string agentId,
+            Vector2 targetWorld,
+            OfficeGridCoordinate targetCell,
+            float radius,
+            string permittedSeatId,
+            string requiredReservationOwner,
+            int occupancyRevision,
+            out PreparedAtomicActorPlacement prepared)
+        {
+            prepared = default;
+            string permitted = permittedSeatId ?? string.Empty;
+            bool targetIsPermittedSeat =
+                permitted.Length > 0 &&
+                _interactionSeats.TryGetValue(targetCell, out string interactionSeatId) &&
+                string.Equals(interactionSeatId, permitted, StringComparison.Ordinal);
+            if (occupancyRevision != Revision ||
+                radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius) ||
+                !_actors.TryGetValue(agentId ?? string.Empty, out ActorState actor) ||
+                !actor.IsPresent ||
+                !_grid.Contains(targetCell) ||
+                (!_grid.IsWalkable(targetCell) && !targetIsPermittedSeat) ||
+                !_presenter.NearestCell(new Vector3(targetWorld.x, targetWorld.y, 0f)).Equals(targetCell) ||
+                !PointClearsStatic(
+                    targetWorld,
+                    radius,
+                    permitted,
+                    out _)) return false;
+
+            bool reservationRequired = !string.IsNullOrEmpty(requiredReservationOwner);
+            if (reservationRequired &&
+                (!string.Equals(requiredReservationOwner, actor.AgentId, StringComparison.Ordinal) ||
+                 !actor.Reservations.Contains(targetCell))) return false;
+
+            foreach (ActorState peer in _actors.Values)
+            {
+                if (ReferenceEquals(peer, actor) || !peer.IsPresent) continue;
+                if (peer.Reservations.Contains(targetCell) && !peer.CurrentCell.Equals(targetCell))
+                    return false;
+                if (Vector2.Distance(targetWorld, peer.Position) <
+                    radius + peer.Radius - AgentContactTolerance) return false;
+            }
+
+            int corridor0 = 0;
+            int corridor1 = 0;
+            int corridor2 = 0;
+            int corridorCount = 0;
+            foreach (KeyValuePair<int, string> item in _narrowCorridorOwners)
+            {
+                if (!string.Equals(item.Value, actor.AgentId, StringComparison.Ordinal)) continue;
+                if (corridorCount == 0) corridor0 = item.Key;
+                else if (corridorCount == 1) corridor1 = item.Key;
+                else if (corridorCount == 2) corridor2 = item.Key;
+                else return false;
+                corridorCount++;
+            }
+
+            if (actor.PlacementBackupActive ||
+                actor.Reservations.Count > ActorState.AtomicReservationCapacity) return false;
+            actor.PlacementBackupCount = 0;
+            foreach (OfficeGridCoordinate cell in actor.Reservations)
+                actor.PlacementBackup[actor.PlacementBackupCount++] = cell;
+            actor.PlacementCorridorCount = CaptureOwnedCorridors(
+                actor.AgentId,
+                actor.PlacementCorridorBackup);
+            actor.PlacementPosition = actor.Position;
+            actor.PlacementDesiredVelocity = actor.DesiredVelocity;
+            actor.PlacementStuckSeconds = actor.StuckSeconds;
+            actor.PlacementCell = actor.CurrentCell;
+            actor.PlacementEpoch = actor.Epoch;
+            actor.PlacementBackupActive = true;
+
+            prepared = new PreparedAtomicActorPlacement(
+                actor,
+                targetWorld,
+                targetCell,
+                Revision,
+                actor.Epoch,
+                reservationRequired,
+                corridor0,
+                corridor1,
+                corridor2,
+                corridorCount);
+            return true;
+        }
+
+        internal bool IsPreparedAtomicActorPlacementCurrent(
+            in PreparedAtomicActorPlacement prepared)
+        {
+            ActorState actor = prepared._actor;
+            if (actor != null && string.Equals(
+                    _qaInvalidatedAtomicAgentId,
+                    actor.AgentId,
+                    StringComparison.Ordinal))
+            {
+                _qaInvalidatedAtomicAgentId = string.Empty;
+                return false;
+            }
+            return actor != null &&
+                   prepared.CapturedRevision == Revision &&
+                   prepared.CapturedEpoch == actor.Epoch &&
+                   actor.IsPresent &&
+                   (!prepared.ReservationRequired || actor.Reservations.Contains(prepared.TargetCell));
+        }
+
+        internal void CommitPreparedAtomicActorPlacement(
+            in PreparedAtomicActorPlacement prepared)
+        {
+            ActorState actor = prepared._actor;
+            if (!IsPreparedAtomicActorPlacementCurrent(prepared) || !actor.PlacementBackupActive)
+                throw new InvalidOperationException("Prepared atomic placement became stale before commit.");
+            actor.Position = prepared.TargetWorld;
+            actor.DesiredVelocity = Vector2.zero;
+            actor.StuckSeconds = 0f;
+            actor.CurrentCell = prepared.TargetCell;
+            actor.Reservations.Clear();
+            if (prepared.CorridorCount > 0) _narrowCorridorOwners.Remove(prepared.Corridor0);
+            if (prepared.CorridorCount > 1) _narrowCorridorOwners.Remove(prepared.Corridor1);
+            if (prepared.CorridorCount > 2) _narrowCorridorOwners.Remove(prepared.Corridor2);
+            actor.Epoch++;
+        }
+
+        internal void CompletePreparedAtomicActorPlacement(
+            in PreparedAtomicActorPlacement prepared)
+        {
+            if (prepared._actor != null) prepared._actor.PlacementBackupActive = false;
+        }
+
+        internal void CancelPreparedAtomicActorPlacement(
+            in PreparedAtomicActorPlacement prepared)
+        {
+            if (prepared._actor != null) prepared._actor.PlacementBackupActive = false;
+        }
+
+        internal void RollbackPreparedAtomicActorPlacement(
+            in PreparedAtomicActorPlacement prepared)
+        {
+            ActorState actor = prepared._actor;
+            if (actor == null || !actor.PlacementBackupActive) return;
+            actor.Position = actor.PlacementPosition;
+            actor.DesiredVelocity = actor.PlacementDesiredVelocity;
+            actor.StuckSeconds = actor.PlacementStuckSeconds;
+            actor.CurrentCell = actor.PlacementCell;
+            RestoreReservationsAndCorridors(
+                actor,
+                actor.PlacementBackup,
+                actor.PlacementBackupCount,
+                actor.PlacementCorridorBackup,
+                actor.PlacementCorridorCount,
+                actor.PlacementEpoch);
+            actor.PlacementBackupActive = false;
+        }
+
+        internal CanonicalActorSnapshot CaptureCanonicalActorSnapshot(string agentId)
+        {
+            ActorState actor = RequiredActor(agentId);
+            return new CanonicalActorSnapshot(
+                actor.AgentId,
+                actor.Position,
+                actor.DesiredVelocity,
+                actor.StuckSeconds,
+                actor.Radius,
+                actor.CurrentCell,
+                actor.IsPresent,
+                actor.Reservations.Count,
+                actor.Epoch,
+                Revision);
+        }
+
+        internal void ObserveAtomicPlacementClearance(
+            string agentId,
+            Vector2 point,
+            OfficeGridCoordinate cell,
+            float radius,
+            string permittedSeatId,
+            out bool floorValid,
+            out bool staticOverlap,
+            out bool dynamicOverlap)
+        {
+            ActorState self = RequiredActor(agentId);
+            floorValid = _grid != null && _grid.Contains(cell) &&
+                         (_grid.IsWalkable(cell) ||
+                          (!string.IsNullOrEmpty(permittedSeatId) &&
+                           _interactionSeats.TryGetValue(cell, out string seatId) &&
+                           string.Equals(seatId, permittedSeatId, StringComparison.Ordinal)));
+            staticOverlap = !PointClearsStatic(
+                point,
+                radius,
+                permittedSeatId ?? string.Empty,
+                out _);
+            dynamicOverlap = false;
+            foreach (ActorState peer in _actors.Values)
+            {
+                if (ReferenceEquals(peer, self) || !peer.IsPresent) continue;
+                if (Vector2.Distance(point, peer.Position) < radius + peer.Radius - AgentContactTolerance)
+                {
+                    dynamicOverlap = true;
+                    break;
+                }
+            }
         }
 
         public bool HasReservation(string agentId, OfficeGridCoordinate cell) =>
@@ -988,6 +1443,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!_actors.TryGetValue(agentId ?? string.Empty, out ActorState result))
                 throw new InvalidOperationException("Runtime occupancy actor is not registered: " + agentId);
             return result;
+        }
+
+        private int CaptureOwnedCorridors(string agentId, int[] target)
+        {
+            int count = 0;
+            foreach (KeyValuePair<int, string> item in _narrowCorridorOwners)
+            {
+                if (!string.Equals(item.Value, agentId, StringComparison.Ordinal)) continue;
+                if (count >= target.Length) return target.Length + 1;
+                target[count++] = item.Key;
+            }
+            return count;
+        }
+
+        private void RestoreReservationsAndCorridors(
+            ActorState actor,
+            OfficeGridCoordinate[] reservations,
+            int reservationCount,
+            int[] corridors,
+            int corridorCount,
+            ulong epoch)
+        {
+            actor.Reservations.Clear();
+            for (var index = 0; index < reservationCount; index++)
+                actor.Reservations.Add(reservations[index]);
+            ReleaseNarrowCorridors(actor.AgentId);
+            for (var index = 0; index < corridorCount; index++)
+                _narrowCorridorOwners[corridors[index]] = actor.AgentId;
+            actor.Epoch = epoch;
         }
 
         private static string RequiredId(string value)

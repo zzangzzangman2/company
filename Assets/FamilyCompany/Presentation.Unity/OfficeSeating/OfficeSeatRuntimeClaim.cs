@@ -87,6 +87,54 @@ namespace FamilyCompany.Presentation.Unity.OfficeSeating
             return true;
         }
 
+        public bool TryPrepareOccupy(out OfficeSeatingState.PreparedRuntimeMutation prepared)
+        {
+            prepared = default;
+            return !IsReleased && !IsOccupied &&
+                   _state.TryPrepareRuntimeOccupy(SeatId, MemberId, Token, out prepared);
+        }
+
+        public bool TryPrepareRelease(out OfficeSeatingState.PreparedRuntimeMutation prepared)
+        {
+            prepared = default;
+            return !IsReleased && IsOccupied &&
+                   _state.TryPrepareRuntimeRelease(SeatId, MemberId, Token, out prepared);
+        }
+
+        public bool IsPreparedMutationCurrent(
+            in OfficeSeatingState.PreparedRuntimeMutation prepared) =>
+            !IsReleased && _state.IsPreparedRuntimeMutationCurrent(prepared);
+
+        public void CommitPreparedOccupy(
+            in OfficeSeatingState.PreparedRuntimeMutation prepared)
+        {
+            _state.CommitPreparedRuntimeOccupy(prepared);
+            IsOccupied = true;
+        }
+
+        public void RollbackPreparedOccupy(
+            in OfficeSeatingState.PreparedRuntimeMutation prepared)
+        {
+            _state.RollbackPreparedRuntimeOccupy(prepared);
+            IsOccupied = false;
+        }
+
+        public void CommitPreparedRelease(
+            in OfficeSeatingState.PreparedRuntimeMutation prepared)
+        {
+            _state.CommitPreparedRuntimeRelease(prepared);
+            IsOccupied = false;
+            IsReleased = true;
+        }
+
+        public void RollbackPreparedRelease(
+            in OfficeSeatingState.PreparedRuntimeMutation prepared)
+        {
+            _state.RollbackPreparedRuntimeRelease(prepared);
+            IsOccupied = true;
+            IsReleased = false;
+        }
+
         public bool TryRelease(out OfficeSeatOperationResult result)
         {
             if (IsReleased)

@@ -26,6 +26,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new Dictionary<string, OfficeSeatSlot>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _assignedSeats =
             new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeSeatDockingPlan> _dockingPlans =
+            new Dictionary<string, OfficeSeatDockingPlan>(StringComparer.Ordinal);
         // StarterOfficeV1 has one entrance. Keep the authority here instead of treating every
         // open cell along the south edge as an interchangeable/random door.
         public static readonly OfficeGridCoordinate StarterEntranceCell =
@@ -62,6 +64,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 paths,
                 AssignedSeat);
             _interactionLifecycle = new OfficeRuntimeInteractionLifecycleService(_offerResolver);
+            foreach (OfficeSeatSlot seat in grid.SeatSlots)
+                _dockingPlans.Add(seat.SeatId, BuildDockingPlan(seat));
         }
 
         public OfficeSeatingState SeatingState => _seatingState;
@@ -386,6 +390,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return result;
         }
 
+        internal OfficeSeatSlot AssignedSeatForQa(string memberId) => AssignedSeat(memberId);
+
         public OfficeRuntimeDestination DestinationForSeat(
             OfficeSeatSlot seat,
             OfficeRuntimeDestination requestedDestination)
@@ -467,6 +473,178 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 egress);
         }
 
+        internal bool TryResolveDockingPlan(
+            OfficeSeatSlot seat,
+            out OfficeSeatDockingPlan plan)
+        {
+            plan = default;
+            return seat != null &&
+                   _dockingPlans.TryGetValue(seat.SeatId, out plan) &&
+                   IsDockingPlanCurrent(plan);
+        }
+
+        internal bool IsDockingPlanCurrent(in OfficeSeatDockingPlan plan)
+        {
+            return plan.Seat != null &&
+                   plan.AnchorRevision == _occupancy.Revision &&
+                   plan.ChairSnapshot.MatchesCurrent(_occupancy.Revision) &&
+                   _seats.TryGetValue(plan.Seat.SeatId, out OfficeSeatSlot current) &&
+                   ReferenceEquals(current, plan.Seat);
+        }
+
+        internal bool TryCaptureLiveChairSnapshot(
+            in OfficeSeatDockingPlan plan,
+            out R5eFurnitureTransformSnapshot snapshot)
+        {
+            snapshot = default;
+            if (plan.Seat == null ||
+                !_seats.TryGetValue(plan.Seat.SeatId, out OfficeSeatSlot current) ||
+                !ReferenceEquals(current, plan.Seat) ||
+                !_furniturePresenter.TryGetSemanticRoot(
+                    plan.Seat.ChairFurnitureId,
+                    out Transform semanticRoot) || semanticRoot == null ||
+                !_furniturePresenter.TryGetVisualRoot(
+                    plan.Seat.ChairFurnitureId,
+                    out Transform visualRoot) || visualRoot == null) return false;
+            PlacedOfficeFurniture chair = null;
+            for (var index = 0; index < _grid.Furniture.Count; index++)
+            {
+                PlacedOfficeFurniture item = _grid.Furniture[index];
+                if (!string.Equals(
+                        item.FurnitureId,
+                        plan.Seat.ChairFurnitureId,
+                        StringComparison.Ordinal)) continue;
+                chair = item;
+                break;
+            }
+            if (chair == null) return false;
+            snapshot = new R5eFurnitureTransformSnapshot(
+                semanticRoot,
+                visualRoot,
+                _occupancy.Revision,
+                plan.Seat,
+                chair);
+            return true;
+        }
+
+        internal bool TryCaptureFurnitureTransformAggregate(out ulong hash, out int count)
+        {
+            unchecked
+            {
+                hash = 14695981039346656037UL;
+                count = 0;
+                for (var index = 0; index < _grid.Furniture.Count; index++)
+                {
+                    PlacedOfficeFurniture item = _grid.Furniture[index];
+                    if (!_furniturePresenter.TryGetSemanticRoot(
+                            item.FurnitureId,
+                            out Transform semanticRoot) || semanticRoot == null ||
+                        !_furniturePresenter.TryGetVisualRoot(
+                            item.FurnitureId,
+                            out Transform visualRoot) || visualRoot == null)
+                        return false;
+                    AddR5eFurnitureHash(ref hash, item.FurnitureId);
+                    AddR5eFurnitureTransform(ref hash, semanticRoot);
+                    AddR5eFurnitureTransform(ref hash, visualRoot);
+                    count++;
+                }
+                return count == _grid.Furniture.Count && count > 0;
+            }
+        }
+
+        private static void AddR5eFurnitureTransform(ref ulong hash, Transform transform)
+        {
+            AddR5eFurnitureHash(ref hash, transform.parent == null
+                ? 0
+                : transform.parent.GetInstanceID());
+            AddR5eFurnitureHash(ref hash, transform.position);
+            AddR5eFurnitureHash(ref hash, transform.rotation);
+            AddR5eFurnitureHash(ref hash, transform.lossyScale);
+        }
+
+        private static void AddR5eFurnitureHash(ref ulong hash, string value)
+        {
+            if (value == null)
+            {
+                AddR5eFurnitureHash(ref hash, 0);
+                return;
+            }
+            for (var index = 0; index < value.Length; index++)
+                AddR5eFurnitureHash(ref hash, value[index]);
+        }
+
+        private static void AddR5eFurnitureHash(ref ulong hash, Vector3 value)
+        {
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.x));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.y));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.z));
+        }
+
+        private static void AddR5eFurnitureHash(ref ulong hash, Quaternion value)
+        {
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.x));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.y));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.z));
+            AddR5eFurnitureHash(ref hash, BitConverter.SingleToInt32Bits(value.w));
+        }
+
+        private static void AddR5eFurnitureHash(ref ulong hash, int value)
+        {
+            unchecked
+            {
+                hash ^= (uint)value;
+                hash *= 1099511628211UL;
+            }
+        }
+
+        private OfficeSeatDockingPlan BuildDockingPlan(OfficeSeatSlot seat)
+        {
+            PlacedOfficeFurniture chair = _grid.Furniture.FirstOrDefault(item =>
+                string.Equals(item.FurnitureId, seat.ChairFurnitureId, StringComparison.Ordinal));
+            if (chair == null)
+                throw new InvalidOperationException("Seat has no chair furniture: " + seat.SeatId);
+            if (!_furniturePresenter.TryGetSemanticRoot(seat.ChairFurnitureId, out Transform semanticRoot) ||
+                semanticRoot == null ||
+                !_furniturePresenter.TryGetVisualRoot(seat.ChairFurnitureId, out Transform visualRoot) ||
+                visualRoot == null)
+                throw new InvalidOperationException("Seat chair Transform roots are unavailable: " + seat.SeatId);
+
+            Vector3 approach3 = SeatApproachWorld(seat);
+            Vector3 seatRoot3 = ChairFloorAnchorWorld(seat);
+            Vector3 pelvis3 = ChairSeatAnchorWorld(seat);
+            IReadOnlyList<OfficeSeatEgressCandidate> candidates =
+                OfficeSeatEgressRules.ResolveCandidates(seat);
+            var resolved = new OfficeSeatEgressAnchor[OfficeSeatEgressRules.CandidateCount];
+            for (var index = 0; index < candidates.Count; index++)
+            {
+                OfficeSeatEgressCandidate candidate = candidates[index];
+                resolved[index] = new OfficeSeatEgressAnchor(
+                    candidate.Kind,
+                    candidate.TargetCell,
+                    _presenter.CellCenterWorld(candidate.TargetCell));
+            }
+
+            // Dock is the authored approach-cell center. It is a real valid floor point outside
+            // the chair collision profile; the atomic state swap is the only path to SeatRoot.
+            var approach = new Vector2(approach3.x, approach3.y);
+            return new OfficeSeatDockingPlan(
+                seat,
+                approach,
+                approach,
+                new Vector2(seatRoot3.x, seatRoot3.y),
+                new Vector2(pelvis3.x, pelvis3.y),
+                resolved[0],
+                resolved[1],
+                resolved[2],
+                _occupancy.Revision,
+                new R5eFurnitureTransformSnapshot(
+                    semanticRoot,
+                    visualRoot,
+                    _occupancy.Revision,
+                    seat,
+                    chair));
+        }
+
         /// <summary>
         /// Kept as the seating hook, but sorting is no longer decided here.
         /// <see cref="OfficeRuntimeDepthSorter"/> orders the whole office from its footprints once
@@ -491,6 +669,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void ClearOcclusion(OfficeSeatSlot seat) =>
             _furniturePresenter.ClearSeatOcclusion(seat);
+
+        internal void ClearOcclusionAfterCommittedExitNoThrow(OfficeSeatSlot seat)
+        {
+            if (seat == null) return;
+            try
+            {
+                _furniturePresenter.ClearSeatOcclusion(seat);
+            }
+            catch (Exception exception)
+            {
+                // The authoritative actor/claim/occupancy transaction is already committed.
+                // Presentation cleanup is observed by the fail-closed visual producer and may
+                // never interrupt token completion or leave a half-published transaction.
+                Debug.LogException(exception);
+            }
+        }
 
         private OfficeSeatSlot AssignedSeat(string memberId)
         {

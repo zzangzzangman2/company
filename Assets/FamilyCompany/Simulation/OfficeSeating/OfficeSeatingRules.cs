@@ -193,11 +193,48 @@ namespace FamilyCompany.Simulation.OfficeSeating
 
     public sealed class OfficeSeatingState
     {
+        public enum PreparedRuntimeMutationKind
+        {
+            Occupy = 0,
+            Release = 1
+        }
+
+        public readonly struct PreparedRuntimeMutation
+        {
+            internal readonly OfficeSeatingState _owner;
+            internal readonly SeatState _seat;
+
+            internal PreparedRuntimeMutation(
+                OfficeSeatingState owner,
+                SeatState seat,
+                string memberId,
+                string token,
+                OfficeSeatMeaningState expectedState,
+                PreparedRuntimeMutationKind kind,
+                ulong version)
+            {
+                _owner = owner;
+                _seat = seat;
+                MemberId = memberId;
+                Token = token;
+                ExpectedState = expectedState;
+                Kind = kind;
+                Version = version;
+            }
+
+            public string MemberId { get; }
+            public string Token { get; }
+            public OfficeSeatMeaningState ExpectedState { get; }
+            public PreparedRuntimeMutationKind Kind { get; }
+            public ulong Version { get; }
+        }
+
         private readonly Dictionary<string, SeatState> _seats;
         private readonly List<string> _orderedSeatIds;
         private readonly Dictionary<string, string> _assignedSeatByMember;
         private readonly Dictionary<string, string> _activeSeatByMember;
         private readonly Dictionary<string, string> _activeSeatByToken;
+        private ulong _runtimeMutationVersion;
 
         public OfficeSeatingState(IEnumerable<OfficeSeatDefinition> seatDefinitions)
         {
@@ -275,6 +312,7 @@ namespace FamilyCompany.Simulation.OfficeSeating
                 _seats[previousSeatId].AssignedMemberId = null;
             target.AssignedMemberId = normalizedMemberId;
             _assignedSeatByMember[normalizedMemberId] = target.SeatId;
+            _runtimeMutationVersion++;
             result = Success(true, target, normalizedMemberId, previousSeatId);
             return true;
         }
@@ -300,6 +338,7 @@ namespace FamilyCompany.Simulation.OfficeSeating
 
             target.AssignedMemberId = null;
             _assignedSeatByMember.Remove(normalizedMemberId);
+            _runtimeMutationVersion++;
             result = Success(true, target, normalizedMemberId, string.Empty);
             return true;
         }
@@ -355,6 +394,7 @@ namespace FamilyCompany.Simulation.OfficeSeating
             target.RuntimeState = OfficeSeatMeaningState.Reserved;
             _activeSeatByMember[normalizedMemberId] = target.SeatId;
             _activeSeatByToken[normalizedToken] = target.SeatId;
+            _runtimeMutationVersion++;
             result = Success(true, target, normalizedMemberId, string.Empty);
             return true;
         }
@@ -392,6 +432,7 @@ namespace FamilyCompany.Simulation.OfficeSeating
                 return Failed(OfficeSeatOperationFailure.ReservationRequired, target, normalizedMemberId, out result);
 
             target.RuntimeState = OfficeSeatMeaningState.Occupied;
+            _runtimeMutationVersion++;
             result = Success(true, target, normalizedMemberId, string.Empty);
             return true;
         }
@@ -420,8 +461,126 @@ namespace FamilyCompany.Simulation.OfficeSeating
             target.RuntimeState = OfficeSeatMeaningState.Unassigned;
             _activeSeatByMember.Remove(normalizedMemberId);
             _activeSeatByToken.Remove(releasedToken);
+            _runtimeMutationVersion++;
             result = Success(true, target, normalizedMemberId, string.Empty);
             return true;
+        }
+
+        public bool TryPrepareRuntimeOccupy(
+            string seatId,
+            string memberId,
+            string token,
+            out PreparedRuntimeMutation prepared)
+        {
+            prepared = default;
+            if (!TryValidateClaimArguments(
+                    seatId,
+                    memberId,
+                    token,
+                    out SeatState seat,
+                    out string normalizedMemberId,
+                    out string normalizedToken,
+                    out _)) return false;
+            if (seat.RuntimeState != OfficeSeatMeaningState.Reserved ||
+                !string.Equals(seat.RuntimeMemberId, normalizedMemberId, StringComparison.Ordinal) ||
+                !string.Equals(seat.Token, normalizedToken, StringComparison.Ordinal)) return false;
+            prepared = new PreparedRuntimeMutation(
+                this,
+                seat,
+                normalizedMemberId,
+                normalizedToken,
+                OfficeSeatMeaningState.Reserved,
+                PreparedRuntimeMutationKind.Occupy,
+                _runtimeMutationVersion);
+            return true;
+        }
+
+        public bool TryPrepareRuntimeRelease(
+            string seatId,
+            string memberId,
+            string token,
+            out PreparedRuntimeMutation prepared)
+        {
+            prepared = default;
+            if (!TryValidateClaimArguments(
+                    seatId,
+                    memberId,
+                    token,
+                    out SeatState seat,
+                    out string normalizedMemberId,
+                    out string normalizedToken,
+                    out _)) return false;
+            if (seat.RuntimeState != OfficeSeatMeaningState.Occupied ||
+                !string.Equals(seat.RuntimeMemberId, normalizedMemberId, StringComparison.Ordinal) ||
+                !string.Equals(seat.Token, normalizedToken, StringComparison.Ordinal)) return false;
+            prepared = new PreparedRuntimeMutation(
+                this,
+                seat,
+                normalizedMemberId,
+                normalizedToken,
+                OfficeSeatMeaningState.Occupied,
+                PreparedRuntimeMutationKind.Release,
+                _runtimeMutationVersion);
+            return true;
+        }
+
+        public bool IsPreparedRuntimeMutationCurrent(in PreparedRuntimeMutation prepared)
+        {
+            return ReferenceEquals(prepared._owner, this) &&
+                   prepared._seat != null &&
+                   prepared.Version == _runtimeMutationVersion &&
+                   prepared._seat.RuntimeState == prepared.ExpectedState &&
+                   string.Equals(prepared._seat.RuntimeMemberId, prepared.MemberId, StringComparison.Ordinal) &&
+                   string.Equals(prepared._seat.Token, prepared.Token, StringComparison.Ordinal);
+        }
+
+        public void CommitPreparedRuntimeOccupy(in PreparedRuntimeMutation prepared)
+        {
+            if (!IsPreparedRuntimeMutationCurrent(prepared) ||
+                prepared.Kind != PreparedRuntimeMutationKind.Occupy)
+                throw new InvalidOperationException("Prepared seat occupy mutation is stale.");
+            prepared._seat.RuntimeState = OfficeSeatMeaningState.Occupied;
+            _runtimeMutationVersion++;
+        }
+
+        public void CommitPreparedRuntimeRelease(in PreparedRuntimeMutation prepared)
+        {
+            if (!IsPreparedRuntimeMutationCurrent(prepared) ||
+                prepared.Kind != PreparedRuntimeMutationKind.Release)
+                throw new InvalidOperationException("Prepared seat release mutation is stale.");
+            string releasedToken = prepared._seat.Token;
+            prepared._seat.RuntimeMemberId = null;
+            prepared._seat.Token = null;
+            prepared._seat.RuntimeState = OfficeSeatMeaningState.Unassigned;
+            _activeSeatByMember.Remove(prepared.MemberId);
+            _activeSeatByToken.Remove(releasedToken);
+            _runtimeMutationVersion++;
+        }
+
+        public void RollbackPreparedRuntimeOccupy(in PreparedRuntimeMutation prepared)
+        {
+            if (!ReferenceEquals(prepared._owner, this) || prepared._seat == null ||
+                prepared.Kind != PreparedRuntimeMutationKind.Occupy ||
+                _runtimeMutationVersion != prepared.Version + 1UL ||
+                prepared._seat.RuntimeState != OfficeSeatMeaningState.Occupied)
+                throw new InvalidOperationException("Committed seat occupy mutation cannot be rolled back exactly.");
+            prepared._seat.RuntimeState = OfficeSeatMeaningState.Reserved;
+            _runtimeMutationVersion = prepared.Version;
+        }
+
+        public void RollbackPreparedRuntimeRelease(in PreparedRuntimeMutation prepared)
+        {
+            if (!ReferenceEquals(prepared._owner, this) || prepared._seat == null ||
+                prepared.Kind != PreparedRuntimeMutationKind.Release ||
+                _runtimeMutationVersion != prepared.Version + 1UL ||
+                prepared._seat.RuntimeState != OfficeSeatMeaningState.Unassigned)
+                throw new InvalidOperationException("Committed seat release mutation cannot be rolled back exactly.");
+            prepared._seat.RuntimeMemberId = prepared.MemberId;
+            prepared._seat.Token = prepared.Token;
+            prepared._seat.RuntimeState = OfficeSeatMeaningState.Occupied;
+            _activeSeatByMember[prepared.MemberId] = prepared._seat.SeatId;
+            _activeSeatByToken[prepared.Token] = prepared._seat.SeatId;
+            _runtimeMutationVersion = prepared.Version;
         }
 
         public bool TryRelease(string token, out OfficeSeatOperationResult result)
@@ -556,6 +715,7 @@ namespace FamilyCompany.Simulation.OfficeSeating
                 _seats[assignment.SeatId].AssignedMemberId = assignment.MemberId;
                 _assignedSeatByMember.Add(assignment.MemberId, assignment.SeatId);
             }
+            _runtimeMutationVersion++;
 
             result = new OfficeSeatingImportResult(true, OfficeSeatingImportFailure.None, string.Empty, normalized.Count);
             return true;
@@ -667,7 +827,7 @@ namespace FamilyCompany.Simulation.OfficeSeating
             return false;
         }
 
-        private sealed class SeatState
+        internal sealed class SeatState
         {
             public SeatState(string seatId, OfficeSeatPosition position)
             {

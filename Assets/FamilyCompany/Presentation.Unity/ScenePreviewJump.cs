@@ -1759,17 +1759,87 @@ namespace FamilyCompany.Presentation.Unity
         {
             Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
             if (actors == null) yield break;
+            var initiallySeated = QaMemberIds.ToDictionary(
+                memberId => memberId,
+                memberId => actors[memberId].IsSeated,
+                StringComparer.Ordinal);
             foreach (string memberId in QaMemberIds)
             {
                 actors[memberId].BeginQaControl();
+                if (!actors[memberId].IsSeated ||
+                    actors[memberId].QaRequestStandWithOutwardRoute()) continue;
+                FailPlayerQa(54, "could not establish a standing pre-dock state for " + memberId);
+                yield break;
+            }
+            float resetStarted = Time.time;
+            while (Time.time - resetStarted < 12f && QaMemberIds.Any(memberId =>
+                       initiallySeated[memberId] &&
+                       (actors[memberId].IsOccupyingSeat ||
+                        !TryObserveClassicFirstWalk(actors[memberId], out _))))
+                yield return null;
+            if (QaMemberIds.Any(memberId =>
+                    initiallySeated[memberId] &&
+                    (actors[memberId].IsOccupyingSeat ||
+                     !TryObserveClassicFirstWalk(actors[memberId], out int direction) ||
+                     direction != actors[memberId].R5eLastAtomicExitDirection)))
+            {
+                FailPlayerQa(54, "could not complete the standing pre-dock reset for all actors");
+                yield break;
+            }
+
+            var entryTicksBeforeDock = QaMemberIds.ToDictionary(
+                memberId => memberId,
+                memberId => actors[memberId].R5eAtomicPlacementTick,
+                StringComparer.Ordinal);
+            var preDockTicks = QaMemberIds.ToDictionary(
+                memberId => memberId,
+                _ => 0UL,
+                StringComparer.Ordinal);
+            foreach (string memberId in QaMemberIds)
+            {
                 if (actors[memberId].QaBeginSeatedWork("four-seat-work")) continue;
                 FailPlayerQa(54, "seat work route could not be created for " + memberId);
                 yield break;
             }
             float started = Time.time;
-            while (Time.time - started < 45f && QaMemberIds.Any(memberId => !actors[memberId].IsSeated))
+            while (Time.time - started < 45f && QaMemberIds.Any(memberId =>
+                       !actors[memberId].IsSeated ||
+                       actors[memberId].R5eAtomicPlacementTick <= entryTicksBeforeDock[memberId]))
+            {
+                foreach (string memberId in QaMemberIds)
+                {
+                    OfficeRuntimeAgent actor = actors[memberId];
+                    if (actor.Phase == OfficeRuntimeAgentPhase.SittingDown ||
+                        actor.Phase == OfficeRuntimeAgentPhase.StandingUp ||
+                        actor.CurrentSeatingClip == OfficeSeatingAnimationClip.SitDown ||
+                        actor.CurrentSeatingClip == OfficeSeatingAnimationClip.StandUp ||
+                        actor.ObservedSitDownFrameCount != 0 ||
+                        actor.ObservedStandUpFrameCount != 0 ||
+                        IsClassicTransitionSprite(actor.CurrentSpriteName))
+                    {
+                        FailPlayerQa(55, "classic atomic dock rendered a forbidden transition for " +
+                                         memberId);
+                        yield break;
+                    }
+                    if (preDockTicks[memberId] == 0 &&
+                        actor.Phase == OfficeRuntimeAgentPhase.RotatingToSeat &&
+                        actor.IsSeatEntryPresentationPlanted &&
+                        !actor.CurrentSeatingClip.HasValue &&
+                        actor.R5eCurrentVelocityMagnitude <= 0.0001f &&
+                        actor.R5eLastActualDisplacementMagnitude <= 0.0001f &&
+                        actor.VisibleFrameMovementWorld <= 0.0001f)
+                        preDockTicks[memberId] = actor.R5eRuntimeTick;
+                }
                 yield return null;
-            if (QaMemberIds.Any(memberId => !actors[memberId].IsSeated))
+            }
+            if (QaMemberIds.Any(memberId =>
+                    !actors[memberId].IsSeated ||
+                    preDockTicks[memberId] == 0 ||
+                    actors[memberId].R5eAtomicPlacementTick <= preDockTicks[memberId] ||
+                    actors[memberId].R5eAtomicPlacementTick <= entryTicksBeforeDock[memberId] ||
+                    actors[memberId].CurrentSeatingClip != OfficeSeatingAnimationClip.Work ||
+                    actors[memberId].ObservedSitDownFrameCount != 0 ||
+                    actors[memberId].ObservedStandUpFrameCount != 0))
             {
                 var goals = QaMemberIds.ToDictionary(
                     memberId => memberId,
@@ -1777,7 +1847,8 @@ namespace FamilyCompany.Presentation.Unity
                     StringComparer.Ordinal);
                 FailPlayerQa(
                     55,
-                    "all four assigned workstations were not seated within 45 simulated seconds | " +
+                    "all four assigned workstations did not perform one planted-to-seated atomic dock " +
+                    "within 45 simulated seconds | " +
                     QaActorSummary(actors, goals) + " | seats=" +
                     string.Join(",", QaMemberIds.Select(memberId =>
                         memberId + ":" + actors[memberId].ActiveSeatId)) + " | " +
@@ -1794,15 +1865,18 @@ namespace FamilyCompany.Presentation.Unity
                        !HasObservedWorkPresentation(actors[memberId]) ||
                        actors[memberId].TypingContactSampleCount == 0))
                 yield return null;
-            if (QaMemberIds.Any(memberId => actors[memberId].ObservedSitDownFrameCount < 4 ||
+            if (QaMemberIds.Any(memberId => actors[memberId].ObservedSitDownFrameCount != 0 ||
+                                                actors[memberId].CurrentSeatingClip !=
+                                                OfficeSeatingAnimationClip.Work ||
                                                 !HasObservedWorkPresentation(actors[memberId]) ||
                                                 actors[memberId].TypingContactSampleCount == 0))
             {
                 FailPlayerQa(
                     56,
-                    "animated seating did not expose every SitDown/work-action frame: " +
+                    "classic atomic docking rendered a transition clip or missed Work: " +
                     string.Join(",", QaMemberIds.Select(memberId =>
                         $"{memberId}=sit{actors[memberId].ObservedSitDownFrameCount}/" +
+                        $"clip{actors[memberId].CurrentSeatingClip}/" +
                         $"work{actors[memberId].ObservedWorkFrameCount}/" +
                         $"hook{actors[memberId].IsOfficeWorkAnimationHookActive}:" +
                         actors[memberId].ObservedOfficeWorkHookSpriteCount)));
@@ -1842,7 +1916,8 @@ namespace FamilyCompany.Presentation.Unity
                     $"rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                     $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
                     $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
-                    $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
+                    $"classic=sit{actor.ObservedSitDownFrameCount}/stand" +
+                    $"{actor.ObservedStandUpFrameCount} work={actor.ObservedWorkFrameCount}/6 " +
                     $"workHook={actor.IsOfficeWorkAnimationHookActive}:" +
                     $"{actor.ObservedOfficeWorkHookSpriteCount} " +
                     $"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px " +
@@ -1855,15 +1930,21 @@ namespace FamilyCompany.Presentation.Unity
                 // semantic seat remains exact; taller/shorter bodies may pull the rendered chair
                 // by up to one tenth of a 160px tile without leaving the workstation footprint.
                 bool presentationMatches = actor.ChairDeskErrorPx <= 16f &&
+                    actor.SeatContactErrorPx <= 1f &&
                     actor.TypingContactSampleCount > 0 &&
                     actor.MaxTypingSeatContactErrorPx <= 6f &&
                     actor.MaxTypingHandWorkErrorPx <= 4f &&
                     actor.VisualRotationErrorDegrees <= 0.01f &&
                     actor.VisualScaleDeviation <= 0.001f && actor.CurrentDirection == 3 &&
                     actor.SeatingPresentationMode == OfficeSeatingPresentationMode.Animated &&
-                    actor.ObservedSitDownFrameCount == 4 && HasObservedWorkPresentation(actor) &&
+                    actor.ObservedSitDownFrameCount == 0 &&
+                    actor.ObservedStandUpFrameCount == 0 &&
+                    actor.CurrentSeatingClip == OfficeSeatingAnimationClip.Work &&
+                    actor.R5eAtomicPlacementTick != 0 &&
+                    actor.WasSeatFacingAlignedBeforeSitDown &&
+                    HasObservedWorkPresentation(actor) &&
                     actor.MaxAnimatedAnchorErrorPx <= 1f &&
-                    actor.MaxTransitionPelvisStepPx <= 2f &&
+                    actor.MaxTransitionPelvisStepPx <= 0.001f &&
                     actor.TransitionMonotonicViolationCount == 0 &&
                     (actor.IsOfficeWorkAnimationHookActive
                         ? IsOfficeWorkActionSprite(memberId, actor.CurrentSpriteName)
@@ -1880,7 +1961,8 @@ namespace FamilyCompany.Presentation.Unity
                         $"rotation={actor.VisualRotationErrorDegrees:F4}deg " +
                         $"scaleDeviation={actor.VisualScaleDeviation:P3} direction={actor.CurrentDirection} " +
                         $"sprite={actor.CurrentSpriteName} mode={actor.SeatingPresentationMode} " +
-                        $"frames={actor.ObservedSitDownFrameCount}/4,{actor.ObservedWorkFrameCount}/6 " +
+                        $"classic=sit{actor.ObservedSitDownFrameCount}/stand" +
+                        $"{actor.ObservedStandUpFrameCount} work={actor.ObservedWorkFrameCount}/6 " +
                         $"workHook={actor.IsOfficeWorkAnimationHookActive}:" +
                         $"{actor.ObservedOfficeWorkHookSpriteCount} " +
                         $"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px " +
@@ -1925,41 +2007,91 @@ namespace FamilyCompany.Presentation.Unity
                 yield break;
             }
             if (!RequireZeroActualViolations("four-seat-work", 58)) yield break;
+            var entryAtomicTicks = QaMemberIds.ToDictionary(
+                memberId => memberId,
+                memberId => actors[memberId].R5eAtomicPlacementTick,
+                StringComparer.Ordinal);
+            var firstWalkObserved = QaMemberIds.ToDictionary(
+                memberId => memberId,
+                _ => false,
+                StringComparer.Ordinal);
+            var firstWalkTicks = QaMemberIds.ToDictionary(
+                memberId => memberId,
+                _ => 0UL,
+                StringComparer.Ordinal);
+            var firstWalkDirections = QaMemberIds.ToDictionary(
+                memberId => memberId,
+                _ => -1,
+                StringComparer.Ordinal);
             foreach (string memberId in QaMemberIds)
             {
-                if (actors[memberId].QaRequestStand()) continue;
-                FailPlayerQa(58, "animated stand-up could not begin for " + memberId);
+                if (actors[memberId].QaRequestStandWithOutwardRoute()) continue;
+                FailPlayerQa(58, "classic atomic exit could not begin for " + memberId);
                 yield break;
             }
             float standStarted = Time.time;
-            while (Time.time - standStarted < 12f &&
-                   QaMemberIds.Any(memberId => actors[memberId].ObservedStandUpFrameCount < 4))
+            while (Time.time - standStarted < 12f && firstWalkObserved.Values.Any(value => !value))
+            {
+                foreach (string memberId in QaMemberIds)
+                {
+                    if (firstWalkObserved[memberId] ||
+                        !TryObserveClassicFirstWalk(actors[memberId], out int direction)) continue;
+                    firstWalkObserved[memberId] = true;
+                    firstWalkTicks[memberId] = actors[memberId].R5eRuntimeTick;
+                    firstWalkDirections[memberId] = direction;
+                }
                 yield return null;
-            if (QaMemberIds.Any(memberId => actors[memberId].ObservedStandUpFrameCount < 4))
+            }
+            if (QaMemberIds.Any(memberId =>
+                    actors[memberId].ObservedSitDownFrameCount != 0 ||
+                    actors[memberId].ObservedStandUpFrameCount != 0 ||
+                    !actors[memberId].R5eLastAtomicExitReservationBacked ||
+                    !actors[memberId].HasCompletedSeatEgress ||
+                    actors[memberId].R5eLastAtomicExitTick <= entryAtomicTicks[memberId] ||
+                    actors[memberId].R5eTurnCompleteTick <=
+                    actors[memberId].R5eLastAtomicExitTick ||
+                    !firstWalkObserved[memberId] ||
+                    firstWalkTicks[memberId] <= actors[memberId].R5eTurnCompleteTick ||
+                    firstWalkDirections[memberId] !=
+                    actors[memberId].R5eLastAtomicExitDirection))
             {
                 FailPlayerQa(
                     58,
-                    "animated seating did not expose every StandUp frame: " +
+                    "classic atomic exit/reservation/first-walk contract failed: " +
                     string.Join(",", QaMemberIds.Select(memberId =>
-                        $"{memberId}=stand{actors[memberId].ObservedStandUpFrameCount}")));
+                        $"{memberId}=clips{actors[memberId].ObservedSitDownFrameCount}/" +
+                        $"{actors[memberId].ObservedStandUpFrameCount} reserved=" +
+                        $"{actors[memberId].R5eLastAtomicExitReservationBacked} " +
+                        $"ticks={entryAtomicTicks[memberId]}/" +
+                        $"{actors[memberId].R5eLastAtomicExitTick}/" +
+                        $"{actors[memberId].R5eTurnCompleteTick}/" +
+                        $"{firstWalkTicks[memberId]} direction=" +
+                        $"{actors[memberId].R5eLastAtomicExitDirection}/" +
+                        firstWalkDirections[memberId])));
                 yield break;
             }
             if (QaMemberIds.Any(memberId =>
-                    actors[memberId].MaxTransitionPelvisStepPx > 2f ||
+                    actors[memberId].MaxTransitionPelvisStepPx > 0.001f ||
                     actors[memberId].TransitionMonotonicViolationCount != 0))
             {
                 FailPlayerQa(
                     58,
-                    "continuous seating motion failed: " +
+                    "classic atomic path rendered intermediate pelvis motion: " +
                     string.Join(",", QaMemberIds.Select(memberId =>
                         $"{memberId}=maxStep{actors[memberId].MaxTransitionPelvisStepPx:F3}px/" +
                         $"reverse{actors[memberId].TransitionMonotonicViolationCount}")));
                 yield break;
             }
+            string atomicExitCapture = QaArtifactPath("starter-office-four-seat-atomic-exit.png");
+            if (!TryCaptureQaCameraFrame(atomicExitCapture, out string atomicExitCaptureFailure))
+            {
+                FailPlayerQa(58, "classic atomic exit capture failed: " + atomicExitCaptureFailure);
+                yield break;
+            }
             Debug.Log(
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
-                " | animation=4x(SitDown4+WorkActionHook>=6+StandUp4) mode=Animated " +
-                "placement=continuous,maxPelvisStep<=2px,monotonic,anchorError<=1px," +
+                " | classicAtomic=4x(Dock-Face-AtomicWork+ReservedAtomicExit-Turn-LaterFirstWalk) " +
+                "transitionClips=0 intermediatePelvisMotion=0 anchorError<=1px " +
                 "typingSeat<=6px,typingHand<=4px,chairPullout<=16px," +
                 "rotation=0,scale=canonical,sorting=chairFloor+1 | " +
                 OccupancyMetricSummary());
@@ -1980,6 +2112,32 @@ namespace FamilyCompany.Presentation.Unity
             return spriteName.StartsWith(memberId + "_typing_", StringComparison.Ordinal) ||
                    spriteName.StartsWith(memberId + "_mouse_", StringComparison.Ordinal) ||
                    spriteName.StartsWith(memberId + "_drink_", StringComparison.Ordinal);
+        }
+
+        private static bool IsClassicTransitionSprite(string spriteName)
+        {
+            if (string.IsNullOrWhiteSpace(spriteName)) return false;
+            return spriteName.IndexOf("sit_down", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   spriteName.IndexOf("sitdown", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   spriteName.IndexOf("stand_up", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   spriteName.IndexOf("standup", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool TryObserveClassicFirstWalk(
+            OfficeRuntimeAgent actor,
+            out int direction)
+        {
+            direction = -1;
+            if (actor == null || !actor.HasCompletedSeatEgress ||
+                actor.R5eTurnCompleteTick <= actor.R5eLastAtomicExitTick ||
+                actor.R5eRuntimeTick <= actor.R5eTurnCompleteTick) return false;
+            Vector2 displacement = actor.Position - actor.LastCompletedSeatEgressWorld;
+            if (displacement.magnitude <= OfficeRuntimeTraceCoordinator.StationaryEpsilon)
+                return false;
+            direction = DirectionalSpriteAnimator.ResolveTileDirection(
+                displacement,
+                actor.R5eLastAtomicExitDirection);
+            return true;
         }
 
         private static string QaArtifactPath(string fileName)

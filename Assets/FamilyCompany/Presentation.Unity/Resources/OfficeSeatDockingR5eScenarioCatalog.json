@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "classic-seat-docking-r5e-scenarios-v1",
+  "seed": 58193017,
+  "actors": ["player", "older_sister", "father", "mother"],
+  "chairRotations": [0, 90, 180, 270],
+  "directions": [
+    "south", "southwest", "west", "northwest",
+    "north", "northeast", "east", "southeast"
+  ],
+  "baseMatrixCaseCount": 128,
+  "expectedTotalCaseCount": 158,
+  "layouts": [
+    { "id": "r5e-open-floor", "kind": "open", "seed": 58193017 },
+    { "id": "r5e-seeded-obstacles-a", "kind": "seeded-obstacles", "seed": 58193018 },
+    { "id": "r5e-seeded-obstacles-b", "kind": "seeded-obstacles", "seed": 58193019 },
+    { "id": "r5e-all-exits-blocked", "kind": "all-exits-blocked", "seed": 58193020 }
+  ],
+  "contentionPermutations": [
+    { "order": ["player", "older_sister", "father", "mother"] },
+    { "order": ["mother", "father", "older_sister", "player"] },
+    { "order": ["father", "player", "mother", "older_sister"] },
+    { "order": ["older_sister", "mother", "player", "father"] }
+  ],
+  "faultInjectionIds": [1, 2, 3, 4, 5, 6],
+  "requiredEvents": [
+    "Prepare", "Commit", "Rollback", "Rebase", "TurnComplete", "FirstWalk",
+    "PreClear", "PostClear"
+  ],
+  "acceptance": {
+    "allExitsBlockedCommitCount": 0,
+    "duplicateOccupancyCount": 0,
+    "clearMaskedViolationCount": 0,
+    "wrongFacingCount": 0,
+    "strafeCount": 0,
+    "minimumForwardDot": 0.92,
+    "maximumRenderedDisplacementWorld": 0.099,
+    "maximumGameplayFrameMs": 50.0
+  }
+}

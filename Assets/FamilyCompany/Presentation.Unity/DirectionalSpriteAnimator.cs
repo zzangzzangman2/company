@@ -587,6 +587,293 @@ namespace FamilyCompany.Presentation.Unity
             return frames[OfficeSeatingAnimationFrames.FlattenedIndex(clip, direction, frame)];
         }
 
+        public bool CanEnterCompletedSeatedWorkAfterAtomicPlacement(int direction)
+        {
+            if (!HasOfficeSeatingFrames || targetRenderer == null ||
+                direction < 0 || direction >= DirectionCount ||
+                _seatingClip.HasValue ||
+                _lastDirection != direction ||
+                !IsOfficeSeatingEntryPlanted) return false;
+            return true;
+        }
+
+        public void EnterCompletedSeatedWorkAfterAtomicPlacement(int direction)
+        {
+            _worldVelocity = Vector3.zero;
+            _lastDirection = direction;
+            _officeSeatingFacingLocked = true;
+            _lockedOfficeSeatingDirection = direction;
+            ResetOfficeSeatingDirectionMetrics();
+            ResetTileFacingState(direction);
+            ResetTileGaitState(direction);
+            _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
+            _seatingClip = OfficeSeatingAnimationClip.Work;
+            _seatingElapsedSeconds = 0f;
+            _seatingProgress01 = 1f;
+            _seatingFrame = 0;
+            _seatingTransitionComplete = false;
+            targetRenderer.flipX = false;
+            targetRenderer.sprite = GetOfficeSeatingFrame(
+                OfficeSeatingAnimationClip.Work,
+                direction,
+                0);
+            CaptureAppliedSpriteDirection(targetRenderer.sprite);
+        }
+
+        public bool CanLeaveCompletedSeatedWorkAfterAtomicPlacement =>
+            HasOfficeSeatingFrames &&
+            targetRenderer != null &&
+            _officeSeatingFacingLocked &&
+            _seatingClip.HasValue &&
+            _seatingClip.Value == OfficeSeatingAnimationClip.Work &&
+            IsOfficeWorkSafeToStand;
+
+        public void LeaveCompletedSeatedWorkAfterAtomicPlacement(int standingDirection)
+        {
+            _seatingClip = null;
+            _seatingElapsedSeconds = 0f;
+            _seatingProgress01 = 0f;
+            _seatingFrame = 0;
+            _seatingTransitionComplete = false;
+            _officeSeatingFacingLocked = false;
+            _lockedOfficeSeatingDirection = -1;
+            _worldVelocity = Vector3.zero;
+            _lastDirection = Mathf.Clamp(standingDirection, 0, DirectionCount - 1);
+            _walkFrame = Mathf.Clamp(idleWalkFrame, 0, WalkFrameCount - 1);
+            ResetTileFacingState(_lastDirection);
+            ResetTileGaitState(_lastDirection);
+            ApplyFrame();
+        }
+
+        internal AtomicPresentationSnapshot CaptureAtomicPresentationSnapshot() =>
+            new AtomicPresentationSnapshot(
+                _worldVelocity,
+                _frameClock,
+                _walkFrame,
+                _lastDirection,
+                _seatingClip,
+                _seatingElapsedSeconds,
+                _seatingProgress01,
+                _seatingFrame,
+                _seatingTransitionComplete,
+                _officeWorkSession,
+                _tileDisplacementDirection,
+                _tileFrameDisplacement,
+                _tileFrameTravelDistance,
+                _tileSemanticDisplacement,
+                _tileFrameDeltaTime,
+                _tileActualSpeed,
+                _tileIsMoving,
+                _tileFrameCollisionProjected,
+                _tilePresentationFrameOpen,
+                _tileFacingState,
+                _tileFacingStateInitialized,
+                _lastSemanticDirection,
+                _lastMotionDirection,
+                _usedSemanticHeading,
+                _lastFacingAlignmentDot,
+                _lastFacingAngularErrorDegrees,
+                _tileGaitState,
+                _tileGaitStateInitialized,
+                _officeSeatingFacingLocked,
+                _lockedOfficeSeatingDirection,
+                _officeSeatingFacingViolationCount,
+                _maximumOfficeSeatingFacingDelta,
+                _officeWorkSpriteDirectionViolationCount,
+                _maximumOfficeWorkSpriteDirectionDelta,
+                _officeAppliedSpriteDirectionViolationCount,
+                _maximumOfficeAppliedSpriteDirectionDelta,
+                _currentAppliedSpriteDirection,
+                _currentAppliedSpriteDirectionMatchesLock,
+                targetRenderer == null ? null : targetRenderer.sprite,
+                targetRenderer != null && targetRenderer.flipX);
+
+        internal void RestoreAtomicPresentationSnapshot(in AtomicPresentationSnapshot snapshot)
+        {
+            _worldVelocity = snapshot.WorldVelocity;
+            _frameClock = snapshot.FrameClock;
+            _walkFrame = snapshot.WalkFrame;
+            _lastDirection = snapshot.LastDirection;
+            _seatingClip = snapshot.SeatingClip;
+            _seatingElapsedSeconds = snapshot.SeatingElapsedSeconds;
+            _seatingProgress01 = snapshot.SeatingProgress;
+            _seatingFrame = snapshot.SeatingFrame;
+            _seatingTransitionComplete = snapshot.SeatingTransitionComplete;
+            _officeWorkSession = snapshot.WorkSession;
+            _tileDisplacementDirection = snapshot.TileDisplacementDirection;
+            _tileFrameDisplacement = snapshot.TileFrameDisplacement;
+            _tileFrameTravelDistance = snapshot.TileFrameTravelDistance;
+            _tileSemanticDisplacement = snapshot.TileSemanticDisplacement;
+            _tileFrameDeltaTime = snapshot.TileFrameDeltaTime;
+            _tileActualSpeed = snapshot.TileActualSpeed;
+            _tileIsMoving = snapshot.TileIsMoving;
+            _tileFrameCollisionProjected = snapshot.TileCollisionProjected;
+            _tilePresentationFrameOpen = snapshot.TilePresentationFrameOpen;
+            _tileFacingState = snapshot.TileFacingState;
+            _tileFacingStateInitialized = snapshot.TileFacingStateInitialized;
+            _lastSemanticDirection = snapshot.LastSemanticDirection;
+            _lastMotionDirection = snapshot.LastMotionDirection;
+            _usedSemanticHeading = snapshot.UsedSemanticHeading;
+            _lastFacingAlignmentDot = snapshot.LastFacingAlignmentDot;
+            _lastFacingAngularErrorDegrees = snapshot.LastFacingAngularErrorDegrees;
+            _tileGaitState = snapshot.TileGaitState;
+            _tileGaitStateInitialized = snapshot.TileGaitStateInitialized;
+            _officeSeatingFacingLocked = snapshot.OfficeSeatingFacingLocked;
+            _lockedOfficeSeatingDirection = snapshot.LockedOfficeSeatingDirection;
+            _officeSeatingFacingViolationCount = snapshot.OfficeSeatingFacingViolationCount;
+            _maximumOfficeSeatingFacingDelta = snapshot.MaximumOfficeSeatingFacingDelta;
+            _officeWorkSpriteDirectionViolationCount = snapshot.OfficeWorkSpriteDirectionViolationCount;
+            _maximumOfficeWorkSpriteDirectionDelta = snapshot.MaximumOfficeWorkSpriteDirectionDelta;
+            _officeAppliedSpriteDirectionViolationCount = snapshot.OfficeAppliedSpriteDirectionViolationCount;
+            _maximumOfficeAppliedSpriteDirectionDelta = snapshot.MaximumOfficeAppliedSpriteDirectionDelta;
+            _currentAppliedSpriteDirection = snapshot.CurrentAppliedSpriteDirection;
+            _currentAppliedSpriteDirectionMatchesLock = snapshot.CurrentAppliedSpriteDirectionMatchesLock;
+            if (targetRenderer != null)
+            {
+                targetRenderer.sprite = snapshot.RendererSprite;
+                targetRenderer.flipX = snapshot.RendererFlipX;
+            }
+        }
+
+        internal void CompleteAtomicPresentationSessionNoThrow()
+        {
+            IDisposable session = _officeWorkSession;
+            _officeWorkSession = null;
+            if (session == null) return;
+            try
+            {
+                session.Dispose();
+            }
+            catch (Exception)
+            {
+                // Presentation hooks are optional. Their teardown cannot invalidate an already
+                // published canonical seat/exit transaction or re-enter the movement scheduler.
+            }
+        }
+
+        internal void RebaseTileMotionAfterAtomicPlacement(int direction)
+        {
+            _tileDisplacementDirection = true;
+            _tileFrameDisplacement = Vector2.zero;
+            _tileFrameTravelDistance = 0f;
+            _tileSemanticDisplacement = Vector2.zero;
+            _tileFrameDeltaTime = 0f;
+            _tileActualSpeed = 0f;
+            _tileIsMoving = false;
+            _tileFrameCollisionProjected = false;
+            _worldVelocity = Vector3.zero;
+            _usedSemanticHeading = false;
+            _lastFacingAlignmentDot = 1f;
+            _lastFacingAngularErrorDegrees = 0f;
+            ResetTileFacingState(Mathf.Clamp(direction, 0, DirectionCount - 1));
+            ResetTileGaitState(Mathf.Clamp(direction, 0, DirectionCount - 1));
+        }
+
+        internal readonly struct AtomicPresentationSnapshot
+        {
+            public AtomicPresentationSnapshot(
+                Vector3 worldVelocity, float frameClock, int walkFrame, int lastDirection,
+                OfficeSeatingAnimationClip? seatingClip, float seatingElapsedSeconds,
+                float seatingProgress, int seatingFrame, bool seatingTransitionComplete,
+                IOfficeSeatedWorkAnimationSession workSession, bool tileDisplacementDirection,
+                Vector2 tileFrameDisplacement, float tileFrameTravelDistance,
+                Vector2 tileSemanticDisplacement, float tileFrameDeltaTime, float tileActualSpeed,
+                bool tileIsMoving, bool tileCollisionProjected, bool tilePresentationFrameOpen,
+                OfficeLocomotionFacingState tileFacingState, bool tileFacingStateInitialized,
+                int lastSemanticDirection, int lastMotionDirection, bool usedSemanticHeading,
+                float lastFacingAlignmentDot, float lastFacingAngularErrorDegrees,
+                OfficeLocomotionGaitState tileGaitState, bool tileGaitStateInitialized,
+                bool officeSeatingFacingLocked, int lockedOfficeSeatingDirection,
+                int officeSeatingFacingViolationCount, int maximumOfficeSeatingFacingDelta,
+                int officeWorkSpriteDirectionViolationCount, int maximumOfficeWorkSpriteDirectionDelta,
+                int officeAppliedSpriteDirectionViolationCount, int maximumOfficeAppliedSpriteDirectionDelta,
+                int currentAppliedSpriteDirection, bool currentAppliedSpriteDirectionMatchesLock,
+                Sprite rendererSprite, bool rendererFlipX)
+            {
+                WorldVelocity = worldVelocity;
+                FrameClock = frameClock;
+                WalkFrame = walkFrame;
+                LastDirection = lastDirection;
+                SeatingClip = seatingClip;
+                SeatingElapsedSeconds = seatingElapsedSeconds;
+                SeatingProgress = seatingProgress;
+                SeatingFrame = seatingFrame;
+                SeatingTransitionComplete = seatingTransitionComplete;
+                WorkSession = workSession;
+                TileDisplacementDirection = tileDisplacementDirection;
+                TileFrameDisplacement = tileFrameDisplacement;
+                TileFrameTravelDistance = tileFrameTravelDistance;
+                TileSemanticDisplacement = tileSemanticDisplacement;
+                TileFrameDeltaTime = tileFrameDeltaTime;
+                TileActualSpeed = tileActualSpeed;
+                TileIsMoving = tileIsMoving;
+                TileCollisionProjected = tileCollisionProjected;
+                TilePresentationFrameOpen = tilePresentationFrameOpen;
+                TileFacingState = tileFacingState;
+                TileFacingStateInitialized = tileFacingStateInitialized;
+                LastSemanticDirection = lastSemanticDirection;
+                LastMotionDirection = lastMotionDirection;
+                UsedSemanticHeading = usedSemanticHeading;
+                LastFacingAlignmentDot = lastFacingAlignmentDot;
+                LastFacingAngularErrorDegrees = lastFacingAngularErrorDegrees;
+                TileGaitState = tileGaitState;
+                TileGaitStateInitialized = tileGaitStateInitialized;
+                OfficeSeatingFacingLocked = officeSeatingFacingLocked;
+                LockedOfficeSeatingDirection = lockedOfficeSeatingDirection;
+                OfficeSeatingFacingViolationCount = officeSeatingFacingViolationCount;
+                MaximumOfficeSeatingFacingDelta = maximumOfficeSeatingFacingDelta;
+                OfficeWorkSpriteDirectionViolationCount = officeWorkSpriteDirectionViolationCount;
+                MaximumOfficeWorkSpriteDirectionDelta = maximumOfficeWorkSpriteDirectionDelta;
+                OfficeAppliedSpriteDirectionViolationCount = officeAppliedSpriteDirectionViolationCount;
+                MaximumOfficeAppliedSpriteDirectionDelta = maximumOfficeAppliedSpriteDirectionDelta;
+                CurrentAppliedSpriteDirection = currentAppliedSpriteDirection;
+                CurrentAppliedSpriteDirectionMatchesLock = currentAppliedSpriteDirectionMatchesLock;
+                RendererSprite = rendererSprite;
+                RendererFlipX = rendererFlipX;
+            }
+
+            public Vector3 WorldVelocity { get; }
+            public float FrameClock { get; }
+            public int WalkFrame { get; }
+            public int LastDirection { get; }
+            public OfficeSeatingAnimationClip? SeatingClip { get; }
+            public float SeatingElapsedSeconds { get; }
+            public float SeatingProgress { get; }
+            public int SeatingFrame { get; }
+            public bool SeatingTransitionComplete { get; }
+            public IOfficeSeatedWorkAnimationSession WorkSession { get; }
+            public bool TileDisplacementDirection { get; }
+            public Vector2 TileFrameDisplacement { get; }
+            public float TileFrameTravelDistance { get; }
+            public Vector2 TileSemanticDisplacement { get; }
+            public float TileFrameDeltaTime { get; }
+            public float TileActualSpeed { get; }
+            public bool TileIsMoving { get; }
+            public bool TileCollisionProjected { get; }
+            public bool TilePresentationFrameOpen { get; }
+            public OfficeLocomotionFacingState TileFacingState { get; }
+            public bool TileFacingStateInitialized { get; }
+            public int LastSemanticDirection { get; }
+            public int LastMotionDirection { get; }
+            public bool UsedSemanticHeading { get; }
+            public float LastFacingAlignmentDot { get; }
+            public float LastFacingAngularErrorDegrees { get; }
+            public OfficeLocomotionGaitState TileGaitState { get; }
+            public bool TileGaitStateInitialized { get; }
+            public bool OfficeSeatingFacingLocked { get; }
+            public int LockedOfficeSeatingDirection { get; }
+            public int OfficeSeatingFacingViolationCount { get; }
+            public int MaximumOfficeSeatingFacingDelta { get; }
+            public int OfficeWorkSpriteDirectionViolationCount { get; }
+            public int MaximumOfficeWorkSpriteDirectionDelta { get; }
+            public int OfficeAppliedSpriteDirectionViolationCount { get; }
+            public int MaximumOfficeAppliedSpriteDirectionDelta { get; }
+            public int CurrentAppliedSpriteDirection { get; }
+            public bool CurrentAppliedSpriteDirectionMatchesLock { get; }
+            public Sprite RendererSprite { get; }
+            public bool RendererFlipX { get; }
+        }
+
         public bool BeginSitDown(int direction)
         {
             if (!HasOfficeSeatingFrames ||

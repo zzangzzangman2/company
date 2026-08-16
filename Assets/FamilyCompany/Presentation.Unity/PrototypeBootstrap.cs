@@ -103,6 +103,8 @@ namespace FamilyCompany.Presentation.Unity
         private OfficeContractTaskCoordinator _contractTaskCoordinator;
         private TitleMoneyRainRenderer _titleMoneyRainRenderer;
         private OfficeAutonomyCoordinator _officeAutonomyCoordinator;
+        private IOfficeRuntimeAgent[] _starterOfficeRuntimeAgents =
+            Array.Empty<IOfficeRuntimeAgent>();
         private PlayerOfficeWorkInteractor _playerWorkInteractor;
         private int _reportedOfficeTaskCount;
         private ManagementUiV2Presenter _managementUiPresenter;
@@ -264,32 +266,92 @@ namespace FamilyCompany.Presentation.Unity
 
         public void BindStarterOfficeRuntime(IOfficeRuntimeAgent[] runtimeAgents)
         {
-            InitializeNow();
-            if (runtimeAgents == null || runtimeAgents.Length < CanonicalFamilyIds.Length)
-                throw new ArgumentException("Starter Office requires the four canonical family actors.", nameof(runtimeAgents));
-            if (runtimeAgents.Any(item => item == null) ||
-                runtimeAgents.Select(item => item.AgentId).Distinct(StringComparer.Ordinal).Count() != runtimeAgents.Length)
-                throw new InvalidOperationException("Starter Office runtime actor IDs must be unique.");
-            var runtimeIds = new HashSet<string>(
-                runtimeAgents.Select(item => item.AgentId),
-                StringComparer.Ordinal);
-            if (CanonicalFamilyIds.Any(id => !runtimeIds.Contains(id)))
-                throw new InvalidOperationException("Starter Office runtime is missing a canonical family actor.");
+            try
+            {
+                UnbindStarterOfficeRuntime();
+                InitializeNow();
+                if (runtimeAgents == null || runtimeAgents.Length < CanonicalFamilyIds.Length)
+                    throw new ArgumentException(
+                        "Starter Office requires the four canonical family actors.",
+                        nameof(runtimeAgents));
+                if (runtimeAgents.Any(item => item == null) ||
+                    runtimeAgents.Select(item => item.AgentId)
+                        .Distinct(StringComparer.Ordinal).Count() != runtimeAgents.Length)
+                    throw new InvalidOperationException("Starter Office runtime actor IDs must be unique.");
+                var runtimeIds = new HashSet<string>(
+                    runtimeAgents.Select(item => item.AgentId),
+                    StringComparer.Ordinal);
+                if (CanonicalFamilyIds.Any(id => !runtimeIds.Contains(id)))
+                    throw new InvalidOperationException(
+                        "Starter Office runtime is missing a canonical family actor.");
 
-            _contractTaskCoordinator = GetComponent<OfficeContractTaskCoordinator>();
+                _starterOfficeRuntimeAgents = runtimeAgents.ToArray();
+                _contractTaskCoordinator = GetComponent<OfficeContractTaskCoordinator>();
+                if (_contractTaskCoordinator == null)
+                    _contractTaskCoordinator = gameObject.AddComponent<OfficeContractTaskCoordinator>();
+                _contractTaskCoordinator.enabled = false;
+                _contractTaskCoordinator.ConfigureRuntime(this, _starterOfficeRuntimeAgents);
+                _contractTaskCoordinator.InitializeNow();
+
+                _officeAutonomyCoordinator = GetComponent<OfficeAutonomyCoordinator>();
+                if (_officeAutonomyCoordinator == null)
+                    _officeAutonomyCoordinator = gameObject.AddComponent<OfficeAutonomyCoordinator>();
+                _officeAutonomyCoordinator.enabled = false;
+                _officeAutonomyCoordinator.ConfigureRuntime(this, _starterOfficeRuntimeAgents);
+                _officeAutonomyCoordinator.InitializeNow();
+
+                _contractTaskCoordinator.enabled = true;
+                _officeAutonomyCoordinator.enabled = true;
+                if (_playerWorkInteractor != null) _playerWorkInteractor.enabled = false;
+                EnsureManagementUiPresenter();
+            }
+            catch
+            {
+                UnbindStarterOfficeRuntime();
+                throw;
+            }
+        }
+
+        public void UnbindStarterOfficeRuntime()
+        {
             if (_contractTaskCoordinator == null)
-                _contractTaskCoordinator = gameObject.AddComponent<OfficeContractTaskCoordinator>();
-            _contractTaskCoordinator.ConfigureRuntime(this, runtimeAgents);
-            _contractTaskCoordinator.InitializeNow();
+                _contractTaskCoordinator = GetComponent<OfficeContractTaskCoordinator>();
+            if (_contractTaskCoordinator != null)
+            {
+                _contractTaskCoordinator.enabled = false;
+                RunStarterOfficeUnbindStepNoThrow(_contractTaskCoordinator.ResetAssignments);
+                RunStarterOfficeUnbindStepNoThrow(() =>
+                    _contractTaskCoordinator.Configure(
+                        this,
+                        Array.Empty<OfficeWorkerAgent>(),
+                        Array.Empty<OfficeWaypoint>()));
+            }
 
-            _officeAutonomyCoordinator = GetComponent<OfficeAutonomyCoordinator>();
             if (_officeAutonomyCoordinator == null)
-                _officeAutonomyCoordinator = gameObject.AddComponent<OfficeAutonomyCoordinator>();
-            _officeAutonomyCoordinator.ConfigureRuntime(this, runtimeAgents);
-            _officeAutonomyCoordinator.InitializeNow();
+                _officeAutonomyCoordinator = GetComponent<OfficeAutonomyCoordinator>();
+            if (_officeAutonomyCoordinator != null)
+            {
+                _officeAutonomyCoordinator.enabled = false;
+                RunStarterOfficeUnbindStepNoThrow(() =>
+                    _officeAutonomyCoordinator.Configure(
+                        this,
+                        Array.Empty<OfficeWorkerAgent>(),
+                        Array.Empty<OfficeWaypoint>()));
+            }
 
-            if (_playerWorkInteractor != null) _playerWorkInteractor.enabled = false;
-            EnsureManagementUiPresenter();
+            _starterOfficeRuntimeAgents = Array.Empty<IOfficeRuntimeAgent>();
+        }
+
+        private static void RunStarterOfficeUnbindStepNoThrow(Action step)
+        {
+            try
+            {
+                step?.Invoke();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
         }
 
         private static OfficeWaypoint[] EnsureOfficeExitWaypoint(OfficeWaypoint[] waypoints)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
+using FamilyCompany.Presentation.Unity.OfficeRuntime.Qa;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
@@ -38,6 +39,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool _configured;
         private float[] _frameMotionDeltas = Array.Empty<float>();
         private int[] _frameStepCounts = Array.Empty<int>();
+        private OfficeRuntimeTraceCoordinator _traceCoordinator;
 
         public OfficeGrid Grid => _grid;
         public OfficeGridTilemapPresenter Presenter => _presenter;
@@ -49,6 +51,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _workstations?.InteractionLifecycle;
         public OfficeRuntimeDepthSorter DepthSorter => _depthSorter;
         public OfficeRuntimeActorRegistry Registry => _registry;
+        internal OfficeRuntimeTraceCoordinator R5eTraceCoordinator => _traceCoordinator;
         public int ReplanCount { get; private set; }
         public int ArrivalCount { get; private set; }
         public float LastFrameDeltaTime { get; private set; }
@@ -114,6 +117,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _occupancy,
                 _paths);
             _depthSorter = new OfficeRuntimeDepthSorter(grid, presenter, furniturePresenter);
+            _traceCoordinator = new OfficeRuntimeTraceCoordinator(
+                1UL,
+                0UL,
+                OfficeRuntimeTraceCoordinator.MaximumActors,
+                OfficeSeatDockingR5eRuntimeQaContract.IsRequested(
+                    Environment.GetCommandLineArgs()));
             MotionTimeDebtSeconds = 0f;
             _configured = true;
         }
@@ -123,6 +132,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!_configured) throw new InvalidOperationException("Starter Office world is not configured.");
             _registry.Register(actor);
             _occupancy.RegisterActor(actor.AgentId, actor.Position, actor.AgentRadius);
+            actor.BindR5eTrace(
+                _traceCoordinator,
+                _traceCoordinator.RegisterActor(actor));
         }
 
         public void ValidateCanonicalActors()
@@ -177,6 +189,102 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (OfficeRuntimeAgent actor in _registry.Actors) actor.InvalidatePath();
         }
 
+        internal static void ExecuteActorRuntimeStep(
+            bool traceContextValid,
+            Action beginObservedStep,
+            Action beginUnobservedStep,
+            Action gameplayTick,
+            Action appendObservedPreClear,
+            Action gameplayEpilogue,
+            Action finalizeObservedPostClear,
+            Action abortObservedStep,
+            Action<Exception> recordGameplayFailure,
+            Action<Exception> recordObserverFailure,
+            bool captureEnabled)
+        {
+            if (beginUnobservedStep == null) throw new ArgumentNullException(nameof(beginUnobservedStep));
+            if (gameplayTick == null) throw new ArgumentNullException(nameof(gameplayTick));
+            if (gameplayEpilogue == null) throw new ArgumentNullException(nameof(gameplayEpilogue));
+
+            bool observe = traceContextValid;
+            if (observe)
+            {
+                try
+                {
+                    beginObservedStep?.Invoke();
+                }
+                catch (Exception exception)
+                {
+                    TryInvokeNoThrow(abortObservedStep);
+                    TryRecordNoThrow(recordObserverFailure, exception);
+                    observe = false;
+                }
+            }
+            if (!observe) beginUnobservedStep();
+
+            try
+            {
+                gameplayTick();
+            }
+            catch (Exception exception)
+            {
+                if (observe) TryInvokeNoThrow(abortObservedStep);
+                TryRecordNoThrow(recordGameplayFailure, exception);
+                if (!captureEnabled) throw;
+                return;
+            }
+
+            if (observe)
+            {
+                try
+                {
+                    appendObservedPreClear?.Invoke();
+                }
+                catch (Exception exception)
+                {
+                    TryInvokeNoThrow(abortObservedStep);
+                    TryRecordNoThrow(recordObserverFailure, exception);
+                    observe = false;
+                }
+            }
+
+            gameplayEpilogue();
+            if (!observe) return;
+            try
+            {
+                finalizeObservedPostClear?.Invoke();
+            }
+            catch (Exception exception)
+            {
+                TryInvokeNoThrow(abortObservedStep);
+                TryRecordNoThrow(recordObserverFailure, exception);
+            }
+        }
+
+        private static void TryInvokeNoThrow(Action callback)
+        {
+            try
+            {
+                callback?.Invoke();
+            }
+            catch
+            {
+                // Trace cleanup is observational and cannot replace the gameplay outcome.
+            }
+        }
+
+        private static void TryRecordNoThrow(Action<Exception> callback, Exception exception)
+        {
+            try
+            {
+                callback?.Invoke(exception);
+            }
+            catch
+            {
+                // Evidence recording is fail-closed in the coordinator, never in gameplay.
+            }
+        }
+
         private void Update()
         {
             using (OfficePerformanceTelemetry.Measure(OfficePerformancePath.RuntimeWorldUpdate))
@@ -229,15 +337,129 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                             _frameMotionDeltas[index],
                             step,
                             actorSteps);
-                        actor.TickRuntime(stepDelta);
-                        actor.ClearInactiveVisibleMotionDebt();
+                        R5eAgentStepSnapshot preStep = actor.CaptureR5eStepSnapshot();
+                        Vector2 beforePosition = actor.Position;
+                        try
+                        {
+                            bool traceContextValid;
+                            OfficeRuntimeStepTraceContext traceContext;
+                            if (!_traceCoordinator.CaptureEnabled)
+                            {
+                                traceContext = default;
+                                traceContextValid = false;
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    traceContextValid = _traceCoordinator.TryBeginActorStep(
+                                        actor,
+                                        Time.frameCount,
+                                        step,
+                                        actorSteps,
+                                        _frameMotionDeltas[index],
+                                        stepDelta,
+                                        out traceContext);
+                                }
+                                catch (Exception exception)
+                                {
+                                    traceContext = default;
+                                    traceContextValid = false;
+                                    _traceCoordinator.AbortFatal(
+                                        "actor-step-begin-observer-exception:" +
+                                        exception.GetType().Name);
+                                }
+                            }
+
+                            void BeginObservedStep()
+                            {
+                                actor.BeginR5eRuntimeStep(traceContext, beforePosition, preStep);
+                            }
+
+                            void TickGameplay()
+                            {
+                                actor.TickRuntime(stepDelta);
+                            }
+
+                            R5eAgentStepSnapshot preClear = default;
+                            void AppendObservedPreClear()
+                            {
+                                preClear = actor.CaptureR5eStepSnapshot();
+                                _traceCoordinator.CountExpectedPreClear(
+                                    traceContext,
+                                    actor.IsR5eSeatedPostState);
+                                actor.AppendObservedPreClear(traceContext, preStep, preClear);
+                            }
+
+                            void ClearGameplayMotionDebt()
+                            {
+                                actor.ClearInactiveVisibleMotionDebt();
+                            }
+
+                            void FinalizeObservedPostClear()
+                            {
+                                R5eAgentStepSnapshot postClear = actor.CaptureR5eStepSnapshot();
+                                bool expectedMoving =
+                                    !actor.AtomicPlacementOccurred(traceContext.ActorRuntimeTick) &&
+                                    Vector2.Distance(actor.Position, beforePosition) >
+                                    OfficeRuntimeTraceCoordinator.StationaryEpsilon;
+                                _traceCoordinator.CountExpectedPostClearAndMoving(
+                                    traceContext,
+                                    actor.IsR5eSeatedPostState,
+                                    expectedMoving);
+                                actor.FinalizeR5eRuntimeStepPostClear(
+                                    traceContext,
+                                    preStep,
+                                    preClear,
+                                    postClear,
+                                    expectedMoving);
+                            }
+
+                            ExecuteActorRuntimeStep(
+                                traceContextValid,
+                                BeginObservedStep,
+                                actor.BeginUnobservedR5eRuntimeStep,
+                                TickGameplay,
+                                AppendObservedPreClear,
+                                ClearGameplayMotionDebt,
+                                FinalizeObservedPostClear,
+                                () => actor.AbortR5eRuntimeStep(traceContext),
+                                exception =>
+                                {
+                                    if (traceContextValid)
+                                    {
+                                        _traceCoordinator.RecordActorStepException(
+                                            traceContext,
+                                            actor.IsR5eSeatedPostState || preStep.Seated);
+                                    }
+                                    else
+                                    {
+                                        _traceCoordinator.AbortFatal(
+                                            "actor-step-unobserved-exception:" +
+                                            exception.GetType().Name);
+                                    }
+                                },
+                                exception => _traceCoordinator.AbortFatal(
+                                    "actor-step-observer-exception:" + exception.GetType().Name),
+                                _traceCoordinator.CaptureEnabled);
+                        }
+                        catch (Exception)
+                        {
+                            if (!_traceCoordinator.CaptureEnabled) throw;
+                        }
                     }
                 }
                 for (var index = 0; index < actors.Count; index++)
                 {
                     OfficeRuntimeAgent actor = actors[index];
                     if (actor != null && actor.isActiveAndEnabled)
+                    {
+                        _traceCoordinator.TryPreflightRender(actor);
+                        _traceCoordinator.BeginRenderFrame(actor, Time.frameCount);
                         actor.TickPresentation(_frameMotionDeltas[index]);
+                        _traceCoordinator.CountExpectedRender(actor);
+                        _traceCoordinator.AppendRenderAdapter(actor, Time.frameCount);
+                    }
                 }
                 MotionTimeDebtSeconds = 0f;
                 for (var index = 0; index < actors.Count; index++)
