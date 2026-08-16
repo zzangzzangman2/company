@@ -2018,13 +2018,12 @@ namespace FamilyCompany.Presentation.Unity
                     $"pelvisStep={actor.MaxTransitionPelvisStepPx:F3}px " +
                     $"monotonicViolations={actor.TransitionMonotonicViolationCount} " +
                     $"sorting={actualOrder} chair={chairOrder} desk={deskOrder}");
-                // A typing chair may be visually pulled out under its occupant. The authored
-                // semantic socket remains exact while flat pixel characters keep scale/rotation 1/0.
-                // The chair is presentation-followed to keep the authored hands planted. Its
-                // semantic seat remains exact; taller/shorter bodies may pull the rendered chair
-                // by up to one tenth of a 160px tile without leaving the workstation footprint.
-                bool presentationMatches = actor.ChairDeskErrorPx <= 16f &&
-                    actor.SeatContactErrorPx <= 1f &&
+                // Furniture is immutable at its canonical tile/footprint centre.  ChairDeskErrorPx
+                // is therefore a diagnostic projection of two distinct authored tile anchors, not
+                // a licence to pull the chair artwork toward the desk.  The occupied contract is
+                // the actor-to-chair pelvis contact plus the presenter's transform invariants.
+                bool presentationMatches = actor.SeatContactErrorPx <= 1f &&
+                    _starterRuntime.World.FurniturePresenter.TransformInvariantViolationCount == 0 &&
                     (!actor.IsOfficeWorkAnimationHookActive ||
                      (actor.TypingContactSampleCount > 0 &&
                       actor.MaxTypingSeatContactErrorPx <= 6f &&
@@ -2187,7 +2186,7 @@ namespace FamilyCompany.Presentation.Unity
                 "STARTER_OFFICE_FOUR_SEAT_WORK_QA_PASS | seats=" + string.Join(",", claims) +
                 " | classicAtomic=4x(Dock-Face-AtomicWork+ReservedAtomicExit-Turn-LaterFirstWalk) " +
                 "transitionClips=0 intermediatePelvisMotion=0 anchorError<=1px " +
-                "typingSeat<=6px,typingHand<=4px,chairPullout<=16px," +
+                "typingSeat<=6px,typingHand<=4px,furniture=immutable-tile-centres," +
                 "rotation=0,scale=canonical,sorting=chairFloor+1 | " +
                 OccupancyMetricSummary());
             foreach (OfficeRuntimeAgent actor in actors.Values) actor.EndQaControl();
