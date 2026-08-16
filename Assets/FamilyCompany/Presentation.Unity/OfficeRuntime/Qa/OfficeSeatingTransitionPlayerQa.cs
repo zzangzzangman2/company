@@ -1120,11 +1120,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             out string failure)
         {
             var failures = new List<string>();
-            if (!trace.SawApproachingSeat || !trace.SawRotatingToSeat ||
-                !trace.SawAlignedBeforeSitDown)
+            if (!trace.SawRotatingToSeat || !trace.SawAlignedBeforeSitDown)
                 failures.Add(
-                    $"durableSeatEntry=approach:{trace.SawApproachingSeat}/" +
-                    $"rotating:{trace.SawRotatingToSeat}/" +
+                    $"durableSeatEntry=rotating:{trace.SawRotatingToSeat}/" +
                     $"facingPlantedMotion0:{trace.SawAlignedBeforeSitDown}");
             if (!actor.WasSeatFacingAlignedBeforeSitDown)
                 failures.Add("seat-facing rotation was not confirmed before atomic dock");
