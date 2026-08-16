@@ -2167,7 +2167,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void TickSeating(float deltaTime)
         {
-            if (_seat == null || _seatClaim == null || _seatClaim.IsReleased)
+            if (Phase != OfficeRuntimeAgentPhase.LeavingSeat &&
+                (_seat == null || _seatClaim == null || _seatClaim.IsReleased))
             {
                 EndInteraction(
                     OfficeRuntimeInteractionTermination.Aborted,
