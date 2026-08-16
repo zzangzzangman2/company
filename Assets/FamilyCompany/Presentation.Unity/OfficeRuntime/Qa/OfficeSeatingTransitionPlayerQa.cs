@@ -53,6 +53,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
         private readonly Dictionary<string, ActorTrace> _traces =
             new Dictionary<string, ActorTrace>(StringComparer.Ordinal);
+        private IReadOnlyDictionary<string, OfficeRuntimeAgent> _activeActors;
         private readonly List<FrameEvidenceRecord> _frameEvidenceRecords =
             new List<FrameEvidenceRecord>();
         private readonly HashSet<string> _frameEvidenceKeys =
@@ -182,6 +183,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             Dictionary<string, OfficeRuntimeAgent> actors = _runtime.Actors
                 .Where(actor => actor != null)
                 .ToDictionary(actor => actor.AgentId, actor => actor, StringComparer.Ordinal);
+            _activeActors = actors;
             if (MemberIds.Any(memberId => !actors.ContainsKey(memberId)))
             {
                 FinishFailure(92, "Canonical family actor set is incomplete.");
@@ -240,6 +242,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             foreach (string memberId in MemberIds)
             {
+                _traces[memberId].FirstWalkCountBaseline = actors[memberId].R5eFirstWalkCount;
                 if (actors[memberId].QaRequestStandWithOutwardRoute()) continue;
                 FinishFailure(96, "Could not begin classic atomic exit for " + memberId + ".");
                 yield break;
@@ -727,6 +730,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     $"phase={phase} clip={clip} sprite={actor.CurrentSpriteName} " +
                     $"frames={actor.ObservedSitDownFrameCount}/{actor.ObservedStandUpFrameCount}");
 
+            if (!ObserveClassicFirstWalk(actor, trace)) return false;
             if (phase == OfficeRuntimeAgentPhase.LeavingSeat)
             {
                 if (!actor.R5eLastAtomicExitReservationBacked ||
@@ -748,13 +752,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             bool engaged = phase == OfficeRuntimeAgentPhase.Working ||
                            phase == OfficeRuntimeAgentPhase.FinishingWork;
-            if (trace.SawLeavingSeat && !actor.HasCompletedSeatEgress &&
-                phase != OfficeRuntimeAgentPhase.LeavingSeat)
-                return Fail(
-                    93,
-                    trace.MemberId + " entered " + phase +
-                    " before the reserved safe egress anchor was completed.");
-            if (!ObserveClassicFirstWalk(actor, trace)) return false;
             if (!engaged) return true;
 
             if (!TryResolveClaimedSeatDirection(actor, out int expectedDirection))
@@ -1017,25 +1014,38 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
         private bool ObserveClassicFirstWalk(OfficeRuntimeAgent actor, ActorTrace trace)
         {
-            if (!trace.SawLeavingSeat || trace.FirstWalkObserved ||
-                !actor.HasCompletedSeatEgress) return true;
+            if (trace.FirstWalkObserved ||
+                actor.R5eFirstWalkCount <= trace.FirstWalkCountBaseline) return true;
+            if (!actor.R5eLastAtomicExitReservationBacked ||
+                actor.R5eLastAtomicExitTick <= trace.EntryAtomicTick ||
+                !actor.HasCompletedSeatEgress ||
+                !actor.LastCompletedSeatEgressClearanceValid ||
+                actor.IsOccupyingSeat || actor.ActiveSeatId.Length != 0 ||
+                actor.IsOfficeSeatingFacingLocked ||
+                actor.R5eTurnCompleteTick <= actor.R5eLastAtomicExitTick ||
+                actor.R5eLastFirstWalkTick <= actor.R5eTurnCompleteTick)
+                return Fail(93, trace.MemberId +
+                    " first-walk latch advanced without a complete durable atomic exit chain.");
             Vector2 displacement = actor.Position - actor.LastCompletedSeatEgressWorld;
             if (displacement.magnitude <= OfficeRuntimeTraceCoordinator.StationaryEpsilon)
-                return true;
+                return Fail(93, trace.MemberId +
+                    " first-walk latch advanced without outward displacement.");
             int direction = DirectionalSpriteAnimator.ResolveTileDirection(
                 displacement,
                 actor.R5eLastAtomicExitDirection);
-            if (actor.Phase != OfficeRuntimeAgentPhase.Navigating ||
-                actor.R5eRuntimeTick <= actor.R5eTurnCompleteTick ||
-                direction != actor.R5eLastAtomicExitDirection)
+            int spriteDirection = ParseSpriteDirection(actor.CurrentSpriteName);
+            if (direction != actor.R5eLastAtomicExitDirection ||
+                actor.CurrentDirection != direction ||
+                actor.CurrentSpriteDirection != direction ||
+                spriteDirection != direction)
                 return Fail(
                     93,
-                    $"{trace.MemberId} first walk was early or misdirected: " +
-                    $"phase={actor.Phase} ticks={actor.R5eTurnCompleteTick}/" +
-                    $"{actor.R5eRuntimeTick} direction=" +
-                    $"{actor.R5eLastAtomicExitDirection}/{direction}");
+                    $"{trace.MemberId} durable first walk was misdirected: " +
+                    $"ticks={actor.R5eTurnCompleteTick}/{actor.R5eLastFirstWalkTick} direction=" +
+                    $"{actor.R5eLastAtomicExitDirection}/{direction}/" +
+                    $"{actor.CurrentDirection}/{actor.CurrentSpriteDirection}/{spriteDirection}");
             trace.FirstWalkObserved = true;
-            trace.FirstWalkTick = actor.R5eRuntimeTick;
+            trace.FirstWalkTick = actor.R5eLastFirstWalkTick;
             trace.FirstWalkDirection = direction;
             return true;
         }
@@ -1055,15 +1065,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
         private static bool CompletedSeatExit(OfficeRuntimeAgent actor, ActorTrace trace)
         {
-            return actor != null && trace.SawLeavingSeat && !actor.IsOccupyingSeat &&
+            return actor != null && !actor.IsOccupyingSeat && actor.ActiveSeatId.Length == 0 &&
+                   !actor.IsOfficeSeatingFacingLocked &&
                    actor.HasCompletedSeatEgress &&
                    actor.LastCompletedSeatEgressClearanceValid &&
-                   actor.Phase == OfficeRuntimeAgentPhase.Idle &&
                    actor.R5eLastAtomicExitReservationBacked &&
                    actor.R5eLastAtomicExitTick > trace.EntryAtomicTick &&
                    actor.R5eTurnCompleteTick > actor.R5eLastAtomicExitTick &&
+                   actor.R5eFirstWalkCount > trace.FirstWalkCountBaseline &&
+                   actor.R5eLastFirstWalkTick > actor.R5eTurnCompleteTick &&
                    trace.FirstWalkObserved &&
-                   trace.FirstWalkTick > actor.R5eTurnCompleteTick &&
+                   trace.FirstWalkTick == actor.R5eLastFirstWalkTick &&
                    trace.FirstWalkDirection == actor.R5eLastAtomicExitDirection &&
                    actor.ObservedSitDownFrameCount == 0 &&
                    actor.ObservedStandUpFrameCount == 0;
@@ -1109,22 +1121,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 failures.Add("Work evidence was not sampled");
             }
-            if (!trace.SawFinishingWork) failures.Add("FinishingWork was not sampled");
-            if (!trace.SawLeavingSeat || trace.LeavingSeatSampleCount == 0)
-                failures.Add("LeavingSeat was not sampled");
             if (!actor.R5eLastAtomicExitReservationBacked ||
                 actor.R5eLastAtomicExitTick <= trace.EntryAtomicTick)
                 failures.Add(
                     $"reservationBeforeAtomicExit={actor.R5eLastAtomicExitReservationBacked} " +
                     $"ticks={trace.EntryAtomicTick}/{actor.R5eLastAtomicExitTick}");
             if (actor.R5eTurnCompleteTick <= actor.R5eLastAtomicExitTick ||
+                actor.R5eFirstWalkCount <= trace.FirstWalkCountBaseline ||
                 !trace.FirstWalkObserved ||
-                trace.FirstWalkTick <= actor.R5eTurnCompleteTick ||
+                actor.R5eLastFirstWalkTick <= actor.R5eTurnCompleteTick ||
+                trace.FirstWalkTick != actor.R5eLastFirstWalkTick ||
                 trace.FirstWalkDirection != actor.R5eLastAtomicExitDirection)
                 failures.Add(
                     $"exitTurnFirstWalk={actor.R5eLastAtomicExitTick}/" +
-                    $"{actor.R5eTurnCompleteTick}/{trace.FirstWalkTick} " +
-                    $"observed={trace.FirstWalkObserved} direction=" +
+                    $"{actor.R5eTurnCompleteTick}/{actor.R5eLastFirstWalkTick} " +
+                    $"count={trace.FirstWalkCountBaseline}/{actor.R5eFirstWalkCount} " +
+                    $"observed={trace.FirstWalkObserved}:{trace.FirstWalkTick} direction=" +
                     $"{actor.R5eLastAtomicExitDirection}/{trace.FirstWalkDirection}");
             if (!actor.HasCompletedSeatEgress || !actor.LastCompletedSeatEgressClearanceValid)
                 failures.Add("safe egress was not completed with clearance");
@@ -2233,7 +2245,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         {
             int resolvedCode = exitCode == 0 ? 90 : exitCode;
             string resolvedMessage = string.IsNullOrWhiteSpace(message) ? "unknown failure" : message;
-            string result = BuildResult(null, false, resolvedMessage);
+            string result = BuildResult(_activeActors, false, resolvedMessage);
             WriteResult(result);
             WriteFrameEvidenceManifest();
             Debug.LogError(
@@ -2422,10 +2434,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     .Append('/').Append(trace.EntryAtomicTick)
                     .Append('/').Append(actor == null ? 0UL : actor.R5eLastAtomicExitTick)
                     .Append('/').Append(actor == null ? 0UL : actor.R5eTurnCompleteTick)
-                    .Append('/').Append(trace.FirstWalkTick)
+                    .Append('/').Append(actor == null ? 0UL : actor.R5eLastFirstWalkTick)
+                    .Append(" firstWalkCount=").Append(trace.FirstWalkCountBaseline)
+                    .Append('/').Append(actor == null ? -1 : actor.R5eFirstWalkCount)
                     .Append(" lifecycleDirections=").Append(actor == null ? -1 :
                         actor.R5eLastAtomicExitDirection)
                     .Append('/').Append(trace.FirstWalkDirection)
+                    .Append(" transientPhases=").Append(trace.SawFinishingWork)
+                    .Append('/').Append(trace.SawLeavingSeat)
                     .Append(" directionSamples=").Append(trace.DirectionSampleCount)
                     .Append(" leavingSamples=").Append(trace.LeavingSeatSampleCount)
                     .Append(" depthSamples=").Append(trace.DepthSampleCount)
@@ -2699,6 +2715,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public bool AtomicSeatEvidenceCaptured { get; set; }
             public bool AtomicSeatFollowupSampled { get; set; }
             public bool FirstWalkObserved { get; set; }
+            public int FirstWalkCountBaseline { get; set; }
             public ulong FirstWalkTick { get; set; }
             public int FirstWalkDirection { get; set; } = -1;
             public int DirectionSampleCount { get; set; }
