@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-08-16 / 가족 전신 보행 복원 및 게이트 V2
+
+- 2026-08-13의 상체 고정·다리 재조합 방식은 가족 4인에게 팔 정지와 2포즈 하체를 만들어 폐기했다. 아래
+  P0-0 절은 당시 이력일 뿐 현재 가족 runtime 정본이 아니다.
+- 가족 canonical 시트 8장은 `BeforeCoherenceV1`의 승인 원본으로 byte-exact 복원했고, 방향별 여섯 전신 포즈의
+  팔 흔들기와 좌우 발 교차를 그대로 유지한다. 신규 ImageGen 생성은 하지 않았다.
+- splitter는 8-connected 실루엣을 검출하고 발 하단 y=247·8px 안전 여백으로 192 frames를 다시 만들었다.
+  프레임 경계를 넘었던 사지도 잘리지 않는다.
+- 현재 strict walk gate는 색상·옷 무늬 변화량이 아니라 silhouette adjacency를 측정한다. 기준은
+  `median<=30%`, `worst<=40%`, unique 6, foot drift<=1px, stable root drift<=4px, closure<=2px다.
+- 최종 결과는 12 characters / 96 walk loops / 576 frames 전부 PASS이고 gate unit test 9/9 PASS다.
+
+---
+
 ## 2026-08-13 / P0-0 구현 완료
 
 - `Tools/stabilize_locomotion_cycles.py`가 캐릭터 폴더를 자동 발견하고 12명×8방향×6프레임을 일괄 재구성한다.

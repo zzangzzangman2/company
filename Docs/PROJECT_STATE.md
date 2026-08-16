@@ -2,13 +2,74 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-16 / R18 최종 arrival 통합 및 배포 대기
+## 2026-08-16 / 일반 새 게임 좌석 정지·타일 보행 수정 후보
+
+- Downloads의 `8b9e3313928545f98b4fc60427da76901271fc96` 배포본은 일반 새 게임 09:07의 첫
+  `FinishingWork`에서 플레이어 컨트롤러가 출근 좌석을 해제해 캐릭터가 의자 앞에 서는 회귀를 재현했다.
+  기존 seating `FAST_QA`는 `BeginQaControl`과 `QaBeginSeatedWork`로 일반 일정·이동·좌석 handoff를
+  우회했으므로 이 회귀의 정상 실게임 증거가 아니었다.
+- 일반 경로는 수동 E 업무로 얻은 좌석만 플레이어 컨트롤러가 해제하고, 출근 atomic seat→Work 6프레임
+  handoff 동안 autonomy가 좌석 업무를 선점하지 않게 했다. 고주사율의 작은 실제 변위도 이동으로 인정하도록
+  visual displacement 임계값만 `1e-10`으로 낮췄으며, path budget·도착 허용치는 바꾸지 않았다.
+- 가족 보행 방향은 캐릭터 원화의 실제 화면축 계약인 `(-world.x, world.y)`로 한 곳에서 변환한다. 화면
+  오른쪽 이동은 West 원화를, 화면 왼쪽 이동은 East 원화를 사용하므로 머리·몸통·팔·다리가 실제 진행 방향과
+  함께 바뀐다. 생산 경로와 legacy pathfinder는 대각선·corner easing·중간 지름길을 제거하고 모든 cell center를
+  순서대로 지나는 4방향 cardinal 경로로 통일했다. 따라서 위쪽 이동은 North 원화로 타일 중앙선을 곧게 걷는다.
+- 기본 이동 속도는 `1.00 world unit/s`, 6프레임 2보 주기는 실제 투영 타일 한 칸과 같은
+  `0.99380799 world unit`이다. 한 타일에 정확히 한 주기·두 발걸음이므로 약 `2.01 steps/s`이며, 누적 실제
+  이동거리 기반 보행 위상과 표현 전용 foot-plant easing으로 발 끌림을 줄였다. 원래 승인된 가족 원화의
+  여섯 전신 포즈를 복원해 좌우 다리 교차와 반대 팔 흔들기를 함께 재생하고, 실루엣 연결성 기반 분할과 8px
+  하단 여백으로 발·팔 잘림을 막았다.
+- 게임 시간 배속만 빨라지고 캐릭터는 1x로 움직이던 원인은 actor motion이 `unscaledDeltaTime`을 사용한 것이었다.
+  runtime actor는 이제 `Time.deltaTime`을 사용하며 1x·2x·4x 모두 같은 game-time 이동 거리를 유지한다.
+  프레임당 visible motion은 `0.08s` 조각으로 제한해 빠른 배속에서도 충돌·점유 동기화를 보존한다.
+- Unity `6000.3.21f1` 정적 이동 검증은 128 seeds / 1,152 paths / 1,970 moving frames를 통과했고
+  reverse-facing, moving-during-pivot, unnecessary-corner-stop은 모두 0이다. 실제 Windows Player의 observer-only
+  일반 새 게임은 route injection·clock jump·docking force 없이 1x·2x·4x 각각 08:50→09:50을 통과했다.
+  네 가족 모두 assigned seat arrival 1회와 Work 6/6을 기록했고 20 game-minute stall은 0이다. 1x에서 누나
+  09:08, 플레이어 09:10, 아빠 09:22, 엄마 09:24에 atomic seat에 도착했고 모두 다음 1 game-minute 안에
+  6프레임 Work loop를 완료했다. 같은 후보의 seating transition FAST_QA도 4인 atomic seat/Work 6/6,
+  primary 28/28, safe egress 4/4, penetration 0으로 통과했다. 가족 프레임 복원 뒤 animation asset strict
+  gate는 12명·96 walk loops·576 frames 전부 PASS다.
+- 이 후보는 아직 커밋·배포되지 않았다. Downloads는 계속 이전 `8b9e331` 배포본이다. 다음 작업은 이번 수정과
+  무관한 UI `.meta` 변경을 별도 보존한 뒤 clean committed HEAD로 release build하고, 실제 candidate EXE에서
+  일반 새 게임 1x·2x·4x와 FAST_QA를 다시 통과한 경우에만 Downloads 승격과 `main` push를 수행하는 것이다.
+
+## 2026-08-16 / 반복 개발 루프 정본화
+
+- [ITERATION_LOOP.md](ITERATION_LOOP.md)를 짧은 반복 루프의 정본으로 추가했다. 변경 종류별 명령, warm 캐시
+  보존 규칙, `BUILD_WINDOWS.cmd`를 반복 확인에 쓰지 않는 경계를 정한다. 릴리스 절차는 그대로
+  [PLAYTEST_BUILD.md](PLAYTEST_BUILD.md)와 [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)가 정본이다.
+- 실측 근거: `build-20260815-035423-unity.log`의 자동화 전체 133.4초 중 103.707초가
+  `Asset Pipeline Refresh ... InitialRefreshV2(ForceSynchronousImport)`였고 같은 로그 239행에
+  `Require frontend run. Library/Bee/1900b0aE.dag couldn't be loaded`가 남았다. warm `Library/Bee`의 normal
+  incremental player build는 6.93/6.94/7.00초, forced clean release-config build도 16.00/19.58/19.44초다.
+  느린 원인은 빌드 옵션이 아니라 worktree마다 warm `Library`를 버리는 것이다.
+- 현재 `Documents/Codex` 아래 Family Company worktree는 36개이며 그중 13개가 각자 `Library`를 갖고 있다.
+  `Artifacts/FastQa/runs`가 존재하는 worktree는 `chair_seat`와 `windows_automation_p1` 둘뿐이므로 Fast QA는
+  사실상 사용되지 않고 있었다. worktree 정리와 단일 warm worktree 사용은 다음 작업이다.
+- 문서와 도구가 어긋난 지점을 기록한다. [AGENTS.md](../AGENTS.md)는 정본 브랜치를 `main` 하나로 규정하지만
+  `Tools/FamilyCompanyBuild.Common.ps1`의 `Get-FamilyCompanyDeployDefaults`는 `RequiredBranch = 'codex/integration-p0-qa'`를
+  요구한다. 로컬 정본 체크아웃에는 `main` 브랜치가 없고 `agent/contract-lifecycle-v0-3`에 머물러 있다.
+  둘 중 어느 쪽을 정본으로 삼을지 정하기 전에는 배포 자동화를 `main`에서 그대로 실행할 수 없다.
+- 이번 작업은 문서와 계약만 변경했다. Unity, Player, build/deploy는 실행하지 않았다.
+
+## 2026-08-16 / R18 최종 arrival 통합 및 배포 완료
 
 - 최종 arrival descendant `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`를 payload guard·UI·tooling이 포함된 clean integration `d2fa777373e8f0376a5aca4899fdfe0c0fecd43a`에 한 번만 통합했다. merge-base는 `45f22430168cf3b3def1f50b147583a0cc3eb624`, 누적 R18 변경은 `OfficeRuntimeAgent.cs`와 `OfficeSeatingTransitionPlayerQa.cs` 2개이며 overlap/conflict는 0이다.
 - R18은 독립 static PASS와 Unity `6000.3.21f1` capture-free Windows Player exit 0 PASS를 받았다. 네 actor 모두 Work 0..5를 관측했고, 같은 좌석의 atomic seat/root/pelvis 정렬과 microslide는 0이며 exit·turn·first-walk·endpoint stationary·safe-egress·furniture drift/penetration도 0이다.
 - 통합 tree에서 Roslyn Simulation/Save/Infrastructure/Presentation/Editor compile, production fixture 158 scenarios·15 controls, negative oracle, offline/simulation, Management UI full compile, payload guard 14 fixtures와 tracked-tree 0위반을 다시 통과했다. R18 first-parent 범위 밖 UI·guard·tooling blob은 그대로다.
 - 과거·회귀 Windows 실행 payload는 repo 밖 text/hash evidence를 먼저 보존하고 허용된 payload root에서 Recycle Bin 우선 방식으로 제거했으며, 이전 GitHub 감사의 history·tags·Releases·Actions executable payload는 모두 0이다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`의 fail-closed CI guard가 `git add -f`와 이름·확장자 변경 Player bundle의 재유입을 차단한다.
-- 최종 Windows build와 Downloads 승격은 아직 수행하지 않았다. clean 최종 HEAD로 별도 승인된 build/deploy gate를 실행해야 하며, PC shutdown 요청은 취소된 상태다.
+- 최종 Windows build와 Downloads 승격은 2026-08-16에 수행되었다. 배포본
+  `C:\Users\godho\Downloads\FamilyCompany_Playtest`의 `BUILD_INFO.txt`는 `commit=8b9e3313928545f98b4fc60427da76901271fc96`,
+  `unity=6000.3.21f1 c02631ffc030`, `configuration=Windows Release`,
+  `qa=FAMILY_COMPANY_SEATING_TRANSITION_QA PASS exit0`을 기록하며 이 SHA는 `origin/main` HEAD와 일치한다.
+  `DEPLOY_MANIFEST.tsv`/`.sha256`도 같은 폴더에 있다.
+- 이 배포본의 `BUILD_INFO.txt`가 증명하는 QA는 seating transition QA 하나다.
+  [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)가 요구하는 네 가족
+  `player` 09:00 / `older_sister` 09:01 / `father` 09:02 / `mother` 09:03 입장·착석 독립 oracle의 통과 여부는
+  배포본 옆 evidence에 기록되어 있지 않다. 다음 배포 전에 이 oracle 결과를 `BUILD_INFO.txt` 또는 같은
+  폴더의 비실행 evidence로 남겨야 한다.
 
 ## 2026-08-16 / Git tracked Windows Player payload 예방 guard 후보
 
@@ -48,7 +109,8 @@
   실행 중 player는 종료하지 않고 `AwaitingPlayerExit` candidate를 재사용한다. AppData 저장 데이터는 범위 밖이다.
 - 격리 dry-run 15건은 공백·한글, dirty exit 31, conflict exit 32, unchanged skip, debounce, duplicate watcher
   exit 24, CMD exit code, 불완전 candidate, 승격 전·후 실패 복구, LKG, 실행 중 EXE 감지를 통과했다.
-  `downloadsTouched=false`, `unityLaunched=false`이며 실제 최종 player build/Downloads 배포는 아직 수행하지 않았다.
+  `downloadsTouched=false`, `unityLaunched=false`였다. 실제 최종 player build와 Downloads 배포는 그 뒤
+  2026-08-16에 `8b9e3313`으로 수행되었다.
 - 후속 애니메이션·이동 hitch 커밋을 통합하고 최종 QA를 통과한 clean HEAD에서
   `START_WINDOWS_DEPLOY_WATCH.cmd` 또는 `DEPLOY_WINDOWS.cmd`를 명시적으로 실행한다.
 
@@ -227,7 +289,9 @@
 2. 저장 v1~v9→v10, 새 게임 v10, 편집 재고, 계약 성장, 주식 계좌, 출퇴근, 실제 변위 회귀를 확인한다.
 3. `BUILD_WINDOWS.cmd`로 새 실행본을 만들고 `BUILD_INFO.txt`와 현재 HEAD가 같은지 확인한다.
 4. [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)의 네 가족 09:00/09:01/09:02/09:03 oracle과 독립 gate를 통과시킨다.
-5. 검증된 새 identity의 폴더 전체만 `C:\Users\godho\Downloads\Family\FamilyCompany_Playtest`에 배포한다. FAIL/UNKNOWN이면 evidence 보존 후 해당 payload를 삭제하고 rollback하거나 current를 비워 둔다.
+5. 검증된 새 identity의 폴더 전체만 `%USERPROFILE%\Downloads\FamilyCompany_Playtest`에 배포한다. 이 경로의 정본은
+   `Tools/FamilyCompanyBuild.Common.ps1`의 `Get-FamilyCompanyDeployDefaults.TargetPath`이며 staging은 같은
+   부모의 `.FamilyCompany_Playtest.deploy-staging`이다. FAIL/UNKNOWN이면 evidence 보존 후 해당 payload를 삭제하고 rollback하거나 current를 비워 둔다.
 
 ## 다른 PC에서 이어하기
 
@@ -241,12 +305,17 @@ git pull --ff-only origin main
 
 빌드가 이미 있더라도 `Builds/Windows/FamilyCompany_Playtest/BUILD_INFO.txt`의 commit이 `git rev-parse HEAD`와 다르면 최신 실행본으로 간주하지 않는다. 상세 절차는 [HOME_PC_CONTINUATION_GUIDE.md](HOME_PC_CONTINUATION_GUIDE.md)와 [PLAYTEST_BUILD.md](PLAYTEST_BUILD.md)를 따른다.
 
+위 `BUILD_WINDOWS.cmd`는 그 PC의 실행본을 처음 한 번 만들 때와 배포 후보를 확정할 때만 쓴다. 이후 한 곳을
+고치고 확인하는 반복 작업에는 `FAST_QA_WINDOWS.cmd`를 쓰며, 근거와 변경 종류별 명령은
+[ITERATION_LOOP.md](ITERATION_LOOP.md)가 정본이다.
+
 회귀·실패·출처 불명·self-PASS-only 실행본의 처리와 재빌드 조건은 [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)를 반드시 따른다.
 
 ## 정본 문서 경계
 
 - 인물·출퇴근·사무실 시각: [CANON.md](CANON.md), [ART_STYLE.md](ART_STYLE.md)
 - 구조·저장·Unity 경계: [ARCHITECTURE.md](ARCHITECTURE.md)
+- 반복 개발 루프와 캐시 규칙: [ITERATION_LOOP.md](ITERATION_LOOP.md), [FAST_QA_WINDOWS.md](FAST_QA_WINDOWS.md)
 - build/deploy 회귀 삭제: [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)
 - 내비게이션·편집: [MAIN_NAVIGATION_HUD_V2.md](MAIN_NAVIGATION_HUD_V2.md), [OFFICE_BUILD_EDITOR_V1.md](OFFICE_BUILD_EDITOR_V1.md)
 - 계약: [CONTRACTS_V0_3.md](CONTRACTS_V0_3.md), [CONTRACT_CLIENT_PROGRESSION_V1.md](CONTRACT_CLIENT_PROGRESSION_V1.md)

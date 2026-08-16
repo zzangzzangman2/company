@@ -95,6 +95,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             return new Vector3(-TileWorldWidth * 0.5f, TileWorldHeight * 0.5f, 0f);
         }
 
+        public Vector2 WorldVectorToVisualFacingAxes(Vector2 worldVector) =>
+            DefaultWorldVectorToVisualFacingAxes(worldVector);
+
+        public static Vector2 DefaultWorldVectorToVisualFacingAxes(Vector2 worldVector)
+        {
+            // The authored walk atlases use character-left/right names: their `west` body looks
+            // screen-right and their `east` body looks screen-left. Resolve against the projected
+            // world displacement with that horizontal handedness so the visible head, torso and
+            // feet point along the actual screen path. Grid coordinates still own routing.
+            return new Vector2(-worldVector.x, worldVector.y);
+        }
+
         public Vector3 SubcellAnchorWorld(OfficeGridSubcellAnchor anchor)
         {
             if (_semanticGrid == null) throw new InvalidOperationException("Office grid presenter is not configured.");

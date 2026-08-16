@@ -6,7 +6,10 @@
 
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
 - 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고, GitHub history·tags·Releases·Actions 감사 결과 executable payload는 0입니다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`에서 도입한 CI guard가 향후 tracked Windows Player payload를 fail-closed 차단합니다.
-- 최종 Windows build와 Downloads 배포는 아직 대기 중이며, PC shutdown은 취소되었습니다.
+- 최종 Windows build와 Downloads 배포는 2026-08-16에 완료되었습니다. 배포본
+  `%USERPROFILE%\Downloads\FamilyCompany_Playtest`의 `BUILD_INFO.txt`가 기록한 `commit=8b9e3313...`은
+  `origin/main` HEAD와 일치합니다. 다만 이 배포본이 남긴 QA 증거는 seating transition QA 하나이며, 네 가족
+  09:00~09:03 독립 oracle 결과는 배포본 옆에 기록되어 있지 않습니다.
 
 ## 현재 플레이 가능한 기준선
 
@@ -23,9 +26,27 @@
 
 기능별 현재 통합 상태, 미완료 항목, 최신 검증은 [PROJECT_STATE.md](Docs/PROJECT_STATE.md)가 유일한 정본입니다.
 
+## 고치고 확인하는 반복 루프
+
+**한 곳을 고치고 결과만 보려면 `BUILD_WINDOWS.cmd`를 쓰지 않습니다.** 릴리스 빌드는 매번 새 staging 폴더와
+전역 lock, 사전 validator, 배포 manifest를 모두 처리하므로 반복 확인에는 낭비입니다.
+
+```bat
+FAST_QA_WINDOWS.cmd
+```
+
+기본 `-Profile auto`가 바뀐 파일을 보고 가장 싼 경로를 고릅니다. Simulation `.cs`만 고쳤으면 Unity를 아예
+켜지 않고 15초, 런타임 `.cs`면 scripts-only 빌드로 60초가 목표입니다. 출력은 `Artifacts/FastQa`에만 쓰므로
+배포본을 건드리지 않습니다.
+
+반복 루프가 느려지는 진짜 원인은 빌드 옵션이 아니라 worktree마다 warm `Library`를 버리는 것입니다. 실측과
+변경 종류별 명령표는 [ITERATION_LOOP.md](Docs/ITERATION_LOOP.md)가 정본이고, Fast QA 도구의 선택 계약은
+[FAST_QA_WINDOWS.md](Docs/FAST_QA_WINDOWS.md)에 있습니다.
+
 ## Windows에서 바로 실행하기
 
-Unity `6000.3.21f1`이 설치된 저장소 루트에서 다음 명령을 사용합니다.
+Unity `6000.3.21f1`이 설치된 저장소 루트에서 다음 명령을 사용합니다. 이 경로는 그 PC의 실행본을 처음 만들
+때와 배포 후보를 확정할 때만 사용합니다.
 
 ```powershell
 .\BUILD_WINDOWS.cmd
@@ -49,6 +70,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 | 3 | [CANON.md](Docs/CANON.md) | 가족·직원 후보·시각 콘텐츠 정본 |
 | 4 | [DECISIONS.md](Docs/DECISIONS.md) | 구조와 방향 결정의 이유 |
 | 구조 | [ARCHITECTURE.md](Docs/ARCHITECTURE.md) | 순수 시뮬레이션·저장·Unity 경계 |
+| 반복 루프 | [ITERATION_LOOP.md](Docs/ITERATION_LOOP.md), [FAST_QA_WINDOWS.md](Docs/FAST_QA_WINDOWS.md) | 변경 종류별 명령과 warm 캐시 규칙 |
 | 사무실·UI | [ART_STYLE.md](Docs/ART_STYLE.md), [OFFICE_BUILD_EDITOR_V1.md](Docs/OFFICE_BUILD_EDITOR_V1.md), [MAIN_NAVIGATION_HUD_V2.md](Docs/MAIN_NAVIGATION_HUD_V2.md), [FRONTEND_V0_4.md](Docs/FRONTEND_V0_4.md) | 현재 런타임 시각·편집·내비게이션 |
 | 계약 | [CONTRACTS_V0_3.md](Docs/CONTRACTS_V0_3.md), [CONTRACT_CLIENT_PROGRESSION_V1.md](Docs/CONTRACT_CLIENT_PROGRESSION_V1.md) | 계약 실행과 T0~T4 성장 |
 | 주식 | [SIMUL_MARKET_PORT.md](Docs/SIMUL_MARKET_PORT.md), [STOCK_MARKET_LANDSCAPE_V1.md](Docs/STOCK_MARKET_LANDSCAPE_V1.md) | 시장 코어와 가로형 UI |
@@ -63,6 +85,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 - 정본 개발 브랜치는 `main` 하나이며, clean 상태에서만 `git pull --ff-only origin main`을 실행합니다.
 - `Library`, `Temp`, `Logs`, `work`, `Builds`는 Git에 넣지 않고 `Assets`의 `.meta`는 반드시 추적합니다.
 - 회사 PC에서는 Unity/EXE를 전면 실행하지 않습니다. 컴파일·순수 로직 검증은 숨김 batchmode, 실제 렌더·IMGUI 캡처는 숨김 또는 비활성 오프스크린 Windows D3D11 창을 사용합니다.
+- 반복 확인은 `FAST_QA_WINDOWS.cmd`로 하고 `BUILD_WINDOWS.cmd`는 배포 후보에만 씁니다. `Library`, `Library/Bee`, `Artifacts/FastQa` 캐시는 일상 실행 사이에 삭제하지 않고, 새 worktree를 만들어 warm `Library`를 버리지 않습니다.
 - 제안서나 완료 보고서는 자동으로 정본이 아닙니다. 구현과 검증 후 `PROJECT_STATE.md`에 반영된 내용만 현재 상태입니다.
 - 회귀·실패·출처 미검증·self-PASS-only 실행본은 이름 변경이나 격리로 보존하지 않습니다. exact-root fence와 evidence-before-delete를 지키며 관련 payload만 삭제하고, 모든 regression oracle과 독립 gate를 통과한 새 build identity만 새로 빌드·승격합니다.
 - 최종 push 전에는 `.gitignore`와 tracked tree뿐 아니라 `origin/main`, 모든 active branch/tag tree, remote release asset에서 회귀·구 executable payload와 unknown identity가 0인지 확인합니다. tracked build는 일반 cleanup commit으로 제거하되, history rewrite/force-push는 exact audit·검증된 backup·collaborator re-clone 영향 승인 전에는 금지합니다.

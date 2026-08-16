@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using FamilyCompany.Presentation.Unity.OfficeGridView;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.OfficeRuntime
@@ -539,13 +540,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Vector2 facingMotion = row.IsRenderRow
                         ? row.RenderTrace.ActualDisplacement
                         : delta;
+                    Vector2 facingAxes = OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(
+                        facingMotion);
                     int renderedFacing = row.IsRenderRow
                         ? row.RenderTrace.DisplayDirection
                         : row.After.RenderedFacing;
-                    int quantized = ResolveFacing(facingMotion, renderedFacing);
+                    int quantized = ResolveFacing(facingAxes, renderedFacing);
                     Set(values, "quantizedVelocityFacing", quantized);
                     Set(values, "renderedFacing", renderedFacing);
-                    Set(values, "forwardDot", ForwardDot(facingMotion, renderedFacing));
+                    Set(values, "forwardDot", ForwardDot(facingAxes, renderedFacing));
                     Set(values, "renderAdapterOrdinal", row.RenderOrdinal);
                     Set(values, "renderFirstActorStepOrdinal", row.FirstStepOrdinal);
                     Set(values, "renderLastActorStepOrdinal", row.LastStepOrdinal);
@@ -576,13 +579,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         actor.ExpectedRenderedTraceCount == actor.ObservedRenderedTraceCount &&
                         (!row.IsRenderRow || row.RenderJoinValid));
                     bool moving = row.IsRenderRow ? row.RenderTrace.IsMoving : row.ObservedMoving;
-                    float forwardDot = ForwardDot(facingMotion, renderedFacing);
+                    float forwardDot = ForwardDot(facingAxes, renderedFacing);
                     bool wrong = moving && (quantized != renderedFacing || forwardDot < 0.92f);
                     Set(values, "wrongFacingCount", wrong ? 1 : 0);
                     Set(values, "strafeCount", wrong ? 1 : 0);
                     Set(values, "frontFacingLateralCount",
                         moving && (renderedFacing == 0 || renderedFacing == 4) &&
-                        Mathf.Abs(facingMotion.x) > Mathf.Abs(facingMotion.y) ? 1 : 0);
+                        Mathf.Abs(facingAxes.x) > Mathf.Abs(facingAxes.y) ? 1 : 0);
                     Set(values, "backwardLookingCount", moving && forwardDot < 0f ? 1 : 0);
                     Set(values, "producerValid", !actor.Failed);
                     Set(values, "droppedRowCount", actor.LocomotionRows.DroppedRowCount);

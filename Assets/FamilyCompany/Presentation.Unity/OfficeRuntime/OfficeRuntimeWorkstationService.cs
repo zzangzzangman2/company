@@ -88,7 +88,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 furnitureWorld.x - actorWorld.x,
                 furnitureWorld.y - actorWorld.y);
             if (heading.sqrMagnitude <= 0.000001f) return false;
-            direction = DirectionalSpriteAnimator.ResolveTileDirection(heading);
+            direction = DirectionalSpriteAnimator.ResolveTileDirection(
+                _presenter.WorldVectorToVisualFacingAxes(heading));
             return true;
         }
 

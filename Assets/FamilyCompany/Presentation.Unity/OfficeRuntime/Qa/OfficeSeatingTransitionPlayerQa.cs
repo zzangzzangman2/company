@@ -1063,8 +1063,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (displacement.magnitude <= OfficeRuntimeTraceCoordinator.StationaryEpsilon)
                 return Fail(93, trace.MemberId +
                     " first-walk latch advanced without outward displacement.");
+            Vector2 facingDisplacement = _runtime.World.Presenter.WorldVectorToVisualFacingAxes(displacement);
             int direction = DirectionalSpriteAnimator.ResolveTileDirection(
-                displacement,
+                facingDisplacement,
                 actor.R5eLastAtomicExitDirection);
             int spriteDirection = ParseSpriteDirection(actor.CurrentSpriteName);
             if (direction != actor.R5eLastAtomicExitDirection ||

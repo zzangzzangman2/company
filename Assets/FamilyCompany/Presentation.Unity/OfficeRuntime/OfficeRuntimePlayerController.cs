@@ -125,11 +125,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void ResetWork(bool leaveSeat)
         {
+            bool releaseControllerOwnedSeat = leaveSeat && _workingOfferId.Length > 0;
             _workProgress = 0f;
             _workingOfferId = string.Empty;
             _creditedThroughMinute = 0L;
             _requiredGameMinutesPerPersonHour = 60;
-            if (leaveSeat) _actor?.EndPlayerWork();
+            // Attendance and autonomy may seat the player independently of the hold-E contract
+            // interaction. Only release a seat that this controller actually acquired for one of
+            // its own manual work sessions.
+            if (releaseControllerOwnedSeat) _actor?.EndPlayerWork();
         }
 
         private static int RequiredGameMinutesPerPersonHour(SubcontractState contract, FamilyMemberState member)

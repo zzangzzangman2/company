@@ -56,6 +56,8 @@ claim that `BuildScriptsOnly` proves asset compatibility.
 ## Cache, lock and cleanup
 
 - Keep the detached QA worktree path stable. Its `Library`, `Library/Bee`, and Fast QA player are warm caches.
+  This is the single highest-impact rule: a new worktree pays an 80-104 s initial asset import before any
+  profile can hit its target. See [ITERATION_LOOP.md](ITERATION_LOOP.md) for the measured breakdown.
 - Never delete `Library`/`Temp` between ordinary runs.
 - A project-local exclusive lock prevents two Fast QA commands from sharing a project path. An existing
   `Temp/UnityLockfile` fails closed; it is never deleted.
@@ -66,13 +68,22 @@ claim that `BuildScriptsOnly` proves asset compatibility.
 
 ## Profiles and SLOs
 
+The runner's `ValidateSet` is the authority for accepted names:
+`auto`, `diagnose`, `simulation-pure`, `editor-validation`, `editor-broad`, `player-scripts`,
+`player-startup`, `asset-capture`, `full-fallback`, `d3d-capture`, `clean-build`.
+
 | Profile | Warm target | Notes |
 | --- | ---: | --- |
+| `auto` | selected profile's target | default; classifies the diff and picks the cheapest safe path |
 | `simulation-pure` | 15 s | no Unity/license/import |
+| `player-startup` | 15 s | existing Fast QA player launch probe only |
+| `d3d-capture` | 30 s | reuses the prebuilt player |
 | `editor-validation` | 45 s | persistent Library required |
 | `player-scripts` | 60 s | compatible prebuilt Fast QA player required |
-| `d3d-capture` | 30 s | reuses the prebuilt player |
+| `diagnose` | 60 s | stage/cache diagnostics when a run is unexpectedly slow |
+| `editor-broad` | no target | the manifest's 10 central gates |
 | `asset-capture` | measured, no 60 s promise | import/data build/capture required |
+| `full-fallback` | no target | broad Editor suite plus forced clean data build |
 | `clean-build` | no 60 s promise | measurement/diagnostics only; never deployment |
 
 Cold import and clean release are reported separately from warm Fast QA statistics. Final release still uses

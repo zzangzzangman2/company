@@ -12,7 +12,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     public static class OfficeRuntimeCollisionMotion
     {
         private const int ContactRefinementIterations = 8;
-        private const float MinimumDisplacementSquared = 0.0000001f;
+        // A 165-240 Hz first acceleration step is intentionally sub-pixel and can have a squared
+        // displacement below 1e-7. Treating that valid step as zero resets velocity every frame
+        // and permanently stalls a route immediately after a stationary pivot.
+        internal const float MinimumDisplacementSquared = 0.0000000001f;
 
         public static Vector2 Resolve(
             OfficeRuntimeOccupancy occupancy,

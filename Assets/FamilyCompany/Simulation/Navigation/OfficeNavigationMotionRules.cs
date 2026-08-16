@@ -492,14 +492,16 @@ namespace FamilyCompany.Simulation.Navigation
 
     public static class OfficeLocomotionGaitRules
     {
-        // One six-frame cycle now represents two planted steps across roughly three quarters of a
-        // semantic tile.  The former 1.08-world-unit cycle advanced the root almost a full tile
-        // while the foot art changed pose, which read as conveyor-belt sliding at normal speed.
-        public const float DefaultStrideLength = 0.78f;
+        // One six-frame cycle represents two planted steps and exactly one projected office tile:
+        // sqrt((320 / 180 / 2)^2 + (160 / 180 / 2)^2) = 0.99380799 world units.
+        // At the normal 1.0-world-unit/second speed this is 2.01 steps/second. Every tile center
+        // therefore repeats the same contact phase instead of letting the feet drift against the
+        // floor grid over a long route.
+        public const float DefaultStrideLength = 0.99380799f;
         public const float StopSettleSeconds = 0.10f;
         // One adjacent 45-degree body turn per interval. Four intervals make a stable 180-degree
         // planted pivot while still exposing every intermediate direction at 30 fps.
-        public const float PivotSeconds = 0.04f;
+        public const float PivotSeconds = 0.06f;
         public const float ShortShuffleStrideFraction = 0.30f;
         private const float MinimumDistance = 0.000001f;
 
@@ -631,6 +633,26 @@ namespace FamilyCompany.Simulation.Navigation
                 throw new ArgumentOutOfRangeException(nameof(strideLength));
             double cycles = accumulatedDistance / strideLength;
             return (float)(cycles - Math.Floor(cycles));
+        }
+
+        public static float StepPhase01(
+            float accumulatedDistance,
+            float strideLength = DefaultStrideLength)
+        {
+            float twoStepPhase = Phase01(accumulatedDistance, strideLength) * 2f;
+            return twoStepPhase - (float)Math.Floor(twoStepPhase);
+        }
+
+        public static float PlantedFootPresentationOffset(
+            float accumulatedDistance,
+            float strideLength = DefaultStrideLength)
+        {
+            // The logical/collision root stays linear. The visual root eases from one foot contact
+            // to the next: zero offset at both contacts, slow at plant, faster while the other foot
+            // swings. This removes the conveyor-belt read without changing path or seat timing.
+            float phase = StepPhase01(accumulatedDistance, strideLength);
+            float eased = phase * phase * (3f - 2f * phase);
+            return (eased - phase) * (strideLength * 0.5f);
         }
 
         public static int DistanceFrame(float accumulatedDistance, float strideLength, int frameCount)
@@ -833,7 +855,7 @@ namespace FamilyCompany.Simulation.Navigation
             return phase == OfficeLocomotionPhase.Pivot ||
                    OfficeLocomotionGaitRules.DirectionDistance(
                        displayDirection,
-                       requestedDirection) >= 3;
+                       requestedDirection) >= 2;
         }
 
         public static bool IsInteractionFacingReady(

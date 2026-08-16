@@ -24,10 +24,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     [DisallowMultipleComponent]
     public sealed class OfficeRuntimeWorld : MonoBehaviour
     {
-        // 1.65 world units/s * 0.06s = 0.099 world unit, below the visible frame-step
-        // quality bar. Simulation time may catch up after a hitch, but a rendered character root
-        // must not consume that entire hitch as one on-screen teleport.
-        public const float MaximumVisibleMotionDeltaSeconds = 0.06f;
+        // 1.00 world unit/s * 0.08s = 0.080 world unit, below the accepted 0.099-unit
+        // visible frame-step bar. This also lets a normal 60 Hz frame consume the complete 4x
+        // gameplay delta so the office clock cannot outrun characters on their attendance route.
+        // Real hitches still become actor-scoped debt instead of one on-screen teleport.
+        public const float MaximumVisibleMotionDeltaSeconds = 0.08f;
         private readonly OfficeRuntimeActorRegistry _registry = new OfficeRuntimeActorRegistry();
         private OfficeGrid _grid;
         private OfficeGridTilemapPresenter _presenter;
@@ -61,15 +62,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public static OfficeVisibleMotionBudget ConsumeVisibleMotionBudget(
             float previousDebtSeconds,
-            float unscaledFrameDeltaTime)
+            float frameDeltaTime)
         {
             if (float.IsNaN(previousDebtSeconds) || float.IsInfinity(previousDebtSeconds) ||
                 previousDebtSeconds < 0f)
                 throw new ArgumentOutOfRangeException(nameof(previousDebtSeconds));
-            if (float.IsNaN(unscaledFrameDeltaTime) || float.IsInfinity(unscaledFrameDeltaTime) ||
-                unscaledFrameDeltaTime < 0f)
-                throw new ArgumentOutOfRangeException(nameof(unscaledFrameDeltaTime));
-            float available = previousDebtSeconds + unscaledFrameDeltaTime;
+            if (float.IsNaN(frameDeltaTime) || float.IsInfinity(frameDeltaTime) ||
+                frameDeltaTime < 0f)
+                throw new ArgumentOutOfRangeException(nameof(frameDeltaTime));
+            float available = previousDebtSeconds + frameDeltaTime;
             float consumed = Mathf.Min(available, MaximumVisibleMotionDeltaSeconds);
             float remaining = Mathf.Max(0f, available - consumed);
             if (remaining <= 0.0000001f) remaining = 0f;
@@ -79,23 +80,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public static OfficeVisibleMotionBudget ConsumeActorVisibleMotionBudget(
             bool hasActiveVisibleMotionIntent,
             float previousDebtSeconds,
-            float unscaledFrameDeltaTime)
+            float frameDeltaTime)
         {
             if (!hasActiveVisibleMotionIntent)
             {
                 if (float.IsNaN(previousDebtSeconds) || float.IsInfinity(previousDebtSeconds) ||
                     previousDebtSeconds < 0f)
                     throw new ArgumentOutOfRangeException(nameof(previousDebtSeconds));
-                if (float.IsNaN(unscaledFrameDeltaTime) || float.IsInfinity(unscaledFrameDeltaTime) ||
-                    unscaledFrameDeltaTime < 0f)
-                    throw new ArgumentOutOfRangeException(nameof(unscaledFrameDeltaTime));
+                if (float.IsNaN(frameDeltaTime) || float.IsInfinity(frameDeltaTime) ||
+                    frameDeltaTime < 0f)
+                    throw new ArgumentOutOfRangeException(nameof(frameDeltaTime));
                 // Idle/work/failed reservation time is not traversable route distance. Runtime
                 // logic still receives one bounded tick, while stale catch-up is cleared now.
                 return new OfficeVisibleMotionBudget(
-                    Mathf.Min(unscaledFrameDeltaTime, MaximumVisibleMotionDeltaSeconds),
+                    Mathf.Min(frameDeltaTime, MaximumVisibleMotionDeltaSeconds),
                     0f);
             }
-            return ConsumeVisibleMotionBudget(previousDebtSeconds, unscaledFrameDeltaTime);
+            return ConsumeVisibleMotionBudget(previousDebtSeconds, frameDeltaTime);
         }
 
         public void Configure(
@@ -293,8 +294,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 float deltaTime = Time.deltaTime;
                 if (deltaTime <= 0f) return;
                 float unscaledDeltaTime = Time.unscaledDeltaTime;
-                // PrototypeBootstrap advances the authoritative office clock separately. Runtime
-                // navigation deliberately advances only the debt consumed here: every TickRuntime
+                // PrototypeBootstrap advances the authoritative office clock separately using the
+                // same gameplay scale. Runtime navigation advances only the scaled debt consumed
+                // here: every TickRuntime
                 // substep moves the visible Transform and updates canonical occupancy together, so a
                 // logical seat/work arrival cannot run ahead of the body or reserve through furniture.
                 // Any hitch remainder stays on the actor that owns the active route and drains on
@@ -316,7 +318,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         continue;
                     }
                     actor.BeginPresentationFrame();
-                    float actorDelta = actor.ConsumeVisibleMotionDelta(unscaledDeltaTime);
+                    float actorDelta = actor.ConsumeVisibleMotionDelta(deltaTime);
                     int actorSteps = OfficeNavigationMotionIntegrator.CalculateStepCount(actorDelta);
                     _frameMotionDeltas[index] = actorDelta;
                     _frameStepCounts[index] = actorSteps;

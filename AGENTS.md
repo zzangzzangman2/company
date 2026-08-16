@@ -8,7 +8,8 @@
 4. Docs/ARCHITECTURE.md
 5. 시각/씬 작업이면 Docs/ART_STYLE.md, Docs/ARCHITECTURE.md, Docs/OFFICE_BUILD_EDITOR_V1.md, Docs/MAIN_NAVIGATION_HUD_V2.md
 6. 회사 역사·시장·계약 작업이면 Docs/ULTIMATE_VISION.md, Docs/REAL_COMPANY_ALT_HISTORY.md, Docs/SIMUL_MARKET_PORT.md, Docs/CONTRACTS_V0_3.md
-7. 작업과 직접 관련된 추가 문서
+7. 코드를 고치고 확인해야 하면 Docs/ITERATION_LOOP.md
+8. 작업과 직접 관련된 추가 문서
 
 ## 필수 작업 규칙
 
@@ -19,6 +20,22 @@
 - 회사 PC에서는 사용자의 업무 화면을 방해하지 않도록 Unity Editor와 플레이테스트 EXE를 전면 실행하지 않는다. 컴파일·로직 검증은 `-batchmode -nographics -quit`, 렌더·PlayMode 캡처는 `-batchmode`를 사용해 백그라운드로 실행하고 로그의 PASS/FAIL까지 확인한다.
 - 시각 검증에서 `Camera.Render`가 필요하면 `-nographics`를 사용하지 않으며, 자동 종료가 검증 coroutine을 끊는 경우 `-quit`도 사용하지 않는다. GUI나 EXE의 직접 조작이 꼭 필요하면 먼저 사용자에게 알린다.
 - Unity 버전은 6000.3.21f1로 고정한다.
+
+### 빌드와 검증 명령
+
+- 한 곳을 고치고 결과를 확인하는 반복 작업에는 `FAST_QA_WINDOWS.cmd`를 쓴다. 기본 `-Profile auto`가 바뀐
+  파일을 보고 가장 싼 경로를 고르며, 출력은 `Artifacts/FastQa`에만 쓴다. 변경 종류별 명령과 실측 근거는
+  Docs/ITERATION_LOOP.md가 정본이다.
+- `BUILD_WINDOWS.cmd`와 `DEPLOY_WINDOWS.cmd`는 배포 후보 HEAD가 확정되고 clean일 때만 실행한다. 한 줄 수정을
+  확인하려고 릴리스 빌드를 돌리지 않는다.
+- `Library`, `Library/Bee`, `Artifacts/FastQa`의 플레이어 캐시는 일상 실행 사이에 삭제하지 않는다. 이 캐시가
+  식으면 같은 변경의 확인 비용이 7~20초에서 100초 이상으로 늘어난다.
+- 새 worktree를 만들면 그 경로의 첫 Unity 실행이 80~104초짜리 최초 임포트를 처음부터 다시 낸다. 반복 작업은
+  `Library`가 이미 warm인 기존 worktree 한 곳에서 수행하고, 병합이 끝난 worktree는 `git worktree remove`로
+  정리한다.
+- 느리다고 느끼면 추측하지 말고 그 실행의 Unity 로그에서 `Asset Pipeline Refresh ... Total: <n> seconds`와
+  `Require frontend run. Library/Bee/*.dag couldn't be loaded`를 먼저 확인한다. 두 값이 작은데도 느릴 때만
+  빌드 파이프라인을 의심한다.
 - 매 작업 종료 전에 Docs/PROJECT_STATE.md의 현재 상태, 완료 항목, 다음 작업, 검증 결과를 갱신한다.
 - 설정·구조·콘텐츠 방향을 바꾸면 Docs/DECISIONS.md에 날짜와 이유를 남긴다.
 - 캐릭터·나이·복장·에셋 정본을 바꾸면 Docs/CANON.md와 Docs/ASSET_MANIFEST.md를 함께 갱신한다.

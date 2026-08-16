@@ -9,7 +9,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-import cv2
 import numpy as np
 from PIL import Image
 
@@ -56,6 +55,23 @@ def parse_args() -> argparse.Namespace:
         "--verify-only",
         action="store_true",
         help="Validate sheets and already-split frames without writing files.",
+    )
+    parser.add_argument(
+        "--character",
+        action="append",
+        default=None,
+        help=(
+            "Limit processing to a character ID. Repeat the option for multiple "
+            "characters; discovery still validates the complete asset tree."
+        ),
+    )
+    parser.add_argument(
+        "--assume-grid-layout",
+        action="store_true",
+        help=(
+            "Crop exact 256px 4x6 cells even when legacy sheets do not carry the "
+            f"{LAYOUT_METADATA_KEY} PNG marker."
+        ),
     )
     return parser.parse_args()
 
@@ -174,30 +190,28 @@ def extract_aligned_frames(sheet: Image.Image, sheet_path: Path) -> list[list[Im
     """Find the 24 real silhouettes and align them to a stable in-place anchor."""
     rgba = np.asarray(sheet)
     binary = (rgba[:, :, 3] > 0).astype(np.uint8)
-    component_count, labels, stats, centroids = cv2.connectedComponentsWithStats(binary, 8)
-    main_labels = [
-        label
-        for label in range(1, component_count)
-        if int(stats[label, cv2.CC_STAT_AREA]) >= 1000
-    ]
-    if len(main_labels) != 24:
-        areas = sorted(
-            (int(stats[label, cv2.CC_STAT_AREA]) for label in range(1, component_count)),
-            reverse=True,
-        )[:30]
-        raise ValueError(f"{sheet_path} must contain 24 main silhouettes; found {len(main_labels)}. areas={areas}")
+    components = connected_component_stats(binary)
+    main_components = [component for component in components if component["area"] >= 1000]
+    if len(main_components) != 24:
+        areas = sorted((component["area"] for component in components), reverse=True)[:30]
+        raise ValueError(
+            f"{sheet_path} must contain 24 main silhouettes; "
+            f"found {len(main_components)}. areas={areas}"
+        )
 
-    main_labels.sort(key=lambda label: (float(centroids[label][1]), float(centroids[label][0])))
+    main_components.sort(key=lambda component: (component["centroid_y"], component["centroid_x"]))
     rows: list[list[Image.Image]] = []
     for row_index in range(4):
-        row_labels = main_labels[row_index * PHASE_COUNT : (row_index + 1) * PHASE_COUNT]
-        row_labels.sort(key=lambda label: float(centroids[label][0]))
+        row_components = main_components[
+            row_index * PHASE_COUNT : (row_index + 1) * PHASE_COUNT
+        ]
+        row_components.sort(key=lambda component: component["centroid_x"])
         row_frames: list[Image.Image] = []
-        for label in row_labels:
-            x = int(stats[label, cv2.CC_STAT_LEFT])
-            y = int(stats[label, cv2.CC_STAT_TOP])
-            width = int(stats[label, cv2.CC_STAT_WIDTH])
-            height = int(stats[label, cv2.CC_STAT_HEIGHT])
+        for component in row_components:
+            x = component["left"]
+            y = component["top"]
+            width = component["width"]
+            height = component["height"]
             padding = 12
             left = max(0, x - padding)
             top = max(0, y - padding)
@@ -219,10 +233,99 @@ def extract_aligned_frames(sheet: Image.Image, sheet_path: Path) -> list[list[Im
 
             canvas = Image.new("RGBA", (CELL_SIZE, CELL_SIZE), (0, 0, 0, 0))
             canvas.alpha_composite(crop, (offset_x, offset_y))
-            validate_frame(canvas, f"{sheet_path} component {label}")
+            validate_frame(canvas, f"{sheet_path} component at ({x},{y})")
             row_frames.append(canvas)
         rows.append(row_frames)
     return rows
+
+
+def connected_component_stats(binary: np.ndarray) -> list[dict[str, int | float]]:
+    """Return 8-connected component stats using row runs, without OpenCV."""
+    height, _ = binary.shape
+    runs: list[tuple[int, int, int]] = []
+    parents: list[int] = []
+
+    def find(index: int) -> int:
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        left_root = find(left)
+        right_root = find(right)
+        if left_root != right_root:
+            parents[right_root] = left_root
+
+    previous: list[int] = []
+    for y in range(height):
+        xs = np.flatnonzero(binary[y])
+        if len(xs) == 0:
+            previous = []
+            continue
+        breaks = np.flatnonzero(np.diff(xs) > 1)
+        starts = np.concatenate(([0], breaks + 1))
+        ends = np.concatenate((breaks, [len(xs) - 1]))
+        current: list[int] = []
+        previous_cursor = 0
+        for start_index, end_index in zip(starts, ends):
+            x0 = int(xs[start_index])
+            x1 = int(xs[end_index])
+            run_index = len(runs)
+            runs.append((y, x0, x1))
+            parents.append(run_index)
+            current.append(run_index)
+
+            while (
+                previous_cursor < len(previous)
+                and runs[previous[previous_cursor]][2] < x0 - 1
+            ):
+                previous_cursor += 1
+            cursor = previous_cursor
+            while cursor < len(previous) and runs[previous[cursor]][1] <= x1 + 1:
+                union(run_index, previous[cursor])
+                cursor += 1
+        previous = current
+
+    aggregates: dict[int, dict[str, int]] = {}
+    for index, (y, x0, x1) in enumerate(runs):
+        root = find(index)
+        length = x1 - x0 + 1
+        aggregate = aggregates.setdefault(
+            root,
+            {
+                "area": 0,
+                "sum_x": 0,
+                "sum_y": 0,
+                "left": x0,
+                "right": x1,
+                "top": y,
+                "bottom": y,
+            },
+        )
+        aggregate["area"] += length
+        aggregate["sum_x"] += ((x0 + x1) * length) // 2
+        aggregate["sum_y"] += y * length
+        aggregate["left"] = min(aggregate["left"], x0)
+        aggregate["right"] = max(aggregate["right"], x1)
+        aggregate["top"] = min(aggregate["top"], y)
+        aggregate["bottom"] = max(aggregate["bottom"], y)
+
+    result: list[dict[str, int | float]] = []
+    for aggregate in aggregates.values():
+        area = aggregate["area"]
+        result.append(
+            {
+                "area": area,
+                "left": aggregate["left"],
+                "top": aggregate["top"],
+                "width": aggregate["right"] - aggregate["left"] + 1,
+                "height": aggregate["bottom"] - aggregate["top"] + 1,
+                "centroid_x": aggregate["sum_x"] / area,
+                "centroid_y": aggregate["sum_y"] / area,
+            }
+        )
+    return result
 
 
 def extract_grid_frames(sheet: Image.Image, sheet_path: Path) -> list[list[Image.Image]]:
@@ -244,7 +347,12 @@ def extract_grid_frames(sheet: Image.Image, sheet_path: Path) -> list[list[Image
     return rows
 
 
-def split_character(repo_root: Path, spec: CharacterSpec, verify_only: bool) -> int:
+def split_character(
+    repo_root: Path,
+    spec: CharacterSpec,
+    verify_only: bool,
+    assume_grid_layout: bool,
+) -> int:
     if verify_only:
         validate_frame_contract(spec)
     else:
@@ -261,7 +369,9 @@ def split_character(repo_root: Path, spec: CharacterSpec, verify_only: bool) -> 
         if sheet.size != SHEET_SIZE:
             raise ValueError(f"{sheet_path} must be {SHEET_SIZE}, got {sheet.size}")
         require_hard_alpha(sheet, sheet_path)
-        if layout_marker is None:
+        if assume_grid_layout:
+            aligned_frames = extract_grid_frames(sheet, sheet_path)
+        elif layout_marker is None:
             aligned_frames = extract_aligned_frames(sheet, sheet_path)
         elif layout_marker == GRID_LAYOUT_MARKER:
             aligned_frames = extract_grid_frames(sheet, sheet_path)
@@ -297,7 +407,24 @@ def main() -> None:
     args = parse_args()
     repo_root = args.repo_root.resolve()
     characters = discover_characters(repo_root)
-    total = sum(split_character(repo_root, spec, args.verify_only) for spec in characters)
+    if args.character:
+        requested = {character_id.strip().lower() for character_id in args.character}
+        available = {spec.character_id for spec in characters}
+        unknown = sorted(requested - available)
+        if unknown:
+            raise ValueError(
+                f"Unknown HighMotion character IDs {unknown}; available={sorted(available)}"
+            )
+        characters = [spec for spec in characters if spec.character_id in requested]
+    total = sum(
+        split_character(
+            repo_root,
+            spec,
+            args.verify_only,
+            args.assume_grid_layout,
+        )
+        for spec in characters
+    )
     expected_total = (
         len(characters)
         * sum(len(directions) for directions in PART_DIRECTIONS.values())

@@ -105,7 +105,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             _frameWriter.WriteLine(
                 "wall_seconds,frame,screen,game_date,game_time,elapsed_minute,world_scale," +
                 "frame_delta,unscaled_frame_delta,motion_delta,motion_debt," +
-                "member,agent_phase,x,y,dx,dy,actual_speed,desired_vx,desired_vy," +
+                "member,agent_phase,x,y,dx,dy,visual_facing_dx,visual_facing_dy,actual_speed,desired_vx,desired_vy," +
                 "motion_direction,display_direction,sprite_direction,locomotion_phase," +
                 "gait_phase,walk_frame,clip,sprite,flip_x,is_moving,collision_projected," +
                 "static_clear,blocker,stuck_seconds,path_index,path_length,seat_id," +
@@ -205,6 +205,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             DirectionalLocomotionFrameTrace trace,
             bool staticClear)
         {
+            Vector2 facingDisplacement = _runtime.World.Presenter.WorldVectorToVisualFacingAxes(
+                trace.ActualDisplacement);
             string[] values =
             {
                 F(wallSeconds),
@@ -222,6 +224,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 actor.Phase.ToString(),
                 F(actor.Position.x), F(actor.Position.y),
                 F(trace.ActualDisplacement.x), F(trace.ActualDisplacement.y),
+                F(facingDisplacement.x), F(facingDisplacement.y),
                 F(trace.ActualSpeed),
                 F(actor.DesiredVelocity.x), F(actor.DesiredVelocity.y),
                 trace.MotionDirection.ToString(Invariant),
@@ -270,12 +273,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 Violation("TELEPORT", wallSeconds, now, actor.AgentId,
                     $"distance={F(displacement.magnitude)} phase={actor.Phase}");
 
-            // The runtime grid is rendered through a 2:1 isometric transform: a semantic
-            // southwest step can therefore have |screen dx| == 2 * |screen dy|. Classify the
-            // lateral contract from the direction resolved from this frame's actual displacement,
-            // rather than treating raw screen-axis dominance as west/east.
+            // Grid cells own the route, while the visible atlas pose follows the same projected
+            // screen segment. The atlas direction names use mirrored horizontal handedness.
+            Vector2 facingDisplacement = _runtime.World.Presenter.WorldVectorToVisualFacingAxes(displacement);
             int displacementDirection = translated
-                ? DirectionalSpriteAnimator.ResolveTileDirection(displacement)
+                ? DirectionalSpriteAnimator.ResolveTileDirection(facingDisplacement)
                 : -1;
             bool lateral = displacementDirection == 2 || displacementDirection == 6;
             if (lateral)

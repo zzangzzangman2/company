@@ -32,13 +32,13 @@ namespace FamilyCompany.Editor
         private static readonly Vector2[] DirectionVectors =
         {
             Vector2.down,
-            new Vector2(-1f, -1f).normalized,
-            Vector2.left,
-            new Vector2(-1f, 1f).normalized,
-            Vector2.up,
-            new Vector2(1f, 1f).normalized,
+            new Vector2(1f, -1f).normalized,
             Vector2.right,
-            new Vector2(1f, -1f).normalized
+            new Vector2(1f, 1f).normalized,
+            Vector2.up,
+            new Vector2(-1f, 1f).normalized,
+            Vector2.left,
+            new Vector2(-1f, -1f).normalized
         };
 
         [MenuItem("Family Company/Validate Movement Facing Navigation")]
@@ -48,7 +48,11 @@ namespace FamilyCompany.Editor
             OfficeSharedLocomotionStrictReport strict = OfficeSharedLocomotionStrictValidation.Run();
             ValidateSameFrameLateralSpriteConsumption();
             ValidateEightDirectionsAndStoppedFacing();
+            ValidateProjectedSpriteFacingBasis();
+            ValidateTileCenterRouting();
+            ValidateTileLockedPlantedFootGait();
             ValidateVisibleMotionFrameCap();
+            ValidateHighRefreshFirstAccelerationStep();
             ValidateActorScopedDebtTransitionsAndRoundRobin();
             ValidateFourActorAttendanceIngressReservation();
             ValidateCanonicalFurniturePathDetours();
@@ -77,8 +81,8 @@ namespace FamilyCompany.Editor
         {
             using (var harness = new AnimatorHarness())
             {
-                ValidateLateralRun(harness, Vector2.left, 2, "west");
-                ValidateLateralRun(harness, Vector2.right, 6, "east");
+                ValidateLateralRun(harness, Vector2.left, 6, "screen-left/east-art");
+                ValidateLateralRun(harness, Vector2.right, 2, "screen-right/west-art");
             }
             ValidateProductionLateralSpriteAssets();
         }
@@ -95,8 +99,8 @@ namespace FamilyCompany.Editor
                     memberId + " production walk frames are missing.");
                 using (var harness = new ProductionAnimatorHarness(memberId, frames))
                 {
-                    ValidateProductionLateralRun(harness, Vector2.left, 2, "west");
-                    ValidateProductionLateralRun(harness, Vector2.right, 6, "east");
+                    ValidateProductionLateralRun(harness, Vector2.left, 6, "screen-left/east-art");
+                    ValidateProductionLateralRun(harness, Vector2.right, 2, "screen-right/west-art");
                 }
             }
         }
@@ -186,20 +190,20 @@ namespace FamilyCompany.Editor
                         $"8-way sprite consumer mismatch for {DirectionTokens[direction]}: {trace}.");
                 }
 
-                harness.Animator.RestoreStandingFacing(6);
+                harness.Animator.RestoreStandingFacing(2);
                 harness.Step(Vector2.right, true);
                 DirectionalLocomotionFrameTrace stopped = default;
                 for (var frame = 0; frame < 20; frame++)
                     stopped = harness.Step(Vector2.zero, false);
                 Require(stopped.Phase == OfficeLocomotionPhase.Idle && !stopped.IsMoving,
                     "Stopped runtime actor did not settle to Idle: " + stopped);
-                Require(stopped.DisplayDirection == 6,
-                    "Stopped runtime actor did not retain its last natural East facing: " + stopped);
+                Require(stopped.DisplayDirection == 2,
+                    "Stopped runtime actor did not retain its screen-right West-art facing: " + stopped);
                 Require(OfficeWorkActionFrameSet.TryResolveNamedDirection(
                             harness.Renderer.sprite,
                             out int stoppedSpriteDirection) &&
-                        stoppedSpriteDirection == 6,
-                    "Stopped sprite consumer did not retain East: " + stopped);
+                        stoppedSpriteDirection == 2,
+                    "Stopped sprite consumer did not retain screen-right West art: " + stopped);
             }
         }
 
@@ -310,12 +314,14 @@ namespace FamilyCompany.Editor
 
         private static void ValidateVisibleMotionFrameCap()
         {
-            foreach (var worldScale in new[] { 1f, 4f })
+            foreach (var worldScale in new[] { 1f, 2f, 4f })
             using (var harness = new OccupancyHarness(CreateAttendanceFurnitureGrid(2)))
             {
                 string actorId = "visible-budget-" + worldScale.ToString("F0");
                 var startCell = new OfficeGridCoordinate(1, 1);
-                var goalCell = new OfficeGridCoordinate(11, 11);
+                // Eight center-to-center cells are enough to exercise hitches, corners and debt
+                // draining while keeping this per-scale regression in the fast iteration loop.
+                var goalCell = new OfficeGridCoordinate(5, 5);
                 harness.Register(actorId, startCell);
                 var paths = new OfficeRuntimePathService(
                     harness.Grid,
@@ -346,24 +352,27 @@ namespace FamilyCompany.Editor
                 float maximumRenderMove = 0f;
                 int multiStepRenderCount = 0;
                 int drainedAtFrame = -1;
-                for (var frame = 0; frame < 900; frame++)
+                float kinematicSeconds = routeLength / OfficeRuntimeAgent.DefaultMoveSpeed;
+                int maximumFrames = Mathf.CeilToInt(
+                    (kinematicSeconds / worldScale + 4f) * 60f);
+                for (var frame = 0; frame < maximumFrames; frame++)
                 {
                     float unscaledFrameDelta = frame == 4
                         ? 0.200f
                         : frame == 11
                             ? 0.500f
                             : 1f / 60f;
-                    // A 4x world clock produces a larger scaled simulation delta, but visible
-                    // navigation owns an unscaled debt so normal 60 Hz frames cannot accumulate it.
+                    // The office clock and actor routes must consume the same gameplay scale.
+                    // The per-render cap/debt mechanism still prevents hitch teleports.
                     float scaledSimulationDelta = unscaledFrameDelta * worldScale;
                     Require(scaledSimulationDelta >= unscaledFrameDelta,
                         "World-scale test input was invalid.");
                     OfficeVisibleMotionBudget budget =
                         OfficeRuntimeWorld.ConsumeVisibleMotionBudget(
                             debt,
-                            unscaledFrameDelta);
+                            scaledSimulationDelta);
                     debt = budget.RemainingDebtSeconds;
-                    totalIncoming += unscaledFrameDelta;
+                    totalIncoming += scaledSimulationDelta;
                     totalConsumed += budget.ConsumedSeconds;
                     float renderMoved = 0f;
                     int stepCount = OfficeNavigationMotionIntegrator.CalculateStepCount(
@@ -376,8 +385,14 @@ namespace FamilyCompany.Editor
                             step,
                             stepCount);
                         float remainingBudget = OfficeRuntimeAgent.DefaultMoveSpeed * stepDelta;
+                        int movementIterations = 0;
                         while (remainingBudget > 0.0000001f && pathIndex < path.Count)
                         {
+                            movementIterations++;
+                            Require(movementIterations <= path.Count * 4,
+                                $"{worldScale:F0}x frame {frame} movement loop made no finite " +
+                                $"progress: pathIndex={pathIndex}/{path.Count} " +
+                                $"remaining={remainingBudget:R} position={position}.");
                             Vector2 target = harness.Position(path[pathIndex]);
                             Vector2 delta = target - position;
                             if (delta.magnitude <= 0.000001f)
@@ -428,8 +443,11 @@ namespace FamilyCompany.Editor
                     }
                 }
 
-                Require(drainedAtFrame >= 0 && drainedAtFrame < 900,
-                    $"{worldScale:F0}x motion debt did not drain or route did not arrive.");
+                Require(drainedAtFrame >= 0 && drainedAtFrame < maximumFrames,
+                    $"{worldScale:F0}x motion debt did not drain or route did not arrive " +
+                    $"within speed-derived budget: route={routeLength:F6} " +
+                    $"speed={OfficeRuntimeAgent.DefaultMoveSpeed:F3} " +
+                    $"kinematic={kinematicSeconds:F3}s frames={maximumFrames}.");
                 Require(multiStepRenderCount >= 2,
                     $"{worldScale:F0}x hitch did not exercise multiple fixed updates/render.");
                 Require(debt <= 0.0000001f,
@@ -453,6 +471,156 @@ namespace FamilyCompany.Editor
                     $"drainedFrame={drainedAtFrame} multiStepRenders={multiStepRenderCount} " +
                     "finalDebt=0 penetrations=0");
             }
+        }
+
+        private static void ValidateHighRefreshFirstAccelerationStep()
+        {
+            using (var harness = new OccupancyHarness(CreateAttendanceFurnitureGrid(2)))
+            {
+                const string actorId = "high-refresh-first-step";
+                var startCell = new OfficeGridCoordinate(1, 1);
+                harness.Register(actorId, startCell);
+                Vector2 start = harness.Position(startCell);
+                const float deltaTime = 1f / 240f;
+                OfficeMotionIntegrationResult motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
+                    new OfficeNavPoint(0f, 0f),
+                    new OfficeNavPoint(OfficeRuntimeAgent.DefaultMoveSpeed, 0f),
+                    7.5f,
+                    deltaTime);
+                var intended = new Vector2(motion.Displacement.X, motion.Displacement.Z);
+                Require(intended.sqrMagnitude > 0f && intended.sqrMagnitude < 0.0000001f,
+                    "The high-refresh fixture no longer exercises the former zero-displacement threshold.");
+                Vector2 actual = OfficeRuntimeCollisionMotion.Resolve(
+                    harness.Occupancy,
+                    actorId,
+                    start,
+                    intended,
+                    Vector2.right * OfficeRuntimeAgent.DefaultMoveSpeed,
+                    Vector2.zero,
+                    OfficeRuntimeAgent.DefaultRadius,
+                    string.Empty,
+                    out bool collisionProjected);
+                Require(!collisionProjected && Vector2.Distance(actual, intended) <= 0.0000001f,
+                    "A valid 240 Hz first acceleration step was discarded as zero movement.");
+            }
+        }
+
+        private static void ValidateProjectedSpriteFacingBasis()
+        {
+            Vector2 basisX = new Vector2(1f, 0.5f);
+            Vector2 basisY = new Vector2(-1f, 0.5f);
+            using (var harness = new AnimatorHarness())
+            {
+                ValidateProjectedDirection(harness, basisX, 3, "screen-up-right/northwest-art");
+                ValidateProjectedDirection(harness, -basisX, 7, "screen-down-left/southeast-art");
+                ValidateProjectedDirection(harness, basisY, 5, "screen-up-left/northeast-art");
+                ValidateProjectedDirection(harness, -basisY, 1, "screen-down-right/southwest-art");
+                ValidateProjectedDirection(harness, basisX + basisY, 4, "screen-up/north-art");
+                ValidateProjectedDirection(harness, basisX - basisY, 2, "screen-right/west-art");
+            }
+            Require(Vector2.Distance(
+                        OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(Vector2.right),
+                        Vector2.left) <= 0.000001f &&
+                    Vector2.Distance(
+                        OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(Vector2.up),
+                        Vector2.up) <= 0.000001f,
+                "Projected walk-art adapter did not preserve vertical and mirror horizontal handedness.");
+        }
+
+        private static void ValidateProjectedDirection(
+            AnimatorHarness harness,
+            Vector2 worldDirection,
+            int expectedDirection,
+            string label)
+        {
+            harness.Animator.RestoreStandingFacing(expectedDirection);
+            DirectionalLocomotionFrameTrace trace = harness.Step(worldDirection, true);
+            Require(trace.MotionDirection == expectedDirection &&
+                    trace.DisplayDirection == expectedDirection,
+                $"{label} did not follow the projected screen segment: {trace}.");
+            Require(OfficeWorkActionFrameSet.TryResolveNamedDirection(
+                        harness.Renderer.sprite,
+                        out int spriteDirection) &&
+                    spriteDirection == expectedDirection,
+                $"{label} consumed the wrong visible body sprite: {trace}.");
+        }
+
+        private static void ValidateTileCenterRouting()
+        {
+            var pathfinder = new DeterministicOfficePathfinder(
+                new OfficeNavBounds(0f, 0f, 5f, 5f),
+                1f,
+                Array.Empty<OfficeNavObstacle>(),
+                0.1f,
+                0f);
+            Require(pathfinder.TryFindPath(
+                    new OfficeNavPoint(0.5f, 0.5f),
+                    new OfficeNavPoint(4.5f, 4.5f),
+                    out OfficeNavPath path),
+                "Tile-center route fixture did not produce a path.");
+            Require(path.Waypoints.Count == 9,
+                $"Tile-center route skipped cells: points={path.Waypoints.Count}.");
+            for (var index = 0; index < path.Waypoints.Count; index++)
+            {
+                OfficeNavPoint point = path.Waypoints[index];
+                Require(Math.Abs(point.X - (Math.Floor(point.X) + 0.5f)) <= 0.000001f &&
+                        Math.Abs(point.Z - (Math.Floor(point.Z) + 0.5f)) <= 0.000001f,
+                    $"Route point {index} left its tile center: {point}.");
+                if (index == 0) continue;
+                OfficeNavPoint previous = path.Waypoints[index - 1];
+                float dx = Math.Abs(point.X - previous.X);
+                float dz = Math.Abs(point.Z - previous.Z);
+                Require((Math.Abs(dx - 1f) <= 0.000001f && dz <= 0.000001f) ||
+                        (Math.Abs(dz - 1f) <= 0.000001f && dx <= 0.000001f),
+                    $"Route segment {index - 1}->{index} did not move center-to-center: " +
+                    $"({previous.X:R},{previous.Z:R})->({point.X:R},{point.Z:R}).");
+            }
+        }
+
+        private static void ValidateTileLockedPlantedFootGait()
+        {
+            float halfWidth = OfficeGridTilemapPresenter.TileWorldWidth * 0.5f;
+            float halfHeight = OfficeGridTilemapPresenter.TileWorldHeight * 0.5f;
+            float tileCenterDistance = Mathf.Sqrt(
+                halfWidth * halfWidth + halfHeight * halfHeight);
+            float stride = OfficeLocomotionGaitRules.DefaultStrideLength;
+            Require(Mathf.Abs(tileCenterDistance - stride) <= 0.000001f,
+                $"Walk cycle is not locked to one tile: tile={tileCenterDistance:R} stride={stride:R}.");
+
+            float stepsPerSecond = OfficeRuntimeAgent.DefaultMoveSpeed / stride * 2f;
+            Require(stepsPerSecond >= 1.9f && stepsPerSecond <= 2.1f,
+                $"Normal walking cadence is outside the planted tycoon range: {stepsPerSecond:F3} steps/s.");
+            Require(OfficeLocomotionGaitRules.DistanceFrame(0f, stride, 6) == 0 &&
+                    OfficeLocomotionGaitRules.DistanceFrame(stride * 0.5f, stride, 6) == 3 &&
+                    OfficeLocomotionGaitRules.DistanceFrame(stride, stride, 6) == 0,
+                "Left/right foot contacts do not exchange at half-tile and close at tile center.");
+
+            Require(Mathf.Abs(OfficeLocomotionGaitRules.PlantedFootPresentationOffset(0f, stride)) <=
+                    0.000001f &&
+                    Mathf.Abs(OfficeLocomotionGaitRules.PlantedFootPresentationOffset(
+                        stride * 0.5f,
+                        stride)) <= 0.000001f &&
+                    Mathf.Abs(OfficeLocomotionGaitRules.PlantedFootPresentationOffset(stride, stride)) <=
+                    0.000001f,
+                "Visual root offset is discontinuous at a planted-foot or tile-center contact.");
+
+            float sampleDistance = stride * 0.01f;
+            float plantAdvance = sampleDistance +
+                                 OfficeLocomotionGaitRules.PlantedFootPresentationOffset(
+                                     sampleDistance,
+                                     stride);
+            float swingStart = stride * 0.25f;
+            float swingAdvance = sampleDistance +
+                                 OfficeLocomotionGaitRules.PlantedFootPresentationOffset(
+                                     swingStart + sampleDistance,
+                                     stride) -
+                                 OfficeLocomotionGaitRules.PlantedFootPresentationOffset(
+                                     swingStart,
+                                     stride);
+            Require(plantAdvance < sampleDistance * 0.10f &&
+                    swingAdvance > sampleDistance * 1.35f,
+                $"Foot planting did not slow contact and recover during swing: " +
+                $"plant={plantAdvance:R} swing={swingAdvance:R} logical={sampleDistance:R}.");
         }
 
         private static void ValidateActorScopedDebtTransitionsAndRoundRobin()
@@ -491,7 +659,7 @@ namespace FamilyCompany.Editor
                         0.500f);
                 mixedDebt[actor] = budget.RemainingDebtSeconds;
             }
-            Require(mixedDebt[0] > 0.43f &&
+            Require(mixedDebt[0] > 0.41f &&
                     mixedDebt.Skip(1).All(value => value <= 0.0000001f),
                 "One moving actor transferred hitch debt to an idle/work sibling.");
 

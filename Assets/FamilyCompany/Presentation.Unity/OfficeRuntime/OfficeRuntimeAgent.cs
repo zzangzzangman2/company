@@ -34,7 +34,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     public sealed class OfficeRuntimeAgent : MonoBehaviour, IOfficeRuntimeAgent
     {
         public const float DefaultRadius = 0.22f;
-        public const float DefaultMoveSpeed = 1.65f;
+        public const float DefaultMoveSpeed = 1.00f;
         internal const int RequiredR5eSeatPreloadDirection = (int)OfficeSeatFacing8.Northwest;
         private const float ArrivalDistance = 0.035f;
         // Keep the generated displacement strictly below the public 0.9 px contract so camera
@@ -79,10 +79,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _standingFacingDirection = -1;
         private bool _attendanceDepartureActive;
         private bool _attendanceArrivalActive;
+        private bool _attendanceWorkHandoffActive;
         private bool _attendanceIngressActive;
         private Vector2 _attendanceIngressExteriorWorld;
         private Vector2 _attendanceIngressInteriorWorld;
         private int _attendanceSeatArrivalCount;
+        private string _lastSeatReleaseRequestReason = string.Empty;
+        private ulong _lastSeatReleaseRequestTick;
+        private Vector2 _locomotionVisualFootPlantOffsetWorld;
         private OfficeRuntimeDestination? _preparedAttendanceDestination;
         private readonly List<OfficeGridCoordinate> _preparedAttendancePath =
             new List<OfficeGridCoordinate>();
@@ -450,6 +454,40 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _animator == null ? default : _animator.CaptureLocomotionFrameTrace();
         public bool IsPresentationAway => _presentationAway;
         public int AttendanceSeatArrivalCount => _attendanceSeatArrivalCount;
+        public Vector2 LocomotionVisualFootPlantOffsetWorld =>
+            _locomotionVisualFootPlantOffsetWorld;
+        internal string DiagnosticDestinationId =>
+            _destination.HasValue ? _destination.Value.DestinationId : string.Empty;
+        internal string DiagnosticPendingDestinationId =>
+            _pendingDestination.HasValue ? _pendingDestination.Value.DestinationId : string.Empty;
+        internal string DiagnosticAutonomyDestinationId =>
+            _autonomyDestination.HasValue ? _autonomyDestination.Value.DestinationId : string.Empty;
+        internal string DiagnosticAutonomyIntentId => _autonomyIntentId;
+        internal bool DiagnosticAttendanceWorkHandoffActive => _attendanceWorkHandoffActive;
+        internal int DiagnosticPathIndex => _pathIndex;
+        internal bool DiagnosticSeatClaimOccupied => _seatClaim != null && _seatClaim.IsOccupied;
+        internal bool DiagnosticSeatClaimReleased => _seatClaim == null || _seatClaim.IsReleased;
+        internal string DiagnosticLastSeatReleaseRequestReason => _lastSeatReleaseRequestReason;
+        internal ulong DiagnosticLastSeatReleaseRequestTick => _lastSeatReleaseRequestTick;
+        internal string DiagnosticDockingPlan
+        {
+            get
+            {
+                if (_seat == null || _world == null ||
+                    !_world.Workstations.TryResolveDockingPlan(_seat, out OfficeSeatDockingPlan plan))
+                    return "none";
+                return string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    "seat={0};revision={1};current={2};root=({3:F3},{4:F3});pelvis=({5:F3},{6:F3})",
+                    _seat.SeatId,
+                    plan.AnchorRevision,
+                    _world.Workstations.IsDockingPlanCurrent(plan),
+                    plan.SeatRootWorld.x,
+                    plan.SeatRootWorld.y,
+                    plan.SeatPelvisWorld.x,
+                    plan.SeatPelvisWorld.y);
+            }
+        }
         public bool IsAttendanceIngressActive => _attendanceIngressActive;
         public Vector2 AttendanceIngressExteriorWorld => _attendanceIngressExteriorWorld;
         public Vector2 AttendanceIngressInteriorWorld => _attendanceIngressInteriorWorld;
@@ -724,7 +762,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _autonomyDestination = null;
             // Attendance owns the prewarmed door-to-desk route until the actor is seated. Do not
             // resolve a competing autonomy path in the same frame.
-            if (!HasAssignedTask && !_attendanceArrivalActive) TryStartAutonomyRequest();
+            if (!HasAssignedTask && !_attendanceArrivalActive && !_attendanceWorkHandoffActive)
+                TryStartAutonomyRequest();
         }
 
         public void ClearAutonomousDestination()
@@ -738,7 +777,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _autonomyLayoutRevision = -1;
             _autonomyStatus = string.Empty;
             _autonomyDestination = null;
-            if (!HasAssignedTask && !_playerControlled) RequestStopAndStand();
+            if (!HasAssignedTask && !_playerControlled && !_attendanceWorkHandoffActive)
+                RequestStopAndStand();
         }
 
         public void ResetRuntimeState()
@@ -757,8 +797,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _autonomyDestination = null;
             _attendanceDepartureActive = false;
             _attendanceArrivalActive = false;
+            _attendanceWorkHandoffActive = false;
             ReleaseAttendanceIngress();
             _attendanceSeatArrivalCount = 0;
+            _lastSeatReleaseRequestReason = string.Empty;
+            _lastSeatReleaseRequestTick = 0;
             _preparedAttendanceDestination = null;
             _preparedAttendancePath.Clear();
             _standingFacingDirection = -1;
@@ -1147,7 +1190,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (!_playerControlled || _qaControl) return;
             if (IsSeated || Phase == OfficeRuntimeAgentPhase.SittingDown || IsEnteringSeat)
-                RequestStopAndStand();
+                RequestStopAndStand("player-work-controller-reset");
         }
 
         public void InvalidatePath()
@@ -1185,7 +1228,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _r5eAwaitingFirstWalk = false;
             _r5eFirstWalkCount++;
             _r5eLastFirstWalkTick = _r5eRuntimeTick;
-            _r5eLastFirstWalkDirection = DirectionalSpriteAnimator.ResolveTileDirection(
+            _r5eLastFirstWalkDirection = _animator.ResolveConfiguredTileDirection(
                 _lastActualDisplacement,
                 _r5eLastAtomicExitDirection);
         }
@@ -1213,7 +1256,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     Phase == OfficeRuntimeAgentPhase.SittingDown ||
                     IsEnteringSeat)
                 {
-                    RequestStopAndStand();
+                    RequestStopAndStand("player-direct-movement");
                 }
                 else if (Phase == OfficeRuntimeAgentPhase.Idle || Phase == OfficeRuntimeAgentPhase.Navigating)
                 {
@@ -1493,6 +1536,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             using (OfficePerformanceTelemetry.Measure(OfficePerformancePath.AnimatorTick))
                 _animator.Tick(presentationDeltaTime);
             _animator.EndTilePresentationFrame();
+            ApplyLocomotionFootPlantPresentation(presentationDeltaTime);
             if (Phase == OfficeRuntimeAgentPhase.FinishingWork)
                 _finishingWorkPresentationObserved = true;
             RecordSeatingFacingInvariant();
@@ -1505,6 +1549,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private bool TryStartAutonomyRequest()
         {
             if (_playerControlled || _qaControl || HasAssignedTask || _attendanceArrivalActive ||
+                _attendanceWorkHandoffActive ||
                 _autonomyIntentId.Length == 0)
                 return false;
 
@@ -1641,7 +1686,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _destination.Value.DestinationId == destination.DestinationId &&
                     destination.RequiresSeat) return true;
                 _pendingDestination = destination;
-                RequestStopAndStand();
+                RequestStopAndStand("destination:" + destination.DestinationId);
                 return true;
             }
 
@@ -1736,12 +1781,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
-        internal float ConsumeVisibleMotionDelta(float unscaledFrameDeltaTime)
+        internal float ConsumeVisibleMotionDelta(float scaledFrameDeltaTime)
         {
             OfficeVisibleMotionBudget budget = OfficeRuntimeWorld.ConsumeActorVisibleMotionBudget(
                 HasActiveVisibleMotionIntent,
                 _visibleMotionDebtSeconds,
-                unscaledFrameDeltaTime);
+                scaledFrameDeltaTime);
             _visibleMotionDebtSeconds = budget.RemainingDebtSeconds;
             return budget.ConsumedSeconds;
         }
@@ -1827,7 +1872,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 AgentRadius)
                 ? intended
                 : Vector2.zero;
-            if (actual.sqrMagnitude > 0.0000001f)
+            if (actual.sqrMagnitude > OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
             {
                 transform.position = new Vector3(after.x, after.y, transform.position.z);
                 ConsumeVisibleFrameMovement(actual.magnitude);
@@ -2510,6 +2555,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (_attendanceArrivalActive)
             {
                 _attendanceArrivalActive = false;
+                _attendanceWorkHandoffActive = true;
                 _attendanceSeatArrivalCount++;
                 Debug.Log(
                     "STARTER_OFFICE_ATTENDANCE_SEATED | member=" + _agentId +
@@ -2590,7 +2636,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             OfficeSeatEgressAnchor exitAnchor = plan.Exit(_seatEgressCandidate.Kind);
             Vector2 exitWorld = new Vector2(exitAnchor.World.x, exitAnchor.World.y);
-            int exitDirection = DirectionalSpriteAnimator.ResolveTileDirection(
+            int exitDirection = _animator.ResolveConfiguredTileDirection(
                 exitWorld - plan.SeatRootWorld,
                 _seatDirection);
             OfficeRuntimeDestination? preparedQaOutward = null;
@@ -3708,8 +3754,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ResumeAutonomy();
         }
 
-        private void RequestStopAndStand()
+        private void RequestStopAndStand(string reason = "unspecified")
         {
+            if (Phase == OfficeRuntimeAgentPhase.Working ||
+                Phase == OfficeRuntimeAgentPhase.SittingDown ||
+                IsEnteringSeat ||
+                Phase == OfficeRuntimeAgentPhase.FinishingWork ||
+                Phase == OfficeRuntimeAgentPhase.StandingUp ||
+                Phase == OfficeRuntimeAgentPhase.LeavingSeat)
+            {
+                _lastSeatReleaseRequestReason = string.IsNullOrWhiteSpace(reason)
+                    ? "unspecified"
+                    : reason.Trim();
+                _lastSeatReleaseRequestTick = _r5eRuntimeTick;
+            }
             _standingFacingDirection = -1;
             _destination = null;
             _path.Clear();
@@ -4116,7 +4174,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 AgentRadius,
                 permittedSeatId,
                 out bool collisionProjected);
-            if (actual.sqrMagnitude > 0.0000001f)
+            if (actual.sqrMagnitude > OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
             {
                 transform.position = new Vector3(
                     before.x + actual.x,
@@ -4130,7 +4188,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _currentVelocity = Vector2.zero;
                 if (targetVelocity.sqrMagnitude > 0.01f) _stuckSeconds += deltaTime;
                 LastMovementBlocker = waitingForPivot
-                    ? $"pivot={_animator.CurrentDirection}->{DirectionalSpriteAnimator.ResolveTileDirection(targetVelocity, _animator.CurrentDirection)}:{_animator.LocomotionPhase}"
+                    ? $"pivot={_animator.CurrentDirection}->{_animator.ResolveConfiguredTileDirection(targetVelocity, _animator.CurrentDirection)}:{_animator.LocomotionPhase}"
                     : _world.Occupancy.DescribeMoveBlocker(
                         _agentId,
                         before,
@@ -4138,7 +4196,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         AgentRadius,
                         permittedSeatId);
             }
-            if (actual.sqrMagnitude > 0.0000001f) LastMovementBlocker = string.Empty;
+            if (actual.sqrMagnitude > OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
+                LastMovementBlocker = string.Empty;
             _animator.AccumulateTileMotion(
                 presentationSemanticVelocity ?? targetVelocity,
                 actual,
@@ -4185,7 +4244,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 AgentRadius,
                 permittedSeatId,
                 out bool collisionProjected);
-            if (actual.sqrMagnitude > 0.0000001f)
+            if (actual.sqrMagnitude > OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
             {
                 transform.position = new Vector3(
                     before.x + actual.x,
@@ -4221,7 +4280,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (_animator == null || targetVelocity.sqrMagnitude <= 0.000001f) return false;
             int current = _animator.CurrentDirection;
-            int target = DirectionalSpriteAnimator.ResolveTileDirection(targetVelocity, current);
+            int target = _animator.ResolveConfiguredTileDirection(targetVelocity, current);
             return OfficeSharedLocomotionRules.RequiresStationaryPivot(
                 current,
                 target,
@@ -4257,6 +4316,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 frame);
             _seatedUpperBodyCutoffPx = profile.PelvisAnchorPx.y;
             RecordObservedSeatingFrame(clip, frame);
+            if (_attendanceWorkHandoffActive &&
+                clip == OfficeSeatingAnimationClip.Work &&
+                (_observedWorkFrameMask & 0x3f) == 0x3f)
+            {
+                _attendanceWorkHandoffActive = false;
+                Debug.Log(
+                    "STARTER_OFFICE_ATTENDANCE_WORK_HANDOFF | member=" + _agentId +
+                    " | tick=" + _r5eRuntimeTick +
+                    " | workFrames=6");
+            }
             if (clip == OfficeSeatingAnimationClip.Work &&
                 _animator.IsOfficeWorkAnimationHookActive &&
                 !string.IsNullOrWhiteSpace(appliedSprite.name))
@@ -4826,6 +4895,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void ReleaseSeatImmediately()
         {
+            _attendanceWorkHandoffActive = false;
             ClearSeatEgressReservation();
             OfficeSeatSlot seat = _seat;
             OfficeSeatRuntimeClaim claim = _seatClaim;
@@ -4932,9 +5002,52 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private void ResetVisualPose()
         {
             if (_visualRoot == null) return;
+            _locomotionVisualFootPlantOffsetWorld = Vector2.zero;
             _visualRoot.localPosition = Vector3.zero;
             _visualRoot.localRotation = Quaternion.identity;
             _visualRoot.localScale = Vector3.one * OfficeGridCharacterMover.UniformVisualScale;
+        }
+
+        private void ApplyLocomotionFootPlantPresentation(float deltaTime)
+        {
+            if (_visualRoot == null || _animator == null) return;
+
+            bool seatingOwnsVisualRoot =
+                _animator.IsOfficeSeatingPoseActive || IsOccupyingSeat || IsEnteringSeat;
+            if (seatingOwnsVisualRoot)
+            {
+                // Seat contact placement is authoritative and must never inherit a walking offset.
+                _locomotionVisualFootPlantOffsetWorld = Vector2.zero;
+                return;
+            }
+
+            Vector2 targetOffset = Vector2.zero;
+            Vector2 displacement = _animator.ActualTileDisplacement;
+            if (!_animator.IsNavigationAnimationSuppressed &&
+                _animator.IsMoving &&
+                displacement.sqrMagnitude > OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
+            {
+                float forwardOffset = OfficeLocomotionGaitRules.PlantedFootPresentationOffset(
+                    _animator.GaitDistance,
+                    OfficeLocomotionGaitRules.DefaultStrideLength);
+                // The authored six-pose cycle already contains natural shoulder/hip rise.
+                // Adding a procedural vertical bob here doubles that motion and reads as hopping.
+                targetOffset = displacement.normalized * forwardOffset;
+            }
+
+            float settlePerSecond = OfficeLocomotionGaitRules.DefaultStrideLength /
+                                    OfficeLocomotionGaitRules.StopSettleSeconds;
+            _locomotionVisualFootPlantOffsetWorld = _animator.IsMoving
+                ? targetOffset
+                : Vector2.MoveTowards(
+                    _locomotionVisualFootPlantOffsetWorld,
+                    Vector2.zero,
+                    settlePerSecond * Mathf.Max(0f, deltaTime));
+            Vector3 localOffset = transform.InverseTransformVector(new Vector3(
+                _locomotionVisualFootPlantOffsetWorld.x,
+                _locomotionVisualFootPlantOffsetWorld.y,
+                0f));
+            _visualRoot.localPosition = localOffset;
         }
 
         private void SetPresentationAway(bool away)

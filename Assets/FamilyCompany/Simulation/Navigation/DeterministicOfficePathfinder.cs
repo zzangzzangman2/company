@@ -6,7 +6,6 @@ namespace FamilyCompany.Simulation.Navigation
     public sealed class DeterministicOfficePathfinder
     {
         private const int CardinalCost = 1000;
-        private const int DiagonalCost = 1414;
         private const float SegmentEpsilon = 0.000001f;
 
         private readonly OfficeNavBounds _bounds;
@@ -132,18 +131,13 @@ namespace FamilyCompany.Simulation.Navigation
                     for (var dx = -1; dx <= 1; dx++)
                     {
                         if (dx == 0 && dz == 0) continue;
+                        if (dx != 0 && dz != 0) continue;
                         var nextX = currentX + dx;
                         var nextZ = currentZ + dz;
                         if (!IsInside(nextX, nextZ)) continue;
                         var nextIndex = ToIndex(nextX, nextZ);
                         if (_blocked[nextIndex] || _closed[nextIndex]) continue;
-                        if (dx != 0 && dz != 0 &&
-                            (_blocked[ToIndex(currentX + dx, currentZ)] ||
-                             _blocked[ToIndex(currentX, currentZ + dz)]))
-                            continue;
-
-                        var stepCost = dx == 0 || dz == 0 ? CardinalCost : DiagonalCost;
-                        var candidate = _g[current.Index] + stepCost;
+                        var candidate = _g[current.Index] + CardinalCost;
                         if (candidate >= _g[nextIndex]) continue;
                         _g[nextIndex] = candidate;
                         _parent[nextIndex] = current.Index;
@@ -155,15 +149,14 @@ namespace FamilyCompany.Simulation.Navigation
 
             if (!found) return false;
             var raw = Reconstruct(_parent, startIndex, goalIndex);
-            var simplified = Simplify(raw);
-            var points = new List<OfficeNavPoint>(simplified.Count + 4);
-            for (var index = 0; index < simplified.Count; index++)
-                points.Add(CellCenter(simplified[index]));
+            // Runtime characters move on the same semantic tile rails as furniture placement.
+            // Preserve every reconstructed cell center: line-of-sight simplification and rounded
+            // corner trimming make a valid tile route visually drift across neighbouring tiles.
+            var points = new List<OfficeNavPoint>(raw.Count + 2);
+            for (var index = 0; index < raw.Count; index++)
+                points.Add(CellCenter(raw[index]));
             AttachExactStart(points, start, startProjected);
             AttachExactGoal(points, goal, goalProjected);
-            var uneased = points;
-            points = EaseCorners(uneased, Math.Min(0.24f, _cellSize * 0.9f));
-            if (!ArePointsWalkable(points)) points = uneased;
             if (!ArePointsWalkable(points)) return false;
             path = new OfficeNavPath(
                 points.ToArray(),
@@ -290,12 +283,10 @@ namespace FamilyCompany.Simulation.Navigation
                     for (var dx = -1; dx <= 1; dx++)
                     {
                         if (dx == 0 && dz == 0) continue;
+                        if (dx != 0 && dz != 0) continue;
                         var nextX = currentX + dx;
                         var nextZ = currentZ + dz;
                         if (!IsOpen(nextX, nextZ)) continue;
-                        if (dx != 0 && dz != 0 &&
-                            (!IsOpen(currentX + dx, currentZ) || !IsOpen(currentX, currentZ + dz)))
-                            continue;
                         var next = ToIndex(nextX, nextZ);
                         if (_reachable[next]) continue;
                         _reachable[next] = true;
@@ -319,72 +310,6 @@ namespace FamilyCompany.Simulation.Navigation
             if (result[result.Count - 1] != start) return new List<int>();
             result.Reverse();
             return result;
-        }
-
-        private List<int> Simplify(IReadOnlyList<int> raw)
-        {
-            if (raw.Count <= 2) return new List<int>(raw);
-            var result = new List<int> { raw[0] };
-            var anchor = 0;
-            while (anchor < raw.Count - 1)
-            {
-                var furthest = anchor + 1;
-                for (var candidate = raw.Count - 1; candidate > anchor + 1; candidate--)
-                {
-                    if (!HasLineOfSight(raw[anchor], raw[candidate])) continue;
-                    furthest = candidate;
-                    break;
-                }
-
-                result.Add(raw[furthest]);
-                anchor = furthest;
-            }
-
-            return result;
-        }
-
-        private List<OfficeNavPoint> EaseCorners(IReadOnlyList<OfficeNavPoint> points, float radius)
-        {
-            if (points.Count <= 2 || radius <= 0f) return new List<OfficeNavPoint>(points);
-            var result = new List<OfficeNavPoint>(points.Count * 2) { points[0] };
-            for (var index = 1; index < points.Count - 1; index++)
-            {
-                var previous = points[index - 1];
-                var current = points[index];
-                var next = points[index + 1];
-                var incoming = (current - previous).Normalized;
-                var outgoing = (next - current).Normalized;
-                var dot = OfficeNavPoint.Dot(incoming, outgoing);
-                if (dot > 0.985f)
-                {
-                    result.Add(current);
-                    continue;
-                }
-
-                var trim = Math.Min(radius,
-                    Math.Min(OfficeNavPoint.Distance(previous, current), OfficeNavPoint.Distance(current, next)) * 0.32f);
-                var before = current - incoming * trim;
-                var after = current + outgoing * trim;
-                if (IsSegmentWalkable(result[result.Count - 1], before) &&
-                    IsSegmentWalkable(before, after) &&
-                    IsSegmentWalkable(after, next))
-                {
-                    result.Add(before);
-                    result.Add(after);
-                }
-                else
-                {
-                    result.Add(current);
-                }
-            }
-
-            result.Add(points[points.Count - 1]);
-            return result;
-        }
-
-        private bool HasLineOfSight(int startIndex, int endIndex)
-        {
-            return IsSegmentWalkable(CellCenter(startIndex), CellCenter(endIndex));
         }
 
         private bool IsOpen(int x, int z) => IsInside(x, z) && !_blocked[ToIndex(x, z)];
@@ -427,9 +352,7 @@ namespace FamilyCompany.Simulation.Navigation
             GetCoordinates(to, out var toX, out var toZ);
             var dx = Math.Abs(toX - fromX);
             var dz = Math.Abs(toZ - fromZ);
-            var diagonal = Math.Min(dx, dz);
-            var straight = Math.Max(dx, dz) - diagonal;
-            return diagonal * DiagonalCost + straight * CardinalCost;
+            return (dx + dz) * CardinalCost;
         }
 
         private readonly struct HeapEntry

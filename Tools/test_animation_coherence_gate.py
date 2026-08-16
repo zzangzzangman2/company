@@ -66,6 +66,25 @@ class AnimationCoherenceGateTests(unittest.TestCase):
             coherence.measure(loop)
             self.assertIn("frozen-gait-pose", loop.failure_codes)
 
+    def test_full_body_silhouette_pop_fails_coherence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = []
+            for index in range(6):
+                path = root / f"actor_south_walk_{index}.png"
+                image = Image.new("RGBA", coherence.CANVAS_SIZE, (0, 0, 0, 0))
+                left = 18 if index % 2 == 0 else 174
+                for y in range(80, 249):
+                    for x in range(left, left + 64):
+                        image.putpixel((x, y), (80 + index, 120, 160, 255))
+                image.save(path)
+                paths.append(path)
+            loop = coherence.Loop(
+                "actor", "walk", "south", list(enumerate(paths)), enforce_walk_quality=True
+            )
+            coherence.measure(loop)
+            self.assertIn("silhouette-adjacent-worst", loop.failure_codes)
+
     def test_missing_walk_direction_fails_contract(self) -> None:
         loops = [
             coherence.Loop("actor", "walk", direction, [])

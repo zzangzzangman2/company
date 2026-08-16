@@ -291,6 +291,21 @@
   - 오지우 A `9C9A5AFAE75F1358B9B9B0A46B2DBDA6E194F75839F5CD3ED87010CF4A6BF6C4`, B `A9B5D8C1B8BBD2CCEB3FEC94B86D67815AF5A31DD76ACCF823BAF4E7843076F6`
   - 윤채아 A `06B35F154FEE2A9C3B857E3DD34BA9BC02BE564856FC10A320163CE88D0B12D8`, B `8C59A4826BEB25E9B8260EEA073E05F388B9648F9916CCEF177248B24A10DCE3`
 
+### 2026-08-16 가족 4인 전신 보행 복원
+
+- 대상: 플레이어·누나·아빠·엄마의 runtime HighMotion 시트 8장과 frame 192장.
+- 출처: `Assets/Art/Characters/BeforeCoherenceV1/{player,older_sister,father,mother}/`에 보존된 승인
+  `*_pixel_walk8dir6_[ab]_v1.png`. 신규 ImageGen 생성 없이 이 PNG 바이트를 canonical HighMotion 시트로
+  복원했다. 복원 전 팔 고정·하체 2포즈 runtime 시트는 repo 밖 작업 증거에 보존했다.
+- 동작 계약: 방향별 6개 전신 고유 포즈에서 좌우 발과 반대 팔이 함께 교차한다. frame 0 상체를 전 사이클에
+  덮거나 다리를 두 접촉 포즈로 축소하지 않는다.
+- 분할: `Tools/split_high_motion_sheets.py --character <id> --assume-grid-layout`. 8-connected component row-run
+  검출로 셀 경계를 넘은 팔·발도 한 실루엣으로 취급하고, 256×256 frame 안에서 발 하단을 y=247에 맞춰
+  8px 하단 안전 여백을 보존한다. 알파는 0/255다.
+- 검증: `Tools/measure_animation_coherence.py --motion walk --strict` 결과 12명·96 loops·576 frames PASS.
+  silhouette median<=30%, worst<=40%, unique 6, foot drift<=1px, stable root drift<=4px, closure<=2px다.
+  `Tools/test_animation_coherence_gate.py` 9/9 PASS이며 발·팔을 포함한 full-body silhouette pop 회귀를 검사한다.
+
 ## 가족 4인 사무실 착석 애니메이션 OfficeSeating V1
 
 - 상태: **448/448 GENERATED · SOURCE/FRAME/META/VISUAL QA PASS · 런타임 미연결**

@@ -1,5 +1,47 @@
 # DECISIONS
 
+## 2026-08-16 / 일반 새 게임 observer가 출근 계약의 최종 판정자다
+
+결정: seating 전용 QA는 좌석·전환·가림의 국소 계약을 검증하지만 일반 새 게임 출근 회귀의 최종 증거로
+사용하지 않는다. 출근 판정은 `actorQaControl=false`, route injection=false, clock jump=false,
+docking force=false인 observer-only Windows Player가 08:50→09:50을 실제로 진행하며 actor별 phase,
+destination/path, reservation/claim, occupancy, atomic seat, Work 6프레임을 기록해야 한다.
+
+이유: 기존 seating QA의 `BeginQaControl`과 `QaBeginSeatedWork`는 정상 일정·경로·좌석 handoff를 의도적으로
+강제해 09:07의 `player-work-controller-reset` 좌석 해제를 가렸다. 빠른 국소 QA 통과와 실제 새 게임 동작은
+서로 다른 증거다.
+
+## 2026-08-16 / 보행은 화면축 전신 방향·cardinal 타일 중앙·한 타일 한 주기다
+
+결정: 가족 원화 방향은 실제 화면 투영과 일치하는 `(-world.x, world.y)` facing axes로 고른다. 오른쪽으로
+이동할 때 West 전신, 왼쪽으로 이동할 때 East 전신이 보이는 현재 원화 계약을 presenter가 한 곳에서 소유하고,
+animator·interaction facing·seat egress trace·gameplay QA가 모두 같은 변환을 사용한다.
+
+결정: 생산 경로와 legacy pathfinder는 대각선·corner easing·중간점 생략 없이 cardinal cell center를 모두
+순서대로 지난다. 기본 이동 속도는 `1.00 world unit/s`, 6프레임 2보 주기는 투영 타일 한 칸과 같은
+`0.99380799 world unit`으로 둔다. 실제 작은 변위를 무시해 걷기 Sprite가 멈추는 문제를 막기 위한 visual
+displacement 제곱 임계값은 `1e-10`이며 path budget·destination tolerance와 분리한다.
+
+이유: 기존 방향 변환은 오른쪽으로 이동하는 아버지에게 North 전신을 선택했고, 대각선 경로와 corner easing은
+위쪽 이동도 비스듬하게 보이게 했다. Venture Tycoon처럼 타일 중앙선을 기준으로 코너에서만 90도 전환하면
+진행 방향을 예측할 수 있다. 기존 `1.65/0.78` 조합의 약 4.23 steps/s는 발이 떨리고 끌려 보였지만 새 계약은
+한 타일에 두 걸음, 약 2.01 steps/s라 발 접지와 이동 거리가 맞는다.
+
+## 2026-08-16 / 가족 보행은 승인된 전신 여섯 포즈와 scaled actor time을 보존한다
+
+결정: 가족 4인의 runtime HighMotion 8개 시트는 `BeforeCoherenceV1`에 보존된 승인 원본으로 복원한다. 머리·몸통·
+팔을 frame 0으로 고정하거나 다리를 두 포즈로 축소하지 않는다. 분할기는 8-connected 실루엣을 순수 NumPy로
+찾아 256×256 frame의 하단 8px에 발 기준선을 맞추며, strict coherence gate는 RGB 변화량이 아니라 silhouette
+인접 변화 `median<=30%`, `worst<=40%`, unique 6, foot drift<=1px, stable root drift<=4px, closure<=2px를 쓴다.
+
+결정: gameplay clock과 actor motion은 모두 scaled time을 사용한다. actor 이동은 `Time.deltaTime`을 최대 0.08초
+조각으로 소비하며, logical root·collision·occupancy는 매 조각 동기화한다. `unscaledDeltaTime`으로 몸만 1x에
+묶는 것을 금지한다.
+
+이유: 기존 안정화 산출물은 팔을 얼리고 하체를 사실상 두 포즈로 줄여 발 끌림을 만들었다. 승인 원본에는 이미
+좌우 발과 반대 팔이 교차하는 여섯 전신 포즈가 있으므로 신규 생성보다 손실 없는 복원이 정확하다. 또한 clock만
+2x/4x가 되고 actor가 1x면 출근 시간창을 실제 이동이 따라가지 못해 부모가 의자 앞에서 멈춘 것처럼 보인다.
+
 ## 2026-08-15 / Windows 자동 배포는 clean integration HEAD와 검증된 candidate만 승격한다
 
 결정: 자동 watcher는 `codex/integration-p0-qa`의 committed HEAD가 배포 manifest와 다르고 debounce 동안
@@ -545,3 +587,27 @@ compression, padding을 별도 승인하기 전에는 검증을 실패시킨다.
 이유: 기존 540p downsample은 월드만 2×2 출력 블록으로 만들었고 UI와 DPI는 정상이라 sharpening이나
 원본 재생성으로 해결할 문제가 아니었다. native sampling과 presentation snap이 같은 프레임의 얇은 경계
 에너지를 2.20배 보존하면서 world state와 병렬 이동/착석 코드를 건드리지 않는다.
+
+## 2026-08-16 / 반복 확인은 Fast QA, 릴리스 빌드는 배포 후보에만
+
+결정: 한 곳을 고치고 결과를 확인하는 반복 루프의 정본 명령은 `FAST_QA_WINDOWS.cmd`이며, `BUILD_WINDOWS.cmd`와
+`DEPLOY_WINDOWS.cmd`는 배포 후보 HEAD가 확정되고 clean일 때만 실행한다. 변경 종류별 명령과 실측 근거는
+`Docs/ITERATION_LOOP.md`가 정본이고 릴리스 절차는 `PLAYTEST_BUILD.md`/`REGRESSION_BUILD_POLICY.md`가 계속 정본이다.
+
+결정: `Library`, `Library/Bee`, `Artifacts/FastQa`의 플레이어 캐시는 일상 실행 사이에 삭제하지 않는다. 반복
+작업은 `Library`가 이미 warm인 기존 worktree 한 곳에서 수행하고, 병합이 끝난 worktree는 정리한다. 새 worktree는
+그 첫 실행이 100초 이상 걸린다는 비용을 인정하고 시작한다.
+
+이유: 실측에서 병목은 빌드 옵션이 아니라 cold `Library`였다. `build-20260815-035423-unity.log`의 자동화 전체
+133.4초 중 103.707초가 `Asset Pipeline Refresh ... InitialRefreshV2(ForceSynchronousImport)`였고 같은 로그는
+`Require frontend run. Library/Bee/1900b0aE.dag couldn't be loaded`도 남겼다. 반면 warm `Library/Bee`에서는 normal
+incremental player build가 6.93/6.94/7.00초, forced clean release-config build조차 16.00/19.58/19.44초다. 즉 강제
+clean 빌드보다 worktree를 새로 만드는 쪽이 5배 이상 비싸다. 이미 존재하던 Fast QA 경로가 `Artifacts/FastQa/runs`
+기준 두 worktree에서만 쓰이고 있었으므로, 도구를 새로 만드는 대신 지침을 정본화해 실제 사용을 강제한다.
+
+결정: Enter Play Mode Options와 Unity Accelerator는 후보로만 기록하고 적용하지 않는다. 전자는
+`ProjectSettings/EditorSettings.asset`이 `m_EnterPlayModeOptionsEnabled: 1`, `m_EnterPlayModeOptions: 0`이라 현재
+이득이 0이지만, `LiveContentPath`의 `_cachedRoot`/`_rootResolved`, `GameAudioCoordinator._instance`,
+`OfficeInteractionSelectionTrace.TraceRecorded` 세 지점의 런타임 가변 static이 Play 사이에 초기화되지 않는 문제를
+먼저 해결하고 Unity 실행 검증을 통과해야 한다. 후자는 별도 설치와 엔드포인트 취급 규칙이 필요하다. 검증 전까지
+둘 다 현재 상태가 아니다.

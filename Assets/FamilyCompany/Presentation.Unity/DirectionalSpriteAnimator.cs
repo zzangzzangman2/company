@@ -1,4 +1,5 @@
 using System;
+using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeSeating;
 using FamilyCompany.Presentation.Unity.OfficeSeating.Authoring;
 using FamilyCompany.Presentation.Unity.OfficeWorkActions;
@@ -260,6 +261,16 @@ namespace FamilyCompany.Presentation.Unity
             ApplyFrame();
         }
 
+        public int ResolveConfiguredTileDirection(Vector2 worldDisplacement, int currentDirection)
+        {
+            if (currentDirection < 0 || currentDirection >= DirectionCount)
+                throw new ArgumentOutOfRangeException(nameof(currentDirection));
+            Vector2 visualDisplacement = WorldVectorToFacingAxes(worldDisplacement);
+            return visualDisplacement.sqrMagnitude <= 0.000001f
+                ? currentDirection
+                : ResolveTileDirection(visualDisplacement, currentDirection);
+        }
+
         public void ConfigureLocomotion(Sprite[] newIdleFrames, float newStrideLength)
         {
             if (newIdleFrames != null && newIdleFrames.Length != 0 &&
@@ -452,7 +463,8 @@ namespace FamilyCompany.Presentation.Unity
                 7 => new Vector2(1f, -1f),
                 _ => Vector2.zero
             };
-            AccumulateTileMotion(heading, Vector2.zero, deltaTime, false);
+            Vector2 worldHeading = new Vector2(-heading.x, heading.y);
+            AccumulateTileMotion(worldHeading, Vector2.zero, deltaTime, false);
         }
 
         public bool IsReadyForInteractionFacing(int desiredDirection)
@@ -1006,16 +1018,18 @@ namespace FamilyCompany.Presentation.Unity
                 float resolvedDeltaTime = _tileFrameDeltaTime > 0.000001f
                     ? _tileFrameDeltaTime
                     : Mathf.Max(0f, deltaTime);
+                Vector2 facingRequest = WorldVectorToFacingAxes(_tileSemanticDisplacement);
+                Vector2 facingMotion = WorldVectorToFacingAxes(_tileFrameDisplacement);
                 OfficeSharedLocomotionFrameResult locomotion =
                     OfficeSharedLocomotionRules.ResolveFrame(
                         _tileFacingState,
                         _tileGaitState,
                         new OfficeNavPoint(
-                            _tileSemanticDisplacement.x,
-                            _tileSemanticDisplacement.y),
+                            facingRequest.x,
+                            facingRequest.y),
                         new OfficeNavPoint(
-                            _tileFrameDisplacement.x,
-                            _tileFrameDisplacement.y),
+                            facingMotion.x,
+                            facingMotion.y),
                         _tileFrameTravelDistance,
                         resolvedDeltaTime,
                         _tileFrameCollisionProjected,
@@ -1134,6 +1148,9 @@ namespace FamilyCompany.Presentation.Unity
                 currentDirection,
                 hysteresisDegrees);
         }
+
+        private static Vector2 WorldVectorToFacingAxes(Vector2 worldVector) =>
+            OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(worldVector);
 
         private void Update()
         {

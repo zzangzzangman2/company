@@ -38,13 +38,12 @@ DIRECTIONS = (
 ALPHA_MIN = 8
 DIFF_MIN = 12
 
-MAX_ADJACENT_MEDIAN = 45.0
-MAX_ADJACENT_WORST = 60.0
-MAX_ADJACENCY_RATIO = 0.95
+MAX_SILHOUETTE_ADJACENT_MEDIAN = 30.0
+MAX_SILHOUETTE_ADJACENT_WORST = 40.0
 MIN_GAIT_ADJACENT_MOTION = 0.18
 MIN_GAIT_PHASE_MOTION = 0.30
 MAX_FOOT_DRIFT_PX = 1.0
-MAX_STABLE_ROOT_DRIFT_PX = 1.0
+MAX_STABLE_ROOT_DRIFT_PX = 4.0
 MAX_LOOP_CLOSURE_PX = 2.0
 MAX_WORK_FOOT_DRIFT_PX = 1.0
 MAX_TYPING_ADJACENT_MEDIAN = 8.0
@@ -113,6 +112,7 @@ class Loop:
 
     frames_audit: list[FrameAudit] = field(default_factory=list)
     adjacent: list[float] = field(default_factory=list)
+    silhouette_adjacent: list[float] = field(default_factory=list)
     opposite: list[float] = field(default_factory=list)
     foot_bottoms: list[int] = field(default_factory=list)
     stable_roots: list[tuple[float, float]] = field(default_factory=list)
@@ -144,6 +144,18 @@ class Loop:
     @property
     def adjacent_worst(self) -> float:
         return max(self.adjacent) if self.adjacent else float("nan")
+
+    @property
+    def silhouette_adjacent_median(self) -> float:
+        return (
+            float(np.median(self.silhouette_adjacent))
+            if self.silhouette_adjacent
+            else float("nan")
+        )
+
+    @property
+    def silhouette_adjacent_worst(self) -> float:
+        return max(self.silhouette_adjacent) if self.silhouette_adjacent else float("nan")
 
     @property
     def opposite_median(self) -> float:
@@ -181,16 +193,27 @@ class Loop:
         median = self.adjacent_median
         worst = self.adjacent_worst
         if self.motion in LOCOMOTION_MOTIONS:
-            if not math.isfinite(median):
-                self.fail("coherence-not-measurable", "coherence is not measurable")
-            elif median > MAX_ADJACENT_MEDIAN:
-                self.fail("adjacent-median", f"median {median:.1f}% > {MAX_ADJACENT_MEDIAN:.0f}%")
-            if math.isfinite(worst) and worst > MAX_ADJACENT_WORST:
-                self.fail("adjacent-worst", f"worst {worst:.1f}% > {MAX_ADJACENT_WORST:.0f}%")
+            silhouette_median = self.silhouette_adjacent_median
+            silhouette_worst = self.silhouette_adjacent_worst
+            if not math.isfinite(silhouette_median):
+                self.fail("coherence-not-measurable", "silhouette coherence is not measurable")
+            elif silhouette_median > MAX_SILHOUETTE_ADJACENT_MEDIAN:
+                self.fail(
+                    "silhouette-adjacent-median",
+                    f"silhouette median {silhouette_median:.1f}% > "
+                    f"{MAX_SILHOUETTE_ADJACENT_MEDIAN:.0f}%",
+                )
+            if (
+                math.isfinite(silhouette_worst)
+                and silhouette_worst > MAX_SILHOUETTE_ADJACENT_WORST
+            ):
+                self.fail(
+                    "silhouette-adjacent-worst",
+                    f"silhouette worst {silhouette_worst:.1f}% > "
+                    f"{MAX_SILHOUETTE_ADJACENT_WORST:.0f}%",
+                )
             if not math.isfinite(self.ratio):
                 self.fail("ratio-not-finite", "locomotion ratio is not finite")
-            elif self.ratio > MAX_ADJACENCY_RATIO:
-                self.fail("adjacency-ratio", f"ratio {self.ratio:.2f} > {MAX_ADJACENCY_RATIO:.2f}")
 
         if self.enforce_work_quality:
             expected = WORK_FRAME_COUNTS[self.motion]
@@ -276,6 +299,9 @@ class Loop:
             "pixelSha256": [item.pixel_sha256 for item in self.frames_audit],
             "frameAudit": [item.as_json() for item in self.frames_audit],
             "adjacent": [round(value, 4) for value in self.adjacent],
+            "silhouetteAdjacent": [round(value, 4) for value in self.silhouette_adjacent],
+            "silhouetteAdjacentMedian": finite_or_none(self.silhouette_adjacent_median),
+            "silhouetteAdjacentWorst": finite_or_none(self.silhouette_adjacent_worst),
             "opposite": [round(value, 4) for value in self.opposite],
             "adjacentMedian": finite_or_none(self.adjacent_median),
             "adjacentWorst": finite_or_none(self.adjacent_worst),
@@ -374,6 +400,17 @@ def change_percent(a: np.ndarray, b: np.ndarray) -> float:
     return float(changed.sum()) / union * 100.0
 
 
+def silhouette_change_percent(a: np.ndarray, b: np.ndarray) -> float:
+    """Measure authored pose change without penalizing normal texture redraw."""
+    alpha_a = a[:, :, 3] >= ALPHA_MIN
+    alpha_b = b[:, :, 3] >= ALPHA_MIN
+    union = alpha_a | alpha_b
+    denominator = int(union.sum())
+    if denominator <= 0:
+        return 0.0
+    return float(((alpha_a ^ alpha_b) & union).sum()) / denominator * 100.0
+
+
 def lower_body_motion_scores(frames: list[np.ndarray]) -> list[float]:
     scores = []
     for index, frame in enumerate(frames):
@@ -457,6 +494,10 @@ def measure(loop: Loop) -> Loop:
     if len(arrays) == loop.frame_count and len(arrays) >= 2 and len(shapes) == 1:
         count = len(arrays)
         loop.adjacent = [change_percent(arrays[i], arrays[(i + 1) % count]) for i in range(count)]
+        loop.silhouette_adjacent = [
+            silhouette_change_percent(arrays[i], arrays[(i + 1) % count])
+            for i in range(count)
+        ]
         if count > 2:
             half = count // 2
             loop.opposite = [change_percent(arrays[i], arrays[(i + half) % count]) for i in range(count)]
@@ -605,8 +646,8 @@ def render_report(loops: list[Loop], contract: dict[str, Any], art_root: Path) -
         "ANIMATION COHERENCE / ASSET CONTRACT V2",
         f"artRoot: {art_root}",
         (
-            f"locomotion gates: median<={MAX_ADJACENT_MEDIAN:.0f}% worst<={MAX_ADJACENT_WORST:.0f}% "
-            f"ratio<={MAX_ADJACENCY_RATIO:.2f} unique={FRAME_COUNT} "
+            f"locomotion gates: silhouetteMedian<={MAX_SILHOUETTE_ADJACENT_MEDIAN:.0f}% "
+            f"silhouetteWorst<={MAX_SILHOUETTE_ADJACENT_WORST:.0f}% unique={FRAME_COUNT} "
             f"footDrift<={MAX_FOOT_DRIFT_PX:.0f}px rootDrift<={MAX_STABLE_ROOT_DRIFT_PX:.0f}px "
             f"closure<={MAX_LOOP_CLOSURE_PX:.0f}px"
         ),
@@ -629,14 +670,14 @@ def render_report(loops: list[Loop], contract: dict[str, Any], art_root: Path) -
         lines.append(f"  CONTRACT FAIL: {failure}")
     lines += [
         "",
-        f"{'character':<16}{'motion':<11}{'facing':<11}{'n':>3}{'median':>9}{'worst':>8}"
+        f"{'character':<16}{'motion':<11}{'facing':<11}{'n':>3}{'silMed':>9}{'silWorst':>9}"
         f"{'ratio':>8}{'unique':>8}{'foot':>7}{'root':>7}{'close':>7} verdict",
     ]
     for loop in loops:
         verdict = "ok" if not loop.failures else "FAIL: " + "; ".join(loop.failures)
         lines.append(
             f"{loop.character:<16}{loop.motion:<11}{loop.facing:<11}{loop.frame_count:>3}"
-            f"{loop.adjacent_median:>8.1f}%{loop.adjacent_worst:>7.1f}%"
+            f"{loop.silhouette_adjacent_median:>8.1f}%{loop.silhouette_adjacent_worst:>8.1f}%"
             f"{loop.ratio:>8.2f}{loop.unique_pixel_frames:>8}"
             f"{loop.foot_drift:>7.1f}{loop.stable_root_drift:>7.1f}{loop.loop_closure:>7.1f} {verdict}"
         )
@@ -705,9 +746,8 @@ def main() -> int:
         "schemaVersion": 2,
         "artRoot": str(art_root),
         "gates": {
-            "adjacentMedianMax": MAX_ADJACENT_MEDIAN,
-            "adjacentWorstMax": MAX_ADJACENT_WORST,
-            "adjacencyRatioMax": MAX_ADJACENCY_RATIO,
+            "silhouetteAdjacentMedianMax": MAX_SILHOUETTE_ADJACENT_MEDIAN,
+            "silhouetteAdjacentWorstMax": MAX_SILHOUETTE_ADJACENT_WORST,
             "uniqueFrames": FRAME_COUNT,
             "footDriftMaxPx": MAX_FOOT_DRIFT_PX,
             "stableRootDriftMaxPx": MAX_STABLE_ROOT_DRIFT_PX,

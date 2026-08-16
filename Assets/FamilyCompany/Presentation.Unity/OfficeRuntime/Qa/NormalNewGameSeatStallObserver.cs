@@ -1,0 +1,591 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
+{
+    /// <summary>
+    /// Observer-only player gate for the public new-game flow. It does not take QA control of an
+    /// actor, inject a route, jump the clock, alter docking, or force a seating transition.
+    /// </summary>
+    [DisallowMultipleComponent]
+    public sealed class NormalNewGameSeatStallObserver : MonoBehaviour
+    {
+        public const string CommandLineFlag = "-familyCompanyNormalSeatStallObserver";
+        public const string ArtifactDirectoryArgument = "-familyCompanyNormalSeatStallArtifacts";
+        public const string SpeedArgument = "-familyCompanyNormalSeatStallSpeed";
+        public const string NoCaptureCommandLineFlag = "-familyCompanyNormalSeatStallNoCapture";
+        public const string BurstCaptureCommandLineFlag =
+            "-familyCompanyNormalSeatStallBurstCapture";
+        public const string DelaySpeedUntilAttendanceCommandLineFlag =
+            "-familyCompanyNormalSeatStallDelaySpeedUntilAttendance";
+
+        private static readonly string[] MemberIds =
+            { "player", "older_sister", "father", "mother" };
+        private static readonly HashSet<long> CaptureMinutes =
+            new HashSet<long>
+            {
+                5L, 10L, 14L,
+                15L, 16L, 17L, 18L, 19L, 20L, 21L, 22L, 23L, 24L, 25L, 26L,
+                27L, 28L, 29L, 30L, 31L, 32L,
+                33L, 34L, 35L, 36L, 37L, 38L, 39L, 40L, 41L, 42L, 43L, 44L,
+                60L
+            };
+        private static NormalNewGameSeatStallObserver _instance;
+
+        private readonly StringBuilder _trace = new StringBuilder(32768);
+        private readonly StringBuilder _events = new StringBuilder(8192);
+        private readonly Dictionary<string, ActorObservation> _observations =
+            new Dictionary<string, ActorObservation>(StringComparer.Ordinal);
+        private readonly HashSet<long> _capturedMinutes = new HashSet<long>();
+        private string _artifactDirectory = string.Empty;
+        private string _firstFailure = string.Empty;
+        private float _requestedSpeed = 1f;
+        private bool _captureEnabled;
+        private bool _burstCaptureEnabled;
+        private float _nextBurstCaptureRealtime;
+        private int _burstCaptureCount;
+        private bool _delaySpeedUntilAttendance;
+        private bool _requestedSpeedApplied;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState() => _instance = null;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoInstall()
+        {
+            if (_instance != null || !HasCommandLineFlag(CommandLineFlag)) return;
+            var host = new GameObject("~NormalNewGameSeatStallObserver");
+            DontDestroyOnLoad(host);
+            _instance = host.AddComponent<NormalNewGameSeatStallObserver>();
+        }
+
+        private void Start()
+        {
+            _artifactDirectory = ResolveArtifactDirectory();
+            _requestedSpeed = ResolveSpeed();
+            _captureEnabled = !HasCommandLineFlag(NoCaptureCommandLineFlag);
+            _burstCaptureEnabled = HasCommandLineFlag(BurstCaptureCommandLineFlag);
+            _delaySpeedUntilAttendance = HasCommandLineFlag(DelaySpeedUntilAttendanceCommandLineFlag);
+            StartCoroutine(RunGuarded());
+        }
+
+        private IEnumerator RunGuarded()
+        {
+            IEnumerator run = Run();
+            while (true)
+            {
+                object yielded;
+                try
+                {
+                    if (!run.MoveNext()) yield break;
+                    yielded = run.Current;
+                }
+                catch (Exception exception)
+                {
+                    Finish(90, "unhandled=" + exception.GetType().Name + ":" + exception.Message, null, null);
+                    yield break;
+                }
+                yield return yielded;
+            }
+        }
+
+        private IEnumerator Run()
+        {
+            Directory.CreateDirectory(_artifactDirectory);
+            Debug.Log(
+                "FAMILY_COMPANY_NORMAL_SEAT_STALL_OBSERVER: START | observerOnly=true" +
+                " | actorQaControl=false | routeInjection=false | clockJump=false | dockingForce=false" +
+                " | requestedSpeed=" + _requestedSpeed.ToString("0", CultureInfo.InvariantCulture) +
+                " | artifacts=" + _artifactDirectory);
+            yield return null;
+
+            PrototypeBootstrap bootstrap = Object.FindFirstObjectByType<PrototypeBootstrap>();
+            if (bootstrap == null)
+            {
+                Finish(91, "PrototypeBootstrap missing", null, null);
+                yield break;
+            }
+
+            ScenePreviewJump.ShowStarterOffice();
+            bootstrap.StartNewGameNow(1, false);
+            ScenePreviewJump.ShowStarterOffice();
+
+            float readyDeadline = Time.realtimeSinceStartup + 30f;
+            StarterOfficeRuntimeBootstrap runtime = null;
+            while (Time.realtimeSinceStartup < readyDeadline)
+            {
+                runtime = Object.FindFirstObjectByType<StarterOfficeRuntimeBootstrap>();
+                if (runtime != null && runtime.IsReady && runtime.World != null &&
+                    runtime.Actors.Count == MemberIds.Length && bootstrap.State != null) break;
+                yield return null;
+            }
+            if (runtime == null || !runtime.IsReady || runtime.World == null ||
+                runtime.Actors.Count != MemberIds.Length || bootstrap.State == null)
+            {
+                Finish(92, "normal runtime did not become ready with four actors", bootstrap, runtime);
+                yield break;
+            }
+
+            Dictionary<string, OfficeRuntimeAgent> actors = runtime.Actors
+                .Where(actor => actor != null)
+                .ToDictionary(actor => actor.AgentId, actor => actor, StringComparer.Ordinal);
+            if (MemberIds.Any(memberId => !actors.ContainsKey(memberId)))
+            {
+                Finish(92, "canonical actor set incomplete", bootstrap, runtime);
+                yield break;
+            }
+
+            foreach (string memberId in MemberIds)
+                _observations.Add(memberId, new ActorObservation(actors[memberId], bootstrap.State.Time.ElapsedMinutes));
+
+            bootstrap.SetWorldTimeScaleNow(_delaySpeedUntilAttendance ? 1f : _requestedSpeed);
+            _requestedSpeedApplied = !_delaySpeedUntilAttendance;
+            _trace.AppendLine(
+                "elapsedMinute,clock,frame,timeScale,worldScale,worldDelta,worldUnscaledDelta,motionDelta," +
+                "actor,tick,phase,activity,position,destination,pendingDestination,autonomyIntent," +
+                "autonomyDestination,pathCount,pathIndex,seatId,claimOccupied,claimReleased," +
+                "attendanceArrivals,workFrames,seatingClip,seatingFrame,sprite,interactionPhase," +
+                "occupancyCell,occupancyPresent,occupancyReservations,occupancyEpoch,occupancyRevision," +
+                "dockingPlan,lastReleaseReason,lastReleaseTick,stuckSeconds,reservationBlocker,movementBlocker");
+
+            long lastMinute = long.MinValue;
+            float wallDeadline = Time.realtimeSinceStartup + 180f;
+            while (bootstrap.State.Time.ElapsedMinutes < 60L && Time.realtimeSinceStartup < wallDeadline)
+            {
+                yield return new WaitForEndOfFrame();
+                long minute = bootstrap.State.Time.ElapsedMinutes;
+                bool minuteChanged = minute != lastMinute;
+                lastMinute = minute;
+
+                string[] duplicateSeats = actors.Values
+                    .Where(actor => actor.ActiveSeatId.Length > 0)
+                    .GroupBy(actor => actor.ActiveSeatId, StringComparer.Ordinal)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => group.Key)
+                    .ToArray();
+                if (duplicateSeats.Length > 0)
+                    RecordFirstFailure(
+                        minute,
+                        actors.Values.First(actor => string.Equals(
+                            actor.ActiveSeatId,
+                            duplicateSeats[0],
+                            StringComparison.Ordinal)),
+                        "duplicate-seat-claim:" + duplicateSeats[0]);
+
+                foreach (string memberId in MemberIds)
+                {
+                    OfficeRuntimeAgent actor = actors[memberId];
+                    ActorObservation observation = _observations[memberId];
+                    string signature = Signature(actor);
+                    bool transition = !string.Equals(signature, observation.LastSignature, StringComparison.Ordinal);
+                    if (minute >= 5L && (minuteChanged || transition)) AppendSnapshot(bootstrap, runtime, actor);
+                    ObserveActor(minute, actor, observation);
+                    observation.LastSignature = signature;
+                }
+
+                if (!_requestedSpeedApplied &&
+                    MemberIds.All(memberId => _observations[memberId].CompletedFirstWorkLoop))
+                {
+                    bootstrap.SetWorldTimeScaleNow(_requestedSpeed);
+                    _requestedSpeedApplied = true;
+                    Debug.Log(
+                        "FAMILY_COMPANY_NORMAL_SEAT_SPEED_APPLIED | clock=" +
+                        bootstrap.State.Time.Now.ToString("HH:mm", CultureInfo.InvariantCulture) +
+                        " | speed=" + _requestedSpeed.ToString("0", CultureInfo.InvariantCulture) +
+                        " | afterAttendanceWorkLoops=4");
+                }
+
+                if (_captureEnabled && minute >= 5L && CaptureMinutes.Contains(minute) &&
+                    _capturedMinutes.Add(minute))
+                {
+                    string clockToken = bootstrap.State.Time.Now.ToString("HHmm", CultureInfo.InvariantCulture);
+                    string capturePath = ArtifactPath("normal-new-game-" + clockToken + ".png");
+                    if (!TryCaptureOverview(capturePath, out string captureFailure))
+                        RecordFirstFailure(minute, actors["player"], "capture-failed:" + captureFailure);
+                }
+                if (_captureEnabled && _burstCaptureEnabled && minute >= 9L && minute <= 15L &&
+                    Time.realtimeSinceStartup >= _nextBurstCaptureRealtime)
+                {
+                    _nextBurstCaptureRealtime = Time.realtimeSinceStartup + 0.1f;
+                    string clockToken = bootstrap.State.Time.Now.ToString("HHmm", CultureInfo.InvariantCulture);
+                    string capturePath = ArtifactPath(
+                        "normal-walk-burst-" + clockToken + "-" +
+                        _burstCaptureCount.ToString("D4", CultureInfo.InvariantCulture) + ".png");
+                    if (!TryCaptureOverview(capturePath, out string captureFailure))
+                        RecordFirstFailure(minute, actors["father"], "burst-capture-failed:" + captureFailure);
+                    else
+                        _burstCaptureCount++;
+                }
+            }
+
+            if (bootstrap.State.Time.ElapsedMinutes < 60L)
+                RecordFirstFailure(
+                    bootstrap.State.Time.ElapsedMinutes,
+                    actors["player"],
+                    "clock-timeout-before-09:50");
+
+            foreach (string memberId in MemberIds)
+            {
+                OfficeRuntimeAgent actor = actors[memberId];
+                if (actor.AttendanceSeatArrivalCount < 1)
+                    RecordFirstFailure(bootstrap.State.Time.ElapsedMinutes, actor, "attendance-never-atomically-seated");
+                else if (actor.ObservedWorkFrameCount < 6)
+                    RecordFirstFailure(
+                        bootstrap.State.Time.ElapsedMinutes,
+                        actor,
+                        "incomplete-work-loop:frames=" + actor.ObservedWorkFrameCount);
+            }
+            if (!_requestedSpeedApplied)
+                RecordFirstFailure(
+                    bootstrap.State.Time.ElapsedMinutes,
+                    actors["player"],
+                    "requested-speed-was-not-applied");
+
+            int exitCode = _firstFailure.Length == 0 ? 0 : 21;
+            Finish(exitCode, exitCode == 0 ? "normal-new-game-seat-stall-zero" : _firstFailure, bootstrap, runtime);
+        }
+
+        private void ObserveActor(long minute, OfficeRuntimeAgent actor, ActorObservation observation)
+        {
+            if (actor.AttendanceSeatArrivalCount > observation.ArrivalCount)
+            {
+                observation.ArrivalCount = actor.AttendanceSeatArrivalCount;
+                observation.AwaitingFirstWorkLoop = true;
+                observation.SeatArrivalTick = actor.R5eRuntimeTick;
+                AppendEvent(minute, actor, "ATOMIC_ATTENDANCE_SEAT");
+            }
+
+            if (observation.AwaitingFirstWorkLoop)
+            {
+                if (actor.ObservedWorkFrameCount >= 6)
+                {
+                    observation.AwaitingFirstWorkLoop = false;
+                    observation.CompletedFirstWorkLoop = true;
+                    AppendEvent(minute, actor, "FIRST_WORK_LOOP_COMPLETE");
+                }
+                else if (actor.Phase != OfficeRuntimeAgentPhase.Working)
+                {
+                    string reason = actor.DiagnosticLastSeatReleaseRequestReason.Length == 0
+                        ? "unknown-seat-release"
+                        : actor.DiagnosticLastSeatReleaseRequestReason;
+                    RecordFirstFailure(
+                        minute,
+                        actor,
+                        "left-atomic-seat-before-work-loop:frames=" + actor.ObservedWorkFrameCount +
+                        ";reason=" + reason +
+                        ";releaseTick=" + actor.DiagnosticLastSeatReleaseRequestTick);
+                    observation.AwaitingFirstWorkLoop = false;
+                }
+            }
+
+            string progress = ProgressSignature(actor);
+            bool moved = Vector2.Distance(actor.Position, observation.LastPosition) > 0.005f;
+            if (moved || !string.Equals(progress, observation.LastProgress, StringComparison.Ordinal))
+            {
+                observation.LastProgressMinute = minute;
+                observation.LastProgress = progress;
+                observation.LastPosition = actor.Position;
+            }
+
+            bool transitionShouldProgress = actor.Phase == OfficeRuntimeAgentPhase.Navigating ||
+                                            actor.IsEnteringSeat ||
+                                            actor.Phase == OfficeRuntimeAgentPhase.SittingDown ||
+                                            actor.Phase == OfficeRuntimeAgentPhase.FinishingWork ||
+                                            actor.Phase == OfficeRuntimeAgentPhase.StandingUp ||
+                                            actor.Phase == OfficeRuntimeAgentPhase.LeavingSeat ||
+                                            (!actor.IsPlayerControlled &&
+                                             actor.DiagnosticAutonomyIntentId.Length > 0 &&
+                                             actor.Phase == OfficeRuntimeAgentPhase.Idle);
+            if (transitionShouldProgress && minute - observation.LastProgressMinute >= 20L)
+            {
+                RecordFirstFailure(
+                    minute,
+                    actor,
+                    "no-transition-progress-20-game-minutes:phase=" + actor.Phase +
+                    ";destination=" + actor.DiagnosticDestinationId +
+                    ";pending=" + actor.DiagnosticPendingDestinationId +
+                    ";path=" + actor.DiagnosticPathIndex + "/" + actor.SemanticPathLength +
+                    ";releaseReason=" + actor.DiagnosticLastSeatReleaseRequestReason);
+                observation.LastProgressMinute = minute;
+            }
+        }
+
+        private void AppendSnapshot(
+            PrototypeBootstrap bootstrap,
+            StarterOfficeRuntimeBootstrap runtime,
+            OfficeRuntimeAgent actor)
+        {
+            OfficeRuntimeOccupancy.CanonicalActorSnapshot occupancy =
+                runtime.World.Occupancy.CaptureCanonicalActorSnapshot(actor.AgentId);
+            _trace.Append(bootstrap.State.Time.ElapsedMinutes).Append(',')
+                .Append(bootstrap.State.Time.Now.ToString("HH:mm", CultureInfo.InvariantCulture)).Append(',')
+                .Append(Time.frameCount).Append(',')
+                .Append(Format(Time.timeScale)).Append(',')
+                .Append(Format(bootstrap.WorldTimeScale)).Append(',')
+                .Append(Format(runtime.World.LastFrameDeltaTime)).Append(',')
+                .Append(Format(runtime.World.LastUnscaledFrameDeltaTime)).Append(',')
+                .Append(Format(runtime.World.LastMotionDeltaTime)).Append(',')
+                .Append(Csv(actor.AgentId)).Append(',')
+                .Append(actor.R5eRuntimeTick).Append(',')
+                .Append(actor.Phase).Append(',')
+                .Append(actor.CurrentActivity).Append(',')
+                .Append(Csv(actor.Position.ToString("F3"))).Append(',')
+                .Append(Csv(actor.DiagnosticDestinationId)).Append(',')
+                .Append(Csv(actor.DiagnosticPendingDestinationId)).Append(',')
+                .Append(Csv(actor.DiagnosticAutonomyIntentId)).Append(',')
+                .Append(Csv(actor.DiagnosticAutonomyDestinationId)).Append(',')
+                .Append(actor.SemanticPathLength).Append(',')
+                .Append(actor.DiagnosticPathIndex).Append(',')
+                .Append(Csv(actor.ActiveSeatId)).Append(',')
+                .Append(actor.DiagnosticSeatClaimOccupied).Append(',')
+                .Append(actor.DiagnosticSeatClaimReleased).Append(',')
+                .Append(actor.AttendanceSeatArrivalCount).Append(',')
+                .Append(actor.ObservedWorkFrameCount).Append(',')
+                .Append(actor.CurrentSeatingClip.HasValue ? actor.CurrentSeatingClip.Value.ToString() : "none").Append(',')
+                .Append(actor.CurrentSeatingFrame).Append(',')
+                .Append(Csv(actor.CurrentSpriteName)).Append(',')
+                .Append(actor.InteractionPhase).Append(',')
+                .Append(Csv(occupancy.CurrentCell.ToString())).Append(',')
+                .Append(occupancy.IsPresent).Append(',')
+                .Append(occupancy.ReservationCount).Append(',')
+                .Append(occupancy.Epoch).Append(',')
+                .Append(occupancy.Revision).Append(',')
+                .Append(Csv(actor.DiagnosticDockingPlan)).Append(',')
+                .Append(Csv(actor.DiagnosticLastSeatReleaseRequestReason)).Append(',')
+                .Append(actor.DiagnosticLastSeatReleaseRequestTick).Append(',')
+                .Append(Format(actor.StuckSeconds)).Append(',')
+                .Append(Csv(actor.LastReservationBlocker)).Append(',')
+                .Append(Csv(actor.LastMovementBlocker))
+                .AppendLine();
+        }
+
+        private void AppendEvent(long minute, OfficeRuntimeAgent actor, string kind)
+        {
+            string row = string.Format(
+                CultureInfo.InvariantCulture,
+                "clock={0} elapsed={1} frame={2} actor={3} tick={4} kind={5} phase={6} seat={7} " +
+                "workFrames={8} destination={9} pending={10} releaseReason={11} releaseTick={12}",
+                TimeLabel(minute), minute, Time.frameCount, actor.AgentId, actor.R5eRuntimeTick,
+                kind, actor.Phase, actor.ActiveSeatId, actor.ObservedWorkFrameCount,
+                actor.DiagnosticDestinationId, actor.DiagnosticPendingDestinationId,
+                actor.DiagnosticLastSeatReleaseRequestReason, actor.DiagnosticLastSeatReleaseRequestTick);
+            _events.AppendLine(row);
+            Debug.Log("FAMILY_COMPANY_NORMAL_SEAT_EVENT | " + row);
+        }
+
+        private void RecordFirstFailure(long minute, OfficeRuntimeAgent actor, string reason)
+        {
+            if (_firstFailure.Length > 0) return;
+            _firstFailure = string.Format(
+                CultureInfo.InvariantCulture,
+                "clock={0};elapsed={1};actor={2};tick={3};phase={4};reason={5}",
+                TimeLabel(minute), minute, actor == null ? "none" : actor.AgentId,
+                actor == null ? 0UL : actor.R5eRuntimeTick,
+                actor == null ? "none" : actor.Phase.ToString(), reason);
+            if (actor != null) AppendEvent(minute, actor, "FIRST_FAILURE");
+            Debug.LogError("FAMILY_COMPANY_NORMAL_SEAT_STALL_FIRST_FAILURE | " + _firstFailure);
+        }
+
+        private void Finish(
+            int exitCode,
+            string reason,
+            PrototypeBootstrap bootstrap,
+            StarterOfficeRuntimeBootstrap runtime)
+        {
+            try
+            {
+                File.WriteAllText(ArtifactPath("normal-new-game-seat-trace.csv"), _trace.ToString());
+                File.WriteAllText(ArtifactPath("normal-new-game-seat-events.log"), _events.ToString());
+                var result = new StringBuilder();
+                result.AppendLine(exitCode == 0
+                    ? "FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: PASS"
+                    : "FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: FAIL");
+                result.AppendLine("observerOnly=true");
+                result.AppendLine("actorQaControl=false");
+                result.AppendLine("routeInjection=false");
+                result.AppendLine("clockJump=false");
+                result.AppendLine("dockingForce=false");
+                result.AppendLine("captureEnabled=" + _captureEnabled);
+                result.AppendLine("burstCaptureEnabled=" + _burstCaptureEnabled);
+                result.AppendLine("burstCaptureFrames=" + _burstCaptureCount);
+                result.AppendLine("delaySpeedUntilAttendance=" + _delaySpeedUntilAttendance);
+                result.AppendLine("requestedSpeedApplied=" + _requestedSpeedApplied);
+                result.AppendLine("requestedSpeed=" + _requestedSpeed.ToString("0", CultureInfo.InvariantCulture));
+                result.AppendLine("timeScale=" + Format(Time.timeScale));
+                result.AppendLine("worldScale=" + (bootstrap == null ? "missing" : Format(bootstrap.WorldTimeScale)));
+                result.AppendLine("elapsedMinute=" + (bootstrap?.State == null ? -1L : bootstrap.State.Time.ElapsedMinutes));
+                result.AppendLine("clock=" + (bootstrap?.State == null
+                    ? "missing"
+                    : bootstrap.State.Time.Now.ToString("HH:mm", CultureInfo.InvariantCulture)));
+                result.AppendLine("runtimeReady=" + (runtime != null && runtime.IsReady));
+                result.AppendLine("reason=" + reason);
+                foreach (string memberId in MemberIds)
+                {
+                    OfficeRuntimeAgent actor = runtime?.Actors.FirstOrDefault(item =>
+                        item != null && string.Equals(item.AgentId, memberId, StringComparison.Ordinal));
+                    result.AppendLine(actor == null
+                        ? "actor=" + memberId + " missing"
+                        : string.Format(
+                            CultureInfo.InvariantCulture,
+                            "actor={0} arrivals={1} phase={2} activity={3} seat={4} workFrames={5} " +
+                            "tick={6} releaseReason={7} releaseTick={8} destination={9} pending={10} path={11}/{12}",
+                            actor.AgentId, actor.AttendanceSeatArrivalCount, actor.Phase,
+                            actor.CurrentActivity, actor.ActiveSeatId, actor.ObservedWorkFrameCount,
+                            actor.R5eRuntimeTick, actor.DiagnosticLastSeatReleaseRequestReason,
+                            actor.DiagnosticLastSeatReleaseRequestTick, actor.DiagnosticDestinationId,
+                            actor.DiagnosticPendingDestinationId, actor.DiagnosticPathIndex,
+                            actor.SemanticPathLength));
+                }
+                File.WriteAllText(ArtifactPath("normal-new-game-seat-result.txt"), result.ToString());
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError("FAMILY_COMPANY_NORMAL_SEAT_STALL_ARTIFACT_WRITE_FAILED | " + exception.Message);
+                if (exitCode == 0) exitCode = 93;
+            }
+
+            if (exitCode == 0)
+                Debug.Log("FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: PASS | " + reason);
+            else
+                Debug.LogError("FAMILY_COMPANY_NORMAL_NEW_GAME_SEAT_STALL: FAIL | code=" + exitCode + " | " + reason);
+            Application.Quit(exitCode);
+        }
+
+        private string ArtifactPath(string fileName)
+        {
+            Directory.CreateDirectory(_artifactDirectory);
+            return Path.Combine(_artifactDirectory, fileName);
+        }
+
+        private static bool TryCaptureOverview(string path, out string failure)
+        {
+            failure = string.Empty;
+            Camera source = Camera.main;
+            if (source == null)
+            {
+                failure = "Camera.main missing";
+                return false;
+            }
+            const int width = 1280;
+            const int height = 720;
+            RenderTexture previous = RenderTexture.active;
+            var target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var pixels = new Texture2D(width, height, TextureFormat.RGB24, false);
+            GameObject captureHost = null;
+            try
+            {
+                captureHost = new GameObject("NormalSeatStallObserverCapture") { hideFlags = HideFlags.HideAndDontSave };
+                Camera camera = captureHost.AddComponent<Camera>();
+                camera.CopyFrom(source);
+                camera.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
+                camera.aspect = width / (float)height;
+                camera.enabled = false;
+                camera.targetTexture = target;
+                camera.Render();
+                RenderTexture.active = target;
+                pixels.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
+                pixels.Apply(false, false);
+                File.WriteAllBytes(path, pixels.EncodeToPNG());
+                return File.Exists(path) && new FileInfo(path).Length > 1024L;
+            }
+            catch (Exception exception)
+            {
+                failure = exception.GetType().Name + ":" + exception.Message;
+                return false;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                if (captureHost != null) Object.Destroy(captureHost);
+                Object.Destroy(target);
+                Object.Destroy(pixels);
+            }
+        }
+
+        private static string Signature(OfficeRuntimeAgent actor) =>
+            actor.Phase + "|" + actor.CurrentActivity + "|" + actor.DiagnosticDestinationId + "|" +
+            actor.DiagnosticPendingDestinationId + "|" + actor.DiagnosticAutonomyIntentId + "|" +
+            actor.SemanticPathLength + "|" + actor.DiagnosticPathIndex + "|" + actor.ActiveSeatId + "|" +
+            actor.DiagnosticSeatClaimOccupied + "|" + actor.AttendanceSeatArrivalCount + "|" +
+            actor.ObservedWorkFrameCount + "|" + actor.CurrentSeatingClip + "|" + actor.CurrentSeatingFrame + "|" +
+            actor.InteractionPhase + "|" + actor.DiagnosticLastSeatReleaseRequestReason + "|" +
+            actor.DiagnosticLastSeatReleaseRequestTick;
+
+        private static string ProgressSignature(OfficeRuntimeAgent actor) =>
+            actor.Phase + "|" + actor.DiagnosticDestinationId + "|" + actor.DiagnosticPendingDestinationId + "|" +
+            actor.SemanticPathLength + "|" + actor.DiagnosticPathIndex + "|" + actor.ActiveSeatId + "|" +
+            actor.AttendanceSeatArrivalCount + "|" + actor.ObservedWorkFrameCount + "|" + actor.CurrentSeatingFrame + "|" +
+            actor.InteractionPhase;
+
+        private static string Csv(string value)
+        {
+            string safe = value ?? string.Empty;
+            return "\"" + safe.Replace("\"", "\"\"") + "\"";
+        }
+
+        private static string Format(float value) => value.ToString("F6", CultureInfo.InvariantCulture);
+
+        private static string TimeLabel(long elapsedMinute)
+        {
+            long total = 8L * 60L + 50L + elapsedMinute;
+            long hour = ((total / 60L) % 24L + 24L) % 24L;
+            long minute = ((total % 60L) + 60L) % 60L;
+            return hour.ToString("00", CultureInfo.InvariantCulture) + ":" +
+                   minute.ToString("00", CultureInfo.InvariantCulture);
+        }
+
+        private static bool HasCommandLineFlag(string flag) => Array.Exists(
+            Environment.GetCommandLineArgs(),
+            argument => string.Equals(argument, flag, StringComparison.OrdinalIgnoreCase));
+
+        private static string ResolveArtifactDirectory()
+        {
+            string[] arguments = Environment.GetCommandLineArgs();
+            for (var index = 0; index < arguments.Length - 1; index++)
+                if (string.Equals(arguments[index], ArtifactDirectoryArgument, StringComparison.OrdinalIgnoreCase))
+                    return Path.GetFullPath(arguments[index + 1]);
+            return Path.Combine(Application.persistentDataPath, "NormalNewGameSeatStallObserver");
+        }
+
+        private static float ResolveSpeed()
+        {
+            string[] arguments = Environment.GetCommandLineArgs();
+            for (var index = 0; index < arguments.Length - 1; index++)
+            {
+                if (!string.Equals(arguments[index], SpeedArgument, StringComparison.OrdinalIgnoreCase)) continue;
+                if (float.TryParse(arguments[index + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out float speed) &&
+                    (speed == 1f || speed == 2f || speed == 4f)) return speed;
+                throw new InvalidOperationException("Observer speed must be 1, 2, or 4.");
+            }
+            return 1f;
+        }
+
+        private sealed class ActorObservation
+        {
+            public ActorObservation(OfficeRuntimeAgent actor, long minute)
+            {
+                ArrivalCount = actor.AttendanceSeatArrivalCount;
+                LastPosition = actor.Position;
+                LastProgressMinute = minute;
+                LastProgress = ProgressSignature(actor);
+                LastSignature = string.Empty;
+            }
+
+            public int ArrivalCount { get; set; }
+            public bool AwaitingFirstWorkLoop { get; set; }
+            public bool CompletedFirstWorkLoop { get; set; }
+            public ulong SeatArrivalTick { get; set; }
+            public Vector2 LastPosition { get; set; }
+            public long LastProgressMinute { get; set; }
+            public string LastProgress { get; set; }
+            public string LastSignature { get; set; }
+        }
+    }
+}

@@ -140,7 +140,7 @@ internal static class OfficeSeatDockingR5eOfflineHarness
         string world = Read(root, WorldSource);
         AssertOrdered(world,
             "actor.BeginPresentationFrame();",
-            "actor.ConsumeVisibleMotionDelta(unscaledDeltaTime);",
+            "actor.ConsumeVisibleMotionDelta(deltaTime);",
             "OfficeNavigationMotionIntegrator.CalculateStepCount(actorDelta);",
             "step >= actorSteps) continue;",
             "OfficeNavigationMotionIntegrator.ResolveStepDelta(",
