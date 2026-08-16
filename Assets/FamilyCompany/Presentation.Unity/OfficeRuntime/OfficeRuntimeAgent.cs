@@ -35,6 +35,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     {
         public const float DefaultRadius = 0.22f;
         public const float DefaultMoveSpeed = 1.65f;
+        internal const int RequiredR5eSeatPreloadDirection = (int)OfficeSeatFacing8.Northwest;
         private const float ArrivalDistance = 0.035f;
         // Keep the generated displacement strictly below the public 0.9 px contract so camera
         // projection roundoff can never turn an exactly-on-boundary step into a false violation.
@@ -392,6 +393,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         internal OfficeRuntimeActorTraceState R5eTraceState =>
             _r5eTraceState ?? throw new InvalidOperationException("R5e trace state is not bound.");
         internal OfficeRuntimeActorTraceState R5eBoundTraceState => _r5eTraceState;
+        private bool HasActiveR5eStepObservation =>
+            _r5ePendingStep.Began && _r5eTraceCoordinator != null && _r5eTraceState != null;
         internal bool IsR5eSeatedPostState =>
             _seat != null &&
             _seatClaim != null &&
@@ -1152,7 +1155,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             finally
             {
-                SealR5eRuntimeStepDispatch();
+                if (HasActiveR5eStepObservation) SealR5eRuntimeStepDispatch();
             }
         }
 
@@ -1284,6 +1287,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!_r5ePendingStep.Began ||
                 _r5ePendingStep.Context.ActorStepOrdinal != context.ActorStepOrdinal) return;
             _r5ePendingStep = default;
+        }
+
+        internal void BeginUnobservedR5eRuntimeStep()
+        {
+            _r5ePendingStep = default;
+            _r5eRuntimeTick = NextR5eRuntimeTick;
+            _r5eAtomicPlacementThisStep = false;
         }
 
         private void SealR5eRuntimeStepDispatch()
@@ -2293,7 +2303,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _seat,
                     out OfficeSeatDockingPlan plan)) return false;
 
-            if (!_r5eTraceCoordinator.TryReserveTransitionRows(this, 3)) return false;
+            bool observeTransition = HasActiveR5eStepObservation;
+            if (observeTransition && !_r5eTraceCoordinator.TryReserveTransitionRows(this, 3))
+                return false;
             BeginR5eTransitionObservation(plan);
             ulong transactionId = _r5eTraceCoordinator.AllocateTransactionId();
             ulong sessionId = _r5eTraceCoordinator.AllocateSeatedSessionId();
@@ -2331,7 +2343,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             bool prepared =
                 posePrepared &&
                 _animator.CanEnterCompletedSeatedWorkAfterAtomicPlacement(_seatDirection) &&
-                _r5eTraceState.CanOpenSeatedSession(sessionId, transactionId) &&
+                (!HasActiveR5eStepObservation ||
+                 _r5eTraceState.CanOpenSeatedSession(sessionId, transactionId)) &&
                 _seatClaim.TryPrepareOccupy(out preparedClaim) &&
                 _world.Occupancy.TryPrepareAtomicActorPlacement(
                     _agentId,
@@ -2395,14 +2408,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 transactionId);
             bool publishSucceeded;
             _r5ePublishActive = true;
-            _r5eTraceCoordinator.EnterPublish();
+            if (observeTransition) _r5eTraceCoordinator.EnterPublish();
             try
             {
                 publishSucceeded = OfficeSeatDockingAtomicPublishPrimitive.TryPublish(ref publisher);
             }
             finally
             {
-                _r5eTraceCoordinator.ExitPublish();
+                if (observeTransition) _r5eTraceCoordinator.ExitPublish();
                 _r5ePublishActive = false;
             }
 
@@ -2423,7 +2436,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
 
             _world.Occupancy.CompletePreparedAtomicActorPlacement(preparedPlacement);
-            _r5eTraceState.OpenSeatedSession(sessionId, transactionId);
+            if (HasActiveR5eStepObservation)
+                _r5eTraceState.OpenSeatedSession(sessionId, transactionId);
 
             R5eAgentStepSnapshot after = CaptureR5eStepSnapshot();
             AppendR5eTransition(
@@ -2468,7 +2482,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _seat,
                     out OfficeSeatDockingPlan plan)) return false;
 
-            if (!_r5eTraceCoordinator.TryReserveTransitionRows(this, 5)) return false;
+            bool observeTransition = HasActiveR5eStepObservation;
+            if (observeTransition && !_r5eTraceCoordinator.TryReserveTransitionRows(this, 5))
+                return false;
             BeginR5eTransitionObservation(plan);
             ulong transactionId = _r5eTraceCoordinator.AllocateTransactionId();
             R5eAgentStepSnapshot before = CaptureR5eStepSnapshot();
@@ -2590,14 +2606,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 preparedQaOutward);
             bool publishSucceeded;
             _r5ePublishActive = true;
-            _r5eTraceCoordinator.EnterPublish();
+            if (observeTransition) _r5eTraceCoordinator.EnterPublish();
             try
             {
                 publishSucceeded = OfficeSeatDockingAtomicPublishPrimitive.TryPublish(ref publisher);
             }
             finally
             {
-                _r5eTraceCoordinator.ExitPublish();
+                if (observeTransition) _r5eTraceCoordinator.ExitPublish();
                 _r5ePublishActive = false;
             }
 
@@ -2621,7 +2637,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _world.Occupancy.CompletePreparedAtomicActorPlacement(preparedPlacement);
             _world.Occupancy.CompleteAtomicReservationScope(reservationScope);
             _animator.CompleteAtomicPresentationSessionNoThrow();
-            _r5eTraceState.CloseSeatedSession();
+            if (HasActiveR5eStepObservation) _r5eTraceState.CloseSeatedSession();
             R5eAgentStepSnapshot after = CaptureR5eStepSnapshot();
             AppendR5eTransition(
                 transactionId,
@@ -3313,6 +3329,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             bool rollbackSucceeded,
             bool locomotionSample)
         {
+            if (!HasActiveR5eStepObservation) return;
             if (_r5ePublishActive || _r5eTraceCoordinator.PublishActive)
                 throw new InvalidOperationException("R5e trace cannot observe a half-published transaction.");
             ulong seatedSessionId = transitionKind == R5eSeatTransitionKind.Exit
@@ -3346,6 +3363,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private void BeginR5eTransitionObservation(in OfficeSeatDockingPlan plan)
         {
             _r5eActiveFaultInjectionId = 0;
+            if (!HasActiveR5eStepObservation) return;
             _r5eTransitionAllocationStart = GC.GetAllocatedBytesForCurrentThread();
             _r5eTransitionBeforeObservation = CaptureR5eProductionObservation(plan);
         }
@@ -4109,6 +4127,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 if (profile == null || !profile.HumanApproved ||
                     profile.Clip != OfficeSeatingAnimationClip.Work ||
+                    profile.DirectionIndex != RequiredR5eSeatPreloadDirection ||
                     !string.Equals(profile.MemberId, memberId, StringComparison.Ordinal)) continue;
                 if (profile.DirectionIndex < 0 ||
                     profile.DirectionIndex >= OfficeSeatingAnimationFrames.DirectionCount)
@@ -4129,7 +4148,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 result.Add(profile);
             }
             if (result.Count == 0)
-                throw new InvalidOperationException("No approved preload poses exist: " + memberId);
+                throw new InvalidOperationException(
+                    "No approved Northwest Work preload poses exist: " + memberId);
             foreach (KeyValuePair<int, bool[]> direction in framesByDirection)
             for (var frame = 0; frame < direction.Value.Length; frame++)
                 if (!direction.Value[frame])
@@ -4142,6 +4162,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return direction != 0 ? direction : left.FrameIndex.CompareTo(right.FrameIndex);
             });
             return result.ToArray();
+        }
+
+        internal void ResetR5eSeatPresentationPreloadAfterFailure()
+        {
+            foreach (Sprite sprite in _seatedUpperBodySprites.Values)
+            {
+                if (sprite == null) continue;
+                if (Application.isPlaying) Destroy(sprite);
+                else DestroyImmediate(sprite);
+            }
+            _seatedUpperBodySprites.Clear();
+            _r5eSeatPresentationPreloaded = false;
+            if (_seatedUpperBodyRenderer != null) _seatedUpperBodyRenderer.enabled = false;
         }
 
         public void ClearSeatedUpperBodyProtection()

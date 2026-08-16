@@ -32,13 +32,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         internal static int CompareActorIds(string left, string right) =>
             string.Compare(left, right, StringComparison.Ordinal);
 
+        internal static void ValidateCanonicalActorIds(IReadOnlyList<string> actorIds)
+        {
+            if (actorIds == null || actorIds.Count != CanonicalFamilyIds.Length)
+                throw new InvalidOperationException(
+                    "Starter Office requires exactly four canonical actor IDs.");
+            var unique = new HashSet<string>(actorIds, StringComparer.Ordinal);
+            if (unique.Count != CanonicalFamilyIds.Length)
+                throw new InvalidOperationException("Starter Office actor IDs must be unique.");
+            foreach (string memberId in CanonicalFamilyIds)
+                if (!unique.Contains(memberId))
+                    throw new InvalidOperationException("Missing Starter Office actor: " + memberId);
+        }
+
         public void ValidateCanonicalFamily()
         {
-            foreach (string memberId in CanonicalFamilyIds)
-            {
-                if (!_actors.ContainsKey(memberId))
-                    throw new InvalidOperationException("Missing Starter Office actor: " + memberId);
-            }
+            ValidateCanonicalActorIds(new List<string>(_actors.Keys));
         }
     }
 }

@@ -65,6 +65,48 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             State = StarterOfficeRuntimePreparationState.Failed;
             FailureReason = string.IsNullOrWhiteSpace(reason) ? "unknown" : reason;
         }
+
+        public bool TryComplete(
+            Action preload,
+            Action prepareAttendance,
+            Action attachCoordinators,
+            Action cleanup,
+            string failureStage,
+            out Exception failure)
+        {
+            if (State != StarterOfficeRuntimePreparationState.Preparing)
+                throw new InvalidOperationException("Runtime preparation transaction is not active.");
+            if (preload == null) throw new ArgumentNullException(nameof(preload));
+            if (prepareAttendance == null) throw new ArgumentNullException(nameof(prepareAttendance));
+            if (attachCoordinators == null) throw new ArgumentNullException(nameof(attachCoordinators));
+            if (cleanup == null) throw new ArgumentNullException(nameof(cleanup));
+            failure = null;
+            try
+            {
+                preload();
+                MarkPreloadSucceeded();
+                prepareAttendance();
+                attachCoordinators();
+                MarkCoordinatorAttached();
+                PublishReady();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+                try
+                {
+                    cleanup();
+                }
+                catch (Exception cleanupException)
+                {
+                    failure = new AggregateException(exception, cleanupException);
+                }
+                Fail((string.IsNullOrWhiteSpace(failureStage) ? "preparation" : failureStage) + ":" +
+                     failure.GetType().Name + ":" + failure.Message);
+                return false;
+            }
+        }
     }
 
     [DisallowMultipleComponent]
@@ -140,7 +182,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ApplyStarterDefinitionWhenStateUsesCodeDefault();
             if (!IsReady)
             {
-                BuildRuntime();
+                if (_building) return;
+                if (_world != null && _generated != null &&
+                    _world.Registry.Count == FamilyMemberIds.Length)
+                {
+                    _building = true;
+                    IsReady = false;
+                    NavigationPrewarmProgress = 0f;
+                    _preparationGate.Begin();
+                    StartCoroutine(CompleteRuntimePreparation());
+                }
+                else
+                {
+                    BuildRuntime();
+                }
                 return;
             }
             string nextHash = _bootstrap.State.OfficeGrid.ComputeLayoutHash();
@@ -149,9 +204,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (!_building) StartCoroutine(RebuildForLayoutChange());
                 return;
             }
+            _building = true;
+            IsReady = false;
+            _preparationGate.Begin();
             foreach (OfficeRuntimeAgent actor in Actors) actor.ResetRuntimeState();
-            PrepareAttendanceArrivals();
-            BindCoordinators();
+            if (TryCompleteActorPreparation(out Exception failure))
+            {
+                IsReady = true;
+                _building = false;
+            }
+            else
+            {
+                CompleteRuntimePreparationFailure(failure);
+            }
         }
 
         /// <summary>
@@ -202,7 +267,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _assetSource.FurnitureVisualCatalog);
             _world = _generated.AddComponent<OfficeRuntimeWorld>();
             _world.Configure(grid, presenter, furniturePresenter);
-            ResolveSeatingPresentationMode();
+            try
+            {
+                ResolveSeatingPresentationMode();
+            }
+            catch (Exception exception)
+            {
+                FailRuntimePreparation("seat-presentation-validation", exception);
+                return;
+            }
             _locomotionTransitionCatalog = OfficeLocomotionTransitionCatalog.LoadDefault();
             if (_locomotionTransitionCatalog == null)
             {
@@ -275,15 +348,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 yield return current;
             }
             timer.Stop();
-            try
+            if (TryCompleteActorPreparation(out Exception failure))
             {
-                foreach (OfficeRuntimeAgent actor in Actors)
-                    actor?.PreloadR5eSeatPresentation();
-                _preparationGate.MarkPreloadSucceeded();
-                PrepareAttendanceArrivals();
-                BindCoordinators();
-                _preparationGate.MarkCoordinatorAttached();
-                _preparationGate.PublishReady();
                 IsReady = PreparationState == StarterOfficeRuntimePreparationState.Ready;
                 _building = false;
                 _layoutSnapshots.Clear();
@@ -295,45 +361,100 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     " elapsed=" + timer.Elapsed.TotalSeconds.ToString("F2") + "s");
                 LogOwnershipPass();
             }
-            catch (Exception exception)
+            else
             {
-                FailRuntimePreparation("preload-or-attach", exception);
+                CompleteRuntimePreparationFailure(failure);
             }
+        }
+
+        private bool TryCompleteActorPreparation(out Exception failure)
+        {
+            return _preparationGate.TryComplete(
+                () =>
+                {
+                    foreach (OfficeRuntimeAgent actor in Actors)
+                    {
+                        if (actor == null)
+                            throw new InvalidOperationException("Runtime preload actor is null.");
+                        actor.PreloadR5eSeatPresentation();
+                    }
+                },
+                PrepareAttendanceArrivals,
+                BindCoordinators,
+                CleanupFailedRuntimePreparation,
+                "preload-attendance-attach",
+                out failure);
         }
 
         private void FailRuntimePreparation(string stage, Exception exception)
         {
-            _building = false;
-            IsReady = false;
+            try
+            {
+                CleanupFailedRuntimePreparation();
+            }
+            catch (Exception cleanupException)
+            {
+                exception = exception == null
+                    ? cleanupException
+                    : new AggregateException(exception, cleanupException);
+            }
             _preparationGate.Fail(stage + ":" +
                                   (exception == null
                                       ? "unknown"
                                       : exception.GetType().Name + ":" + exception.Message));
+            CompleteRuntimePreparationFailure(exception);
+        }
+
+        private void CompleteRuntimePreparationFailure(Exception exception)
+        {
+            _building = false;
+            IsReady = false;
             Debug.LogError(
-                "STARTER_OFFICE_PREPARATION_FAILED | stage=" + stage +
-                " | reason=" + PreparationFailureReason +
+                "STARTER_OFFICE_PREPARATION_FAILED | reason=" + PreparationFailureReason +
                 " | retry=rebind-or-rebuild");
             if (exception != null) Debug.LogException(exception);
         }
 
         private void PrepareAttendanceArrivals()
         {
-            int prepared = 0;
-            foreach (OfficeRuntimeAgent actor in Actors)
-                if (actor != null && actor.PrepareAttendanceArrival()) prepared++;
-            if (prepared != Actors.Count)
-            {
-                // Layout editing and focused QA fixtures may intentionally remove assigned desks
-                // or the canonical entrance. They must still rebuild; attendance simply falls
-                // back to unavailable until a complete office layout is applied again.
-                Debug.LogWarning(
-                    $"STARTER_OFFICE_ATTENDANCE_PREWARM_SKIPPED | prepared={prepared} " +
-                    $"actors={Actors.Count} layoutHash={_layoutHash}");
-                return;
-            }
+            string[] actorIds = Actors.Select(actor => actor?.AgentId).ToArray();
+            bool[] prepared = Actors.Select(actor =>
+                actor != null && actor.PrepareAttendanceArrival()).ToArray();
+            RequireCompleteAttendancePreparation(actorIds, prepared);
             Debug.Log(
-                "STARTER_OFFICE_ATTENDANCE_PREWARM_PASS | routes=" + prepared +
+                "STARTER_OFFICE_ATTENDANCE_PREWARM_PASS | routes=" + prepared.Length +
                 " | entrance=(8,1)");
+        }
+
+        internal static void RequireCompleteAttendancePreparation(
+            IReadOnlyList<string> actorIds,
+            IReadOnlyList<bool> preparedRoutes)
+        {
+            OfficeRuntimeActorRegistry.ValidateCanonicalActorIds(actorIds);
+            if (preparedRoutes == null || preparedRoutes.Count != FamilyMemberIds.Length)
+                throw new InvalidOperationException(
+                    "Starter Office requires exactly four attendance route results.");
+            int prepared = 0;
+            for (var index = 0; index < preparedRoutes.Count; index++)
+            {
+                if (preparedRoutes[index]) prepared++;
+            }
+            if (prepared != FamilyMemberIds.Length)
+                throw new InvalidOperationException(
+                    "Starter Office attendance preparation is incomplete: canonical=4 routes=" +
+                    prepared + "/4.");
+        }
+
+        private void CleanupFailedRuntimePreparation()
+        {
+            foreach (OfficeRuntimeAgent actor in Actors)
+            {
+                if (actor == null) continue;
+                actor.ResetRuntimeState();
+                actor.ResetR5eSeatPresentationPreloadAfterFailure();
+                actor.SetAttendanceOutside(true, false);
+                _world?.Occupancy.ClearReservations(actor.AgentId);
+            }
         }
 
         private void ApplyStarterDefinitionWhenStateUsesCodeDefault()
