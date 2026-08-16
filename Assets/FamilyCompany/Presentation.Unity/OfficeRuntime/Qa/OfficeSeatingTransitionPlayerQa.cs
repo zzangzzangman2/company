@@ -397,7 +397,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 "FAMILY_COMPANY_CHAIR_SEAT_STABILITY_QA: PASS | " +
                 "family=4 classicAtomicDock=4/4 workEvidence=6/6 reservedAtomicExit=4/4 " +
                 "transitionClips=0 directionMismatch=0 maxOctantDelta=0 " +
-                "seatResidual<=0.9px logicalRoot<=0.001px " +
+                "seatResidual<=0.9px seatedRootAnchor<=0.001px " +
                 "primaryCloseups=28/28 atomicSeat+work penetration=0 " +
                 "invalidUpperForegroundOverlap=0 typingHandForegroundOverlap=0 " +
                 "chairTransform=semantic+visual+parent immutable chairForeground=seat-rim-only " +
@@ -802,17 +802,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             OfficeSeatSlot fixedSeat =
                 _runtime.World.Workstations.RequiredSeat(actor.ActiveSeatId);
-            OfficeSeatInteractionAnchors anchors =
-                _runtime.World.Workstations.ResolveInteractionAnchors(fixedSeat);
+            Vector3 seatedRootAnchor =
+                _runtime.World.Workstations.ChairFloorAnchorWorld(fixedSeat);
             Camera camera = Camera.main;
             if (camera == null)
-                return Fail(93, trace.MemberId + " has no camera for logical-root validation.");
-            trace.MaximumLogicalRootErrorPx = Mathf.Max(
-                trace.MaximumLogicalRootErrorPx,
+                return Fail(93, trace.MemberId + " has no camera for seated-root anchor validation.");
+            trace.MaximumSeatedRootAnchorErrorPx = Mathf.Max(
+                trace.MaximumSeatedRootAnchorErrorPx,
                 OfficeGridAlignmentMetrics.ScreenDistance(
                     camera,
                     actor.transform.position,
-                    anchors.AlignmentWorld));
+                    seatedRootAnchor));
             if (!_runtime.World.Presenter.NearestCell(actor.transform.position)
                     .Equals(fixedSeat.Cell))
                 trace.SeatCellMismatchCount++;
@@ -1204,8 +1204,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 failures.Add($"anchorError={actor.MaxAnimatedAnchorErrorPx:F3}px");
             if (actor.MaxTypingSeatContactErrorPx > MaximumSeatResidualPx)
                 failures.Add($"typingSeat={actor.MaxTypingSeatContactErrorPx:F3}px");
-            if (trace.MaximumLogicalRootErrorPx > 0.001f)
-                failures.Add($"logicalRoot={trace.MaximumLogicalRootErrorPx:F6}px");
+            if (trace.MaximumSeatedRootAnchorErrorPx > 0.001f)
+                failures.Add($"seatedRootAnchor={trace.MaximumSeatedRootAnchorErrorPx:F6}px");
             if (trace.SeatCellMismatchCount != 0)
                 failures.Add("seatCellMismatches=" + trace.SeatCellMismatchCount);
             if (Mathf.Abs(actor.AgentRadius - OfficeRuntimeAgent.DefaultRadius) > 0.000001f)
@@ -2571,8 +2571,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         .Append(" typingSeatPx=").Append(actor.MaxTypingSeatContactErrorPx.ToString("F3"))
                         .Append(" handKeyboardPx=").Append(actor.MaxTypingHandWorkErrorPx.ToString("F3"))
                         .Append(" chairStepPx=").Append(actor.MaxChairPresentationStepPx.ToString("F3"))
-                        .Append(" logicalRootPx=")
-                        .Append(trace.MaximumLogicalRootErrorPx.ToString("F6"))
+                        .Append(" seatedRootAnchorPx=")
+                        .Append(trace.MaximumSeatedRootAnchorErrorPx.ToString("F6"))
                         .Append(" seatCellMismatches=").Append(trace.SeatCellMismatchCount)
                         .Append(" collisionRadius=").Append(actor.AgentRadius.ToString("F3"))
                         .Append(" egressKind=").Append(actor.LastCompletedSeatEgressKind)
@@ -2835,7 +2835,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public float MaximumPelvisSeatErrorPx { get; private set; }
             public float MaximumHandWorkErrorPx { get; private set; }
             public float MinimumHandWorkErrorPx { get; private set; } = float.PositiveInfinity;
-            public float MaximumLogicalRootErrorPx { get; set; }
+            public float MaximumSeatedRootAnchorErrorPx { get; set; }
             public int SeatCellMismatchCount { get; set; }
             public int NoLowerBodyOverlapFrameCount { get; private set; }
             public int SitLowerBodyOccludedPixels { get; private set; }
