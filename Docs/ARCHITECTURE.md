@@ -77,7 +77,10 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - `StarterOfficeRuntimeBootstrap`이 플레이어와 가족 4인의 `OfficeRuntimeAgent`를 단일 소유한다. legacy `PrototypePlayerController`, `OfficeWorkerAgent`, 3D `CharacterController` 경로는 Starter Runtime이 준비되면 비활성이다.
 - `OfficeRuntimeOccupancy`와 결정론적 cardinal `OfficeRuntimePathService`가 static/interaction/dynamic occupancy와 예약을 처리한다. 편집 가능 가구는 `OfficeFurnitureGeometryQuery.Shared`의 회전된 ground mask가 정본이며 query에 없는 legacy/unknown 저장 콘텐츠는 전체 셀로 fail-closed한다.
 - 플레이어·가족·계약 이동은 `OfficeSharedLocomotionRules`를 공유한다. 방향과 gait는 요청 벡터가 아니라 실제 frame displacement/speed로 결정하며 막힌 입력은 걷기 위상을 진행하지 않는다.
-- `OfficeAutonomyCoordinator`의 의미 목적지와 계약 coordinator의 업무 목적지는 같은 actor/path/occupancy로 투영된다. 계약 업무는 실제 도착·정지·작업 상태에서만 `RecordWork`를 호출한다.
+- `OfficeAutonomyCoordinator`가 가족 생산 자율 선택과 fallback 목적지의 실제 소유자다. 의미 목적지와 계약
+  coordinator의 업무 목적지는 같은 actor/path/occupancy로 투영된다. 가구 없는 fallback도 destination이 있는
+  도달 가능한 타일 중심이어야 하며 같은 셀 `current-look`은 이동 대체물이 아니다. 계약 업무는 실제
+  도착·정지·작업 상태에서만 `RecordWork`를 호출한다.
 - 평일 학교·외부 일정·영업·가사와 수면은 `FamilyScheduleRules`에서 계산하며 계약 코어와 UI가 같은 가용성 판정을 사용한다.
 - 출근 actor는 첫 live path segment를 문 밖으로 연장한 비가시 exterior point에서 단일 ingress gate를 claim한 뒤 entrance로 이동한다. 동시 요청은 한 명씩 직렬화되고 이후에는 기존 path/reservation/seat lifecycle을 그대로 사용한다.
 
@@ -85,7 +88,10 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 
 - `OfficeInteractionDefinition`은 행동, 의미 위치, target template, 가구 kind, 지속 시간, capacity, cooldown, 접근·예약 정책과 역할별 기존 weight를 순수 C# 데이터로 묶는다.
 - `OfficeInteractionCatalog`는 현재 13종 Micro Action의 표준·회의·fallback 후보 20개를 광고한다. 기존 후보 생성은 아직 정본이며 Editor QA가 action/location/target/weight 1:1 parity를 검사한다.
-- `OfficeInteractionScoring`은 기존 weight×20, macro compatibility, Energy/Stress 기반 need, 미방문 novelty, availability와 repetition을 정수로 합산한다. 후보는 OfferId 정렬 뒤 StableRandom top-band로 Shadow 선택하므로 입력 배열 순서에 독립적이다.
+- `OfficeInteractionScoring`은 weight×20, macro compatibility, Energy/Stress 기반 need, 미방문 novelty,
+  availability와 repetition을 정수로 합산하는 **Shadow 비교 경로**다. OfferId 정렬 뒤 StableRandom top-band
+  결과는 진단 trace일 뿐 생산 `OfficeAutonomyCoordinator` 선택/fallback을 변경하지 않는다. 따라서 자율
+  회귀 수정과 제품 gate는 coordinator의 실제 intent·destination·path를 기준으로 한다.
 - `OfficeInteractionSelectionTrace`는 legacy 선택, Shadow 선택, duration, resolved target, partner와 후보별 점수 분해를 진단 이벤트로 노출한다. 구독자가 없으면 retained state가 없으며 이 진단은 전체 저장 스키마 v10에 별도 상태를 추가하지 않는다.
 - `OfficeInteractionOfferFactory`는 Definition을 현재 `OfficeGrid.Furniture`에 투영해 실제 `FurnitureId`별 Offer를 만든다. 접근 칸과 capacity는 Definition에서 파생되며, passability/reachability는 호출자가 주입하므로 Simulation은 Unity를 참조하지 않는다.
 - `OfficeRuntimeInteractionOfferResolver`는 현재 Occupancy와 cardinal PathService로 열린 접근 칸·도달 가능한 접근 칸만 남긴다. 결과는 캐시하지 않으며 Occupancy revision이 바뀌면 동일 intent도 다시 해석해 이동·삭제된 가구의 예전 접근 칸을 사용하지 않는다.

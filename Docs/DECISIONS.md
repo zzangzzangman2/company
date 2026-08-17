@@ -1,5 +1,30 @@
 # DECISIONS
 
+## 2026-08-17 / 빈 사무실 생산 자율과 실제 구매 클릭을 릴리스 gate로 둔다
+
+결정: 빈 사무실 가족의 생산 선택 권한은 `OfficeAutonomyCoordinator` 하나다. `OfficeInteractionScoring`의
+Shadow 결과는 비교 진단일 뿐 fallback 목적지나 actor state를 바꾸지 않는다. 가구가 없으면 coordinator가
+현재 셀과 다른 도달 가능한 타일 중심을 선택하고, cardinal path의 다음 segment 방향으로 planted pivot을
+완료한 뒤 translation한다. 같은 셀 `current-look` 재선택, destination 없는 장기 Idle, 중복 pivot,
+direction-displacement 불일치는 릴리스 실패다.
+
+결정: 사무실 관리 구매는 green preview 표시만으로 완료 판정하지 않는다. 실제 Windows Player의 첫 유효
+좌클릭이 `ConfirmPreview()`에 정확히 한 번 도달하고 ledger·inventory·OfficeGrid·runtime apply가 원자로
+갱신돼야 한다. preview hover 갱신은 같은 frame의 confirm 입력을 조기 return으로 소비하지 않는다.
+
+이유: `b397af9`의 empty-office observer는 입장/퇴실과 진행 중 전환 정지만 보아 stationary 48 대 walk loop
+13의 제자리 행동을 PASS했고, editor/static purchase 검사는 실제 pointer 분기를 지나지 않아 녹색 preview 뒤
+클릭 무효를 놓쳤다. 사용자 입력과 생산 coordinator를 직접 지나지 않는 QA는 이 두 회귀의 최종 증거가 아니다.
+
+## 2026-08-17 / 기능 작업트리는 warm integration 하나만 유지한다
+
+결정: 필수 Git 기준 작업트리 외 기능 작업은 `fc_agents/integration_p0` 하나에서 순차 진행한다. 옛 작업트리
+34개와 파생 `Library/Builds/Artifacts`는 제거하며, 미커밋 변경이 있던 7개만
+`cleanup-salvage-20260817-*` stash로 복구 가능하게 보존한다. 새 기능 작업은 이 stash를 자동 참조하지 않는다.
+
+이유: 중복 Unity Library와 실행 증거가 약 85GB를 차지했고, 여러 checkout이 서로 다른 과거 구현을 현재
+정본처럼 참조하게 만들었다. 한 warm Library를 유지하면 빌드 시간과 코드 정본을 동시에 안정화한다.
+
 ## 2026-08-17 / 새 게임은 빈 타일 사무실이며 모든 가구는 타일 중심에 배치한다
 
 결정: 실제 새 게임은 13×13 바닥과 외곽 bay 52개만 가진 `CreateNewGameEmptyOfficeV1()`로 시작한다.

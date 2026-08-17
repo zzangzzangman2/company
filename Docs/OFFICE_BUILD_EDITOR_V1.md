@@ -2,6 +2,10 @@
 
 ## Current integration status
 
+- **Known blocking regression (`b397af9`)**: pending 구매에서 green world preview는 보이지만 preview 셀 갱신
+  직후 `HandlePointer()`가 return하므로 좌클릭이 `GetMouseButtonDown(0)`/`ConfirmPreview()`에 도달하지 않는다.
+  실제 Windows Player 클릭으로 ledger·inventory·OfficeGrid·runtime apply가 원자 갱신되기 전까지 구매 배치를
+  통합 완료로 취급하지 않는다. 아래 항목은 수정 후 지켜야 할 계약이지 현재 배포 PASS 선언이 아니다.
 - Build editor와 MainNavigation adapter는 현재 main 계보에 통합되어 있다.
 - 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v10이며 v1~v9를 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
 - 진입점은 `사무실 → 회사 → 사무실 관리`다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
@@ -97,6 +101,8 @@ cancel, insufficient funds, and repeated command IDs change cash by zero.
 - Desk/chair workstation rotation turns desk footprint, chair, seat facing, approach cell, and
   subcell operator anchor as one immutable grid transform.
 - Preview grids never call runtime occupancy, path reservation, or wallet methods.
+- Preview hover 갱신은 같은 frame의 confirm 입력을 소비하거나 조기 return해서는 안 된다. 유효 green preview의
+  첫 좌클릭은 정확히 한 번 `ConfirmPreview()`로 이어져야 한다.
 - Purchase computes layout and inventory first, posts the ledger once, then swaps layout/inventory
   into `GameState` together. Same transaction ID and instance is idempotent.
 - Move/rotate/store are free. Active interaction or seat claim causes refusal. The four assigned

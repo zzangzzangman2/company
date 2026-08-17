@@ -2,7 +2,33 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-17 / 빈 타일 사무실·타일 중심 배치·가족 전체 보행 V2 최종 후보
+## 2026-08-17 / 현재 차단 회귀 — 배치 클릭 실패·빈 사무실 제자리 current-look
+
+- `b397af9400be6f958e2d57162bf35508863a7a58`과 같은 Downloads 실행본은 현재 정상 배포가 아니다. normal
+  1배속 재관찰에서 플레이어는 09:08부터 `(11,3)`에 고정됐고 누나·아빠도 첫 open-area 뒤 장시간 Idle,
+  엄마는 09:31과 09:44에 `current-look@virtual:mother:10:9`를 같은 셀 `pathCount=1`로 재선택했다. 정지
+  전이는 48, 유효 보행 loop는 13이었다. 기존 empty-office observer의 PASS는 입장 후 퇴실 여부와 진행 중
+  전환의 20분 정지만 검사해 destination 없는 Idle/current-look 반복과 방향-변위 불일치를 놓쳤다.
+- 사무실 관리의 pending 구매는 녹색 world preview까지 표시되지만 `HandlePointer()`가 preview 셀을 갱신한
+  직후 return하므로 같은 좌클릭의 `GetMouseButtonDown(0)`/`ConfirmPreview()` 경계에 도달하지 않는다. 실제
+  클릭으로 ledger·inventory·OfficeGrid·runtime apply가 한 번에 갱신되기 전까지 편집기 배치를 통합 완료로
+  표시하지 않는다.
+- 자율 선택의 실제 소유자는 `OfficeAutonomyCoordinator`다. `OfficeInteractionScoring`과 Shadow 선택 trace는
+  진단/비교 경로이며 생산 fallback을 바꾸지 않는다. 빈 사무실은 도달 가능한 서로 다른 타일 중심 목적지를
+  선택하고, 다음 cardinal segment 방향으로 planted pivot을 끝낸 뒤 이동해야 한다. 같은 셀 current-look
+  재선택·중복 pivot·실제 변위와 다른 머리/몸/다리 방향은 모두 0이어야 한다.
+- 새 후보는 normal 처음하기 실제 클릭, observer-only 1×·2×·4× 08:50→09:50, stationary/look 대비 유효
+  walk loop, 방향-변위 일치, 타일 중심, 충돌/20분 정지 gate를 통과해야 한다. FAST_QA의 강제 route/state
+  PASS만으로 배포·push하지 않는다.
+
+## 2026-08-17 / 오래된 작업트리·증거 정리
+
+- 필수 Git 기준 작업트리와 `fc_agents/integration_p0`만 남기고 옛 작업트리 34개를 제거했다. clean 작업트리
+  27개는 즉시 제거했고, 변경이 있던 7개는 `cleanup-salvage-20260817-*` stash로 복구 가능하게 보존한 뒤
+  제거했다. 옛 `Library/Builds/Artifacts`, FastQA runs, 이전 작업방 work/outputs, interim 출력, last-known-good
+  복사본을 정리해 약 85GB를 회수했다. 반복 빌드 속도를 위해 현재 `integration_p0/Library/Bee`만 유지한다.
+
+## 2026-08-17 / 빈 타일 사무실·타일 중심 배치·가족 전체 보행 V2 구현 상태
 
 - 실제 새 게임은 13×13 외곽 구조물 52개와 비어 있는 11×11 실내 타일만 생성한다. 좌석·업무 가구·구매
   inventory는 모두 0이며, 기존 4인 가구 배치는 save migration과 출근/좌석 QA 전용 fixture로 분리했다. 빈
@@ -19,11 +45,9 @@
 - warm rebind와 cold 준비 모두 실제 `NavigationPrewarmProgress`를 따른다. 표시 진행률은 raw 값으로 우회하지
   않고 30fps 한 프레임당 최대 0.0127만 전진하며, runtime `IsReady` 전에는 로딩을 닫지 않는다. 준비가 30초
   동안 막히면 원인 경고를 남기고 빠져나오는 fail-open 계약은 유지한다.
-- 현재 같은 warm worktree의 Unity `6000.3.21f1`에서 `editor-broad` 14.188초 PASS, 새 게임 empty/editor
-  런타임 purchase·tile-anchor·4 actor route PASS, 가구 13종 구매와 canonical footprint-center PASS,
-  보행 V2 재현/의미 검사 4/4와 32/32 행 PASS다. 다음 단계는 clean commit의 Release Player에서 observer-only
-  빈 새 게임 1x·2x·4x 08:50→09:50, furnished FAST_QA seat/Work, loading telemetry를 모두 다시 통과한 뒤
-  그 동일 HEAD만 Downloads와 `origin/main`에 승격하는 것이다.
+- Editor/static에서 empty layout, canonical footprint-center, 보행 V2 32/32 행은 통과했지만 이것은 실제
+  구매 클릭과 빈 사무실 자율 산책의 정상 증거가 아니다. 위 차단 회귀가 해소된 동일 clean HEAD의 Release
+  Player를 다시 검증한 뒤에만 Downloads와 `origin/main` 승격을 논의한다.
 
 ## 2026-08-17 / 엄마 북쪽 보행 V2 검증 완료·배포 후보
 
@@ -39,7 +63,9 @@
   좌우 반전되고, 1/4는 회수, 2/5는 반대 통과 포즈이며 치마 밑단 변화와 발 하단 잘림 0을 실제 D3D12
   768px closeup으로 확인했다. QA는 프레임/스프라이트를 강제하지 않고 기존 직접이동·충돌·거리 기반 gait를
   사용하며 command-line opt-in 밖에서는 NPC 제어에 영향이 없다.
-- 같은 clean Release의 observer-only 일반 새 게임은 1x·2x·4x 모두 08:50→09:50 PASS다.
+- 당시 furnished 기본 레이아웃의 clean Release observer-only 일반 새 게임은 1x·2x·4x 모두
+  08:50→09:50 PASS였다. 이 역사 결과는 이후 도입한 빈 새 게임의 자율 산책이나 실제 구매 클릭을 검증하지
+  않으므로 현재 회귀의 정상 근거로 사용하지 않는다.
   `actorQaControl=false`, route injection=false, clock jump=false, docking force=false이며 네 가족 모두 seat
   arrival 1회·Work 6/6·20 game-minute stall 0이다. 커밋된 clean HEAD의 `FAST_QA player-scripts`도
   37.966초로 SLO 60초를 충족했다.
@@ -106,9 +132,9 @@
   `Require frontend run. Library/Bee/1900b0aE.dag couldn't be loaded`가 남았다. warm `Library/Bee`의 normal
   incremental player build는 6.93/6.94/7.00초, forced clean release-config build도 16.00/19.58/19.44초다.
   느린 원인은 빌드 옵션이 아니라 worktree마다 warm `Library`를 버리는 것이다.
-- 현재 `Documents/Codex` 아래 Family Company worktree는 36개이며 그중 13개가 각자 `Library`를 갖고 있다.
-  `Artifacts/FastQa/runs`가 존재하는 worktree는 `chair_seat`와 `windows_automation_p1` 둘뿐이므로 Fast QA는
-  사실상 사용되지 않고 있었다. worktree 정리와 단일 warm worktree 사용은 다음 작업이다.
+- 이 진단 당시 Family Company worktree는 36개였고 13개가 각자 `Library`를 가졌다. 2026-08-17 정리에서
+  옛 작업트리 34개와 누적 산출물을 제거했으며, 현재는 필수 Git 기준 작업트리와 warm
+  `fc_agents/integration_p0` 두 개만 남는다.
 - 문서와 도구가 어긋난 지점을 기록한다. [AGENTS.md](../AGENTS.md)는 정본 브랜치를 `main` 하나로 규정하지만
   `Tools/FamilyCompanyBuild.Common.ps1`의 `Get-FamilyCompanyDeployDefaults`는 `RequiredBranch = 'codex/integration-p0-qa'`를
   요구한다. 로컬 정본 체크아웃에는 `main` 브랜치가 없고 `agent/contract-lifecycle-v0-3`에 머물러 있다.
@@ -292,7 +318,7 @@
 | 새 게임 | `2000-01-03 08:50`, 가족 4인, 자본금 5,000,000원 |
 | 출퇴근 | 가족만 `09:00`~`09:03` 1분 간격, 문 밖 spawn과 단일 ingress 예약으로 입장, `18:00`부터 퇴근 |
 | 직원 8인 | 시작 인원이 아닌 향후 채용 후보. 고용 전 런타임 출근 금지 |
-| 사무실 | `StarterOfficeV1`, 13×13, 실내 가구 17 + 외곽 bay 52, 가족 workstation 4 |
+| 사무실 | 새 게임은 13×13, 외곽 bay 52, 편집 가능 가구·좌석·재고 0. furnished `StarterOfficeV1`은 migration/QA fixture 전용 |
 | 외곽 출입구 | `(8,0)` threshold 1칸. `entrance_door`는 호환 ID이며 door leaf/jamb/lintel 애니메이션이 아님 |
 | 메인 UI | `MainNavigationV2`: 회사·인사·사업·연구·투자 5개 허브 |
 | 계약 | 고객 등급 `T0 → T1 → T2 → T3 → T4`, 순차 해금과 하락/회복 |
@@ -324,12 +350,12 @@
 
 ## 열린 기술 부채와 제품 backlog
 
-1. 직원 후보 8인은 고용 시스템이 생긴 뒤에만 출근시킨다. 시작 roster나 09:00~09:03 가족 출근에 섞지 않는다.
-2. 소파/다인 좌석은 group atomic claim, 짝 이동, 취소/퇴장 해제, non-NorthWest pose 승인과 idle/emote QA를 추가한다.
-3. 오피스 확장은 현재 StarterOffice를 보존하며 단계별 면적/가구 해금으로 구현한다. 과거 요청서의 숫자를 검증 없이 새 정본으로 삼지 않는다.
-4. 60일 외상 매출/지급, 경쟁 견적, 뉴스 조합은 `GAMEPLAY_FUN_V1.md`와 `DO_NOTS.md`의 재미·미래 누설 제한을 지키며 별도 설계/검증한다.
-5. 주식은 전체 계좌/주문/체결/원장 persistence, S3/S4 시나리오, 외부 tape/호가 연결을 확장하되 기존 결정론을 보존한다.
-6. Utility AI의 선택 규칙은 현재 `WeightedPick`이 정본이다. `ArgMax` 변경은 제안만으로 적용하지 않는다.
+1. pending 구매 preview 좌클릭이 실제 `ConfirmPreview()`와 원자 state mutation까지 도달하도록 회귀를 수정한다.
+2. 빈 사무실의 실제 `OfficeAutonomyCoordinator` fallback을 destination 있는 타일 중심 산책으로 바꾸고 같은 셀 current-look/중복 pivot/방향-변위 불일치를 0으로 만든다.
+3. 직원 후보 8인은 고용 시스템이 생긴 뒤에만 출근시킨다. 시작 roster나 09:00~09:03 가족 출근에 섞지 않는다.
+4. 소파/다인 좌석은 group atomic claim, 짝 이동, 취소/퇴장 해제, non-NorthWest pose 승인과 idle/emote QA를 추가한다.
+5. 오피스 확장은 현재 StarterOffice를 보존하며 단계별 면적/가구 해금으로 구현한다. 과거 요청서의 숫자를 검증 없이 새 정본으로 삼지 않는다.
+6. Utility AI의 생산 선택은 `OfficeAutonomyCoordinator`가 소유한다. Shadow scoring 결과를 생산 동작으로 오인하지 않는다.
 
 ## 검증 상태
 
@@ -338,9 +364,9 @@
 | Simulation/Editor 전체 회귀 | clean `main` HEAD | FastQA `simulation-pure`, `editor-validation`, `editor-broad` PASS |
 | Workforce/Save v10 | clean `main` HEAD | skills=6, grades=S-F, v1~v9 migration, 1x/2x/4x PASS |
 | UI V3/Maplestory | clean `main` HEAD | assets=24, characters=670, missingGlyphs=0; 1280×720·1392×768·1600×900/1000·1920×1080 PASS |
-| Windows D3D11 UI | clean `main` HEAD | Title→New Game, Loading, 5 tabs, People, 계약·건축·주식, ESC, 1x/2x/4x PASS |
-| Windows D3D11 사무실 | clean `main` HEAD | 가족4 출근·착석·타이핑·이석·이동·충돌·상호작용·스태미나·저장/불러오기 PASS |
-| 최종 portable Windows build | 최종 `main` | clean HEAD에서만 생성하고 `BUILD_INFO.txt` SHA 일치, Release watermark 0, 배포 EXE smoke PASS로 판정 |
+| Windows D3D11 UI | `b397af9` | **BLOCKED** — 사무실 관리 pending 구매의 녹색 preview 좌클릭이 confirm에 도달하지 않음 |
+| Windows D3D11 사무실 | `b397af9` normal 처음하기 | **BLOCKED** — 첫 open-area 뒤 destination 없는 Idle/current-look 반복, stationary 48 대 walk loop 13 |
+| 최종 portable Windows build | 최종 `main` | **BLOCKED** — 위 두 회귀를 동일 clean HEAD의 실제 EXE에서 고치고 재검증하기 전 배포 금지 |
 
 과거 개별 PASS는 해당 기능의 회귀 근거다. 최종 결합 SHA의 PASS를 대신하지 않는다.
 

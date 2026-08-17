@@ -35,9 +35,10 @@
 ## 규칙 1 — worktree를 늘려서 `Library`를 버리지 않는다
 
 worktree를 새로 만들면 그 경로의 `Library`는 비어 있고, 첫 Unity 실행이 80~104초짜리 최초 임포트를
-처음부터 다시 낸다. worktree 13개는 이 비용을 13번 낸다는 뜻이다.
+처음부터 다시 낸다. 2026-08-17 정리 전에는 이 비용이 여러 worktree에서 반복됐고, 현재 기능 작업은
+`fc_agents/integration_p0`의 warm `Library` 하나만 사용한다.
 
-- 반복 작업은 **`Library`가 이미 warm인 기존 worktree 한 곳**에서 브랜치를 바꿔가며 수행한다.
+- 반복 작업은 **`Library`가 이미 warm인 `fc_agents/integration_p0` 한 곳**에서 순차 수행한다.
 - `Library`, `Library/Bee`, `Artifacts/FastQa`의 플레이어 캐시는 일상 실행 사이에 삭제하지 않는다.
 - 병합이 끝난 worktree는 `git worktree remove`로 정리해 디스크와 혼동을 함께 줄인다.
 - 어쩔 수 없이 새 worktree가 필요하면, 그 첫 실행이 100초 이상 걸린다는 사실을 비용으로 인정하고

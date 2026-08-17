@@ -13,6 +13,10 @@
 
 ## 필수 작업 규칙
 
+- 현재 `b397af9`는 사무실 관리 구매 클릭과 빈 사무실 자율 산책의 차단 회귀가 확인된 재현 기준일 뿐
+  정상 릴리스가 아니다. `Docs/PROJECT_STATE.md` 맨 위의 차단 회귀를 먼저 읽고, 삭제된 이전 작업방
+  outputs나 `Docs/History/Reports`의 PASS를 현재 정상 증거로 재사용하지 않는다. normal 새 게임에서 다시
+  재현·검증한다.
 - 정본 개발 브랜치는 `main` 하나다. `agent/*`, 기능·임시 브랜치, 새 branch와 별도 worktree를 만들거나 전환하지 않는다.
 - 한 채팅에서 한 작업씩 순차 진행한다. 사용자가 다시 명시적으로 허용하지 않는 한 하위 에이전트·다른 채팅·새 작업에 위임하지 않는다.
 - 회사 PC·집 PC·다른 AI나 도구에서 작업해도 먼저 이 문서와 README의 문서 표를 읽고, clean `main`에서만 `git pull --ff-only origin main`으로 시작한다.
@@ -33,6 +37,8 @@
 - 새 worktree를 만들면 그 경로의 첫 Unity 실행이 80~104초짜리 최초 임포트를 처음부터 다시 낸다. 반복 작업은
   `Library`가 이미 warm인 기존 worktree 한 곳에서 수행하고, 병합이 끝난 worktree는 `git worktree remove`로
   정리한다.
+- 2026-08-17 정리 후 기능 작업 경로는 `fc_agents/integration_p0` 하나다. 이 경로의 `Library/Bee`를 보존하고
+  삭제된 옛 작업트리 이름이나 stash를 탐색해 코드를 가져오지 않는다.
 - 느리다고 느끼면 추측하지 말고 그 실행의 Unity 로그에서 `Asset Pipeline Refresh ... Total: <n> seconds`와
   `Require frontend run. Library/Bee/*.dag couldn't be loaded`를 먼저 확인한다. 두 값이 작은데도 느릴 때만
   빌드 파이프라인을 의심한다.
@@ -47,6 +53,9 @@
 - Library, Temp, Logs, UserSettings는 Git에 넣지 않는다. Assets의 .meta는 반드시 추적한다.
 - 다른 작업자의 변경을 삭제하거나 되돌리지 않는다.
 - Docs/PROJECT_STATE.md는 현재 상태만 기록한다. `Docs/History/Reports/`의 완료 보고서는 당시 증거이며 현재 정본이나 미완료 목록을 덮어쓰지 않는다.
+- Observer/FAST_QA의 PASS 조건이 사용자 증상을 직접 계측하지 않으면 정상 증거가 아니다. 편집기는 실제
+  pointer click→confirm→state mutation을, 자율 이동은 실제 coordinator intent→destination→path와
+  direction/displacement를 normal Player에서 검증한다.
 
 ## History 데이터 소유권
 

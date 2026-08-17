@@ -4,24 +4,30 @@
 
 ## 최종 통합 후보 상태
 
+- **현재 `b397af9` Downloads 실행본은 배포 승인 상태가 아니다.** 2026-08-17 normal 1배속 재조사에서 빈
+  사무실 가족이 첫 open-area 도착 뒤 destination 없는 `Idle/current-look`을 반복했고, 배치 편집기는 구매
+  preview를 갱신한 frame에 `HandlePointer()`가 return해 녹색 preview 좌클릭이 `ConfirmPreview()`까지 도달하지
+  않는 회귀를 확인했다. 과거 observer 1×·2×·4× PASS는 입장 후 퇴실/20분 전환 정지만 보았고 자연 보행과
+  실제 구매 클릭을 검증하지 않았으므로 현재 정상 근거로 사용하지 않는다.
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
 - 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고, GitHub history·tags·Releases·Actions 감사 결과 executable payload는 0입니다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`에서 도입한 CI guard가 향후 tracked Windows Player payload를 fail-closed 차단합니다.
-- 일반 새 게임 좌석 정지와 가족 타일 보행 수정은 2026-08-16에 검증·배포되었습니다. 배포본
-  `%USERPROFILE%\Downloads\FamilyCompany_Playtest`의 `BUILD_INFO.txt`와 `DEPLOY_MANIFEST.json`이 최종 commit과
-  Unity `6000.3.21f1` identity를 기록하며 `origin/main`과 일치합니다. 일반 새 게임 observer 1x·2x·4x,
-  seating transition Player, FAST_QA, 보행 asset strict gate를 모두 통과한 identity만 승격합니다.
+- `%USERPROFILE%\Downloads\FamilyCompany_Playtest`는 현재 회귀 재현용이며 새 수정 후보가 normal 실제 클릭과
+  08:50→09:50 자율 산책 gate를 통과하기 전에는 재승격하거나 정상 배포로 보고하지 않는다.
 
-## 현재 플레이 가능한 기준선
+## 현재 구현 기준선 — 차단 회귀 수정 필요
 
 - 새 게임은 `2000-01-03 08:50`, 가족 4명, 자본금 500만 원으로 시작합니다.
 - 사무실은 13×13 바닥과 외곽만 있는 빈 상태로 시작합니다. `회사 → 사무실 관리`에서 책상·의자·정수기 등 카테고리별 가구를 구매하고, 모든 가구를 회전된 footprint의 정확한 타일 중심에 배치합니다.
 - 가족 4명만 `09:00`~`09:03`에 1분 간격으로 출근하고 `18:00`부터 퇴근합니다. 직원 8명은 시작 인원이 아니라 향후 채용 후보입니다.
 - `MainNavigationV2`의 회사·인사·사업·연구·투자 5개 허브를 사용합니다. 회사 허브는 사무실 편집, 사업 허브는 계약/제품, 투자 허브는 주식으로 연결됩니다.
 - 계약 고객은 `T0 → T1 → T2 → T3 → T4` 순차 해금과 등급 하락/회복 규칙을 가집니다.
-- 사무실 편집기는 배치·회전·이동·회수·재고·저장을 지원합니다. 전체 저장 스키마는 `v10`이고 `v1`~`v9`을 읽어 이관합니다.
+- 사무실 편집기의 배치·회전·이동·회수·재고·저장 계약은 유지한다. 단, 현재 `b397af9`의 pending 구매
+  좌클릭은 알려진 회귀이므로 수정 전 실행본을 플레이 가능 기준선으로 취급하지 않는다. 전체 저장 스키마는
+  `v10`이고 `v1`~`v9`을 읽어 이관합니다.
 - Title·Loading·HUD·5개 허브·인사 roster는 UI Remaster V3 공용 스킨과 프로젝트에 포함된 Maplestory Light/Bold 폰트를 사용합니다.
 - 가족 4명은 같은 10,000 체력 기준으로 시작하며, 업무 중 체력이 25%까지 내려가면 실제 배치·접근·사용 가능한 정수기·자판기·휴식 좌석을 찾아 회복한 뒤 원래 자리와 남은 업무로 돌아갑니다.
-- 캐릭터 방향과 걷기 애니메이션은 요청 속도가 아니라 프레임의 실제 이동량으로 판정합니다.
+- 캐릭터 방향과 걷기 애니메이션의 정본은 요청 방향이 아니라 프레임의 실제 이동량이다. 빈 사무실
+  `current-look` fallback이 같은 셀의 중복 pivot과 횡미끄럼을 만들고 있는 현재 회귀는 이 계약 위반이다.
 - 기본 렌더는 `1920×1080`, native scale 1, pixel snap을 사용하고 작은 창은 compact UI로 대응합니다.
 - 주식은 회사 자금과 연결되며 시장 시간, 7+7 호가, 가격·시간 우선 FIFO, 수수료·세금, 결정론적 저장 규칙을 유지합니다.
 
