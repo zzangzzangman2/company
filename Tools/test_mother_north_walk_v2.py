@@ -7,7 +7,9 @@ import hashlib
 import unittest
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageOps
+from PIL import Image
+
+import build_family_walk_half_cycles_v2 as build
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -23,20 +25,6 @@ def load_frames() -> list[Image.Image]:
         Image.open(FRAMES_ROOT / f"mother_north_walk_{index}.png").convert("RGBA")
         for index in range(6)
     ]
-
-
-def silhouette_change(
-    left: Image.Image,
-    right: Image.Image,
-    box: tuple[int, int, int, int],
-) -> float:
-    left_alpha = left.getchannel("A").crop(box).point(lambda value: 255 if value else 0)
-    right_alpha = right.getchannel("A").crop(box).point(lambda value: 255 if value else 0)
-    union = ImageChops.lighter(left_alpha, right_alpha)
-    difference = ImageChops.logical_xor(left_alpha.convert("1"), right_alpha.convert("1"))
-    union_pixels = sum(1 for value in union.get_flattened_data() if value)
-    difference_pixels = sum(1 for value in difference.get_flattened_data() if value)
-    return difference_pixels / union_pixels
 
 
 def bottom_y(image: Image.Image, x0: int, x1: int) -> int:
@@ -65,43 +53,47 @@ class MotherNorthWalkV2Tests(unittest.TestCase):
             self.assertEqual((256, 256), frame.size)
             self.assertEqual(247, bottom_y(frame, 0, 256), f"frame {index} ground line")
 
-    def test_second_half_is_exact_opposite_gait(self) -> None:
-        for index in range(3):
-            self.assertEqual(
-                ImageOps.mirror(self.frames[index]).tobytes(),
-                self.frames[index + 3].tobytes(),
-                f"frame {index + 3} must mirror frame {index}",
-            )
-
-    def test_support_foot_changes_only_at_passing_phases(self) -> None:
-        support_sides: list[str] = []
-        for frame in self.frames:
-            left_y = bottom_y(frame, 0, 128)
-            right_y = bottom_y(frame, 128, 256)
-            support_sides.append("L" if left_y > right_y else "R" if right_y > left_y else "=")
-        self.assertEqual(["R", "R", "L", "L", "L", "R"], support_sides)
-
-    def test_opposite_contacts_move_arms_skirt_and_feet(self) -> None:
-        frame0, frame3 = self.frames[0], self.frames[3]
-        bboxes = [frame.getchannel("A").getbbox() for frame in (frame0, frame3)]
+    def test_height_and_body_volume_stay_stable(self) -> None:
+        bboxes = [frame.getchannel("A").getbbox() for frame in self.frames]
         self.assertNotIn(None, bboxes)
-        left = min(box[0] for box in bboxes if box)
-        top = min(box[1] for box in bboxes if box)
-        right = max(box[2] for box in bboxes if box)
-        bottom = max(box[3] for box in bboxes if box)
-        height = bottom - top
-        regions = {
-            "upper": (left, top, right, top + round(height * 0.58)),
-            "skirt": (left, top + round(height * 0.40), right, top + round(height * 0.82)),
-            "feet": (left, top + round(height * 0.76), right, bottom),
-        }
-        changes = {
-            name: silhouette_change(frame0, frame3, box)
-            for name, box in regions.items()
-        }
-        self.assertGreaterEqual(changes["upper"], 0.20, changes)
-        self.assertGreaterEqual(changes["skirt"], 0.20, changes)
-        self.assertGreaterEqual(changes["feet"], 0.50, changes)
+        self.assertEqual(
+            {build.CHARACTER_BY_ID["mother"].target_height},
+            {box[3] - box[1] for box in bboxes if box},
+        )
+        areas = [
+            sum(1 for value in frame.getchannel("A").get_flattened_data() if value)
+            for frame in self.frames
+        ]
+        self.assertLessEqual(max(areas) / min(areas), 1.06, areas)
+
+    def test_all_six_transitions_move_the_lower_body(self) -> None:
+        adjacent = [
+            build.visible_pixel_change(
+                self.frames[index],
+                self.frames[(index + 1) % 6],
+                lower_body_only=True,
+            )
+            for index in range(6)
+        ]
+        self.assertGreaterEqual(
+            min(adjacent), build.MIN_ADJACENT_LOWER_BODY_CHANGE, adjacent
+        )
+        self.assertGreaterEqual(
+            sum(adjacent) / 6,
+            build.MIN_MEAN_ADJACENT_LOWER_BODY_CHANGE,
+            adjacent,
+        )
+
+    def test_opposite_contacts_change_body_and_feet(self) -> None:
+        frame0, frame3 = self.frames[0], self.frames[3]
+        self.assertGreaterEqual(
+            build.visible_pixel_change(frame0, frame3),
+            build.MIN_OPPOSITE_PIXEL_CHANGE,
+        )
+        self.assertGreaterEqual(
+            build.visible_pixel_change(frame0, frame3, lower_body_only=True),
+            build.MIN_OPPOSITE_LOWER_BODY_CHANGE,
+        )
 
     def test_sheet_cells_match_runtime_frames(self) -> None:
         with Image.open(SHEET_PATH) as loaded:

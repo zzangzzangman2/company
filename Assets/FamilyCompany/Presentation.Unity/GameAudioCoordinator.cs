@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FamilyCompany.Presentation.Unity
 {
@@ -48,6 +49,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private AudioSource _bgmSource;
         private AudioSource _sfxSource;
+        private AudioListener _listener;
         private Coroutine _bgmFadeRoutine;
         private string _requestedBgmId = string.Empty;
         private string _currentBgmId = string.Empty;
@@ -103,6 +105,15 @@ namespace FamilyCompany.Presentation.Unity
 
             _instance = this;
             DontDestroyOnLoad(gameObject);
+
+            // 프로젝트의 유일한 AudioListener는 OfficeTileMigrationPreview 씬의 Main Camera에 있었고,
+            // ScenePreviewJump는 그 씬을 additive 로드한 직후 해당 listener를 끈다. 그래서 출력이 존재하는
+            // 구간은 그 씬이 활성화된 순간부터 listener가 꺼질 때까지뿐이었고, 타이틀 BGM이 약 1초 들리다
+            // 끊긴 뒤 남은 세션 전체가 무음이 되었다. 오디오 권한이 자기 listener를 소유하게 해서 출력이
+            // 어떤 씬이 로드되어 있는지에 의존하지 않게 한다. 모든 소리는 spatialBlend=0인 2D이므로
+            // listener의 위치는 결과에 영향을 주지 않는다.
+            _listener = gameObject.AddComponent<AudioListener>();
+
             _bgmSource = gameObject.AddComponent<AudioSource>();
             _bgmSource.playOnAwake = false;
             _bgmSource.loop = true;
@@ -115,6 +126,8 @@ namespace FamilyCompany.Presentation.Unity
             _sfxSource.spatialBlend = 0f;
             _sfxSource.ignoreListenerPause = true;
             _sfxSource.volume = sfxVolume;
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+            EnforceSingleAudioListener();
             PlayBgm(TitleBgmId, 0f);
         }
 
@@ -123,12 +136,37 @@ namespace FamilyCompany.Presentation.Unity
             _screenPollRemaining -= Time.unscaledDeltaTime;
             if (_screenPollRemaining > 0f) return;
             _screenPollRemaining = ScreenPollIntervalSeconds;
+            EnforceSingleAudioListener();
             RefreshScreenBgm();
         }
 
         private void OnDestroy()
         {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
             if (_instance == this) _instance = null;
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            // 씬이 추가로 로드되는 순간 그 씬의 listener가 함께 살아나면 Unity가 다중 listener 경고를
+            // 남기므로, 로드 프레임에서 바로 정리한다.
+            EnforceSingleAudioListener();
+        }
+
+        private void EnforceSingleAudioListener()
+        {
+            if (_listener == null) return;
+
+            var listeners = FindObjectsByType<AudioListener>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            foreach (var listener in listeners)
+            {
+                if (listener == _listener || !listener.enabled) continue;
+                listener.enabled = false;
+            }
+
+            if (!_listener.enabled) _listener.enabled = true;
         }
 
         public void SetBgmVolume(float volume)

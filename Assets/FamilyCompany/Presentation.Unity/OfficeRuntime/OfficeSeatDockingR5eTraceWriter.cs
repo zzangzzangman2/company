@@ -766,11 +766,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private static int ResolveFacing(Vector2 velocity, int fallback) =>
             velocity.sqrMagnitude <= 0.0000000001f
                 ? fallback
-                : DirectionalSpriteAnimator.ResolveTileDirection(velocity, fallback);
+                : DirectionalSpriteAnimator.ResolveTileDirection(
+                    OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(velocity),
+                    fallback);
 
         private static float ForwardDot(Vector2 velocity, int renderedFacing)
         {
             if (velocity.sqrMagnitude <= 0.0000000001f) return 1f;
+            // The octant table is in walking-surface axes while the velocity is a projected world
+            // vector, so compare them in the same space instead of dotting across the projection.
+            Vector2 facing = OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(velocity);
             Vector2 forward = renderedFacing switch
             {
                 0 => Vector2.down,
@@ -783,7 +788,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 7 => new Vector2(1f, -1f).normalized,
                 _ => Vector2.zero
             };
-            return Vector2.Dot(forward, velocity.normalized);
+            return facing.sqrMagnitude <= 0.0000000001f
+                ? 1f
+                : Vector2.Dot(forward, facing.normalized);
         }
 
         private static OfficeSeatEgressKind ResolveExitKind(

@@ -63,6 +63,20 @@
 - 런타임 이동 정본: `Assets/Art/Characters/Mother/Pixel/HighMotion/mother_pixel_walk8dir6_{a,b}_v1.png`
 - 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
+## 가족 보행 제작 정본
+
+- 최우선 계약은 `Docs/FAMILY_WALK_ART_GUARDRAILS.md`의 `FC-WALK-GUARDRAIL-V1`과
+  `FC-WALK-TWOSTEP-GATE-V1`이다.
+- 추적 source 정본은 `ArtSources/FamilyWalkHalfCyclesV2/<member>/<direction>/`의 표식 없는
+  identity-locked 192 frame이다. 방향별 외형 기준은 `IdentityModelV1/` 32장, 해부학적 좌우 다리 증거는
+  동일 alpha의 별도 `MarkerReviewV1/` 192장이다.
+- 각 6프레임은 왼발 접지·지지·오른발 낮은 통과·오른발 접지·지지·왼발 낮은 통과다. 3·4·5 하체는
+  0·1·2의 골반축 반사이며 얼굴·머리·옷·방향은 반사하지 않는다.
+- 제작은 `Tools/build_family_walk_half_cycles_v2.py` 단일 source→runtime 경로만 사용한다. gate PASS 전
+  `--write`는 금지하며 구형 세대 import로 source를 덮어쓰지 않는다.
+- 정상 가족 런타임은 별도 `LocomotionTransitionsV1` 초상화를 섞지 않고 승인 walk/idle 계열만 사용한다.
+  cardinal 타일 중심 구간은 다음 구간 방향으로 pivot을 끝낸 뒤 translation한다.
+
 ## 향후 직원 후보 8인
 
 - `simul`의 김서아·이지안·최이서·정아린·박하은·한수아·오지우·윤채아를 향후 고용 가능한 직원 후보 에셋 풀로 사용한다.

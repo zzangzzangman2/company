@@ -1437,9 +1437,7 @@ namespace FamilyCompany.Presentation.Unity
                         $"player translated during planted pivot for {QaDirectionNames[direction]}");
                     yield break;
                 }
-                Vector2 expectedFacingDisplacement =
-                    OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(observedDisplacement);
-                int expected = DirectionalSpriteAnimator.ResolveTileDirection(expectedFacingDisplacement);
+                int expected = ResolveFacingAxesDirection(observedDisplacement);
                 int expectedWalkFrame = OfficeLocomotionGaitRules.DistanceFrame(
                     observedGaitDistance,
                     player.StrideLength,
@@ -1461,7 +1459,10 @@ namespace FamilyCompany.Presentation.Unity
                         $"direction mismatch {QaDirectionNames[direction]}: vector={observedDisplacement} " +
                         $"frame={observedFrameDisplacement} semantic={observedSemanticDisplacement} " +
                         $"inputIndex={direction} expectedFacing={expected} " +
-                        $"facingVector={expectedFacingDisplacement} semanticDir={observedSemanticDirection} " +
+                        $"facingVector=" +
+                        OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(
+                            observedDisplacement) +
+                        $" semanticDir={observedSemanticDirection} " +
                         $"motionDir={observedMotionDirection} visualDir={observedVisualDirection} " +
                         $"projected={observedProjection} speed={observedSpeed:F3} " +
                         $"locomotion={observedLocomotionPhase} gaitDistance={observedGaitDistance:F3} " +
@@ -1584,6 +1585,15 @@ namespace FamilyCompany.Presentation.Unity
             yield return null;
         }
 
+        // Walk art is authored against the visible projected plane. Quantise through the axis
+        // overload so a legitimately tiny rendered step remains diagnostic instead of throwing.
+        private static int ResolveFacingAxesDirection(Vector2 worldDisplacement)
+        {
+            Vector2 facingAxes =
+                OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(worldDisplacement);
+            return DirectionalSpriteAnimator.ResolveDirectionFromAxes(facingAxes.x, facingAxes.y);
+        }
+
         private IEnumerator RunReversalPivotQa()
         {
             Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
@@ -1594,6 +1604,10 @@ namespace FamilyCompany.Presentation.Unity
             actors["father"].QaTeleportToCell(new OfficeGridCoordinate(21, 3));
             actors["mother"].QaTeleportToCell(new OfficeGridCoordinate(21, 21));
 
+            // Keep reversal expectations on the same visible-heading adapter as production.
+            int downFacing = ResolveFacingAxesDirection(Vector2.down);
+            int upFacing = ResolveFacingAxesDirection(Vector2.up);
+
             player.QaSetPlayerInput(Vector2.down);
             float started = Time.time;
             bool establishedSouth = false;
@@ -1602,8 +1616,8 @@ namespace FamilyCompany.Presentation.Unity
                 yield return null;
                 Vector2 displacement = player.AccumulatedFrameDisplacement;
                 if (displacement.sqrMagnitude <= 0.0000001f) continue;
-                int motionDirection = DirectionalSpriteAnimator.ResolveTileDirection(displacement);
-                if (motionDirection == 0 && player.CurrentDirection == 0)
+                int motionDirection = ResolveFacingAxesDirection(displacement);
+                if (motionDirection == downFacing && player.CurrentDirection == downFacing)
                 {
                     establishedSouth = true;
                     break;
@@ -1627,12 +1641,12 @@ namespace FamilyCompany.Presentation.Unity
                 Vector2 displacement = player.AccumulatedFrameDisplacement;
                 if (displacement.sqrMagnitude <= 0.0000001f)
                 {
-                    if (player.CurrentDirection == 4) plantedNorthFacingObserved = true;
+                    if (player.CurrentDirection == upFacing) plantedNorthFacingObserved = true;
                     continue;
                 }
 
                 movingFrames++;
-                int actualDirection = DirectionalSpriteAnimator.ResolveTileDirection(displacement);
+                int actualDirection = ResolveFacingAxesDirection(displacement);
                 if (player.CurrentDirection != actualDirection)
                 {
                     player.QaSetPlayerInput(Vector2.zero);
@@ -1643,7 +1657,7 @@ namespace FamilyCompany.Presentation.Unity
                         $"locomotion={player.LocomotionPhase}");
                     yield break;
                 }
-                if (actualDirection != 4) continue;
+                if (actualDirection != upFacing) continue;
                 if (!plantedNorthFacingObserved)
                 {
                     player.QaSetPlayerInput(Vector2.zero);

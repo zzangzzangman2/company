@@ -81,10 +81,36 @@ namespace FamilyCompany.Editor
         {
             using (var harness = new AnimatorHarness())
             {
-                ValidateLateralRun(harness, Vector2.left, 6, "screen-left/east-art");
-                ValidateLateralRun(harness, Vector2.right, 2, "screen-right/west-art");
+                ValidateLateralRun(harness, Vector2.left, ExpectedFacing(Vector2.left), "screen-left");
+                ValidateLateralRun(harness, Vector2.right, ExpectedFacing(Vector2.right), "screen-right");
             }
             ValidateProductionLateralSpriteAssets();
+        }
+
+        // Sprite rows describe visible screen headings. Keep the expectation behind the shared
+        // adapter, then independently reject any body leaning away from its travelled side.
+        private static int ExpectedFacing(Vector2 worldDisplacement) =>
+            DirectionalSpriteAnimator.ResolveTileDirection(
+                OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(worldDisplacement));
+
+        private static int HorizontalLean(int direction) => direction switch
+        {
+            1 or 2 or 3 => -1,
+            5 or 6 or 7 => 1,
+            _ => 0
+        };
+
+        private static void RequireNoMoonwalk(
+            DirectionalLocomotionFrameTrace trace,
+            Vector2 displacementDirection,
+            string label,
+            int frame)
+        {
+            int travelSign = Math.Sign(displacementDirection.x);
+            if (travelSign == 0) return;
+            int lean = HorizontalLean(trace.DisplayDirection);
+            Require(lean * travelSign >= 0,
+                $"{label} frame {frame} rendered a body leaning away from the travelled side: {trace}.");
         }
 
         private static void ValidateProductionLateralSpriteAssets()
@@ -99,8 +125,10 @@ namespace FamilyCompany.Editor
                     memberId + " production walk frames are missing.");
                 using (var harness = new ProductionAnimatorHarness(memberId, frames))
                 {
-                    ValidateProductionLateralRun(harness, Vector2.left, 6, "screen-left/east-art");
-                    ValidateProductionLateralRun(harness, Vector2.right, 2, "screen-right/west-art");
+                    ValidateProductionLateralRun(
+                        harness, Vector2.left, ExpectedFacing(Vector2.left), "screen-left");
+                    ValidateProductionLateralRun(
+                        harness, Vector2.right, ExpectedFacing(Vector2.right), "screen-right");
                 }
             }
         }
@@ -126,6 +154,7 @@ namespace FamilyCompany.Editor
                     $"{harness.MemberId}/{label}/{frame} production Sprite mismatch: {trace}.");
                 Require(!trace.FlipX,
                     $"{harness.MemberId}/{label}/{frame} production Sprite was mirrored: {trace}.");
+                RequireNoMoonwalk(trace, displacementDirection, harness.MemberId + "/" + label, frame);
                 if (frame == 0 || frame == 17)
                     Debug.Log(
                         $"PRODUCTION_LATERAL_FRAME_TRACE | member={harness.MemberId} " +
@@ -170,6 +199,7 @@ namespace FamilyCompany.Editor
                     $"{label} frame {frame} selected a front/back sprite during lateral motion: {trace}.");
                 Require(!trace.FlipX,
                     $"{label} frame {frame} mirrored an independently-authored 8-way sprite: {trace}.");
+                RequireNoMoonwalk(trace, displacementDirection, label, frame);
             }
         }
 
@@ -177,33 +207,45 @@ namespace FamilyCompany.Editor
         {
             using (var harness = new AnimatorHarness())
             {
+                var consumed = new HashSet<int>();
                 for (var direction = 0; direction < DirectionVectors.Length; direction++)
                 {
-                    harness.Animator.RestoreStandingFacing(direction);
-                    DirectionalLocomotionFrameTrace trace = harness.Step(DirectionVectors[direction], true);
-                    Require(trace.MotionDirection == direction && trace.DisplayDirection == direction,
+                    Vector2 world = DirectionVectors[direction];
+                    int expected = ExpectedFacing(world);
+                    harness.Animator.RestoreStandingFacing(expected);
+                    DirectionalLocomotionFrameTrace trace = harness.Step(world, true);
+                    Require(trace.MotionDirection == expected && trace.DisplayDirection == expected,
                         $"8-way runtime frame mismatch for {DirectionTokens[direction]}: {trace}.");
                     Require(OfficeWorkActionFrameSet.TryResolveNamedDirection(
                                 harness.Renderer.sprite,
                                 out int spriteDirection) &&
-                            spriteDirection == direction,
+                            spriteDirection == expected,
                         $"8-way sprite consumer mismatch for {DirectionTokens[direction]}: {trace}.");
+                    RequireNoMoonwalk(trace, world, DirectionTokens[direction], direction);
+                    consumed.Add(expected);
                 }
 
-                harness.Animator.RestoreStandingFacing(2);
+                // Eight distinct world headings must still reach eight distinct authored rows. This
+                // holds under any adapter convention and fails immediately if the projection ever
+                // collapses two headings onto one body.
+                Require(consumed.Count == DirectionVectors.Length,
+                    $"8-way headings collapsed onto {consumed.Count} authored rows.");
+
+                int heldFacing = ExpectedFacing(Vector2.right);
+                harness.Animator.RestoreStandingFacing(heldFacing);
                 harness.Step(Vector2.right, true);
                 DirectionalLocomotionFrameTrace stopped = default;
                 for (var frame = 0; frame < 20; frame++)
                     stopped = harness.Step(Vector2.zero, false);
                 Require(stopped.Phase == OfficeLocomotionPhase.Idle && !stopped.IsMoving,
                     "Stopped runtime actor did not settle to Idle: " + stopped);
-                Require(stopped.DisplayDirection == 2,
-                    "Stopped runtime actor did not retain its screen-right West-art facing: " + stopped);
+                Require(stopped.DisplayDirection == heldFacing,
+                    "Stopped runtime actor did not retain its screen-right facing: " + stopped);
                 Require(OfficeWorkActionFrameSet.TryResolveNamedDirection(
                             harness.Renderer.sprite,
                             out int stoppedSpriteDirection) &&
-                        stoppedSpriteDirection == 2,
-                    "Stopped sprite consumer did not retain screen-right West art: " + stopped);
+                        stoppedSpriteDirection == heldFacing,
+                    "Stopped sprite consumer did not retain screen-right art: " + stopped);
             }
         }
 
@@ -507,25 +549,48 @@ namespace FamilyCompany.Editor
 
         private static void ValidateProjectedSpriteFacingBasis()
         {
+            // Literal 2:1 isometric steps. These are written out here instead of read back from the
+            // adapter under test so this fixture cannot pass by sharing the product's own mistake.
             Vector2 basisX = new Vector2(1f, 0.5f);
             Vector2 basisY = new Vector2(-1f, 0.5f);
             using (var harness = new AnimatorHarness())
             {
-                ValidateProjectedDirection(harness, basisX, 3, "screen-up-right/northwest-art");
-                ValidateProjectedDirection(harness, -basisX, 7, "screen-down-left/southeast-art");
-                ValidateProjectedDirection(harness, basisY, 5, "screen-up-left/northeast-art");
-                ValidateProjectedDirection(harness, -basisY, 1, "screen-down-right/southwest-art");
-                ValidateProjectedDirection(harness, basisX + basisY, 4, "screen-up/north-art");
-                ValidateProjectedDirection(harness, basisX - basisY, 2, "screen-right/west-art");
+                ValidateProjectedDirection(harness, basisX, 5, "grid+X/screen-up-right/northeast-art");
+                ValidateProjectedDirection(harness, -basisX, 1, "grid-X/screen-down-left/southwest-art");
+                ValidateProjectedDirection(harness, basisY, 3, "grid+Y/screen-up-left/northwest-art");
+                ValidateProjectedDirection(harness, -basisY, 7, "grid-Y/screen-down-right/southeast-art");
+                ValidateProjectedDirection(harness, basisX + basisY, 4, "grid+X+Y/screen-up/north-art");
+                ValidateProjectedDirection(harness, basisX - basisY, 6, "grid+X-Y/screen-right/east-art");
             }
             Require(Vector2.Distance(
-                        OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(Vector2.right),
-                        Vector2.left) <= 0.000001f &&
+                        OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(basisX).normalized,
+                        basisX.normalized) <= 0.000001f &&
                     Vector2.Distance(
-                        OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(Vector2.up),
-                        Vector2.up) <= 0.000001f,
-                "Projected walk-art adapter did not preserve vertical and mirror horizontal handedness.");
+                        OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(basisY).normalized,
+                        basisY.normalized) <= 0.000001f,
+                "Projected walk-art adapter did not preserve the visible screen heading.");
+            for (var direction = 0; direction < DirectionalSpriteAnimator.DirectionCount; direction++)
+            {
+                Vector2 facing = OctantFacingVector(direction);
+                Vector2 roundTrip = OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(
+                    OfficeGridTilemapPresenter.VisualFacingAxesToWorldVector(facing));
+                Require(Vector2.Distance(roundTrip, facing) <= 0.00001f,
+                    $"Facing axes round trip lost direction {direction}: {facing} -> {roundTrip}.");
+            }
         }
+
+        private static Vector2 OctantFacingVector(int direction) => direction switch
+        {
+            0 => new Vector2(0f, -1f),
+            1 => new Vector2(-1f, -1f),
+            2 => new Vector2(-1f, 0f),
+            3 => new Vector2(-1f, 1f),
+            4 => new Vector2(0f, 1f),
+            5 => new Vector2(1f, 1f),
+            6 => new Vector2(1f, 0f),
+            7 => new Vector2(1f, -1f),
+            _ => Vector2.zero
+        };
 
         private static void ValidateProjectedDirection(
             AnimatorHarness harness,

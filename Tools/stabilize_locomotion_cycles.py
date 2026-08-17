@@ -158,6 +158,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--pelvis", type=float, default=0.56)
     parser.add_argument("--arm-inner", type=float, default=0.14)
+    parser.add_argument(
+        "--characters",
+        nargs="+",
+        help="optional character ids to review instead of every discovered set",
+    )
     parser.add_argument("--apply", action="store_true")
     parser.add_argument(
         "--promotion-root",
@@ -897,6 +902,16 @@ def main() -> int:
     repo_root = args.repo_root.resolve()
     output = args.output if args.output.is_absolute() else repo_root / args.output
     characters = discover(repo_root / "Assets" / "Art" / "Characters")
+    if args.characters:
+        requested = set(args.characters)
+        discovered = {character.character_id for character in characters}
+        unknown = sorted(requested - discovered)
+        if unknown:
+            raise ValueError(f"unknown character ids: {unknown}")
+        characters = [
+            character for character in characters
+            if character.character_id in requested
+        ]
     loops = []
     for character in characters:
         contract = require_contract(character)

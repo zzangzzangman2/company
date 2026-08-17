@@ -49,6 +49,11 @@ namespace FamilyCompany.Presentation.Unity
             new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly Dictionary<string, OfficeGridCoordinate> _emptyOfficeWanderTargets =
             new Dictionary<string, OfficeGridCoordinate>(StringComparer.Ordinal);
+        // The cell an actor walked in from. Excluding only the current origin still let a member
+        // alternate between exactly two cells forever, which reads on screen as a family member
+        // pacing right, turning around, pacing left, and repeating for the whole day.
+        private readonly Dictionary<string, OfficeGridCoordinate> _emptyOfficeWanderPreviousOrigins =
+            new Dictionary<string, OfficeGridCoordinate>(StringComparer.Ordinal);
         private const float MinimumAttendanceEntranceClearance = 0.72f;
         private const int MinimumEmptyOfficeWanderDistance = 4;
 
@@ -515,6 +520,7 @@ namespace FamilyCompany.Presentation.Unity
             _emptyOfficeWanderActive = false;
             _emptyOfficeWanderSequences.Clear();
             _emptyOfficeWanderTargets.Clear();
+            _emptyOfficeWanderPreviousOrigins.Clear();
             EmptyOfficeWanderSelectionCount = 0;
             EmptyOfficeWanderCandidateFailureCount = 0;
         }
@@ -545,6 +551,11 @@ namespace FamilyCompany.Presentation.Unity
             _emptyOfficeWanderSequences[agent.AgentId] = sequence;
             OfficeGridCoordinate origin = agent.CurrentCell;
             OfficeGrid grid = bootstrap.State.OfficeGrid;
+            OfficeGridCoordinate? previousOrigin =
+                _emptyOfficeWanderPreviousOrigins.TryGetValue(agent.AgentId, out OfficeGridCoordinate before) &&
+                !before.Equals(origin)
+                    ? before
+                    : (OfficeGridCoordinate?)null;
             OfficeGridCoordinate[] candidates = EmptyOfficeWanderCandidates(
                 grid,
                 bootstrap.State.WorldSeed,
@@ -552,7 +563,8 @@ namespace FamilyCompany.Presentation.Unity
                 sequence,
                 origin,
                 occupiedCells,
-                reservedTargets);
+                reservedTargets,
+                previousOrigin);
             int failures = 0;
             for (int index = 0; index < candidates.Length; index++)
             {
@@ -567,6 +579,7 @@ namespace FamilyCompany.Presentation.Unity
                 }
 
                 _emptyOfficeWanderTargets[agent.AgentId] = candidate;
+                _emptyOfficeWanderPreviousOrigins[agent.AgentId] = origin;
                 reservedTargets.Add(candidate);
                 EmptyOfficeWanderSelectionCount++;
                 EmptyOfficeWanderCandidateFailureCount += failures;
@@ -601,7 +614,8 @@ namespace FamilyCompany.Presentation.Unity
             int sequence,
             OfficeGridCoordinate origin,
             ISet<OfficeGridCoordinate> occupiedCells,
-            ISet<OfficeGridCoordinate> reservedTargets)
+            ISet<OfficeGridCoordinate> reservedTargets,
+            OfficeGridCoordinate? previousOrigin = null)
         {
             if (grid == null) throw new ArgumentNullException(nameof(grid));
             string canonicalAgentId = string.IsNullOrWhiteSpace(agentId)
@@ -609,10 +623,35 @@ namespace FamilyCompany.Presentation.Unity
                 : agentId.Trim();
             if (sequence <= 0) throw new ArgumentOutOfRangeException(nameof(sequence));
 
+            OfficeGridCoordinate[] ordered = OrderEmptyOfficeWanderCandidates(
+                grid, worldSeed, canonicalAgentId, sequence, origin, occupiedCells, reservedTargets,
+                previousOrigin);
+            // Walking straight back where the actor just came from is the one choice that reads as
+            // a malfunction, so it is excluded first. It is a preference and not a hard rule: if
+            // the territory is small enough that excluding it leaves nothing, moving is still
+            // better than standing still, so fall back to the unfiltered order.
+            return ordered.Length > 0
+                ? ordered
+                : OrderEmptyOfficeWanderCandidates(
+                    grid, worldSeed, canonicalAgentId, sequence, origin, occupiedCells,
+                    reservedTargets, null);
+        }
+
+        private static OfficeGridCoordinate[] OrderEmptyOfficeWanderCandidates(
+            OfficeGrid grid,
+            int worldSeed,
+            string canonicalAgentId,
+            int sequence,
+            OfficeGridCoordinate origin,
+            ISet<OfficeGridCoordinate> occupiedCells,
+            ISet<OfficeGridCoordinate> reservedTargets,
+            OfficeGridCoordinate? previousOrigin)
+        {
             return Enumerable.Range(0, grid.Height)
                 .SelectMany(y => Enumerable.Range(0, grid.Width)
                     .Select(x => new OfficeGridCoordinate(x, y)))
                 .Where(cell => grid.IsWalkable(cell) && !cell.Equals(origin))
+                .Where(cell => !previousOrigin.HasValue || !cell.Equals(previousOrigin.Value))
                 // The empty starter room has no furniture to create natural circulation lanes.
                 // Give each family member a broad, disjoint quarter of the reachable floor so
                 // their independently selected routes cannot deadlock on the same intermediate

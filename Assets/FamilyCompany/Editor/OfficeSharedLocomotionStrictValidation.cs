@@ -202,8 +202,6 @@ namespace FamilyCompany.Editor
                 Step(ref state, forward * deltaTime, forward * (speed * deltaTime), deltaTime);
                 bool observedPivot = false;
                 bool resumedReverse = false;
-                int previousPivotDirection = state.Gait.DisplayDirection;
-
                 for (var frameIndex = 0; frameIndex < 180; frameIndex++)
                 {
                     bool hold = OfficeSharedLocomotionRules.RequiresStationaryPivot(
@@ -236,11 +234,8 @@ namespace FamilyCompany.Editor
                     {
                         observedPivot = true;
                         if (frame.IsMoving) metrics.MovingDuringPivotFrames++;
-                        int step = OfficeLocomotionGaitRules.DirectionDistance(
-                            previousPivotDirection,
-                            frame.DisplayDirection);
-                        Require(step <= 1, MemberIds[member] + " pivot skipped an adjacent octant");
-                        previousPivotDirection = frame.DisplayDirection;
+                        Require(frame.DisplayDirection == reverseDirection,
+                            MemberIds[member] + " pivot exposed an intermediate body direction");
                     }
                     if (frame.IsMoving && frame.DisplayDirection == reverseDirection)
                         resumedReverse = true;
@@ -304,7 +299,6 @@ namespace FamilyCompany.Editor
                 OfficeNavPoint requested = OfficeSharedLocomotionRules.DirectionVector(targetDirection);
                 HarnessState state = HarnessState.Initial(initialDirection);
                 float gaitDistance = state.Gait.AccumulatedDistance;
-                int priorDirection = initialDirection;
                 bool observedPivot = false;
                 bool ready = false;
                 for (var frameIndex = 0; frameIndex < 60; frameIndex++)
@@ -321,11 +315,8 @@ namespace FamilyCompany.Editor
                         MemberIds[member] + " blocked input played a walking phase");
                     Require(Math.Abs(frame.GaitState.AccumulatedDistance - gaitDistance) <= 0.000001f,
                         MemberIds[member] + " blocked pivot advanced walk distance");
-                    int step = OfficeLocomotionGaitRules.DirectionDistance(
-                        priorDirection,
-                        frame.DisplayDirection);
-                    Require(step <= 1, MemberIds[member] + " blocked pivot skipped an octant");
-                    priorDirection = frame.DisplayDirection;
+                    Require(frame.DisplayDirection == targetDirection,
+                        MemberIds[member] + " blocked pivot exposed an intermediate body direction");
                     observedPivot |= frame.Phase == OfficeLocomotionPhase.Pivot;
                     ready = OfficeSharedLocomotionRules.IsInteractionFacingReady(
                         frame.GaitState,

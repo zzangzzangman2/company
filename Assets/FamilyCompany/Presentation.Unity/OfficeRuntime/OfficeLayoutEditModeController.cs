@@ -90,6 +90,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public bool IsOpen { get; private set; }
 
+        // Player-build diagnostics used by the native-pointer placement gate. The gate may
+        // prepare a purchase preview through the narrow QA hook below, but the state mutation
+        // still has to arrive through HandlePointer's real Input.GetMouseButtonDown(0) branch.
+        public int DiagnosticPointerCommitCount { get; private set; }
+        public int DiagnosticStateMutationCount { get; private set; }
+        public OfficeGridCoordinate DiagnosticLastPointerCommitCell { get; private set; }
+        public string DiagnosticLastMutationInstanceId { get; private set; } = string.Empty;
+        public bool PreviewValidForPlayerQa => PreviewValid;
+        public OfficeGridCoordinate PreviewOriginForPlayerQa => _previewOrigin;
+
         public void Configure(StarterOfficeRuntimeBootstrap runtime, Camera camera)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -131,6 +141,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             failure = string.Empty;
             Debug.Log("OFFICE_BUILD_EDITOR_OPEN | timeScale=" + Time.timeScale);
             Say("사무실 관리 · 배치 중에는 게임 시간과 AI가 정지됩니다");
+            return true;
+        }
+
+        public bool BeginPurchaseForPlayerQa(string definitionId, out string failure)
+        {
+            if (!IsOpen || State == null || Grid == null)
+            {
+                failure = "사무실 배치 모드가 준비되지 않았습니다.";
+                return false;
+            }
+            OfficeFurnitureDefinition definition = OfficeFurnitureCatalog.Find(definitionId);
+            if (definition == null || !definition.IsPurchasable)
+            {
+                failure = "구매 가능한 가구 정의가 아닙니다: " + (definitionId ?? string.Empty);
+                return false;
+            }
+            BeginPurchase(definition);
+            failure = string.Empty;
             return true;
         }
 
@@ -211,6 +239,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 InvalidatePreview();
                 if (Input.GetMouseButtonDown(0))
                 {
+                    DiagnosticPointerCommitCount++;
+                    DiagnosticLastPointerCommitCell = cell;
                     Debug.Log(
                         "OFFICE_BUILD_POINTER_COMMIT | source=" + _pendingSource +
                         " cell=" + cell.X + ":" + cell.Y);
@@ -453,6 +483,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ClearVisuals();
             _runtime.ApplyLayout(State.OfficeGrid);
             var after = new BuildStateSnapshot(State);
+            DiagnosticStateMutationCount++;
+            DiagnosticLastMutationInstanceId = result.InstanceId ?? string.Empty;
             PlacedOfficeFurniture placed = State.OfficeGrid.Furniture.FirstOrDefault(item =>
                 string.Equals(item.FurnitureId, result.InstanceId, StringComparison.Ordinal));
             string anchor = "none";

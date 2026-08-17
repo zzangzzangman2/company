@@ -10,6 +10,8 @@
 6. 회사 역사·시장·계약 작업이면 Docs/ULTIMATE_VISION.md, Docs/REAL_COMPANY_ALT_HISTORY.md, Docs/SIMUL_MARKET_PORT.md, Docs/CONTRACTS_V0_3.md
 7. 코드를 고치고 확인해야 하면 Docs/ITERATION_LOOP.md
 8. 작업과 직접 관련된 추가 문서
+9. 가족 보행 프레임을 생성·편집·가져오기·검증하면 작업 시작 전에
+   Docs/FAMILY_WALK_ART_GUARDRAILS.md를 읽고 `FC-WALK-GUARDRAIL-V1` 확인 문구를 작업 로그에 남긴다.
 
 ## 필수 작업 규칙
 

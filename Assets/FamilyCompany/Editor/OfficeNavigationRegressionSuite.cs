@@ -621,31 +621,22 @@ namespace FamilyCompany.Editor
                 "actual reverse displacement never keeps the old forward-facing sprite");
             OfficeLocomotionGaitState pivot = OfficeLocomotionGaitRules.Resolve(
                 forward, 0f, 0.03f, true, 4, stride);
-            Require(pivot.Phase == OfficeLocomotionPhase.Pivot && pivot.DisplayDirection == 0,
-                "a stopped 180-degree reversal enters a planted-foot pivot");
-            int previousPivotDirection = pivot.DisplayDirection;
-            for (var pivotStep = 0; pivotStep < 4; pivotStep++)
-            {
-                pivot = OfficeLocomotionGaitRules.Resolve(
-                    pivot,
-                    0f,
-                    OfficeLocomotionGaitRules.PivotSeconds,
-                    true,
-                    4,
-                    stride);
-                Require(OfficeLocomotionGaitRules.DirectionDistance(
-                            previousPivotDirection,
-                            pivot.DisplayDirection) <= 1,
-                    "180-degree pivot advances through adjacent octants");
-                previousPivotDirection = pivot.DisplayDirection;
-            }
+            Require(pivot.Phase == OfficeLocomotionPhase.Pivot && pivot.DisplayDirection == 4,
+                "a stopped 180-degree reversal plants directly in its final body direction");
+            pivot = OfficeLocomotionGaitRules.Resolve(
+                pivot,
+                0f,
+                OfficeLocomotionGaitRules.PivotSeconds,
+                true,
+                4,
+                stride);
             Require(pivot.DisplayDirection == 4 && pivot.Phase != OfficeLocomotionPhase.Pivot,
-                "pivot commits the new direction after four adjacent steps");
+                "pivot holds one final direction and completes after one planted interval");
             OfficeLocomotionGaitState quarterTurn = OfficeLocomotionGaitRules.Resolve(
                 OfficeLocomotionGaitState.Initial(0), 0f, 0.02f, true, 2, stride);
             Require(quarterTurn.Phase == OfficeLocomotionPhase.Pivot &&
-                    quarterTurn.DisplayDirection == 0,
-                "a stopped 90-degree turn enters a planted-foot pivot");
+                    quarterTurn.DisplayDirection == 2,
+                "a stopped 90-degree turn never exposes an intermediate body direction");
             checks += 4;
             return checks;
         }

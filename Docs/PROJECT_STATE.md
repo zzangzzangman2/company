@@ -2,24 +2,115 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-17 / 현재 차단 회귀 — 배치 클릭 실패·빈 사무실 제자리 current-look
+## 2026-08-18 / 가족 보행 identity-lock 재제작·실제 Player 승인 후보
 
-- `b397af9400be6f958e2d57162bf35508863a7a58`과 같은 Downloads 실행본은 현재 정상 배포가 아니다. normal
-  1배속 재관찰에서 플레이어는 09:08부터 `(11,3)`에 고정됐고 누나·아빠도 첫 open-area 뒤 장시간 Idle,
-  엄마는 09:31과 09:44에 `current-look@virtual:mother:10:9`를 같은 셀 `pathCount=1`로 재선택했다. 정지
-  전이는 48, 유효 보행 loop는 13이었다. 기존 empty-office observer의 PASS는 입장 후 퇴실 여부와 진행 중
-  전환의 20분 정지만 검사해 destination 없는 Idle/current-look 반복과 방향-변위 불일치를 놓쳤다.
-- 사무실 관리의 pending 구매는 녹색 world preview까지 표시되지만 `HandlePointer()`가 preview 셀을 갱신한
-  직후 return하므로 같은 좌클릭의 `GetMouseButtonDown(0)`/`ConfirmPreview()` 경계에 도달하지 않는다. 실제
-  클릭으로 ledger·inventory·OfficeGrid·runtime apply가 한 번에 갱신되기 전까지 편집기 배치를 통합 완료로
-  표시하지 않는다.
-- 자율 선택의 실제 소유자는 `OfficeAutonomyCoordinator`다. `OfficeInteractionScoring`과 Shadow 선택 trace는
-  진단/비교 경로이며 생산 fallback을 바꾸지 않는다. 빈 사무실은 도달 가능한 서로 다른 타일 중심 목적지를
-  선택하고, 다음 cardinal segment 방향으로 planted pivot을 끝낸 뒤 이동해야 한다. 같은 셀 current-look
-  재선택·중복 pivot·실제 변위와 다른 머리/몸/다리 방향은 모두 0이어야 한다.
-- 새 후보는 normal 처음하기 실제 클릭, observer-only 1×·2×·4× 08:50→09:50, stationary/look 대비 유효
-  walk loop, 방향-변위 일치, 타일 중심, 충돌/20분 정지 gate를 통과해야 한다. FAST_QA의 강제 route/state
-  PASS만으로 배포·push하지 않는다.
+- `FC-WALK-GUARDRAIL-V1`과 `FC-WALK-TWOSTEP-GATE-V1`에 따라 가족 4명×8방향×6프레임을
+  identity-locked candidate 61로 교체했다. 방향마다 canonical portrait/body anchor를 고정하고 두 다리만
+  결정론적으로 움직인다. 출하 source 192장에는 표식이 한 번도 닿지 않고, 좌/우 다리 표식은 동일 alpha의
+  별도 `MarkerReviewV1` 192장에만 있다.
+- `Verify-FamilyWalkTwoStep.ps1 -SelfTest`는 반사 행 승인·합성 한 발 반복 거부·전신 반전 치트 거부를
+  통과했다. 추적 source는 해부학 표식 32/32와 two-step 32/32, runtime static 32/32, unit 10/10과
+  source/runtime/sheet byte 일치를 통과했다. 필수 마지막 줄은
+  `FAMILY_WALK_TWO_STEP_GATE: PASS | contract=FC-WALK-TWOSTEP-GATE-V1 source=artsources rows=32`다.
+- `build_family_walk_half_cycles_v2.py`는 구형 V4/V5/V6/V7/raw import 세대를 제거한 단일
+  source→runtime writer다. `--write`는 source와 marker gate PASS 전에는 쓰지 않는다. candidate 62
+  재생성은 gate FAIL로 폐기했고 추적 원화에 쓰지 않았다.
+- production `StarterOfficeRuntimeBootstrap.CreateActor`는 `LocomotionTransitionsV1`의 다른 세대
+  시작/정지/pivot 초상화를 더 이상 가족 actor에 구성하지 않는다. 빈 사무실 연속 경로는 승인 walk/idle만
+  재생하고, 다음 cardinal segment 방향으로 planted pivot을 끝낸 뒤 타일 중심 translation을 시작한다.
+- 실제 Release Player normal 빈 사무실 1× 08:50→09:50은 30fps 629-frame burst와 8fps 가족별 review
+  sheet/GIF로 사람 확인했다. 네 가족의 identity, 짧은 보폭, 양발 교대, 방향 전환을 승인했고 런지·X자
+  다리·크로마·잔상·초상화 교체를 찾지 못했다. 1×/2×/4×에서 합계 walk loop 132/134/124였고 모든
+  direction mismatch, pivot 전 이동, 중복 pivot, non-cardinal segment, 충돌/겹침, 타일 중심 이탈,
+  visual-root offset, transition sprite frame은 0이다.
+- 실제 Windows native pointer가 빈 새 게임의 녹색 `(1,1)` 프리뷰 셀을 한 번 클릭했다. pointer commit과
+  state mutation은 각각 1회, 자금 `5,000,000→4,986,250`, ledger `1→2`, inventory `0→1`, furniture
+  `52→53`, editable `0→1`, grid hash `104C121BBA787A22→2D928B958610B1BF`이며 runtime hash도 같다.
+  화분 semantic/render 중심의 타일 중심 오차는 `0.00000000`이다.
+- Unity `6000.3.21f1` `editor-broad`와 `player-scripts`가 PASS했다. release 승격은 이 문서가 포함된 clean
+  main commit을 다시 빌드하고 동일 파일을 Downloads에서 재검증한 뒤에만 완료한다.
+
+## 2026-08-17 / 화면 진행방향 직접 양자화·V5 두발 보행
+
+- 런타임 `world` 변위는 이미 등각 Tilemap 변환이 적용된 실제 화면 진행 벡터다. 이를 다시 grid 축으로
+  역투영한 것이 오른쪽 위로 번역하면서 정면/옆모습을 재생한 최초 방향 오류였다.
+- `DefaultWorldVectorToVisualFacingAxes`는 실제 변위를 그대로 반환하고 원화의 화면 heading을 직접
+  양자화한다. 결과는 grid `+X→northeast`, `−X→southwest`, `+Y→northwest`, `−Y→southeast`다.
+  따라서 pivot과 translation 프레임의 머리·허리·다리 방향이 화면 displacement와 동일하다.
+- 월드 변위를 옥탄트로 바꾸던 나머지 소비자(`NormalNewGameSeatStallObserver`, `ScenePreviewJump`의
+  reversal QA와 8방향 QA, `OfficeSeatDockingR5eTraceWriter`)도 같은 직접 화면축 어댑터를 거치게 했다.
+  매우 짧은 진단 프레임은 예외를 던지지 않는 `ResolveDirectionFromAxes`를 쓴다.
+- 검증기가 제품과 같은 변환을 공유해 거짓 PASS를 내지 않도록 기대값을 하드코딩에서 어댑터 독립
+  불변조건으로 바꿨다. 2:1 스텝 벡터는 리터럴로 적고, 몸의 좌우 기울기가 진행 방향의 반대일 수 없다는
+  조건과 8개 서로 다른 헤딩이 8개 서로 다른 원화 행에 도달해야 한다는 조건을 추가했다.
+- 정지·회전·출발/정지 전이 프레임 256개 중 64칸이 셀 상단에서 잘려 정지 중인 가족의 머리 윗부분이
+  평평하게 사라졌다. 원인은 생성 아트가 4×4 시트의 셀 경계를 넘겨 그려졌는데 분할이 256px 경계에서
+  그대로 잘랐기 때문이다. 잘린 픽셀은 한 칸 위 셀에 그대로 남아 있었다.
+- `Tools/Repair-LocomotionTransitionFrameHeads.ps1`이 vendored alpha 시트를 상향 overflow 밴드와 함께
+  다시 분할하고, 최대 연결 실루엣만 남겨 위 칸의 발을 버린 뒤 기존 planted-foot 정렬을 적용한다. 43개
+  프레임이 1~18행을 되찾았고 전체 256개에서 평평한 상단 행은 0이다. 복구 대상이 아닌 프레임은 실루엣이
+  픽셀 단위로 동일하며(onlyOld=0, onlyNew=0), 기존 분할이 1:1 blit에서 남긴 최대 5/255 색 잔차만
+  사라진다.
+- Unity `6000.3.21f1`에서 `OFFICE_MOVEMENT_FACING_NAVIGATION_VALIDATION: PASS`(seeds=128, paths=1152,
+  movingFrames=1970, reverseFacingFrames=0, movingDuringPivot=0, unnecessaryCornerStops=0), 실제 Release
+  Player의 normal 빈 사무실 observer 1배속 08:50→09:50 `PASS`(4인 보행, directionMismatch=0,
+  prePivotTranslation=0, duplicatePivot=0, currentLook=0, nonCardinal=0, collision=0), 확장 tile runtime
+  QA `-familyCompanyTileRuntimeQa` exit 0(좌석·도킹·4방향·배치/회수·자율 시계·HUD·로딩 UI)을 통과했다.
+- 미해결: 확장 QA 로그에 `OFFICE_EMPTY_WANDER_FAIL | actor=father|mother candidateCount=19 rejected=19`가
+  반복된다. QA fixture 배치에서 두 액터의 산책 후보가 전부 거부되어 매 tick 재시도한다. normal 빈
+  사무실 관측에서는 `coordinatorCandidateFailures=0`으로 재현되지 않았다. 사용자가 보고한 "누나가
+  제자리에서 도는" 증상은 수정본 60분 관측에서 재현되지 않았고(누나 pivot episode 9회, 옥탄트 24회,
+  A→B→A 반복 0회) 사용자 확인이 필요하다.
+- 이 작업은 커밋하지 않았고 Downloads 배포도 하지 않았다. 실행본은
+  `Builds/Windows/FamilyCompany_Playtest/FamilyCompany.exe`에만 있다.
+
+## 2026-08-17 / 타이틀 BGM 1초 후 무음 — 오디오 listener 소유권 이전
+
+- 프로젝트의 `AudioListener`는 `OfficeTileMigrationPreview.unity`의 Main Camera 하나뿐이었고 첫 씬
+  `Prototype01.unity`에는 없다. `ScenePreviewJump.Start()`가 타이틀이 떠 있는 동안 그 씬을 additive로
+  워밍하고 `ScenePreviewJump.cs:471`이 로드 직후 같은 listener를 끄므로, 실제 출력은 씬 활성화부터
+  listener 비활성까지의 짧은 구간에만 존재했다. 타이틀 BGM이 약 1초 들리다 끊기고 그 뒤 BGM과 모든
+  SFX가 세션 내내 무음이 된 원인이다.
+- 회귀 조합이다. `6e9d32b`가 preview listener 비활성화를 도입했고 `47aefa9`가 타이틀 워밍을 `Start()`로
+  옮기면서 짧은 가청 구간이 생겼다. `door_open`·`door_close` SFX QA는 `PlaySfx` 호출 횟수만 세므로
+  listener가 꺼진 무음 상태를 검출하지 못했다.
+- `GameAudioCoordinator`가 자기 `DontDestroyOnLoad` 오브젝트에 `AudioListener`를 소유한다. scene load
+  콜백과 기존 0.2초 poll에서 자기 것 외의 활성 listener만 끄므로 다중 listener 경고 없이 항상 정확히
+  하나가 유지된다. 모든 소리는 `spatialBlend=0`인 2D여서 listener 위치는 결과에 영향이 없고, 씬 파일과
+  `ScenePreviewJump`는 변경하지 않았다.
+- Unity를 기동하지 않는 Roslyn 경로 `Tools/Validate-ManagementUiV2.ps1`에서 `Presentation.Unity` 전체
+  런타임 compile을 포함해 `MANAGEMENT_UI_V2_EXTERNAL_COMPILE`, `MANAGEMENT_UI_V2_EDITOR_VALIDATOR_COMPILE`,
+  `MANAGEMENT_UI_V2_STATIC_STRUCTURE` PASS다. 신규 경고는 없다.
+- 실제 Player 가청 검증은 하지 않았다. 같은 worktree에서 사무실 배치 작업이 진행 중이라 Unity와 build
+  lock을 점유하지 않았다. 다음 명령은 사무실 작업이 끝난 뒤 `FAST_QA_WINDOWS.cmd -Profile player-scripts`를
+  실행하고 Player에서 타이틀 BGM 지속과 문·발소리 SFX 가청을 확인하는 것이다.
+- 이 변경은 아직 커밋하지 않았다. 같은 worktree에 다른 작업의 미커밋 변경이 함께 있으므로 커밋할 때
+  `GameAudioCoordinator.cs`와 이 문서만 명시적으로 선택해야 한다.
+
+## 2026-08-17 / 배치 클릭·빈 사무실 산책 수정 후보 — 실제 Downloads 클릭 승격 보류
+
+- 기준 `b397af9400be6f958e2d57162bf35508863a7a58`의 실제 회귀는 그대로 재현했다. 배치 pending 분기는 녹색
+  preview 셀을 갱신한 뒤 return해 같은 좌클릭의 `GetMouseButtonDown(0)`/`ConfirmPreview()`를 소비하지
+  못했고, 빈 사무실 observer는 stationary direction transition 48 대 valid walk loop 13인데도 같은 셀
+  `current-look`와 destinationless Idle을 검사하지 않아 거짓 PASS했다.
+- 배치 pending 분기는 preview 갱신 뒤 실제 좌클릭을 같은 프레임에 정확히 한 번 confirm한다. 성공 로그는
+  cash·ledger·inventory·furniture·editable count·grid hash의 전후 값과 semantic/render anchor 오차를 함께
+  기록한다. FAST_QA와 내부 runtime desk add/remove는 통과했지만, 다른 전체화면 앱이 전면 입력을 점유하고
+  있어 실제 Downloads의 녹색 preview 한 번 클릭 증거와 배포는 아직 보류한다.
+- 생산 소유자 `OfficeAutonomyCoordinator`는 실제 새 게임이 빈 사무실일 때 네 가족별로 겹치지 않는 도달 가능
+  타일 영역에서 현재 셀과 다른 목적지를 결정적으로 고른다. actor는 각 cardinal segment의 실제 방향으로
+  planted pivot을 완료한 다음 translation하고, 이동 프레임은 실제 화면 변위 방향을 즉시 사용한다.
+  사용자 녹화에서 보인 반복 점프는 6포즈 원화 위에 `VisualRoot` foot-plant 위치 보정을 다시 더해 표현 속도가
+  한 보마다 0~1.5배로 출렁인 것이 원인이어서, 원화·좌석을 바꾸지 않고 중복 전신 보정만 제거했다.
+- observer-only normal Player 08:50→09:50은 1×·2×·4× 모두 PASS다. 1×는 coordinator 선택 25·후보 실패 0,
+  유효 walk loop 136 대 stationary direction transition 131이며 actor별 loop는 39/37/32/28이다. 2×는
+  선택 24·실패 0·loop 134 대 transition 114, 4×는 선택 18·실패 0·loop 114 대 transition 87이다. 세 속도
+  모두 current-look·destinationless·같은 셀·중복 pivot·pivot 전 이동·direction/displacement mismatch·
+  non-cardinal 이동·충돌·겹침·중복 목적지·타일 중심 이탈·표현 root offset·20분 정지가 0이다.
+- `FAST_QA_WINDOWS.cmd -Profile player-scripts`와 `editor-broad`, main navigation Player QA가 통과했다. 렌더링
+  전체 타일 runtime QA도 빈 새 게임 확인 뒤 4인 착석, 4방향 교차, 책상 추가/제거, 8방향, 반전 pivot,
+  충돌, save/load를 끝까지 실행해 exit 0 PASS했다. clean commit·Release build·Downloads 실제 클릭·동일 후보
+  normal 재검증 전에는 배포하거나 `origin/main`에 push하지 않는다.
 
 ## 2026-08-17 / 오래된 작업트리·증거 정리
 
@@ -37,11 +128,11 @@
 - 회사 허브의 기존 `건축·편집` 진입은 `사무실 관리`로 명확히 이름을 바꿨다. 업무·좌석·기기·수납·음료 등
   기존 카테고리별 구매/회전/보관/판매/배치 흐름은 유지하며, 배치 origin은 항상 정수 타일이다. 1×1 가구는
   그 타일의 정중앙, 다중 타일 가구는 점유 footprint 전체의 정중앙만 semantic/render anchor로 허용한다.
-- 가족 4명×8방향 32개 행을 `0·1·2` 반 주기와 반대 지지발 `3·4·5`로 다시 제작했다. 지지발과 반대 팔이
-  함께 바뀌고 전신 바닥선 y=247과 hard alpha를 유지한다. 모든 행의 0↔3 실루엣 변화율은 30% 이상이며,
-  런타임 192프레임과 8개 sheet는 `ArtSources/FamilyWalkHalfCyclesV2/`에서 결정적으로 재생성된다. 생산 이동은
-  기존 cardinal cell-centre path와 한 타일당 두 걸음 계약을 계속 사용하므로 정북 이동은 대각선 원화를 쓰지
-  않고, 화면 오른쪽 이동은 머리·몸통·팔·다리가 모두 오른쪽을 향한다.
+- 실제 cardinal cell-centre path가 사용하는 SW/SE/NE/NW 4개 화면 행을 V5 두발 주기로 교체했다.
+  순서는 A발 착지·하중, B발 낮은 통과·착지·하중, A발 낮은 통과이며 0↔3 착지발과 2↔5 통과발이 모두
+  반대다. 전신 높이와 바닥선 y=247은 6프레임 내내 고정되고 신발 아래 8px가 투명하므로 발이 잘리거나
+  바닥에 묻히지 않는다. V5 96프레임은 raw key sheet에서 byte-exact 재생성되며 나머지 진단 행과 합친
+  런타임 192프레임·8개 sheet도 `ArtSources/FamilyWalkHalfCyclesV2/`에서 결정적으로 재생성된다.
 - warm rebind와 cold 준비 모두 실제 `NavigationPrewarmProgress`를 따른다. 표시 진행률은 raw 값으로 우회하지
   않고 30fps 한 프레임당 최대 0.0127만 전진하며, runtime `IsReady` 전에는 로딩을 닫지 않는다. 준비가 30초
   동안 막히면 원인 경고를 남기고 빠져나오는 fail-open 계약은 유지한다.
@@ -83,15 +174,13 @@
 - 일반 경로는 수동 E 업무로 얻은 좌석만 플레이어 컨트롤러가 해제하고, 출근 atomic seat→Work 6프레임
   handoff 동안 autonomy가 좌석 업무를 선점하지 않게 했다. 고주사율의 작은 실제 변위도 이동으로 인정하도록
   visual displacement 임계값만 `1e-10`으로 낮췄으며, path budget·도착 허용치는 바꾸지 않았다.
-- 가족 보행 방향은 캐릭터 원화의 실제 화면축 계약인 `(-world.x, world.y)`로 한 곳에서 변환한다. 화면
-  오른쪽 이동은 West 원화를, 화면 왼쪽 이동은 East 원화를 사용하므로 머리·몸통·팔·다리가 실제 진행 방향과
-  함께 바뀐다. 생산 경로와 legacy pathfinder는 대각선·corner easing·중간 지름길을 제거하고 모든 cell center를
-  순서대로 지나는 4방향 cardinal 경로로 통일했다. 따라서 위쪽 이동은 North 원화로 타일 중앙선을 곧게 걷는다.
+- 가족 보행 방향은 이미 투영된 실제 `world` displacement를 그대로 화면 heading으로 사용한다. 화면 오른쪽
+  위 이동은 Northeast, 왼쪽 아래는 Southwest 원화를 사용한다. 생산 경로와 legacy pathfinder는 대각선·
+  corner easing·중간 지름길을 제거하고 모든 cell center를 순서대로 지나는 4방향 cardinal 경로로 통일했다.
 - 기본 이동 속도는 `1.00 world unit/s`, 6프레임 2보 주기는 실제 투영 타일 한 칸과 같은
-  `0.99380799 world unit`이다. 한 타일에 정확히 한 주기·두 발걸음이므로 약 `2.01 steps/s`이며, 누적 실제
-  이동거리 기반 보행 위상과 표현 전용 foot-plant easing으로 발 끌림을 줄였다. 원래 승인된 가족 원화의
-  여섯 전신 포즈를 복원해 좌우 다리 교차와 반대 팔 흔들기를 함께 재생하고, 실루엣 연결성 기반 분할과 8px
-  하단 여백으로 발·팔 잘림을 막았다.
+  `0.99380799 world unit`이다. 한 타일에 정확히 한 주기·두 발걸음이므로 약 `2.01 steps/s`이며, translation은
+  선형으로 유지하고 누적 실제 이동거리만 보행 위상을 전진시킨다. 상하 root offset은 사용하지 않고 V5 원화의
+  두 착지발·두 통과발만 움직이므로 방방 뛰는 이동을 만들지 않는다.
 - 게임 시간 배속만 빨라지고 캐릭터는 1x로 움직이던 원인은 actor motion이 `unscaledDeltaTime`을 사용한 것이었다.
   runtime actor는 이제 `Time.deltaTime`을 사용하며 1x·2x·4x 모두 같은 game-time 이동 거리를 유지한다.
   프레임당 visible motion은 `0.08s` 조각으로 제한해 빠른 배속에서도 충돌·점유 동기화를 보존한다.

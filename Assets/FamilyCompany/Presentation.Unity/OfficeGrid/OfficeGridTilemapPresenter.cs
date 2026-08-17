@@ -100,11 +100,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
 
         public static Vector2 DefaultWorldVectorToVisualFacingAxes(Vector2 worldVector)
         {
-            // The authored walk atlases use character-left/right names: their `west` body looks
-            // screen-right and their `east` body looks screen-left. Resolve against the projected
-            // world displacement with that horizontal handedness so the visible head, torso and
-            // feet point along the actual screen path. Grid coordinates still own routing.
-            return new Vector2(-worldVector.x, worldVector.y);
+            // Character rows are authored for what the player sees on screen. The actor's world
+            // position is already on that projected screen plane, so preserve its heading here.
+            // Unprojecting a cardinal grid step made an up-right translation consume the pure-right
+            // profile row (and equivalent 45-degree errors in the other three directions), which is
+            // the visible sideways slide reported in normal play.
+            return worldVector;
+        }
+
+        public static Vector2 VisualFacingAxesToWorldVector(Vector2 facingVector)
+        {
+            // Exact inverse of DefaultWorldVectorToVisualFacingAxes. A requested visible facing is
+            // already expressed in the same projected world/screen plane used by locomotion.
+            return facingVector;
         }
 
         public Vector3 SubcellAnchorWorld(OfficeGridSubcellAnchor anchor)

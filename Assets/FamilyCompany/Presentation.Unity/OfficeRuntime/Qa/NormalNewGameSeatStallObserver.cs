@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
@@ -178,7 +179,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 "elapsedMinute,clock,frame,timeScale,worldScale,worldDelta,worldUnscaledDelta,motionDelta," +
                 "actor,tick,phase,activity,position,destination,pendingDestination,autonomyIntent," +
                 "autonomyDestination,destinationCell,emptyWander,pathCount,pathIndex," +
-                "currentDirection,requestedDirection,motionDirection,locomotionPhase,gaitPhase,walkFrame," +
+                "currentDirection,requestedDirection,motionDirection,expectedDirection,spriteDirection," +
+                "locomotionPhase,gaitPhase,walkFrame," +
                 "actualDisplacement,semanticDisplacement,facingErrorDegrees,visualRootOffset," +
                 "seatId,claimOccupied,claimReleased," +
                 "attendanceArrivals,workFrames,seatingClip,seatingFrame,sprite,interactionPhase," +
@@ -241,10 +243,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     if (!TryCaptureOverview(capturePath, out string captureFailure))
                         RecordFirstFailure(minute, actors["player"], "capture-failed:" + captureFailure);
                 }
-                if (_captureEnabled && _burstCaptureEnabled && minute >= 9L && minute <= 15L &&
+                // Include the staggered father/mother arrivals and their first autonomous turns,
+                // not only the player's 09:00 entrance. At 4x this remains a short review clip.
+                if (_captureEnabled && _burstCaptureEnabled && minute >= 9L && minute <= 44L &&
                     Time.realtimeSinceStartup >= _nextBurstCaptureRealtime)
                 {
-                    _nextBurstCaptureRealtime = Time.realtimeSinceStartup + 0.1f;
+                    // Product walk review is a real 30 fps sequence, not a sparse screenshot
+                    // sampler. Capturing in the observer keeps every frame tied to the actual
+                    // built player camera and avoids recording a stale or obscured EXE window.
+                    _nextBurstCaptureRealtime = Time.realtimeSinceStartup + (1f / 30f);
                     string clockToken = bootstrap.State.Time.Now.ToString("HHmm", CultureInfo.InvariantCulture);
                     string capturePath = ArtifactPath(
                         "normal-walk-burst-" + clockToken + "-" +
@@ -288,10 +295,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             bootstrap.State.Time.ElapsedMinutes,
                             actor,
                             "insufficient-valid-walk-loops:" + observation.ValidWalkLoops);
+                    if (observation.ValidWalkLoops <= observation.StationaryDirectionTransitions)
+                        RecordFirstFailure(
+                            bootstrap.State.Time.ElapsedMinutes,
+                            actor,
+                            "walk-loops-not-above-stationary-transitions:walk=" +
+                            observation.ValidWalkLoops + ";stationary=" +
+                            observation.StationaryDirectionTransitions);
                     if (observation.CurrentLookSelections != 0 ||
                         observation.DestinationlessIdleSelections != 0 ||
                         observation.SameCellDestinationSelections != 0 ||
                         observation.DuplicatePivotEpisodes != 0 ||
+                        observation.UnexpectedStationaryDirectionTransitions != 0 ||
+                        observation.TransitionSpriteFrames != 0 ||
+                        observation.WalkPhaseMismatchFrames != 0 ||
                         observation.TranslationBeforePivotFrames != 0 ||
                         observation.DirectionDisplacementMismatchFrames != 0 ||
                         observation.NonCardinalSegmentFrames != 0 ||
@@ -441,6 +458,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             }
 
             DirectionalLocomotionFrameTrace locomotion = actor.CaptureLocomotionFrameTrace();
+            if (actor.ConfiguredLocomotionTransitionFrameCount != 0 ||
+                actor.IsLocomotionTransitionSpriteActive)
+                RecordFirstFailure(
+                    minute,
+                    actor,
+                    "legacy-locomotion-transition-art-configured:frames=" +
+                    actor.ConfiguredLocomotionTransitionFrameCount +
+                    ";active=" + actor.IsLocomotionTransitionSpriteActive);
+            if (_emptyOfficeMode && locomotion.Clip.StartsWith(
+                    "Transition/",
+                    StringComparison.Ordinal))
+                observation.TransitionSpriteFrames++;
             bool moving = locomotion.IsMoving &&
                           locomotion.ActualDisplacement.sqrMagnitude > 0.0000001f;
             int gaitCycle = Mathf.FloorToInt(actor.GaitDistance / Mathf.Max(0.000001f, actor.StrideLength));
@@ -448,6 +477,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             {
                 observation.LastMovingMinute = minute;
                 observation.MovingFrames++;
+                int expectedWalkFrame = OfficeLocomotionGaitRules.DistanceFrame(
+                    actor.GaitDistance,
+                    actor.StrideLength,
+                    DirectionalSpriteAnimator.WalkFrameCount);
+                if (_emptyOfficeMode && actor.CurrentWalkFrame != expectedWalkFrame)
+                    observation.WalkPhaseMismatchFrames++;
                 if (gaitCycle > observation.LastGaitCycle)
                     observation.ValidWalkLoops += gaitCycle - observation.LastGaitCycle;
                 observation.MovedSinceLastPivot = true;
@@ -458,8 +493,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 observation.LastMotionDirection = locomotion.MotionDirection;
                 observation.SawStationarySinceLastMotion = false;
 
-                if (locomotion.DisplayDirection != locomotion.MotionDirection ||
-                    actor.CurrentDirection != locomotion.MotionDirection)
+                int expectedRenderedDirection =
+                    ResolveFacingAxesDirection(locomotion.ActualDisplacement);
+                if (locomotion.DisplayDirection != expectedRenderedDirection ||
+                    locomotion.MotionDirection != expectedRenderedDirection ||
+                    actor.CurrentDirection != expectedRenderedDirection ||
+                    actor.CurrentSpriteDirection != expectedRenderedDirection)
                     observation.DirectionDisplacementMismatchFrames++;
 
                 if (locomotion.ActualDisplacement.sqrMagnitude > 0.00000001f &&
@@ -477,7 +516,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         minute - observation.LastMovingMinute);
                 observation.SawStationarySinceLastMotion = true;
                 if (actor.CurrentDirection != observation.LastDisplayDirection)
+                {
                     observation.StationaryDirectionTransitions++;
+                    // At accelerated speeds a complete 0.06-second pivot can fall between two
+                    // rendered samples. Compare the published body directly with its semantic
+                    // target instead of dividing by the number of sampled Pivot phases.
+                    if (actor.CurrentDirection != actor.RequestedDirection)
+                        observation.UnexpectedStationaryDirectionTransitions++;
+                }
             }
             observation.LastGaitCycle = gaitCycle;
             observation.LastDisplayDirection = actor.CurrentDirection;
@@ -590,6 +636,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             return Vector2.Distance(position, new Vector2(center.x, center.y));
         }
 
+        // Walk art is authored against the visible projected plane. Quantise through the axis
+        // overload so a legitimately tiny rendered step remains diagnostic instead of throwing.
+        private static int ResolveFacingAxesDirection(Vector2 worldDisplacement)
+        {
+            Vector2 facingAxes =
+                OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes(worldDisplacement);
+            return DirectionalSpriteAnimator.ResolveDirectionFromAxes(facingAxes.x, facingAxes.y);
+        }
+
         private static bool IsCardinalTileDisplacement(
             StarterOfficeRuntimeBootstrap runtime,
             Vector2 displacement)
@@ -639,6 +694,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 .Append(actor.CurrentDirection).Append(',')
                 .Append(actor.RequestedDirection).Append(',')
                 .Append(actor.MotionDirection).Append(',')
+                .Append(actor.LastActualDisplacement.sqrMagnitude > 0.0000001f
+                    ? ResolveFacingAxesDirection(actor.LastActualDisplacement)
+                    : -1).Append(',')
+                .Append(actor.CurrentSpriteDirection).Append(',')
                 .Append(actor.LocomotionPhase).Append(',')
                 .Append(Format(actor.GaitPhase01)).Append(',')
                 .Append(actor.CurrentWalkFrame).Append(',')
@@ -747,13 +806,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             CultureInfo.InvariantCulture,
                             "actor={0} arrivals={1} phase={2} activity={3} seat={4} workFrames={5} " +
                             "tick={6} releaseReason={7} releaseTick={8} destination={9} pending={10} path={11}/{12} " +
-                            "metrics={13}",
+                            "transitionFramesConfigured={13} transitionSpriteActive={14} metrics={15}",
                             actor.AgentId, actor.AttendanceSeatArrivalCount, actor.Phase,
                             actor.CurrentActivity, actor.ActiveSeatId, actor.ObservedWorkFrameCount,
                             actor.R5eRuntimeTick, actor.DiagnosticLastSeatReleaseRequestReason,
                             actor.DiagnosticLastSeatReleaseRequestTick, actor.DiagnosticDestinationId,
                             actor.DiagnosticPendingDestinationId, actor.DiagnosticPathIndex,
                             actor.SemanticPathLength,
+                            actor.ConfiguredLocomotionTransitionFrameCount,
+                            actor.IsLocomotionTransitionSpriteActive,
                             _observations.TryGetValue(memberId, out ActorObservation observation)
                                 ? ObservationMetrics(observation)
                                 : "missing"));
@@ -848,7 +909,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             actor.DiagnosticPendingDestinationId + "|" + actor.DiagnosticAutonomyIntentId + "|" +
             actor.SemanticPathLength + "|" + actor.DiagnosticPathIndex + "|" + actor.ActiveSeatId + "|" +
             actor.DiagnosticDestinationCell + "|" + actor.DiagnosticEmptyOfficeWanderActive + "|" +
-            actor.CurrentDirection + "|" + actor.MotionDirection + "|" + actor.LocomotionPhase + "|" +
+            actor.CurrentDirection + "|" + actor.MotionDirection + "|" +
+            actor.CurrentSpriteDirection + "|" + actor.LocomotionPhase + "|" +
             actor.CurrentWalkFrame + "|" +
             actor.DiagnosticSeatClaimOccupied + "|" + actor.AttendanceSeatArrivalCount + "|" +
             actor.ObservedWorkFrameCount + "|" + actor.CurrentSeatingClip + "|" + actor.CurrentSeatingFrame + "|" +
@@ -874,7 +936,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             ";loops=" + observation.ValidWalkLoops +
             ";movingFrames=" + observation.MovingFrames +
             ";stationaryTurns=" + observation.StationaryDirectionTransitions +
+            ";unexpectedStationaryTurns=" +
+            observation.UnexpectedStationaryDirectionTransitions +
             ";pivotEpisodes=" + observation.PivotEpisodes +
+            ";transitionSprites=" + observation.TransitionSpriteFrames +
+            ";walkPhaseMismatch=" + observation.WalkPhaseMismatchFrames +
             ";currentLook=" + observation.CurrentLookSelections +
             ";destinationless=" + observation.DestinationlessIdleSelections +
             ";sameCell=" + observation.SameCellDestinationSelections +
@@ -971,7 +1037,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public int ValidWalkLoops { get; set; }
             public int MovingFrames { get; set; }
             public int StationaryDirectionTransitions { get; set; }
+            public int UnexpectedStationaryDirectionTransitions { get; set; }
             public int PivotEpisodes { get; set; }
+            public int TransitionSpriteFrames { get; set; }
+            public int WalkPhaseMismatchFrames { get; set; }
             public int CurrentLookSelections { get; set; }
             public int DestinationlessIdleSelections { get; set; }
             public int SameCellDestinationSelections { get; set; }

@@ -499,8 +499,9 @@ namespace FamilyCompany.Simulation.Navigation
         // floor grid over a long route.
         public const float DefaultStrideLength = 0.99380799f;
         public const float StopSettleSeconds = 0.10f;
-        // One adjacent 45-degree body turn per interval. Four intervals make a stable 180-degree
-        // planted pivot while still exposing every intermediate direction at 30 fps.
+        // A route corner owns one final heading. Hold that heading for one short planted interval
+        // before translation; never parade through unrelated intermediate sprite rows while the
+        // actor is standing on the same tile centre.
         public const float PivotSeconds = 0.06f;
         public const float ShortShuffleStrideFraction = 0.30f;
         private const float MinimumDistance = 0.000001f;
@@ -554,8 +555,9 @@ namespace FamilyCompany.Simulation.Navigation
                     state.DisplayDirection,
                     resolvedVisualDirection);
                 // Moving frames never enter this branch, so actual displacement still owns facing.
-                // Stationary turns advance through adjacent octants instead of jumping directly
-                // from front to back. This also covers blocked input without advancing walk phase.
+                // A stationary route turn publishes only its final requested body row. Advancing
+                // through adjacent octants made a 90-degree corner visibly look in two directions
+                // and a reversal look in four directions before taking a step.
                 if (directionDelta >= 1)
                 {
                     bool beginPivot = state.Phase != OfficeLocomotionPhase.Pivot ||
@@ -563,7 +565,6 @@ namespace FamilyCompany.Simulation.Navigation
                     float pivotSeconds = beginPivot
                         ? deltaTime
                         : state.TransitionSeconds + deltaTime;
-                    int pivotDirection = state.DisplayDirection;
                     if (pivotSeconds + 0.000001f < PivotSeconds)
                     {
                         return new OfficeLocomotionGaitState(
@@ -573,24 +574,19 @@ namespace FamilyCompany.Simulation.Navigation
                             0f,
                             pivotSeconds,
                             NearestContactFrame(state.Frame, frameCount),
-                            pivotDirection,
+                            resolvedVisualDirection,
                             resolvedVisualDirection);
                     }
 
-                    pivotSeconds = Math.Max(0f, pivotSeconds - PivotSeconds);
-                    pivotDirection = AdvanceOneDirection(
-                        pivotDirection,
-                        resolvedVisualDirection);
-                    bool pivotComplete = pivotDirection == resolvedVisualDirection;
                     return new OfficeLocomotionGaitState(
-                        pivotComplete ? OfficeLocomotionPhase.Idle : OfficeLocomotionPhase.Pivot,
+                        OfficeLocomotionPhase.Idle,
                         state.AccumulatedDistance,
                         0f,
                         0f,
-                        pivotComplete ? 0f : pivotSeconds,
+                        0f,
                         NearestContactFrame(state.Frame, frameCount),
-                        pivotDirection,
-                        pivotComplete ? -1 : resolvedVisualDirection);
+                        resolvedVisualDirection,
+                        -1);
                 }
             }
 
@@ -689,14 +685,6 @@ namespace FamilyCompany.Simulation.Navigation
             return Math.Min(delta, OfficeFacingHysteresisRules.DirectionCount - delta);
         }
 
-        private static int AdvanceOneDirection(int current, int target)
-        {
-            int clockwise = (target - current + OfficeFacingHysteresisRules.DirectionCount) %
-                            OfficeFacingHysteresisRules.DirectionCount;
-            int step = clockwise <= OfficeFacingHysteresisRules.DirectionCount / 2 ? 1 : -1;
-            return (current + step + OfficeFacingHysteresisRules.DirectionCount) %
-                   OfficeFacingHysteresisRules.DirectionCount;
-        }
     }
 
     public readonly struct OfficeSharedLocomotionFrameResult

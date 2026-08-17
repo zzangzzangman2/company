@@ -1,5 +1,29 @@
 # DECISIONS
 
+## 2026-08-18 / 가족 보행은 identity-locked body, 분리 다리, 별도 marker copy가 소유한다
+
+결정: 가족 보행은 방향별 canonical identity/body anchor를 먼저 고정하고, 프레임마다 전신을 새로 생성하지
+않는다. 첫 반주기 0·1·2의 해부학적으로 분리된 두 다리를 결정론적으로 움직이고, 3·4·5 하체는 골반축
+반사로 만든다. 머리·얼굴·의상·카메라 방향은 반사하지 않는다. 방향쌍까지 파생하므로 생성 예산은 가족당
+5방향×3패널=15패널이다.
+
+결정: 청록/자홍 좌우 다리 표식은 출하 픽셀에 칠하지 않는다. 표식 없는 shipping source를 먼저 만들고,
+동일 alpha 실루엣의 별도 marker review copy에만 표식을 칠한다. `IdentityModelV1`, shipping source,
+`MarkerReviewV1`을 함께 추적하며 0/3 접지발 색과 2/5 통과발 색 교대를 증명한다.
+
+결정: `build_family_walk_half_cycles_v2.py`는 추적 source를 runtime frame/sheet로 publish하는 한 경로만
+가진다. 구형 V4/V5/V6/V7/raw import CLI 세대는 제거하고 `--write` 앞에 two-step/marker 32행 gate를
+강제한다. `FAIL이면 사람 눈으로 뒤집을 수 없다. PASS해도 필요조건일 뿐 충분조건이 아니다.`
+
+결정: 정상 가족 actor는 별도 `LocomotionTransitionsV1` 캐릭터 그림을 사용하지 않는다. 시작·정지·pivot은
+승인 walk/idle 계열만 사용해 다른 세대 모자·바지·몸통이 순간 교체되는 것을 막는다. 최종 승인은 정적
+수치가 아니라 실제 normal 새 게임 30fps 영상과 1×/2×/4× 이동 불변조건으로 닫는다.
+
+이유: 독립 192장 생성은 같은 사람·키·팔레트를 유지하지 못했고, 래스터 봉합선·바지 폭·신발 간격·보폭을
+따로 늘리는 시도는 변수가 결합돼 수렴하지 않았다. probe 53은 구조 gate는 통과했지만 출하본에 칠한
+표식의 어두운 외곽이 남았다. candidate 61의 identity-lock과 marker-copy 분리는 초상화 교체와 표식 잔류
+실패가 생기는 제작 경로 자체를 제거한다.
+
 ## 2026-08-17 / 빈 사무실 생산 자율과 실제 구매 클릭을 릴리스 gate로 둔다
 
 결정: 빈 사무실 가족의 생산 선택 권한은 `OfficeAutonomyCoordinator` 하나다. `OfficeInteractionScoring`의

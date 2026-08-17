@@ -108,6 +108,10 @@ namespace FamilyCompany.Editor
                     starterBootstrap.Contains("AddComponent<OfficeSeatedWorkMicroActionAdapter>()") &&
                     starterBootstrap.Contains("ConfigureOfficeWorkAnimationHook(adapter)"),
                 "Starter runtime actors must retain and reconnect their seated work-action frame sets.");
+            Require(!starterBootstrap.Contains("ConfigureLocomotionTransitions") &&
+                    !starterBootstrap.Contains("OfficeLocomotionTransitionCatalog.LoadDefault"),
+                "Production family actors must use only approved walk/idle art; separately authored " +
+                "start, stop, and pivot portraits are forbidden by FC-WALK-GUARDRAIL-V1.");
             string rebuild = Section(
                 starterBootstrap,
                 "private IEnumerator RebuildForLayoutChange()",

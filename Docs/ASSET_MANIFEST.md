@@ -1,15 +1,17 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-17
+최종 갱신: 2026-08-18
 
-## Family Walk Half-Cycles V2 (2026-08-17)
+## Family Walk Identity-Locked Six-Pose Cycles (2026-08-18)
 
 - Runtime: 가족 4명 각각 `Assets/Art/Characters/<Member>/Pixel/HighMotion/Frames/`의 8방향×6프레임 192장과 A/B 시트 8장.
-- Source: `ArtSources/FamilyWalkHalfCyclesV2/`의 방향별 contact/recoil/passing 반 주기 96장. 승인된 ImageGen 원 strip은 `RawImageGen/`에 보존한다.
-- Generation mode: OpenAI built-in ImageGen의 identity-preserving game-production raster generation. 기존 승인 캐릭터를 정체성·카메라 참조로 사용했고 제3자 자산은 추가하지 않았다.
-- Prompt/derivation ledger: `ArtSources/FamilyWalkHalfCyclesV2/README.md`. 반대 반 주기는 정확한 좌우 반전과 방향쌍 교차 반전으로 결정론적으로 만들며 런타임에서 임의 보간하지 않는다.
-- Runtime contract: 256×256 RGBA hard alpha, 바닥선 y=247, 6장 unique, 0↔3 전체 실루엣 변화율 30% 이상, 반대 발과 반대 팔의 동시 교차. 엄마는 치마 밑단 변화도 포함한다.
-- Reproduction/gate: `Tools/build_family_walk_half_cycles_v2.py`, `Tools/test_family_walk_half_cycles_v2.py`, `Tools/audit_family_walk_half_cycles_v2.py`. 테스트는 32/32 방향 행, 192 runtime frame, 8 sheet의 source 일치를 검사한다.
+- Shipping source: `ArtSources/FamilyWalkHalfCyclesV2/<member>/<direction>/`의 표식 없는 identity-locked 192장. 출하 픽셀에는 청록/자홍 표식을 칠한 적이 없다.
+- Identity/marker evidence: `IdentityModelV1/`의 방향별 canonical identity anchor 32장과 `MarkerReviewV1/`의 해부학적 좌우 다리 표식 사본 192장. marker copy는 shipping source와 alpha 실루엣이 픽셀 단위로 같다.
+- Derivation ledger: `ArtSources/FamilyWalkHalfCyclesV2/README.md`. 0·1·2는 왼발 접지/지지와 오른발 낮은 통과, 3·4·5는 하체만 골반축 반사한 오른발 접지/지지와 왼발 낮은 통과다. 얼굴·머리·옷·카메라 방향은 반사하지 않는다.
+- Generation budget: `south, southeast, east, northeast, north` 5방향 × 첫 반주기 3패널 = 가족당 15패널. 반대 방향과 두 번째 반주기는 결정론적으로 파생한다. 프레임마다 전신을 새로 생성하지 않는다.
+- Runtime contract: 256×256 RGBA hard alpha, 동일 가족의 머리·몸통·골반·옷 길이·다리·신발 크기와 바닥선 고정, 분리 조각/크로마/잔상 0, marker residue 0. production actor는 다른 세대 `LocomotionTransitionsV1` 초상화를 사용하지 않는다.
+- Reproduction/gate: `Tools/build_family_walk_half_cycles_v2.py` 단일 source→runtime 경로, `Tools/test_family_walk_half_cycles_v2.py`, `Tools/audit_family_walk_half_cycles_v2.py`, `Tools/Verify-FamilyWalkTwoStep.ps1`. gate self-test, source 32/32, runtime static 32/32, 192 frame/8 sheet byte 일치가 모두 PASS다.
+- Provenance: candidate 61을 정본으로 채택했다. candidate 62는 gate FAIL로 폐기했다. probe 53의 표식 제거 잔류는 marker-copy 구조를 도입한 역사 원인이며 그 출하 PNG는 정본이 아니다. 신규 제3자 아트는 추가하지 않았다.
 
 ## Main Navigation HUD V2 (2026-08-14)
 

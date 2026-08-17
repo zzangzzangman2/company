@@ -88,6 +88,7 @@ namespace FamilyCompany.Presentation.Unity
         private IOfficeSeatedWorkAnimationHook _officeWorkHook;
         private IOfficeSeatedWorkAnimationSession _officeWorkSession;
         private bool _navigationAnimationSuppressed;
+        private bool _continuousRouteLocomotionPresentation;
         private bool _tileDisplacementDirection;
         private bool _externallyTicked;
         private Vector2 _tileFrameDisplacement;
@@ -165,6 +166,7 @@ namespace FamilyCompany.Presentation.Unity
             locomotionTransitionFrames?.Length ?? 0;
         public bool IsLocomotionTransitionSpriteActive =>
             !_seatingClip.HasValue &&
+            !_continuousRouteLocomotionPresentation &&
             _tileDisplacementDirection &&
             _tileGaitStateInitialized &&
             _tileGaitState.Phase != OfficeLocomotionPhase.Walk &&
@@ -202,6 +204,8 @@ namespace FamilyCompany.Presentation.Unity
         public bool IsOfficeWorkSafeToStand =>
             _officeWorkSession == null || _officeWorkSession.IsSafeToStand;
         public bool IsNavigationAnimationSuppressed => _navigationAnimationSuppressed;
+        public bool UsesContinuousRouteLocomotionPresentation =>
+            _continuousRouteLocomotionPresentation;
         public OfficeSeatingPresentationMode SeatingPresentationMode => seatingPresentationMode;
         public Vector2 AccumulatedTileDisplacement => _tileFrameDisplacement;
         public Vector2 ActualTileDisplacement => _tileFrameDisplacement;
@@ -360,6 +364,23 @@ namespace FamilyCompany.Presentation.Unity
             _externallyTicked = externallyTicked;
         }
 
+        public void SetContinuousRouteLocomotionPresentation(bool enabled)
+        {
+            if (_continuousRouteLocomotionPresentation == enabled) return;
+            _continuousRouteLocomotionPresentation = enabled;
+            if (enabled && _tileGaitStateInitialized && _tileIsMoving)
+            {
+                // Route corners retain the distance-owned six-frame gait phase. Replaying the
+                // two-pose start clip at every cell-centre pivot made an otherwise linear walk
+                // read as a hop and swapped to a differently proportioned body for a few frames.
+                _walkFrame = OfficeLocomotionGaitRules.DistanceFrame(
+                    _tileGaitState.AccumulatedDistance,
+                    OfficeLocomotionGaitRules.DefaultStrideLength,
+                    WalkFrameCount);
+            }
+            ApplyFrame();
+        }
+
         public void SetWorldVelocity(Vector3 velocity)
         {
             _tileDisplacementDirection = false;
@@ -463,8 +484,13 @@ namespace FamilyCompany.Presentation.Unity
                 7 => new Vector2(1f, -1f),
                 _ => Vector2.zero
             };
-            Vector2 worldHeading = new Vector2(-heading.x, heading.y);
-            AccumulateTileMotion(worldHeading, Vector2.zero, deltaTime, false);
+            // `heading` is a visible sprite-facing vector. Convert through the shared inverse so a
+            // completed planted pivot republishes exactly that screen direction.
+            AccumulateTileMotion(
+                OfficeGridTilemapPresenter.VisualFacingAxesToWorldVector(heading),
+                Vector2.zero,
+                deltaTime,
+                false);
         }
 
         public bool IsReadyForInteractionFacing(int desiredDirection)
@@ -1067,7 +1093,12 @@ namespace FamilyCompany.Presentation.Unity
                     _tileGaitState = locomotion.GaitState;
                     _lastDirection = _tileGaitState.DisplayDirection;
                 }
-                _walkFrame = _tileGaitState.Frame;
+                _walkFrame = _continuousRouteLocomotionPresentation && locomotion.IsMoving
+                    ? OfficeLocomotionGaitRules.DistanceFrame(
+                        _tileGaitState.AccumulatedDistance,
+                        OfficeLocomotionGaitRules.DefaultStrideLength,
+                        WalkFrameCount)
+                    : _tileGaitState.Frame;
                 _frameClock = 0f;
             }
             else

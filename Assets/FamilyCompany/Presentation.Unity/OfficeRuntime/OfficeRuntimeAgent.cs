@@ -340,6 +340,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             : _animator.StrideLength;
         public int CurrentWalkFrame => _animator == null ? 0 : _animator.CurrentWalkFrame;
         public int CurrentDirection => _animator == null ? 0 : _animator.CurrentDirection;
+        public int ConfiguredLocomotionTransitionFrameCount => _animator == null
+            ? 0
+            : _animator.ConfiguredLocomotionTransitionFrameCount;
+        public bool IsLocomotionTransitionSpriteActive =>
+            _animator != null && _animator.IsLocomotionTransitionSpriteActive;
         public int ExpectedSeatDirection => _seatDirection;
         public bool IsOfficeSeatingFacingLocked =>
             _animator != null && _animator.IsOfficeSeatingFacingLocked;
@@ -560,6 +565,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (_animator != null) _animator.OfficeFrameApplied -= HandleOfficeFrameApplied;
             _animator = animator ?? throw new ArgumentNullException(nameof(animator));
             _animator.SetExternallyTicked(true);
+            SyncEmptyOfficeLocomotionPresentation();
             _animator.OfficeFrameApplied += HandleOfficeFrameApplied;
             _poseCatalog = poseCatalog ?? throw new ArgumentNullException(nameof(poseCatalog));
             AgentRadius = Mathf.Max(0.12f, radius);
@@ -1401,6 +1407,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             StopMotion();
             TickArrivedWork(deltaTime);
+        }
+
+        private void SyncEmptyOfficeLocomotionPresentation()
+        {
+            if (_animator == null) return;
+            bool emptyOffice = _world?.Grid != null && _world.Grid.SeatSlots.Count == 0;
+            if (emptyOffice)
+            {
+                foreach (PlacedOfficeFurniture item in _world.Grid.Furniture)
+                {
+                    if (OfficeFurnitureCatalog.Find(item.KindId)?.IsPlayerEditable != true) continue;
+                    emptyOffice = false;
+                    break;
+                }
+            }
+
+            // The empty room is a continuous tile-centre walking space. Its actors use the stable
+            // high-motion atlas for the planted pivot and every translated frame; as soon as the
+            // player places editable furniture, the normal interaction transition presentation is
+            // restored. Seating clips are independently owned and are never suppressed here.
+            _animator.SetContinuousRouteLocomotionPresentation(emptyOffice);
         }
 
         internal R5eAgentStepSnapshot CaptureR5eStepSnapshot()

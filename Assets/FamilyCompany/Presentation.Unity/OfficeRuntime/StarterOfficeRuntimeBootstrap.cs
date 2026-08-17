@@ -135,7 +135,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private static int _activeLayoutRebuilds;
         private string _layoutHash = string.Empty;
         private bool _building;
-        private OfficeLocomotionTransitionCatalog _locomotionTransitionCatalog;
         private readonly Dictionary<string, OfficeWorkActionFrameSet> _workActionFrameSets =
             new Dictionary<string, OfficeWorkActionFrameSet>(StringComparer.Ordinal);
         private readonly Dictionary<string, OfficeRuntimeAgentLayoutSnapshot> _layoutSnapshots =
@@ -276,16 +275,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 FailRuntimePreparation("seat-presentation-validation", exception);
                 return;
             }
-            _locomotionTransitionCatalog = OfficeLocomotionTransitionCatalog.LoadDefault();
-            if (_locomotionTransitionCatalog == null)
-            {
-                Debug.LogWarning(
-                    "STARTER_OFFICE_LOCOMOTION_TRANSITIONS | mode=WalkFallback reason=CatalogMissing");
-            }
-            else
-            {
-                _locomotionTransitionCatalog.Validate();
-            }
+            // FC-WALK-GUARDRAIL-V1: family locomotion must never swap to the separately authored
+            // legacy start/stop/pivot portraits. The approved idle/walk identity is the only
+            // sprite family configured on production actors.
+            Debug.Log("STARTER_OFFICE_LOCOMOTION_TRANSITIONS | mode=WalkIdleOnly " +
+                      "contract=FC-WALK-GUARDRAIL-V1");
             var usedSpawns = new HashSet<OfficeGridCoordinate>();
             for (var index = 0; index < MemberIds.Length; index++)
             {
@@ -538,9 +532,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             bool familyMember = Array.IndexOf(FamilyMemberIds, memberId) >= 0;
             Sprite[] walkFrames = ResolveWalkFrames(memberId);
             animator.Configure(renderer, walkFrames);
-            if (familyMember && _locomotionTransitionCatalog != null)
-                animator.ConfigureLocomotionTransitions(
-                    _locomotionTransitionCatalog.CopyFrames(memberId));
             if (familyMember)
             {
                 OfficeGridSeatingFrameSet seating = _assetSource.CopySeatingFrameSet(memberId);

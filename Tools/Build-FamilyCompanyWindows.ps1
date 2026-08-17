@@ -17,6 +17,9 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+# Get-FileHash lives in Microsoft.PowerShell.Utility. Import it explicitly so the canonical
+# build fingerprint does not depend on the caller's module auto-loading preference.
+Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 . (Join-Path $PSScriptRoot 'FamilyCompanyBuild.Common.ps1')
 
 $defaults = Get-FamilyCompanyBuildDefaults
