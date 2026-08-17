@@ -10,6 +10,7 @@ using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.OfficeInteractions;
+using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.OfficeSeating;
 using UnityEngine;
 
@@ -43,7 +44,13 @@ namespace FamilyCompany.Presentation.Unity
         private long _attendanceDoorSfxArmedShiftKey = long.MinValue;
         private DateTime? _attendanceAudioObservedAt;
         private int _attendanceDoorSfxPlayCount;
+        private bool _emptyOfficeWanderActive;
+        private readonly Dictionary<string, int> _emptyOfficeWanderSequences =
+            new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, OfficeGridCoordinate> _emptyOfficeWanderTargets =
+            new Dictionary<string, OfficeGridCoordinate>(StringComparer.Ordinal);
         private const float MinimumAttendanceEntranceClearance = 0.72f;
+        private const int MinimumEmptyOfficeWanderDistance = 4;
 
         public OfficeSeatingState SeatingState => _seatingState;
         public bool IsSeatingRuntimeReady =>
@@ -51,6 +58,8 @@ namespace FamilyCompany.Presentation.Unity
             seatRegistry != null && seatRegistry.isActiveAndEnabled &&
             seatRegistry.SeatCount > 0 && seatRegistry.RuntimeRevision == _seatingRegistryRevision;
         public int AttendanceDoorSfxPlayCount => _attendanceDoorSfxPlayCount;
+        public int EmptyOfficeWanderSelectionCount { get; private set; }
+        public int EmptyOfficeWanderCandidateFailureCount { get; private set; }
 
         public static bool IsAttendanceDoorSfxEligibleAt(DateTime now)
         {
@@ -90,6 +99,7 @@ namespace FamilyCompany.Presentation.Unity
             _arrivalReleaseRemaining = 0f;
             _lastAttendanceEntrant = null;
             _lastAttendanceEntryPosition = Vector2.zero;
+            ResetEmptyOfficeWanderTracking();
             BindAttendanceAudioState(newBootstrap != null ? newBootstrap.State : null);
             _initialized = false;
         }
@@ -112,6 +122,7 @@ namespace FamilyCompany.Presentation.Unity
             _arrivalReleaseRemaining = 0f;
             _lastAttendanceEntrant = null;
             _lastAttendanceEntryPosition = Vector2.zero;
+            ResetEmptyOfficeWanderTracking();
             BindAttendanceAudioState(newBootstrap != null ? newBootstrap.State : null);
             _initialized = false;
         }
@@ -387,6 +398,47 @@ namespace FamilyCompany.Presentation.Unity
                     }
                 }
             }
+            bool emptyOffice = IsEmptyOfficeLayout(bootstrap.State.OfficeGrid);
+            if (!emptyOffice || attendance != OfficeAttendancePhase.Working)
+            {
+                StopEmptyOfficeWander(orderedAgents);
+            }
+            else if (!_emptyOfficeWanderActive)
+            {
+                IOfficeRuntimeAgent[] familyAgents = orderedAgents.Where(agent =>
+                        bootstrap.State.Family.Members.Any(member => string.Equals(
+                            member.MemberId,
+                            agent.AgentId,
+                            StringComparison.Ordinal)))
+                    .ToArray();
+                if (familyAgents.Any(agent => !agent.IsPresentationAway && !agent.IsBusy))
+                {
+                    _emptyOfficeWanderActive = true;
+                    Debug.Log(
+                        "OFFICE_EMPTY_WANDER_START | actors=" + familyAgents.Length +
+                        " time=" + now.ToString("HH:mm"));
+                }
+            }
+
+            var occupiedCells = new HashSet<OfficeGridCoordinate>(orderedAgents
+                .Where(agent => !agent.IsPresentationAway)
+                .Select(agent => agent.CurrentCell));
+            var reservedWanderTargets = new HashSet<OfficeGridCoordinate>();
+            foreach (IOfficeRuntimeAgent agent in orderedAgents)
+                if (agent.IsBusy && agent.ActiveDestinationCell.HasValue)
+                    reservedWanderTargets.Add(agent.ActiveDestinationCell.Value);
+            foreach (KeyValuePair<string, OfficeGridCoordinate> entry in
+                     _emptyOfficeWanderTargets.ToArray())
+            {
+                IOfficeRuntimeAgent owner = orderedAgents.FirstOrDefault(agent =>
+                    string.Equals(agent.AgentId, entry.Key, StringComparison.Ordinal));
+                if (owner == null || !owner.IsBusy)
+                {
+                    _emptyOfficeWanderTargets.Remove(entry.Key);
+                    continue;
+                }
+                reservedWanderTargets.Add(entry.Value);
+            }
             for (int index = 0; index < orderedAgents.Length; index++)
             {
                 IOfficeRuntimeAgent agent = orderedAgents[index];
@@ -414,6 +466,16 @@ namespace FamilyCompany.Presentation.Unity
                 // live facility handle or restart its path every refresh.
                 if (StaminaRecoveryRuntimeCoordinator.BlocksRoutineAutonomy(agent.AgentId))
                     continue;
+                if (emptyOffice)
+                {
+                    if (!_emptyOfficeWanderActive || agent.IsBusy) continue;
+                    TryAssignEmptyOfficeWander(
+                        agent,
+                        member,
+                        occupiedCells,
+                        reservedWanderTargets);
+                    continue;
+                }
                 if (agent.IsPlayerControlled)
                 {
                     agent.ClearAutonomousDestination();
@@ -440,6 +502,160 @@ namespace FamilyCompany.Presentation.Unity
                 _lastRuntimeAttendancePhase = attendance;
             }
         }
+
+        private static bool IsEmptyOfficeLayout(OfficeGrid grid)
+        {
+            if (grid == null || grid.SeatSlots.Count > 0) return false;
+            return grid.Furniture.All(item =>
+                OfficeFurnitureCatalog.Find(item.KindId)?.IsPlayerEditable != true);
+        }
+
+        private void ResetEmptyOfficeWanderTracking()
+        {
+            _emptyOfficeWanderActive = false;
+            _emptyOfficeWanderSequences.Clear();
+            _emptyOfficeWanderTargets.Clear();
+            EmptyOfficeWanderSelectionCount = 0;
+            EmptyOfficeWanderCandidateFailureCount = 0;
+        }
+
+        private void StopEmptyOfficeWander(IReadOnlyList<IOfficeRuntimeAgent> orderedAgents)
+        {
+            if (!_emptyOfficeWanderActive && _emptyOfficeWanderTargets.Count == 0) return;
+            foreach (IOfficeRuntimeAgent agent in orderedAgents)
+                agent?.ClearAutonomousDestination();
+            ResetEmptyOfficeWanderTracking();
+        }
+
+        private bool TryAssignEmptyOfficeWander(
+            IOfficeRuntimeAgent agent,
+            FamilyMemberState member,
+            HashSet<OfficeGridCoordinate> occupiedCells,
+            HashSet<OfficeGridCoordinate> reservedTargets)
+        {
+            if (_emptyOfficeWanderTargets.TryGetValue(agent.AgentId, out OfficeGridCoordinate previous))
+            {
+                reservedTargets.Remove(previous);
+                _emptyOfficeWanderTargets.Remove(agent.AgentId);
+            }
+
+            int sequence = _emptyOfficeWanderSequences.TryGetValue(agent.AgentId, out int current)
+                ? checked(current + 1)
+                : 1;
+            _emptyOfficeWanderSequences[agent.AgentId] = sequence;
+            OfficeGridCoordinate origin = agent.CurrentCell;
+            OfficeGrid grid = bootstrap.State.OfficeGrid;
+            OfficeGridCoordinate[] candidates = EmptyOfficeWanderCandidates(
+                grid,
+                bootstrap.State.WorldSeed,
+                agent.AgentId,
+                sequence,
+                origin,
+                occupiedCells,
+                reservedTargets);
+            int failures = 0;
+            for (int index = 0; index < candidates.Length; index++)
+            {
+                OfficeGridCoordinate candidate = candidates[index];
+                string intentId = "empty-office-wander:" + agent.AgentId + ":" + sequence;
+                string status =
+                    "빈 사무실 산책 · " + member.Autonomy.MoodLabel(member.Energy, member.Stress);
+                if (!agent.TrySetAutonomousWanderDestination(intentId, candidate, status))
+                {
+                    failures++;
+                    continue;
+                }
+
+                _emptyOfficeWanderTargets[agent.AgentId] = candidate;
+                reservedTargets.Add(candidate);
+                EmptyOfficeWanderSelectionCount++;
+                EmptyOfficeWanderCandidateFailureCount += failures;
+                Debug.Log(
+                    "OFFICE_EMPTY_WANDER_SELECT | actor=" + agent.AgentId +
+                    " sequence=" + sequence +
+                    " origin=" + origin.X + ":" + origin.Y +
+                    " candidate=" + candidate.X + ":" + candidate.Y +
+                    " candidateCount=" + candidates.Length +
+                    " rejected=" + failures +
+                    " reason=" + (ManhattanDistance(origin, candidate) >=
+                                    MinimumEmptyOfficeWanderDistance
+                        ? "distant-reachable"
+                        : "reachable-fallback"));
+                return true;
+            }
+
+            EmptyOfficeWanderCandidateFailureCount += failures;
+            Debug.LogWarning(
+                "OFFICE_EMPTY_WANDER_FAIL | actor=" + agent.AgentId +
+                " sequence=" + sequence +
+                " origin=" + origin.X + ":" + origin.Y +
+                " candidateCount=" + candidates.Length +
+                " rejected=" + failures);
+            return false;
+        }
+
+        public static OfficeGridCoordinate[] EmptyOfficeWanderCandidates(
+            OfficeGrid grid,
+            int worldSeed,
+            string agentId,
+            int sequence,
+            OfficeGridCoordinate origin,
+            ISet<OfficeGridCoordinate> occupiedCells,
+            ISet<OfficeGridCoordinate> reservedTargets)
+        {
+            if (grid == null) throw new ArgumentNullException(nameof(grid));
+            string canonicalAgentId = string.IsNullOrWhiteSpace(agentId)
+                ? throw new ArgumentException("Agent ID is required.", nameof(agentId))
+                : agentId.Trim();
+            if (sequence <= 0) throw new ArgumentOutOfRangeException(nameof(sequence));
+
+            return Enumerable.Range(0, grid.Height)
+                .SelectMany(y => Enumerable.Range(0, grid.Width)
+                    .Select(x => new OfficeGridCoordinate(x, y)))
+                .Where(cell => grid.IsWalkable(cell) && !cell.Equals(origin))
+                // The empty starter room has no furniture to create natural circulation lanes.
+                // Give each family member a broad, disjoint quarter of the reachable floor so
+                // their independently selected routes cannot deadlock on the same intermediate
+                // cell. The centre row/column remain neutral circulation space for attendance.
+                .Where(cell => IsEmptyOfficeWanderTerritory(canonicalAgentId, cell, grid))
+                .Where(cell => occupiedCells == null || !occupiedCells.Contains(cell))
+                .Where(cell => reservedTargets == null || !reservedTargets.Contains(cell))
+                .OrderBy(cell => ManhattanDistance(origin, cell) >= MinimumEmptyOfficeWanderDistance
+                    ? 0
+                    : 1)
+                .ThenBy(cell => StableRandom.StableRandomInt(
+                    "empty-office-wander-cell:" + worldSeed + ":" + canonicalAgentId + ":" +
+                    sequence + ":" + cell.X + ":" + cell.Y,
+                    int.MaxValue))
+                .ThenBy(cell => cell.Y)
+                .ThenBy(cell => cell.X)
+                .ToArray();
+        }
+
+        private static bool IsEmptyOfficeWanderTerritory(
+            string agentId,
+            OfficeGridCoordinate cell,
+            OfficeGrid grid)
+        {
+            int middleX = grid.Width / 2;
+            int middleY = grid.Height / 2;
+            return agentId switch
+            {
+                // Keep the lower entrance rows and the later entrants' right-hand aisle clear.
+                // The player is already inside first and can safely patrol this interior block.
+                "player" => cell.X > middleX && cell.X <= middleX + 3 &&
+                            cell.Y >= 3 && cell.Y < middleY,
+                "older_sister" => cell.X < middleX && cell.Y > middleY,
+                "father" => cell.X < middleX && cell.Y < middleY,
+                "mother" => cell.X > middleX && cell.Y > middleY,
+                _ => true
+            };
+        }
+
+        private static int ManhattanDistance(
+            OfficeGridCoordinate left,
+            OfficeGridCoordinate right) =>
+            Math.Abs(left.X - right.X) + Math.Abs(left.Y - right.Y);
 
         private void BindAttendanceAudioState(GameState state)
         {

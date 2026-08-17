@@ -22,6 +22,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private enum PendingSource { None, Purchase, Stored }
         private enum Confirmation { None, Store, Sell }
 
+        private readonly struct BuildStateSnapshot
+        {
+            public BuildStateSnapshot(GameState state)
+            {
+                Cash = state.Company.CashWon;
+                Ledger = state.Company.Ledger.Count;
+                Inventory = state.OfficeFurnitureInventory.Instances.Count;
+                Furniture = state.OfficeGrid.Furniture.Count;
+                EditableFurniture = state.OfficeGrid.Furniture.Count(item =>
+                    OfficeFurnitureCatalog.Find(item.KindId)?.IsPlayerEditable == true);
+                GridHash = state.OfficeGrid.ComputeLayoutHash();
+            }
+
+            public long Cash { get; }
+            public int Ledger { get; }
+            public int Inventory { get; }
+            public int Furniture { get; }
+            public int EditableFurniture { get; }
+            public string GridHash { get; }
+        }
+
         private readonly OfficeLayoutEditModeSkin _skin = new OfficeLayoutEditModeSkin();
         private readonly List<GameObject> _overlay = new List<GameObject>();
         private StarterOfficeRuntimeBootstrap _runtime;
@@ -108,6 +129,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             ClearPending();
             failure = string.Empty;
+            Debug.Log("OFFICE_BUILD_EDITOR_OPEN | timeScale=" + Time.timeScale);
             Say("사무실 관리 · 배치 중에는 게임 시간과 AI가 정지됩니다");
             return true;
         }
@@ -187,6 +209,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 _previewOrigin = cell;
                 InvalidatePreview();
+                if (Input.GetMouseButtonDown(0))
+                {
+                    Debug.Log(
+                        "OFFICE_BUILD_POINTER_COMMIT | source=" + _pendingSource +
+                        " cell=" + cell.X + ":" + cell.Y);
+                    ConfirmPreview();
+                }
                 return;
             }
 
@@ -261,6 +290,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _previewRotation = definition.DesiredFacing;
             _previewOrigin = new OfficeGridCoordinate(6, 6);
             InvalidatePreview();
+            Debug.Log(
+                "OFFICE_BUILD_PREVIEW_BEGIN | source=purchase definition=" +
+                definition.DefinitionId + " origin=6:6");
             Say("마우스로 위치 선택 · R 회전 · 확정 전에는 돈이 차감되지 않습니다");
         }
 
@@ -365,6 +397,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 Say(_previewMessage.Length > 0 ? _previewMessage : "변경할 내용이 없습니다");
                 return;
             }
+            var before = new BuildStateSnapshot(State);
             OfficeFurnitureCommandResult result;
             if (_pendingSource == PendingSource.Purchase)
             {
@@ -389,22 +422,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             HandleCommand(result, result.ChargedWon > 0
                 ? $"구매·배치 완료 · {Won(result.ChargedWon)} 차감"
-                : "배치 변경을 확정했습니다");
+                : "배치 변경을 확정했습니다", before);
         }
 
         private void ConfirmDestructive()
         {
             if (_confirmation == Confirmation.None || _selectedId.Length == 0) return;
+            var before = new BuildStateSnapshot(State);
             OfficeFurnitureCommandResult result = _confirmation == Confirmation.Store
                 ? OfficeFurnitureTransactionService.Store(State, _selectedId, IsFurnitureInUse)
                 : OfficeFurnitureTransactionService.Sell(
                     State, _confirmationCommandId, _selectedId, IsFurnitureInUse);
             HandleCommand(result, _confirmation == Confirmation.Store
                 ? "보관함으로 옮겼습니다"
-                : $"판매 완료 · {Won(result.RefundedWon)} 환급");
+                : $"판매 완료 · {Won(result.RefundedWon)} 환급", before);
         }
 
-        private void HandleCommand(OfficeFurnitureCommandResult result, string success)
+        private void HandleCommand(
+            OfficeFurnitureCommandResult result,
+            string success,
+            BuildStateSnapshot before)
         {
             if (!result.Success)
             {
@@ -415,6 +452,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ClearPending();
             ClearVisuals();
             _runtime.ApplyLayout(State.OfficeGrid);
+            var after = new BuildStateSnapshot(State);
+            PlacedOfficeFurniture placed = State.OfficeGrid.Furniture.FirstOrDefault(item =>
+                string.Equals(item.FurnitureId, result.InstanceId, StringComparison.Ordinal));
+            string anchor = "none";
+            if (placed != null &&
+                _runtime.World.FurniturePresenter.TryGetSemanticRoot(
+                    result.InstanceId,
+                    out Transform semanticRoot) &&
+                semanticRoot != null)
+            {
+                Vector3 expected = _runtime.World.Presenter.SubcellAnchorWorld(placed.PlacementAnchor);
+                anchor =
+                    "origin=" + placed.Origin.X + ":" + placed.Origin.Y +
+                    " anchor2=" + placed.PlacementAnchor.X2 + ":" + placed.PlacementAnchor.Y2 +
+                    " expected=" + expected.ToString("F6") +
+                    " rendered=" + semanticRoot.position.ToString("F6") +
+                    " anchorError=" + Vector3.Distance(expected, semanticRoot.position).ToString("F8");
+            }
+            Debug.Log(
+                "OFFICE_BUILD_STATE_MUTATION | instance=" + result.InstanceId +
+                " charged=" + result.ChargedWon +
+                " refunded=" + result.RefundedWon +
+                " cash=" + before.Cash + "->" + after.Cash +
+                " ledger=" + before.Ledger + "->" + after.Ledger +
+                " inventory=" + before.Inventory + "->" + after.Inventory +
+                " furniture=" + before.Furniture + "->" + after.Furniture +
+                " editable=" + before.EditableFurniture + "->" + after.EditableFurniture +
+                " gridHash=" + before.GridHash + "->" + after.GridHash +
+                " " + anchor);
             Say(success);
         }
 

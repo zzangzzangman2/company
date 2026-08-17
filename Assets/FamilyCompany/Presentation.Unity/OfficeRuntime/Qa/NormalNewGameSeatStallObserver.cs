@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -176,7 +177,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             _trace.AppendLine(
                 "elapsedMinute,clock,frame,timeScale,worldScale,worldDelta,worldUnscaledDelta,motionDelta," +
                 "actor,tick,phase,activity,position,destination,pendingDestination,autonomyIntent," +
-                "autonomyDestination,pathCount,pathIndex,seatId,claimOccupied,claimReleased," +
+                "autonomyDestination,destinationCell,emptyWander,pathCount,pathIndex," +
+                "currentDirection,requestedDirection,motionDirection,locomotionPhase,gaitPhase,walkFrame," +
+                "actualDisplacement,semanticDisplacement,facingErrorDegrees,visualRootOffset," +
+                "seatId,claimOccupied,claimReleased," +
                 "attendanceArrivals,workFrames,seatingClip,seatingFrame,sprite,interactionPhase," +
                 "occupancyCell,occupancyPresent,occupancyReservations,occupancyEpoch,occupancyRevision," +
                 "dockingPlan,lastReleaseReason,lastReleaseTick,stuckSeconds,reservationBlocker,movementBlocker");
@@ -212,9 +216,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     string signature = Signature(actor);
                     bool transition = !string.Equals(signature, observation.LastSignature, StringComparison.Ordinal);
                     if (minute >= 5L && (minuteChanged || transition)) AppendSnapshot(bootstrap, runtime, actor);
-                    ObserveActor(minute, actor, observation);
+                    ObserveActor(minute, runtime, actor, observation);
                     observation.LastSignature = signature;
                 }
+                if (_emptyOfficeMode) ObserveEmptyOfficeCrowd(minute, runtime, actors);
 
                 if (!_requestedSpeedApplied &&
                     MemberIds.All(memberId => _observations[memberId].CompletedFirstWorkLoop))
@@ -262,6 +267,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 OfficeRuntimeAgent actor = actors[memberId];
                 if (_emptyOfficeMode)
                 {
+                    ActorObservation observation = _observations[memberId];
                     if (!_observations[memberId].EnteredEmptyOffice)
                         RecordFirstFailure(
                             bootstrap.State.Time.ElapsedMinutes,
@@ -272,6 +278,39 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             bootstrap.State.Time.ElapsedMinutes,
                             actor,
                             "attendance-left-empty-office-before-09:50");
+                    if (observation.WanderSelections < 2)
+                        RecordFirstFailure(
+                            bootstrap.State.Time.ElapsedMinutes,
+                            actor,
+                            "insufficient-empty-office-wander-selections:" + observation.WanderSelections);
+                    if (observation.ValidWalkLoops < 2)
+                        RecordFirstFailure(
+                            bootstrap.State.Time.ElapsedMinutes,
+                            actor,
+                            "insufficient-valid-walk-loops:" + observation.ValidWalkLoops);
+                    if (observation.CurrentLookSelections != 0 ||
+                        observation.DestinationlessIdleSelections != 0 ||
+                        observation.SameCellDestinationSelections != 0 ||
+                        observation.DuplicatePivotEpisodes != 0 ||
+                        observation.TranslationBeforePivotFrames != 0 ||
+                        observation.DirectionDisplacementMismatchFrames != 0 ||
+                        observation.NonCardinalSegmentFrames != 0 ||
+                        observation.CollisionProjectedFrames != 0 ||
+                        observation.ActorOverlapFrames != 0 ||
+                        observation.DuplicateDestinationFrames != 0 ||
+                        observation.TileCenterDeviationCount != 0 ||
+                        observation.NonzeroVisualRootOffsetFrames != 0)
+                    {
+                        RecordFirstFailure(
+                            bootstrap.State.Time.ElapsedMinutes,
+                            actor,
+                            "empty-office-motion-invariant:" + ObservationMetrics(observation));
+                    }
+                    if (observation.LongestStationaryMinutes >= 20L)
+                        RecordFirstFailure(
+                            bootstrap.State.Time.ElapsedMinutes,
+                            actor,
+                            "stationary-20-game-minutes:" + observation.LongestStationaryMinutes);
                 }
                 else if (actor.AttendanceSeatArrivalCount < 1)
                     RecordFirstFailure(bootstrap.State.Time.ElapsedMinutes, actor, "attendance-never-atomically-seated");
@@ -286,6 +325,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     bootstrap.State.Time.ElapsedMinutes,
                     actors["player"],
                     "requested-speed-was-not-applied");
+            if (_emptyOfficeMode)
+            {
+                int totalWalkLoops = _observations.Values.Sum(item => item.ValidWalkLoops);
+                int totalStationaryTransitions =
+                    _observations.Values.Sum(item => item.StationaryDirectionTransitions);
+                if (totalWalkLoops <= totalStationaryTransitions)
+                    RecordFirstFailure(
+                        bootstrap.State.Time.ElapsedMinutes,
+                        actors["player"],
+                        "walk-loops-not-above-stationary-transitions:walk=" + totalWalkLoops +
+                        ";stationary=" + totalStationaryTransitions);
+                OfficeAutonomyCoordinator coordinator =
+                    Object.FindFirstObjectByType<OfficeAutonomyCoordinator>();
+                if (coordinator == null || coordinator.EmptyOfficeWanderSelectionCount < 8)
+                    RecordFirstFailure(
+                        bootstrap.State.Time.ElapsedMinutes,
+                        actors["player"],
+                        "coordinator-wander-selections=" +
+                        (coordinator == null ? -1 : coordinator.EmptyOfficeWanderSelectionCount));
+            }
 
             int exitCode = _firstFailure.Length == 0 ? 0 : 21;
             Finish(
@@ -299,12 +358,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 runtime);
         }
 
-        private void ObserveActor(long minute, OfficeRuntimeAgent actor, ActorObservation observation)
+        private void ObserveActor(
+            long minute,
+            StarterOfficeRuntimeBootstrap runtime,
+            OfficeRuntimeAgent actor,
+            ActorObservation observation)
         {
             if (_emptyOfficeMode && minute >= 10L && !observation.EnteredEmptyOffice &&
                 !actor.IsPresentationAway && actor.Phase != OfficeRuntimeAgentPhase.Outside)
             {
                 observation.EnteredEmptyOffice = true;
+                observation.LastMovingMinute = minute;
                 AppendEvent(minute, actor, "EMPTY_OFFICE_ATTENDANCE_ENTERED");
             }
 
@@ -375,6 +439,171 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     ";releaseReason=" + actor.DiagnosticLastSeatReleaseRequestReason);
                 observation.LastProgressMinute = minute;
             }
+
+            DirectionalLocomotionFrameTrace locomotion = actor.CaptureLocomotionFrameTrace();
+            bool moving = locomotion.IsMoving &&
+                          locomotion.ActualDisplacement.sqrMagnitude > 0.0000001f;
+            int gaitCycle = Mathf.FloorToInt(actor.GaitDistance / Mathf.Max(0.000001f, actor.StrideLength));
+            if (moving)
+            {
+                observation.LastMovingMinute = minute;
+                observation.MovingFrames++;
+                if (gaitCycle > observation.LastGaitCycle)
+                    observation.ValidWalkLoops += gaitCycle - observation.LastGaitCycle;
+                observation.MovedSinceLastPivot = true;
+                if (observation.LastMotionDirection >= 0 &&
+                    observation.LastMotionDirection != locomotion.MotionDirection &&
+                    !observation.SawStationarySinceLastMotion)
+                    observation.TranslationBeforePivotFrames++;
+                observation.LastMotionDirection = locomotion.MotionDirection;
+                observation.SawStationarySinceLastMotion = false;
+
+                if (locomotion.DisplayDirection != locomotion.MotionDirection ||
+                    actor.CurrentDirection != locomotion.MotionDirection)
+                    observation.DirectionDisplacementMismatchFrames++;
+
+                if (locomotion.ActualDisplacement.sqrMagnitude > 0.00000001f &&
+                    !IsCardinalTileDisplacement(runtime, locomotion.ActualDisplacement))
+                    observation.NonCardinalSegmentFrames++;
+                observation.MaximumFrameDisplacement = Mathf.Max(
+                    observation.MaximumFrameDisplacement,
+                    locomotion.ActualDisplacement.magnitude);
+            }
+            else
+            {
+                if (observation.EnteredEmptyOffice)
+                    observation.LongestStationaryMinutes = Math.Max(
+                        observation.LongestStationaryMinutes,
+                        minute - observation.LastMovingMinute);
+                observation.SawStationarySinceLastMotion = true;
+                if (actor.CurrentDirection != observation.LastDisplayDirection)
+                    observation.StationaryDirectionTransitions++;
+            }
+            observation.LastGaitCycle = gaitCycle;
+            observation.LastDisplayDirection = actor.CurrentDirection;
+
+            bool pivoting = !moving && locomotion.Phase == OfficeLocomotionPhase.Pivot;
+            if (pivoting && !observation.WasPivoting)
+            {
+                OfficeGridCoordinate pivotCell = actor.CurrentCell;
+                if (observation.HasPivotEpisode && !observation.MovedSinceLastPivot &&
+                    pivotCell.Equals(observation.LastPivotCell))
+                    observation.DuplicatePivotEpisodes++;
+                observation.HasPivotEpisode = true;
+                observation.PivotEpisodes++;
+                observation.LastPivotCell = pivotCell;
+                observation.MovedSinceLastPivot = false;
+            }
+            observation.WasPivoting = pivoting;
+
+            if (actor.WasCollisionProjected) observation.CollisionProjectedFrames++;
+            if (actor.LocomotionVisualFootPlantOffsetWorld.sqrMagnitude > 0.00000001f)
+                observation.NonzeroVisualRootOffsetFrames++;
+
+            string autonomySelection = actor.DiagnosticAutonomyIntentId + "|" +
+                                       actor.DiagnosticAutonomyDestinationId + "|" +
+                                       actor.DiagnosticDestinationId;
+            if (!string.Equals(
+                    autonomySelection,
+                    observation.LastAutonomySelection,
+                    StringComparison.Ordinal))
+            {
+                if (autonomySelection.IndexOf("current-look", StringComparison.Ordinal) >= 0)
+                    observation.CurrentLookSelections++;
+                bool destinationlessIdle = actor.Phase == OfficeRuntimeAgentPhase.Idle &&
+                                           actor.DiagnosticAutonomyIntentId.Length > 0 &&
+                                           actor.DiagnosticAutonomyDestinationId.Length == 0 &&
+                                           actor.DiagnosticDestinationId.Length == 0 &&
+                                           actor.DiagnosticPendingDestinationId.Length == 0 &&
+                                           actor.SemanticPathLength == 0;
+                if (destinationlessIdle) observation.DestinationlessIdleSelections++;
+                if (actor.DiagnosticDestinationId.StartsWith(
+                        "empty-office-wander:",
+                        StringComparison.Ordinal))
+                {
+                    observation.WanderSelections++;
+                    if (actor.DiagnosticDestinationCell.HasValue &&
+                        actor.DiagnosticDestinationCell.Value.Equals(actor.CurrentCell))
+                        observation.SameCellDestinationSelections++;
+                    float currentError = DistanceToNearestCellCenter(runtime, actor.Position);
+                    float previousError = DistanceToNearestCellCenter(
+                        runtime,
+                        observation.PreviousFramePosition);
+                    float departureError = Mathf.Min(currentError, previousError);
+                    observation.MaximumTileCenterError = Mathf.Max(
+                        observation.MaximumTileCenterError,
+                        departureError);
+                    if (departureError > 0.0001f) observation.TileCenterDeviationCount++;
+                }
+                observation.LastAutonomySelection = autonomySelection;
+            }
+
+            if (observation.LastRuntimePhase == OfficeRuntimeAgentPhase.Navigating &&
+                actor.Phase == OfficeRuntimeAgentPhase.Idle)
+            {
+                float arrivalError = DistanceToNearestCellCenter(runtime, actor.Position);
+                observation.MaximumTileCenterError = Mathf.Max(
+                    observation.MaximumTileCenterError,
+                    arrivalError);
+                if (arrivalError > 0.0001f) observation.TileCenterDeviationCount++;
+            }
+            observation.LastRuntimePhase = actor.Phase;
+            observation.PreviousFramePosition = actor.Position;
+        }
+
+        private void ObserveEmptyOfficeCrowd(
+            long minute,
+            StarterOfficeRuntimeBootstrap runtime,
+            IReadOnlyDictionary<string, OfficeRuntimeAgent> actors)
+        {
+            if (minute < 10L) return;
+            OfficeRuntimeAgent[] present = actors.Values
+                .Where(actor => !actor.IsPresentationAway &&
+                                actor.Phase != OfficeRuntimeAgentPhase.Outside)
+                .ToArray();
+            for (int left = 0; left < present.Length; left++)
+            for (int right = left + 1; right < present.Length; right++)
+            {
+                if (Vector2.Distance(present[left].Position, present[right].Position) + 0.0001f >=
+                    present[left].AgentRadius + present[right].AgentRadius) continue;
+                _observations[present[left].AgentId].ActorOverlapFrames++;
+                _observations[present[right].AgentId].ActorOverlapFrames++;
+            }
+
+            var duplicateTargets = present
+                .Where(actor => actor.DiagnosticEmptyOfficeWanderActive &&
+                                actor.DiagnosticDestinationCell.HasValue)
+                .GroupBy(actor => actor.DiagnosticDestinationCell.Value)
+                .Where(group => group.Count() > 1)
+                .ToArray();
+            foreach (var duplicate in duplicateTargets)
+                foreach (OfficeRuntimeAgent actor in duplicate)
+                    _observations[actor.AgentId].DuplicateDestinationFrames++;
+        }
+
+        private static float DistanceToNearestCellCenter(
+            StarterOfficeRuntimeBootstrap runtime,
+            Vector2 position)
+        {
+            OfficeGridCoordinate cell = runtime.World.Presenter.NearestCell(position);
+            Vector3 center = runtime.World.Presenter.CellCenterWorld(cell);
+            return Vector2.Distance(position, new Vector2(center.x, center.y));
+        }
+
+        private static bool IsCardinalTileDisplacement(
+            StarterOfficeRuntimeBootstrap runtime,
+            Vector2 displacement)
+        {
+            Vector3 origin3 = runtime.World.Presenter.CellCenterWorld(new OfficeGridCoordinate(1, 1));
+            Vector3 x3 = runtime.World.Presenter.CellCenterWorld(new OfficeGridCoordinate(2, 1));
+            Vector3 y3 = runtime.World.Presenter.CellCenterWorld(new OfficeGridCoordinate(1, 2));
+            Vector2 direction = displacement.normalized;
+            Vector2 x = new Vector2(x3.x - origin3.x, x3.y - origin3.y).normalized;
+            Vector2 y = new Vector2(y3.x - origin3.x, y3.y - origin3.y).normalized;
+            float alignment = Mathf.Max(
+                Mathf.Abs(Vector2.Dot(direction, x)),
+                Mathf.Abs(Vector2.Dot(direction, y)));
+            return alignment >= 0.999f;
         }
 
         private void AppendSnapshot(
@@ -401,8 +630,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 .Append(Csv(actor.DiagnosticPendingDestinationId)).Append(',')
                 .Append(Csv(actor.DiagnosticAutonomyIntentId)).Append(',')
                 .Append(Csv(actor.DiagnosticAutonomyDestinationId)).Append(',')
+                .Append(Csv(actor.DiagnosticDestinationCell.HasValue
+                    ? actor.DiagnosticDestinationCell.Value.ToString()
+                    : string.Empty)).Append(',')
+                .Append(actor.DiagnosticEmptyOfficeWanderActive).Append(',')
                 .Append(actor.SemanticPathLength).Append(',')
                 .Append(actor.DiagnosticPathIndex).Append(',')
+                .Append(actor.CurrentDirection).Append(',')
+                .Append(actor.RequestedDirection).Append(',')
+                .Append(actor.MotionDirection).Append(',')
+                .Append(actor.LocomotionPhase).Append(',')
+                .Append(Format(actor.GaitPhase01)).Append(',')
+                .Append(actor.CurrentWalkFrame).Append(',')
+                .Append(Csv(actor.LastActualDisplacement.ToString("F6"))).Append(',')
+                .Append(Csv(actor.SemanticFrameDisplacement.ToString("F6"))).Append(',')
+                .Append(Format(actor.FacingAngularErrorDegrees)).Append(',')
+                .Append(Csv(actor.LocomotionVisualFootPlantOffsetWorld.ToString("F6"))).Append(',')
                 .Append(Csv(actor.ActiveSeatId)).Append(',')
                 .Append(actor.DiagnosticSeatClaimOccupied).Append(',')
                 .Append(actor.DiagnosticSeatClaimReleased).Append(',')
@@ -503,13 +746,33 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         : string.Format(
                             CultureInfo.InvariantCulture,
                             "actor={0} arrivals={1} phase={2} activity={3} seat={4} workFrames={5} " +
-                            "tick={6} releaseReason={7} releaseTick={8} destination={9} pending={10} path={11}/{12}",
+                            "tick={6} releaseReason={7} releaseTick={8} destination={9} pending={10} path={11}/{12} " +
+                            "metrics={13}",
                             actor.AgentId, actor.AttendanceSeatArrivalCount, actor.Phase,
                             actor.CurrentActivity, actor.ActiveSeatId, actor.ObservedWorkFrameCount,
                             actor.R5eRuntimeTick, actor.DiagnosticLastSeatReleaseRequestReason,
                             actor.DiagnosticLastSeatReleaseRequestTick, actor.DiagnosticDestinationId,
                             actor.DiagnosticPendingDestinationId, actor.DiagnosticPathIndex,
-                            actor.SemanticPathLength));
+                            actor.SemanticPathLength,
+                            _observations.TryGetValue(memberId, out ActorObservation observation)
+                                ? ObservationMetrics(observation)
+                                : "missing"));
+                }
+                if (_emptyOfficeMode)
+                {
+                    OfficeAutonomyCoordinator coordinator =
+                        Object.FindFirstObjectByType<OfficeAutonomyCoordinator>();
+                    result.AppendLine(
+                        "coordinatorSelections=" +
+                        (coordinator == null ? -1 : coordinator.EmptyOfficeWanderSelectionCount));
+                    result.AppendLine(
+                        "coordinatorCandidateFailures=" +
+                        (coordinator == null ? -1 : coordinator.EmptyOfficeWanderCandidateFailureCount));
+                    result.AppendLine(
+                        "walkLoops=" + _observations.Values.Sum(item => item.ValidWalkLoops));
+                    result.AppendLine(
+                        "stationaryDirectionTransitions=" +
+                        _observations.Values.Sum(item => item.StationaryDirectionTransitions));
                 }
                 File.WriteAllText(ArtifactPath(artifactPrefix + "-result.txt"), result.ToString());
             }
@@ -584,6 +847,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             actor.Phase + "|" + actor.CurrentActivity + "|" + actor.DiagnosticDestinationId + "|" +
             actor.DiagnosticPendingDestinationId + "|" + actor.DiagnosticAutonomyIntentId + "|" +
             actor.SemanticPathLength + "|" + actor.DiagnosticPathIndex + "|" + actor.ActiveSeatId + "|" +
+            actor.DiagnosticDestinationCell + "|" + actor.DiagnosticEmptyOfficeWanderActive + "|" +
+            actor.CurrentDirection + "|" + actor.MotionDirection + "|" + actor.LocomotionPhase + "|" +
+            actor.CurrentWalkFrame + "|" +
             actor.DiagnosticSeatClaimOccupied + "|" + actor.AttendanceSeatArrivalCount + "|" +
             actor.ObservedWorkFrameCount + "|" + actor.CurrentSeatingClip + "|" + actor.CurrentSeatingFrame + "|" +
             actor.InteractionPhase + "|" + actor.DiagnosticLastSeatReleaseRequestReason + "|" +
@@ -602,6 +868,28 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         }
 
         private static string Format(float value) => value.ToString("F6", CultureInfo.InvariantCulture);
+
+        private static string ObservationMetrics(ActorObservation observation) =>
+            "wander=" + observation.WanderSelections +
+            ";loops=" + observation.ValidWalkLoops +
+            ";movingFrames=" + observation.MovingFrames +
+            ";stationaryTurns=" + observation.StationaryDirectionTransitions +
+            ";pivotEpisodes=" + observation.PivotEpisodes +
+            ";currentLook=" + observation.CurrentLookSelections +
+            ";destinationless=" + observation.DestinationlessIdleSelections +
+            ";sameCell=" + observation.SameCellDestinationSelections +
+            ";duplicatePivot=" + observation.DuplicatePivotEpisodes +
+            ";prePivotTranslation=" + observation.TranslationBeforePivotFrames +
+            ";directionMismatch=" + observation.DirectionDisplacementMismatchFrames +
+            ";nonCardinal=" + observation.NonCardinalSegmentFrames +
+            ";collision=" + observation.CollisionProjectedFrames +
+            ";overlap=" + observation.ActorOverlapFrames +
+            ";duplicateTarget=" + observation.DuplicateDestinationFrames +
+            ";tileCenterDeviation=" + observation.TileCenterDeviationCount +
+            ";maxTileCenterError=" + Format(observation.MaximumTileCenterError) +
+            ";visualRootOffset=" + observation.NonzeroVisualRootOffsetFrames +
+            ";longestStationaryMinutes=" + observation.LongestStationaryMinutes +
+            ";maxFrameStep=" + Format(observation.MaximumFrameDisplacement);
 
         private static string TimeLabel(long elapsedMinute)
         {
@@ -647,6 +935,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 LastProgressMinute = minute;
                 LastProgress = ProgressSignature(actor);
                 LastSignature = string.Empty;
+                PreviousFramePosition = actor.Position;
+                LastRuntimePhase = actor.Phase;
+                LastDisplayDirection = actor.CurrentDirection;
+                LastMotionDirection = -1;
+                LastGaitCycle = Mathf.FloorToInt(
+                    actor.GaitDistance / Mathf.Max(0.000001f, actor.StrideLength));
+                SawStationarySinceLastMotion = true;
+                MovedSinceLastPivot = true;
+                LastAutonomySelection = string.Empty;
+                LastMovingMinute = minute;
             }
 
             public int ArrivalCount { get; set; }
@@ -658,6 +956,38 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public long LastProgressMinute { get; set; }
             public string LastProgress { get; set; }
             public string LastSignature { get; set; }
+            public Vector2 PreviousFramePosition { get; set; }
+            public OfficeRuntimeAgentPhase LastRuntimePhase { get; set; }
+            public int LastDisplayDirection { get; set; }
+            public int LastMotionDirection { get; set; }
+            public int LastGaitCycle { get; set; }
+            public bool SawStationarySinceLastMotion { get; set; }
+            public bool WasPivoting { get; set; }
+            public bool HasPivotEpisode { get; set; }
+            public bool MovedSinceLastPivot { get; set; }
+            public OfficeGridCoordinate LastPivotCell { get; set; }
+            public string LastAutonomySelection { get; set; }
+            public int WanderSelections { get; set; }
+            public int ValidWalkLoops { get; set; }
+            public int MovingFrames { get; set; }
+            public int StationaryDirectionTransitions { get; set; }
+            public int PivotEpisodes { get; set; }
+            public int CurrentLookSelections { get; set; }
+            public int DestinationlessIdleSelections { get; set; }
+            public int SameCellDestinationSelections { get; set; }
+            public int DuplicatePivotEpisodes { get; set; }
+            public int TranslationBeforePivotFrames { get; set; }
+            public int DirectionDisplacementMismatchFrames { get; set; }
+            public int NonCardinalSegmentFrames { get; set; }
+            public int CollisionProjectedFrames { get; set; }
+            public int ActorOverlapFrames { get; set; }
+            public int DuplicateDestinationFrames { get; set; }
+            public int TileCenterDeviationCount { get; set; }
+            public int NonzeroVisualRootOffsetFrames { get; set; }
+            public float MaximumTileCenterError { get; set; }
+            public float MaximumFrameDisplacement { get; set; }
+            public long LastMovingMinute { get; set; }
+            public long LongestStationaryMinutes { get; set; }
         }
     }
 }

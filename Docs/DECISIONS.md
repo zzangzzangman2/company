@@ -8,6 +8,11 @@ Shadow 결과는 비교 진단일 뿐 fallback 목적지나 actor state를 바�
 완료한 뒤 translation한다. 같은 셀 `current-look` 재선택, destination 없는 장기 Idle, 중복 pivot,
 direction-displacement 불일치는 릴리스 실패다.
 
+결정: 걷기 여섯 포즈가 이미 발·골반·어깨의 상하 움직임을 포함하므로 `VisualRoot`에 별도 foot-plant
+위치 보정을 더하지 않는다. 충돌·점유를 소유하는 논리 root와 표현 root를 항상 같은 위치에 두고, 보행 위상은
+실제 이동거리로만 진행한다. 정지/look 입력의 방향 hysteresis는 유지하되 실제 translation 프레임은 그 프레임의
+화면 변위와 가장 가까운 방향을 즉시 사용한다.
+
 결정: 사무실 관리 구매는 green preview 표시만으로 완료 판정하지 않는다. 실제 Windows Player의 첫 유효
 좌클릭이 `ConfirmPreview()`에 정확히 한 번 도달하고 ledger·inventory·OfficeGrid·runtime apply가 원자로
 갱신돼야 한다. preview hover 갱신은 같은 frame의 confirm 입력을 조기 return으로 소비하지 않는다.
@@ -15,6 +20,8 @@ direction-displacement 불일치는 릴리스 실패다.
 이유: `b397af9`의 empty-office observer는 입장/퇴실과 진행 중 전환 정지만 보아 stationary 48 대 walk loop
 13의 제자리 행동을 PASS했고, editor/static purchase 검사는 실제 pointer 분기를 지나지 않아 녹색 preview 뒤
 클릭 무효를 놓쳤다. 사용자 입력과 생산 coordinator를 직접 지나지 않는 QA는 이 두 회귀의 최종 증거가 아니다.
+사용자 녹화의 반복 점프는 foot-plant 보정이 일정한 논리 이동 위에서 표현 root 속도를 주기적으로 0~1.5배로
+바꾼 결과였으므로 원화나 좌석을 바꾸지 않고 중복된 전신 보정만 제거한다.
 
 ## 2026-08-17 / 기능 작업트리는 warm integration 하나만 유지한다
 

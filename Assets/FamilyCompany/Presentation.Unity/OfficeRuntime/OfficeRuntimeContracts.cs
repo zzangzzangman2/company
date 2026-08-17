@@ -131,6 +131,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         bool IsPresentationAway { get; }
         OfficeActivity CurrentActivity { get; }
         Vector2 Position { get; }
+        OfficeGridCoordinate CurrentCell { get; }
+        OfficeGridCoordinate? ActiveDestinationCell { get; }
         OfficeRuntimeInteractionPhase InteractionPhase { get; }
         string ActiveInteractionId { get; }
         string ActiveInteractionOfferId { get; }
@@ -145,6 +147,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string intentId,
             OfficeSemanticLocation location,
             string interactionId,
+            string statusLabel);
+        bool TrySetAutonomousWanderDestination(
+            string intentId,
+            OfficeGridCoordinate destinationCell,
             string statusLabel);
         void ClearAutonomousDestination();
         void ResetRuntimeState();

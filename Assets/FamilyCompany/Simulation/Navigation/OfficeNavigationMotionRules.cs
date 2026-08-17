@@ -789,8 +789,12 @@ namespace FamilyCompany.Simulation.Navigation
                 authoritativeMotion,
                 deltaTime,
                 collisionProjected,
-                OfficeLocomotionPresentationRules.DefaultHysteresisDegrees,
-                OfficeLocomotionPresentationRules.DefaultFacingStabilizationSeconds);
+                // A translating sprite must use the nearest octant of this frame's actual
+                // displacement immediately. Boundary hysteresis is useful for standing look
+                // input, but holding an adjacent old direction while the root moves produces the
+                // visible sideways/backwards slide that this shared runtime boundary forbids.
+                0f,
+                0f);
             OfficeLocomotionGaitState gait = OfficeLocomotionGaitRules.Resolve(
                 gaitState,
                 isMoving ? actualTravelDistance : 0f,
