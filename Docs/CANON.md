@@ -66,15 +66,23 @@
 ## 가족 4명 보행 제작 정본
 
 - 최우선 계약은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의
-  `FC-CHARACTER-LOCOMOTION-GENERATION-V1`과 `FC-CHARACTER-LOCOMOTION-QA-V1`이다.
+  `FC-CHARACTER-LOCOMOTION-GENERATION-V1`, `FC-FAMILY-LOCOMOTION-RIG-V1`과
+  `FC-CHARACTER-LOCOMOTION-FOOT-LOCK-QA-V1`이다.
 - 현재 출하/gate 범위는 가족 4명×8방향×6위상=192 PNG다. 직원 후보 8명은 가족 4명의 실제 Player
   품질 승인 뒤 같은 정본을 확장한다. 제작/publish는 `Tools/generate_character_locomotion_v1.py`만 수행한다.
-- `BeforeCoherenceV1`의 승인 온몸 6포즈가 motion authority다. 허리에서 상·하체를 자르거나 pelvis cap을
-  덮지 않는다. 플레이어/엄마만 결함 전 방향별 identity anchor의 머리 영역을 underlap으로 겹친다.
-- 각 6프레임은 접촉 A·A 지지/B 초기 스윙·B 통과·접촉 B·B 지지/A 초기 스윙·A 통과다. 지지발 접지,
-  반대 발의 실제 진행축 이동·들림, 최소 자연 체중 이동을 함께 요구한다.
+- `ArtSources/FamilyLocomotionRigV1`의 SHA 고정 분리 leg parts와
+  `Tools/CharacterLocomotionIdentityV1`의 방향별 canonical upper가 source authority다. 완성 전신 6패널
+  생성, 허리 cap과 이미 중앙 정렬된 runtime 재입력은 금지한다.
+- 각 6프레임은 P0~P2 해부학적 left support/right swing, P3~P5 right support/left swing이다. PPU 180,
+  scale 1.55, stride 0.99380799에서 지지발은 local 진행축 반대로 phase당 19.234993px 이동하며 projected
+  drift가 1px 이하여야 한다. P1/P4의 canonical upper와 hip은 함께 1px 이동해 완전 고정 몸통과 seam
+  분리를 동시에 막는다.
+- 방향 승인은 row token이나 얼굴만 보지 않는다. 시선/머리→흉곽→골반→무릎·발목→양쪽 신발 앞코가
+  실제 변위와 같은 방향이어야 한다. 뒤발의 앞코 반전, 정면으로 벌어진 발, 같은 swing leg의 두 번 반복은
+  발 이동량·cadence가 정상이어도 실패다.
 - `ArtSources/FamilyWalkHalfCyclesV2`, `IdentityModelV1`, `MarkerReviewV1`은 가족 제작 provenance와 좌우
-  다리 증거로 보존하지만 shipping writer가 아니다. 구 builder `--write`는 차단돼 있다.
+  다리 증거로 보존하지만 shipping writer가 아니다. `BeforeCoherenceV1`과 `MotherSideWalkV3`도 현재
+  motion source가 아닌 실패 분석/역사 자료다. 구 builder `--write`는 차단돼 있다.
 - 정상 가족 런타임은 별도 `LocomotionTransitionsV1` 초상화를 섞지 않고 승인 walk/idle 계열만 사용한다.
   cardinal 타일 중심 구간은 다음 구간 방향으로 pivot을 끝낸 뒤 translation한다.
 

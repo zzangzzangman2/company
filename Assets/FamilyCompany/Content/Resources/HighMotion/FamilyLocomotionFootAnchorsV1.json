@@ -1,0 +1,1448 @@
+{
+  "schemaVersion": 1,
+  "contract": "FC-FAMILY-LOCOMOTION-FOOT-ANCHORS-V1",
+  "pixelsPerUnit": 180.0,
+  "visualScale": 1.55,
+  "strideWorld": 0.99380799,
+  "rootStepPixels": 19.234993354838707,
+  "maximumAuthoredSupportDriftPixels": 1.0,
+  "maximumPlayerSupportDriftPixels": 4.0,
+  "bodyOffsetsPixels": [
+    {
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "x": 0.0,
+      "y": 1.0
+    },
+    {
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "x": 0.0,
+      "y": 1.0
+    },
+    {
+      "x": 0.0,
+      "y": 0.0
+    }
+  ],
+  "rows": [
+    {
+      "character": "player",
+      "direction": "south",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 137.0,
+          "y": 241.414474
+        },
+        {
+          "x": 137.145455,
+          "y": 222.3
+        },
+        {
+          "x": 137.042254,
+          "y": 202.408451
+        },
+        {
+          "x": 118.940789,
+          "y": 241.434211
+        },
+        {
+          "x": 118.781818,
+          "y": 221.536364
+        },
+        {
+          "x": 118.887324,
+          "y": 203.239437
+        }
+      ]
+    },
+    {
+      "character": "player",
+      "direction": "southwest",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 116.6375,
+          "y": 242.045833
+        },
+        {
+          "x": 129.420382,
+          "y": 227.656051
+        },
+        {
+          "x": 142.045872,
+          "y": 212.981651
+        },
+        {
+          "x": 116.704167,
+          "y": 242.104167
+        },
+        {
+          "x": 129.426752,
+          "y": 227.636943
+        },
+        {
+          "x": 142.0,
+          "y": 213.036364
+        }
+      ]
+    },
+    {
+      "character": "player",
+      "direction": "west",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 112.513308,
+          "y": 242.642586
+        },
+        {
+          "x": 131.741071,
+          "y": 241.834821
+        },
+        {
+          "x": 150.947867,
+          "y": 242.118483
+        },
+        {
+          "x": 112.542714,
+          "y": 242.718593
+        },
+        {
+          "x": 131.790698,
+          "y": 241.948837
+        },
+        {
+          "x": 150.936,
+          "y": 242.572
+        }
+      ]
+    },
+    {
+      "character": "player",
+      "direction": "northwest",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 116.416667,
+          "y": 214.930556
+        },
+        {
+          "x": 129.366279,
+          "y": 229.52907
+        },
+        {
+          "x": 141.839806,
+          "y": 243.907767
+        },
+        {
+          "x": 116.430556,
+          "y": 214.902778
+        },
+        {
+          "x": 129.497041,
+          "y": 229.52071
+        },
+        {
+          "x": 141.790244,
+          "y": 243.902439
+        }
+      ]
+    },
+    {
+      "character": "player",
+      "direction": "north",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 118.876712,
+          "y": 202.273973
+        },
+        {
+          "x": 119.0,
+          "y": 221.433333
+        },
+        {
+          "x": 118.923077,
+          "y": 240.423077
+        },
+        {
+          "x": 137.236842,
+          "y": 202.184211
+        },
+        {
+          "x": 137.099174,
+          "y": 221.512397
+        },
+        {
+          "x": 137.109677,
+          "y": 241.380645
+        }
+      ]
+    },
+    {
+      "character": "player",
+      "direction": "northeast",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 138.583333,
+          "y": 214.930556
+        },
+        {
+          "x": 125.633721,
+          "y": 229.52907
+        },
+        {
+          "x": 113.160194,
+          "y": 243.907767
+        },
+        {
+          "x": 138.569444,
+          "y": 214.902778
+        },
+        {
+          "x": 125.502959,
+          "y": 229.52071
+        },
+        {
+          "x": 113.209756,
+          "y": 243.902439
+        }
+      ]
+    },
+    {
+      "character": "player",
+      "direction": "east",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 142.486692,
+          "y": 242.642586
+        },
+        {
+          "x": 123.258929,
+          "y": 241.834821
+        },
+        {
+          "x": 104.052133,
+          "y": 242.118483
+        },
+        {
+          "x": 142.457286,
+          "y": 242.718593
+        },
+        {
+          "x": 123.209302,
+          "y": 241.948837
+        },
+        {
+          "x": 104.064,
+          "y": 242.572
+        }
+      ]
+    },
+    {
+      "character": "player",
+      "direction": "southeast",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 138.3625,
+          "y": 242.045833
+        },
+        {
+          "x": 125.579618,
+          "y": 227.656051
+        },
+        {
+          "x": 112.954128,
+          "y": 212.981651
+        },
+        {
+          "x": 138.295833,
+          "y": 242.104167
+        },
+        {
+          "x": 125.573248,
+          "y": 227.636943
+        },
+        {
+          "x": 113.0,
+          "y": 213.036364
+        }
+      ]
+    },
+    {
+      "character": "older_sister",
+      "direction": "south",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 137.103704,
+          "y": 241.985185
+        },
+        {
+          "x": 137.255319,
+          "y": 222.755319
+        },
+        {
+          "x": 137.134328,
+          "y": 203.492537
+        },
+        {
+          "x": 118.978261,
+          "y": 241.949275
+        },
+        {
+          "x": 118.817204,
+          "y": 222.83871
+        },
+        {
+          "x": 118.927536,
+          "y": 203.521739
+        }
+      ]
+    },
+    {
+      "character": "older_sister",
+      "direction": "southwest",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 117.238095,
+          "y": 242.220238
+        },
+        {
+          "x": 130.155172,
+          "y": 227.922414
+        },
+        {
+          "x": 142.802326,
+          "y": 213.406977
+        },
+        {
+          "x": 114.924812,
+          "y": 239.902256
+        },
+        {
+          "x": 127.990741,
+          "y": 225.75
+        },
+        {
+          "x": 140.73913,
+          "y": 211.282609
+        }
+      ]
+    },
+    {
+      "character": "older_sister",
+      "direction": "west",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 111.259259,
+          "y": 243.847222
+        },
+        {
+          "x": 130.492308,
+          "y": 242.902564
+        },
+        {
+          "x": 149.754386,
+          "y": 243.988304
+        },
+        {
+          "x": 111.211712,
+          "y": 243.756757
+        },
+        {
+          "x": 130.371287,
+          "y": 242.782178
+        },
+        {
+          "x": 149.716763,
+          "y": 243.959538
+        }
+      ]
+    },
+    {
+      "character": "older_sister",
+      "direction": "northwest",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 117.25,
+          "y": 214.77
+        },
+        {
+          "x": 130.252174,
+          "y": 228.982609
+        },
+        {
+          "x": 143.296875,
+          "y": 243.15625
+        },
+        {
+          "x": 115.272727,
+          "y": 216.738636
+        },
+        {
+          "x": 127.809091,
+          "y": 231.518182
+        },
+        {
+          "x": 140.6,
+          "y": 245.786207
+        }
+      ]
+    },
+    {
+      "character": "older_sister",
+      "direction": "north",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 118.943662,
+          "y": 202.394366
+        },
+        {
+          "x": 119.082474,
+          "y": 221.690722
+        },
+        {
+          "x": 119.091603,
+          "y": 240.78626
+        },
+        {
+          "x": 137.056338,
+          "y": 202.394366
+        },
+        {
+          "x": 137.0,
+          "y": 221.696078
+        },
+        {
+          "x": 136.947761,
+          "y": 240.746269
+        }
+      ]
+    },
+    {
+      "character": "older_sister",
+      "direction": "northeast",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 137.75,
+          "y": 214.77
+        },
+        {
+          "x": 124.747826,
+          "y": 228.982609
+        },
+        {
+          "x": 111.703125,
+          "y": 243.15625
+        },
+        {
+          "x": 139.727273,
+          "y": 216.738636
+        },
+        {
+          "x": 127.190909,
+          "y": 231.518182
+        },
+        {
+          "x": 114.4,
+          "y": 245.786207
+        }
+      ]
+    },
+    {
+      "character": "older_sister",
+      "direction": "east",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 143.740741,
+          "y": 243.847222
+        },
+        {
+          "x": 124.507692,
+          "y": 242.902564
+        },
+        {
+          "x": 105.245614,
+          "y": 243.988304
+        },
+        {
+          "x": 143.788288,
+          "y": 243.756757
+        },
+        {
+          "x": 124.628713,
+          "y": 242.782178
+        },
+        {
+          "x": 105.283237,
+          "y": 243.959538
+        }
+      ]
+    },
+    {
+      "character": "older_sister",
+      "direction": "southeast",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 137.761905,
+          "y": 242.220238
+        },
+        {
+          "x": 124.844828,
+          "y": 227.922414
+        },
+        {
+          "x": 112.197674,
+          "y": 213.406977
+        },
+        {
+          "x": 140.075188,
+          "y": 239.902256
+        },
+        {
+          "x": 127.009259,
+          "y": 225.75
+        },
+        {
+          "x": 114.26087,
+          "y": 211.282609
+        }
+      ]
+    },
+    {
+      "character": "father",
+      "direction": "south",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 136.892617,
+          "y": 241.33557
+        },
+        {
+          "x": 136.89916,
+          "y": 222.294118
+        },
+        {
+          "x": 137.0,
+          "y": 203.255556
+        },
+        {
+          "x": 118.926667,
+          "y": 241.306667
+        },
+        {
+          "x": 118.902439,
+          "y": 221.463415
+        },
+        {
+          "x": 118.967033,
+          "y": 203.285714
+        }
+      ]
+    },
+    {
+      "character": "father",
+      "direction": "southwest",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 117.503846,
+          "y": 241.873077
+        },
+        {
+          "x": 130.342541,
+          "y": 227.552486
+        },
+        {
+          "x": 143.066176,
+          "y": 212.933824
+        },
+        {
+          "x": 117.586873,
+          "y": 241.996139
+        },
+        {
+          "x": 130.424581,
+          "y": 227.541899
+        },
+        {
+          "x": 143.126866,
+          "y": 212.962687
+        }
+      ]
+    },
+    {
+      "character": "father",
+      "direction": "west",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 112.104651,
+          "y": 242.166667
+        },
+        {
+          "x": 131.298077,
+          "y": 242.389423
+        },
+        {
+          "x": 150.578125,
+          "y": 242.848958
+        },
+        {
+          "x": 112.094118,
+          "y": 242.168627
+        },
+        {
+          "x": 131.475728,
+          "y": 242.26699
+        },
+        {
+          "x": 150.585106,
+          "y": 242.734043
+        }
+      ]
+    },
+    {
+      "character": "father",
+      "direction": "northwest",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 117.363636,
+          "y": 214.914773
+        },
+        {
+          "x": 130.243655,
+          "y": 229.253807
+        },
+        {
+          "x": 142.971963,
+          "y": 243.724299
+        },
+        {
+          "x": 117.52,
+          "y": 214.748571
+        },
+        {
+          "x": 130.596059,
+          "y": 228.576355
+        },
+        {
+          "x": 143.090476,
+          "y": 243.604762
+        }
+      ]
+    },
+    {
+      "character": "father",
+      "direction": "north",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 118.968421,
+          "y": 202.336842
+        },
+        {
+          "x": 118.854839,
+          "y": 222.185484
+        },
+        {
+          "x": 118.904192,
+          "y": 241.167665
+        },
+        {
+          "x": 137.0,
+          "y": 202.364583
+        },
+        {
+          "x": 137.0,
+          "y": 221.395161
+        },
+        {
+          "x": 137.029586,
+          "y": 241.159763
+        }
+      ]
+    },
+    {
+      "character": "father",
+      "direction": "northeast",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 137.636364,
+          "y": 214.914773
+        },
+        {
+          "x": 124.756345,
+          "y": 229.253807
+        },
+        {
+          "x": 112.028037,
+          "y": 243.724299
+        },
+        {
+          "x": 137.48,
+          "y": 214.748571
+        },
+        {
+          "x": 124.403941,
+          "y": 228.576355
+        },
+        {
+          "x": 111.909524,
+          "y": 243.604762
+        }
+      ]
+    },
+    {
+      "character": "father",
+      "direction": "east",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 142.895349,
+          "y": 242.166667
+        },
+        {
+          "x": 123.701923,
+          "y": 242.389423
+        },
+        {
+          "x": 104.421875,
+          "y": 242.848958
+        },
+        {
+          "x": 142.905882,
+          "y": 242.168627
+        },
+        {
+          "x": 123.524272,
+          "y": 242.26699
+        },
+        {
+          "x": 104.414894,
+          "y": 242.734043
+        }
+      ]
+    },
+    {
+      "character": "father",
+      "direction": "southeast",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 137.496154,
+          "y": 241.873077
+        },
+        {
+          "x": 124.657459,
+          "y": 227.552486
+        },
+        {
+          "x": 111.933824,
+          "y": 212.933824
+        },
+        {
+          "x": 137.413127,
+          "y": 241.996139
+        },
+        {
+          "x": 124.575419,
+          "y": 227.541899
+        },
+        {
+          "x": 111.873134,
+          "y": 212.962687
+        }
+      ]
+    },
+    {
+      "character": "mother",
+      "direction": "south",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 145.492308,
+          "y": 241.946154
+        },
+        {
+          "x": 145.048193,
+          "y": 222.759036
+        },
+        {
+          "x": 144.380952,
+          "y": 203.47619
+        },
+        {
+          "x": 110.519685,
+          "y": 241.984252
+        },
+        {
+          "x": 110.988095,
+          "y": 222.714286
+        },
+        {
+          "x": 111.704918,
+          "y": 203.42623
+        }
+      ]
+    },
+    {
+      "character": "mother",
+      "direction": "southwest",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 118.125,
+          "y": 242.402174
+        },
+        {
+          "x": 130.941176,
+          "y": 227.352941
+        },
+        {
+          "x": 142.865854,
+          "y": 212.731707
+        },
+        {
+          "x": 114.820144,
+          "y": 239.129496
+        },
+        {
+          "x": 128.067308,
+          "y": 225.105769
+        },
+        {
+          "x": 140.735632,
+          "y": 210.494253
+        }
+      ]
+    },
+    {
+      "character": "mother",
+      "direction": "west",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 110.787037,
+          "y": 243.537037
+        },
+        {
+          "x": 129.931937,
+          "y": 242.827225
+        },
+        {
+          "x": 149.321637,
+          "y": 243.94152
+        },
+        {
+          "x": 110.717593,
+          "y": 243.601852
+        },
+        {
+          "x": 130.154639,
+          "y": 242.840206
+        },
+        {
+          "x": 149.201149,
+          "y": 243.954023
+        }
+      ]
+    },
+    {
+      "character": "mother",
+      "direction": "northwest",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 116.959596,
+          "y": 214.151515
+        },
+        {
+          "x": 129.37963,
+          "y": 228.916667
+        },
+        {
+          "x": 142.740157,
+          "y": 243.307087
+        },
+        {
+          "x": 115.469136,
+          "y": 215.641975
+        },
+        {
+          "x": 127.729167,
+          "y": 230.604167
+        },
+        {
+          "x": 140.453901,
+          "y": 245.078014
+        }
+      ]
+    },
+    {
+      "character": "mother",
+      "direction": "north",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 111.737705,
+          "y": 202.180328
+        },
+        {
+          "x": 111.082353,
+          "y": 221.858824
+        },
+        {
+          "x": 110.64,
+          "y": 240.64
+        },
+        {
+          "x": 144.283333,
+          "y": 202.15
+        },
+        {
+          "x": 145.071429,
+          "y": 221.630952
+        },
+        {
+          "x": 145.508333,
+          "y": 240.641667
+        }
+      ]
+    },
+    {
+      "character": "mother",
+      "direction": "northeast",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 138.040404,
+          "y": 214.151515
+        },
+        {
+          "x": 125.62037,
+          "y": 228.916667
+        },
+        {
+          "x": 112.259843,
+          "y": 243.307087
+        },
+        {
+          "x": 139.530864,
+          "y": 215.641975
+        },
+        {
+          "x": 127.270833,
+          "y": 230.604167
+        },
+        {
+          "x": 114.546099,
+          "y": 245.078014
+        }
+      ]
+    },
+    {
+      "character": "mother",
+      "direction": "east",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 144.212963,
+          "y": 243.537037
+        },
+        {
+          "x": 125.068063,
+          "y": 242.827225
+        },
+        {
+          "x": 105.678363,
+          "y": 243.94152
+        },
+        {
+          "x": 144.282407,
+          "y": 243.601852
+        },
+        {
+          "x": 124.845361,
+          "y": 242.840206
+        },
+        {
+          "x": 105.798851,
+          "y": 243.954023
+        }
+      ]
+    },
+    {
+      "character": "mother",
+      "direction": "southeast",
+      "supportLegs": [
+        "left",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right"
+      ],
+      "supportAnchors": [
+        {
+          "x": 136.875,
+          "y": 242.402174
+        },
+        {
+          "x": 124.058824,
+          "y": 227.352941
+        },
+        {
+          "x": 112.134146,
+          "y": 212.731707
+        },
+        {
+          "x": 140.179856,
+          "y": 239.129496
+        },
+        {
+          "x": 126.932692,
+          "y": 225.105769
+        },
+        {
+          "x": 114.264368,
+          "y": 210.494253
+        }
+      ]
+    }
+  ],
+  "assetRgbaSha256": {
+    "player_south_walk_0.png": "86B76C49B85E302258EA7B1A53FE81DCDF359CF7D237154198898049B9843C1F",
+    "player_south_walk_1.png": "CD4BACFE942D6A06311095FF5A417B03049158B0D1D249DE3F06825E9B717571",
+    "player_south_walk_2.png": "F1930E399CF7097AE8C1B6E7B4A9F21D1BFA8117323C48792CEE960D390C3519",
+    "player_south_walk_3.png": "06788E1A771A20F46CBE68644919B7F19064D067DBDDC92842773BD18256C6B9",
+    "player_south_walk_4.png": "D29F963956C1CCB36D095C3EAF1E2F4D0B7D08EFFCC6F6EBABE0BA2BB1D533C3",
+    "player_south_walk_5.png": "5B1807AF8AA58EC1B0C15662734DDA8BB8A0C853154BC80419F75B7A7090F55C",
+    "player_southwest_walk_0.png": "F9EB07071D4728DAAFEFBB8921E88C14D00CBD539DFA0EE976AADDCF9489D924",
+    "player_southwest_walk_1.png": "90D63D6E938BAE5A5A2726153BF21A43E5FD956CB068A225CFF96008A94CE3C6",
+    "player_southwest_walk_2.png": "7E749C783F986346EEF5586EB3130CE8A2EB7CDD8C0906DC40160F1CB8DB6D8E",
+    "player_southwest_walk_3.png": "47152672FC8F55CBAF0EA16490F4EEC98764C1FD81446B6049678E6C5B1A1D07",
+    "player_southwest_walk_4.png": "64E2C7833DD0AC169A413D89B5094DDBD35E81B7764A909C21535962E9D2C67B",
+    "player_southwest_walk_5.png": "F0C8CABE955660276EE6670836FDBA3A3F7E68433112AD918B37D90E2ECF39E3",
+    "player_west_walk_0.png": "F13CCACC19BA471AAAB7FFA7880D7404C3884C4517340F97ACCDE33061C6B78F",
+    "player_west_walk_1.png": "9189EB938CBAFB2ADDDE7EDF3833CBD42B852B951FC3322C3F97621D0DE74264",
+    "player_west_walk_2.png": "678FE7A28CF633DBA471EC235432589F68DF1DA73C455AAC407D92299BD1A1F3",
+    "player_west_walk_3.png": "CC15F0BD736B8A9267857D1BCD34213A2A1023129D39C964AB8CB307335FC27F",
+    "player_west_walk_4.png": "4CBED231F0A1A5F20A4EB30EB299168DD14B6A3474CAE36B6AD354BE34FE4883",
+    "player_west_walk_5.png": "361F64559C882652A1872A4C630C42990235325E75454AF4EB3B3FC50C6DB696",
+    "player_northwest_walk_0.png": "1F20F7515C6EEF489930B86D44922A34054549B5D92271142196C3D83A0BC01A",
+    "player_northwest_walk_1.png": "5604DBB2474D88B4206FF395FB2C9C58124440AE0EAD5D9F888D85F2508B2C0B",
+    "player_northwest_walk_2.png": "CDFBC61F6D884EA1427241D14F1B03EC519C70FB7D58ECF865D77E7DF7BD70C4",
+    "player_northwest_walk_3.png": "2D02BE1170BF2217B1533931CC1BDBC7D8E42A3D054B020E2A082FF91D56CB95",
+    "player_northwest_walk_4.png": "5A731CDDB792656C9B43CD562BBAC88A7C8888D981459826CF23B2193D40159B",
+    "player_northwest_walk_5.png": "DC869F24691EE05CCB4EF7B4DE5BCCDF6D2790860F96D9184B0CBDB3B6DA5E1F",
+    "player_north_walk_0.png": "25B2DD35E6189A033FC32FE4586315FD4BFE0017DC0741961CF3AF6689DFA8F5",
+    "player_north_walk_1.png": "CECA0B03C730211BD77AEB86E6AD7FB0EAFBE75E640F0B50D2FFA6832D18CA1F",
+    "player_north_walk_2.png": "F1E7A4F462A869C82EF887E4B658F5B0691C1B61A39073421BB5691952D39E70",
+    "player_north_walk_3.png": "F253EABD8E58A73323C6469A799D34B04052B9CAE397DD359BD8FEAD10FE6949",
+    "player_north_walk_4.png": "A298B3BAB0C119D4E362A62DB1B787CAC1AACC9254527059D0D7B5AE30C73075",
+    "player_north_walk_5.png": "8225AD5E29EDD346F6A545172D18784D677E7C2ABAFBE8A83A2C74C8383279D2",
+    "player_northeast_walk_0.png": "941C3CD4249E25F467EF417DE586CF4E321DCE694CB5D456970DA7349709DEEF",
+    "player_northeast_walk_1.png": "45C6DE3BF01CD057FC906EF059B15DCFA75E0B4FF6C529DCC769D807FB9D0976",
+    "player_northeast_walk_2.png": "DF434A85EF71C2326E25224E144505B35736E5A0935AB523866167548719B5F7",
+    "player_northeast_walk_3.png": "9DD3283A5CF29379B2C833711EF09E896D5167789BAE40B94EA16F71B211E075",
+    "player_northeast_walk_4.png": "138D08DEF4F099B81266C4E7E247EAB42C705CDF497BD388A60DF7CE6E46C4EB",
+    "player_northeast_walk_5.png": "BFEA20E9F4B5903001554E4DB5B47EFE5B1B14778E362E9F0B66096EACA5B9EA",
+    "player_east_walk_0.png": "95D3D5D2033F2BBCF22821C9B9F8ACE14E624CD30791472A98D75D7F21B18563",
+    "player_east_walk_1.png": "261885896E0AEEB8D62D257C16DF2A7B98511C0A8398AE0CCC2051C7E240D922",
+    "player_east_walk_2.png": "232963E794A35A5950CB5B503E31F95AA4A275D8F719EAA56CFC0821235E2130",
+    "player_east_walk_3.png": "8336B400EE20BBD6218CD6747D51D257E717002FB83D67499A5D480FF232AFDE",
+    "player_east_walk_4.png": "A117B8D1D5F8975CF401F1073764AA7ADDDAE421BDFF4CFF254C5DD98BB88441",
+    "player_east_walk_5.png": "6F7249133FE5D3B86FC7FFB04BF47CCB5086AC61933A5F94360D493C3131AE60",
+    "player_southeast_walk_0.png": "7F7A757527EFC269319BED5AEE524963C898B12D2F8330893AFFC867A123D0C7",
+    "player_southeast_walk_1.png": "7A7848806A9ED9A8666B49C56E7D1DA86050CC597E9B451BAAFBE221755814A3",
+    "player_southeast_walk_2.png": "76A6FE02337979CECA4050F366E816F168F3674950A52472D2863D5ADFB0583B",
+    "player_southeast_walk_3.png": "B45E5F46F4290F4E5D6EF1302850B9712631CE0057060E63BFDDBE6AA4B01A5B",
+    "player_southeast_walk_4.png": "A0B566B81DFA15E082EE91DFD5E35E30882198A223ED99BEF84630EBD91EE65F",
+    "player_southeast_walk_5.png": "1D65C451A9607C225A169EFF26CBCA8C4D319303D53DAD9A86DA7F08603E43BC",
+    "older_sister_south_walk_0.png": "0728DCA415BD838B3E69589F9143146EFFDF9DA960C74578F5E29E914EE8BCA4",
+    "older_sister_south_walk_1.png": "A0A8277B9D626A0CEA3CDE042AB107ECCC4B4C697493D98DF46442DFDE3B5299",
+    "older_sister_south_walk_2.png": "B388476D3B1F7D5250B1D1A04F41B66AC3F09CF450C8E5A77F5659E3DAA835DA",
+    "older_sister_south_walk_3.png": "ECF7B03A1B24FFA19F92A5582C76800EE04B17192BB36A48D3BE87C1FB533FE1",
+    "older_sister_south_walk_4.png": "3A513BC01CC3EC54F1794BB4553FE3F5C800E787D04F8F45876B356F46C94AF4",
+    "older_sister_south_walk_5.png": "B098B7E27F1C0CA6255A897372BFBF9ACDEA094145200B245907D7907AF774B4",
+    "older_sister_southwest_walk_0.png": "D78914CC5D2169446D9BE2FEF19507EC90C866AFD8FA6E84947CBD0AA1F86DD1",
+    "older_sister_southwest_walk_1.png": "F9D91F4C239000DF51D736D20767CAB12DFC18C1E039F4E8F9207E9B3EA74DFF",
+    "older_sister_southwest_walk_2.png": "3142D396C8EB78A27BDA181EC7BDE8248ACFB948A97EEE511A463FAF90235230",
+    "older_sister_southwest_walk_3.png": "5D8DA93B68399F39E4374B6C3BB6AC71824170585046555FAF62C8BBE3502D29",
+    "older_sister_southwest_walk_4.png": "531D5C5F279AB3057D1D4B64EA02E2F5FDE59AC438AB6A322BE8D50ABE3B8ECE",
+    "older_sister_southwest_walk_5.png": "A9C54F9A736D874DE1E03C6B6643025A67D4B080834E6EB9400CB45C5E745ED3",
+    "older_sister_west_walk_0.png": "AC23B8906F956EF9D35045F2C2F8686C903846AC144613C62F12C2FD83D6E5F3",
+    "older_sister_west_walk_1.png": "86D423597CA5538C7F9A8DEF5BE91FFC270ED3EAD4E0AAA0BC90257392D6D0E5",
+    "older_sister_west_walk_2.png": "E53F6E2B41AB8E8415D394A82EB9A52F4D2944584583FE56DE38FA776EDF914A",
+    "older_sister_west_walk_3.png": "1FD811D3A0EFBFA9B2C3ED33A5D2676384858650940534EE0E08D8DBAE2EE477",
+    "older_sister_west_walk_4.png": "C470BDA92EEA52328604ABF31B6FB079CBCCB3D157BD70EB0B3FD1045C754BB0",
+    "older_sister_west_walk_5.png": "D8A191BE91182CD6363FE9F13B97C1440DF91B3A3913B9FA584346CA9199A5D1",
+    "older_sister_northwest_walk_0.png": "B261158DA12EC6799553A3621C102803986B736DE6483FCBC940CACB2F6511EF",
+    "older_sister_northwest_walk_1.png": "61AB5D6DE600864C21DE184524152D71A16273746E4A8ADA594DD895F0042F71",
+    "older_sister_northwest_walk_2.png": "AE2F52A53F7CD57ECD816F907A1951508E2E4F9A791DE0F160023F3C67052E17",
+    "older_sister_northwest_walk_3.png": "03D5C27188C2F842A2BB621DACD212BD1EDD9D5882F97775390833210C85BF35",
+    "older_sister_northwest_walk_4.png": "35DDFBA2CC8C0E491DD3CB4983B8C96AB63D1505E83BCC5A2A4EF145E8459894",
+    "older_sister_northwest_walk_5.png": "D8578CCBAA42174AD2F25A2FC3C8D4C8762D280900108B953A5304A1B711D777",
+    "older_sister_north_walk_0.png": "CB52F7CC6B8E59220557F836DBBFE0026702CD57787BA5DAC6685642F7603650",
+    "older_sister_north_walk_1.png": "9442FB67EE43CD7EEDECC854476286BF8F1121BA4A169003F24161270390A92C",
+    "older_sister_north_walk_2.png": "7DF268FE032D44017F7FDB3574D624367335F69A928A80855ECF41BEBF9A2551",
+    "older_sister_north_walk_3.png": "E31F95F0A404ECB02AD6A2B7A2BC198C70759C499A7F620F2D38F5458FA3CE14",
+    "older_sister_north_walk_4.png": "B35F0F2F940781D37505C4D4D765A6E1F33C0B9B0AE34F3D10EE5D9B16BAED99",
+    "older_sister_north_walk_5.png": "E8509042A8CB3002735D93B0C5180A4832B41E0CA5A4914BDAA93CAFF4F73B28",
+    "older_sister_northeast_walk_0.png": "3530DCA4552E2E13DF42980A785F64E72AFD8AEDB1FA9045CBBD6C40EE5055E4",
+    "older_sister_northeast_walk_1.png": "465B936F09FF5BF51A1A34CECB10F8E52E262A87CAAF2575E627A7FC46CCF436",
+    "older_sister_northeast_walk_2.png": "E19ECC5D23BA3B165CB81C796107B9D8CDF8078A7917FD0F5A2A869AFC420AA6",
+    "older_sister_northeast_walk_3.png": "6E1EB6AE2FBEE0C94DAAF2EDA3F6F4F24BBF163CCEF7A32D4C23410D2E241EA8",
+    "older_sister_northeast_walk_4.png": "BDEC8F53C969A53DC4FE23D30D36118D3D7BC15724EF1F3530D8471A66EE216D",
+    "older_sister_northeast_walk_5.png": "83DE788EB743E1F4E01F1894FD15FC3E3815812E2CE782F2EC42D5747EE5AABA",
+    "older_sister_east_walk_0.png": "0720F52C44C919A919AEF50026B47C51DD6D1C03E073FADA79E90F4DAD00D6D0",
+    "older_sister_east_walk_1.png": "CA4F7201B4BCC1857382CDCD7B34F35B967A1090847FBD99E0BCB67613569286",
+    "older_sister_east_walk_2.png": "FA0F37C572F9CA7A2BB2D8A50DC83ADCD7A4704149A8823C2074752E3F57055F",
+    "older_sister_east_walk_3.png": "F17C5E5A47CCF0396498746F98E9F5E4125D1E87879C298AA79ECCABBEE1742F",
+    "older_sister_east_walk_4.png": "0C6AC0702D14BDE3AF6274FD999DFFE1BC7DEF2C3277F94F575744B39681A911",
+    "older_sister_east_walk_5.png": "BA77B6FF4800E7A772AD192E53350808BDD3DE88B3B6622EBCD8E301CD1B0E65",
+    "older_sister_southeast_walk_0.png": "7C65469B3B1976E7B444FA1E334249324D346FC28714AA74AE33CEAEA3E456C9",
+    "older_sister_southeast_walk_1.png": "C13C903370D31CEA5FBFBDD37CF831125A2B09840F4AFED929F5644FD40A209A",
+    "older_sister_southeast_walk_2.png": "1F5B829AD5F0DF82CBC7D85152569F7013CF191D795BD0CEA41A55009F9F89D4",
+    "older_sister_southeast_walk_3.png": "3BCFCBCF7430E493CD3B9F3D693BE0EC55A0C8769BC9A6032EF682B8879BC712",
+    "older_sister_southeast_walk_4.png": "52ECFAABBA5A92F18B6ED189A39C3EF6179B96F9683777EB9C03F38DFD4CE958",
+    "older_sister_southeast_walk_5.png": "61ED24570423D1ED0BBC5B78DCFF286A344AEC0F8BDE73940536DDC248B57924",
+    "father_south_walk_0.png": "6F10FB31B7665A5D9A68C6E4F3BA7B85FF1A839C7C28207D9873D6A84796BE5D",
+    "father_south_walk_1.png": "0AA399DE38D01AFB5F39A390034DB473F29D6497EF302CF7284F39BC5F8CBE89",
+    "father_south_walk_2.png": "61A6662C55953C6824C0A492829759F053B1EF7B023AFEE008CB37B62D2B38CA",
+    "father_south_walk_3.png": "C870F220E1D325F263856244458C34D6FD253B6B7920529091192DB8D19D7098",
+    "father_south_walk_4.png": "A7172636A5494F340E3D6E3CE53BCACBC030D8A43DEC65DB819DDCB702413659",
+    "father_south_walk_5.png": "D303196884236EE63AF01F700687683907FE62C3F57AE2224373DA9281B1C047",
+    "father_southwest_walk_0.png": "C147E1F7C8B02CBEB0867A1668D9410F10E4FF2A094352FD1226B26E784192DF",
+    "father_southwest_walk_1.png": "6FEF534B9D3DA3CAA773D3A02FEC41E15F27FF27FA41B4129340ADB092E3284E",
+    "father_southwest_walk_2.png": "328C01F16F0F88BF7B4B9EE451135AC65CCA571674647E47D67E962BB87EC39E",
+    "father_southwest_walk_3.png": "9E93BA0E4CEC75E012821E959F8BD3A2DA4F0043FD628505559BF3D5C5078B87",
+    "father_southwest_walk_4.png": "2C7871BD0966F00A4988F6F4E348F73088F102998D043ABF8E72DCFB2C998F03",
+    "father_southwest_walk_5.png": "F3EDB16B42E35B66AEEDC18D5D7D0EA4297427E7A51E9D5D8B300696A88F5291",
+    "father_west_walk_0.png": "585AB1485B66A4B3DD42D651069919EA2BCB12BAAFC3F52AA787D8CDB0D51365",
+    "father_west_walk_1.png": "55EBB775949C8D6DBAFF737DCD53540D37BA241EC2DDF8DE5DE5F2FA052E527E",
+    "father_west_walk_2.png": "271301CDD4A16C17549AC3893A00A230B2D120DA3845AF68FE65887EF81779BE",
+    "father_west_walk_3.png": "4D3FA77382076437FCEEAFD14732CB1385B7FDF2D0C8A23F5D9CE6EDF75E9650",
+    "father_west_walk_4.png": "AAF3336356CDA1CD4B3C440815BBFBE032E6B87C7621523E779F92DF4E387F4D",
+    "father_west_walk_5.png": "7F0D911353A60D23CD8FC9254DFD0FD1BFA027C8474F6546748DF944DBB49F87",
+    "father_northwest_walk_0.png": "2B32C80AE675E799F395FAE928F8F517B59A55B474ED13E35E8CFD705D652DE1",
+    "father_northwest_walk_1.png": "3B99E834237AC9AD5787304A90FADD202A9F9F6DC47BC7B209B32AFC26B676F5",
+    "father_northwest_walk_2.png": "945EE62690E155EEAD9613518687112CCF0F2418A236265FBB5884A5049659DB",
+    "father_northwest_walk_3.png": "794F2D8F7B3A9FC3535FE548FF04501915B975DC08F58548EABB6DF8783907E9",
+    "father_northwest_walk_4.png": "83507CAFD637F2F5426083E52C6345971C4D664A45964A0142FC3BD914E0E8A4",
+    "father_northwest_walk_5.png": "BEC0178F73B5952B91E1A31FBC299A960C445C1F47A095EAB8059DE3267D5151",
+    "father_north_walk_0.png": "2FF0B137E233B3D9D41AC2FFCEAC53B413A491228B4EFDCABF8D476B8C8260CB",
+    "father_north_walk_1.png": "9BED2D37F6C442D4A2B14F45A60726BBEA7EDB9155141BB3FB07C58E68F27D4A",
+    "father_north_walk_2.png": "41C9AE158482D22BA2C55778CAE74BFBAF53651411C1ED37B3938D9EC7F2CDB6",
+    "father_north_walk_3.png": "2532263FE24562D2F723B46569CDF20331E0037F9CF2EB4F4F5B5B8F144842E4",
+    "father_north_walk_4.png": "FCAB80E844902D8F7BFCFD56A00BA766E7A2FC2AACD9FF14EAD7746806F910A7",
+    "father_north_walk_5.png": "EE45C205787EAF210E90A65E79E4855FD58BD83E214F2DBFC3C27BE0D1A3C144",
+    "father_northeast_walk_0.png": "A98484C6282C994BA3C0B81C06DA09B5238FFB8A20B1BE33F59F767B2FD4669F",
+    "father_northeast_walk_1.png": "C04C47F7BBA02CC8242F597644D7D26C89097C6E6EED33907C27F335DB77D6E5",
+    "father_northeast_walk_2.png": "904FB8445142E5F13F0C31091E2CB68C60B9484B3F72321467A4B095AD208968",
+    "father_northeast_walk_3.png": "3F833B201377B81EBE0D7AAFB0F0B2053044B1576D332C0A59CCF43DC754A046",
+    "father_northeast_walk_4.png": "F5215061297B081027F1755E1EB215F3E96F3A128C43035C4B95575525DABAF6",
+    "father_northeast_walk_5.png": "207114798C40A4AF05750343D4B189CAE7A63A0075CD73FB083FD13C0D3EDBC2",
+    "father_east_walk_0.png": "0C5F2241C79735DEDBDEAFDAF0C132D6B764CC0351EE6533C962C53CC9D650F5",
+    "father_east_walk_1.png": "6B9C6EF168B9F5884E6585D256856CD3FB145C2417C1ABA8098151598150F1C1",
+    "father_east_walk_2.png": "8BD2CB3C3AA20D817FD2BFA43484B8D9A372713765E65573F67E96E506340C90",
+    "father_east_walk_3.png": "BCC4A22673335C60D2DE505231FEADA7E26EB412AC3EE72C1514AC733F55C944",
+    "father_east_walk_4.png": "21C85E1BD3BCC21DFC681283A8575D0D3145BD09BC97EDE802932F52B6DD4381",
+    "father_east_walk_5.png": "3732DCFD1C5B6C0DED304B24801D37E367DA13C1D1B07A4C0F09E2A2539E1ABF",
+    "father_southeast_walk_0.png": "C378CD1B13E61262892ED6D50BABED820E723C3F988017994F49B0106A4326EB",
+    "father_southeast_walk_1.png": "7BF54E99BC3A59DC986CBACD08EF2CFE57F55A6393A500A610F02AEBEF7427D0",
+    "father_southeast_walk_2.png": "424479257C4681F14291C4E7913168281911BA3273C28566151E2C1C3395FCE4",
+    "father_southeast_walk_3.png": "6780997894304E948ED1D63A5F69ACB80BC6382E516CC106D21F0DCA4A25361B",
+    "father_southeast_walk_4.png": "354C8DB395BB3EE2522B19A3C5051CDA677BADB89D89897CBABB3CAF78F29690",
+    "father_southeast_walk_5.png": "21DAA525058A986A8DB9EB71303594BC276E57599D37078D80E1E8A2356EC3DA",
+    "mother_south_walk_0.png": "49C09CDE41AF92073CD39A8FC37A4E4DD92C43554F389C9CCE2D78511067152C",
+    "mother_south_walk_1.png": "CF6058975C78F60E841EF958D3C881A1478712121BCA75A8D6789624BE2AA803",
+    "mother_south_walk_2.png": "3861120287D3AC38C4DBFBD783497BE5A12F2ABEFE3C92894CBD093A4497A623",
+    "mother_south_walk_3.png": "6760865DF4E02DE7990EB550E1DBCEC3EA51E55B02BD33C1D9BC858CC3235EAB",
+    "mother_south_walk_4.png": "0C5245650255DD8F844CAE18C18C93FAB5A638676CBECC01DA2118CBC872A757",
+    "mother_south_walk_5.png": "D1B6B16FCAB0CD7A0932FEE52282EFC8212D89F9FB8105F86C432D2791E7A5FE",
+    "mother_southwest_walk_0.png": "4DDEE3F55AF9E7B97CCA4FC419D3F52C6BAFE8EB2500174527EDA4D8750378F1",
+    "mother_southwest_walk_1.png": "7FF0BEE7B7BE3980AB2B8BDAD71246344D4B62B105AE47842C58245BDEF94C5C",
+    "mother_southwest_walk_2.png": "EDEE882138EA95F84DDC422BA4C172570C9B7A810A65755EA8B67572C2B278BC",
+    "mother_southwest_walk_3.png": "6EB9D4FF2A5B23F144D60484A3535882398E66AB91E7EDCC39011F220C4E5357",
+    "mother_southwest_walk_4.png": "BDD95CAF3FD44C3518A9BC1C4A631D52F4D47039A2623B92EB6CB3E9F4158267",
+    "mother_southwest_walk_5.png": "53A0262BED1779D8F238552A797CC28EA1A285782F3E6055564391E7AA3F9176",
+    "mother_west_walk_0.png": "206BF02DD96B0F90099ED91C4BFFD297D2B6C412ABBF12EBF6296A831068A378",
+    "mother_west_walk_1.png": "0E0393D9D72081A876DA5D50232BC1708761AA71163B629A054C86C728CEEA3D",
+    "mother_west_walk_2.png": "E23DCCE93F63A597C4FDF5431C1C8B669BF20301BD6C71A3BC78F4D4D260D1A1",
+    "mother_west_walk_3.png": "21577A8D9CC289BB7950C55CE9C86864077833D6ADC83ECC21A7EB9C5109C3EE",
+    "mother_west_walk_4.png": "059E555C16F2C5E026BDC56584C7308B0B6C6ED12E1E1F6D7632F043616421E5",
+    "mother_west_walk_5.png": "75B31E1D9882FB14D3855167A8DF4CCE6D9E5E2AA1AC1485B1B51175A78FAED4",
+    "mother_northwest_walk_0.png": "200067D7EA8B56C8D011A4AD10421E27FACEAC0F0C36EDCE1DE1E15F26248C61",
+    "mother_northwest_walk_1.png": "5568AA48EAACF96F9302F962FECBA73288861FCF77D384062302072B4CCF12E0",
+    "mother_northwest_walk_2.png": "6205774D28DDF47F61EFA51E35829311BE7A78E3A13F236AE35B012A141EFC0E",
+    "mother_northwest_walk_3.png": "E4485299B0491C74DF0FFC72DD1BFCF22521E1B1A3B20F1E08A5290C15A82B40",
+    "mother_northwest_walk_4.png": "08361BA32CBD1ECFF9120C1103C55DB5BAE1EF54A7BDF63CB9E113AC2BA0C8D8",
+    "mother_northwest_walk_5.png": "DA842BF6048023EE15AE09C0F7137D4CC16F4B3B7D7F6EBC6855FEAFE685C6A2",
+    "mother_north_walk_0.png": "E0875438805992CA75AA5BBDA0831C21BD443A6D7001A1B80B7913418486D1F9",
+    "mother_north_walk_1.png": "E3C7B6FE991EC11B650ADC50FBA471A6431B153B2605A9807660DBAC2B236E4A",
+    "mother_north_walk_2.png": "8DB60AD363D431C503BE00D2C8B8F66ED0133392397AF5DB7993A33FD878E1F7",
+    "mother_north_walk_3.png": "A9B9EE71ACFA1A7A0029FD5616A4E74F62A3186EC56D20E3A5E8E9F7E0C50548",
+    "mother_north_walk_4.png": "9D8C7F2369CFEE6A404B80DC4BBE61EAD06251E69F5A87BD34DC3D765BB8F2F0",
+    "mother_north_walk_5.png": "C6721043CCF80A71863C6308E52D0C7DD547B0E382B254E0B30B35E474ED98B8",
+    "mother_northeast_walk_0.png": "9EDA026A71E62E6F607829407210FD351F12900075A756B5A00D231BBDD6F49A",
+    "mother_northeast_walk_1.png": "49570BAFF570D68351A2FB645087BDE8BA0EC2253E785AAAE1217D38CE675D72",
+    "mother_northeast_walk_2.png": "1DF7C37679A49F74D2DDA8E443A2520AA31C8E034A97D6E604EC1610D4A9B577",
+    "mother_northeast_walk_3.png": "239F7B63561067E3464826CA84070DDA4CA11D95977FD16B14F465133B76ABBB",
+    "mother_northeast_walk_4.png": "F6B9736524BA1E487AE5408B38883D1C7128D024847C53BC402314CC2C74B6F0",
+    "mother_northeast_walk_5.png": "99EAE0891649953B12F2E51AD7437B73F4A8A195B8C908C2CA8D9536CCAE5D78",
+    "mother_east_walk_0.png": "76E10550FC1809C25014A39CAEDAA3E976EE0512BB97000B7321DF1DDBF40D4A",
+    "mother_east_walk_1.png": "F4F15C0E67EFAAF3488C8949ECB48F28815A23823E060C8F0A8FD3773123F6A2",
+    "mother_east_walk_2.png": "16B1D7D42EB6D083DF2B7674E8612669610CC04112F8A1F696D94AD9B716C7B6",
+    "mother_east_walk_3.png": "FD48C3AFFA0B07F99C72C6D472862B7B2587E5DF5A6C40275C64DA59AD4710DB",
+    "mother_east_walk_4.png": "DDFEC8513F806B1B8120AAB3978FF003BEB0BA8971E8E8998A83373DEA2F5B17",
+    "mother_east_walk_5.png": "C7DFCA1C429B0128FD1B843F01A24DB3A2E887B610CF10544C9BD7BDB27E3CFB",
+    "mother_southeast_walk_0.png": "6DF97E6098EE40A73A87BB693C9616B683D7C7A52B3822F605843F0B594D0118",
+    "mother_southeast_walk_1.png": "7203C08F4545BBCE17E09FC52D75C958F1CAA2502997D5E08EE3D48A4AF541EE",
+    "mother_southeast_walk_2.png": "B08267838DDA8CB983F42BEBFCF93D52F8DE54656F3ED1ABDE15C922548D6381",
+    "mother_southeast_walk_3.png": "21CAF2B77ADED81D9E6CC734461A56251CC6BA21A1C5A05F7B1893A4F687489B",
+    "mother_southeast_walk_4.png": "05F73AE7F7E38317A2BBF63BCDEECB8786210925257A5345F0D3D87A328B227F",
+    "mother_southeast_walk_5.png": "3A5E01D6B40DBF923D03E83F92170E2936F020EFA8A3724B97CF215BFDF03D1C"
+  }
+}

@@ -15,6 +15,15 @@
    `FC-WALK-GUARDRAIL-V1` 확인 문구를 작업 로그에 남긴다. 현재 shipping writer/gate는 직원 8명을
    포함하지 않는 가족 4명 전용 Character Locomotion Generation V1이다. 직원 확장은 가족 4명 실게임
    품질 승인 뒤 같은 규칙을 적용하는 별도 단계다.
+   방향 문자열·catalog index·머리 방향만 맞는 것으로 승인하지 않는다. 각 실제 PNG와 Player closeup에서
+   머리/시선, 흉곽, 골반, 무릎, 양쪽 발목과 **두 신발 앞코**가 같은 화면 heading인지 확인하고, contact
+   A/B 사이에 지지 다리 ownership과 arm occlusion이 실제로 바뀌는지 확인한다. 같은 다리 swing 반복,
+   뒤발 앞코의 반대방향 회전, 정면으로 벌어진 발은 수치 motion PASS여도 무조건 FAIL이다.
+   프레임을 상체/실루엣 중심으로 매번 재센터링하지 않는다. `strideWorld / 6`을 현재 PPU와 캐릭터 scale로
+   환산한 프레임당 root 이동과 지지발의 반대방향 local 이동을 비교하고, P0~P2와 P3~P5의 실제 projected
+   support-foot drift를 각각 검사한다. P0~P2 left, P3~P5 right처럼 해부학적 ownership을 먼저 고정하며
+   두 발 중 유리한 발을 프레임마다 바꿔 고르는 best-case 검사는 금지한다. 명시된 발의 projected drift가
+   1px를 넘으면 FAIL이다. contact separation·world-step/body-height·cadence만으로 foot lock을 대신하지 않는다.
 
 ## 필수 작업 규칙
 

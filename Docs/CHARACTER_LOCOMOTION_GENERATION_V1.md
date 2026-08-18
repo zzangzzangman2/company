@@ -2,206 +2,253 @@
 
 계약 ID: `FC-CHARACTER-LOCOMOTION-GENERATION-V1`
 
-정량 게이트 ID: `FC-CHARACTER-LOCOMOTION-QA-V1`
+리그 ID: `FC-FAMILY-LOCOMOTION-RIG-V1`
 
-Unity 소비자 게이트 ID: `CHARACTER_LOCOMOTION_GENERATION_V1_UNITY`
+발 좌표 ID: `FC-FAMILY-LOCOMOTION-FOOT-ANCHORS-V1`
 
-Windows Player 게이트 ID: `FC-CHARACTER-LOCOMOTION-PLAYER-QA-V1`
+이미지 QA ID: `FC-CHARACTER-LOCOMOTION-FOOT-LOCK-QA-V1`
 
-이 문서는 가족회사 캐릭터 보행 PNG의 생성, Unity import, 실제 이동 결합, 검증과 실패 수정 절차의
-공용 정본이다. 2026-08-18 현재 출하 범위는 가족 4명뿐이다. 직원 후보 8명은 가족 4명이 실제 게임에서
-사람 눈으로 승인된 뒤 같은 규칙으로 확장하며, 현재 writer/gate의 PASS 수에 포함하지 않는다. 오래된
-문서의 12명 PASS, upper-body 고정, lower-body cutout 합성 설명과 충돌하면 이 문서와 현재 코드·실제
-PNG·Unity import·D3D11 Player 순으로 판정한다.
+Unity/Player QA ID: `CHARACTER_LOCOMOTION_GENERATION_V1_UNITY`,
+`FC-CHARACTER-LOCOMOTION-PLAYER-QA-V1`
 
-## 1. 게임 정체성과 보행의 역할
+이 문서는 가족회사 캐릭터 보행의 원화, 공용 리그, 8방향/6위상, Unity 런타임 결합, 실패 판정과
+수정 절차의 정본이다. 2026-08-18 출하 대상은 가족 4명뿐이다. 직원 후보 8명은 가족 4명의 실제 D3D11
+Player 보행이 사람 눈으로 승인된 뒤 같은 리그 계약을 retarget한다. 오래된 문서의 full-body donor,
+upper-body byte lock, strict coherence PASS와 충돌하면 현재 코드·실제 PNG·Unity import·Player 캡처
+순으로 판정한다.
 
-가족회사는 2000-01-03 한국풍 가상 도시에서 시작하는 싱글플레이 생활 경영 RPG/회사 타이쿤이다.
-14살 플레이어와 누나·아빠·엄마가 빈 13×13 사무실에서 작은 IT/SI·웹 외주 회사를 시작해 가구와
-워크스테이션을 사고, 계약·연구·주식·M&A와 가족 관계·피로·시간을 관리한다. 캐릭터는 전투 유닛이
-아니라 문, 책상, 회의, 휴식, 퇴근 동선을 계속 오가는 사람이다.
+## 1. 게임 정체성과 보행 목표
 
-따라서 작은 화면에서도 다음 세 항목이 동시에 읽혀야 한다.
+가족회사는 2000-01-03 한국풍 가상 도시에서 14살 플레이어와 누나·아빠·엄마가 빈 13×13 사무실에서
+IT/SI·웹 외주 회사를 시작하는 싱글플레이 생활 경영 RPG/회사 타이쿤이다. 가구와 워크스테이션을 사고,
+계약·연구·주식·M&A, 가족 관계·피로·시간을 관리한다. 캐릭터는 전투 유닛이 아니라 문, 책상, 회의,
+휴식, 퇴근 동선을 계속 오가는 사람이다.
 
-- identity: 얼굴, 머리/모자, 체형, 의상, 나이와 가족 구분이 프레임 사이에 바뀌지 않는다.
-- heading: 실제 화면 변위와 얼굴·몸·발이 가리키는 8방향이 일치한다.
-- weight: 좌우 지지발이 교대하고 반대 발이 진행축으로 이동·들림·착지한다. 월드 이동과 cadence가 맞아
-  두 발을 끌거나 컨베이어 위에서 미끄러지는 것처럼 보이지 않는다.
+작은 등각 화면에서도 다음이 동시에 읽혀야 한다.
 
-## 2. 현재 범위와 파일 정본
+- identity: 얼굴, 머리/모자, 체형, 의상과 가족 구분이 프레임 사이에서 바뀌지 않는다.
+- heading: 실제 화면 변위와 머리·몸통·골반·무릎·양쪽 발끝이 같은 방향을 향한다.
+- weight: 좌우 지지발이 한 반주기씩 교대하고 반대 발은 진행축으로 스윙·들림·착지한다.
+- coherence: 상체와 하체가 한 골반 결합점을 공유한다. 허리 투명 틈, 폭이 다른 splice, 분리 파츠가
+  보이면 실패다.
+- foot lock: 월드 root가 이동하는 동안 지지발의 투영 화면 위치는 접지 구간에 남는다.
 
-현재 캐릭터 ID는 `player`, `older_sister`, `father`, `mother` 네 개다. 각 캐릭터는
-8방향×6위상=48개 256×256 RGBA PNG와 A/B 4×6 시트 두 장을 가진다. 총 출하 범위는 192 PNG,
-32 보행 루프, 시트 8장이다.
+## 2. 현재 출하 범위와 정본 파일
 
-- 프레임: `Assets/Art/Characters/<Character>/Pixel/HighMotion/Frames/<id>_<direction>_walk_<phase>.png`
-- 시트: 같은 `HighMotion` 폴더의 `<id>_pixel_walk8dir6_{a,b}_v1.png`
-- full-body motion 원본: `Assets/Art/Characters/BeforeCoherenceV1/<id>/`
-- 방향별 identity anchor 32장: `Tools/CharacterLocomotionIdentityV1/<id>/<id>_<direction>_identity_v1.png`
-- 공용 프로필: `Tools/character_locomotion_profiles_v1.json`
-- writer: `Tools/generate_character_locomotion_v1.py`
-- fail-closed gate/self-test: `Tools/verify_character_locomotion_v1.py`,
+캐릭터 ID는 `player`, `older_sister`, `father`, `mother`다. 각 캐릭터는 8방향×6위상=48개
+256×256 RGBA PNG와 A/B 4×6 시트 두 장을 가진다. 총 192 PNG, 32루프, 8시트다.
+
+- 런타임 프레임:
+  `Assets/Art/Characters/<Character>/Pixel/HighMotion/Frames/<id>_<direction>_walk_<phase>.png`
+- 런타임 시트: 같은 `HighMotion` 폴더의 `<id>_pixel_walk8dir6_{a,b}_v1.png`
+- 방향별 정체성 상체 32장:
+  `Tools/CharacterLocomotionIdentityV1/<id>/<id>_<direction>_identity_v1.png`
+- 리그 raw/manifest: `ArtSources/FamilyLocomotionRigV1/`
+- 공용 리그 writer: `Tools/build_family_locomotion_rig_v1.py`
+- 단일 공개 진입점: `Tools/generate_character_locomotion_v1.py`
+- 독립 QA/self-test: `Tools/verify_character_locomotion_v1.py`,
   `Tools/test_character_locomotion_v1.py`
+- Unity Player용 발 좌표:
+  `Assets/FamilyCompany/Content/Resources/HighMotion/FamilyLocomotionFootAnchorsV1.json`
 
-identity anchor는 허리가 이미 잘린 현재 runtime P0를 다시 입력으로 삼지 않는다. 결함 도입 전 승인
-revision `9144fa0e`의 4명×8방향 P0에서 한 번 추출한 독립 입력이며 저장소에 추적한다. 생성 결과를 다음
-생성 입력으로 재사용하지 않는다.
+`ArtSources/FamilyLocomotionRigV1/rig_manifest_v1.json`은 source SHA-256, runtime stride/PPU/scale,
+phase ownership과 캐릭터 공용 프로필을 고정한다. raw 입력은 다음 다섯 장뿐이다.
+
+| 파일 | SHA-256 |
+| --- | --- |
+| `player_east_rig_parts_raw_v1.png` | `AB11A69D51911B212D3DE8BB5D787CFB5C6346420DBD4B059F92CBB446F8748B` |
+| `player_other_directions_raw_v1.png` | `A4AE8E02A56589AB4AB16E4B8CFB9662DF7F5910CEC69170C8281BD32BA63883` |
+| `older_sister_five_directions_raw_v1.png` | `A4EE4FB3C85F247721C2FF116B091D02FE8A603B01D6E706932A3C360FB09DFF` |
+| `father_five_directions_raw_v1.png` | `01250857E9C897986DC04EA09E26AA0BD6E21F1D5EDDAFA75980E07881A82673` |
+| `mother_five_directions_raw_v1.png` | `B835BF6F9DAF7F5025839D621530A2411C63DD87FF1CA6F325D1FE72FE813C73` |
+
+ImageGen은 이 분리된 좌/우 허벅지·종아리/발 파츠와 방향별 형태를 만드는 데만 사용한다. 최종 6프레임의
+발 좌표, 지지발 ownership, 보폭과 접지는 결정론적 코드가 소유한다. 완성 전신 6프레임을 모델에 맡기지
+않는다.
 
 파일 계약:
 
-- PNG만 게시한다. 기존 `.meta`와 GUID를 보존하며 삭제·재생성하지 않는다.
-- 256×256 RGBA, alpha `{0,255}`, Point, PPU 180, bottom-center pivot을 유지한다.
-- 실제 몸 실루엣 최저점은 모든 프레임에서 `y=247`이다. `y>=248`은 비운다.
+- 256×256 RGBA, alpha `{0,255}`, Point, PPU 180, bottom-center pivot `(0.5,0)`.
 - A 시트 행은 `south, southwest, west, northwest`, B 시트 행은
   `north, northeast, east, southeast`다.
 - Unity 배열은 phase-major, `index = phase * 8 + direction`이다.
+- 기존 PNG `.meta`/GUID는 삭제·재생성하지 않고 바이트 해시를 전후 비교한다.
+- 프레임 alpha는 하나의 연결 실루엣이어야 한다. 모자/머리는 위와 좌우에 최소 4px 여백을 둔다.
 
-## 3. 화면 8방향 좌표계
+## 3. 8방향 좌표계
 
-방향 토큰은 이미 등각 투영된 실제 화면 이동 벡터를 뜻한다. `flipX=false`이며 반대 행을 미러링해
-대신하지 않는다.
+Unity 화면/world 벡터는 y가 위로 증가하지만 PNG row는 y가 아래로 증가한다.
 
-| index | 토큰 | 화면 벡터 `(x,y)` | 표시 방향 |
+| index | token | Unity 화면 벡터 | PNG 진행 벡터 |
 | ---: | --- | --- | --- |
-| 0 | south | `(0,-1)` | 아래 |
-| 1 | southwest | `(-1,-1)` 정규화 | 왼쪽 아래 |
-| 2 | west | `(-1,0)` | 왼쪽 |
-| 3 | northwest | `(-1,1)` 정규화 | 왼쪽 위 |
-| 4 | north | `(0,1)` | 위 |
-| 5 | northeast | `(1,1)` 정규화 | 오른쪽 위 |
-| 6 | east | `(1,0)` | 오른쪽 |
-| 7 | southeast | `(1,-1)` 정규화 | 오른쪽 아래 |
+| 0 | south | `(0,-1)` | `(0,+1)` |
+| 1 | southwest | `(-1,-1)` | `(-√½,+√½)` |
+| 2 | west | `(-1,0)` | `(-1,0)` |
+| 3 | northwest | `(-1,+1)` | `(-√½,-√½)` |
+| 4 | north | `(0,+1)` | `(0,-1)` |
+| 5 | northeast | `(+1,+1)` | `(+√½,-√½)` |
+| 6 | east | `(+1,0)` | `(+1,0)` |
+| 7 | southeast | `(+1,-1)` | `(+√½,+√½)` |
 
-`OfficeGridTilemapPresenter.DefaultWorldVectorToVisualFacingAxes`가 화면축 변위를 반환하고
-`DirectionalSpriteAnimator.ResolveDirectionFromAxes`가 옥탄트로 양자화한다. 오른쪽 실제 이동은
-반드시 `east(6)`, 왼쪽 실제 이동은 `west(2)`를 소비한다. manifest remap은 네 캐릭터 모두 0→0 … 7→7이다.
+manifest remap은 가족 네 명 모두 0→0 … 7→7이며 Player에서 `flipX=false`다. 공용 생성의 canonical
+방향은 `south, north, east, southeast, northeast`다. `west, southwest, northwest`는 각각
+`east, southeast, northeast`의 **프레임 전체** 수평 반전이다. 머리만 또는 발만 반전하지 않는다.
 
-## 4. 6프레임 보행 위상과 원화 규칙
+한 프레임의 방향 승인은 코/시선, 머리 회전, 흉곽과 옷의 앞뒤, 골반, 두 무릎·발목, 양쪽 신발의
+뒤축→앞코가 모두 같은 진행축을 가리킬 때만 성립한다. 뒤에 있는 발도 위치만 뒤일 뿐 앞코가 반대나
+정면으로 돌아가면 실패다. 사용자가 지적한 “고개는 뒤인데 발은 앞”은 파일명이나 얼굴 방향 PASS로
+덮을 수 없다.
 
-한 루프는 좌우 접촉이 한 번씩 나타나는 두 걸음이다. 원화는 발끝 몇 픽셀이나 바짓단만 흔드는 방식이
-아니라 골반부터 발까지 연결된 온몸 포즈여야 한다.
+## 4. 6프레임 위상, 접지와 스윙
 
-| 위상 | 의미 | 접지/스윙 규칙 |
+해부학적 좌우 ownership을 색 marker 사본에 고정한다.
+
+- left marker RGB: `(0,235,255)`
+- right marker RGB: `(255,35,195)`
+- marker는 QA 전용이며 출하 PNG에는 색을 넣지 않는다. marker와 출하 PNG의 alpha는 픽셀 단위로 같다.
+
+| phase | ownership | 의미 |
 | ---: | --- | --- |
-| P0 | 접촉 A | A 지지발이 바닥에 닿고 두 발의 진행축 간격이 읽힌다. |
-| P1 | A 지지, B 초기 스윙 | A발은 바닥에 남고 B 하퇴·발이 진행축으로 회수된다. 최소 하중 이동을 허용한다. |
-| P2 | B 통과/공중 | A발은 접지하고 B발은 실제 픽셀 중심과 실루엣이 이동하며 바닥에서 들린다. |
-| P3 | 접촉 B | P0와 반대 발이 접지하며 접촉 서명이 바뀐다. |
-| P4 | B 지지, A 초기 스윙 | B발은 바닥에 남고 A 하퇴·발이 진행축으로 회수된다. 최소 하중 이동을 허용한다. |
-| P5 | A 통과/공중 | B발은 접지하고 A발은 실제 픽셀 중심과 실루엣이 이동하며 바닥에서 들린다. |
+| P0 | left support | 왼발 접촉, 오른발 toe-off 위치 |
+| P1 | left support | 왼발 접지 유지, 오른발 passing/air, 상체·골반 공통 +1px down |
+| P2 | left support | 왼발 접지 유지, 오른발 전방 swing/착지 준비 |
+| P3 | right support | 오른발 접촉, 왼발 toe-off 위치 |
+| P4 | right support | 오른발 접지 유지, 왼발 passing/air, 상체·골반 공통 +1px down |
+| P5 | right support | 오른발 접지 유지, 왼발 전방 swing/착지 준비 |
 
-공통 금지 사항:
+P0~P2 지지발은 항상 left, P3~P5는 항상 right다. 검사기가 프레임마다 더 안정적으로 보이는 발을
+K-means나 optical flow로 골라 PASS시키는 것을 금지한다. 같은 발을 두 반주기에 재사용하거나, 발끝·바짓단
+몇 픽셀만 흔들거나, passing pose에 공중 위상이 없으면 실패다.
 
-- P0/P1/P2 또는 P3/P4/P5를 같은 포즈로 복제하지 않는다.
-- 발끝, 바짓단, 치맛단만 흔들고 발 excursion이 거의 0인 루프를 허용하지 않는다.
-- 지지발과 스윙발이 함께 뜨거나, 같은 화면측 발만 두 번 들거나, 진행축 반대로 스윙하지 않는다.
-- 허리선을 지우고 상체와 하체를 서로 다른 폭으로 덮는 cutout/splice를 하지 않는다.
-- 접합부를 가리기 위한 직사각형 골반 cap, 별도 바닥 그림자, 분리된 발 픽셀을 추가하지 않는다.
-- X자 다리, 과한 런지·행진·달리기 높이, 얼굴 왜곡, 과도한 상체 bob을 만들지 않는다.
+P1/P4의 1px 체중 이동은 상체만 또는 하체만 움직이지 않는다. canonical 상체 레이어, hip joint와 두 다리
+결합점을 같은 `(0,+1)`로 평행 이동한다. 얼굴·모자·옷 픽셀을 재생성/warp하지 않으면서 upper-body
+byte-identical freeze도 피한다. 별도 허리 cap이나 seam 은폐 레이어는 없다.
 
-## 5. identity와 온몸 coherence
+## 5. 런타임 stride와 foot-lock 수식
 
-`BeforeCoherenceV1`의 승인 6포즈가 프레임별 **온몸 authority**다. 머리부터 발까지 연결된 donor 포즈를
-그대로 사용하므로 허리에서 상·하체를 자르지 않는다. `lowerBodyStart`는 생성 cut 위치가 아니라 QA의
-발/상체/허리 참조 구역을 계산하는 프로필 값이다.
+런타임은 실제 누적 이동거리로 frame을 선택한다.
 
-플레이어와 엄마는 포즈 donor의 머리 세대 차이 때문에 방향별 안정 anchor의 머리 영역만 겹친다.
-플레이어는 전신 높이의 48%, 엄마는 46% 지점까지 사용하고 10px를 아래로 겹쳐 목에 투명 틈을 남기지
-않는다. P1/P4에서는 anchor 전체를 변형하지 않고 1px 아래로 옮겨 최소 하중 이동을 허용한다. 누나와
-아빠는 full-body donor 자체가 identity authority이므로 별도 layer 합성을 하지 않는다.
+```text
+OfficeRuntimeAgent actual displacement
+→ DirectionalSpriteAnimator.AccumulateTileMotion
+→ OfficeSharedLocomotionRules.ResolveFrame
+→ OfficeLocomotionGaitRules.DistanceFrame
+→ ApplyFrame → SpriteRenderer
+```
 
-플레이어의 빨간 뉴스보이 캡, 누나의 긴 양갈래·리본, 아빠의 머리·안경, 엄마의 머리와 얼굴은 방향과
-프레임 사이에서 잘리거나 바뀌면 안 된다. 모든 프레임은 머리 위 투명 여백을 최소 4px 확보한다.
+- `DefaultStrideLength = 0.99380799 world`
+- `phasesPerCycle = 6`, `stepsPerCycle = 2`
+- `pixelsPerUnit = 180`, `visualScale = 1.55`
+- `DefaultMoveSpeed = 1.0 world/s`
+- cadence = `1 / 0.99380799 × 2 = 2.0125 steps/s`
 
-donor의 발 아래에 분리된 1~3px 높이의 오래된 그림자 streak가 있으면 발로 취급하지 않는다. 생성기는
-폭 3px 이상, 면적 80px 이하인 바닥 근처 분리 component를 **ground 정렬 전에** 제거한다. 순서를
-뒤집으면 가짜 그림자를 y=247로 맞추느라 실제 몸이 위로 밀려 모자·머리가 잘리고 발이 뜨므로 실패다.
-그 뒤 면적 6px 미만 고립 component를 제거하고 실제 몸의 최저점을 y=247로 정렬한다.
+한 phase의 root 이동을 source pixel로 환산하면 다음과 같다.
 
-## 6. 공용 생성과 재현 절차
+```text
+rootStepPixels
+= (0.99380799 / 6) / (1.55 / 180)
+= 19.234993 px
+```
 
-정본 `main`의 clean 시작점을 확인한 뒤 실행한다.
+PNG 진행 단위벡터를 `v`, phase를 `p`, 해당 phase 지지발 local anchor를 `a[p]`라 하면 화면 투영
+지지발은 다음 값이다.
+
+```text
+supportWorldPx[p] = a[p] + p × 19.234993 × v
+```
+
+P0~P2의 left `supportWorldPx`, P3~P5의 right `supportWorldPx` 진행축 투영 차이는 각각 최대 1px다.
+따라서 local 지지발은 매 phase 진행축 반대로 약 19.235px 이동해야 한다. 좌우 착지 위치 P0→P3은
+`3 × 19.234993 = 57.704980px`, world로는 `stride/2`다. 이 수식 없이 cadence만 맞으면 root와 함께
+발이 끌려간다.
+
+## 6. 공용 리그 생성 규칙
+
+1. manifest raw SHA가 하나라도 다르면 생성 전에 실패한다.
+2. 방향 atlas의 녹색 배경을 제거하고 큰 연결 component를 네 파츠로 분리한다.
+3. 방향별 identity 상체에서 실제 옷 seam 아래의 기존 서 있는 다리만 corridor로 제거한다. 낮게 내려온
+   손과 소매, 치마/반바지/바지 허리선은 보존한다.
+4. 좌/우 허벅지와 종아리/발 파츠의 joint endpoint와 foot anchor를 계산한다.
+5. phase profile의 left/right foot control로 hip→knee→foot를 배치한다. 허벅지/종아리는 hard-alpha로
+   bake하고 canonical 상체를 마지막에 합성한다.
+6. front/back은 화면 평면의 고정 길이 IK가 무릎을 옆으로 던지는 X자/활 모양을 만들므로 투영
+   foreshortening midpoint를 쓴다. side/diagonal도 작은 진행축 knee bend만 허용한다.
+7. 정면/후면은 두 해부학적 발이 겹쳐 한 발로 보이지 않도록 lateral stance를 둔다. player/sister/father는
+   9px, 불투명 치마의 mother는 18px다. 엄마 값을 9px로 낮춰 치마 아래 한 발이 사라지거나, 30px로
+   높여 과도한 팔자/X자 다리가 되면 실패다.
+8. support marker를 다시 렌더해 진행축 projected drift를 반복 보정한다. 수직/횡 방향의 자연스러운
+   원근 변화까지 0으로 만들지 않고 **진행축 미끄러짐만** 최대 1px로 제한한다.
+9. canonical 5방향을 완성한 뒤 반대 3방향은 upper/lower/marker를 포함한 프레임 전체를 mirror한다.
+10. 192 frame, 8 sheet, marker 사본, anchor catalog, 정량 JSON/CSV, 방향 contact sheet, fixed-grid world
+    motion/contact GIF를 한 번에 생성한다.
+
+캐릭터별 허용 프로필은 garment seam, leg corridor, hip 높이, 파츠 길이와 엄마 depth stance뿐이다.
+캐릭터×방향×phase별 수작업 좌표는 두지 않는다. 직원 확장은 이 프로필을 retarget하는 방식으로만 한다.
+
+## 7. 재현 절차
+
+정본 `main`에서 다음을 실행한다.
 
 ```powershell
 git status --short --branch
 git rev-parse HEAD
+git fetch origin main
 git rev-parse origin/main
 git pull --ff-only origin main
 
-# 비파괴 후보 생성: runtime PNG를 쓰지 않는다.
+# 후보 생성. runtime은 아직 쓰지 않는다.
 py -3 Tools/generate_character_locomotion_v1.py
 
-# 후보의 4명×8방향 32루프/192프레임 정량 검증.
+# 후보 4×8×6과 음성 회귀 검사.
 py -3 Tools/verify_character_locomotion_v1.py `
   --candidate-root Artifacts/CharacterLocomotionGenerationV1/Candidate `
   --output Artifacts/CharacterLocomotionGenerationV1/CandidateQa
-
-# 양성 1 + 음성 6 회귀 검증.
 py -3 Tools/test_character_locomotion_v1.py
 
-# Evidence의 방향별 contact sheet를 눈으로 확인한 후보만 게시한다.
+# Evidence contact/GIF를 사람이 확인한 뒤에만 게시한다.
 py -3 Tools/generate_character_locomotion_v1.py --publish-existing
 
-# 게시된 실제 runtime PNG를 다시 검증한다.
+# 실제 runtime PNG/시트를 다시 검사한다.
 py -3 Tools/verify_character_locomotion_v1.py `
   --output Artifacts/CharacterLocomotionGenerationV1/RuntimeQa
 ```
 
-생성기는 네 캐릭터 프로필을 반복하고, 8방향 donor sheet에서 6개의 온몸 프레임을 추출한다. 분리 그림자와
-미세 island를 제거하고 ground를 정규화한 뒤, 프로필에 `identityHeadFraction`이 있는 캐릭터만 머리 anchor를
-겹친다. 각 출력은 hard alpha, 서로 다른 6포즈, y=247을 생성 중 단언한다. candidate와 게시 경로의 192
-PNG byte 일치까지 확인한다. 캐릭터·방향·위상별 수작업 좌표 예외는 두지 않는다.
+게시 전후 네 캐릭터 HighMotion 아래 모든 `.meta` SHA-256 목록을 비교해 0 diff여야 한다.
 
-## 7. 이미지/manifest fail-closed QA
+## 8. 이미지/manifest fail-closed QA
 
-`verify_character_locomotion_v1.py`는 후보나 실제 runtime PNG를 다시 열어 32루프를 독립 측정한다.
-기존 strict coherence의 `footDrift=0`은 바닥선만 고정됐다는 뜻이며 발이 움직였다는 증거가 아니다.
-현재 PASS는 아래 항목을 **모두** 요구한다.
+검사는 candidate 또는 실제 runtime PNG를 다시 열고 marker와 anchor catalog를 독립 계산한다.
 
-| 지표 | 허용값 | 실패 의미 |
-| --- | ---: | --- |
-| P0/P3 두 발 군집 간격 | 각각 ≥ 7.0px | 접촉 포즈에서 두 발이 읽히지 않음 |
-| P0↔P3 접촉 교대 optical excursion | ≥ 1.0px | 좌우 접촉 서명이 사실상 같음 |
-| P0→P2, P3→P5 반주기 excursion | 각각 ≥ 1.0px | 실제 스윙이 없음 |
-| P0→P1→P2, P3→P4→P5 인접 excursion | 모두 ≥ 1.0px | 정지 프레임 뒤 순간이동 |
-| 인접 발 영역 RGBA 변화율 | 모두 ≥ 0.50 | 바지/발끝 일부만 흔듦 |
-| 인접 발 alpha 실루엣 변화율 | 모두 ≥ 0.05 | 색만 바꾼 가짜 움직임 |
-| P2/P5 수직 optical lift | 각각 ≥ 0.15px | 공중 위상 들림이 없음 |
-| P2/P5 바닥선 support 픽셀 | 각각 ≥ 1 | 지지발도 함께 뜸 |
-| 상체/몸 authored 변화율 | ≥ 0.10 | 하체와 무관하게 상체가 완전히 얼어 있음 |
-| 정렬 허용 머리 실루엣 IoU | ≥ 0.78 | 얼굴/머리/모자 형태가 흔들림 |
-| 머리 위 투명 여백 | ≥ 4px | 모자·머리카락 잘림 |
-| 머리 최상단 excursion | ≤ 6px | 과한 bob 또는 위치 점프 |
-| full donor 대비 허리 band mismatch | ≤ 0.01 | 상·하체 seam 변형/투명 절단 |
-| profile identity-head mismatch | = 0 | 플레이어/엄마 머리 anchor 손상 |
+| 지표 | PASS 기준 | 2026-08-18 가족 4명 실측 |
+| --- | ---: | ---: |
+| 범위 | 4명×8방향×6 = 192 | 192/192 |
+| explicit support ownership | P0~2 left, P3~5 right | 32/32 |
+| projected support drift | 각 반주기 ≤ 1.0px | 최대 0.726448px |
+| adjacent counter-motion error | ≤ 1.25px | PASS |
+| alternating contact step | 57.704980 ± 1px | 57.669070~57.794742px |
+| swing world travel | 좌/우 각각 ≥ 80px | 최소 86.316402px |
+| passing air lift | 좌/우 각각 ≥ 2.5px | 최소 3.234033px |
+| head/hat top margin | ≥ 4px | PASS |
+| marker/candidate alpha | exact | 192/192 |
+| direction mirrors | 전체 RGBA exact | 72/72 derived frames |
+| detached alpha | 0px | 0px |
+| sheet tile vs frame | exact | 192/192 |
+| raw source SHA, frame RGBA SHA | exact | PASS |
 
-optical flow와 변화율은 발/하퇴 corridor에서 측정한다. 한 지표, loop closure, upper identity만으로
-PASS하지 않는다. 셀프테스트는 승인 후보와 다음 여섯 음성 대조군을 매번 실행한다.
+셀프테스트는 최소 다음 음성 대조군을 FAIL시킨다.
 
-1. 여섯 장 완전 정지
-2. 발은 고정하고 바지만 흔듦
-3. 접촉 포즈를 공중 위상으로 재사용
-4. 발만 움직이고 상체는 byte-identical
-5. 허리에 4px 투명 절단
-6. 모든 프레임의 모자/머리를 같은 높이로 잘라냄
+- 여섯 프레임의 두 발이 정지: support world drift `38.470px`로 FAIL.
+- 후반도 같은 지지발을 재사용: contact step error `32.407px`로 FAIL.
+- 발은 이동하지만 passing lift 0: air phase로 FAIL.
+- P0~P5가 모두 left support: explicit ownership으로 FAIL.
+- 모자 상단 절단: marker/candidate alpha 및 identity로 FAIL.
 
-이 중 하나라도 PASS하면 gate 자체가 실패다. 임계값을 새 후보에 맞춰 낮추지 말고 positive/negative
-fixture와 실제 contact sheet를 함께 고친다.
+발 움직임이 거의 0인데 프레임 byte uniqueness, upper-body identity 또는 loop closure만으로 PASS하는 경로는
+없다. marker 색을 제거한 출하 PNG만 보고 “가장 그럴듯한 발”을 사후 선택하지 않는다.
 
-## 8. Unity import와 이동 속도/cadence 결합
+## 9. Unity Editor와 Windows D3D11 Player QA
 
-런타임 경로는 다음과 같다.
-
-`OfficeRuntimeAgent` 실제 변위 → `DirectionalSpriteAnimator.AccumulateTileMotion` →
-`OfficeSharedLocomotionRules.ResolveFrame` → `OfficeLocomotionGaitRules.DistanceFrame` →
-`ApplyFrame` → 최종 `SpriteRenderer`.
-
-`OfficeLocomotionGaitRules.DefaultStrideLength = 0.99380799 world`는 2:1 등각 타일 중심 간 거리다.
-한 6프레임 루프가 한 stride/두 걸음이고 `DefaultMoveSpeed=1.0 world/s`에서 이론 cadence는
-`1 / 0.99380799 * 2 = 2.0125 steps/s`다. 실제 누적 이동거리로 phase를 고르므로 충돌로 멈추면 발도
-멈추고 한 타일마다 같은 위상으로 닫힌다. `VisualRoot`에 별도 미끄럼 보정 offset을 더하지 않는다.
-
-Unity 6000.3.21f1은 화면을 띄우지 않는 batchmode로 다음을 검증한다.
+Unity Editor는 창 없이 실행한다.
 
 ```powershell
 Unity.exe -batchmode -nographics -quit -projectPath <repo> `
@@ -211,12 +258,14 @@ Unity.exe -batchmode -nographics -quit -projectPath <repo> `
 FAST_QA_WINDOWS.cmd -Profile editor-broad
 ```
 
-첫 게이트는 가족 4×8×6=192 Sprite, catalog phase-major 순서, direction remap, stride/cadence를 검사한다.
-broad 게이트는 실제 방향, pivot, 충돌, gait closure를 검사한다.
+Editor gate는 실제 import된 192 Sprite의 이름, phase-major 순서, direction remap, PPU 180, bottom-center
+pivot, 32행 foot-anchor Resources 계약, root step 19.234993px와 cadence 2.0125 steps/s를 확인한다.
 
-## 9. 실제 Windows D3D11 Player QA와 증거
-
-최종 Release Windows x64 빌드를 `-force-d3d11`, 창 모드, 백그라운드로 실행한다.
+Player QA는 정상 새 게임의 실제 `OfficeRuntimeAgent`, navigation, `DirectionalSpriteAnimator`, 최종
+`SpriteRenderer`를 사용한다. 각 phase의 support pixel anchor를 sprite pivot/PPU/renderer transform으로
+world에 투영하고 P0~P2, P3~P5의 진행축 drift를 source pixel로 다시 환산한다. 빌드/런타임 샘플링 오차를
+포함한 hard limit은 4px이며, 정지 PNG의 약 38.47px/phase 미끄러짐은 통과할 수 없다. 좌우 contact world
+간격은 `stride/2 ± 0.05 world`, cycle은 `0.99380799 ± 0.08`, cadence는 1.85~2.15 steps/s여야 한다.
 
 ```powershell
 FamilyCompany.exe -force-d3d11 -screen-fullscreen 0 -screen-width 1392 -screen-height 699 `
@@ -225,36 +274,71 @@ FamilyCompany.exe -force-d3d11 -screen-fullscreen 0 -screen-width 1392 -screen-h
   -logFile <player-log>
 ```
 
-필수 PASS:
+필수 증거:
 
-- `character-locomotion-player-final.txt`가 PASS이고 graphics가 `Direct3D11`이다.
-- 정상 새 게임의 실제 `OfficeRuntimeAgent`, navigation, gait, 최종 `SpriteRenderer`를 사용한다.
-- 가족 4명×8방향×6위상=192 sprite를 소비하고 32루프의 motion/display/sprite direction이 일치한다.
-- `flip_x=false`, 기대 sprite 이름 일치, 5→0 wrap과 한 cycle world distance가
-  `0.99380799 ± 0.08`이다.
-- actual speed/cycle cadence가 1.85~2.15 steps/s, world step/body height가 0.18~0.70이다.
-- 전체 화면 overview, 방향별 closeup, 6위상 contact sheet/GIF를 `Artifacts`에 남긴다.
-- 플레이어의 빨간 모자 상단, 네 캐릭터 허리 연결, 엄마의 southwest를 포함해 실제 Player 캡처를 사람이
-  확대 확인한다. 수치 PASS는 이 시각 검수를 대체하지 않는다.
+- 가족 4명×8방향 실제 전체 화면 overview와 방향별 closeup.
+- 6위상 contact sheet, fixed-grid world-motion GIF, support marker trace GIF.
+- Player CSV의 sprite/direction/phase/root displacement/support world 좌표.
+- Player 결과의 D3D11, 32 loops, support drift, contact step, cadence.
+- 실제 배포 `C:\Users\godho\Downloads\Family\BUILD_INFO.txt`의 commit SHA가 정본 HEAD와 같고
+  `WorkingTreeDirty=False`임을 확인한다.
 
-릴리스는 `BUILD_WINDOWS.cmd`와 `DEPLOY_WINDOWS.cmd`로 `C:\Users\godho\Downloads\Family`에 배포한다.
-배포 `BUILD_INFO.txt`의 commit이 정본 `main` HEAD와 같고 `WorkingTreeDirty=False`인 같은 파일을 다시
-D3D11 검증해야 한다. 원화만 바꾸고 이전 EXE를 재사용한 결과는 무효다.
+수치 PASS는 시각 승인을 대체하지 않는다. 모자 전체, 허리/치마/반바지 seam, 정면/후면 두 발 가시성,
+side/diagonal 발끝 방향과 한 발만 미끄러지는 느낌을 사람이 확대 확인한다.
 
-## 10. 실패 시 수정 순서
+## 10. 확인된 과거 실패 원인과 금지된 수정
 
-1. 정본 runtime PNG와 실제 Player 캡처 중 어느 쪽에서 처음 문제가 보이는지 분리한다.
-2. 모자/머리가 잘리면 detached ground shadow 제거가 ground 정렬보다 먼저인지, top margin이 4px 이상인지
-   확인한다. 캔버스를 임의 확대하거나 머리만 축소하지 않는다.
-3. 허리가 찢어지면 waist band를 full donor 같은 위상의 band와 비교한다. lower-body clear/refill, pelvis
-   cap, 폭이 다른 layer splice를 제거하고 온몸 donor 포즈로 돌아간다.
-4. 발이 안 움직이면 P0↔P3 접촉 교대, P0→P2/P3→P5 excursion, 인접 변화, vertical lift와 support ground를
-   실제 PNG에서 확인한다. threshold를 낮추거나 바짓단만 흔들지 않는다.
-5. 방향이 틀리면 원화를 미러링하지 말고 manifest 0→0 … 7→7과 실제 화면 displacement를 추적한다.
-6. PNG는 정상인데 Player가 미끄러지면 catalog sprite 이름/phase order, 실제 cycle world distance, speed,
-   cadence, BUILD_INFO SHA를 확인한다.
-7. 수정 뒤 candidate QA, self-test, runtime 재검증, Unity 두 게이트, clean Release build, 배포본 D3D11 Player
-   QA와 사람 시각 확인을 처음부터 다시 수행한다.
+이번에 실제 PNG와 runtime 수식으로 확인한 원인은 다음과 같다.
 
-완료는 가족 4명의 32루프/192 PNG와 Unity, 실제 배포 Player가 모두 PASS하고 모자·머리·허리·발을 눈으로
-승인했을 때뿐이다. 직원 8명은 이 완료 뒤 같은 문서와 도구를 확장하는 다음 작업이다.
+1. `split_high_motion_sheets.py::extract_aligned_frames`가 매 프레임 상체 median X를 128로 독립 재정렬했다.
+   이 과정이 지지발의 root-relative 역이동을 삭제했다. `build_mother_side_walk_v3.py`의 개체별 중앙 정렬도
+   같은 결함을 가진다.
+2. 기존 gate는 adjacent foot motion 1px, 바닥선과 upper identity를 주로 보았고 월드 투영 지지발을
+   계산하지 않았다. 1~6px 흔들림도 PASS했지만 필요한 값은 phase당 19.235px였다.
+3. best-case K-means support 선택은 프레임마다 다른 발을 선택해도 된다. 실제 고정된 left/right ownership으로
+   재측정하자 구 루프 32개 전부 반주기 drift 26.260~40.138px로 실패했다.
+4. 구 Player QA는 cycle world distance와 cadence만 검사했다. root가 정상이어도 발 그림이 같이 끌리는
+   오류를 검출하지 못했다.
+5. full-body ImageGen 6패널은 정확한 anchor/시간 순서를 반복해서 무시하고 같은 큰 보폭을 복제했다.
+6. whole-body warp는 치마/다리를 늘였고, marker full-leg warp와 2-bone 추정은 허리 seam, 블록형 관절과
+   다리 교차를 만들었다.
+7. 이미 잘못 중앙 정렬된 PNG에서 pivot만 고정하면 발은 붙지만 몸통이 41.5~73.4px 점프했다.
+8. 화면 평면 fixed-length IK는 front/back 무릎을 옆으로 던져 X자/활 모양 다리를 만들었다.
+9. 얼굴 방향만 맞추고 발 band를 반전한 행은 “고개는 뒤, 발은 앞”이 되었다. 방향은 전신 축으로 본다.
+10. 허리에서 상체와 하체를 별도 offset/width로 합성해 투명 틈이나 직사각 cap이 생겼고, closeup framing
+    1.15는 실제 PNG가 온전해도 모자 상단을 잘라 보였다.
+11. 엄마의 front/back stance가 좁으면 불투명 치마 아래 한 발이 사라져 한 발 보행처럼 보이고, 너무 넓으면
+    X자/팔자 다리가 된다. 현재 공용 프로필 18px가 두 조건 사이의 정본이다.
+12. upper-body exact-byte lock은 얼굴 흔들림은 막지만 고정 몸통 아래 다리만 흐르는 느낌을 강화했다.
+    현재는 정체성 픽셀을 변형하지 않고 P1/P4에 upper+hip을 함께 1px 이동한다.
+
+다음 수정은 금지한다.
+
+- 발 excursion threshold를 후보에 맞춰 낮추기.
+- 전역 VisualRoot smoothstep/foot-lock 보정으로 PNG 결함을 숨기기.
+- 상체와 하체를 서로 다른 좌표로 이동하거나 허리 cap으로 가리기.
+- 192장의 완성 전신 프레임을 ImageGen에 다시 맡기기.
+- 한 캐릭터/방향/phase별 수작업 숫자를 추가하기.
+- 가족 4명 Player 시각 승인 전에 직원 8명까지 복제하기.
+- 이전 EXE나 dirty build의 캡처를 새 결과로 보고하기.
+
+## 11. 실패 시 수정 순서
+
+1. candidate frame/marker → runtime frame/sheet → Unity import → Player SpriteRenderer 순으로 처음 달라지는
+   지점을 찾는다.
+2. 한 발 미끄러짐은 explicit support ownership과 `a[p] + p×rootStep×v`부터 계산한다. 정지 PNG나
+   best-case 발 선택으로 우회하지 않는다.
+3. 발 스윙 부족은 swing world travel, P1/P4 passing lift와 P0/P3 contact step을 함께 본다. 바짓단이나
+   발끝 몇 픽셀만 흔들지 않는다.
+4. 허리 찢어짐은 garment seam corridor, canonical upper, hip/body 공통 offset과 connected alpha를 확인한다.
+   별도 cap이나 전역 warp를 추가하지 않는다.
+5. 모자/머리 잘림은 실제 PNG alpha margin과 Player 캡처 camera 1.35 framing을 각각 구분한다.
+6. 머리/발 방향 불일치는 frame 전체 mirror와 8방향 index를 확인하고, 얼굴만 또는 발 band만 반전하지
+   않는다.
+7. 엄마 한 발 가림은 depth stance 18px와 marker 양발 픽셀을 확인한다. 무조건 넓히지 않는다.
+8. PNG는 정상이지만 Player가 미끄러지면 sprite name/order, pivot/PPU/scale, actual displacement,
+   cadence, support world trace, BUILD_INFO SHA를 순서대로 확인한다.
+9. 수정 뒤 candidate QA, 음성 self-test, runtime QA, `.meta` hash, Editor batch/broad, clean Release build,
+   배포본 D3D11 Player와 사람 시각 확인을 처음부터 다시 실행한다.
+
+QA가 실제로 PASS하고 캡처를 사람이 확인하기 전에는 완료라고 기록하지 않는다.

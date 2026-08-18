@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "contract": "FC-FAMILY-LOCOMOTION-RIG-V1",
+  "runtime": {
+    "strideWorld": 0.99380799,
+    "phasesPerCycle": 6,
+    "stepsPerCycle": 2,
+    "pixelsPerUnit": 180.0,
+    "visualScale": 1.55,
+    "rootStepPixels": 19.235,
+    "maximumProjectedSupportDriftPixels": 1.0
+  },
+  "phaseOwnership": [
+    "left-support-contact",
+    "left-support-right-pass",
+    "left-support-right-swing",
+    "right-support-contact",
+    "right-support-left-pass",
+    "right-support-left-swing"
+  ],
+  "bodyOffsetsPixels": [[0, 0], [0, 1], [0, 0], [0, 0], [0, 1], [0, 0]],
+  "sourceSha256": {
+    "father_five_directions_raw_v1.png": "01250857E9C897986DC04EA09E26AA0BD6E21F1D5EDDAFA75980E07881A82673",
+    "mother_five_directions_raw_v1.png": "B835BF6F9DAF7F5025839D621530A2411C63DD87FF1CA6F325D1FE72FE813C73",
+    "older_sister_five_directions_raw_v1.png": "A4EE4FB3C85F247721C2FF116B091D02FE8A603B01D6E706932A3C360FB09DFF",
+    "player_east_rig_parts_raw_v1.png": "AB11A69D51911B212D3DE8BB5D787CFB5C6346420DBD4B059F92CBB446F8748B",
+    "player_other_directions_raw_v1.png": "A4AE8E02A56589AB4AB16E4B8CFB9662DF7F5910CEC69170C8281BD32BA63883"
+  },
+  "canonicalDirections": ["south", "north", "east", "southeast", "northeast"],
+  "mirrors": {
+    "west": "east",
+    "southwest": "southeast",
+    "northwest": "northeast"
+  },
+  "profiles": {
+    "player": {"legStartY": 179, "legCorridorX": [100, 157], "lowerClearY": 190, "hipY": 178.0, "thighLength": 34.0, "shinLength": 42.0},
+    "older_sister": {"legStartY": 171, "legCorridorX": [102, 153], "lowerClearY": 180, "hipY": 169.0, "thighLength": 38.0, "shinLength": 47.0},
+    "father": {"legStartY": 166, "legCorridorX": [100, 155], "lowerClearY": 181, "hipY": 164.0, "thighLength": 40.0, "shinLength": 48.0},
+    "mother": {"legStartY": 180, "legCorridorX": [98, 145], "lowerClearY": 194, "hipY": 176.0, "thighLength": 36.0, "shinLength": 45.0, "depthFacingStancePixels": 18.0}
+  }
+}

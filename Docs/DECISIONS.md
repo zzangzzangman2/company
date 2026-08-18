@@ -1,5 +1,50 @@
 # DECISIONS
 
+## 2026-08-18 / 방향은 row 이름이 아니라 머리부터 양쪽 신발 앞코까지의 해부학 계약이다
+
+결정: `east/west/...` 파일명, catalog index, actor displacement, 얼굴 방향 중 하나만 맞아도 방향 PASS로
+보지 않는다. 각 프레임에서 시선/코, 흉곽, 골반, 양 무릎·발목, **두 신발의 뒤축→앞코 축**이 같은 화면
+heading이어야 한다. 뒤에 있는 발도 위치만 뒤일 뿐 앞코는 진행 방향을 유지해야 하며, 정면으로 벌어지거나
+반대쪽을 향하면 발 excursion과 cadence가 정상이어도 실패다.
+
+결정: P0→P1→P2와 P3→P4→P5는 단지 다른 실루엣이면 되는 것이 아니라 support-leg ownership이 바뀌는
+두 반주기다. P3/P4/P5에서 같은 화면측 다리를 다시 swing하거나 P0/P1/P2를 색·팔만 바꿔 반복하면
+실패다. contact A/B의 앞/뒤 다리 occlusion과 반대 arm swing도 함께 뒤집혀야 한다.
+
+결정: 생성 원본을 `full-body`라고 부르는 것 자체는 coherence 증거가 아니다. ImageGen/기존 donor 모두
+한 프레임 안에서 머리와 발을 다른 카메라 방향으로 그릴 수 있다. 방향별 source manifest에는 사람 눈으로
+승인한 `head/torso/pelvis/knees/shoeToes` 의미와 정확 frame hash를 남기고, runtime은 그 hash에서만
+결정론적으로 파생한다. 새 시안은 모자·seam·motion gate뿐 아니라 확대된 전신/발 contact sheet를 거친다.
+
+결정: 실제 결함이 확인된 엄마 east/west는 `BeforeCoherenceV1` donor를 재사용하지 않는다.
+`ArtSources/MotherSideWalkV3`의 승인 east 전신 6포즈를 정규화하고 west는 그 프레임의 정확한 수평 반전으로
+파생한다. raw/frame SHA, 모든 신발 앞코 방향, support alternation manifest가 일치하지 않으면 생성기가
+즉시 실패한다. 이 예외는 직원이나 다른 가족 행을 암묵적으로 다시 그릴 권한이 아니다.
+
+결정: QA 캡처 자체도 전신을 잘라서는 안 된다. 이전 1.15 orthographic closeup은 원화가 정상이어도
+플레이어 모자와 누나 머리카락을 화면 밖으로 잘랐다. 캡처에는 머리 위 여백과 양발 전체가 포함돼야 하며,
+원화 clipping과 카메라 framing clipping을 별도로 판정한다.
+
+이유: commit `befe937`은 허리 절단, 모자 asset clipping, 발 이동량과 Player cadence는 고쳤지만 엄마 east
+프레임에서 머리·몸통이 옆을 보는 동안 발이 정면/반대쪽을 향하는 것을 놓쳤다. 방향 semantic을 독립
+계약으로 두지 않으면 수치가 모두 PASS해도 사람에게 즉시 틀려 보인다.
+
+## 2026-08-18 / contact pose가 아니라 projected support-foot anchor가 skating 판정을 소유한다
+
+결정: `split_high_motion_sheets.extract_aligned_frames()`처럼 매 프레임 upper-body median을 x=128로
+재센터링하는 출력을 보행 정본으로 승인하지 않는다. 이 정렬은 실루엣과 pivot을 안정시키지만 접지발이
+root 진행을 상쇄해야 하는 local translation을 지운다. 신규 baker는 pelvis/root와 좌우 foot anchor를
+위상별로 명시하고 P0~P2/P3~P5의 같은 support foot projected 위치를 추적해야 한다.
+
+결정: stride `0.99380799`, PPU 180, visual scale 1.55의 현행 결합에서는 source frame당 root가 진행축으로
+19.235px, 한 걸음은 57.705px에 해당한다. 지지발 local anchor가 반대로 같은 양을 이동하지 않거나 contact
+stride가 이 값과 맞지 않으면 실패다. 임계값 `foot excursion >=1px`, 두 발 cluster 존재, cycle world
+distance, cadence, world-step/body-height는 foot lock 증거가 아니다.
+
+이유: push 전 commit `6ae4041`의 실제 Player를 다시 보자 일부 방향이 한 발로 미끄러졌다. 계산 결과 실제
+인접 발 excursion은 1.011~6.471px뿐이고, 프레임마다 두 군집 중 가장 유리한 발을 골라도 32/32루프의
+반주기 support drift가 26.260~40.138px였다. 방향이 교정된 엄마 east/west도 26.260px라 승인할 수 없다.
+
 ## 2026-08-18 / 가족 4명은 full-body authored pose가 소유하고 허리 splice를 금지한다
 
 결정: 현재 shipping/gate 범위는 가족 4명, 32루프, 192 PNG다. 직원 후보 8명은 가족 4명의 실제 D3D11
@@ -792,3 +837,36 @@ unnecessaryCornerStops=0.
 `DisplayDirection == MotionDirection`을 이동 프레임마다 강제하는 런타임 불변식과 QA 단언 7곳을 함께 바꿔야
 하고, 그중 `ReverseFacingFrames == 0`과 `MaximumFacingErrorDegrees` 같은 집계 지표를 느슨하게 만들어야 한다.
 과거 역방향 버그를 잡던 그물이므로 이번에는 적용하지 않았다.
+
+## 2026-08-18 / 가족 보행은 전신 생성·독립 재센터링 대신 marker-owned 2D part rig로 bake한다
+
+결정: 가족 4명의 출하 보행은 `FC-FAMILY-LOCOMOTION-RIG-V1` 공용 리그가 소유한다. ImageGen은
+방향별 좌/우 허벅지·종아리/발 분리 파츠만 제공하고, 6위상의 foot control, anatomical support ownership,
+root stride 결합, 반대 방향 mirror와 final PNG bake는 결정론적 코드가 담당한다. 직원 8명은 가족 4명의
+실제 D3D11 Player 시각 승인 전에는 변환하지 않는다.
+
+이유: 기존 `extract_aligned_frames()`의 phase별 upper-body median recenter가 접지발의 local counter-motion을
+삭제했다. stride 0.99380799, PPU 180, scale 1.55에서는 phase당 19.234993px 역이동이 필요하지만 구 PNG는
+1.011~6.471px만 움직였고 가족 32/32루프의 best-case 반주기 drift가 26.260~40.138px였다. 기존 1px
+excursion/ground/upper identity gate와 cadence-only Player QA는 이 미끄러짐을 통과시켰다.
+
+결정: P0~P2는 left, P3~P5는 right support로 명시하고 출하와 alpha가 같은 anatomy marker에서 발 anchor를
+측정한다. `supportWorldPx[p] = localAnchor[p] + p × 19.234993 × direction`의 진행축 drift를 1px 이하,
+P0→P3 contact step을 57.704980±1px, swing world travel을 80px 이상, passing lift를 2.5px 이상으로
+검증한다. 런타임 Resources anchor와 실제 Player SpriteRenderer transform 뒤 좌표도 별도 측정한다.
+
+결정: 방향별 canonical identity upper의 얼굴·모자·의상 픽셀은 변형하지 않는다. garment seam에서 기존
+standing leg만 corridor clear하고 generated legs를 같은 hip에 결합한다. P1/P4는 upper와 hip을 함께 1px
+아래로 움직여 upper byte freeze와 상·하체 독립 이동을 모두 금지한다. 엄마 front/back stance는 18px로
+고정해 불투명 치마 아래 한 발 가림과 과도한 X자/팔자 다리를 함께 피한다.
+
+거부한 대안: 완성 전신 6패널 재생성은 exact anchor/시간 순서를 지키지 못했고, whole-body/marker-leg warp는
+치마·다리 왜곡과 seam을 만들었다. 이미 중앙 정렬된 PNG의 pivot lock은 몸을 41.5~73.4px 점프시켰고,
+평면 fixed-length IK는 front/back 무릎을 옆으로 던졌다. 전역 VisualRoot smoothstep으로 원화를 숨기는
+방식도 runtime 속도 변동을 만들므로 다시 사용하지 않는다.
+
+검증 상태: pure candidate/runtime QA는 32/32루프 PASS, 최대 support drift 0.726448px, contact step
+57.669070~57.794742px, swing travel 최소 86.316402px, passing lift 최소 3.234033px, 기존 `.meta`/GUID
+diff 0건이다. Unity import batch도 192 Sprite, rootStep 19.2350px, cadence 2.0125로 PASS했고
+`FAST_QA_WINDOWS.cmd -Profile editor-broad`는 10.725초 PASS했다. clean build와 배포 D3D11 Player 사람
+검토가 끝날 때까지 릴리스 결정은 미완료다.

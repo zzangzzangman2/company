@@ -50,6 +50,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private string _artifactDirectory = string.Empty;
         private StreamWriter _trace;
 
+        [Serializable]
+        private sealed class FootAnchorCatalog
+        {
+            public string contract;
+            public float pixelsPerUnit;
+            public float visualScale;
+            public float strideWorld;
+            public float rootStepPixels;
+            public float maximumPlayerSupportDriftPixels;
+            public FootAnchorRow[] rows;
+        }
+
+        [Serializable]
+        private sealed class FootAnchorRow
+        {
+            public string character;
+            public string direction;
+            public string[] supportLegs;
+            public FootAnchorPoint[] supportAnchors;
+        }
+
+        [Serializable]
+        private sealed class FootAnchorPoint
+        {
+            public float x;
+            public float y;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState() => _instance = null;
 
@@ -75,7 +103,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 new UTF8Encoding(false));
             _trace.WriteLine(
                 "character,direction,phase,frame_count,gait_distance,cycle_distance,x,y,dx,dy," +
-                "motion_direction,display_direction,sprite_direction,clip,sprite,flip_x");
+                "motion_direction,display_direction,sprite_direction,clip,sprite,flip_x," +
+                "support_foot_world_x,support_foot_world_y");
             StartCoroutine(RunGuarded());
         }
 
@@ -175,10 +204,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 Finish(101, "OfficeRuntimeCharacterArtCatalog missing");
                 yield break;
             }
+            TextAsset anchorJson = Resources.Load<TextAsset>("HighMotion/FamilyLocomotionFootAnchorsV1");
+            if (anchorJson == null)
+            {
+                Finish(107, "FamilyLocomotionFootAnchorsV1 resource missing");
+                yield break;
+            }
+            FootAnchorCatalog footAnchors = JsonUtility.FromJson<FootAnchorCatalog>(anchorJson.text);
+            if (footAnchors == null ||
+                !string.Equals(footAnchors.contract, "FC-FAMILY-LOCOMOTION-FOOT-ANCHORS-V1",
+                    StringComparison.Ordinal) || footAnchors.rows == null || footAnchors.rows.Length != 32 ||
+                Mathf.Abs(footAnchors.pixelsPerUnit - 180f) > 0.001f ||
+                Mathf.Abs(footAnchors.visualScale - 1.55f) > 0.001f ||
+                Mathf.Abs(footAnchors.strideWorld - OfficeLocomotionGaitRules.DefaultStrideLength) > 0.0001f)
+            {
+                Finish(108, "FamilyLocomotionFootAnchorsV1 runtime contract invalid");
+                yield break;
+            }
+            Dictionary<string, FootAnchorRow> anchorRows = footAnchors.rows.ToDictionary(
+                row => row.character + "/" + row.direction, row => row, StringComparer.Ordinal);
 
             var cycleDistances = new List<float>();
             var stepBodyHeightRatios = new List<float>();
             var observedCadences = new List<float>();
+            var supportDrifts = new List<float>();
+            var contactStepDistances = new List<float>();
             var renderedCharacters = new HashSet<string>(StringComparer.Ordinal);
             var renderedLoops = 0;
             var capturedCloseups = 0;
@@ -203,10 +253,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 renderedCharacters.Add(characterId);
                 for (var direction = 0; direction < DirectionVectors.Length; direction++)
                 {
+                    string anchorKey = characterId + "/" + DirectionTokens[direction];
+                    if (!anchorRows.TryGetValue(anchorKey, out FootAnchorRow anchorRow) ||
+                        anchorRow.supportLegs == null || anchorRow.supportLegs.Length != 6 ||
+                        anchorRow.supportAnchors == null || anchorRow.supportAnchors.Length != 6 ||
+                        anchorRow.supportLegs.Take(3).Any(leg => !string.Equals(leg, "left", StringComparison.Ordinal)) ||
+                        anchorRow.supportLegs.Skip(3).Any(leg => !string.Equals(leg, "right", StringComparison.Ordinal)))
+                    {
+                        Finish(109, "invalid explicit support-foot phase ownership: " + anchorKey);
+                        yield break;
+                    }
                     player.QaTeleportToCell(start);
                     yield return null;
                     player.QaSetDirectMovementInput(DirectionVectors[direction]);
                     var captured = new HashSet<int>();
+                    var supportWorldByPhase = new Vector2[6];
                     var previousFrame = -1;
                     float phaseZeroDistance = -1f;
                     // PNG encoding is synchronous in this release-player proof.  A wall-clock-only
@@ -244,6 +305,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
                         if (!captured.Contains(phase))
                         {
+                            if (!TryResolveSupportFootWorld(player.PresentationRenderer, anchorRow, phase,
+                                    out Vector2 supportFootWorld, out string anchorFailure))
+                            {
+                                Finish(110, $"character={characterId} direction={DirectionTokens[direction]} " +
+                                            "support anchor failed: " + anchorFailure);
+                                yield break;
+                            }
+                            supportWorldByPhase[phase] = supportFootWorld;
                             if (string.Equals(characterId, "player", StringComparison.Ordinal) ||
                                 phase == 0 || phase == 2 || phase == 3 || phase == 5)
                             {
@@ -274,14 +343,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             captured.Add(phase);
                             if (phase == 0 && phaseZeroDistance < 0f)
                                 phaseZeroDistance = player.GaitDistance;
-                            WriteTrace(characterId, direction, phase, player, trace, 0f);
+                            WriteTrace(characterId, direction, phase, player, trace, 0f, supportFootWorld);
                         }
 
                         if (previousFrame == 5 && phase == 0 && phaseZeroDistance >= 0f)
                         {
                             float cycleDistance = player.GaitDistance - phaseZeroDistance;
                             cycleDistances.Add(cycleDistance);
-                            WriteTrace(characterId, direction, phase, player, trace, cycleDistance);
+                            if (!TryResolveSupportFootWorld(player.PresentationRenderer, anchorRow, phase,
+                                    out Vector2 wrappedSupportWorld, out string wrappedAnchorFailure))
+                            {
+                                Finish(110, "wrapped support anchor failed: " + wrappedAnchorFailure);
+                                yield break;
+                            }
+                            WriteTrace(characterId, direction, phase, player, trace, cycleDistance,
+                                wrappedSupportWorld);
                             float tolerance = 0.08f;
                             if (Mathf.Abs(cycleDistance - OfficeLocomotionGaitRules.DefaultStrideLength) > tolerance)
                             {
@@ -319,6 +395,37 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                                     " sampledFrames=" + sampledFrames);
                         yield break;
                     }
+                    float sourcePixelsPerWorld = 180f /
+                        Mathf.Max(0.0001f, Mathf.Abs(player.PresentationRenderer.transform.lossyScale.x));
+                    float leftSupportDrift = Mathf.Max(
+                        Mathf.Abs(Vector2.Dot(supportWorldByPhase[1] - supportWorldByPhase[0],
+                            DirectionVectors[direction])),
+                        Mathf.Abs(Vector2.Dot(supportWorldByPhase[2] - supportWorldByPhase[0],
+                            DirectionVectors[direction]))) * sourcePixelsPerWorld;
+                    float rightSupportDrift = Mathf.Max(
+                        Mathf.Abs(Vector2.Dot(supportWorldByPhase[4] - supportWorldByPhase[3],
+                            DirectionVectors[direction])),
+                        Mathf.Abs(Vector2.Dot(supportWorldByPhase[5] - supportWorldByPhase[3],
+                            DirectionVectors[direction]))) * sourcePixelsPerWorld;
+                    float maximumSupportDrift = Mathf.Max(leftSupportDrift, rightSupportDrift);
+                    if (maximumSupportDrift > footAnchors.maximumPlayerSupportDriftPixels)
+                    {
+                        Finish(111, $"character={characterId} direction={DirectionTokens[direction]} " +
+                                    $"screen support-foot drift={maximumSupportDrift:F3}px > " +
+                                    $"{footAnchors.maximumPlayerSupportDriftPixels:F3}px");
+                        yield break;
+                    }
+                    float contactStep = Vector2.Dot(supportWorldByPhase[3] - supportWorldByPhase[0],
+                        DirectionVectors[direction]);
+                    float expectedContactStep = OfficeLocomotionGaitRules.DefaultStrideLength * 0.5f;
+                    if (Mathf.Abs(contactStep - expectedContactStep) > 0.05f)
+                    {
+                        Finish(112, $"character={characterId} direction={DirectionTokens[direction]} " +
+                                    $"alternating contact step={contactStep:F4} expected={expectedContactStep:F4}");
+                        yield break;
+                    }
+                    supportDrifts.Add(maximumSupportDrift);
+                    contactStepDistances.Add(contactStep);
                 }
             }
             player.QaSetDirectMovementInput(Vector2.zero);
@@ -343,13 +450,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("worldStepBodyHeightRatioMinMax=" +
                               stepBodyHeightRatios.Min().ToString("F4", Invariant) + "," +
                               stepBodyHeightRatios.Max().ToString("F4", Invariant));
+            result.AppendLine("screenSupportFootDriftSourcePxMinMax=" +
+                              supportDrifts.Min().ToString("F4", Invariant) + "," +
+                              supportDrifts.Max().ToString("F4", Invariant));
+            result.AppendLine("alternatingContactStepWorldMinMax=" +
+                              contactStepDistances.Min().ToString("F4", Invariant) + "," +
+                              contactStepDistances.Max().ToString("F4", Invariant));
             File.WriteAllText(ArtifactPath("character-locomotion-player-result.txt"), result.ToString(),
                 new UTF8Encoding(false));
             Finish(0, "4 family characters, 8 directions, 192 phases, and stride-owned cadence rendered");
         }
 
         private void WriteTrace(string characterId, int direction, int phase, OfficeRuntimeAgent actor,
-            DirectionalLocomotionFrameTrace trace, float cycleDistance)
+            DirectionalLocomotionFrameTrace trace, float cycleDistance, Vector2 supportFootWorld)
         {
             Vector2 displacement = trace.ActualDisplacement;
             _trace.WriteLine(string.Join(",", new[]
@@ -361,9 +474,39 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 displacement.x.ToString("F6", Invariant), displacement.y.ToString("F6", Invariant),
                 trace.MotionDirection.ToString(Invariant), trace.DisplayDirection.ToString(Invariant),
                 actor.CurrentSpriteDirection.ToString(Invariant), trace.Clip, trace.SpriteName,
-                trace.FlipX ? "true" : "false"
+                trace.FlipX ? "true" : "false",
+                supportFootWorld.x.ToString("F6", Invariant),
+                supportFootWorld.y.ToString("F6", Invariant)
             }));
             _trace.Flush();
+        }
+
+        private static bool TryResolveSupportFootWorld(SpriteRenderer renderer, FootAnchorRow row, int phase,
+            out Vector2 world, out string failure)
+        {
+            world = Vector2.zero;
+            failure = string.Empty;
+            if (renderer == null || renderer.sprite == null)
+            {
+                failure = "SpriteRenderer/sprite missing";
+                return false;
+            }
+            if (phase < 0 || phase >= 6 || row?.supportAnchors == null || row.supportAnchors.Length != 6)
+            {
+                failure = "phase/row invalid";
+                return false;
+            }
+            Sprite sprite = renderer.sprite;
+            FootAnchorPoint anchor = row.supportAnchors[phase];
+            float ppu = sprite.pixelsPerUnit;
+            Vector3 local = new Vector3(
+                (anchor.x - sprite.pivot.x) / ppu,
+                (sprite.rect.height - anchor.y - sprite.pivot.y) / ppu,
+                0f);
+            Vector3 transformed = renderer.transform.TransformPoint(local);
+            world = new Vector2(transformed.x, transformed.y);
+            return !float.IsNaN(world.x) && !float.IsInfinity(world.x) &&
+                   !float.IsNaN(world.y) && !float.IsInfinity(world.y);
         }
 
         private bool TryCapture(OfficeRuntimeAgent actor, string path, int width, int height,

@@ -5,28 +5,39 @@
 ## Character Locomotion Generation V1 (2026-08-18, current family-4 shipping authority)
 
 - Contract: `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의
-  `FC-CHARACTER-LOCOMOTION-GENERATION-V1` / `FC-CHARACTER-LOCOMOTION-QA-V1`.
+  `FC-CHARACTER-LOCOMOTION-GENERATION-V1` / `FC-FAMILY-LOCOMOTION-RIG-V1` /
+  `FC-CHARACTER-LOCOMOTION-FOOT-LOCK-QA-V1`.
 - Scope: 가족 4명, 4×8방향×6위상=192 frame과 캐릭터별 A/B sheet 8장. 직원 후보 8명은 가족
   실제 Player 승인 뒤 별도 확장하며 현재 writer/gate 범위 밖이다.
 - Shipping frames: 각 캐릭터 `Pixel/HighMotion/Frames/<id>_<direction>_walk_<phase>.png`.
-- Deterministic writer: `Tools/generate_character_locomotion_v1.py`; shared profile:
-  `Tools/character_locomotion_profiles_v1.json`; fail-closed gate/self-test:
-  `Tools/verify_character_locomotion_v1.py`, `Tools/test_character_locomotion_v1.py`.
+- Deterministic writer: `Tools/generate_character_locomotion_v1.py`가
+  `Tools/build_family_locomotion_rig_v1.py`의 공용 리그를 호출한다. fail-closed gate/self-test는
+  `Tools/verify_character_locomotion_v1.py`, `Tools/test_character_locomotion_v1.py`다.
 - Identity source: 결함 전 revision `9144fa0e`에서 독립 보존한
   `Tools/CharacterLocomotionIdentityV1/<id>/`의 방향별 anchor 32장. 생성 runtime을 입력으로 재사용하지
-  않는다. Motion source는 `Assets/Art/Characters/BeforeCoherenceV1/<id>/`의 온몸 6포즈다.
-- Derivation: 온몸 authored pose→분리 ground-shadow 제거→실제 몸 ground y247 normalize→플레이어/엄마만
-  안정 머리 anchor underlap→hard alpha/island cleanup→기존 runtime PNG와 시트에 publish. 허리 cutout,
-  pelvis cap, 캐릭터·프레임별 수작업은 없다.
+  않는다. canonical identity의 얼굴·모자·옷 상체는 변형하지 않고, P1/P4에서 hip과 함께 1px 이동한다.
+- Rig source: `ArtSources/FamilyLocomotionRigV1/`의 manifest와 generated raw 5장. ImageGen은 방향별
+  좌/우 허벅지·종아리/발 분리 파츠까지만 만들며 최종 발 좌표·위상·접지는 코드가 소유한다. raw SHA는
+  manifest와 `CHARACTER_LOCOMOTION_GENERATION_V1.md`에 고정했다.
+- Derivation: 방향별 identity upper→garment seam의 기존 standing leg만 corridor clear→공용 좌/우 leg
+  part를 hip/knee/foot control에 bake→upper와 hip을 같은 weight offset으로 합성→support marker 진행축
+  drift 보정→5 canonical 방향과 3 full-frame mirror→hard-alpha frames/sheets/anchor catalog. 허리 cap,
+  전신 frame generation, 프레임별 수작업 좌표는 없다.
 - Import contract: 256×256 RGBA, PPU 180, Point, hard alpha, bottom-center pivot. 기존 PNG `.meta`와 GUID는
   보존했다.
+- Direction contract: 파일명·행·얼굴만으로 승인하지 않는다. 머리/시선, 흉곽, 골반, 무릎·발목과 양쪽
+  신발의 뒤축→앞코가 같은 heading이어야 한다. 뒤발도 앞코는 진행 방향을 향해야 하며 같은 다리를 두
+  반주기에서 반복하면 실패다.
+- Foot-lock contract: P0~P2는 left, P3~P5는 right support다. PPU 180/scale 1.55/stride
+  0.99380799에서 local support anchor는 phase당 진행축 반대로 19.234993px 이동한다. 생성 QA 최대
+  projected drift는 0.726448px이며 정지발·한 발 반복·air phase 0·모자 절단 음성 fixture를 거부한다.
 - Reference observation only: Mad Games Tycoon 2 1659.042578~1659.409241 1/30초 프레임과 Big Biz
   Tycoon 299.954658~300.321321 1/30초 책상 동선을 보행 가독성 비교에 사용했다. 외부 게임 픽셀/에셋은
   프로젝트에 복사하지 않았다.
 
 ## Family Walk Identity-Locked Six-Pose Cycles (2026-08-18)
 
-Historical/provenance only. 현재 가족 4명 Generation V1 full-body writer와 release gate가 대체한다.
+Historical/provenance only. 현재 가족 4명 Generation V1 part-rig writer와 foot-lock gate가 대체한다.
 
 - Runtime: 가족 4명 각각 `Assets/Art/Characters/<Member>/Pixel/HighMotion/Frames/`의 8방향×6프레임 192장과 A/B 시트 8장.
 - Shipping source: `ArtSources/FamilyWalkHalfCyclesV2/<member>/<direction>/`의 표식 없는 identity-locked 192장. 출하 픽셀에는 청록/자홍 표식을 칠한 적이 없다.

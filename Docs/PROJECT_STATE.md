@@ -2,27 +2,38 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-18 / 가족 4명 보행 seam·모자 복구 — 현재 shipping authority
+## 2026-08-18 / 가족 4명 foot-anchored 공용 리그 — 검증 진행 중 shipping 후보
 
-- 직전 12명 cutout 결과는 발만 움직이고 상·하체가 허리에서 찢어지며 플레이어 모자와 일부 머리가
-  잘리는 실제 화면 결함이 있어 승인과 배포 주장을 철회했다. 이번 출하 범위는 사용자 지시에 따라
-  가족 4명×8방향×6위상=192 PNG뿐이다. 직원 후보 8명은 변경·검증하지 않으며 가족 4명 실제 Player
-  승인 뒤 같은 규칙을 적용한다.
-- 반복 원인은 이미 손상된 runtime P0를 identity 입력으로 다시 사용하고, 하체 영역을 지운 뒤 더 좁은
-  layer로 채운 cutout 합성이었다. 수치 검사는 발 excursion과 upper identity만 보아 허리의 투명 절단과
-  모자 clipping을 직접 거부하지 못했다.
-- 현재 writer `Tools/generate_character_locomotion_v1.py`는 revision `9144fa0e`에서 독립 보존한 방향별
-  identity anchor 32장과 `BeforeCoherenceV1`의 승인 **온몸 6포즈**만 입력으로 사용한다. 허리 splice와
-  pelvis cap을 없앴다. 플레이어/엄마만 안정 머리 영역을 10px underlap으로 겹치며 누나/아빠는 온몸
-  donor 자체를 사용한다. ground 정렬 전에 분리된 얇은 그림자를 제거해 몸이 위로 밀려 모자가 잘리는
-  순서 오류도 막았다.
-- `FC-CHARACTER-LOCOMOTION-QA-V1`은 가족 32루프/192 runtime PNG를 검사한다. 발 접촉 교대·반주기와
-  인접 excursion·실루엣 변화·수직 들림·지지발 바닥 픽셀뿐 아니라 full donor 대비 허리 band mismatch
-  ≤1%, 머리 IoU ≥0.78, 머리 위 여백 ≥4px, 머리 identity mismatch 0을 요구한다. 정지, 바지만 흔듦,
-  접촉 재사용, 상체 byte freeze, 4px 허리 절단, 모자/머리 절단 음성 대조군을 모두 거부한다.
-- 이미지 후보와 게시 runtime은 현재 4명/32루프 PASS이고 192 PNG가 재생성 결과와 byte-identical하다.
-  완료 승인은 Unity 6000.3.21f1 catalog/broad 검증, 실제 Release D3D11 Player 캡처의 사람 확인, clean
-  `main` 빌드의 `BUILD_INFO` SHA 일치까지 모두 통과한 결과만 사용한다. 정확한 절차와 최신 임계값은
+> commit `befe937`과 로컬 `6ae4041`의 기존 PASS는 무효다. 전자는 프레임 내부 머리/발 방향을,
+> 후자는 실제 projected support foot을 검사하지 않았다. `split_high_motion_sheets.py`가 각 phase의 상체
+> median X를 128로 독립 재센터링해 접지발의 root-relative 역이동을 지웠다. 필요한 값은 phase당
+> 19.234993px인데 구 PNG는 1.011~6.471px만 움직였고, explicit support가 아닌 best-case 발 선택에서도
+> 가족 32/32루프가 26.260~40.138px 미끄러졌다. `6ae4041`은 push·배포하지 않는다.
+
+- 사용자 지시에 따라 출하 범위는 가족 4명×8방향×6위상=192 PNG뿐이다. 직원 후보 8명은 변경하지
+  않았고 가족 4명 실제 Player 사람이 승인된 뒤 같은 rig/profile을 retarget한다.
+- `Tools/generate_character_locomotion_v1.py`는 이제 `Tools/build_family_locomotion_rig_v1.py`를 호출한다.
+  `ArtSources/FamilyLocomotionRigV1`의 SHA 고정 5방향 분리 leg parts와 결함 전 방향별 identity upper를
+  사용한다. ImageGen은 파츠까지만 맡고 final foot coordinates/phase/contact는 공용 코드가 소유한다.
+- canonical 방향은 south/north/east/southeast/northeast, west 계열 3방향은 frame 전체 mirror다. P0~P2는
+  anatomical left support, P3~P5는 right support다. 출하와 alpha가 같은 cyan/magenta marker 사본으로
+  두 발을 명시해 검사기가 프레임마다 다른 best-case 발을 고를 수 없다.
+- garment seam corridor에서 기존 standing leg만 제거하고 generated leg를 같은 hip에 결합한 뒤 canonical
+  upper를 마지막에 덮는다. 별도 pelvis cap과 상/하체 independent offset은 없다. P1/P4에는 upper와 hip을
+  함께 1px 아래로 옮겨 얼굴/의상 픽셀을 변형하지 않으면서 frozen torso 느낌과 seam 찢어짐을 막는다.
+- front/back은 fixed-length 평면 IK 대신 foreshortening을 사용한다. 엄마의 불투명 치마 아래 한 발이
+  사라지는 것과 과도한 X자/팔자 다리를 함께 피하도록 depth-facing stance를 18px로 고정했다.
+- 후보와 게시 runtime의 독립 foot-lock QA는 4명/8방향/32루프/192프레임 전부 PASS다. 최대 projected
+  support drift `0.726448px`, alternating contact step `57.669070~57.794742px`, swing world travel 최소
+  `86.316402px`, passing lift 최소 `3.234033px`, detached alpha `0px`다. 기존 `.meta`/GUID hash diff는 0건이다.
+- 음성 회귀는 정지발을 `38.470px` support drift, 같은 지지발 반복을 `32.407px` contact-step error,
+  lift 0을 air-phase failure, P0~P5 left를 ownership failure, 모자 절단을 alpha/identity failure로 거부한다.
+- Unity 6000.3.21f1 숨김 batch는 실제 import된 `characters=4 directions=8 frames=192`, stride
+  `0.99380800`, `rootStepPx=19.2350`, cadence `2.0125 steps/s`로 PASS했고 `FAST_QA_WINDOWS.cmd -Profile
+  editor-broad`도 10.725초에 PASS했다. clean Release build, 배포본 D3D11 Player의 renderer support-world
+  trace와 실제 캡처 사람 검토는 아직 다시 실행해야 한다. 이들이 PASS하고 `BUILD_INFO` SHA가 HEAD와
+  같기 전에는 완료/정상 릴리스가 아니다.
+- 정확한 source SHA, 좌표계, phase, threshold, 실패 사례와 재현 명령은
   `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`가 소유한다.
 
 ## 2026-08-18 / 가족 보행 identity-lock 재제작·실제 Player 승인 후보
