@@ -63,14 +63,16 @@
 - 런타임 이동 정본: `Assets/Art/Characters/Mother/Pixel/HighMotion/mother_pixel_walk8dir6_{a,b}_v1.png`
 - 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
-## 전체 캐릭터 보행 제작 정본
+## 가족 4명 보행 제작 정본
 
 - 최우선 계약은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의
   `FC-CHARACTER-LOCOMOTION-GENERATION-V1`과 `FC-CHARACTER-LOCOMOTION-QA-V1`이다.
-- 가족 4명뿐 아니라 직원 후보 8명을 포함한 12명의 8방향×6위상이 같은 공용 생성 규칙과 profile을
-  사용한다. 제작/publish는 `Tools/generate_character_locomotion_v1.py`만 수행한다.
-- 각 6프레임은 접촉 A·A 지지/B 초기 스윙·B 통과·접촉 B·B 지지/A 초기 스윙·A 통과다. P1/P4에는
-  승인 identity를 재생성하지 않는 1px 강체 하중 이동이 있으며 P2/P5에는 실제 하퇴/발 4px 들림이 있다.
+- 현재 출하/gate 범위는 가족 4명×8방향×6위상=192 PNG다. 직원 후보 8명은 가족 4명의 실제 Player
+  품질 승인 뒤 같은 정본을 확장한다. 제작/publish는 `Tools/generate_character_locomotion_v1.py`만 수행한다.
+- `BeforeCoherenceV1`의 승인 온몸 6포즈가 motion authority다. 허리에서 상·하체를 자르거나 pelvis cap을
+  덮지 않는다. 플레이어/엄마만 결함 전 방향별 identity anchor의 머리 영역을 underlap으로 겹친다.
+- 각 6프레임은 접촉 A·A 지지/B 초기 스윙·B 통과·접촉 B·B 지지/A 초기 스윙·A 통과다. 지지발 접지,
+  반대 발의 실제 진행축 이동·들림, 최소 자연 체중 이동을 함께 요구한다.
 - `ArtSources/FamilyWalkHalfCyclesV2`, `IdentityModelV1`, `MarkerReviewV1`은 가족 제작 provenance와 좌우
   다리 증거로 보존하지만 shipping writer가 아니다. 구 builder `--write`는 차단돼 있다.
 - 정상 가족 런타임은 별도 `LocomotionTransitionsV1` 초상화를 섞지 않고 승인 walk/idle 계열만 사용한다.
@@ -82,6 +84,7 @@
 - 각 인물의 정본 전신 원화 9종과 정체성 앵커는 외형·표정·복장을 바꾸지 않고 그대로 보존한다.
 - 에셋 루트: Assets/Art/Characters/Employees/
 - 인물별 런타임 도트는 8방향과 방향별 걷기 6프레임을 가진다. 정본 루트는 각 인물의 `Pixel/HighMotion/`이다.
+- 현재 직원 보행 PNG는 이번 가족 4명 seam/모자 수정의 출하 승인이나 QA 범위에 포함되지 않는다.
 - 이 8인은 시작 시점의 4인 가족 창업팀에 자동 합류하지 않으며, 이후 고용 시스템에서 해금·채용한다.
 
 ## 에셋 권리

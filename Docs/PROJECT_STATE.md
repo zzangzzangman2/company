@@ -2,34 +2,28 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-18 / 전체 캐릭터 보행 Generation V1 — clean main 배포·Player 검증 완료
+## 2026-08-18 / 가족 4명 보행 seam·모자 복구 — 현재 shipping authority
 
-- 기존 가족 candidate 61/HalfCyclesV2를 shipping 정본에서 내리고, 가족 4명과 채용 후보 8명을 합친
-  12명×8방향×6위상=576 PNG를 하나의 결정론적 cutout 생성기와 캐릭터 프로필로 통합했다. 현재 writer는
-  `Tools/generate_character_locomotion_v1.py`, 정본 계약은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`다.
-- 실제 변경 전 PNG를 새 게이트로 읽으면 96루프 중 88루프가 발 이동·들림·접촉 교대 부족으로 실패했다.
-  기존 strict coherence가 `footDrift=0`을 PASS로 기록한 것은 발이 움직였다는 뜻이 아니라 최저 바닥선만
-  유지됐다는 뜻이었다.
-- V1은 P0/P3의 반대 접촉 하체를 공용 leg layer로 분리해 P1/P2와 P4/P5의 support/swing을 합성한다.
-  P2/P5 스윙은 4px 들리고 실제 하퇴·발이 진행축으로 이동하며, P1/P4에는 얼굴·복장 픽셀을 재생성하지
-  않는 1px 강체 하중 이동을 넣었다. donor는 신발/발 band와 연결된 component만 허용하고 hip 전환대는
-  P0 silhouette 2px 안쪽만 허용해 늘어진 손·머리카락이 다리로 복제되는 것도 차단한다. 상체 6장이
-  byte-identical인 후보도 이제 실패한다. 최종 재생성은 runtime과 600/600 PNG byte-identical이다.
-- `FC-CHARACTER-LOCOMOTION-QA-V1`은 현재 runtime 12명/96루프 전부 PASS다. 정지 6장, 바지만 흔드는
-  가짜 움직임, contact를 air로 재사용한 루프, 발은 움직이지만 상체가 완전히 고정된 루프를 음성 대조군으로
-  거부한다. 구 strict coherence도 96/96, 576/576 PASS다.
-- Unity 6000.3.21f1 Editor import/catalog 검증은 `characters=12 directions=8 frames=576`, stride
-  `0.99380800`, cadence `2.0125 steps/s`로 PASS했다. broad 이동 검증은 seeds 128, paths 1,152,
-  direction checks 288, reverse facing/moving during pivot/unnecessary stop 0으로 PASS했다.
-- D3D11 실제 Player QA는 실제 `OfficeRuntimeAgent`의 이동·방향·최종 SpriteRenderer를 유지한 채 catalog
-  12명을 순회하도록 확장했다. 커밋 전 최종 Windows Release에서 12명, 8방향, 96루프, 576위상과 closeup
-  400장·overview 96장을 렌더해 PASS했다. cycle distance는 `0.992789~1.009411 world`, cadence는
-  `1.9814~2.0145 steps/s`, world step/body height는 `0.2252~0.2289`다.
-- clean main Release를 `C:\Users\godho\Downloads\Family`에 배포했다. `BUILD_INFO.txt`는 이 문서를
-  포함한 HEAD와 같은 commit, branch `main`, `WorkingTreeDirty=False`여야 하며 배포 EXE 자체의 재검증도
-  D3D11, 12명, 96루프, 576위상, closeup 400장·overview 96장으로 PASS했다. 배포본 cycle distance는
-  `0.992772~1.009320 world`, cadence는 `1.9815~2.0146 steps/s`, world step/body height는
-  `0.2252~0.2289`다.
+- 직전 12명 cutout 결과는 발만 움직이고 상·하체가 허리에서 찢어지며 플레이어 모자와 일부 머리가
+  잘리는 실제 화면 결함이 있어 승인과 배포 주장을 철회했다. 이번 출하 범위는 사용자 지시에 따라
+  가족 4명×8방향×6위상=192 PNG뿐이다. 직원 후보 8명은 변경·검증하지 않으며 가족 4명 실제 Player
+  승인 뒤 같은 규칙을 적용한다.
+- 반복 원인은 이미 손상된 runtime P0를 identity 입력으로 다시 사용하고, 하체 영역을 지운 뒤 더 좁은
+  layer로 채운 cutout 합성이었다. 수치 검사는 발 excursion과 upper identity만 보아 허리의 투명 절단과
+  모자 clipping을 직접 거부하지 못했다.
+- 현재 writer `Tools/generate_character_locomotion_v1.py`는 revision `9144fa0e`에서 독립 보존한 방향별
+  identity anchor 32장과 `BeforeCoherenceV1`의 승인 **온몸 6포즈**만 입력으로 사용한다. 허리 splice와
+  pelvis cap을 없앴다. 플레이어/엄마만 안정 머리 영역을 10px underlap으로 겹치며 누나/아빠는 온몸
+  donor 자체를 사용한다. ground 정렬 전에 분리된 얇은 그림자를 제거해 몸이 위로 밀려 모자가 잘리는
+  순서 오류도 막았다.
+- `FC-CHARACTER-LOCOMOTION-QA-V1`은 가족 32루프/192 runtime PNG를 검사한다. 발 접촉 교대·반주기와
+  인접 excursion·실루엣 변화·수직 들림·지지발 바닥 픽셀뿐 아니라 full donor 대비 허리 band mismatch
+  ≤1%, 머리 IoU ≥0.78, 머리 위 여백 ≥4px, 머리 identity mismatch 0을 요구한다. 정지, 바지만 흔듦,
+  접촉 재사용, 상체 byte freeze, 4px 허리 절단, 모자/머리 절단 음성 대조군을 모두 거부한다.
+- 이미지 후보와 게시 runtime은 현재 4명/32루프 PASS이고 192 PNG가 재생성 결과와 byte-identical하다.
+  완료 승인은 Unity 6000.3.21f1 catalog/broad 검증, 실제 Release D3D11 Player 캡처의 사람 확인, clean
+  `main` 빌드의 `BUILD_INFO` SHA 일치까지 모두 통과한 결과만 사용한다. 정확한 절차와 최신 임계값은
+  `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`가 소유한다.
 
 ## 2026-08-18 / 가족 보행 identity-lock 재제작·실제 Player 승인 후보
 

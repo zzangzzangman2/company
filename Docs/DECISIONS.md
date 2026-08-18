@@ -1,6 +1,31 @@
 # DECISIONS
 
+## 2026-08-18 / 가족 4명은 full-body authored pose가 소유하고 허리 splice를 금지한다
+
+결정: 현재 shipping/gate 범위는 가족 4명, 32루프, 192 PNG다. 직원 후보 8명은 가족 4명의 실제 D3D11
+Player 시각 승인이 끝난 뒤 같은 계약을 확장하는 별도 작업으로 둔다. 아래의 “전체 12명 cutout” 결정은
+실제 허리 절단과 머리 clipping을 놓쳤으므로 현재 권한이 없다.
+
+결정: `BeforeCoherenceV1`의 승인 6포즈를 머리부터 발까지 온몸 motion authority로 사용한다. lower-body를
+지우고 다시 채우는 cutout, 허리선 합성, 직사각형 pelvis cap을 금지한다. 플레이어와 엄마만 결함 전
+revision `9144fa0e`에서 독립 보존한 방향별 identity anchor의 머리 영역을 10px underlap으로 겹친다.
+누나와 아빠는 donor 전신 자체가 authority다. 생성된 runtime P0를 다음 생성 입력으로 사용하지 않는다.
+
+결정: 발 아래 분리된 1~3px shadow island는 ground normalize 전에 제거한다. 가짜 최저점을 먼저 맞춰
+몸 전체가 위로 이동하고 모자·머리카락이 canvas 밖으로 잘리는 순서 오류를 fail-closed한다.
+
+결정: 발의 contact/excursion/lift/support/cadence gate에 full donor 대비 허리 band mismatch ≤1%, 머리
+실루엣 IoU ≥0.78, top margin ≥4px, profile identity-head mismatch 0을 추가한다. 발이 움직여도 상체가
+byte-identical인 후보, 허리에 4px 투명 절단이 있는 후보, 모자를 같은 높이로 자른 후보는 음성 대조군에서
+반드시 실패해야 한다. 수치 PASS 뒤 실제 D3D11 Player closeup을 사람이 확대 확인해야 승인한다.
+
+이유: 이전 게이트는 발 운동과 identity를 서로 떨어진 구역으로만 검사해 두 영역 사이의 seam을 보지
+않았고, detached shadow를 실제 발바닥으로 오인해 정렬하면서 모자까지 잘랐다. 온몸 pose authority와
+seam/head 회귀 검사는 사용자가 실제 GIF에서 본 결함을 직접 금지한다.
+
 ## 2026-08-18 / 전체 12명 보행은 공용 cutout 규칙, 실제 발 궤적, Player cadence가 소유한다
+
+이 결정은 위 가족 4명 full-body 결정으로 대체된 실패 이력이다. 현재 shipping 권한이 없다.
 
 결정: shipping walk는 `FC-CHARACTER-LOCOMOTION-GENERATION-V1` 하나가 소유한다. 현재 catalog의
 가족 4명과 직원 후보 8명 모두 같은 8방향 좌표계와 contact/support/pass/contact/support/pass 위상 곡선을

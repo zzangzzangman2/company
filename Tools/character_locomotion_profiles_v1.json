@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "description": "Character-level seam profiles for the shared Character Locomotion Generation V1 pipeline. Values are per identity, never per frame or direction.",
   "characters": {
-    "player": { "lowerBodyStart": 0.70, "footCorridorMarginPx": 18 },
+    "player": { "lowerBodyStart": 0.70, "footCorridorMarginPx": 18, "identityHeadFraction": 0.48, "identityHeadUnderlapPx": 10 },
     "older_sister": { "lowerBodyStart": 0.66, "footCorridorMarginPx": 22 },
     "father": { "lowerBodyStart": 0.66, "footCorridorMarginPx": 18 },
-    "mother": { "lowerBodyStart": 0.68, "footCorridorMarginPx": 30 },
+    "mother": { "lowerBodyStart": 0.68, "footCorridorMarginPx": 30, "identityHeadFraction": 0.46, "identityHeadUnderlapPx": 10 },
     "kim_seoa": { "lowerBodyStart": 0.66, "footCorridorMarginPx": 24 },
     "lee_jian": { "lowerBodyStart": 0.67, "footCorridorMarginPx": 24 },
     "choi_iseo": { "lowerBodyStart": 0.67, "footCorridorMarginPx": 22 },

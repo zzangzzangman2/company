@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build the shared 12-character, 8-direction, 6-phase walk candidate.
+"""Build the family 4-character, 8-direction, 6-phase walk candidate.
 
-The current identity-locked frame 0 is the stable head/torso authority for each
-direction.  The repository's approved pre-coherence six-pose sheets are used only
-as a lower-body motion donor.  This restores real contact/recoil/passing geometry
-without redrawing faces, hair, upper clothing, or camera direction.
+The repository's approved pre-coherence six-pose sheets are the full-body motion
+authority.  Committed V1 identity anchors preserve the stable head/hat only for
+profiles that need it; no waist splice is permitted.  Generated runtime output is
+never reused as generation input.
 
 Default execution is non-destructive and writes a review candidate under
 Artifacts/CharacterLocomotionGenerationV1.  ``--write`` is deliberately separate
@@ -31,6 +31,7 @@ from split_high_motion_sheets import extract_aligned_frames
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROFILE_PATH = REPO_ROOT / "Tools" / "character_locomotion_profiles_v1.json"
 DONOR_ROOT = REPO_ROOT / "Assets" / "Art" / "Characters" / "BeforeCoherenceV1"
+IDENTITY_ROOT = REPO_ROOT / "Tools" / "CharacterLocomotionIdentityV1"
 DEFAULT_OUTPUT = REPO_ROOT / "Artifacts" / "CharacterLocomotionGenerationV1"
 FRAME_SIZE = 256
 PHASE_COUNT = 6
@@ -68,20 +69,15 @@ class Character:
     def donor_sheet_path(self, part: str) -> Path:
         return self.donor_root / f"{self.character_id}_pixel_walk8dir6_{part}_v1.png"
 
+    def identity_path(self, direction: str) -> Path:
+        return IDENTITY_ROOT / self.character_id / f"{self.character_id}_{direction}_identity_v1.png"
+
 
 CHARACTERS = (
     Character("player", "Player"),
     Character("older_sister", "OlderSister"),
     Character("father", "Father"),
     Character("mother", "Mother"),
-    Character("kim_seoa", "Employees/KimSeoa"),
-    Character("lee_jian", "Employees/LeeJian"),
-    Character("choi_iseo", "Employees/ChoiIseo"),
-    Character("jung_arin", "Employees/JungArin"),
-    Character("park_haeun", "Employees/ParkHaeun"),
-    Character("han_sua", "Employees/HanSua"),
-    Character("oh_jiwoo", "Employees/OhJiwoo"),
-    Character("yoon_chaea", "Employees/YoonChaea"),
 )
 
 
@@ -112,22 +108,31 @@ def remove_tiny_islands(image: Image.Image, minimum_pixels: int = 6) -> Image.Im
     return Image.fromarray(rgba, "RGBA")
 
 
+def remove_ground_shadow_islands(image: Image.Image) -> Image.Image:
+    """Remove detached one-to-three-pixel ground streaks before foot normalization.
+
+    Several approved source sheets contain a thin magenta/brown shadow below the real
+    shoe.  Treating that streak as anatomy shifts the whole sprite upward, clips hair or
+    headwear at y=0, and leaves the visible feet floating.  A real foot has vertical mass;
+    only detached, very shallow components near the source bottom are removed here.
+    """
+
+    rgba = np.asarray(hard_alpha(image), dtype=np.uint8).copy()
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(
+        (rgba[:, :, 3] > 0).astype(np.uint8), 8
+    )
+    for index in range(1, count):
+        _, y, width, height, area = (int(value) for value in stats[index])
+        if y >= GROUND_Y - 12 and height <= 3 and width >= 3 and area <= 80:
+            rgba[labels == index] = 0
+    return Image.fromarray(rgba, "RGBA")
+
+
 def alpha_bounds(array: np.ndarray) -> tuple[int, int, int, int]:
     rows, columns = np.nonzero(array[:, :, 3] > 0)
     if not len(columns):
         raise ValueError("empty character frame")
     return int(columns.min()), int(rows.min()), int(columns.max()), int(rows.max())
-
-
-def dilate(mask: np.ndarray, radius: int) -> np.ndarray:
-    result = mask.copy()
-    height, width = result.shape
-    for _ in range(radius):
-        padded = np.pad(result, 1, constant_values=False)
-        result = np.logical_or.reduce(
-            tuple(padded[dy : dy + height, dx : dx + width] for dy in range(3) for dx in range(3))
-        )
-    return result
 
 
 def load_profiles() -> dict[str, dict[str, float | int]]:
@@ -136,8 +141,8 @@ def load_profiles() -> dict[str, dict[str, float | int]]:
         raise ValueError(f"unsupported locomotion profile schema: {payload.get('schemaVersion')}")
     profiles = payload.get("characters", {})
     expected = {character.character_id for character in CHARACTERS}
-    if set(profiles) != expected:
-        raise ValueError(f"profile character mismatch: expected={sorted(expected)} actual={sorted(profiles)}")
+    if not expected.issubset(profiles):
+        raise ValueError(f"profile character mismatch: missing={sorted(expected - set(profiles))}")
     return profiles
 
 
@@ -151,7 +156,10 @@ def load_donor_rows(character: Character) -> dict[str, list[Image.Image]]:
             sheet = hard_alpha(loaded)
         rows = extract_aligned_frames(sheet, sheet_path)
         for row, direction in enumerate(directions):
-            result[direction] = [normalize_ground(remove_tiny_islands(frame)) for frame in rows[row]]
+            result[direction] = [
+                normalize_ground(remove_ground_shadow_islands(remove_tiny_islands(frame)))
+                for frame in rows[row]
+            ]
     return result
 
 
@@ -164,59 +172,6 @@ def normalize_ground(image: Image.Image) -> Image.Image:
     canvas = Image.new("RGBA", (FRAME_SIZE, FRAME_SIZE), (0, 0, 0, 0))
     canvas.alpha_composite(image, (0, dy))
     return hard_alpha(canvas)
-
-
-def motion_mask(donors: list[np.ndarray], seam_y: int, corridor_margin: int) -> np.ndarray:
-    stack = np.stack(donors).astype(np.int16)
-    alpha_union = np.any(stack[:, :, :, 3] > 0, axis=0)
-    reference = stack[0]
-    changed = np.any(np.max(np.abs(stack[:, :, :, :3] - reference[:, :, :3]), axis=3) >= 12, axis=0)
-    changed |= np.any((stack[:, :, :, 3] > 0) != (reference[:, :, 3] > 0), axis=0)
-
-    height, width = alpha_union.shape
-    lower = np.zeros_like(alpha_union)
-    lower[max(0, seam_y - 2) :] = True
-
-    # The corridor is derived from every visible shoe/foot position across all six donor poses.
-    # It excludes long hair and dangling sleeves while retaining the full stride envelope.
-    foot_band = np.zeros_like(alpha_union)
-    foot_band[max(seam_y, GROUND_Y - 40) : GROUND_Y + 1] = True
-    foot_pixels = alpha_union & foot_band
-    _, foot_x = np.nonzero(foot_pixels)
-    if not len(foot_x):
-        raise ValueError("lower-body donor has no measurable foot pixels")
-    left = max(0, int(foot_x.min()) - corridor_margin)
-    right = min(width - 1, int(foot_x.max()) + corridor_margin)
-    corridor = np.zeros_like(alpha_union)
-    corridor[:, left : right + 1] = True
-
-    moving = dilate(changed & lower & corridor, 3)
-    # Include all donor pixels connected to the moving envelope below the seam.  The extra dilation
-    # keeps knee and skirt seams closed without authoring per-frame masks.
-    moving |= dilate(alpha_union & lower & corridor, 1) & dilate(moving, 5)
-    moving[: max(0, seam_y - 2)] = False
-    return moving
-
-
-def grounded_limb_mask(frame: np.ndarray, eligible: np.ndarray) -> np.ndarray:
-    """Keep only donor components that are connected to a measurable shoe/foot.
-
-    Some pre-coherence poses contain a dangling hand or hair below the nominal hip
-    seam.  A rectangular lower-body cut admits those islands and creates a duplicate
-    limb even though upper identity remains byte-stable.  Connectivity to the bottom
-    34-pixel foot band is a character-independent semantic rule: both support and
-    swing legs survive, while sleeves, hands, and hair cannot become locomotion donors.
-    """
-    visible = eligible & (frame[:, :, 3] > 0)
-    count, labels = cv2.connectedComponents(visible.astype(np.uint8), 8)
-    if count <= 1:
-        raise ValueError("lower-body donor has no connected limb components")
-    seed_rows = np.arange(FRAME_SIZE)[:, None] >= GROUND_Y - 34
-    seeded_labels = np.unique(labels[visible & seed_rows])
-    seeded_labels = seeded_labels[seeded_labels != 0]
-    if not len(seeded_labels):
-        raise ValueError("lower-body donor has no foot-connected component")
-    return np.isin(labels, seeded_labels)
 
 
 def shift_layer(layer: np.ndarray, dx: int, dy: int) -> np.ndarray:
@@ -235,179 +190,54 @@ def shift_layer(layer: np.ndarray, dx: int, dy: int) -> np.ndarray:
     return shifted
 
 
-def split_leg_layers(frame: np.ndarray, moving: np.ndarray) -> tuple[list[np.ndarray], list[tuple[float, float]]]:
-    visible = moving & (frame[:, :, 3] > 0)
-    yy, xx = np.indices(visible.shape)
-    foot_sample = visible & (yy >= GROUND_Y - 46)
-    rows, columns = np.nonzero(foot_sample)
-    if len(columns) < 40:
-        raise ValueError("contact donor has insufficient lower-limb pixels")
-    centres = np.array([np.percentile(columns, 25), np.percentile(columns, 75)], dtype=np.float64)
-    for _ in range(16):
-        labels = np.argmin(np.abs(columns[:, None] - centres[None, :]), axis=1)
-        updated = centres.copy()
-        for index in range(2):
-            selected = columns[labels == index]
-            if len(selected):
-                updated[index] = float(selected.mean())
-        if np.allclose(updated, centres, atol=0.01):
-            break
-        centres = updated
-    centres.sort()
-
-    layers: list[np.ndarray] = []
-    anchors: list[tuple[float, float]] = []
-    moving_rows, moving_columns = np.nonzero(visible)
-    for index, centre_x in enumerate(centres):
-        if index == 0:
-            selected = visible & (xx <= float(centres.mean()))
-        else:
-            selected = visible & (xx > float(centres.mean()))
-        layer = np.zeros_like(frame)
-        layer[selected] = frame[selected]
-        foot_rows, foot_columns = np.nonzero(selected & (yy >= GROUND_Y - 34))
-        if len(foot_columns) < 12:
-            raise ValueError(f"contact donor leg {index} has no measurable foot")
-        bottom = int(foot_rows.max())
-        core = foot_rows >= max(GROUND_Y - 28, bottom - 16)
-        anchors.append((float(foot_columns[core].mean()), float(foot_rows[core].mean())))
-        layers.append(layer)
-    return layers, anchors
-
-
-def composite_contact(
-    identity: np.ndarray,
-    donor: np.ndarray,
-    moving: np.ndarray,
-    donor_limbs: np.ndarray,
-) -> np.ndarray:
-    output = identity.copy()
-    output[moving] = 0
-    visible = donor_limbs & (donor[:, :, 3] > 0)
-    output[visible] = donor[visible]
-    return np.asarray(hard_alpha(Image.fromarray(output, "RGBA")), dtype=np.uint8)
-
-
-def composite_passing_phase(
-    identity: np.ndarray,
-    contact: np.ndarray,
-    moving: np.ndarray,
-    contact_limbs: np.ndarray,
-    seam_y: int,
-    source_layers: list[np.ndarray],
-    source_anchors: list[tuple[float, float]],
-    target_anchors: list[tuple[float, float]],
-    support_index: int,
-    support_progress: float,
-    swing_progress: float,
-    swing_lift: int,
-    body_drop: int,
-) -> np.ndarray:
-    # A walk needs a small load response above the knees as well as moving shoes.  Keep the
-    # approved pixels rigid (no redraw or deformation), but lower the identity layer by one pixel
-    # in each support/down phase.  This preserves face, hair and clothing exactly while preventing
-    # the legacy "frozen paper doll with swapped trousers" failure mode.
-    rigid_body = identity.copy()
-    rigid_body[moving] = 0
-    output = shift_layer(rigid_body, 0, body_drop)
-    identity_guard = dilate(identity[:, :, 3] > 0, 2)
-    transition_band = np.zeros((FRAME_SIZE, FRAME_SIZE), dtype=bool)
-    transition_band[max(0, seam_y - 2) : min(FRAME_SIZE, seam_y + 20)] = True
-    swing_index = 1 - support_index
-    order = (support_index, swing_index)
-    for index in order:
-        target_index = 1 - index
-        progress = support_progress if index == support_index else swing_progress
-        dx = int(round((target_anchors[target_index][0] - source_anchors[index][0]) * progress))
-        layer_rows, _ = np.nonzero(source_layers[index][:, :, 3] > 0)
-        if not len(layer_rows):
-            raise ValueError("empty synthesized leg layer")
-        ground_correction = GROUND_Y - int(layer_rows.max())
-        dy = ground_correction if index == support_index else ground_correction - swing_lift
-        shifted = shift_layer(source_layers[index], dx, dy)
-        visible = shifted[:, :, 3] > 0
-        # A lifted thigh must never cross into the identity-locked torso rows.  Preserve the
-        # protected rows exactly; the unchanged seam overlay below closes the hip joint.
-        visible[: max(0, seam_y - 2)] = False
-        visible &= ~transition_band | identity_guard
-        output[visible] = shifted[visible]
-
-    # Keep a narrow, unchanged hip seam from the contact donor.  Only the actual legs below it
-    # travel; this prevents a transparent crack without turning pants/skirt wobble into the gait.
-    seam = contact_limbs.copy()
-    seam[seam_y + 9 :] = False
-    seam_visible = seam & (contact[:, :, 3] > 0)
-    output[seam_visible] = contact[seam_visible]
-    return np.asarray(hard_alpha(Image.fromarray(output, "RGBA")), dtype=np.uint8)
-
-
 def build_direction(
     character: Character,
     direction: str,
     donor_images: list[Image.Image],
     profile: dict[str, float | int],
 ) -> tuple[list[Image.Image], dict[str, object]]:
-    with Image.open(character.frame_path(direction, 0)) as loaded:
+    with Image.open(character.identity_path(direction)) as loaded:
         identity = np.asarray(hard_alpha(loaded), dtype=np.uint8)
     donor_arrays = [np.asarray(hard_alpha(image), dtype=np.uint8) for image in donor_images]
     _, top, _, bottom = alpha_bounds(identity)
     lower_fraction = float(profile["lowerBodyStart"])
     seam_y = int(round(top + (bottom - top + 1) * lower_fraction))
-    raw_moving = motion_mask(donor_arrays, seam_y, int(profile["footCorridorMarginPx"]))
-    donor_limb_masks = [grounded_limb_mask(donor, raw_moving) for donor in donor_arrays]
-    # Close to the hip seam, a true leg may change overlap but cannot appear as a new
-    # lateral appendage.  Require donor pixels in this transition band to overlap a
-    # two-pixel expansion of the approved identity silhouette.  Below the band the
-    # complete authored stride envelope remains unconstrained.
-    identity_guard = dilate(identity[:, :, 3] > 0, 2)
-    transition_band = np.zeros((FRAME_SIZE, FRAME_SIZE), dtype=bool)
-    transition_band[max(0, seam_y - 2) : min(FRAME_SIZE, seam_y + 20)] = True
-    donor_limb_masks = [
-        limb_mask & (~transition_band | identity_guard)
-        for limb_mask in donor_limb_masks
-    ]
-    # Clear the complete leg excursion envelope from the identity frame, but only ever
-    # insert pixels from the per-pose foot-connected masks above.
-    moving = dilate(np.logical_or.reduce(donor_limb_masks), 1) & raw_moving
+    identity_head_fraction = float(profile.get("identityHeadFraction", 0.0))
+    head_underlap = int(profile.get("identityHeadUnderlapPx", 10))
+    body_drop_by_phase = (0, 1, 0, 0, 1, 0)
+    head_cut = (
+        int(round(top + (bottom - top + 1) * identity_head_fraction))
+        if identity_head_fraction > 0.0
+        else 0
+    )
 
-    contact_a = donor_arrays[0]
-    contact_b = donor_arrays[3]
-    contact_limbs_a = donor_limb_masks[0]
-    contact_limbs_b = donor_limb_masks[3]
-    layers_a, anchors_a = split_leg_layers(contact_a, contact_limbs_a)
-    layers_b, anchors_b = split_leg_layers(contact_b, contact_limbs_b)
-    generated_arrays = [
-        composite_contact(identity, contact_a, moving, contact_limbs_a),
-        composite_passing_phase(
-            identity, contact_a, moving, contact_limbs_a, seam_y, layers_a, anchors_a, anchors_b,
-            support_index=0, support_progress=0.12, swing_progress=0.32, swing_lift=1,
-            body_drop=1,
-        ),
-        composite_passing_phase(
-            identity, contact_a, moving, contact_limbs_a, seam_y, layers_a, anchors_a, anchors_b,
-            support_index=0, support_progress=0.32, swing_progress=0.70, swing_lift=4,
-            body_drop=0,
-        ),
-        composite_contact(identity, contact_b, moving, contact_limbs_b),
-        composite_passing_phase(
-            identity, contact_b, moving, contact_limbs_b, seam_y, layers_b, anchors_b, anchors_a,
-            support_index=1, support_progress=0.12, swing_progress=0.32, swing_lift=1,
-            body_drop=1,
-        ),
-        composite_passing_phase(
-            identity, contact_b, moving, contact_limbs_b, seam_y, layers_b, anchors_b, anchors_a,
-            support_index=1, support_progress=0.32, swing_progress=0.70, swing_lift=4,
-            body_drop=0,
-        ),
-    ]
+    generated_arrays: list[np.ndarray] = []
+    yy, _ = np.indices((FRAME_SIZE, FRAME_SIZE))
+    for phase, donor in enumerate(donor_arrays):
+        output = donor.copy()
+        if head_cut:
+            body_drop = body_drop_by_phase[phase]
+            expected_identity = shift_layer(identity, 0, body_drop)
+            clear_end = min(FRAME_SIZE, head_cut + body_drop)
+            output[:clear_end] = 0
+            identity_visible = (
+                (expected_identity[:, :, 3] > 0)
+                & (yy < min(FRAME_SIZE, clear_end + head_underlap))
+            )
+            output[identity_visible] = expected_identity[identity_visible]
+        generated_arrays.append(output)
 
     outputs: list[Image.Image] = []
     for phase, output in enumerate(generated_arrays):
         output = output.copy()
         output[GROUND_Y + 1 :] = 0
-        cleaned = np.asarray(remove_tiny_islands(Image.fromarray(output, "RGBA")), dtype=np.uint8).copy()
-        protected_end = max(0, seam_y - 2)
-        cleaned[:protected_end] = output[:protected_end]
+        cleaned = np.asarray(
+            remove_ground_shadow_islands(remove_tiny_islands(Image.fromarray(output, "RGBA"))),
+            dtype=np.uint8,
+        ).copy()
+        protected_end = min(FRAME_SIZE, head_cut + body_drop_by_phase[phase]) if head_cut else 0
+        if protected_end:
+            cleaned[:protected_end] = output[:protected_end]
         output = cleaned
         _, _, _, output_bottom = alpha_bounds(output)
         if output_bottom != GROUND_Y:
@@ -416,26 +246,21 @@ def build_direction(
             )
         outputs.append(Image.fromarray(output, "RGBA"))
 
-    upper_end = max(0, seam_y - 2)
-    body_drop_by_phase = (0, 1, 0, 0, 1, 0)
-    for phase, output in enumerate(outputs):
-        expected = shift_layer(identity, 0, body_drop_by_phase[phase])
-        if np.asarray(output)[:upper_end].tobytes() != expected[:upper_end].tobytes():
-            raise AssertionError(f"{character.character_id}/{direction}/{phase}: upper identity drift")
-        unexpected_transition = (
-            (np.asarray(output)[:, :, 3] > 0) & transition_band & ~identity_guard
-        )
-        if unexpected_transition.any():
-            raise AssertionError(
-                f"{character.character_id}/{direction}/{phase}: donor accessory crossed hip transition"
-            )
+    if head_cut:
+        for phase, output in enumerate(outputs):
+            expected = shift_layer(identity, 0, body_drop_by_phase[phase])
+            clear_end = min(FRAME_SIZE, head_cut + body_drop_by_phase[phase])
+            if np.asarray(output)[:clear_end].tobytes() != expected[:clear_end].tobytes():
+                raise AssertionError(f"{character.character_id}/{direction}/{phase}: head identity drift")
     if len({image.tobytes() for image in outputs}) != PHASE_COUNT:
         raise ValueError(f"{character.character_id}/{direction}: generated frames are not six unique poses")
 
     report = {
         "seamY": seam_y,
-        "movingPixels": int(moving.sum()),
-        "upperIdentityRows": upper_end,
+        "composition": "authored-full-body",
+        "identityHeadFraction": identity_head_fraction,
+        "identityHeadRows": head_cut,
+        "identityHeadUnderlapPx": head_underlap if head_cut else 0,
         "rigidBodyDropPx": list(body_drop_by_phase),
         "frameSha256": [hashlib.sha256(image.tobytes()).hexdigest().upper() for image in outputs],
     }

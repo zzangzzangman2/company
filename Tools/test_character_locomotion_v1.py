@@ -82,10 +82,30 @@ def main() -> int:
     assert_failed(
         "valid feet under byte-identical frozen upper body",
         measure_loop(character, direction, frozen_upper, profile),
-        "upper/body rigid weight excursion",
+        "upper/body authored change",
     )
 
-    print("FC-CHARACTER-LOCOMOTION-QA-V1-SELFTEST: PASS cases=5")
+    detached_waist = [frame.copy() for frame in frames]
+    for frame in detached_waist:
+        frame[181:185] = 0
+    assert_failed(
+        "transparent torso/lower-body cut with otherwise valid feet",
+        measure_loop(character, direction, detached_waist, profile),
+        "waist reference mismatch",
+    )
+
+    clipped_hat = [frame.copy() for frame in frames]
+    visible_rows = np.nonzero(frames[0][:, :, 3] > 0)[0]
+    clip_end = int(visible_rows.min()) + 12
+    for frame in clipped_hat:
+        frame[:clip_end] = 0
+    assert_failed(
+        "uniformly clipped hat/head silhouette",
+        measure_loop(character, direction, clipped_hat, profile),
+        "head identity mismatch",
+    )
+
+    print("FC-CHARACTER-LOCOMOTION-QA-V1-SELFTEST: PASS cases=7")
     return 0
 
 

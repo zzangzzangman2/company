@@ -27,9 +27,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
         private static readonly string[] CharacterIds =
         {
-            "player", "older_sister", "father", "mother",
-            "kim_seoa", "lee_jian", "choi_iseo", "jung_arin",
-            "park_haeun", "han_sua", "oh_jiwoo", "yoon_chaea"
+            "player", "older_sister", "father", "mother"
         };
         private static readonly string[] DirectionTokens =
         {
@@ -213,7 +211,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     float phaseZeroDistance = -1f;
                     // PNG encoding is synchronous in this release-player proof.  A wall-clock-only
                     // deadline therefore penalizes the walk loop for time spent writing evidence,
-                    // especially late in the 12-character sweep on slower GPUs.  Bound both real
+                    // especially late in the four-family sweep on slower GPUs.  Bound both real
                     // time and rendered samples so a stalled actor still fails without making
                     // evidence capture part of the cadence contract.
                     float deadline = Time.realtimeSinceStartup + 60f;
@@ -251,7 +249,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                             {
                                 string closeup = ArtifactPath(
                                     $"{characterId}-{DirectionTokens[direction]}-phase-{phase}-close.png");
-                                if (!TryCapture(player, closeup, 768, 768, 1.15f, out string failure))
+                                // Keep the complete hat/hair silhouette and both feet inside the
+                                // evidence frame.  The former 1.15 framing cropped the player's
+                                // newsboy cap and the sister's top hair even though the sprite was
+                                // intact, making the QA artifact itself look like a product defect.
+                                if (!TryCapture(player, closeup, 768, 768, 1.35f, out string failure))
                                 {
                                     Finish(97, "closeup capture failed: " + failure);
                                     yield break;
@@ -343,7 +345,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                               stepBodyHeightRatios.Max().ToString("F4", Invariant));
             File.WriteAllText(ArtifactPath("character-locomotion-player-result.txt"), result.ToString(),
                 new UTF8Encoding(false));
-            Finish(0, "12 characters, 8 directions, 576 phases, and stride-owned cadence rendered");
+            Finish(0, "4 family characters, 8 directions, 192 phases, and stride-owned cadence rendered");
         }
 
         private void WriteTrace(string characterId, int direction, int phase, OfficeRuntimeAgent actor,

@@ -12,8 +12,9 @@
 8. 작업과 직접 관련된 추가 문서
 9. 캐릭터 보행 프레임을 생성·편집·가져오기·검증하면 작업 시작 전에
    `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`와 `Docs/FAMILY_WALK_ART_GUARDRAILS.md`를 모두 읽고
-   `FC-WALK-GUARDRAIL-V1` 확인 문구를 작업 로그에 남긴다. 현재 shipping writer/gate는 가족 4명 전용
-   HalfCyclesV2가 아니라 전체 12명용 Character Locomotion Generation V1이다.
+   `FC-WALK-GUARDRAIL-V1` 확인 문구를 작업 로그에 남긴다. 현재 shipping writer/gate는 직원 8명을
+   포함하지 않는 가족 4명 전용 Character Locomotion Generation V1이다. 직원 확장은 가족 4명 실게임
+   품질 승인 뒤 같은 규칙을 적용하는 별도 단계다.
 
 ## 필수 작업 규칙
 

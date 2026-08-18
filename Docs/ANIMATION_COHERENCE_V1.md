@@ -4,6 +4,10 @@
 성격: **측정 결과 + 요청서**. 정본이 아니다.
 측정 도구: `Tools/measure_animation_coherence.py` (읽기 전용, 캐릭터 자동 발견)
 
+> 2026-08-18 정정: 아래 12명/576 frame strict PASS는 허리 seam과 모자 clipping, 실제 발 excursion 0을
+> 직접 거부하지 못한 역사 측정이다. 현재 가족 4명 shipping 판정에는 사용하지 않는다. 정본은
+> `CHARACTER_LOCOMOTION_GENERATION_V1.md`의 full-body/seam/head/Player gate다.
+
 ---
 
 ## 2026-08-16 / 가족 전신 보행 복원 및 게이트 V2
@@ -16,7 +20,7 @@
   프레임 경계를 넘었던 사지도 잘리지 않는다.
 - 현재 strict walk gate는 색상·옷 무늬 변화량이 아니라 silhouette adjacency를 측정한다. 기준은
   `median<=30%`, `worst<=40%`, unique 6, foot drift<=1px, stable root drift<=4px, closure<=2px다.
-- 최종 결과는 12 characters / 96 walk loops / 576 frames 전부 PASS이고 gate unit test 9/9 PASS다.
+- 당시 결과는 12 characters / 96 walk loops / 576 frames PASS였으나 현재 시각 승인으로 재사용하지 않는다.
 
 ---
 

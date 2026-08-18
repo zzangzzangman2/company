@@ -11,16 +11,14 @@ namespace FamilyCompany.Editor
     /// <summary>
     /// Unity-side consumer validation for Character Locomotion Generation V1.  Pixel trajectory
     /// measurements live in Tools/verify_character_locomotion_v1.py; this gate proves that Unity
-    /// imports and the shipping catalog consume those exact 12 x 8 x 6 stable paths in the same
+    /// imports and the shipping catalog consume the approved family 4 x 8 x 6 stable paths in the same
     /// direction/phase order used by the distance-owned runtime gait.
     /// </summary>
     public static class CharacterLocomotionGenerationV1Validation
     {
         private static readonly string[] CharacterIds =
         {
-            "player", "older_sister", "father", "mother",
-            "kim_seoa", "lee_jian", "choi_iseo", "jung_arin",
-            "park_haeun", "han_sua", "oh_jiwoo", "yoon_chaea"
+            "player", "older_sister", "father", "mother"
         };
 
         private static readonly string[] Directions =

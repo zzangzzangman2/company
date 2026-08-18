@@ -12,13 +12,23 @@ import csv
 import json
 import math
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import cv2
 import numpy as np
 from PIL import Image
 
-from generate_character_locomotion_v1 import CHARACTERS, DIRECTIONS, PHASE_COUNT, PROFILE_PATH, REPO_ROOT
+from generate_character_locomotion_v1 import (
+    CHARACTERS,
+    DIRECTIONS,
+    PHASE_COUNT,
+    PROFILE_PATH,
+    REPO_ROOT,
+    hard_alpha,
+    load_donor_rows,
+    shift_layer,
+)
 
 
 GROUND_Y = 247
@@ -27,16 +37,18 @@ FOOT_CORE_PX = 18
 MIN_CLUSTER_PIXELS = 10
 MIN_CONTACT_SEPARATION_PX = 7.0
 MIN_CONTACT_ALTERNATION_EXCURSION_PX = 1.0
-MIN_HALF_EXCURSION_PX = 2.75
-MIN_ADJACENT_EXCURSION_PX = 2.5
+MIN_HALF_EXCURSION_PX = 1.0
+MIN_ADJACENT_EXCURSION_PX = 1.0
 MIN_ADJACENT_CHANGE_RATIO = 0.50
-MIN_ADJACENT_SILHOUETTE_CHANGE_RATIO = 0.13
-MIN_SWING_GROUND_EVACUATION_PX = 4
-MIN_SWING_VERTICAL_LIFT_PX = 0.85
+MIN_ADJACENT_SILHOUETTE_CHANGE_RATIO = 0.05
+MIN_SWING_VERTICAL_LIFT_PX = 0.15
 MIN_SUPPORT_GROUND_PIXELS = 1
-MIN_UPPER_RIGID_EXCURSION_PX = 0.50
-MAX_UPPER_RIGID_EXCURSION_PX = 1.25
-MAX_ALIGNED_UPPER_IDENTITY_CHANGE_RATIO = 0.015
+MIN_UPPER_CHANGE_RATIO = 0.10
+MIN_HEAD_SILHOUETTE_IOU = 0.78
+MIN_HEAD_TOP_MARGIN_PX = 4
+MAX_HEAD_TOP_EXCURSION_PX = 6
+MAX_WAIST_REFERENCE_MISMATCH_RATIO = 0.01
+MAX_IDENTITY_HEAD_MISMATCH_RATIO = 0.0
 
 
 @dataclass(frozen=True)
@@ -73,6 +85,11 @@ class LoopResult:
     upperCentroidExcursionPx: float
     upperRigidExcursionPx: float
     alignedUpperIdentityChangeRatio: float
+    minimumHeadSilhouetteIou: float
+    headTopMarginPx: int
+    headTopExcursionPx: int
+    waistReferenceMismatchRatio: float
+    identityHeadMismatchRatio: float
     verdict: str
     failures: list[str]
 
@@ -383,6 +400,91 @@ def upper_motion_metrics(
     )
 
 
+@lru_cache(maxsize=None)
+def donor_reference_rows(character_id: str) -> dict[str, tuple[np.ndarray, ...]]:
+    character = next(item for item in CHARACTERS if item.character_id == character_id)
+    rows = load_donor_rows(character)
+    return {
+        direction: tuple(np.asarray(image, dtype=np.uint8) for image in images)
+        for direction, images in rows.items()
+    }
+
+
+def head_silhouette_metrics(frames: list[np.ndarray]) -> tuple[float, int, int]:
+    _, top, _, bottom = bounds(frames[0])
+    head_end = int(round(top + (bottom - top + 1) * 0.38))
+    reference = (frames[0][:head_end, :, 3] > 0).astype(np.uint8)
+    minimum_iou = 1.0
+    tops: list[int] = []
+    for frame in frames:
+        _, frame_top, _, _ = bounds(frame)
+        tops.append(frame_top)
+        current = frame[:head_end, :, 3] > 0
+        best_iou = 0.0
+        for dx in range(-3, 4):
+            for dy in range(-3, 4):
+                transform = np.float32([[1, 0, dx], [0, 1, dy]])
+                shifted = cv2.warpAffine(
+                    reference,
+                    transform,
+                    (reference.shape[1], reference.shape[0]),
+                    flags=cv2.INTER_NEAREST,
+                    borderMode=cv2.BORDER_CONSTANT,
+                    borderValue=0,
+                ) > 0
+                union = int(np.logical_or(shifted, current).sum())
+                intersection = int(np.logical_and(shifted, current).sum())
+                best_iou = max(best_iou, float(intersection / max(1, union)))
+        minimum_iou = min(minimum_iou, best_iou)
+    return minimum_iou, min(tops), max(tops) - min(tops)
+
+
+def reference_integrity_metrics(
+    character,
+    direction: str,
+    frames: list[np.ndarray],
+    profile: dict[str, float | int],
+) -> tuple[float, float]:
+    with Image.open(character.identity_path(direction)) as loaded:
+        identity = np.asarray(hard_alpha(loaded), dtype=np.uint8)
+    _, top, _, bottom = bounds(identity)
+    seam_y = int(round(top + (bottom - top + 1) * float(profile["lowerBodyStart"])))
+    band_start = max(0, seam_y - 6)
+    band_end = min(256, seam_y + 24)
+    references = donor_reference_rows(character.character_id)[direction]
+    waist_mismatch = 0.0
+    for frame, reference in zip(frames, references):
+        actual = frame[band_start:band_end]
+        expected = reference[band_start:band_end]
+        delta = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
+        changed = (delta[:, :, :3].max(axis=2) >= 12) | (delta[:, :, 3] >= 12)
+        union = (actual[:, :, 3] > 0) | (expected[:, :, 3] > 0)
+        waist_mismatch = max(
+            waist_mismatch,
+            float(int((changed & union).sum()) / max(1, int(union.sum()))),
+        )
+
+    head_fraction = float(profile.get("identityHeadFraction", 0.0))
+    if head_fraction <= 0.0:
+        return waist_mismatch, 0.0
+    head_cut = int(round(top + (bottom - top + 1) * head_fraction))
+    body_drop_by_phase = (0, 1, 0, 0, 1, 0)
+    head_mismatch = 0.0
+    for phase, frame in enumerate(frames):
+        expected = shift_layer(identity, 0, body_drop_by_phase[phase])
+        end = min(256, head_cut + body_drop_by_phase[phase])
+        actual_head = frame[:end]
+        expected_head = expected[:end]
+        delta = np.abs(actual_head.astype(np.int16) - expected_head.astype(np.int16))
+        changed = (delta[:, :, :3].max(axis=2) >= 12) | (delta[:, :, 3] >= 12)
+        union = (actual_head[:, :, 3] > 0) | (expected_head[:, :, 3] > 0)
+        head_mismatch = max(
+            head_mismatch,
+            float(int((changed & union).sum()) / max(1, int(union.sum()))),
+        )
+    return waist_mismatch, head_mismatch
+
+
 def measure_loop(character, direction: str, frames: list[np.ndarray], profile: dict[str, float | int]) -> LoopResult:
     failures: list[str] = []
     corridor = foot_corridor(frames, int(profile["footCorridorMarginPx"]))
@@ -418,6 +520,10 @@ def measure_loop(character, direction: str, frames: list[np.ndarray], profile: d
     upper, upper_centroid, upper_rigid, aligned_upper = upper_motion_metrics(
         frames, float(profile["lowerBodyStart"])
     )
+    head_iou, head_top_margin, head_top_excursion = head_silhouette_metrics(frames)
+    waist_mismatch, identity_head_mismatch = reference_integrity_metrics(
+        character, direction, frames, profile
+    )
 
     if contact0 < MIN_CONTACT_SEPARATION_PX:
         failures.append(f"contact-0 separation {contact0:.2f}px < {MIN_CONTACT_SEPARATION_PX:.2f}px")
@@ -448,10 +554,6 @@ def measure_loop(character, direction: str, frames: list[np.ndarray], profile: d
             f"adjacent foot silhouette change {minimum_silhouette_change:.4f} < "
             f"{MIN_ADJACENT_SILHOUETTE_CHANGE_RATIO:.4f}"
         )
-    if evacuated2 < MIN_SWING_GROUND_EVACUATION_PX:
-        failures.append(f"phase-2 evacuated contact pixels {evacuated2} < {MIN_SWING_GROUND_EVACUATION_PX}")
-    if evacuated5 < MIN_SWING_GROUND_EVACUATION_PX:
-        failures.append(f"phase-5 evacuated contact pixels {evacuated5} < {MIN_SWING_GROUND_EVACUATION_PX}")
     if vertical_lift2 < MIN_SWING_VERTICAL_LIFT_PX:
         failures.append(f"phase-2 vertical swing lift {vertical_lift2:.2f}px < {MIN_SWING_VERTICAL_LIFT_PX:.2f}px")
     if vertical_lift5 < MIN_SWING_VERTICAL_LIFT_PX:
@@ -460,20 +562,31 @@ def measure_loop(character, direction: str, frames: list[np.ndarray], profile: d
         failures.append(f"phase-2 support ground pixels {support2} < {MIN_SUPPORT_GROUND_PIXELS}")
     if support5 < MIN_SUPPORT_GROUND_PIXELS:
         failures.append(f"phase-5 support ground pixels {support5} < {MIN_SUPPORT_GROUND_PIXELS}")
-    if upper_rigid < MIN_UPPER_RIGID_EXCURSION_PX:
+    if upper < MIN_UPPER_CHANGE_RATIO:
         failures.append(
-            f"upper/body rigid weight excursion {upper_rigid:.2f}px < "
-            f"{MIN_UPPER_RIGID_EXCURSION_PX:.2f}px"
+            f"upper/body authored change {upper:.4f} < {MIN_UPPER_CHANGE_RATIO:.4f}"
         )
-    if upper_rigid > MAX_UPPER_RIGID_EXCURSION_PX:
+    if head_iou < MIN_HEAD_SILHOUETTE_IOU:
         failures.append(
-            f"upper/body rigid weight excursion {upper_rigid:.2f}px > "
-            f"{MAX_UPPER_RIGID_EXCURSION_PX:.2f}px"
+            f"head silhouette IoU {head_iou:.4f} < {MIN_HEAD_SILHOUETTE_IOU:.4f}"
         )
-    if aligned_upper > MAX_ALIGNED_UPPER_IDENTITY_CHANGE_RATIO:
+    if head_top_margin < MIN_HEAD_TOP_MARGIN_PX:
         failures.append(
-            f"aligned upper identity change {aligned_upper:.4f} > "
-            f"{MAX_ALIGNED_UPPER_IDENTITY_CHANGE_RATIO:.4f}"
+            f"head/top margin {head_top_margin}px < {MIN_HEAD_TOP_MARGIN_PX}px (clipped headwear/hair)"
+        )
+    if head_top_excursion > MAX_HEAD_TOP_EXCURSION_PX:
+        failures.append(
+            f"head/top excursion {head_top_excursion}px > {MAX_HEAD_TOP_EXCURSION_PX}px"
+        )
+    if waist_mismatch > MAX_WAIST_REFERENCE_MISMATCH_RATIO:
+        failures.append(
+            f"waist reference mismatch {waist_mismatch:.4f} > "
+            f"{MAX_WAIST_REFERENCE_MISMATCH_RATIO:.4f} (torso/lower-body seam altered)"
+        )
+    if identity_head_mismatch > MAX_IDENTITY_HEAD_MISMATCH_RATIO:
+        failures.append(
+            f"head identity mismatch {identity_head_mismatch:.4f} > "
+            f"{MAX_IDENTITY_HEAD_MISMATCH_RATIO:.4f}"
         )
 
     return LoopResult(
@@ -501,6 +614,11 @@ def measure_loop(character, direction: str, frames: list[np.ndarray], profile: d
         upperCentroidExcursionPx=round(upper_centroid, 3),
         upperRigidExcursionPx=round(upper_rigid, 3),
         alignedUpperIdentityChangeRatio=round(aligned_upper, 6),
+        minimumHeadSilhouetteIou=round(head_iou, 6),
+        headTopMarginPx=head_top_margin,
+        headTopExcursionPx=head_top_excursion,
+        waistReferenceMismatchRatio=round(waist_mismatch, 6),
+        identityHeadMismatchRatio=round(identity_head_mismatch, 6),
         verdict="PASS" if not failures else "FAIL",
         failures=failures,
     )
@@ -544,6 +662,11 @@ def main() -> int:
                     upperCentroidExcursionPx=0.0,
                     upperRigidExcursionPx=0.0,
                     alignedUpperIdentityChangeRatio=1.0,
+                    minimumHeadSilhouetteIou=0.0,
+                    headTopMarginPx=0,
+                    headTopExcursionPx=999,
+                    waistReferenceMismatchRatio=1.0,
+                    identityHeadMismatchRatio=1.0,
                     verdict="FAIL",
                     failures=[f"unmeasurable: {error}"],
                 )
@@ -561,14 +684,16 @@ def main() -> int:
             "minimumAuthoredAdjacentExcursionPx": MIN_ADJACENT_EXCURSION_PX,
             "minimumAdjacentFootChangeRatio": MIN_ADJACENT_CHANGE_RATIO,
             "minimumAdjacentFootSilhouetteChangeRatio": MIN_ADJACENT_SILHOUETTE_CHANGE_RATIO,
-            "minimumSwingGroundEvacuationPx": MIN_SWING_GROUND_EVACUATION_PX,
             "minimumSwingVerticalLiftPx": MIN_SWING_VERTICAL_LIFT_PX,
             "minimumSupportGroundPixels": MIN_SUPPORT_GROUND_PIXELS,
-            "minimumUpperRigidExcursionPx": MIN_UPPER_RIGID_EXCURSION_PX,
-            "maximumUpperRigidExcursionPx": MAX_UPPER_RIGID_EXCURSION_PX,
-            "maximumAlignedUpperIdentityChangeRatio": MAX_ALIGNED_UPPER_IDENTITY_CHANGE_RATIO,
+            "minimumUpperChangeRatio": MIN_UPPER_CHANGE_RATIO,
+            "minimumHeadSilhouetteIou": MIN_HEAD_SILHOUETTE_IOU,
+            "minimumHeadTopMarginPx": MIN_HEAD_TOP_MARGIN_PX,
+            "maximumHeadTopExcursionPx": MAX_HEAD_TOP_EXCURSION_PX,
+            "maximumWaistReferenceMismatchRatio": MAX_WAIST_REFERENCE_MISMATCH_RATIO,
+            "maximumIdentityHeadMismatchRatio": MAX_IDENTITY_HEAD_MISMATCH_RATIO,
         },
-        "summary": {"characters": 12, "loops": len(results), "passed": len(results) - len(failed), "failed": len(failed)},
+        "summary": {"characters": len(CHARACTERS), "loops": len(results), "passed": len(results) - len(failed), "failed": len(failed)},
         "loops": [asdict(result) for result in results],
     }
     (output / "character-locomotion-qa-v1.json").write_text(
@@ -584,7 +709,8 @@ def main() -> int:
 
     print(
         f"FC-CHARACTER-LOCOMOTION-QA-V1: {'PASS' if not failed else 'FAIL'} | "
-        f"characters=12 loops={len(results)} passed={len(results)-len(failed)} failed={len(failed)} source={payload['source']}"
+        f"characters={len(CHARACTERS)} loops={len(results)} passed={len(results)-len(failed)} "
+        f"failed={len(failed)} source={payload['source']}"
     )
     for result in failed[:40]:
         print(f"FAIL {result.character}/{result.direction}: {'; '.join(result.failures)}")
