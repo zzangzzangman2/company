@@ -1034,6 +1034,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _playerInput = Vector2.ClampMagnitude(input, 1f);
         }
 
+        /// <summary>
+        /// QA-only catalog sweep hook.  It keeps the real actor, navigation displacement, shared
+        /// gait state and final SpriteRenderer, and replaces only the 48-frame walk consumer input.
+        /// Normal gameplay never calls this method.
+        /// </summary>
+        public void QaReplaceWalkFrames(Sprite[] frames)
+        {
+            if (!_qaControl) throw new InvalidOperationException("QA control must be active.");
+            if (frames == null || frames.Length != DirectionalSpriteAnimator.RequiredFrameCount)
+                throw new ArgumentException("QA walk catalog requires exactly 48 non-null sprites.", nameof(frames));
+            for (var index = 0; index < frames.Length; index++)
+                if (frames[index] == null)
+                    throw new ArgumentException("QA walk catalog contains a null sprite.", nameof(frames));
+            _animator.Configure(_renderer, frames);
+        }
+
         public void BeginQaControl()
         {
             _qaControl = true;

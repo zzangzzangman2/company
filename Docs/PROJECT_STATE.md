@@ -2,7 +2,38 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-18 / 전체 캐릭터 보행 Generation V1 — clean main 배포·Player 검증 완료
+
+- 기존 가족 candidate 61/HalfCyclesV2를 shipping 정본에서 내리고, 가족 4명과 채용 후보 8명을 합친
+  12명×8방향×6위상=576 PNG를 하나의 결정론적 cutout 생성기와 캐릭터 프로필로 통합했다. 현재 writer는
+  `Tools/generate_character_locomotion_v1.py`, 정본 계약은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`다.
+- 실제 변경 전 PNG를 새 게이트로 읽으면 96루프 중 88루프가 발 이동·들림·접촉 교대 부족으로 실패했다.
+  기존 strict coherence가 `footDrift=0`을 PASS로 기록한 것은 발이 움직였다는 뜻이 아니라 최저 바닥선만
+  유지됐다는 뜻이었다.
+- V1은 P0/P3의 반대 접촉 하체를 공용 leg layer로 분리해 P1/P2와 P4/P5의 support/swing을 합성한다.
+  P2/P5 스윙은 4px 들리고 실제 하퇴·발이 진행축으로 이동하며, P1/P4에는 얼굴·복장 픽셀을 재생성하지
+  않는 1px 강체 하중 이동을 넣었다. donor는 신발/발 band와 연결된 component만 허용하고 hip 전환대는
+  P0 silhouette 2px 안쪽만 허용해 늘어진 손·머리카락이 다리로 복제되는 것도 차단한다. 상체 6장이
+  byte-identical인 후보도 이제 실패한다. 최종 재생성은 runtime과 600/600 PNG byte-identical이다.
+- `FC-CHARACTER-LOCOMOTION-QA-V1`은 현재 runtime 12명/96루프 전부 PASS다. 정지 6장, 바지만 흔드는
+  가짜 움직임, contact를 air로 재사용한 루프, 발은 움직이지만 상체가 완전히 고정된 루프를 음성 대조군으로
+  거부한다. 구 strict coherence도 96/96, 576/576 PASS다.
+- Unity 6000.3.21f1 Editor import/catalog 검증은 `characters=12 directions=8 frames=576`, stride
+  `0.99380800`, cadence `2.0125 steps/s`로 PASS했다. broad 이동 검증은 seeds 128, paths 1,152,
+  direction checks 288, reverse facing/moving during pivot/unnecessary stop 0으로 PASS했다.
+- D3D11 실제 Player QA는 실제 `OfficeRuntimeAgent`의 이동·방향·최종 SpriteRenderer를 유지한 채 catalog
+  12명을 순회하도록 확장했다. 커밋 전 최종 Windows Release에서 12명, 8방향, 96루프, 576위상과 closeup
+  400장·overview 96장을 렌더해 PASS했다. cycle distance는 `0.992789~1.009411 world`, cadence는
+  `1.9814~2.0145 steps/s`, world step/body height는 `0.2252~0.2289`다.
+- clean main Release를 `C:\Users\godho\Downloads\Family`에 배포했다. `BUILD_INFO.txt`는 이 문서를
+  포함한 HEAD와 같은 commit, branch `main`, `WorkingTreeDirty=False`여야 하며 배포 EXE 자체의 재검증도
+  D3D11, 12명, 96루프, 576위상, closeup 400장·overview 96장으로 PASS했다. 배포본 cycle distance는
+  `0.992772~1.009320 world`, cadence는 `1.9815~2.0146 steps/s`, world step/body height는
+  `0.2252~0.2289`다.
+
 ## 2026-08-18 / 가족 보행 identity-lock 재제작·실제 Player 승인 후보
+
+아래 내용은 Generation V1 이전 제작 이력이다. 현재 shipping writer/gate를 설명하지 않는다.
 
 - `FC-WALK-GUARDRAIL-V1`과 `FC-WALK-TWOSTEP-GATE-V1`에 따라 가족 4명×8방향×6프레임을
   identity-locked candidate 61로 교체했다. 방향마다 canonical portrait/body anchor를 고정하고 두 다리만

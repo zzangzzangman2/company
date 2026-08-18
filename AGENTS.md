@@ -10,8 +10,10 @@
 6. 회사 역사·시장·계약 작업이면 Docs/ULTIMATE_VISION.md, Docs/REAL_COMPANY_ALT_HISTORY.md, Docs/SIMUL_MARKET_PORT.md, Docs/CONTRACTS_V0_3.md
 7. 코드를 고치고 확인해야 하면 Docs/ITERATION_LOOP.md
 8. 작업과 직접 관련된 추가 문서
-9. 가족 보행 프레임을 생성·편집·가져오기·검증하면 작업 시작 전에
-   Docs/FAMILY_WALK_ART_GUARDRAILS.md를 읽고 `FC-WALK-GUARDRAIL-V1` 확인 문구를 작업 로그에 남긴다.
+9. 캐릭터 보행 프레임을 생성·편집·가져오기·검증하면 작업 시작 전에
+   `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`와 `Docs/FAMILY_WALK_ART_GUARDRAILS.md`를 모두 읽고
+   `FC-WALK-GUARDRAIL-V1` 확인 문구를 작업 로그에 남긴다. 현재 shipping writer/gate는 가족 4명 전용
+   HalfCyclesV2가 아니라 전체 12명용 Character Locomotion Generation V1이다.
 
 ## 필수 작업 규칙
 
@@ -36,11 +38,8 @@
   확인하려고 릴리스 빌드를 돌리지 않는다.
 - `Library`, `Library/Bee`, `Artifacts/FastQa`의 플레이어 캐시는 일상 실행 사이에 삭제하지 않는다. 이 캐시가
   식으면 같은 변경의 확인 비용이 7~20초에서 100초 이상으로 늘어난다.
-- 새 worktree를 만들면 그 경로의 첫 Unity 실행이 80~104초짜리 최초 임포트를 처음부터 다시 낸다. 반복 작업은
-  `Library`가 이미 warm인 기존 worktree 한 곳에서 수행하고, 병합이 끝난 worktree는 `git worktree remove`로
-  정리한다.
-- 2026-08-17 정리 후 기능 작업 경로는 `fc_agents/integration_p0` 하나다. 이 경로의 `Library/Bee`를 보존하고
-  삭제된 옛 작업트리 이름이나 stash를 탐색해 코드를 가져오지 않는다.
+- 새 branch·worktree는 만들지 않는다. 정본 저장소 main의 warm `Library/Bee`를 보존하고, 삭제된 옛
+  작업트리 이름이나 stash를 탐색해 코드를 가져오지 않는다.
 - 느리다고 느끼면 추측하지 말고 그 실행의 Unity 로그에서 `Asset Pipeline Refresh ... Total: <n> seconds`와
   `Require frontend run. Library/Bee/*.dag couldn't be loaded`를 먼저 확인한다. 두 값이 작은데도 느릴 때만
   빌드 파이프라인을 의심한다.

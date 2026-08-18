@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and publish the identity-locked family walk source set.
+"""Validate the retired identity-locked family walk source set.
 
 FC-WALK-GUARDRAIL-V1 deliberately has one production path. The tracked 256px source frames and
 their separate anatomy-marker review copies are the source of truth. This tool can only validate
@@ -7,8 +7,10 @@ that source, copy it to the stable Unity runtime paths, and assemble the two 4x6
 V4/V5/V6/V7 import, joint-rig, strip-rotation and normalization modes were removed because whichever
 mode ran last silently changed the tracked art generation.
 
-`--write` is impossible until the 32-row FC-WALK-TWOSTEP-GATE-V1 source/marker gate passes. Marker
-paint is never read as shipping RGB and is never copied into Assets.
+Character Locomotion Generation V1 now owns every shipping walk PNG.  This module remains readable
+for provenance and marker audits, but it must never overwrite the shared 12-character runtime set.
+`--check` delegates to the current fail-closed runtime gate; `--write` prints the canonical command
+and exits nonzero.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -243,46 +246,21 @@ def build_sheets(character: Character, rows: tuple[str, ...]) -> Image.Image:
 
 
 def write_outputs() -> None:
-    failures = validate_sources()
-    if failures:
-        raise SystemExit("source contract failures: " + ", ".join(failures))
-    run_twostep_gate()
-    for character in CHARACTERS:
-        character.frames_root.mkdir(parents=True, exist_ok=True)
-        for direction in DIRECTIONS:
-            for phase, frame in enumerate(derived_frames(character, direction)):
-                destination = character.runtime_frame(direction, phase)
-                frame.save(destination)
-                print(f"WROTE {destination.relative_to(REPO_ROOT)}")
-        for rows, suffix in ((DIRECTIONS_A, "a"), (DIRECTIONS_B, "b")):
-            metadata = PngInfo()
-            metadata.add_text(LAYOUT_METADATA_KEY, GRID_LAYOUT_MARKER)
-            destination = character.sheet_path(suffix)
-            build_sheets(character, rows).save(destination, pnginfo=metadata)
-            print(f"WROTE {destination.relative_to(REPO_ROOT)} sha256={sha256(destination)}")
+    raise SystemExit(
+        "FAMILY_WALK_V2_PUBLISH_RETIRED: use "
+        "`py -3 Tools/generate_character_locomotion_v1.py --write`; "
+        "the V2 source is provenance only and cannot overwrite shipping PNGs"
+    )
 
 
 def check_outputs() -> None:
-    failures = validate_sources()
-    if failures:
-        raise SystemExit("source contract failures: " + ", ".join(failures))
-    run_twostep_gate()
-    for character in CHARACTERS:
-        for direction in DIRECTIONS:
-            for phase, expected in enumerate(derived_frames(character, direction)):
-                tracked = hard_alpha(Image.open(character.runtime_frame(direction, phase)))
-                if tracked.tobytes() != expected.tobytes():
-                    raise SystemExit(
-                        f"stale runtime frame: {character.member_id}/{direction}/{phase}"
-                    )
-        for rows, suffix in ((DIRECTIONS_A, "a"), (DIRECTIONS_B, "b")):
-            with Image.open(character.sheet_path(suffix)) as loaded:
-                if loaded.info.get(LAYOUT_METADATA_KEY) != GRID_LAYOUT_MARKER:
-                    raise SystemExit(f"missing sheet marker: {character.sheet_path(suffix)}")
-                tracked_sheet = loaded.convert("RGBA")
-            if tracked_sheet.tobytes() != build_sheets(character, rows).tobytes():
-                raise SystemExit(f"stale sheet: {character.member_id}/{suffix}")
-    print("PASS all family six-pose runtime outputs match identity-locked deterministic sources")
+    command = [sys.executable, str(REPO_ROOT / "Tools" / "verify_character_locomotion_v1.py")]
+    result = subprocess.run(command, cwd=REPO_ROOT, text=True, capture_output=True, timeout=120)
+    print(result.stdout, end="")
+    if result.returncode != 0:
+        print(result.stderr, end="")
+        raise SystemExit("FC-CHARACTER-LOCOMOTION-QA-V1 failed")
+    print("FAMILY_WALK_V2_CHECK_DELEGATED: PASS | owner=CharacterLocomotionGenerationV1")
 
 
 def main() -> int:

@@ -1,6 +1,41 @@
 # DECISIONS
 
+## 2026-08-18 / 전체 12명 보행은 공용 cutout 규칙, 실제 발 궤적, Player cadence가 소유한다
+
+결정: shipping walk는 `FC-CHARACTER-LOCOMOTION-GENERATION-V1` 하나가 소유한다. 현재 catalog의
+가족 4명과 직원 후보 8명 모두 같은 8방향 좌표계와 contact/support/pass/contact/support/pass 위상 곡선을
+사용한다. 캐릭터 프로필에는 하체 시작 비율과 발 corridor margin만 두며, 캐릭터·방향·프레임별 수작업
+예외를 두지 않는다. 현재 P0는 identity authority, 보존된 BeforeCoherence 접촉 A/B는 하체 기하 donor다.
+
+결정: 얼굴·머리·복장 픽셀은 생성 모델로 다시 그리지 않는다. 다만 정체성 보존을 상체 동작 정지와 같은
+뜻으로 취급하지 않는다. P1/P4 support/down에는 승인 상체를 변형 없이 1px 내리는 공용 강체 하중 이동을
+넣고, 정렬 뒤 identity 변화 1.5% 이하와 강체 이동 0.5~1.25px를 함께 검사한다. 6위상 상체가
+byte-identical이면 발이 움직여도 실패다.
+
+결정: 하체 donor는 발 band까지 연결된 불투명 component만 leg layer가 될 수 있다. hip 전환대에서는
+방향별 P0 identity silhouette을 2px 확장한 범위 밖의 donor 픽셀을 contact·passing 모두 거부한다.
+늘어진 손·소매·머리카락이 seam 아래에 있어도 보행 limb로 복제하지 않으며 이 조건은 생성 중 단언한다.
+
+결정: PASS는 실제 PNG의 두 발 간격·접촉 교대·dense-flow excursion·인접 실루엣 변화·바닥 이탈·수직
+들림·support 바닥 픽셀을 모두 만족해야 한다. 그 다음 Unity 576 Sprite/catalog 순서와 broad 이동을
+검사하고, 최종 D3D11 Player에서 12명×8방향의 실제 actor 변위, sprite 이름, 방향, flip, cycle world
+distance, cadence와 body-height 대비 world step을 검사한다. 구 `footDrift=0`, loop closure, 상체 identity
+하나만으로는 릴리스할 수 없다.
+
+결정: `build_family_walk_half_cycles_v2.py`와 marker 소스는 제작 이력/해부학 증거로만 보존한다. 그
+`--write`는 차단하고 `--check`는 V1 gate에 위임한다. 2D Animation 패키지나 런타임 skeletal 시스템을
+추가하지 않고, 공용 cutout 생성 결과를 현재 256×256 PNG 소비 형식으로 bake해 기존 런타임·GUID를
+보존한다.
+
+이유: 변경 전 strict coherence는 발 excursion 0에 가까운 루프도 통과시켰고, 외부 보행 리뷰가 지적한
+상체 exact-byte lock은 정체성을 지키는 대신 체중 이동까지 막았다. Mad Games Tycoon 2의 30fps 실화면과
+Big Biz Tycoon의 책상 동선은 작은 화면에서도 전신 방향과 지지/스윙 실루엣이 읽혀야 한다는 판독 기준을
+확인시켰다. 공용 규칙→PNG bake는 현재 2D 투자와 runtime을 지키면서 같은 실패를 576장에 반복하지 않는
+가장 작은 구조 변경이다.
+
 ## 2026-08-18 / 가족 보행은 identity-locked body, 분리 다리, 별도 marker copy가 소유한다
+
+이 결정은 Generation V1 이전 가족 전용 제작 이력이며 shipping writer 권한은 위 결정이 대체한다.
 
 결정: 가족 보행은 방향별 canonical identity/body anchor를 먼저 고정하고, 프레임마다 전신을 새로 생성하지
 않는다. 첫 반주기 0·1·2의 해부학적으로 분리된 두 다리를 결정론적으로 움직이고, 3·4·5 하체는 골반축

@@ -1,5 +1,10 @@
 # 가족 보행 에셋 제작 가드레일
 
+> 현재 shipping authority는 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`다. 이 문서는 가족 4명의
+> identity/marker 제작 provenance와 `FC-WALK-GUARDRAIL-V1` 사전 확인 계약으로 보존한다.
+> `build_family_walk_half_cycles_v2.py --write`는 사용하지 않으며, 전체 12명 runtime 판정은
+> `Tools/verify_character_locomotion_v1.py`와 실제 D3D11 Player QA가 소유한다.
+
 계약 ID: `FC-WALK-GUARDRAIL-V1`
 
 이 문서는 가족 4명의 보행 프레임을 만들거나 고치기 전에 반드시 읽는 정본이다. 프롬프트,

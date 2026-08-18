@@ -18,7 +18,7 @@
 - 시작 나이: 14
 - 임시 생일: 1985-08-10
 - 역할: 창업 아이디어, 제품 방향, 시장 조사, 현장 행동
-- 런타임 외형 정본: 짧고 헝클어진 짙은 갈색 머리, 갈색 눈, **모자 없음**
+- 런타임 외형 정본: 짧고 헝클어진 짙은 갈색 머리, 갈색 눈, 작은 금색 장식이 있는 **빨간 뉴스보이 캡**
 - 런타임 의상 정본: 흰색 후드 윈드브레이커와 남색 트리밍, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화
 - 정본 범위: 플레이어를 월드에서 식별하는 조작 말의 외형이다. 별도 VN 초상화나 실존 사용자 얼굴을 의미하지 않는다.
 - 기반 디자인: 기존 `simul` 타이틀의 14살 플레이어 디자인
@@ -63,17 +63,16 @@
 - 런타임 이동 정본: `Assets/Art/Characters/Mother/Pixel/HighMotion/mother_pixel_walk8dir6_{a,b}_v1.png`
 - 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
-## 가족 보행 제작 정본
+## 전체 캐릭터 보행 제작 정본
 
-- 최우선 계약은 `Docs/FAMILY_WALK_ART_GUARDRAILS.md`의 `FC-WALK-GUARDRAIL-V1`과
-  `FC-WALK-TWOSTEP-GATE-V1`이다.
-- 추적 source 정본은 `ArtSources/FamilyWalkHalfCyclesV2/<member>/<direction>/`의 표식 없는
-  identity-locked 192 frame이다. 방향별 외형 기준은 `IdentityModelV1/` 32장, 해부학적 좌우 다리 증거는
-  동일 alpha의 별도 `MarkerReviewV1/` 192장이다.
-- 각 6프레임은 왼발 접지·지지·오른발 낮은 통과·오른발 접지·지지·왼발 낮은 통과다. 3·4·5 하체는
-  0·1·2의 골반축 반사이며 얼굴·머리·옷·방향은 반사하지 않는다.
-- 제작은 `Tools/build_family_walk_half_cycles_v2.py` 단일 source→runtime 경로만 사용한다. gate PASS 전
-  `--write`는 금지하며 구형 세대 import로 source를 덮어쓰지 않는다.
+- 최우선 계약은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의
+  `FC-CHARACTER-LOCOMOTION-GENERATION-V1`과 `FC-CHARACTER-LOCOMOTION-QA-V1`이다.
+- 가족 4명뿐 아니라 직원 후보 8명을 포함한 12명의 8방향×6위상이 같은 공용 생성 규칙과 profile을
+  사용한다. 제작/publish는 `Tools/generate_character_locomotion_v1.py`만 수행한다.
+- 각 6프레임은 접촉 A·A 지지/B 초기 스윙·B 통과·접촉 B·B 지지/A 초기 스윙·A 통과다. P1/P4에는
+  승인 identity를 재생성하지 않는 1px 강체 하중 이동이 있으며 P2/P5에는 실제 하퇴/발 4px 들림이 있다.
+- `ArtSources/FamilyWalkHalfCyclesV2`, `IdentityModelV1`, `MarkerReviewV1`은 가족 제작 provenance와 좌우
+  다리 증거로 보존하지만 shipping writer가 아니다. 구 builder `--write`는 차단돼 있다.
 - 정상 가족 런타임은 별도 `LocomotionTransitionsV1` 초상화를 섞지 않고 승인 walk/idle 계열만 사용한다.
   cardinal 타일 중심 구간은 다음 구간 방향으로 pivot을 끝낸 뒤 translation한다.
 

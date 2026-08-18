@@ -2,7 +2,30 @@
 
 최종 갱신: 2026-08-18
 
+## Character Locomotion Generation V1 (2026-08-18, current shipping authority)
+
+- Contract: `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의
+  `FC-CHARACTER-LOCOMOTION-GENERATION-V1` / `FC-CHARACTER-LOCOMOTION-QA-V1`.
+- Scope: 가족 4명+직원 후보 8명, 12×8방향×6위상=576 frame과 캐릭터별 A/B sheet 24장.
+- Shipping frames: 각 캐릭터 `Pixel/HighMotion/Frames/<id>_<direction>_walk_<phase>.png`.
+- Deterministic writer: `Tools/generate_character_locomotion_v1.py`; shared profile:
+  `Tools/character_locomotion_profiles_v1.json`; fail-closed gate/self-test:
+  `Tools/verify_character_locomotion_v1.py`, `Tools/test_character_locomotion_v1.py`.
+- Identity source: 현재 방향별 runtime P0의 얼굴·머리·상의·식별 표지. Motion donor:
+  `Assets/Art/Characters/BeforeCoherenceV1/<id>/`의 접촉 P0/P3 하체 기하만 사용한다. donor 전신이나 다른
+  세대 얼굴을 shipping identity로 복원하지 않는다.
+- Derivation: 공용 lower-body mask→발 band 연결 component만 두 leg layer로 채택→P0 silhouette 2px hip
+  transition guard→반대 contact anchor→support/swing 보간→P2/P5 4px swing lift→P1/P4 1px rigid body
+  load→hard alpha/ground y247 bake. 손·소매·머리카락 donor 복제를 금지하며 개별 576장 수작업은 없다.
+- Import contract: 256×256 RGBA, PPU 180, Point, hard alpha, bottom-center pivot. 기존 PNG `.meta`와 GUID는
+  보존했다.
+- Reference observation only: Mad Games Tycoon 2 1659.042578~1659.409241 1/30초 프레임과 Big Biz
+  Tycoon 299.954658~300.321321 1/30초 책상 동선을 보행 가독성 비교에 사용했다. 외부 게임 픽셀/에셋은
+  프로젝트에 복사하지 않았다.
+
 ## Family Walk Identity-Locked Six-Pose Cycles (2026-08-18)
+
+Historical/provenance only. Generation V1이 현재 12명 shipping PNG writer와 release gate를 대체한다.
 
 - Runtime: 가족 4명 각각 `Assets/Art/Characters/<Member>/Pixel/HighMotion/Frames/`의 8방향×6프레임 192장과 A/B 시트 8장.
 - Shipping source: `ArtSources/FamilyWalkHalfCyclesV2/<member>/<direction>/`의 표식 없는 identity-locked 192장. 출하 픽셀에는 청록/자홍 표식을 칠한 적이 없다.
