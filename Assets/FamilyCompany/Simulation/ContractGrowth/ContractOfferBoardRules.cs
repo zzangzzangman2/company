@@ -4,6 +4,7 @@ using System.Linq;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.Technology;
 
 namespace FamilyCompany.Simulation.ContractGrowth
 {
@@ -212,7 +213,10 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 2,
                 risk,
                 BuildPrerequisiteLabels(client.Tier, qualityStandard, requiredCapability),
-                onboarding);
+                onboarding,
+                // The client's experience bar travels with the job, not with the tier, so the same
+                // work always asks for the same proven technology wherever it shows up.
+                ContractTechnologyRequirementCatalog.ForTemplateIndex(template.LegacyGlobalIndex));
         }
 
         private static long CalculateReward(

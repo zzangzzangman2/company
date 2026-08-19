@@ -617,9 +617,63 @@ namespace FamilyCompany.Editor
             Require(technologyLine.Contains("pt"), "technology label reports points, not money");
             Require(!technologyLine.Contains("₩"), "technology label never carries a cash amount");
 
+            ValidateContractTechnologyGates();
+
             Debug.Log(
                 $"CONTRACT_TECHNOLOGY_REWARD_VALIDATION: PASS | technologies={CompanyTechnologyCatalog.All.Count} " +
                 $"contracts={ContractTechnologyGrantCatalog.TemplateCount} schema=11");
+        }
+
+        /// <summary>
+        /// The higher subcontracts ask for proven technology. That ladder has to be climbable from
+        /// nothing: simulating only the jobs a company is currently allowed to take must eventually
+        /// unlock every gated job. Otherwise a save can reach a state where no further work exists.
+        /// </summary>
+        private static void ValidateContractTechnologyGates()
+        {
+            var open = Enumerable.Range(0, BootstrapContractCatalog.TotalOfferTemplateCount)
+                .Where(ContractTechnologyRequirementCatalog.IsOpenToEveryone)
+                .ToArray();
+            Require(open.Length > 0, "some subcontracts must be open to a company with no technology");
+
+            var technology = new CompanyTechnologyState();
+            var unlocked = new HashSet<int>(open);
+            // Repeatedly take every currently available job. Each pass can only add technology, so
+            // this converges; the bound just stops a broken table from looping forever.
+            for (var pass = 0; pass < 40; pass++)
+            {
+                foreach (var index in unlocked.ToArray())
+                    technology.ApplyGrants(ContractTechnologyGrantCatalog.ForTemplateIndex(index));
+                for (var index = 0; index < BootstrapContractCatalog.TotalOfferTemplateCount; index++)
+                {
+                    if (unlocked.Contains(index)) continue;
+                    if (ContractTechnologyRequirementCatalog.ForTemplateIndex(index).AllMetBy(technology))
+                        unlocked.Add(index);
+                }
+
+                if (unlocked.Count == BootstrapContractCatalog.TotalOfferTemplateCount) break;
+            }
+
+            var blocked = Enumerable.Range(0, BootstrapContractCatalog.TotalOfferTemplateCount)
+                .Where(index => !unlocked.Contains(index))
+                .ToArray();
+            Require(blocked.Length == 0,
+                "subcontracts unreachable from the open jobs: " + string.Join(",", blocked));
+
+            // Every own-product technology bar must also be reachable through contract work alone.
+            foreach (var product in ProductOpportunityRules.All)
+            {
+                foreach (var requirement in product.RequiredTechnologyLevels)
+                {
+                    Require(technology.HasLevel(requirement.TechnologyId, requirement.RequiredLevel),
+                        $"product requirement unreachable through contracts: {product.ProductPathId} {requirement.DisplayKo}");
+                }
+            }
+
+            Debug.Log(
+                $"CONTRACT_TECHNOLOGY_GATE_VALIDATION: PASS | open={open.Length} " +
+                $"gated={ContractTechnologyRequirementCatalog.GatedTemplateIndices.Count} " +
+                $"reachable={unlocked.Count}/{BootstrapContractCatalog.TotalOfferTemplateCount}");
         }
 
         private static void ValidateSaveRoundTrip()

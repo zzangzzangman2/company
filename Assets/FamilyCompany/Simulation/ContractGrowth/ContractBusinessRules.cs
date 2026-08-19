@@ -38,9 +38,13 @@ namespace FamilyCompany.Simulation.ContractGrowth
             string riskKo,
             string reputationKo,
             IEnumerable<ContractMemberChoiceViewModel> memberChoices,
-            string technologyKo = "")
+            string technologyKo = "",
+            string requirementKo = "",
+            bool technologyRequirementMet = true)
         {
             TechnologyKo = technologyKo ?? string.Empty;
+            RequirementKo = requirementKo ?? string.Empty;
+            TechnologyRequirementMet = technologyRequirementMet;
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             TierKo = tierKo ?? string.Empty;
             RewardKo = rewardKo ?? string.Empty;
@@ -68,6 +72,15 @@ namespace FamilyCompany.Simulation.ContractGrowth
         /// Kept as its own line so the player reads money and technology as two separate rewards.
         /// </summary>
         public string TechnologyKo { get; }
+
+        /// <summary>
+        /// Proven experience the client asks for, written as what the company has against what is
+        /// needed: <c>필요 기술 DB 설계 Lv1/2</c>. Empty when the job is open to everyone.
+        /// </summary>
+        public string RequirementKo { get; }
+
+        /// <summary>False when the company cannot take this job yet for lack of technology.</summary>
+        public bool TechnologyRequirementMet { get; }
 
         public IReadOnlyList<ContractMemberChoiceViewModel> MemberChoices { get; }
     }
@@ -140,7 +153,9 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 summary,
                 profile,
                 clients);
-            var cards = snapshot.Offers.Select(item => CreateCard(item, state.Family, state.Time.Now)).ToArray();
+            var cards = snapshot.Offers
+                .Select(item => CreateCard(item, state.Family, state.Time.Now, state.Growth.Technology))
+                .ToArray();
             return new ContractBoardViewModel(
                 snapshot,
                 cards,
@@ -171,10 +186,25 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 ProductOpportunityRules.EvaluateAll(summary, state.Company, state.Growth));
         }
 
+        /// <summary>
+        /// "필요 기술 DB 설계 Lv1/2" — always written as have/need so the player can see how close the
+        /// company is, instead of a bare locked flag.
+        /// </summary>
+        private static string RequirementLabel(
+            ContractOfferDefinition definition,
+            CompanyTechnologyState technology)
+        {
+            var requirements = definition.RequiredTechnologyLevels;
+            if (requirements.Count == 0) return string.Empty;
+            var parts = requirements.Select(item => item.ProgressKo(technology));
+            return "필요 기술 " + string.Join(" · ", parts);
+        }
+
         public static ContractCardViewModel CreateCard(
             ContractOfferDefinition definition,
             FamilyState family,
-            DateTime now)
+            DateTime now,
+            CompanyTechnologyState technology = null)
         {
             var offer = definition.Offer;
             var task = ContractWorkTaskProfiles.Resolve(definition.Specialty);
@@ -183,8 +213,13 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 var schedule = FamilyScheduleRules.Resolve(member.Role, now);
                 var taskScore = WorkforcePerformanceRules.CalculateScore(member.Capability.Skills, task.ProgressWeights);
                 var capable = taskScore >= offer.RequiredCapability;
-                var available = schedule.CanPerformCompanyWork && member.Energy >= 2 && capable;
-                var label = !schedule.CanPerformCompanyWork ? schedule.Label : !capable ? "요구 역량 부족" : member.Energy < 2 ? "체력 부족" : "배정 가능";
+                var technologyReady = definition.RequiredTechnologyLevels.AllMetBy(technology);
+                var available = schedule.CanPerformCompanyWork && member.Energy >= 2 && capable && technologyReady;
+                var label = !technologyReady
+                    ? "회사 기술 부족"
+                    : !schedule.CanPerformCompanyWork ? schedule.Label
+                    : !capable ? "요구 역량 부족"
+                    : member.Energy < 2 ? "체력 부족" : "배정 가능";
                 return new ContractMemberChoiceViewModel(member.MemberId, member.DisplayName, available, label);
             }).ToArray();
             return new ContractCardViewModel(
@@ -197,7 +232,9 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 $"예상 위험 {RiskLabel(definition.RiskLevel)}",
                 $"완료 평판 +{definition.ReputationReward} · 실패 위험 -{definition.ReputationRisk}",
                 choices,
-                "기술 " + ContractTechnologyGrantCatalog.DisplayKo(definition.Template.LegacyGlobalIndex));
+                "기술 " + ContractTechnologyGrantCatalog.DisplayKo(definition.Template.LegacyGlobalIndex),
+                RequirementLabel(definition, technology),
+                definition.RequiredTechnologyLevels.AllMetBy(technology));
         }
 
         public static string Won(long amountWon) => "₩" + amountWon.ToString("N0", CultureInfo.InvariantCulture);
@@ -224,30 +261,30 @@ namespace FamilyCompany.Simulation.ContractGrowth
             new ProductOpportunityDefinition("own-product:web", BusinessIndustry.WebAndSoftware, "웹 서비스·PC 소프트웨어", 6_000_000, 4, 80, 8, new[] { ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.Moderate, "패키지 판매·서비스 이용료",
                 new[]
                 {
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.DatabaseDesign, 2),
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.WebPublishing, 1),
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.ServerOperations, 1)
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.DatabaseDesign, 2),
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.WebPublishing, 1),
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.ServerOperations, 1)
                 }),
             new ProductOpportunityDefinition("own-product:mobile", BusinessIndustry.FeaturePhoneAndMobile, "피처폰 콘텐츠·모바일 게임", 7_000_000, 6, 120, 12, new[] { ResearchTechnologyIds.AutomationLine, ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.High, "다운로드 판매·퍼블리싱 정산",
                 new[]
                 {
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.FeaturePhoneUi, 2),
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.DevicePorting, 1),
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.MidiSound, 1)
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.FeaturePhoneUi, 2),
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.DevicePorting, 1),
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.MidiSound, 1)
                 }),
             new ProductOpportunityDefinition("own-product:hardware", BusinessIndustry.HardwareAndPc, "PC 주변기기·디지털 기기", 8_000_000, 8, 160, 16, new[] { ResearchTechnologyIds.AutomationLine, ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.High, "제조 원가 후 기기 판매",
                 new[]
                 {
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.BoardAssembly, 2),
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.PcAssembly, 1),
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.QualityInspection, 1)
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.BoardAssembly, 2),
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.PcAssembly, 1),
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.QualityInspection, 1)
                 }),
             new ProductOpportunityDefinition("own-product:retail", BusinessIndustry.FashionRetailAndOffline, "상점 전산화·유통 브랜드", 6_000_000, 5, 100, 10, new[] { ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.Moderate, "상품 마진·납품 매출",
                 new[]
                 {
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.InventorySystem, 2),
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.AdminTool, 1),
-                    new ProductTechnologyRequirement(CompanyTechnologyIds.ProductPhotography, 1)
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.InventorySystem, 2),
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.AdminTool, 1),
+                    new TechnologyLevelRequirement(CompanyTechnologyIds.ProductPhotography, 1)
                 })
         };
 
@@ -269,7 +306,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
         /// see exactly which subcontract work is still missing rather than a single locked flag.
         /// </summary>
         private static string SkillLabel(
-            IReadOnlyList<ProductTechnologyRequirement> requirements,
+            IReadOnlyList<TechnologyLevelRequirement> requirements,
             CompanyGrowthState growth)
         {
             if (requirements.Count == 0) return "필요 기술 없음";

@@ -4,6 +4,7 @@ using System.Linq;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.ContractGrowth;
+using FamilyCompany.Simulation.Technology;
 using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Simulation.Contracts
@@ -135,6 +136,18 @@ namespace FamilyCompany.Simulation.Contracts
             }
 
             if (growth != null && !growth.HasTechnology(offer.RequiredTechnologyId))
+            {
+                return RejectedAcceptance(ContractRejectionReason.RequiredTechnologyMissing);
+            }
+
+            // The client also asks for proven experience: technology the company built up by doing
+            // the easier jobs. Starter work declares nothing here so a company with no history can
+            // always earn its first points.
+            if (growth != null &&
+                LegacyContractTemplateCatalog.TryResolve(offer, out var acceptedTemplate) &&
+                !ContractTechnologyRequirementCatalog
+                    .ForTemplateIndex(acceptedTemplate.LegacyGlobalIndex)
+                    .AllMetBy(growth.Technology))
             {
                 return RejectedAcceptance(ContractRejectionReason.RequiredTechnologyMissing);
             }

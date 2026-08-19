@@ -136,6 +136,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
     public sealed class ContractOfferDefinition
     {
         private readonly string[] _prerequisiteLabels;
+        private readonly TechnologyLevelRequirement[] _requiredTechnologyLevels;
 
         public ContractOfferDefinition(
             SubcontractOffer offer,
@@ -148,8 +149,11 @@ namespace FamilyCompany.Simulation.ContractGrowth
             int reputationRisk,
             ContractRiskLevel riskLevel,
             IEnumerable<string> prerequisiteLabels,
-            bool onboardingRecommendation)
+            bool onboardingRecommendation,
+            IEnumerable<TechnologyLevelRequirement> requiredTechnologyLevels = null)
         {
+            _requiredTechnologyLevels = (requiredTechnologyLevels ?? Array.Empty<TechnologyLevelRequirement>())
+                .ToArray();
             Offer = offer ?? throw new ArgumentNullException(nameof(offer));
             Template = template ?? throw new ArgumentNullException(nameof(template));
             Client = client ?? throw new ArgumentNullException(nameof(client));
@@ -180,6 +184,13 @@ namespace FamilyCompany.Simulation.ContractGrowth
         public int ReputationRisk { get; }
         public ContractRiskLevel RiskLevel { get; }
         public IReadOnlyList<string> PrerequisiteLabels => _prerequisiteLabels;
+
+        /// <summary>
+        /// Proven experience the client asks for. Empty for the starter jobs, which stay open so a
+        /// company with no technology can always earn its first points.
+        /// </summary>
+        public IReadOnlyList<TechnologyLevelRequirement> RequiredTechnologyLevels => _requiredTechnologyLevels;
+
         public bool OnboardingRecommendation { get; }
     }
 
@@ -388,30 +399,10 @@ namespace FamilyCompany.Simulation.ContractGrowth
         public IReadOnlyList<ContractTierProgress> TierProgress => _tierProgress;
     }
 
-    /// <summary>A technology level an own-product path needs before it can be started.</summary>
-    public readonly struct ProductTechnologyRequirement
-    {
-        public ProductTechnologyRequirement(string technologyId, int requiredLevel)
-        {
-            if (!CompanyTechnologyCatalog.Exists(technologyId))
-                throw new ArgumentException($"Unknown company technology: {technologyId}", nameof(technologyId));
-            if (requiredLevel < 1 || requiredLevel > CompanyTechnologyCatalog.MaximumLevel)
-                throw new ArgumentOutOfRangeException(nameof(requiredLevel));
-            TechnologyId = technologyId;
-            RequiredLevel = requiredLevel;
-        }
-
-        public string TechnologyId { get; }
-        public int RequiredLevel { get; }
-
-        public string DisplayKo =>
-            $"{CompanyTechnologyCatalog.Get(TechnologyId).DisplayNameKo} Lv{RequiredLevel}";
-    }
-
     public sealed class ProductOpportunityDefinition
     {
         private readonly string[] _requiredTechnologyIds;
-        private readonly ProductTechnologyRequirement[] _requiredTechnologyLevels;
+        private readonly TechnologyLevelRequirement[] _requiredTechnologyLevels;
 
         public ProductOpportunityDefinition(
             string productPathId,
@@ -424,9 +415,9 @@ namespace FamilyCompany.Simulation.ContractGrowth
             IEnumerable<string> requiredTechnologyIds,
             ContractRiskLevel riskLevel,
             string revenueModelKo,
-            IEnumerable<ProductTechnologyRequirement> requiredTechnologyLevels = null)
+            IEnumerable<TechnologyLevelRequirement> requiredTechnologyLevels = null)
         {
-            _requiredTechnologyLevels = (requiredTechnologyLevels ?? Array.Empty<ProductTechnologyRequirement>())
+            _requiredTechnologyLevels = (requiredTechnologyLevels ?? Array.Empty<TechnologyLevelRequirement>())
                 .ToArray();
             ProductPathId = productPathId ?? string.Empty;
             Industry = industry;
@@ -450,7 +441,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
         public IReadOnlyList<string> RequiredTechnologyIds => _requiredTechnologyIds;
 
         /// <summary>Levels the company has to reach by doing subcontract work, not by paying.</summary>
-        public IReadOnlyList<ProductTechnologyRequirement> RequiredTechnologyLevels => _requiredTechnologyLevels;
+        public IReadOnlyList<TechnologyLevelRequirement> RequiredTechnologyLevels => _requiredTechnologyLevels;
 
         public ContractRiskLevel RiskLevel { get; }
         public string RevenueModelKo { get; }

@@ -352,6 +352,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         /// </summary>
         private const float CardCornerOrnamentInset = 42f;
 
+        /// <summary>Copy colour for a contract the company does not yet have the technology for.</summary>
+        private static readonly Color LockedInk = new Color(0.42f, 0.47f, 0.46f, 1f);
+
         private void BuildWorldDim()
         {
             _worldDim = CreateRect("Main Navigation World Dim 26 Percent", _safeRoot);
@@ -942,15 +945,20 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 AddLayout(client.rectTransform, -1f, 30f, 0f, 0f);
                 var title = AddText(card, offer.TitleKo, 17f, true, TextAlignmentOptions.TopLeft, DeepInk);
                 AddLayout(title.rectTransform, -1f, 46f, 0f, 0f);
+                // The client's experience bar sits right under what the job teaches, so the trade
+                // reads in one place: what it pays, what it builds, and what it demands first.
+                var requirementLine = string.IsNullOrEmpty(offer.RequirementKo)
+                    ? string.Empty
+                    : offer.RequirementKo + "\n";
                 var facts = AddText(
                     card,
-                    offer.RewardKo + "\n" + offer.TechnologyKo + "\n" + offer.DeadlineKo + "\n" +
-                    offer.WorkKo + "\n" + offer.CapabilityKo,
+                    offer.RewardKo + "\n" + offer.TechnologyKo + "\n" + requirementLine +
+                    offer.DeadlineKo + "\n" + offer.WorkKo + "\n" + offer.CapabilityKo,
                     15f,
                     false,
                     TextAlignmentOptions.TopLeft,
-                    DeepInk);
-                AddLayout(facts.rectTransform, -1f, 158f, 0f, 1f);
+                    offer.TechnologyRequirementMet ? DeepInk : LockedInk);
+                AddLayout(facts.rectTransform, -1f, 178f, 0f, 1f);
                 var ready = offer.MemberChoices.Count(item => item.Available);
                 var status = AddText(
                     card,
