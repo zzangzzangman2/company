@@ -345,6 +345,13 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private static float TimePlaqueInset => BadgeHeight * 0.92f;
         private static float TabHeight => CanvasHeight(92f, 82f);
 
+        /// <summary>
+        /// Indent for a card's first and last text line so it clears the coral corner ornament.
+        /// `card_normal_v2` draws that ornament at sprite x 33..60 inside a 142px border, and the
+        /// card's own padding only covers the first 18px of it.
+        /// </summary>
+        private const float CardCornerOrnamentInset = 42f;
+
         private void BuildWorldDim()
         {
             _worldDim = CreateRect("Main Navigation World Dim 26 Percent", _safeRoot);
@@ -929,6 +936,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 ConfigureLayout(cardLayout, new RectOffset(18, 18, 18, 16), 5f);
                 cardLayout.childAlignment = TextAnchor.UpperLeft;
                 var tier = AddText(card, offer.TierKo, 15f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
+                tier.margin = new Vector4(CardCornerOrnamentInset, 0f, 0f, 0f);
                 AddLayout(tier.rectTransform, -1f, 24f, 0f, 0f);
                 var client = AddText(card, offer.ClientNameKo, 21f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
                 AddLayout(client.rectTransform, -1f, 30f, 0f, 0f);
@@ -950,6 +958,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     true,
                     TextAlignmentOptions.BottomLeft,
                     DeepInk);
+                status.margin = new Vector4(CardCornerOrnamentInset, 0f, 0f, 0f);
                 AddLayout(status.rectTransform, -1f, 36f, 0f, 0f);
             }
         }
@@ -1613,7 +1622,14 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             if (parent == null) return;
             for (var index = parent.childCount - 1; index >= 0; index--)
-                Destroy(parent.GetChild(index).gameObject);
+            {
+                var child = parent.GetChild(index);
+                // Destroy only takes effect at the end of the frame, so the outgoing content would
+                // still be laid out beside the content built immediately afterwards and both would
+                // render on top of each other. Detaching first removes it from layout right away.
+                child.SetParent(null, false);
+                Destroy(child.gameObject);
+            }
         }
 
         private static void Stretch(RectTransform rect)

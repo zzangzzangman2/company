@@ -9,6 +9,13 @@
   inventory `0→1`, furniture `52→53`, editable `0→1`이 확인되었다. 구현은
   `Presentation.Unity/OfficeRuntime/OfficeLayoutEditModeController.cs:230`에 있다.
 - Build editor와 MainNavigation adapter는 현재 main 계보에 통합되어 있다.
+- **스킨 (2026-08-19)**: `OfficeLayoutEditModeSkin`은 `MainNavigationV2` 프레임에서 샘플링한 팔레트를 쓴다.
+  크림 `#FCF0D8` 종이, 골드 `#E49C3C` 테두리와 안쪽 밝은 선, 딥틸 `#245454` 글자, 코럴 `#F07854` 위험
+  버튼이다. 카탈로그 스크롤바도 기본 검은 막대 대신 같은 팔레트를 쓰며, `GUI.skin`은 스크롤뷰 구간에서만
+  교체하고 즉시 되돌린다.
+- **QA 캡처 (2026-08-19)**: 이 화면은 IMGUI라 `CaptureOffscreen`의 카메라 렌더에 잡히지 않는다. 반드시
+  `MainNavigationHudPlayerCapture`의 `build-editor-imgui-*.png`(전체 프레임 캡처)로 확인한다. 기존
+  `build-editor-from-company-*.png`는 빈 사무실만 담고 있으므로 렌더 근거로 쓰지 않는다.
 - 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v10이며 v1~v9를 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
 - 진입점은 `사무실 → 회사 → 사무실 관리`다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
 - 실제 새 게임은 바닥·외곽만 있는 빈 13×13 사무실로 시작하고 카테고리별 가구를 여기서 구매·배치한다. furnished `StarterOfficeV1`은 기존 저장/QA fixture다.

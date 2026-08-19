@@ -220,6 +220,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                         Require(buildController.IsOpen && Mathf.Approximately(Time.timeScale, 0f),
                             "Build adapter did not open its dedicated paused editor.");
                         RequestCapture("build-editor-from-company-1920x1080.png");
+                        yield return RequestFullFrameCapture("build-editor-imgui-1920x1080.png");
                         yield return new WaitForSecondsRealtime(0.75f);
                         VerifyCapture("build-editor-from-company-1920x1080.png", 1920, 1080);
                         buildController.Close();
@@ -305,6 +306,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var loadedState = ValidateStockSaveRoundTrip(bootstrap.State);
             Append("STOCK_STATE_PASS | gameState=same-instance saveRoundTrip=portfolio-preserved runtimeSessions=1");
             RequestCapture("stock-market-from-investment-1920x1080.png");
+            yield return RequestFullFrameCapture("stock-market-imgui-1920x1080.png");
             yield return new WaitForSecondsRealtime(0.75f);
             VerifyCapture("stock-market-from-investment-1920x1080.png", 1920, 1080);
 
@@ -553,6 +555,32 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             if (File.Exists(path)) File.Delete(path);
             CaptureOffscreen(path, superSize);
             _captureCount++;
+        }
+
+        /// <summary>
+        /// Captures the presented frame, including IMGUI. <see cref="CaptureOffscreen"/> renders the
+        /// camera into a RenderTexture, which never contains <c>OnGUI</c> output, so the build editor
+        /// and the stock market panel come out as an empty office. Those are the screens this is for.
+        /// </summary>
+        private IEnumerator RequestFullFrameCapture(string fileName)
+        {
+            var path = Path.Combine(_outputFolder, fileName);
+            if (File.Exists(path)) File.Delete(path);
+            yield return new WaitForEndOfFrame();
+            ScreenCapture.CaptureScreenshot(path);
+            var deadline = Time.realtimeSinceStartup + 10f;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+                if (File.Exists(path) && new FileInfo(path).Length > 1024L)
+                {
+                    _captureCount++;
+                    Append($"FULL_FRAME_CAPTURE_PASS | {path}");
+                    yield break;
+                }
+            }
+
+            Require(false, "Full frame screenshot was never written: " + path);
         }
 
         private static void CaptureOffscreen(string path, int superSize)

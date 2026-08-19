@@ -1,5 +1,32 @@
 # DECISIONS
 
+## 2026-08-19 / 패널을 교체할 때는 detach 후 Destroy한다
+
+결정: `ClearChildren`은 자식을 `Destroy`하기 전에 `SetParent(null, false)`로 먼저 떼어 낸다.
+
+이유: `Destroy`는 프레임 끝에 실행되므로, 같은 프레임에 새 패널을 만들면 나가는 패널이 아직 레이아웃에
+남아 두 텍스트가 겹쳐 렌더된다. 인사 화면에서 다른 가족을 고르면 이전 이름과 새 이름이 한 줄에 겹쳐
+찍히던 원인이다. detach는 즉시 반영되므로 겹침이 사라진다.
+
+## 2026-08-19 / IMGUI 화면은 offscreen camera 캡처로 검증하지 않는다
+
+결정: 사무실 관리와 주식시장처럼 `OnGUI`로 그리는 화면은 `MainNavigationHudPlayerCapture`의
+`RequestFullFrameCapture`(= `ScreenCapture.CaptureScreenshot`)로 캡처한다.
+
+이유: 기존 `CaptureOffscreen`은 카메라를 RenderTexture에 렌더하는데, IMGUI는 그 경로에 들어가지 않는다.
+그래서 두 화면의 QA 캡처가 계속 빈 사무실로만 나왔고, 실제로는 아무도 그 화면의 렌더 결과를 확인하지
+못한 채 PASS가 기록되고 있었다. 변경 전 빌드로 다시 찍어 같은 빈 화면이 나오는 것을 확인했다.
+
+## 2026-08-19 / 사무실 관리 스킨은 생성 아트에서 뽑은 팔레트를 쓴다
+
+결정: `OfficeLayoutEditModeSkin`의 색은 `MainNavigationV2` 프레임에서 샘플링한 크림 `#FCF0D8`,
+골드 `#E49C3C`, 딥틸 `#245454`, 코럴 `#F07854`을 쓰고, 모든 판은 골드 테두리와 그 안쪽 밝은 선을 가진다.
+
+이유: 기존 스킨은 주황 헤더와 민트 버튼이라 같은 게임의 다른 화면과 색·질감이 전혀 맞지 않았다.
+IMGUI라 생성 PNG를 9-slice로 그대로 쓸 수는 없으므로(모서리를 대상 크기에 맞게 줄일 수 없다), 팔레트와
+테두리 규칙만 아트에서 가져와 절차적 텍스처로 만든다. 텍스처는 border가 기대하는 크기로 정확히 생성해
+스케일 문제가 생기지 않게 한다.
+
 ## 2026-08-19 / 프레임 아트는 rect에 맞춰 눌러 담지 않고 자기 높이 기준으로 축소해 그린다
 
 결정: sliced `Image`의 9-slice border는 `UiNineSliceFitter`가 `pixelsPerUnitMultiplier`로 스케일한다.

@@ -32,6 +32,11 @@
   `0.550h`, `time_badge_v2`(1012×233)의 socket 중심 x=120은 `0.515h`다. 날짜 배지의 teal socket에는 요일
   한 글자를 넣어 날짜가 plaque 중앙에 오도록 한다.
 - 프레임 아트를 다시 내보내면 `MainNavigationHudPresenter`의 배지 비율 상수를 다시 재야 한다.
+- 카드의 첫 줄과 마지막 줄은 `CardCornerOrnamentInset`만큼 들여 쓴다. `card_normal_v2`는 코럴 장식을
+  스프라이트 x 33..60에 그리는데 카드 padding 18로는 그 위에 글자가 얹힌다. 하청 계약 카드의
+  `T0 동네 사업자`와 `지금 배정 가능 N명`이 그 경우였다.
+- 패널을 교체할 때 `ClearChildren`은 `Destroy` 전에 `SetParent(null, false)`로 떼어 낸다. `Destroy`는
+  프레임 끝에 적용되므로 떼어 내지 않으면 이전 패널과 새 패널의 글자가 한 프레임 겹쳐 렌더된다.
 
 ## 주식시장 정본과 진입 스택
 

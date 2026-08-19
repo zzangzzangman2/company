@@ -729,10 +729,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 .ToList();
             float rowHeight = _skin.Round(82);
             Rect view = new Rect(0, 0, width - _skin.Round(18), definitions.Count * rowHeight);
-            _catalogScroll = GUI.BeginScrollView(scrollRect, _catalogScroll, view);
-            for (int index = 0; index < definitions.Count; index++)
-                DrawCatalogRow(new Rect(0, index * rowHeight, view.width, rowHeight - _skin.Round(5)), definitions[index]);
-            GUI.EndScrollView();
+            // The built-in skin draws a black scrollbar over the cream catalog. Swap in the editor
+            // skin's track/thumb for the duration of the scroll view and put the originals back.
+            var previousScrollbar = GUI.skin.verticalScrollbar;
+            var previousThumb = GUI.skin.verticalScrollbarThumb;
+            GUI.skin.verticalScrollbar = _skin.ScrollbarStyle;
+            GUI.skin.verticalScrollbarThumb = _skin.ScrollbarThumbStyle;
+            try
+            {
+                _catalogScroll = GUI.BeginScrollView(scrollRect, _catalogScroll, view);
+                for (int index = 0; index < definitions.Count; index++)
+                    DrawCatalogRow(new Rect(0, index * rowHeight, view.width, rowHeight - _skin.Round(5)), definitions[index]);
+                GUI.EndScrollView();
+            }
+            finally
+            {
+                GUI.skin.verticalScrollbar = previousScrollbar;
+                GUI.skin.verticalScrollbarThumb = previousThumb;
+            }
             y += catalogHeight + _skin.Round(8);
             DrawDetails(new Rect(x, y, width, panel.yMax - y - pad));
 
