@@ -45,8 +45,8 @@ namespace FamilyCompany.Editor
 
             new SimulationRunner(source).AdvanceMinutes(240);
             GameSaveDto dto = GameSaveMapper.ToDto(source);
-            Require(dto.schemaVersion == 10 && dto.staminaState != null,
-                "top-level save v9 stamina payload");
+            Require(dto.schemaVersion == 11 && dto.staminaState != null,
+                "top-level save stamina payload");
             string before = JsonUtility.ToJson(dto.staminaState);
             GameState restored = GameSaveMapper.FromDto(dto);
             string after = JsonUtility.ToJson(restored.Stamina.ExportSnapshot());

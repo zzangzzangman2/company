@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FamilyCompany.Infrastructure.Unity;
@@ -10,6 +11,7 @@ using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.History;
 using FamilyCompany.Simulation.Market;
 using FamilyCompany.Simulation.Prototype;
+using FamilyCompany.Simulation.Technology;
 using FamilyCompany.Simulation.Workforce;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -33,6 +35,7 @@ namespace FamilyCompany.Editor
                 ValidateFourPersonContractScope();
                 ValidateContractLifecycle();
                 ValidateSaveRoundTrip();
+            ValidateContractTechnologyRewards();
                 ValidateSaveSlots();
                 ValidateWideFrontendSettings();
                 ValidateAssetsAndScene();
@@ -548,6 +551,77 @@ namespace FamilyCompany.Editor
                 "KOSDAQ price rule market");
         }
 
+        /// <summary>
+        /// The subcontract-to-own-product loop: a finished contract must pay cash AND teach a named
+        /// technology, the two must stay separate, and the technology must survive a save round trip.
+        /// </summary>
+        private static void ValidateContractTechnologyRewards()
+        {
+            // Every technology in the catalog has to be reachable by doing work, otherwise a product
+            // requirement could be impossible to satisfy through contracts alone.
+            var taught = new HashSet<string>(ContractTechnologyGrantCatalog.TaughtTechnologyIds, StringComparer.Ordinal);
+            foreach (var definition in CompanyTechnologyCatalog.All)
+            {
+                Require(taught.Contains(definition.TechnologyId),
+                    $"Technology is not taught by any subcontract: {definition.TechnologyId}");
+            }
+
+            AssertEqual(
+                BootstrapContractCatalog.TotalOfferTemplateCount,
+                ContractTechnologyGrantCatalog.TemplateCount,
+                "every bootstrap contract declares its technology grants");
+
+            // Levels: no points is 미습득, the first point earned is Lv1, and each 100 adds a level.
+            AssertEqual(0, CompanyTechnologyCatalog.LevelFor(0), "level at zero points");
+            AssertEqual(1, CompanyTechnologyCatalog.LevelFor(1), "level at first point");
+            AssertEqual(1, CompanyTechnologyCatalog.LevelFor(99), "level below one hundred");
+            AssertEqual(2, CompanyTechnologyCatalog.LevelFor(100), "level at one hundred");
+            AssertEqual(
+                CompanyTechnologyCatalog.MaximumLevel,
+                CompanyTechnologyCatalog.LevelFor(100_000),
+                "level is capped");
+
+            var state = new CompanyTechnologyState();
+            var grants = ContractTechnologyGrantCatalog.ForTemplateIndex(2);
+            Require(grants.Count > 0, "the word DB contract teaches something");
+            Require(grants.Any(item => item.TechnologyId == CompanyTechnologyIds.DatabaseDesign),
+                "the word DB contract teaches DB design");
+            var gains = state.ApplyGrants(grants);
+            AssertEqual(grants.Count, gains.Count, "one gain record per grant");
+            AssertEqual(
+                grants.First(item => item.TechnologyId == CompanyTechnologyIds.DatabaseDesign).Points,
+                state.PointsFor(CompanyTechnologyIds.DatabaseDesign),
+                "granted points land on the technology");
+
+            // Repeating the same job levels it up; the reward is cumulative and never resets.
+            for (var repeat = 0; repeat < 3; repeat++) state.ApplyGrants(grants);
+            Require(state.LevelFor(CompanyTechnologyIds.DatabaseDesign) >= 2,
+                "repeating a contract raises the technology level");
+
+            var save = new GameSaveDto();
+            AssertEqual(0, save.growth.technologyPoints.Count, "a new save carries no technology");
+
+            var source = PrototypeStateFactory.Create();
+            source.Growth.Technology.ApplyGrants(grants);
+            var json = JsonUtility.ToJson(GameSaveMapper.ToDto(source));
+            var restored = GameSaveMapper.FromDto(JsonUtility.FromJson<GameSaveDto>(json));
+            AssertEqual(
+                source.Growth.Technology.PointsFor(CompanyTechnologyIds.DatabaseDesign),
+                restored.Growth.Technology.PointsFor(CompanyTechnologyIds.DatabaseDesign),
+                "technology points survive a save round trip");
+
+            // Money and technology must not be the same number: a contract card reports them apart.
+            var card = ContractBusinessViewModelRules.Won(720_000);
+            Require(!string.IsNullOrEmpty(card), "money label is formatted");
+            var technologyLine = ContractTechnologyGrantCatalog.DisplayKo(2);
+            Require(technologyLine.Contains("pt"), "technology label reports points, not money");
+            Require(!technologyLine.Contains("₩"), "technology label never carries a cash amount");
+
+            Debug.Log(
+                $"CONTRACT_TECHNOLOGY_REWARD_VALIDATION: PASS | technologies={CompanyTechnologyCatalog.All.Count} " +
+                $"contracts={ContractTechnologyGrantCatalog.TemplateCount} schema=11");
+        }
+
         private static void ValidateSaveRoundTrip()
         {
             var source = PrototypeStateFactory.Create(314159);
@@ -581,7 +655,7 @@ namespace FamilyCompany.Editor
             AssertEqual(source.Company.CashWon, restored.Company.CashWon, "save cash");
             AssertEqual(source.Family.Get("older_sister").Energy, restored.Family.Get("older_sister").Energy, "save sister energy");
             AssertEqual(source.Events.Count, restored.Events.Count, "save event count");
-            AssertEqual(10, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
+            AssertEqual(11, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
             AssertEqual(source.OfficeGrid.ComputeLayoutHash(), restored.OfficeGrid.ComputeLayoutHash(), "office grid layout hash");
             AssertEqual(source.Contracts.Contracts.Count, restored.Contracts.Contracts.Count, "save contract count");
             var restoredContract = restored.Contracts.Get(offer.OfferId);
@@ -975,6 +1049,11 @@ namespace FamilyCompany.Editor
             {
                 throw new InvalidOperationException($"{label}: expected {expected}, got {actual}");
             }
+        }
+
+        private static void Require(bool condition, string label)
+        {
+            if (!condition) throw new InvalidOperationException(label);
         }
 
         private static void AssertApproximately(double expected, double actual, double tolerance, string label)

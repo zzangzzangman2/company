@@ -944,12 +944,13 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 AddLayout(title.rectTransform, -1f, 46f, 0f, 0f);
                 var facts = AddText(
                     card,
-                    offer.RewardKo + "\n" + offer.DeadlineKo + "\n" + offer.WorkKo + "\n" + offer.CapabilityKo,
+                    offer.RewardKo + "\n" + offer.TechnologyKo + "\n" + offer.DeadlineKo + "\n" +
+                    offer.WorkKo + "\n" + offer.CapabilityKo,
                     15f,
                     false,
                     TextAlignmentOptions.TopLeft,
                     DeepInk);
-                AddLayout(facts.rectTransform, -1f, 132f, 0f, 1f);
+                AddLayout(facts.rectTransform, -1f, 158f, 0f, 1f);
                 var ready = offer.MemberChoices.Count(item => item.Available);
                 var status = AddText(
                     card,

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FamilyCompany.Simulation.Technology;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Family;
 
@@ -221,8 +222,10 @@ namespace FamilyCompany.Simulation.Company
             ProductProjectState productProject = null,
             int marketReportSequence = 0,
             int productSequence = 0,
-            IEnumerable<OwnedBusinessState> ownedBusinesses = null)
+            IEnumerable<OwnedBusinessState> ownedBusinesses = null,
+            IEnumerable<KeyValuePair<string, int>> technologyPoints = null)
         {
+            Technology = new CompanyTechnologyState(technologyPoints);
             ResearchCenterUnlocked = researchCenterUnlocked;
             _researchedTechnologyIds = researchedTechnologyIds == null
                 ? new HashSet<string>(StringComparer.Ordinal)
@@ -253,6 +256,12 @@ namespace FamilyCompany.Simulation.Company
 
         public bool ResearchCenterUnlocked { get; private set; }
         public IReadOnlyCollection<string> ResearchedTechnologyIds => _researchedTechnologyIds;
+
+        /// <summary>
+        /// Know-how earned by finishing subcontracts, separate from <see cref="ResearchedTechnologyIds"/>,
+        /// which is the older cash-purchased unlock. Money buys a licence; work buys a level.
+        /// </summary>
+        public CompanyTechnologyState Technology { get; }
         public MarketReportState MarketReport { get; private set; }
         public ProductProjectState ProductProject { get; private set; }
         public int MarketReportSequence => _marketReportSequence;

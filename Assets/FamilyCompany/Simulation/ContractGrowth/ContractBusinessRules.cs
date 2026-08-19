@@ -6,6 +6,7 @@ using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Game;
+using FamilyCompany.Simulation.Technology;
 using FamilyCompany.Simulation.Workforce;
 
 namespace FamilyCompany.Simulation.ContractGrowth
@@ -36,8 +37,10 @@ namespace FamilyCompany.Simulation.ContractGrowth
             string capabilityKo,
             string riskKo,
             string reputationKo,
-            IEnumerable<ContractMemberChoiceViewModel> memberChoices)
+            IEnumerable<ContractMemberChoiceViewModel> memberChoices,
+            string technologyKo = "")
         {
+            TechnologyKo = technologyKo ?? string.Empty;
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             TierKo = tierKo ?? string.Empty;
             RewardKo = rewardKo ?? string.Empty;
@@ -59,6 +62,13 @@ namespace FamilyCompany.Simulation.ContractGrowth
         public string CapabilityKo { get; }
         public string RiskKo { get; }
         public string ReputationKo { get; }
+
+        /// <summary>
+        /// Exactly which know-how finishing this job builds, e.g. <c>기술 DB 설계 +40pt · 자료 입력 +15pt</c>.
+        /// Kept as its own line so the player reads money and technology as two separate rewards.
+        /// </summary>
+        public string TechnologyKo { get; }
+
         public IReadOnlyList<ContractMemberChoiceViewModel> MemberChoices { get; }
     }
 
@@ -186,7 +196,8 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 $"업무 적합도 {offer.RequiredCapability} · 품질 기준 {definition.QualityStandard}",
                 $"예상 위험 {RiskLabel(definition.RiskLevel)}",
                 $"완료 평판 +{definition.ReputationReward} · 실패 위험 -{definition.ReputationRisk}",
-                choices);
+                choices,
+                "기술 " + ContractTechnologyGrantCatalog.DisplayKo(definition.Template.LegacyGlobalIndex));
         }
 
         public static string Won(long amountWon) => "₩" + amountWon.ToString("N0", CultureInfo.InvariantCulture);
@@ -207,10 +218,37 @@ namespace FamilyCompany.Simulation.ContractGrowth
     {
         private static readonly ProductOpportunityDefinition[] Definitions =
         {
-            new ProductOpportunityDefinition("own-product:web", BusinessIndustry.WebAndSoftware, "웹 서비스·PC 소프트웨어", 6_000_000, 4, 80, 8, new[] { ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.Moderate, "패키지 판매·서비스 이용료"),
-            new ProductOpportunityDefinition("own-product:mobile", BusinessIndustry.FeaturePhoneAndMobile, "피처폰 콘텐츠·모바일 게임", 7_000_000, 6, 120, 12, new[] { ResearchTechnologyIds.AutomationLine, ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.High, "다운로드 판매·퍼블리싱 정산"),
-            new ProductOpportunityDefinition("own-product:hardware", BusinessIndustry.HardwareAndPc, "PC 주변기기·디지털 기기", 8_000_000, 8, 160, 16, new[] { ResearchTechnologyIds.AutomationLine, ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.High, "제조 원가 후 기기 판매"),
-            new ProductOpportunityDefinition("own-product:retail", BusinessIndustry.FashionRetailAndOffline, "상점 전산화·유통 브랜드", 6_000_000, 5, 100, 10, new[] { ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.Moderate, "상품 마진·납품 매출")
+            // Each path asks for the technologies its own industry's subcontracts actually teach, so
+            // the way to unlock a product is to keep taking that kind of work. Levels come only from
+            // finished contracts; the ResearchTechnologyIds entry stays as the separate cash unlock.
+            new ProductOpportunityDefinition("own-product:web", BusinessIndustry.WebAndSoftware, "웹 서비스·PC 소프트웨어", 6_000_000, 4, 80, 8, new[] { ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.Moderate, "패키지 판매·서비스 이용료",
+                new[]
+                {
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.DatabaseDesign, 2),
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.WebPublishing, 1),
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.ServerOperations, 1)
+                }),
+            new ProductOpportunityDefinition("own-product:mobile", BusinessIndustry.FeaturePhoneAndMobile, "피처폰 콘텐츠·모바일 게임", 7_000_000, 6, 120, 12, new[] { ResearchTechnologyIds.AutomationLine, ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.High, "다운로드 판매·퍼블리싱 정산",
+                new[]
+                {
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.FeaturePhoneUi, 2),
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.DevicePorting, 1),
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.MidiSound, 1)
+                }),
+            new ProductOpportunityDefinition("own-product:hardware", BusinessIndustry.HardwareAndPc, "PC 주변기기·디지털 기기", 8_000_000, 8, 160, 16, new[] { ResearchTechnologyIds.AutomationLine, ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.High, "제조 원가 후 기기 판매",
+                new[]
+                {
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.BoardAssembly, 2),
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.PcAssembly, 1),
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.QualityInspection, 1)
+                }),
+            new ProductOpportunityDefinition("own-product:retail", BusinessIndustry.FashionRetailAndOffline, "상점 전산화·유통 브랜드", 6_000_000, 5, 100, 10, new[] { ResearchTechnologyIds.MarketAnalysis }, ContractRiskLevel.Moderate, "상품 마진·납품 매출",
+                new[]
+                {
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.InventorySystem, 2),
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.AdminTool, 1),
+                    new ProductTechnologyRequirement(CompanyTechnologyIds.ProductPhotography, 1)
+                })
         };
 
         public static IReadOnlyList<ProductOpportunityDefinition> All => Definitions;
@@ -226,6 +264,23 @@ namespace FamilyCompany.Simulation.ContractGrowth
             return Definitions.Select(definition => Evaluate(definition, summary, company, growth)).ToArray();
         }
 
+        /// <summary>
+        /// Reads the level requirements as "쌓은 기술 DB 설계 Lv1/2 · 웹 퍼블리싱 Lv1/1" so the player can
+        /// see exactly which subcontract work is still missing rather than a single locked flag.
+        /// </summary>
+        private static string SkillLabel(
+            IReadOnlyList<ProductTechnologyRequirement> requirements,
+            CompanyGrowthState growth)
+        {
+            if (requirements.Count == 0) return "필요 기술 없음";
+            var parts = requirements.Select(item =>
+            {
+                var name = CompanyTechnologyCatalog.Get(item.TechnologyId).DisplayNameKo;
+                return $"{name} Lv{growth.Technology.LevelFor(item.TechnologyId)}/{item.RequiredLevel}";
+            });
+            return "쌓은 기술 " + string.Join(" · ", parts);
+        }
+
         private static ProductOpportunityProgress Evaluate(
             ProductOpportunityDefinition definition,
             ContractPerformanceSummary summary,
@@ -235,6 +290,14 @@ namespace FamilyCompany.Simulation.ContractGrowth
             var experience = summary.DomainExperienceHours(definition.Industry);
             var correctReport = growth.MarketReport != null && growth.MarketReport.Industry == definition.Industry;
             var technologyReady = definition.RequiredTechnologyIds.All(growth.HasTechnology);
+            // Averaged per requirement so a path that is one level short reads as nearly ready
+            // instead of collapsing to zero.
+            var levelRequirements = definition.RequiredTechnologyLevels;
+            var skillReady = levelRequirements.Count == 0
+                ? 10_000
+                : levelRequirements.Sum(item => Ratio(
+                      growth.Technology.LevelFor(item.TechnologyId),
+                      item.RequiredLevel)) / levelRequirements.Count;
             var values = new[]
             {
                 Ratio(company.CashWon, definition.RequiredCashWon),
@@ -242,6 +305,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 Ratio(experience, definition.RequiredDomainExperienceHours),
                 Ratio(company.Reputation, definition.RequiredReputation),
                 technologyReady ? 10_000 : 0,
+                skillReady,
                 correctReport ? 10_000 : 0
             };
             var labels = new[]
@@ -251,6 +315,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 $"관련 하청 경험 {experience}/{definition.RequiredDomainExperienceHours}인시",
                 $"평판 {company.Reputation}/{definition.RequiredReputation}",
                 technologyReady ? "필요 연구 완료" : "소비자 시장 분석 등 필요 연구 미완료",
+                SkillLabel(levelRequirements, growth),
                 correctReport ? "해당 분야 시장 보고서 보유" : "해당 분야 시장 보고서 필요"
             };
             return new ProductOpportunityProgress(
@@ -297,19 +362,39 @@ namespace FamilyCompany.Simulation.ContractGrowth
 
     public sealed class AuthoritativeContractWorkAdvanceResult
     {
-        public AuthoritativeContractWorkAdvanceResult(int attemptedHours, int appliedHours, bool completed, long rewardWon, ContractWorkRejectionReason lastRejection)
+        private readonly ContractTechnologyGrant[] _technologyGrants;
+
+        public AuthoritativeContractWorkAdvanceResult(
+            int attemptedHours,
+            int appliedHours,
+            bool completed,
+            long rewardWon,
+            ContractWorkRejectionReason lastRejection,
+            IEnumerable<ContractTechnologyGrant> technologyGrants = null)
         {
             AttemptedHours = attemptedHours;
             AppliedHours = appliedHours;
             Completed = completed;
             RewardWon = rewardWon;
             LastRejection = lastRejection;
+            _technologyGrants = (technologyGrants ?? Array.Empty<ContractTechnologyGrant>()).ToArray();
         }
+
         public int AttemptedHours { get; }
         public int AppliedHours { get; }
         public bool Completed { get; }
+
+        /// <summary>Cash settled for the finished contract. Never mixed with the technology reward.</summary>
         public long RewardWon { get; }
+
         public ContractWorkRejectionReason LastRejection { get; }
+
+        /// <summary>
+        /// Know-how the finished contract teaches. Empty while the contract is still in progress, and
+        /// the caller is what writes it into <c>CompanyGrowthState.Technology</c>, so this stays a
+        /// pure result and the state changes in exactly one place.
+        /// </summary>
+        public IReadOnlyList<ContractTechnologyGrant> TechnologyGrants => _technologyGrants;
     }
 
     /// <summary>
@@ -333,6 +418,17 @@ namespace FamilyCompany.Simulation.ContractGrowth
         }
 
         public long ConsumedThroughMinute => _consumedThroughMinute;
+
+        /// <summary>
+        /// The technology a specific job teaches, looked up by the stable bootstrap template the
+        /// offer came from. An offer with no matching template teaches nothing rather than guessing.
+        /// </summary>
+        private static IReadOnlyList<ContractTechnologyGrant> ResolveTechnologyGrants(SubcontractOffer offer)
+        {
+            return LegacyContractTemplateCatalog.TryResolve(offer, out var template)
+                ? ContractTechnologyGrantCatalog.ForTemplateIndex(template.LegacyGlobalIndex)
+                : Array.Empty<ContractTechnologyGrant>();
+        }
 
         public AuthoritativeContractWorkAdvanceResult AdvanceTo(long authoritativeElapsedMinute, ContractPortfolio portfolio, FamilyState family, CompanyState company)
         {
@@ -364,7 +460,11 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 lastRejection = result.RejectionReason;
                 if (completed || result.RejectionReason == ContractWorkRejectionReason.ContractNotActive) break;
             }
-            return new AuthoritativeContractWorkAdvanceResult(attempted, applied, completed, reward, lastRejection);
+
+            var grants = completed
+                ? ResolveTechnologyGrants(contract.Offer)
+                : Array.Empty<ContractTechnologyGrant>();
+            return new AuthoritativeContractWorkAdvanceResult(attempted, applied, completed, reward, lastRejection, grants);
         }
     }
 }

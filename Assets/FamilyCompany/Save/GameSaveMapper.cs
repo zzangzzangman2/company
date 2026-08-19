@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.Contracts;
@@ -152,6 +153,12 @@ namespace FamilyCompany.Save
                     researchedTechnologyIds = state.Growth.ResearchedTechnologyIds.ToList(),
                     marketReportSequence = state.Growth.MarketReportSequence,
                     productSequence = state.Growth.ProductSequence,
+                    technologyPoints = state.Growth.Technology.Snapshot()
+                        .Select(item => new TechnologyPointsSaveDto
+                        {
+                            technologyId = item.Key,
+                            points = item.Value
+                        }).ToList(),
                     hasMarketReport = state.Growth.MarketReport != null,
                     hasProductProject = state.Growth.ProductProject != null,
                     marketReport = state.Growth.MarketReport == null ? null : new MarketReportSaveDto
@@ -196,7 +203,7 @@ namespace FamilyCompany.Save
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion < 1 || save.schemaVersion > 10)
+            if (save.schemaVersion < 1 || save.schemaVersion > 11)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -383,6 +390,13 @@ namespace FamilyCompany.Save
                             item.totalRevenueWon,
                             item.launchedProductCount))
                     : Enumerable.Empty<OwnedBusinessState>();
+                // v10 and older have no technology ledger; those companies simply start with no
+                // accumulated know-how and rebuild it by taking contracts.
+                var technologyPoints = save.schemaVersion >= 11 && save.growth.technologyPoints != null
+                    ? save.growth.technologyPoints
+                        .Where(item => item != null && !string.IsNullOrEmpty(item.technologyId))
+                        .Select(item => new KeyValuePair<string, int>(item.technologyId, item.points))
+                    : Enumerable.Empty<KeyValuePair<string, int>>();
                 growth = new CompanyGrowthState(
                     save.growth.researchCenterUnlocked,
                     save.growth.researchedTechnologyIds,
@@ -390,7 +404,8 @@ namespace FamilyCompany.Save
                     product,
                     save.growth.marketReportSequence,
                     save.growth.productSequence,
-                    ownedBusinesses);
+                    ownedBusinesses,
+                    technologyPoints);
             }
             var stockMarket = save.stockMarket != null && save.stockMarket.initialized
                 ? FromStockMarketSaveDto(save.stockMarket)

@@ -10,7 +10,7 @@ namespace FamilyCompany.Save
     [Serializable]
     public sealed class GameSaveDto
     {
-        public int schemaVersion = 10;
+        public int schemaVersion = 11;
         public int worldSeed;
         public long elapsedMinutes;
         public CompanySaveDto company = new CompanySaveDto();
@@ -185,6 +185,16 @@ namespace FamilyCompany.Save
         public MarketReportSaveDto marketReport;
         public ProductProjectSaveDto productProject;
         public List<OwnedBusinessSaveDto> ownedBusinesses = new List<OwnedBusinessSaveDto>();
+
+        /// <summary>Schema v11: technology points earned by finishing subcontracts.</summary>
+        public List<TechnologyPointsSaveDto> technologyPoints = new List<TechnologyPointsSaveDto>();
+    }
+
+    [Serializable]
+    public sealed class TechnologyPointsSaveDto
+    {
+        public string technologyId = string.Empty;
+        public int points;
     }
 
     [Serializable]

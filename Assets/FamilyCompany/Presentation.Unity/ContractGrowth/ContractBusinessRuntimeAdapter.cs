@@ -6,6 +6,7 @@ using FamilyCompany.Simulation.Company;
 using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
+using FamilyCompany.Simulation.Technology;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.ContractGrowth
@@ -176,11 +177,32 @@ namespace FamilyCompany.Presentation.Unity.ContractGrowth
                 _bootstrap.State.Company);
             if (result.Completed)
             {
-                NotificationKo = $"계약 완료 · {ContractBusinessViewModelRules.Won(result.RewardWon)} 정산";
+                // The two rewards are reported separately on purpose: cash settles into the company
+                // account, technology settles into the company's know-how and is what opens own
+                // products later.
+                var gains = _bootstrap.State.Growth.Technology.ApplyGrants(result.TechnologyGrants);
+                var money = ContractBusinessViewModelRules.Won(result.RewardWon);
+                NotificationKo = gains.Count == 0
+                    ? $"계약 완료 · {money} 정산 · 습득 기술 없음"
+                    : $"계약 완료 · {money} 정산 · 기술 {DescribeGains(gains)}";
                 _playerWorkSession = null;
             }
             if (result.AppliedHours > 0 || result.Completed) StateChanged?.Invoke();
             return result;
+        }
+
+        /// <summary>
+        /// "DB 설계 +40pt (Lv2 달성) · 자료 입력 +15pt" — the level-up is called out because that is the
+        /// moment a product requirement can flip to satisfied.
+        /// </summary>
+        private static string DescribeGains(IReadOnlyList<CompanyTechnologyGainRecord> gains)
+        {
+            return string.Join(" · ", gains.Select(item =>
+            {
+                var name = CompanyTechnologyCatalog.Get(item.TechnologyId).DisplayNameKo;
+                var text = $"{name} +{item.PointsAdded}pt";
+                return item.LeveledUp ? $"{text} (Lv{item.LevelAfter} 달성)" : text;
+            }));
         }
 
         public void CancelPlayerWork()
