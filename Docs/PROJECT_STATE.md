@@ -2,6 +2,31 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-19 / 문서 정합성 감사 — 코드/실행본 대조 후 정정 (문서만 변경)
+
+- 코드·실행본과 대조해 stale해진 문서 주장만 고쳤다. `Assets`, `Tools`, `ArtSources`는 건드리지 않았고
+  Codex가 작업 중인 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`와
+  `Tools/build_family_locomotion_rig_v1.py`도 제외했다.
+- `b397af9`의 두 차단 회귀는 더 이상 현재 상태가 아니다. 배치 pending 좌클릭은
+  `OfficeLayoutEditModeController.HandlePointer()`가 preview 갱신 뒤 같은 frame에 `ConfirmPreview()`를
+  호출하고, 빈 사무실 산책은 `OfficeAutonomyCoordinator`의 destination 후보 경로를 쓴다. 이 사실을
+  README, AGENTS, OFFICE_BUILD_EDITOR_V1, 이 문서의 검증 표와 backlog에 반영했다.
+- 배포 경로가 문서와 달랐다. 실제 배포본은 `%USERPROFILE%\Downloads\Family`(`befe937e`)이고
+  `Downloads\FamilyCompany_Playtest`는 존재하지 않는다. 저장소 build는 clean HEAD `8fa5fa74`다.
+  PLAYTEST_BUILD, WINDOWS_AUTO_DEPLOY, HOME_PC_CONTINUATION_GUIDE, README를 실제 경로로 정정했다.
+- **미해결(코드 쪽)**: `Tools/FamilyCompanyBuild.Common.ps1`의 `Get-FamilyCompanyDeployDefaults`는 아직
+  `TargetPath = Downloads\FamilyCompany_Playtest`와 `RequiredBranch = codex/integration-p0-qa`를 기본값으로
+  갖는다. 그 branch는 더 이상 없으므로 `DEPLOY_WINDOWS.cmd`를 인수 없이 실행하면 `WRONG_BRANCH`(35)로
+  멈춘다. 지금은 문서에 우회 인수를 적어 두었고, 기본값 자체를 `main`/`Family`로 바꿀지는 사용자 결정
+  사항으로 남긴다. `Tools/Test-FamilyCompanyDeployPipeline.ps1`도 같은 옛 값을 인수로 넘긴다.
+- `Docs/MOVEMENT_NATURALNESS_V1.md`가 제안한 `Editor/OfficeNaturalnessQa.cs`는 만들어진 적이 없어 문서
+  상단에 미구현 제안서 표시를 달았다. `Docs/ASSET_MANIFEST.md`가 참조하는 `remove_chroma_key.py`는 이
+  저장소와 `simul` 어디에도 없다.
+- 대조로 확인한 정확한 값(변경 없음): Unity `6000.3.21f1`, 시작 `2000-01-03 08:50`, 자본금 `5,000,000`,
+  13×13/169셀, starter 가구 69, 저장 스키마 `v10`(v1~v9 이관), 출근 09:00~09:03·퇴근 18:00, 허브 5개
+  (회사·인사·사업·연구·투자), 계약 T0~T4, 체력 10,000·25% 임계, 가족 4명 보행 PNG 192장
+  (4×8방향×6프레임), CANON의 가족 4명 런타임 시트 경로.
+
 ## 2026-08-18 / 가족 4명 foot-anchored 공용 리그 — 검증 진행 중 shipping 후보
 
 > commit `befe937`과 로컬 `6ae4041`의 기존 PASS는 무효다. 전자는 프레임 내부 머리/발 방향을,
@@ -30,9 +55,10 @@
   lift 0을 air-phase failure, P0~P5 left를 ownership failure, 모자 절단을 alpha/identity failure로 거부한다.
 - Unity 6000.3.21f1 숨김 batch는 실제 import된 `characters=4 directions=8 frames=192`, stride
   `0.99380800`, `rootStepPx=19.2350`, cadence `2.0125 steps/s`로 PASS했고 `FAST_QA_WINDOWS.cmd -Profile
-  editor-broad`도 10.725초에 PASS했다. clean Release build, 배포본 D3D11 Player의 renderer support-world
-  trace와 실제 캡처 사람 검토는 아직 다시 실행해야 한다. 이들이 PASS하고 `BUILD_INFO` SHA가 HEAD와
-  같기 전에는 완료/정상 릴리스가 아니다.
+  editor-broad`도 10.725초에 PASS했다. clean Release build는 `Builds/Windows/FamilyCompany_Playtest`에
+  `commit=8fa5fa74`, `WorkingTreeDirty=False`로 존재한다. 남은 것은 배포본 D3D11 Player의 renderer
+  support-world trace와 실제 캡처 사람 검토이며, 현재 배포본 `Downloads\Family`는 아직 `befe937e`다.
+  이 둘이 PASS하고 배포본 `BUILD_INFO` SHA가 HEAD와 같기 전에는 완료/정상 릴리스가 아니다.
 - 정확한 source SHA, 좌표계, phase, threshold, 실패 사례와 재현 명령은
   `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`가 소유한다.
 
@@ -475,12 +501,13 @@
 
 ## 열린 기술 부채와 제품 backlog
 
-1. pending 구매 preview 좌클릭이 실제 `ConfirmPreview()`와 원자 state mutation까지 도달하도록 회귀를 수정한다.
-2. 빈 사무실의 실제 `OfficeAutonomyCoordinator` fallback을 destination 있는 타일 중심 산책으로 바꾸고 같은 셀 current-look/중복 pivot/방향-변위 불일치를 0으로 만든다.
-3. 직원 후보 8인은 고용 시스템이 생긴 뒤에만 출근시킨다. 시작 roster나 09:00~09:03 가족 출근에 섞지 않는다.
-4. 소파/다인 좌석은 group atomic claim, 짝 이동, 취소/퇴장 해제, non-NorthWest pose 승인과 idle/emote QA를 추가한다.
-5. 오피스 확장은 현재 StarterOffice를 보존하며 단계별 면적/가구 해금으로 구현한다. 과거 요청서의 숫자를 검증 없이 새 정본으로 삼지 않는다.
-6. Utility AI의 생산 선택은 `OfficeAutonomyCoordinator`가 소유한다. Shadow scoring 결과를 생산 동작으로 오인하지 않는다.
+1. 가족 4명 foot-anchored 리그 후보를 배포 실행본에서 마무리한다. clean Release build는 `8fa5fa74`로 이미
+   있으므로 남은 것은 D3D11 Player의 renderer support-world trace와 실제 캡처 사람 검토, 그리고 배포본
+   `BUILD_INFO` SHA를 HEAD와 맞추는 재배포다.
+2. 직원 후보 8인은 고용 시스템이 생긴 뒤에만 출근시킨다. 시작 roster나 09:00~09:03 가족 출근에 섞지 않는다.
+3. 소파/다인 좌석은 group atomic claim, 짝 이동, 취소/퇴장 해제, non-NorthWest pose 승인과 idle/emote QA를 추가한다.
+4. 오피스 확장은 현재 StarterOffice를 보존하며 단계별 면적/가구 해금으로 구현한다. 과거 요청서의 숫자를 검증 없이 새 정본으로 삼지 않는다.
+5. Utility AI의 생산 선택은 `OfficeAutonomyCoordinator`가 소유한다. Shadow scoring 결과를 생산 동작으로 오인하지 않는다.
 
 ## 검증 상태
 
@@ -489,9 +516,10 @@
 | Simulation/Editor 전체 회귀 | clean `main` HEAD | FastQA `simulation-pure`, `editor-validation`, `editor-broad` PASS |
 | Workforce/Save v10 | clean `main` HEAD | skills=6, grades=S-F, v1~v9 migration, 1x/2x/4x PASS |
 | UI V3/Maplestory | clean `main` HEAD | assets=24, characters=670, missingGlyphs=0; 1280×720·1392×768·1600×900/1000·1920×1080 PASS |
-| Windows D3D11 UI | `b397af9` | **BLOCKED** — 사무실 관리 pending 구매의 녹색 preview 좌클릭이 confirm에 도달하지 않음 |
-| Windows D3D11 사무실 | `b397af9` normal 처음하기 | **BLOCKED** — 첫 open-area 뒤 destination 없는 Idle/current-look 반복, stationary 48 대 walk loop 13 |
-| 최종 portable Windows build | 최종 `main` | **BLOCKED** — 위 두 회귀를 동일 clean HEAD의 실제 EXE에서 고치고 재검증하기 전 배포 금지 |
+| Windows D3D11 UI | `9144fa0e` 실제 native pointer | PASS — 녹색 preview 1클릭이 commit 1회·mutation 1회, 자금 `5,000,000→4,986,250`, furniture `52→53` |
+| Windows D3D11 사무실 | `9144fa0e` normal 처음하기 | PASS — 08:50→09:50 4인 보행, `currentLook=0`, `duplicatePivot=0`, `nonCardinal=0`, `collision=0` |
+| 가족 4명 보행 리그 | `8fa5fa74` | 진행 중 — foot-lock QA 192/192, Unity batch, `editor-broad` PASS. 배포 Player trace와 캡처 사람 검토 미실시 |
+| 최종 portable Windows build | 최종 `main` | **BLOCKED** — 배포본 `Downloads\Family`가 `befe937e`로 HEAD보다 뒤. 위 보행 gate 통과 후 HEAD로 재배포해야 함 |
 
 과거 개별 PASS는 해당 기능의 회귀 근거다. 최종 결합 SHA의 PASS를 대신하지 않는다.
 
@@ -501,9 +529,11 @@
 2. 저장 v1~v9→v10, 새 게임 v10, 편집 재고, 계약 성장, 주식 계좌, 출퇴근, 실제 변위 회귀를 확인한다.
 3. `BUILD_WINDOWS.cmd`로 새 실행본을 만들고 `BUILD_INFO.txt`와 현재 HEAD가 같은지 확인한다.
 4. [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)의 네 가족 09:00/09:01/09:02/09:03 oracle과 독립 gate를 통과시킨다.
-5. 검증된 새 identity의 폴더 전체만 `%USERPROFILE%\Downloads\FamilyCompany_Playtest`에 배포한다. 이 경로의 정본은
-   `Tools/FamilyCompanyBuild.Common.ps1`의 `Get-FamilyCompanyDeployDefaults.TargetPath`이며 staging은 같은
-   부모의 `.FamilyCompany_Playtest.deploy-staging`이다. FAIL/UNKNOWN이면 evidence 보존 후 해당 payload를 삭제하고 rollback하거나 current를 비워 둔다.
+5. 검증된 새 identity의 폴더 전체만 현재 배포 경로 `%USERPROFILE%\Downloads\Family`에 배포하고 staging은 같은
+   부모의 `.Family.deploy-staging`을 쓴다. `Tools/FamilyCompanyBuild.Common.ps1`의
+   `Get-FamilyCompanyDeployDefaults`는 아직 옛 이름 `FamilyCompany_Playtest`와 존재하지 않는 branch
+   `codex/integration-p0-qa`를 기본값으로 갖고 있으므로, 배포는 `-TargetPath`/`-RequiredBranch main`을 명시해
+   호출한다. FAIL/UNKNOWN이면 evidence 보존 후 해당 payload를 삭제하고 rollback하거나 current를 비워 둔다.
 
 ## 다른 PC에서 이어하기
 

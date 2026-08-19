@@ -1,14 +1,20 @@
 # WINDOWS AUTO DEPLOY
 
 clean integration HEAD를 Windows Release player로 만든 뒤 사용자의 Downloads에 안전하게 승격하는 절차다.
-현재 단계에서는 자동화와 격리 dry-run만 검증했다. 후속 애니메이션·이동 hitch 커밋과 최종 QA가 들어오기
-전에는 실제 배포 watcher를 시작하거나 최종 player를 만들지 않는다.
+자동화와 격리 dry-run은 검증되어 있고 실제 1회 배포도 수행된 적이 있다. watcher 상시 구동은 최종 QA를
+통과한 clean HEAD에서만 시작한다.
 
 ## 최종 대상
 
+현재 실제로 사용하는 배포 경로는 다음이다.
+
 ```text
-C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe
+C:\Users\godho\Downloads\Family\FamilyCompany.exe
 ```
+
+`Tools/FamilyCompanyBuild.Common.ps1`의 `Get-FamilyCompanyDeployDefaults`는 아직 옛 이름
+`Downloads\FamilyCompany_Playtest`를 기본값으로 갖고 있다. 기본값을 그대로 쓰면 지금 배포본과 다른 폴더에
+쓰게 되므로 배포는 `-TargetPath "C:\Users\godho\Downloads\Family"`를 명시해 호출한다.
 
 배포 폴더에는 다음 파일이 함께 있어야 한다.
 
@@ -25,7 +31,9 @@ C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe
 
 ## 작동 계약
 
-1. watcher는 `codex/integration-p0-qa`의 clean committed HEAD만 관찰한다.
+1. watcher는 `-RequiredBranch`로 지정한 branch의 clean committed HEAD만 관찰한다. 스크립트 기본값은 지금은
+   존재하지 않는 `codex/integration-p0-qa`이므로, 정본 branch인 `main`을 쓰려면 `-RequiredBranch main`을
+   명시해야 한다. 기본값 그대로 실행하면 `HeldWrongBranch`(35)로 멈춘다.
 2. 배포 manifest의 commit과 HEAD가 같으면 아무것도 만들지 않는다.
 3. 새 HEAD가 debounce 시간 동안 그대로이고 working tree가 clean일 때만 한 번 빌드한다.
 4. untracked 파일을 포함한 미커밋 변경은 `HeldDirtyWorktree`, 미해결 merge는
@@ -39,8 +47,8 @@ C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe
    `WindowsPlayerBuild.BuildWindowsX64`가 비-Development Windows x64 candidate를 staging에 만든다.
 8. EXE, Data, `UnityPlayer.dll`, build info, deploy manifest와 runner를 모두 검사한 뒤에만 같은 볼륨의
    디렉터리 rename으로 Downloads target을 교체한다.
-9. 기존 target은 `FamilyCompany_Playtest.last-known-good.<UTC>.<old-commit>` 한 개로 보존한다.
-   candidate 승격이 실패하면 기존 target을 즉시 복구한다.
+9. 기존 target은 `<target-이름>.last-known-good.<UTC>.<old-commit>` 한 개로 보존한다. 현재 배포 경로에서는
+   `Family.last-known-good.<UTC>.<old-commit>`이며, candidate 승격이 실패하면 기존 target을 즉시 복구한다.
 10. target의 `FamilyCompany.exe`가 실행 중이면 종료하지 않는다. candidate와
     `AwaitingPlayerExit` 상태를 남기며 watcher가 종료 후 같은 candidate를 재사용해 승격한다.
 
@@ -107,4 +115,6 @@ powershell -ExecutionPolicy Bypass -File .\Tools\Test-FamilyCompanyDeployPipelin
 - dry-run은 실제 player build 시간, Windows Build Support 설치 상태와 실행 smoke를 대체하지 않는다.
 - 후속 통합 뒤 chair/movement/performance/animation QA와 Windows D3D11 smoke를 통과시킨 clean HEAD에서만
   watcher 또는 실제 1회 배포를 시작한다.
+- `Tools/Test-FamilyCompanyDeployPipeline.ps1`은 아직 옛 target 이름과 `codex/integration-p0-qa`를 인수로
+  넘긴다. dry-run 회귀는 격리 폴더에서만 돌기 때문에 통과하지만 실제 배포 경로·branch의 검증은 아니다.
 - 최종 실행본은 `DEPLOY_MANIFEST.json`의 SHA가 당시 integration HEAD와 같은지 다시 확인한다.

@@ -7,12 +7,16 @@
 
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0을 통과해 integration에 단일 merge되었다. 가족 4명의 Work 0..5, atomic seat/root/pelvis, microslide 0, exit/turn/first-walk, stationary endpoint, safe egress와 furniture 0이 실제 Player에서 확인되었다.
 - 과거·회귀 실행 payload는 evidence 보존 뒤 허용 root에서 제거되었고, 이전 GitHub history·tags·Releases·Actions 감사의 executable payload는 0이다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`의 tracked Player payload CI guard를 build 전 필수 gate로 유지한다.
-- 일반 새 게임 좌석 정지·가족 타일 보행 수정의 최종 Windows build와 Downloads 배포는 2026-08-16에
-  수행했다. `%USERPROFILE%\Downloads\FamilyCompany_Playtest`의 `BUILD_INFO.txt`와 `DEPLOY_MANIFEST.json`은
-  clean 최종 HEAD·Unity `6000.3.21f1`·Release build를 기록하며 이 SHA는 `origin/main`과 같다.
-- 배포 전 candidate와 배포 후 Downloads EXE에서 observer-only 일반 새 게임 1x·2x·4x 08:50→09:50을 각각
-  통과했다. 네 가족 seat arrival 1회·Work 6/6·20분 stall 0이며 route injection·clock jump·docking force는
-  모두 false다. 같은 identity의 seating transition Player, FAST_QA, animation strict gate도 통과했다.
+- 현재 배포 경로는 `%USERPROFILE%\Downloads\Family`다. 2026-08-16의 `FamilyCompany_Playtest` 배포는 더 이상
+  존재하지 않으며, 그 경로를 현재 실행본으로 안내하지 않는다.
+- 현재 실행 payload는 두 개다. 저장소 `Builds/Windows/FamilyCompany_Playtest`는 clean HEAD `8fa5fa74`의
+  Release build이고, 배포본 `Downloads\Family`의 `DEPLOY_MANIFEST.json`은 한 커밋 앞선 `befe937e`를 기록한다.
+  LKG는 `Downloads\Family.last-known-good.20260818-034402.f8e371ca6482` 한 개다.
+- 따라서 지금 Downloads 실행본은 HEAD와 다르다. HEAD의 동작을 확인하려면 저장소 build를 쓰거나 HEAD로
+  재배포한다. 재배포는 가족 4명 보행 리그 gate를 통과한 뒤에만 수행한다.
+- 배포 시 `Tools/FamilyCompanyBuild.Common.ps1` 기본값은 옛 target 이름과 존재하지 않는 branch
+  `codex/integration-p0-qa`를 가리키므로 `-TargetPath`와 `-RequiredBranch main`을 명시한다. 자세한 계약은
+  [WINDOWS_AUTO_DEPLOY.md](WINDOWS_AUTO_DEPLOY.md)에 있다.
 
 ## 반복 확인에는 이 문서를 쓰지 않는다
 

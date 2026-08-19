@@ -4,30 +4,35 @@
 
 ## 최종 통합 후보 상태
 
-- **현재 `b397af9` Downloads 실행본은 배포 승인 상태가 아니다.** 2026-08-17 normal 1배속 재조사에서 빈
-  사무실 가족이 첫 open-area 도착 뒤 destination 없는 `Idle/current-look`을 반복했고, 배치 편집기는 구매
-  preview를 갱신한 frame에 `HandlePointer()`가 return해 녹색 preview 좌클릭이 `ConfirmPreview()`까지 도달하지
-  않는 회귀를 확인했다. 과거 observer 1×·2×·4× PASS는 입장 후 퇴실/20분 전환 정지만 보았고 자연 보행과
-  실제 구매 클릭을 검증하지 않았으므로 현재 정상 근거로 사용하지 않는다.
+- **`b397af9`의 두 차단 회귀는 `a9c6885e`에서 수정되어 더 이상 현재 기준선이 아니다.** 배치 편집기의 pending
+  분기는 preview 셀을 갱신한 뒤 같은 frame에서 `Input.GetMouseButtonDown(0)` → `ConfirmPreview()`까지
+  진행하고, 빈 사무실 fallback은 `OfficeAutonomyCoordinator`의 destination 있는 타일 중심 산책으로 바뀌었다.
+  실제 Windows native pointer 1회 클릭에서 자금 `5,000,000→4,986,250`, furniture `52→53`, 실제 Release
+  Player normal 빈 사무실 08:50→09:50 관측에서 `currentLook=0`, `duplicatePivot=0`을 확인했다.
+- **현재 열린 gate는 가족 4명 보행 리그의 출하 검증이다.** 배포 실행본의 D3D11 renderer support-world trace와
+  실제 캡처 사람 검토가 아직 남아 있으므로 완료/정상 릴리스로 보고하지 않는다. 이 작업은 진행 중이며 정확한
+  범위와 재현 명령은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`가 소유한다.
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
 - 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고, GitHub history·tags·Releases·Actions 감사 결과 executable payload는 0입니다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`에서 도입한 CI guard가 향후 tracked Windows Player payload를 fail-closed 차단합니다.
-- `%USERPROFILE%\Downloads\FamilyCompany_Playtest`는 현재 회귀 재현용이며 새 수정 후보가 normal 실제 클릭과
-  08:50→09:50 자율 산책 gate를 통과하기 전에는 재승격하거나 정상 배포로 보고하지 않는다.
+- 현재 실행 payload는 두 곳뿐이다. 저장소 `Builds/Windows/FamilyCompany_Playtest`는 clean HEAD `8fa5fa74`의
+  Release build이고, 배포본 `%USERPROFILE%\Downloads\Family`는 한 커밋 앞선 `befe937e`다. LKG는
+  `Downloads\Family.last-known-good.<UTC>.<sha>` 한 개로만 보존한다. `%USERPROFILE%\Downloads\FamilyCompany_Playtest`
+  경로는 현재 존재하지 않으며, `Tools/FamilyCompanyBuild.Common.ps1`의 기본값만 아직 그 옛 이름을 가리킨다.
+- 배포본이 HEAD보다 뒤에 있으므로 `Downloads\Family`의 실행 결과를 현재 HEAD의 증거로 사용하지 않는다.
 
-## 현재 구현 기준선 — 차단 회귀 수정 필요
+## 현재 구현 기준선
 
 - 새 게임은 `2000-01-03 08:50`, 가족 4명, 자본금 500만 원으로 시작합니다.
 - 사무실은 13×13 바닥과 외곽만 있는 빈 상태로 시작합니다. `회사 → 사무실 관리`에서 책상·의자·정수기 등 카테고리별 가구를 구매하고, 모든 가구를 회전된 footprint의 정확한 타일 중심에 배치합니다.
 - 가족 4명만 `09:00`~`09:03`에 1분 간격으로 출근하고 `18:00`부터 퇴근합니다. 직원 8명은 시작 인원이 아니라 향후 채용 후보입니다.
 - `MainNavigationV2`의 회사·인사·사업·연구·투자 5개 허브를 사용합니다. 회사 허브는 사무실 편집, 사업 허브는 계약/제품, 투자 허브는 주식으로 연결됩니다.
 - 계약 고객은 `T0 → T1 → T2 → T3 → T4` 순차 해금과 등급 하락/회복 규칙을 가집니다.
-- 사무실 편집기의 배치·회전·이동·회수·재고·저장 계약은 유지한다. 단, 현재 `b397af9`의 pending 구매
-  좌클릭은 알려진 회귀이므로 수정 전 실행본을 플레이 가능 기준선으로 취급하지 않는다. 전체 저장 스키마는
-  `v10`이고 `v1`~`v9`을 읽어 이관합니다.
+- 사무실 편집기의 배치·회전·이동·회수·재고·저장 계약을 유지하며, pending 구매 좌클릭은 같은 frame에
+  `ConfirmPreview()`까지 도달합니다. 전체 저장 스키마는 `v10`이고 `v1`~`v9`을 읽어 이관합니다.
 - Title·Loading·HUD·5개 허브·인사 roster는 UI Remaster V3 공용 스킨과 프로젝트에 포함된 Maplestory Light/Bold 폰트를 사용합니다.
 - 가족 4명은 같은 10,000 체력 기준으로 시작하며, 업무 중 체력이 25%까지 내려가면 실제 배치·접근·사용 가능한 정수기·자판기·휴식 좌석을 찾아 회복한 뒤 원래 자리와 남은 업무로 돌아갑니다.
-- 캐릭터 방향과 걷기 애니메이션의 정본은 요청 방향이 아니라 프레임의 실제 이동량이다. 빈 사무실
-  `current-look` fallback이 같은 셀의 중복 pivot과 횡미끄럼을 만들고 있는 현재 회귀는 이 계약 위반이다.
+- 캐릭터 방향과 걷기 애니메이션의 정본은 요청 방향이 아니라 프레임의 실제 이동량입니다. 빈 사무실 산책도
+  destination을 가진 타일 중심 경로를 쓰며, 각 cardinal 구간의 pivot을 끝낸 뒤 translation합니다.
 - 기본 렌더는 `1920×1080`, native scale 1, pixel snap을 사용하고 작은 창은 compact UI로 대응합니다.
 - 주식은 회사 자금과 연결되며 시장 시간, 7+7 호가, 가격·시간 우선 FIFO, 수수료·세금, 결정론적 저장 규칙을 유지합니다.
 

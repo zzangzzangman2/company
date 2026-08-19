@@ -27,10 +27,11 @@
 
 ## 필수 작업 규칙
 
-- 현재 `b397af9`는 사무실 관리 구매 클릭과 빈 사무실 자율 산책의 차단 회귀가 확인된 재현 기준일 뿐
-  정상 릴리스가 아니다. `Docs/PROJECT_STATE.md` 맨 위의 차단 회귀를 먼저 읽고, 삭제된 이전 작업방
-  outputs나 `Docs/History/Reports`의 PASS를 현재 정상 증거로 재사용하지 않는다. normal 새 게임에서 다시
-  재현·검증한다.
+- `b397af9`의 사무실 관리 구매 클릭과 빈 사무실 자율 산책 회귀는 `a9c6885e`에서 수정되었고 실제 native
+  pointer 클릭과 normal 08:50→09:50 관측으로 확인되었다. 현재 열린 gate는 가족 4명 보행 리그의 출하
+  검증이며 아직 정상 릴리스는 아니다. `Docs/PROJECT_STATE.md` 맨 위를 먼저 읽고, 삭제된 이전 작업방
+  outputs나 `Docs/History/Reports`의 PASS를 현재 정상 증거로 재사용하지 않는다. 상태를 바꾸는 주장은
+  normal 새 게임에서 다시 재현·검증한다.
 - 정본 개발 브랜치는 `main` 하나다. `agent/*`, 기능·임시 브랜치, 새 branch와 별도 worktree를 만들거나 전환하지 않는다.
 - 한 채팅에서 한 작업씩 순차 진행한다. 사용자가 다시 명시적으로 허용하지 않는 한 하위 에이전트·다른 채팅·새 작업에 위임하지 않는다.
 - 회사 PC·집 PC·다른 AI나 도구에서 작업해도 먼저 이 문서와 README의 문서 표를 읽고, clean `main`에서만 `git pull --ff-only origin main`으로 시작한다.

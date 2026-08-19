@@ -1,5 +1,9 @@
 # MOVEMENT NATURALNESS V1 — 움직임 자연스러움
 
+> **상태: 미구현 제안서.** 이 문서의 4장이 제안한 `Assets/FamilyCompany/Editor/OfficeNaturalnessQa.cs`와
+> `Artifacts/OfficeNaturalnessQa/naturalness-30s.txt`는 아직 만들어지지 않았다. 제안서는 정본이 아니므로
+> 현재 구현 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
+
 작성: 2026-08-11 / Claude
 성격: **감사 결과 + 요청서**. 정본이 아니다.
 전제: 코덱스가 지금 이 영역을 작업 중이다. **중복 요청을 피하려고 먼저 있는 것부터 확인했다.**
