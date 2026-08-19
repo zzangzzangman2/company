@@ -572,12 +572,16 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             while (Time.realtimeSinceStartup < deadline)
             {
                 yield return null;
-                if (File.Exists(path) && new FileInfo(path).Length > 1024L)
-                {
-                    _captureCount++;
-                    Append($"FULL_FRAME_CAPTURE_PASS | {path}");
-                    yield break;
-                }
+                if (!File.Exists(path) || new FileInfo(path).Length <= 1024L) continue;
+                // A file on disk is not evidence. ScreenCapture has no swapchain to read under
+                // -batchmode and writes a fully black frame, which would otherwise be recorded as a
+                // pass for a screen nobody has actually looked at.
+                Require(IsFrameVisible(path),
+                    "Full frame screenshot is effectively black, so this screen was not really " +
+                    "captured. ScreenCapture needs a presented frame; re-run without -batchmode: " + path);
+                _captureCount++;
+                Append($"FULL_FRAME_CAPTURE_PASS | {path}");
+                yield break;
             }
 
             Require(false, "Full frame screenshot was never written: " + path);
@@ -654,6 +658,29 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 Canvas.ForceUpdateCanvases();
                 if (texture != null) Destroy(texture);
                 if (renderTexture != null) RenderTexture.ReleaseTemporary(renderTexture);
+            }
+        }
+
+        private static bool IsFrameVisible(string path)
+        {
+            var texture = new Texture2D(2, 2, TextureFormat.RGB24, false);
+            try
+            {
+                if (!texture.LoadImage(File.ReadAllBytes(path), false)) return false;
+                var pixels = texture.GetPixels32();
+                var stride = Math.Max(1, pixels.Length / 4096);
+                var nonBlackSamples = 0;
+                for (var index = 0; index < pixels.Length; index += stride)
+                {
+                    var pixel = pixels[index];
+                    if (pixel.r + pixel.g + pixel.b > 24) nonBlackSamples++;
+                }
+
+                return nonBlackSamples >= 16;
+            }
+            finally
+            {
+                Destroy(texture);
             }
         }
 
