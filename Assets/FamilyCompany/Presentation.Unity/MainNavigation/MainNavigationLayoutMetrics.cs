@@ -35,9 +35,12 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         public const int ReferenceHeight = 1080;
         public const double MatchWidthOrHeight = 0.5d;
         public const double OuterMargin = 28d;
-        public const double TopHudHeight = 68d;
-        public const double BottomNavigationWidth = 1120d;
-        public const double BottomNavigationHeight = 100d;
+        // The generated badge and tab frames need room for a real 9-slice centre once
+        // UiNineSliceFitter stops their borders from being clamped flat. 68px of top HUD and 100px
+        // of dock left the badges as capsules and pushed the tab captions onto the frame edge.
+        public const double TopHudHeight = 84d;
+        public const double BottomNavigationWidth = 1180d;
+        public const double BottomNavigationHeight = 120d;
         public const double ContentPanelWidth = 1120d;
         public const double ContentPanelHeight = 660d;
         public const double RegionGap = 24d;
@@ -79,8 +82,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 pixelWidth - safeInsets.Left - safeInsets.Right,
                 pixelHeight - safeInsets.Top - safeInsets.Bottom);
             var margin = Math.Max(18d, Math.Min(32d, OuterMargin * scale));
-            var topHeight = Math.Max(56d, Math.Min(72d, TopHudHeight * scale));
-            var bottomHeight = Math.Max(88d, Math.Min(104d, BottomNavigationHeight * scale));
+            var topHeight = Math.Max(72d, Math.Min(92d, TopHudHeight * scale));
+            var bottomHeight = Math.Max(106d, Math.Min(132d, BottomNavigationHeight * scale));
             var regionGap = Math.Max(14d, Math.Min(24d, RegionGap * scale));
             var top = new UiPixelRect(
                 safe.X + margin,
@@ -89,7 +92,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 topHeight);
             var bottomWidth = Math.Min(
                 safe.Width - margin * 2d,
-                Math.Max(760d, Math.Min(1120d, BottomNavigationWidth * scale)));
+                Math.Max(780d, Math.Min(1180d, BottomNavigationWidth * scale)));
             var bottom = new UiPixelRect(
                 safe.X + (safe.Width - bottomWidth) * 0.5d,
                 safe.Bottom - margin - bottomHeight,

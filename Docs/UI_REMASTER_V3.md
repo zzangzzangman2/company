@@ -80,3 +80,17 @@ Import contract:
 ## Legacy/rejected removal candidates
 
 기존 `MainNavigationV2` runtime assets는 capability candidate와 route 호환 때문에 이번 후보에서 파괴적으로 삭제하지 않는다. Title V2 money-rain resource 연결과 코드 생성 검은 fallback은 V3 연결 후 reference 0을 검증한 다음 중앙 통합에서 제거 후보로 판단한다. 장식과 외부 padding이 능력치 글자를 침범했던 V3 common card 4종과 투명 여백이 과했던 loading V3 frame/track/fill/icon 4종은 superseded removal candidate이며 런타임 reference는 0이다. 거절된 불투명/checker/alpha-halo ImageGen 출력과 검은 Hidden 캡처 시도는 `Artifacts/UiRemasterV3/Rejected` 또는 비최종 QA 폴더에 보존하고 프로젝트 Assets에는 연결하지 않는다.
+
+## 타이틀 프레임 드로잉 계약 (2026-08-19)
+
+- 타이틀 화면의 버튼과 저장 슬롯 카드는 `GUIStyle.border` 9-slice로 그리지 않는다. IMGUI는 border를 소스와
+  대상에 같은 픽셀값으로 쓰기 때문에 대상 크기에 맞춰 모서리를 줄일 수 없다.
+- 대신 `UiRemasterTitleArt`의 content window를 쓴다. 값은 원본 PNG의 alpha>40 영역에서 측정했고 텍스처
+  대비 비율로 저장한다. 임포터가 `maxTextureSize 2048`로 줄이므로 픽셀로 저장하면 안 된다.
+- 버튼은 window를 rect에 그대로 매핑한다. `title_button_normal_v3`의 content는 2137×357이므로 버튼 rect는
+  `UiRemasterLayout.TitleButtonAspect = 5.986`으로 잡는다. pressed/disabled는 normal 대비 커진 비율만큼
+  같은 중심에서 키워 눌림 효과를 유지한다.
+- 저장 슬롯 카드는 아트(3.18:1)와 rect(약 7:1)의 종횡비 차이가 커서 `DrawSliced`의 스케일 9-slice를 쓴다.
+  왼쪽 575px(teal 등·썸네일 프레임), 오른쪽 145px(장식 모서리), 위 180px·아래 115px(금색 괘선)이 고정이고
+  가운데 크림 영역만 늘어난다.
+- 아트를 다시 내보내면 window와 border를 다시 측정해 `UiRemasterTitleArt`를 갱신한다.

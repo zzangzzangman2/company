@@ -58,6 +58,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private RectTransform _worldDim;
         private TMP_Text _companyText;
         private TMP_Text _timeText;
+        private TMP_Text _timeWeekdayText;
         private TMP_Text _panelTitle;
         private TMP_Text _panelDescription;
         private TMP_Text _officeReturnLabel;
@@ -324,6 +325,26 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             _comingSoonRibbon = LoadRequiredSprite(MarkerRoot + "coming_soon_ribbon_v2");
         }
 
+        // Badge overlay geometry, measured from the authored frames.
+        //
+        // UiNineSliceFitter draws these sprites at the scale that fits the sprite height into the
+        // badge height, so a sprite pixel lands at (badgeHeight / spriteHeight) canvas pixels and
+        // every overlay can be expressed as a fraction of the badge height.
+        //
+        // company_badge_v2 is 1015x220 and its teal medallion spans x 31..211 centred at x=121, so
+        // the icon sits at 121/220 = 0.550h with an inner disc near 120/220 = 0.545h, and the cream
+        // plaque starts past the medallion at 211/220 = 0.959h plus a gap.
+        // time_badge_v2 is 1012x233 and its teal socket spans x 51..190 centred at x=120, giving
+        // 120/233 = 0.515h and a plaque start at 190/233 = 0.815h plus a gap.
+        private static float BadgeHeight => CanvasHeight(64f, 56f);
+        private static float BadgeMedallionIconSize => BadgeHeight * 0.545f;
+        private static float BadgeMedallionCentreX => BadgeHeight * 0.550f;
+        private static float BadgePlaqueInset => BadgeHeight * 1.06f;
+        private static float TimeSocketSize => BadgeHeight * 0.550f;
+        private static float TimeSocketCentreX => BadgeHeight * 0.515f;
+        private static float TimePlaqueInset => BadgeHeight * 0.92f;
+        private static float TabHeight => CanvasHeight(92f, 82f);
+
         private void BuildWorldDim()
         {
             _worldDim = CreateRect("Main Navigation World Dim 26 Percent", _safeRoot);
@@ -338,35 +359,44 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             _topHud = CreateSpritePanel("Main Navigation Top HUD", _safeRoot, _topBackplate, true);
             var layout = _topHud.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(12, 12, 6, 6), 10f);
+            ConfigureLayout(layout, new RectOffset(20, 20, 8, 8), 14f);
             layout.childAlignment = TextAnchor.MiddleCenter;
 
             var company = CreateSpritePanel("Company Name Badge", _topHud, _companyBadge, true);
-            AddLayout(company, 470f, 56f, 420f, 0f);
+            AddLayout(company, 470f, BadgeHeight, 420f, 0f);
             var companyIcon = AddIcon(
                 company,
                 LoadRequiredSprite(MainNavigationCatalog.Get(MainNavigationTabId.Company).IconResourcePath),
-                46f);
+                BadgeMedallionIconSize);
             companyIcon.rectTransform.anchorMin = new Vector2(0f, 0.5f);
             companyIcon.rectTransform.anchorMax = new Vector2(0f, 0.5f);
-            companyIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
-            companyIcon.rectTransform.anchoredPosition = new Vector2(12f, 0f);
-            _companyText = AddText(company, "우리 가족회사", CanvasFont(24f, UiRemasterTypography.TopHudPixels), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            companyIcon.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            companyIcon.rectTransform.anchoredPosition = new Vector2(BadgeMedallionCentreX, 0f);
+            _companyText = AddText(company, "우리 가족회사", CanvasFont(23f, UiRemasterTypography.TopHudPixels), true, TextAlignmentOptions.MidlineLeft, DeepInk);
             _companyText.rectTransform.anchorMin = Vector2.zero;
             _companyText.rectTransform.anchorMax = Vector2.one;
-            _companyText.rectTransform.offsetMin = new Vector2(76f, 0f);
-            _companyText.rectTransform.offsetMax = new Vector2(-20f, 0f);
+            _companyText.rectTransform.offsetMin = new Vector2(BadgePlaqueInset, 0f);
+            _companyText.rectTransform.offsetMax = new Vector2(-CanvasPixels(22f), 0f);
             _companyText.textWrappingMode = TextWrappingModes.NoWrap;
 
             AddFlexibleSpacer(_topHud);
 
             var time = CreateSpritePanel("Canonical Date Time Badge", _topHud, _timeBadge, true);
-            AddLayout(time, 520f, 56f, 440f, 0f);
+            AddLayout(time, 470f, BadgeHeight, 420f, 0f);
+            // The badge art carries a teal socket on its left. Filling it with the weekday keeps the
+            // date centred on the cream plaque instead of colliding with an empty coloured square.
+            _timeWeekdayText = AddText(time, string.Empty, CanvasFont(19f, UiRemasterTypography.TopHudPixels), true, TextAlignmentOptions.Midline, Color.white);
+            _timeWeekdayText.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+            _timeWeekdayText.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            _timeWeekdayText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            _timeWeekdayText.rectTransform.sizeDelta = new Vector2(TimeSocketSize, TimeSocketSize);
+            _timeWeekdayText.rectTransform.anchoredPosition = new Vector2(TimeSocketCentreX, 0f);
+            _timeWeekdayText.textWrappingMode = TextWrappingModes.NoWrap;
             _timeText = AddText(time, string.Empty, CanvasFont(20f, UiRemasterTypography.TopHudPixels), false, TextAlignmentOptions.Midline, DeepInk);
             _timeText.rectTransform.anchorMin = Vector2.zero;
             _timeText.rectTransform.anchorMax = Vector2.one;
-            _timeText.rectTransform.offsetMin = new Vector2(72f, 0f);
-            _timeText.rectTransform.offsetMax = new Vector2(-18f, 0f);
+            _timeText.rectTransform.offsetMin = new Vector2(TimePlaqueInset, 0f);
+            _timeText.rectTransform.offsetMax = new Vector2(-CanvasPixels(20f), 0f);
             _timeText.textWrappingMode = TextWrappingModes.NoWrap;
 
             AddFlexibleSpacer(_topHud);
@@ -380,7 +410,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 _speedSelected,
                 _bootstrap.ToggleOfficeObservationCameraNow,
                 206f,
-                50f);
+                BadgeHeight);
             var officeViewLabel = AddText(
                 officeViewButton.GetComponent<RectTransform>(),
                 "사무실 보기 · C",
@@ -391,7 +421,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             Stretch(officeViewLabel.rectTransform);
 
             var speedHost = CreateRect("Canonical Time Speed Segments", _topHud);
-            AddLayout(speedHost, 320f, 52f, 320f, 0f);
+            AddLayout(speedHost, 320f, BadgeHeight, 320f, 0f);
             var speedLayout = speedHost.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(speedLayout, null, 8f);
             speedLayout.childAlignment = TextAnchor.MiddleRight;
@@ -409,7 +439,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     _speedSelected,
                     () => _bootstrap.SetWorldTimeScaleNow(capturedSpeed),
                     96f,
-                    50f);
+                    BadgeHeight);
                 var label = AddText(button.GetComponent<RectTransform>(), $"{speed}x", CanvasFont(20f, UiRemasterTypography.ButtonPixels), true, TextAlignmentOptions.Midline, DeepInk);
                 Stretch(label.rectTransform);
                 _speedButtons[speed] = button;
@@ -421,7 +451,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             _bottomNavigation = CreateSpritePanel("Main Navigation Floating Dock", _safeRoot, _bottomDock, true);
             var layout = _bottomNavigation.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(28, 28, 9, 9), 10f);
+            ConfigureLayout(layout, PixelPadding(26, 26, 12, 12), CanvasPixels(12f));
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = true;
             layout.childForceExpandWidth = true;
@@ -440,11 +470,13 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     _tabSelected,
                     () => OpenTabNow(capturedTab),
                     200f,
-                    82f);
+                    TabHeight);
                 var buttonLayout = button.gameObject.AddComponent<VerticalLayoutGroup>();
-                ConfigureLayout(buttonLayout, new RectOffset(12, 12, 7, 6), 2f);
+                // The tab frame draws a gold corner inside each edge, so the content has to stay
+                // clear of it. Padding is in canvas pixels for the same reason the tab is.
+                ConfigureLayout(buttonLayout, PixelPadding(16, 16, 8, 12), CanvasPixels(2f));
                 buttonLayout.childAlignment = TextAnchor.MiddleCenter;
-                var navigationIconSize = CanvasPixels(WorkforceCanvasScale() < 0.8f ? 36f : 42f);
+                var navigationIconSize = CanvasPixels(WorkforceCanvasScale() < 0.8f ? 36f : 44f);
                 var icon = AddIcon(button.GetComponent<RectTransform>(), LoadRequiredSprite(definition.IconResourcePath), navigationIconSize);
                 AddLayout(icon.rectTransform, navigationIconSize, navigationIconSize, navigationIconSize, 0f);
                 var label = AddText(
@@ -454,7 +486,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     true,
                     TextAlignmentOptions.Midline,
                     DeepInk);
-                AddLayout(label.rectTransform, -1f, 24f, 0f, 1f);
+                var labelHeight = CanvasHeight(26f, 22f);
+                AddLayout(label.rectTransform, -1f, labelHeight, 0f, 0f).minHeight = labelHeight;
                 label.textWrappingMode = TextWrappingModes.NoWrap;
                 _tabButtons[definition.TabId] = button;
                 _tabLabels[definition.TabId] = label;
@@ -1189,7 +1222,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             if (!_built || _bootstrap.State == null) return;
             SetText(_companyText, _bootstrap.State.Company.CompanyName);
-            SetText(_timeText, _bootstrap.State.Time.Now.ToString("yyyy년 MM월 dd일 ddd HH:mm"));
+            var now = _bootstrap.State.Time.Now;
+            SetText(_timeText, now.ToString("yyyy년 MM월 dd일  HH:mm"));
+            SetText(_timeWeekdayText, WeekdayKo(now.DayOfWeek));
             RefreshSpeedStyles();
         }
 
@@ -1299,6 +1334,10 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             image.type = sliced ? Image.Type.Sliced : Image.Type.Simple;
             image.color = Color.white;
             image.raycastTarget = false;
+            // The generated frames are authored 2-8x larger than the rects they fill, so their
+            // 9-slice borders would otherwise be clamped to the whole rect and collapse the centre
+            // into two touching end caps. The fitter keeps a real stretchable centre.
+            if (sliced) UiNineSliceFitter.Attach(image);
             return rect;
         }
 
@@ -1501,6 +1540,20 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             asset.isMultiAtlasTexturesEnabled = true;
             if (asset.fallbackFontAssetTable == null) asset.fallbackFontAssetTable = new List<TMP_FontAsset>();
             return asset;
+        }
+
+        private static string WeekdayKo(DayOfWeek day)
+        {
+            switch (day)
+            {
+                case DayOfWeek.Monday: return "월";
+                case DayOfWeek.Tuesday: return "화";
+                case DayOfWeek.Wednesday: return "수";
+                case DayOfWeek.Thursday: return "목";
+                case DayOfWeek.Friday: return "금";
+                case DayOfWeek.Saturday: return "토";
+                default: return "일";
+            }
         }
 
         private void SetText(TMP_Text target, string value)

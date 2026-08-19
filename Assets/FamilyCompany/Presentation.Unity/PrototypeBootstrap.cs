@@ -751,13 +751,30 @@ namespace FamilyCompany.Presentation.Unity
             bool enabled,
             MainMenuButtonKind kind)
         {
-            var style = kind == MainMenuButtonKind.Primary
-                ? _mainButtonPrimaryStyle
-                : kind == MainMenuButtonKind.Danger ? _mainButtonDangerStyle : _mainButtonStyle;
-            if (!enabled) style = _mainButtonDisabledStyle;
+            // The frame is drawn from its measured content window instead of a GUIStyle background:
+            // the authored sheet is ~2x taller than the frame, so a stretched background rendered a
+            // thin sliver and a sliced one smeared the corner ornaments across the middle.
+            var hovered = enabled && rect.Contains(Event.current.mousePosition);
+            var pressed = hovered && GUI.enabled && Input.GetMouseButton(0);
+            var texture = !enabled
+                ? _mainButtonDisabledTexture
+                : pressed
+                    ? _mainButtonActiveTexture
+                    : hovered
+                        ? kind == MainMenuButtonKind.Primary ? _mainButtonPrimaryHoverTexture : _mainButtonHoverTexture
+                        : kind == MainMenuButtonKind.Primary
+                            ? _mainButtonPrimaryTexture
+                            : kind == MainMenuButtonKind.Danger ? _mainButtonDangerTexture : _mainButtonTexture;
+            var window = !enabled
+                ? UiRemasterTitleArt.ButtonDisabled
+                : pressed
+                    ? UiRemasterTitleArt.ButtonPressed
+                    : hovered ? UiRemasterTitleArt.ButtonHover : UiRemasterTitleArt.ButtonNormal;
+            UiRemasterTitleArt.Draw(rect, texture, window, UiRemasterTitleArt.ButtonNormal);
+
             var previousEnabled = GUI.enabled;
             GUI.enabled = enabled;
-            var clicked = GUI.Button(rect, GUIContent.none, style);
+            var clicked = GUI.Button(rect, GUIContent.none, GUIStyle.none);
             GUI.enabled = previousEnabled;
 
             var danger = kind == MainMenuButtonKind.Danger;
@@ -765,10 +782,11 @@ namespace FamilyCompany.Presentation.Unity
                 ? danger ? new Color(0.64f, 0.18f, 0.14f, 1f) : new Color(0.125f, 0.23f, 0.23f, 1f)
                 : new Color(0.39f, 0.47f, 0.45f, 1f);
             var scale = UiRemasterTypography.CalculateScale(Screen.width, Screen.height);
-            var iconSize = Mathf.Min(rect.height - UiRemasterTypography.Pixels(16f, scale),
-                UiRemasterTypography.Pixels(42f, scale));
+            // The frame's gold end cap occupies about 7.6% of the width, so the icon starts past it.
+            var iconSize = Mathf.Min(rect.height - UiRemasterTypography.Pixels(18f, scale),
+                UiRemasterTypography.Pixels(44f, scale));
             var iconRect = UiRemasterTypography.PixelSnap(new Rect(
-                rect.x + UiRemasterTypography.Pixels(22f, scale),
+                rect.x + rect.width * 0.085f,
                 rect.y + (rect.height - iconSize) * 0.5f,
                 iconSize,
                 iconSize));
@@ -783,7 +801,7 @@ namespace FamilyCompany.Presentation.Unity
             var textBounds = new Rect(
                 iconRect.xMax + UiRemasterTypography.Pixels(UiRemasterLayout.IconTextGap, scale),
                 rect.y,
-                rect.xMax - iconRect.xMax - UiRemasterTypography.Pixels(30f, scale),
+                rect.xMax - iconRect.xMax - rect.width * 0.10f,
                 rect.height);
             var content = new GUIContent(title);
             DrawColoredLabel(UiRemasterTypography.CenterUsingFontMetrics(textBounds, content, _mainButtonTitleStyle),
@@ -1073,7 +1091,14 @@ namespace FamilyCompany.Presentation.Unity
                     cardHeight));
                 var label = BuildSlotLabel(repository);
                 GUI.enabled = canUseEmptySlot || repository.Exists;
-                if (GUI.Button(card, GUIContent.none, _slotStyle))
+                // The card art packs a teal spine, a thumbnail frame and two gold rules into a 3.2:1
+                // sheet that has to fill a 7:1 rect, so it is nine-sliced with the decoration drawn
+                // at its authored proportions and only the cream field stretched.
+                var slotHovered = GUI.enabled && card.Contains(Event.current.mousePosition);
+                var slotWindow = slotHovered ? UiRemasterTitleArt.SlotSelected : UiRemasterTitleArt.SlotNormal;
+                var slotTexture = slotHovered ? _slotSelectedTexture : _slotNormalTexture;
+                UiRemasterTitleArt.DrawSliced(card, slotTexture, slotWindow);
+                if (GUI.Button(card, GUIContent.none, GUIStyle.none))
                 {
                     if (_screen == PrototypeUiScreen.NewGameSlots) SelectNewGameSlotNow(slot);
                     else if (_screen == PrototypeUiScreen.SaveSlots)
@@ -1084,9 +1109,15 @@ namespace FamilyCompany.Presentation.Unity
                     }
                     else LoadSlotNow(slot);
                 }
-                var slotColumnWidth = Mathf.Min(UiRemasterTypography.Pixels(180f, scale), card.width * 0.24f);
-                var slotBounds = new Rect(card.x + UiRemasterTypography.Pixels(16f, scale), card.y,
-                    slotColumnWidth - UiRemasterTypography.Pixels(20f, scale), card.height);
+                // Centre the slot number on the thumbnail frame the art draws in its left border.
+                var slotColumnWidth = Mathf.Max(
+                    UiRemasterTypography.Pixels(96f, scale),
+                    slotWindow.LeftBorderFor(card.height, slotTexture));
+                var slotBounds = new Rect(
+                    card.x + slotColumnWidth * 0.16f,
+                    card.y,
+                    slotColumnWidth * 0.78f,
+                    card.height);
                 var slotContent = new GUIContent("슬롯 " + slot);
                 GUI.Label(UiRemasterTypography.CenterUsingFontMetrics(slotBounds, slotContent, _mainButtonTitleStyle),
                     slotContent, _mainButtonTitleStyle);

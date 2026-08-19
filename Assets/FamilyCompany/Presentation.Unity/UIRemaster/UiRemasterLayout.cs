@@ -50,6 +50,9 @@ namespace FamilyCompany.Presentation.Unity.UIRemaster
         public const float TextInset = 24f;
         public const float IconTextGap = 14f;
 
+        /// <summary>Content aspect of <c>title_button_normal_v3</c>; see UiRemasterTitleArt.</summary>
+        public const float TitleButtonAspect = 5.986f;
+
         public static UiRemasterTitleLayout CalculateTitle(int pixelWidth, int pixelHeight)
         {
             if (pixelWidth <= 0 || pixelHeight <= 0) throw new ArgumentOutOfRangeException(nameof(pixelWidth));
@@ -64,9 +67,11 @@ namespace FamilyCompany.Presentation.Unity.UIRemaster
                 logoWidth - UiRemasterTypography.Pixels(24f, scale),
                 UiRemasterTypography.Pixels(26f, scale)));
 
-            var buttonWidth = Mathf.Min(UiRemasterTypography.Pixels(330f, scale), pixelWidth - margin * 2f);
-            var buttonHeight = UiRemasterTypography.Pixels(60f, scale);
-            var gap = UiRemasterTypography.Pixels(8f, scale);
+            // The title button frame is authored at a 5.99:1 content aspect. Sizing the rect to that
+            // ratio lets the art be drawn straight into it with no distortion and no 9-slice.
+            var buttonWidth = Mathf.Min(UiRemasterTypography.Pixels(400f, scale), pixelWidth - margin * 2f);
+            var buttonHeight = Mathf.Round(buttonWidth / TitleButtonAspect);
+            var gap = UiRemasterTypography.Pixels(12f, scale);
             var firstY = Mathf.Max(
                 subtitle.yMax + UiRemasterTypography.Pixels(18f, scale),
                 UiRemasterTypography.Pixels(218f, scale));

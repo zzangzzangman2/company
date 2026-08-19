@@ -18,6 +18,21 @@
 - 한국어는 기존 `ManagementUiFontCatalog_v1`의 TMP 동적 폰트와 fallback 체인을 재사용한다. PNG에는 글자·날짜·숫자·가격이 없다.
 - generated Sprite가 없으면 검은 debug fallback을 만들지 않고 `MAIN_NAVIGATION_V2_ASSET_MISSING` 예외로 QA를 실패시킨다.
 
+## 프레임 스케일 계약 (2026-08-19)
+
+- 모든 sliced 프레임 `Image`에는 `UiNineSliceFitter`가 붙는다. `CreateSpritePanel`이 sliced로 만들 때
+  자동으로 붙이며, rect가 바뀔 때마다 `pixelsPerUnitMultiplier`를 다시 계산한다.
+- 멀티플라이어는 스프라이트 높이를 rect 높이에 맞추는 값이 기본이고, 중앙 stretch 영역이 어느 축에서든
+  10% 미만이 될 때만 더 키운다. 절대 1 미만으로 내려가지 않는다.
+- 이 계약이 없으면 Unity가 border를 rect에 맞춰 눌러 중앙을 0으로 만들고, 프레임이 양 끝 cap만 남아
+  캡슐·동그라미로 렌더된다. 상단 배지 3종, 하단 탭 5개, 카드와 리본이 모두 그 상태였다.
+- 상단 HUD 84px, 배지 64px, 하단 dock 120px, 탭 92px가 현재 값이다. 이보다 낮추면 배지의 원형 medallion과
+  탭의 모서리 장식이 다시 눌린다.
+- 배지 위 오버레이는 배지 높이의 비율로 배치한다. `company_badge_v2`(1015×220)의 medallion 중심 x=121은
+  `0.550h`, `time_badge_v2`(1012×233)의 socket 중심 x=120은 `0.515h`다. 날짜 배지의 teal socket에는 요일
+  한 글자를 넣어 날짜가 plaque 중앙에 오도록 한다.
+- 프레임 아트를 다시 내보내면 `MainNavigationHudPresenter`의 배지 비율 상수를 다시 재야 한다.
+
 ## 주식시장 정본과 진입 스택
 
 기존 정본을 이동하거나 복제하지 않았다.
