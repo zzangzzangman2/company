@@ -1,8 +1,103 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-18
+최종 갱신: 2026-08-19
 
-## Character Locomotion Generation V1 (2026-08-18, current family-4 shipping authority)
+## Player Natural Walk V4 eight-pose foot transfer (candidate, human approval pending)
+
+- Contract: `FC-PLAYER-NATURAL-WALK-V1`.
+- Runtime: `Assets/Resources/FamilyCompany/PlayerNaturalWalkV1/Frames/`의 방향별 toe/pass/land 6장과 기존
+  source-exact contact 2장을 `PlayerNaturalWalkPresenter`가 한 타일당 8단계로 결합한다.
+- Derivation: `Tools/extract_player_natural_passes_v1.py`가 각 contact의 source-exact upper와 lower pixels를
+  유지한다. 하체 좌우를 분리해 동/서는 각 18px, 남/북은 각 12px 안쪽으로 평행 이동하며 scale은 항상
+  1.0이다. 반주기마다 toe/pass/land를 따로 만들고 모든 pose 시간은 12.5%다. 통과 시 왼발/오른발을
+  교대로 12px(동/서) 또는 9px(남/북) 든다. 축소·보간·재표본화가 없다. ImageGen 출력은 0장 사용한다.
+  receipt는 `PlayerNaturalWalkV1/source-receipt.json`이다.
+- Import: east/west PPU 314, north/south PPU 324, Point, mipmap off, uncompressed, FullRect,
+  bottom-center pivot, opaque-bottom ground alignment.
+- Turn: 주인공 route corner만 0.18초 planted hold를 사용하며 source-exact contact의 이전/중간/목표
+  cardinal view를 순서대로 표시한다. logical root, collision, tile waypoint는 이동하지 않는다.
+- QA: Unity 6000.3.21f1 Windows Player Direct3D11, Intel Graphics, 577 moving frame/69 capture,
+  8 adjacent tile-center legs, 최대 선분 이탈 `0.00000053 world`, endpoint/visual-root/final-center 오차 0,
+  collision/sprite violation 0, build warning 0.
+- Status: 사용자 최종 화면 승인 대기. 다른 가족에 복사하지 않는다.
+- Rejected: legacy passing 전신 직접 혼합은 체형 축소로, legacy 하체 corridor 합성 V1은 스침 때 다리가
+  한 덩어리처럼 얇아져 폐기했다. V2 wide-passing은 다리 굵기는 해결했지만 두 발이 모두 접지해 교대가
+  약하므로 대체했다. V3는 한 스침 pose를 거리 30% 동안 유지해 미끄러져 보이므로 대체했다. ImageGen
+  3회 후보도 체크 배경·다리 겹침·정지 자세 회귀 때문에 모두 미사용이다.
+
+## Player East Source-Exact Contact V1 (in-game visual approval pending)
+
+- Contract: `FC-PLAYER-EAST-CONTACT-V1`.
+- Canonical source: `Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png`, SHA-256
+  `0C23A5D9594FFED9E8263938A11F6268F133B09ECDFFC90BAD4E2545179BC4EB`.
+- Runtime frames: `Assets/Resources/FamilyCompany/PlayerEastContactV1/Frames/`의 204×389 RGBA 두 장.
+- Derivation: `Tools/extract_player_east_contacts_v1.py`가 4×2 정본 시트의 east 열 두 칸을 crop하고
+  투명 canvas에 bottom-center 정렬한다. 새 픽셀 생성, 보간, recolor, 전신 재생성은 0이다.
+- Receipt: `Assets/Resources/FamilyCompany/PlayerEastContactV1/source-receipt.json`; frame SHA와 source box를
+  고정한다.
+- Import: PPU 314, Point, mipmap off, uncompressed, FullRect, bottom-center pivot. 불투명 발바닥은 bottom
+  padding 0으로 pivot에 직접 닿는다.
+- Runtime scope: 주인공 east+moving만 `GaitPhase01 < 0.5 / >= 0.5`로 두 포즈를 선택한다. idle,
+  착석/작업/퇴장은 기존 renderer fallback이다. 대각선 east 계열 후보도 같은 exact sprite를 읽지만
+  east presenter와 파일을 수정하지 않는다.
+- QA: 단독 Editor/Player D3D11 6 phase는 PASS했고 2026-08-19 화면 승인도 받았다. 그러나 최초 실제 게임
+  PPU 180 통합은 약 1.75배 과대·부유·코너 scale pop으로 시각 실패했다. PPU 314 정규화 뒤 실제 게임
+  최종 화면 승인을 다시 기다린다.
+- Rights: 기존 정본 시트와 동일한 프로젝트 소유 GPT 생성 아트이며 신규 제3자 에셋은 없다.
+- Rejected/removed: 자동 분리 rigid-part atlas와 과거 전 가족 생성 source/writer는 화면 승인 실패 후
+  제거했다. 사람이 승인한 12~18 layer PSB 없이는 cutout rig를 production에 게시하지 않는다.
+
+## Player South Source-Exact Contact V1 (in-game visual approval pending)
+
+- Contract: `FC-PLAYER-SOUTH-CONTACT-V1`.
+- Canonical source: east와 같은 `Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png`, SHA-256
+  `0C23A5D9594FFED9E8263938A11F6268F133B09ECDFFC90BAD4E2545179BC4EB`.
+- Runtime frames: `Assets/Resources/FamilyCompany/PlayerSouthContactV1/Frames/`의 177×401 RGBA 두 장.
+- Derivation: `Tools/extract_player_south_contacts_v1.py`가 4×2 정본 시트의 south 열 두 칸을 crop하고
+  투명 canvas에 bottom-center 정렬한다. 새 픽셀 생성, 보간, recolor, 전신 재생성은 0이다.
+- Receipt: `Assets/Resources/FamilyCompany/PlayerSouthContactV1/source-receipt.json`; frame SHA는
+  `5C068C0A...9A8E`, `BC8E841A...BA6FA`다.
+- Import: PPU 324, Point, mipmap off, uncompressed, FullRect, bottom-center pivot. 불투명 발바닥은 bottom
+  padding 0으로 pivot에 직접 닿는다.
+- Runtime scope: 주인공 south+moving만 `GaitPhase01 < 0.5 / >= 0.5`로 두 포즈를 선택한다. east는 승인
+  presenter가 계속 소유하고, 나머지 방향과 idle, 착석/작업/퇴장은 기존 renderer fallback이다.
+- QA: Unity 6000.3.21f1 Editor D3D11 6 phase PASS, Windows Player Direct3D11 6 phase PASS, Intel Graphics,
+  build warning 0. east 회귀 6 phase는 승인 Player 캡처와 SHA-256 바이트 일치 PASS.
+- Status: 단독 화면 승인은 받았지만 실제 게임 PPU 정규화 결과는 사용자 최종 화면 승인 대기다.
+- Rights: 기존 정본 시트와 동일한 프로젝트 소유 GPT 생성 아트이며 신규 제3자 에셋은 없다.
+
+## Player North/West Source-Exact Contact V1 (candidate, human approval pending)
+
+- Contracts: `FC-PLAYER-NORTH-CONTACT-V1`, `FC-PLAYER-WEST-CONTACT-V1`.
+- Canonical source: 같은 `player_pixel_walk4x2_v1.png`; north column 2, west column 1을 각각 독립 추출한다.
+- Runtime frames: `PlayerNorthContactV1/Frames/`의 173×396 두 장과
+  `PlayerWestContactV1/Frames/`의 204×389 두 장. north는 PPU 324, west는 PPU 314이며 둘 다 불투명
+  발바닥이 bottom-center pivot에 직접 닿는다.
+- Derivation: `Tools/extract_player_north_contacts_v1.py`, `Tools/extract_player_west_contacts_v1.py`.
+  새 픽셀 생성, 보간, recolor, 전신 재생성은 0이며 승인 east/south output을 읽거나 수정하지 않는다.
+- QA: Editor D3D11 12 phase PASS, Windows Player Direct3D11 12 phase PASS, Intel Graphics. 최종 8방향
+  통합 뒤 north/west 각 6장도 직전 Player 캡처와 SHA-256 바이트 일치 PASS.
+- Status: 실행 게이트 PASS, 사용자 화면 승인 대기.
+
+## Player Diagonal Four-Direction Visual Mapping V1 (candidate, human approval pending)
+
+- Contract: `FC-PLAYER-DIAGONAL-CARDINAL-MAP-V1`.
+- Source policy: 정본 4×2 시트에 대각선 아트가 없으므로 새 대각선 전신을 생성하지 않는다.
+  southwest/northwest는 exact west 두 포즈, northeast/southeast는 exact east 두 포즈를 사용한다.
+- Runtime: `PlayerDiagonalContactPresenter`; moving diagonal에만 활성화한다. idle, 착석/작업/퇴장은 기존
+  renderer가 계속 소유한다.
+- QA: Editor D3D11 4방향×6 phase=24 PASS, Windows Player Direct3D11 24 phase PASS,
+  generated/interpolated pixel 0, build warning 0. PPU 314/324로 정규화한 실제 새 게임
+  `OfficeRuntimeAgent`의 인접 타일 8구간 center-to-center loop는 최대 선분 이탈 `0.00000080 world`,
+  endpoint/visual-root/final-center 오차 0, collision/sprite violation 0으로 D3D11 PASS했다. 최초 PPU 180
+  실제 게임 캡처는 과대·부유·코너 scale pop으로 시각 실패했으며 승인 근거가 아니다.
+- Status: 기존 주인공 대각선 generated legacy walk를 production 이동 화면에서 가리는 4방향 RPG 후보다.
+  사용자 최종 화면 승인 전에는 다른 가족에 복사하지 않는다.
+
+## Character Locomotion Generation V1 (2026-08-18, RETIRED TOMBSTONE)
+
+아래 source/writer/gate 경로는 2026-08-19에 삭제했다. 현재 권한이나 재현 경로가 아니라 제거 전 계약의
+역사 기록이다. checked-in `HighMotion/Frames`는 non-east/좌석 fallback으로만 남는다.
 
 - Contract: `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의
   `FC-CHARACTER-LOCOMOTION-GENERATION-V1` / `FC-FAMILY-LOCOMOTION-RIG-V1` /
@@ -35,9 +130,9 @@
   Tycoon 299.954658~300.321321 1/30초 책상 동선을 보행 가독성 비교에 사용했다. 외부 게임 픽셀/에셋은
   프로젝트에 복사하지 않았다.
 
-## Family Walk Identity-Locked Six-Pose Cycles (2026-08-18)
+## Family Walk Identity-Locked Six-Pose Cycles (2026-08-18, RETIRED TOMBSTONE)
 
-Historical/provenance only. 현재 가족 4명 Generation V1 part-rig writer와 foot-lock gate가 대체한다.
+Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했고 현재 재현 경로가 아니다.
 
 - Runtime: 가족 4명 각각 `Assets/Art/Characters/<Member>/Pixel/HighMotion/Frames/`의 8방향×6프레임 192장과 A/B 시트 8장.
 - Shipping source: `ArtSources/FamilyWalkHalfCyclesV2/<member>/<direction>/`의 표식 없는 identity-locked 192장. 출하 픽셀에는 청록/자홍 표식을 칠한 적이 없다.
@@ -85,11 +180,11 @@ Historical/provenance only. 현재 가족 4명 Generation V1 part-rig writer와 
 
 ## 플레이어
 
-### 레거시 도트 이동 시트
+### 동쪽 접촉 정본의 원본 도트 시트
 
 - 경로: Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png
-- 상태: LEGACY IDENTITY REFERENCE
-- 용도: 구형 14살 플레이어의 정체성·카메라 참조. 현재 런타임에는 사용하지 않는다.
+- 상태: CANONICAL IDENTITY SOURCE / PLAYER EAST CONTACT SOURCE
+- 용도: 14살 플레이어 정체성·카메라 참조이며 현재 east-only 두 접촉 런타임의 직접 원본이다.
 - 규격: 1536x1024 RGBA, 4열x2행, 알파 0/255, 네 모서리 투명
 - 방향: 정면, 왼쪽, 뒤, 오른쪽
 - 외형: 빨간 뉴스보이캡, 짧은 짙은 갈색 머리, 갈색 눈, 흰 후드 윈드브레이커, 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화

@@ -548,6 +548,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
             var actor = root.AddComponent<OfficeRuntimeAgent>();
+            PlayerNaturalWalkPresenter playerNaturalWalk = null;
+            if (playerControlled && string.Equals(memberId, "player", StringComparison.Ordinal))
+            {
+                playerNaturalWalk = root.AddComponent<PlayerNaturalWalkPresenter>();
+                playerNaturalWalk.Configure(renderer);
+            }
             actor.Configure(
                 _bootstrap,
                 _world,
@@ -558,6 +564,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 animator,
                 _assetSource.CharacterSeatPoseCatalog,
                 spawn);
+            actor.ConfigurePlayerNaturalWalk(playerNaturalWalk);
             if (playerControlled)
             {
                 var controller = root.AddComponent<OfficeRuntimePlayerController>();

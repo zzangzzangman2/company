@@ -1,0 +1,41 @@
+{
+  "contract": "FC-PLAYER-SOUTH-CONTACT-V1",
+  "source": "Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png",
+  "sourceSha256": "0C23A5D9594FFED9E8263938A11F6268F133B09ECDFFC90BAD4E2545179BC4EB",
+  "direction": "south",
+  "frameCount": 2,
+  "generatedPixels": false,
+  "interpolatedPixels": false,
+  "runtimePixelsPerUnit": 324,
+  "groundAlignment": "opaque-bottom-at-pivot",
+  "frames": [
+    {
+      "phase": 0.0,
+      "sourceBox": [
+        162,
+        83,
+        169,
+        393
+      ],
+      "canvasSize": [
+        177,
+        401
+      ],
+      "sha256": "E27AA917417FA27BCF642022CDDF9986020CF891790DF561574F2D6F963AEC8E"
+    },
+    {
+      "phase": 0.5,
+      "sourceBox": [
+        160,
+        542,
+        168,
+        397
+      ],
+      "canvasSize": [
+        177,
+        401
+      ],
+      "sha256": "CD9F8AAE09E8E661EC7CEBB1D5F78266FA8BDF56708C3D636F5D6B56B16927C5"
+    }
+  ]
+}

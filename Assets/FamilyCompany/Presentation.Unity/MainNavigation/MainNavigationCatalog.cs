@@ -20,7 +20,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         OpenBuildingEditor,
         OpenContractBoard,
         OpenProductOpportunities,
-        OpenStockMarket
+        OpenStockMarket,
+        OpenTechnologyLedger
     }
 
     public static class MainNavigationRouteIds
@@ -29,6 +30,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         public const string BusinessContracts = "business.contracts";
         public const string BusinessProducts = "business.products";
         public const string StockMarket = "investment.stock-market";
+        public const string ResearchTechnology = "research.technology";
     }
 
     public sealed class MainNavigationFeatureDefinition
@@ -155,7 +157,13 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 "연구",
                 "새 기술과 운영 노하우로 가족회사의 다음 기회를 엽니다.",
                 ResourceRoot + "Icons/Bottom/research_v2",
-                Feature("research-tech-tree", "테크 트리", "시대와 회사 역량에 맞는 기술 경로를 선택합니다."),
+                Feature(
+                    "research-tech-tree",
+                    "보유 기술",
+                    "하청을 하며 쌓은 기술과 숙련도를 확인합니다.",
+                    "이용 가능 · 열기",
+                    MainNavigationFeatureAction.OpenTechnologyLedger,
+                    MainNavigationRouteIds.ResearchTechnology),
                 Feature("research-efficiency", "효율 강화", "같은 시간과 자원으로 더 좋은 결과를 만듭니다."),
                 Feature("research-marketing", "마케팅 기법", "새로운 고객 획득과 홍보 방식을 해금합니다."),
                 Feature("research-lineup", "제품 라인업", "연구 성과로 새로운 제품군을 확장합니다.")),

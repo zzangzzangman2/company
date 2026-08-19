@@ -22,8 +22,9 @@
 - 런타임 의상 정본: 흰색 후드 윈드브레이커와 남색 트리밍, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화
 - 정본 범위: 플레이어를 월드에서 식별하는 조작 말의 외형이다. 별도 VN 초상화나 실존 사용자 얼굴을 의미하지 않는다.
 - 기반 디자인: 기존 `simul` 타이틀의 14살 플레이어 디자인
-- 런타임 이동 정본: `Assets/Art/Characters/Player/Pixel/HighMotion/player_pixel_walk8dir6_{a,b}_v1.png`
-- 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
+- 런타임 이동 후보: 실제 moving은 `Player{East,South,North,West}ContactV1`의 source-exact 2포즈를 쓰고,
+  대각선은 west/east를 재사용한다. `HighMotion`은 idle/turn/착석/작업 fallback을 소유한다.
+- 런타임 방향: 남·남서·서·북서·북·북동·동·남동. 실제 게임 정규화 결과는 사용자 최종 승인 대기다.
 
 ### 누나
 
@@ -63,28 +64,39 @@
 - 런타임 이동 정본: `Assets/Art/Characters/Mother/Pixel/HighMotion/mother_pixel_walk8dir6_{a,b}_v1.png`
 - 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
-## 가족 4명 보행 제작 정본
+## 주인공 원본 접촉 보행 제작 정본
 
-- 최우선 계약은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의
-  `FC-CHARACTER-LOCOMOTION-GENERATION-V1`, `FC-FAMILY-LOCOMOTION-RIG-V1`과
-  `FC-CHARACTER-LOCOMOTION-FOOT-LOCK-QA-V1`이다.
-- 현재 출하/gate 범위는 가족 4명×8방향×6위상=192 PNG다. 직원 후보 8명은 가족 4명의 실제 Player
-  품질 승인 뒤 같은 정본을 확장한다. 제작/publish는 `Tools/generate_character_locomotion_v1.py`만 수행한다.
-- `ArtSources/FamilyLocomotionRigV1`의 SHA 고정 분리 leg parts와
-  `Tools/CharacterLocomotionIdentityV1`의 방향별 canonical upper가 source authority다. 완성 전신 6패널
-  생성, 허리 cap과 이미 중앙 정렬된 runtime 재입력은 금지한다.
-- 각 6프레임은 P0~P2 해부학적 left support/right swing, P3~P5 right support/left swing이다. PPU 180,
-  scale 1.55, stride 0.99380799에서 지지발은 local 진행축 반대로 phase당 19.234993px 이동하며 projected
-  drift가 1px 이하여야 한다. P1/P4의 canonical upper와 hip은 함께 1px 이동해 완전 고정 몸통과 seam
-  분리를 동시에 막는다.
-- 방향 승인은 row token이나 얼굴만 보지 않는다. 시선/머리→흉곽→골반→무릎·발목→양쪽 신발 앞코가
-  실제 변위와 같은 방향이어야 한다. 뒤발의 앞코 반전, 정면으로 벌어진 발, 같은 swing leg의 두 번 반복은
-  발 이동량·cadence가 정상이어도 실패다.
-- `ArtSources/FamilyWalkHalfCyclesV2`, `IdentityModelV1`, `MarkerReviewV1`은 가족 제작 provenance와 좌우
-  다리 증거로 보존하지만 shipping writer가 아니다. `BeforeCoherenceV1`과 `MotherSideWalkV3`도 현재
-  motion source가 아닌 실패 분석/역사 자료다. 구 builder `--write`는 차단돼 있다.
-- 정상 가족 런타임은 별도 `LocomotionTransitionsV1` 초상화를 섞지 않고 승인 walk/idle 계열만 사용한다.
-  cardinal 타일 중심 구간은 다음 구간 방향으로 pivot을 끝낸 뒤 translation한다.
+- 현재 실제 게임 후보는 `FC-PLAYER-NATURAL-WALK-V1`의 eight-pose V4다. source-exact contact 두 장
+  사이를 각 반주기 `toe→pass→land`로 나눠 한 타일당 8단계를 사용한다. 각 자세는 실제 이동거리 12.5%만
+  소유하고 왼발/오른발을 교대로 들어 접지발과 이동발을 구분한다. 상체와 정체성 픽셀, 원래 다리 굵기는
+  contact가 계속 소유하며 ImageGen이나 legacy HighMotion 픽셀은 사용하지 않는다.
+- 주인공 코너 회전은 0.18초 planted hold 동안 이전/중간 cardinal/목표 contact를 거친다. 이 시간에 logical
+  root는 타일 중심에 고정되고 그 뒤에만 다음 center-to-center translation이 시작된다.
+- `FC-PLAYER-EAST-CONTACT-V1`과 `FC-PLAYER-SOUTH-CONTACT-V1`은 단독 화면 승인을 받았고 north/west 및
+  diagonal mapping도 Editor/Windows Player 실행 게이트를 통과했다. 다만 최초 실제 게임 PPU 180 통합은
+  과대·부유·코너 scale pop으로 시각 실패했으므로, PPU 314/324 정규화 실제 게임 결과 전체가 사용자
+  최종 화면 승인 대기다.
+- source authority는 `Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png`이다.
+  `Tools/extract_player_east_contacts_v1.py`가 east 열 두 접촉 포즈를 픽셀 생성/보간 없이 게시한다.
+- 런타임 `PlayerEastContactPresenter`는 기존 이동의 `GaitPhase01`만 읽고 0.0/0.5 반주기에 두 포즈를
+  선택한다. logical root, stride, collision, arrival, depth 식은 바꾸지 않는다.
+- idle, 착석, 작업, 퇴장은 기존 `DirectionalSpriteAnimator`와 checked-in fallback이 소유한다.
+- south 정본은 같은 source authority의 south 열 두 접촉 포즈만 픽셀 생성/보간 없이 게시한다. 런타임
+  `PlayerSouthContactPresenter`는 south+moving에만 활성화되고 east presenter와 서로의 파일을 읽거나
+  덮어쓰지 않는다. 통합 Player의 east 6장도 기존 승인 캡처와 바이트 단위로 같음을 확인했다.
+- north/west 후보도 정본 시트의 해당 열 두 장씩만 독립 게시한다. source에 대각선이 없으므로 대각선
+  moving은 west/east exact contact를 수평 우선으로 재사용한다. 신규 대각선 픽셀이나 legacy generated
+  diagonal art를 주인공 production walk에 섞지 않는다. 이 6방향 후보는 사용자 최종 화면 승인 전이며
+  다른 가족으로 확대하지 않는다.
+- 이 presenter들은 시각 sprite만 교체한다. 실제 새 게임의 pathfinding, logical root, tile-center waypoint,
+  collision, arrival은 기존 `OfficeRuntimeAgent`가 계속 소유한다. D3D11 실제 사무실 8개 인접 타일 loop에서
+  center segment 최대 이탈 `0.00000053 world`, endpoint/visual-root/final-center 오차 0을 확인했다. contact는
+  동/서 PPU 314, 남/북 PPU 324, bottom padding 0이며 수치 PASS는 사람 화면 승인을 대신하지 않는다.
+- 과거 `FamilyWalkHalfCyclesV2`, `FamilyLocomotionRigV1`, `MotherSideWalkV3`, `MotherNorthWalkV2`,
+  `CharacterLocomotionIdentityV1` source/writer/gate는 2026-08-19에 삭제했다. 현재 재현 경로가 아니다.
+- 승인 layered PSB가 없으면 자동 분리 rigid cutout을 production에 게시하지 않는다. 사람이 원본을
+  12~18개 rigid layer로 나눈 경우에만 Unity 2D Animation east-only 후보를 다시 열고, D3D11 Player
+  사람 승인 전에는 범위를 넓히지 않는다.
 
 ## 향후 직원 후보 8인
 

@@ -8,6 +8,7 @@ using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Presentation.Unity.UIRemaster;
 using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.ManagementUi;
+using FamilyCompany.Simulation.Technology;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -888,6 +889,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 case MainNavigationFeatureAction.OpenProductOpportunities:
                     BuildProductOpportunityDetail(feature, tab);
                     return;
+                case MainNavigationFeatureAction.OpenTechnologyLedger:
+                    BuildTechnologyLedgerDetail(feature, tab);
+                    return;
                 default:
                     BuildComingSoonDetail(feature, tab);
                     return;
@@ -969,6 +973,104 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     DeepInk);
                 status.margin = new Vector4(CardCornerOrnamentInset, 0f, 0f, 0f);
                 AddLayout(status.rectTransform, -1f, 36f, 0f, 0f);
+            }
+        }
+
+        /// <summary>
+        /// The company's know-how, grouped by track. This is the only place a player can see what all
+        /// that subcontract work added up to, so it shows the level, the progress inside the level and
+        /// the raw points rather than a bare badge.
+        /// </summary>
+        private void BuildTechnologyLedgerDetail(
+            MainNavigationFeatureDefinition feature,
+            MainNavigationTabDefinition tab)
+        {
+            var technology = _bootstrap?.State?.Growth?.Technology;
+            if (technology == null)
+            {
+                _featureRouteFailureKo = "회사 기술 상태를 연결하는 중입니다.";
+                BuildComingSoonDetail(feature, tab);
+                return;
+            }
+
+            var root = CreateRect("Technology Ledger", _featureHost);
+            Stretch(root);
+            var vertical = root.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(vertical, null, CanvasPixels(10f));
+            vertical.childAlignment = TextAnchor.UpperCenter;
+
+            var learned = technology.LearnedTechnologyIds.Count;
+            var summary = AddText(
+                root,
+                learned == 0
+                    ? "아직 쌓은 기술이 없습니다. 사업 허브의 하청을 완료하면 그 일이 가르치는 기술이 여기 쌓입니다."
+                    : $"보유 기술 {learned}/{CompanyTechnologyCatalog.All.Count}종 · 하청을 완료하면 그 일이 가르치는 기술이 오릅니다.",
+                16f,
+                false,
+                TextAlignmentOptions.TopLeft,
+                DeepInk);
+            AddLayout(summary.rectTransform, -1f, CanvasHeight(30f, 26f), 0f, 0f);
+
+            var grid = CreateRect("Technology Tracks", root);
+            AddLayout(grid, -1f, -1f, 0f, 1f);
+            var gridLayout = grid.gameObject.AddComponent<GridLayoutGroup>();
+            gridLayout.padding = new RectOffset();
+            gridLayout.spacing = new Vector2(CanvasPixels(12f), CanvasPixels(12f));
+            gridLayout.cellSize = new Vector2(CanvasPixels(340f), CanvasPixels(238f));
+            gridLayout.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            gridLayout.startAxis = GridLayoutGroup.Axis.Horizontal;
+            gridLayout.childAlignment = TextAnchor.UpperCenter;
+            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridLayout.constraintCount = 3;
+
+            foreach (CompanyTechnologyTrack track in Enum.GetValues(typeof(CompanyTechnologyTrack)))
+            {
+                var entries = CompanyTechnologyCatalog.ForTrack(track);
+                if (entries.Count == 0) continue;
+                BuildTechnologyTrackCard(grid, track, entries, technology);
+            }
+        }
+
+        private void BuildTechnologyTrackCard(
+            RectTransform parent,
+            CompanyTechnologyTrack track,
+            IReadOnlyList<CompanyTechnologyDefinition> entries,
+            CompanyTechnologyState technology)
+        {
+            var card = CreateSpritePanel($"Technology Track {track}", parent, _cardNormal, true);
+            var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(layout, PixelPadding(20, 16, 12, 10), CanvasPixels(1f));
+            layout.childAlignment = TextAnchor.UpperLeft;
+
+            var title = AddText(card, TrackNameKo(track), 17f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            title.margin = new Vector4(CardCornerOrnamentInset, 0f, 0f, 0f);
+            AddLayout(title.rectTransform, -1f, CanvasHeight(24f, 21f), 0f, 0f);
+
+            foreach (var entry in entries)
+            {
+                var points = technology.PointsFor(entry.TechnologyId);
+                var row = AddText(
+                    card,
+                    $"{entry.DisplayNameKo}  {CompanyTechnologyCatalog.DisplayLevelKo(points)}",
+                    14f,
+                    points > 0,
+                    TextAlignmentOptions.MidlineLeft,
+                    points > 0 ? DeepInk : LockedInk);
+                row.textWrappingMode = TextWrappingModes.NoWrap;
+                row.overflowMode = TextOverflowModes.Ellipsis;
+                AddLayout(row.rectTransform, -1f, CanvasHeight(20f, 18f), 0f, 0f);
+            }
+        }
+
+        private static string TrackNameKo(CompanyTechnologyTrack track)
+        {
+            switch (track)
+            {
+                case CompanyTechnologyTrack.WebAndSoftware: return "웹·소프트웨어";
+                case CompanyTechnologyTrack.Mobile: return "모바일";
+                case CompanyTechnologyTrack.Hardware: return "하드웨어";
+                case CompanyTechnologyTrack.RetailAndOffline: return "리테일·오프라인";
+                default: return "공통";
             }
         }
 

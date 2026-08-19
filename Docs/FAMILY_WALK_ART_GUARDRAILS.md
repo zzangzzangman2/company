@@ -1,9 +1,9 @@
 # 가족 보행 에셋 제작 가드레일
 
-> 현재 shipping authority는 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`다. 이 문서는 가족 4명의
-> identity/marker 제작 provenance와 `FC-WALK-GUARDRAIL-V1` 사전 확인 계약으로 보존한다.
-> `build_family_walk_half_cycles_v2.py --write`는 사용하지 않으며, 전체 12명 runtime 판정은
-> `Tools/verify_character_locomotion_v1.py`와 실제 D3D11 Player QA가 소유한다.
+> 2026-08-19 현재 이 문서는 삭제된 가족 4명 생성 파이프라인의 실패 provenance다. 언급된
+> ArtSources/writer/gate는 제거됐으며 실행하면 안 된다. 현재 사람 승인 권한은 CANON의
+> `FC-PLAYER-EAST-CONTACT-V1`, `FC-PLAYER-SOUTH-CONTACT-V1`이다. north/west와 diagonal cardinal mapping은
+> D3D11 실행 게이트 PASS, 사용자 최종 화면 승인 대기 후보다.
 
 계약 ID: `FC-WALK-GUARDRAIL-V1`
 
@@ -254,7 +254,7 @@ FAMILY_WALK_TWO_STEP_GATE: FAIL | contract=FC-WALK-TWOSTEP-GATE-V1 source=runtim
 `same`이 `mirror`보다 작은 행은 프레임 3이 프레임 0의 복사본에 가깝다는 뜻이다. `player northeast`의
 `same=168`은 사실상 같은 그림이다.
 
-### 파이프라인이 계약을 폐기했던 지점과 2026-08-18 해소
+### [퇴역 이력] 파이프라인이 계약을 폐기했던 지점과 2026-08-18 당시 해소
 
 2026-08-17 당시 `Tools/build_family_walk_half_cycles_v2.py` 첫 주석은 다음과 같았다.
 
@@ -265,7 +265,7 @@ FAMILY_WALK_TWO_STEP_GATE: FAIL | contract=FC-WALK-TWOSTEP-GATE-V1 source=runtim
 rig·V7 색 정체성·raw strip import 세대와 서로 배타적인 CLI 모드가 겹쳐 있었다. 따라서 추적 원화가
 마지막 수동 실행 모드에 따라 달라졌고, 한 번 고친 뒤 다른 import에서 되돌아왔다.
 
-2026-08-18에 이 문제를 해소했다. 현재 builder는 `ArtSources/FamilyWalkHalfCyclesV2`의 identity-locked
+2026-08-18 당시 이 문제를 해소했다. 당시 builder는 `ArtSources/FamilyWalkHalfCyclesV2`의 identity-locked
 출하 source와 별도 marker review copy만 읽는 단일 source→runtime publish 경로다. 구형
 `--bootstrap-existing`, `--import-v4-masters`, `--import-v6-joint-rig`, `--import-v7-color-identity`,
 `--import-strip`, `--rotate-source`, `--normalize-sources` 모드는 제거했다. `--write`는 source/marker

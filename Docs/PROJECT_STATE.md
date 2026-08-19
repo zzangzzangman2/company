@@ -2,6 +2,87 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-19 / 주인공 자연 보행 V4 — 8단계 발 교대·0.18초 고정발 회전 후보
+
+- 기존 네 자세의 한 bitmap을 이동거리 20~30% 동안 끌던 주인공 보행을 `PlayerNaturalWalkPresenter`가
+  `접촉 A→발 떼기 A→통과 A→착지 B→접촉 B→발 떼기 B→통과 B→착지 A` 8단계로 재생한다. 각 자세는
+  이동거리의 12.5%만 소유한다. phase는 실제 이동 누적 거리만 읽으므로
+  한 타일=한 주기와 tile-center root 계약은 바뀌지 않는다.
+- 스침 자세는 새 전신 생성물이 아니다. 각 source-exact contact의 머리·목·얼굴·모자·몸통·재킷·팔·손과
+  양쪽 하체 픽셀을 그대로 쓴다. 하체를 중앙에서 좌우 두 덩어리로 나눠 동/서는 각 18px, 남/북은 각
+  12px 안쪽으로 평행 이동할 뿐 축소·재표본화·보간하지 않는다. 발 떼기는 최대 이동/들기의 50% 이하,
+  통과는 전체 이동과 12px(동/서) 또는 9px(남/북) 들기, 착지는 다음 contact의 50% 안쪽 이동을 쓴다.
+  접지발과 이동발이 바뀌는 과정을 세 자세로 나누고 두 다리의 원래 굵기는 유지한다.
+  `Tools/extract_player_natural_passes_v1.py`와 `PlayerNaturalWalkV1/source-receipt.json`이 입력 SHA, 경계,
+  `legScale=1.0`과 발 들기 값을 고정한다.
+- 코너에서는 주인공만 0.18초 동안 logical root를 정지시키고, 이전 방향→중간 cardinal→목표 방향의
+  source-exact contact를 30/40/30%로 보여 준 뒤 다음 타일 translation을 시작한다. 좌석·작업·idle은 기존
+  renderer 소유권을 유지한다.
+- ImageGen 통과 자세 3회는 체크 배경, 무릎 과상승, 다리 겹침 또는 정지 자세 회귀로 모두 거부했고 게임
+  자산에 넣지 않았다. legacy 전신 passing 혼합 후보는 체형 축소로, legacy 하체 corridor 합성 V1은 발을
+  바꿔 디딜 때 다리가 한 덩어리처럼 얇아져 폐기했다. V2 wide-passing은 굵기는 해결했지만 두 발이 모두
+  바닥에 붙어 교대 순간이 약해 V3로 대체했다. V3는 발 들기는 읽혔지만 한 스침 bitmap을 이동거리 30%
+  동안 끌어 미끄러져 보여 V4 8단계로 대체했다.
+- Unity 6000.3.21f1 Windows Player D3D11 실제 8구간 loop는 577 moving frame/69 capture,
+  최대 center-segment 이탈 `0.00000053 world`, endpoint/visual-root/final-center 오차 0,
+  collision projection/moving sprite violation/build warning 0으로 PASS했다. 사람 최종 화면 승인 대기이며
+  승인 전에는 다른 가족으로 확대하지 않는다.
+
+## 2026-08-19 / 주인공 실제 타일 보행 — 크기·접지 정규화 뒤 최종 화면 승인 대기
+
+- 첫 실제 사무실 GIF는 경로 수치만 PASS했을 뿐 시각적으로 실패했다. source-exact contact를 기존과 같은
+  PPU 180으로 가져와 legacy 전환 프레임보다 약 1.75배 커졌고, crop 아래 4px 투명 여백 때문에 발이 떠
+  보였으며 코너에서 legacy 프레임으로 전환할 때 캐릭터가 작아졌다 다시 커졌다. 이 GIF와 수치를 승인
+  근거로 사용하지 않는다.
+- contact crop은 불투명 발바닥이 bottom-center pivot에 직접 닿도록 bottom padding을 0으로 바꿨다.
+  동/서는 PPU 314, 남/북은 PPU 324로 방향별 불투명 신장을 기존 256px 전환 프레임과 맞췄다. Point,
+  mipmap off, uncompressed 및 source-exact/generated pixel 0 계약은 유지한다.
+- 수정한 Windows Player D3D11 실제 사무실에서 grid `(1,1)→(2,1)→(3,1)→(3,2)→(3,3)→(2,3)→
+  (1,3)→(1,2)→(1,1)`의 인접 8구간을 다시 돌았다. 581 moving frame/68 capture에서 최대 center-segment
+  이탈 `0.00000080 world`, endpoint/visual-root/final-center 오차 0, collision projection과 moving sprite
+  violation 0, build warning 0으로 PASS했다. 청록 선은 이 QA 실행에만 있는 정확한 tile-center 경로 표시다.
+- 수치 PASS는 사람 화면 승인을 대신하지 않는다. 수정 GIF의 크기·접지·코너 전환은 사용자 최종 화면
+  승인 대기이며 승인 전에는 나머지 가족으로 확대하지 않는다.
+
+## 2026-08-19 / 가족 보행 전면 정리 — Player source-exact 방향 후보 실행 검증
+
+- 사용자가 기존 보행 생성 찌꺼기 전체 삭제를 승인했다. `FamilyWalkHalfCyclesV2`,
+  `FamilyLocomotionRigV1`, `MotherSideWalkV3`, `MotherNorthWalkV2`,
+  `CharacterLocomotionIdentityV1`과 연결된 생성기·검사기·구 계약 문서를 제거했다. 현재
+  `HighMotion/Frames`와 이동/충돌/착석/방향 전환 런타임은 다른 가족과 non-walking fallback 때문에 유지한다.
+- 자동 생성 rigid-part 후보도 D3D11 화면에서 팔·다리 비율이 원본과 달라져 거부하고 source,
+  Resources, 코드, QA Player와 로그를 모두 삭제했다. 승인 layered PSB가 없을 때 자동 파츠 분리를
+  production으로 승격하지 않는다.
+- 최초 승인 범위는 주인공 동쪽 보행 하나였다. `Tools/extract_player_east_contacts_v1.py`가 정본
+  `player_pixel_walk4x2_v1.png`의 east 열 두 칸을 생성/보간 없이 crop하고 bottom-center 정렬한다.
+  런타임 `PlayerEastContactPresenter`는 기존 `GaitPhase01`의 0.0/0.5 반주기에 두 접촉 포즈를 배정한다.
+  idle, 착석, 작업, 퇴장은 기존 `DirectionalSpriteAnimator`가 그대로 소유한다.
+- source SHA-256은 `0C23A5D9594FFED9E8263938A11F6268F133B09ECDFFC90BAD4E2545179BC4EB`,
+  현재 출력은 204×389 RGBA 두 장이며 receipt는
+  `Assets/Resources/FamilyCompany/PlayerEastContactV1/source-receipt.json`이다.
+- Unity `6000.3.21f1`에서 Editor D3D11 6 phase와 실제 Windows Player D3D11 6 phase가 PASS했다.
+  Player 로그는 `graphics=Direct3D11`, `device=Intel(R) Graphics`, build warning 0이다.
+- `com.unity.2d.animation 13.0.0`, `com.unity.2d.psdimporter 12.0.0`은 향후 사람이 승인한 layered PSB
+  실험 기반으로 설치했다. 현재 두 접촉 기준선은 이 패키지에 의존하지 않는다.
+- 2026-08-19 사용자 화면 승인을 받았다. Player east source-exact contact V1은 사람 게이트까지 통과한
+  현재 정본이다. east 파일은 더 이상 자동 파츠/전신 생성으로
+  덮어쓰지 않는다. 더 부드러운 rigid cutout이 필요하면 사람이 원본을 12~18 layer PSB로 나눈 뒤 별도
+  후보로만 다시 연다.
+- 다음 범위인 Player south도 같은 정본 시트의 south 열 두 칸을 새 픽셀·보간 없이 crop해 연결했다.
+  현재 출력은 177×401 RGBA 두 장이고 receipt는
+  `Assets/Resources/FamilyCompany/PlayerSouthContactV1/source-receipt.json`이다. Unity Editor D3D11 6 phase와
+  실제 Windows Player D3D11 6 phase가 PASS했고 통합 Player build warning은 0이다. 같은 통합 Player에서
+  east 6 phase를 재캡처해 승인 당시 PNG와 SHA-256 바이트 일치도 확인했다. 2026-08-19 사용자 화면
+  승인을 받아 south도 현재 정본이다.
+- 같은 4×2 source의 north/west 열도 각각 2장씩 source-exact로 게시했다. 현재 north는 173×396, west는
+  204×389이며 generated/interpolated pixel은 0이다. source에 대각선 아트가 없으므로 주인공 이동 중
+  southwest/northwest는 west, northeast/southeast는 east 접촉 포즈를 쓰는 표준 4방향 visual mapping을
+  적용했다. Editor D3D11은 north/west 12 phase와 diagonal 24 phase, 실제 Player D3D11도 같은 36 phase를
+  PASS했다. 최종 build warning은 0이며 east/south/north/west 회귀 24장은 직전 승인/후보와 SHA-256
+  바이트 일치다. north/west 및 대각선 mapping은 사용자 최종 화면 승인 대기 상태다.
+- 단독 presenter가 아니라 실제 새 게임 사무실의 `OfficeRuntimeAgent`에도 통합했다. 최초 PPU 180 실행은
+  경로 수치와 무관하게 캐릭터 크기·접지·전환이 실패했으며, 위 정규화 재검증만 현재 후보 증거다.
+
 ## 2026-08-19 / 문서 정합성 감사 — 코드/실행본 대조 후 정정 (문서만 변경)
 
 - 코드·실행본과 대조해 stale해진 문서 주장만 고쳤다. `Assets`, `Tools`, `ArtSources`는 건드리지 않았고
@@ -27,7 +108,7 @@
   (회사·인사·사업·연구·투자), 계약 T0~T4, 체력 10,000·25% 임계, 가족 4명 보행 PNG 192장
   (4×8방향×6프레임), CANON의 가족 4명 런타임 시트 경로.
 
-## 2026-08-18 / 가족 4명 foot-anchored 공용 리그 — 검증 진행 중 shipping 후보
+## [퇴역 이력] 2026-08-18 / 가족 4명 foot-anchored 공용 리그
 
 > commit `befe937`과 로컬 `6ae4041`의 기존 PASS는 무효다. 전자는 프레임 내부 머리/발 방향을,
 > 후자는 실제 projected support foot을 검사하지 않았다. `split_high_motion_sheets.py`가 각 phase의 상체
@@ -62,7 +143,7 @@
 - 정확한 source SHA, 좌표계, phase, threshold, 실패 사례와 재현 명령은
   `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`가 소유한다.
 
-## 2026-08-18 / 가족 보행 identity-lock 재제작·실제 Player 승인 후보
+## [퇴역 이력] 2026-08-18 / 가족 보행 identity-lock 재제작·실제 Player 승인 후보
 
 아래 내용은 Generation V1 이전 제작 이력이다. 현재 shipping writer/gate를 설명하지 않는다.
 

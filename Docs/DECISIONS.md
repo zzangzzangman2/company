@@ -1,5 +1,86 @@
 # DECISIONS
 
+## 2026-08-19 / 주인공은 8단계 발 교대와 0.18초 planted cardinal turn을 쓴다
+
+결정: 주인공 moving presentation은 source-exact contact A/B 사이를 각 반주기 toe/pass/land로 나눠
+거리 phase 0.000/0.125/0.250/0.375/0.500/0.625/0.750/0.875에 배치한다. 각 pose는 거리 12.5%만
+소유한다. 하체 좌우를 동/서는 최대 각 18px, 남/북은 최대 각 12px 안쪽으로 평행 이동하고 passing에서
+왼발/오른발을 교대로 12px(동/서) 또는 9px(남/북) 든다. scale은 1.0이며
+축소·보간·재표본화하지 않는다. 코너에서는 logical root를 0.18초 멈추고 이전/중간 cardinal/목표 contact를
+순서대로 표시한다.
+
+이유: 두 contact만 반 타일씩 유지하면 다리는 교대하지만 중간에 굳어 미끄러지는 인상이 남는다. legacy
+passing 전신을 그대로 섞으면 얼굴·몸통 폭이 줄어 큰–작은 scale pop이 재발한다. 상체를 contact로 잠그고
+두 하체를 원래 굵기 그대로 이동하면 정체성과 크기를 보존하면서도 발이 완전히 합쳐져 가늘어지는 것을
+막을 수 있다. V2처럼 양발을 계속 접지하면 스침 자세가 단순한 짧은 보폭으로 읽히고, V3처럼 한 bitmap을
+거리 30% 동안 유지하면 발 그림이 고정된 채 root가 0.3타일 흘러 미끄러진다. toe/pass/land 분리는 한
+bitmap이 끌리는 최대 거리를 12.5%로 줄인다.
+0.06초 즉시 방향 교체도 회전 동작으로 읽히지 않으므로 주인공에게만 짧은 planted turn을 둔다.
+
+검증: ImageGen 후보 3회와 legacy 전신 혼합 1회, 다리가 얇아진 legacy 하체 corridor V1은 화면 검사에서
+폐기했다. 양발 접지 wide-passing V2와 거리 30% 고정 readable-transfer V3도 대체했다. eight-pose V4는
+Unity 6000.3.21f1 Windows Player D3D11 577 moving frame/69 capture, 실제
+인접 타일 8구간 최대 이탈 `0.00000053 world`, endpoint/visual-root/final-center 오차 0,
+collision/sprite violation/build warning 0이다.
+사람 최종 화면 승인 전에는 다른 가족으로 확대하지 않는다.
+
+## 2026-08-19 / source-exact contact는 불투명 신장으로 legacy 전환 프레임과 정규화한다
+
+결정: 주인공 contact crop의 불투명 발바닥을 bottom-center pivot에 직접 붙이고 bottom padding은 0으로
+고정한다. 동/서는 PPU 314, 남/북은 PPU 324를 사용한다. Point, mipmap off, uncompressed와 source-exact
+픽셀 계약은 유지한다.
+
+이유: source-exact crop을 프로젝트 기본값 PPU 180으로 가져온 최초 실제 게임 GIF는 legacy 256px 전환
+프레임보다 보이는 캐릭터가 약 1.75배 컸다. 4px 아래 여백 때문에 발이 떠 보였고, 코너에서 legacy turn으로
+넘어갈 때 작아졌다 다시 커졌다. 경로 좌표 PASS만으로 시각 PASS를 선언한 것도 잘못이었다.
+
+검증: Unity 6000.3.21f1 Windows Player D3D11 실제 사무실 8개 인접 타일 loop 581 moving frame/68 capture,
+center-segment 최대 이탈 `0.00000080 world`, endpoint/visual-root/final-center 오차 0,
+collision projection/moving sprite violation/build warning 0. 최종 사람 화면 승인은 별도 대기한다.
+
+## 2026-08-19 / 4×2 정본에 없는 대각선은 생성하지 않고 4방향 RPG visual mapping을 쓴다
+
+결정: Player north/west는 정본 시트의 각 열 두 포즈를 source-exact로 게시한다. source에 없는 네 대각선은
+새 전신을 만들지 않고 southwest/northwest→west, northeast/southeast→east로 매핑한다. mapping은 moving에만
+활성화하며 idle/착석/작업/퇴장은 기존 renderer 소유권을 유지한다.
+
+이유: 대각선 전신을 ImageGen이나 삭제된 legacy pipeline으로 다시 만들면 승인된 캐릭터 비율과 관절 연결을
+또 잃는다. 4방향 이동 아트를 8방향 입력에 매핑하는 방식은 source가 실제로 제공하는 네 시점만 사용하면서
+주인공의 깨진 legacy diagonal walk를 화면에서 제거한다.
+
+검증: north/west extraction 2회 SHA 일치, generated/interpolated pixel 0, Editor D3D11 36 phase PASS,
+Windows Player Direct3D11 36 phase PASS, Intel Graphics, build warning 0. 최종 통합 뒤 cardinal 24 PNG는
+직전 승인/후보와 바이트 일치 PASS. 최초 PPU 180 실제 게임 캡처는 시각 실패했고, PPU 314/324 정규화 뒤
+실제 새 게임 `OfficeRuntimeAgent`의 인접 타일 8구간 loop는 최대 center-segment 이탈
+`0.00000080 world`, endpoint/visual-root/final-center 오차 0, collision/sprite violation 0으로 PASS했다.
+north/west 및 diagonal mapping은 사용자 최종 화면 승인 대기다.
+
+## 2026-08-19 / Player south도 승인 east와 같은 source-exact 두 접촉 방식으로만 후보화한다
+
+결정: Player south는 정본 4×2 시트의 south 열 두 포즈를 새 픽셀·보간 없이 crop하고 bottom-center로
+정렬한다. 별도 `PlayerSouthContactPresenter`가 south+moving일 때만 기존 `GaitPhase01`에 연결하며 east
+승인 파일과 presenter는 수정하지 않는다. 2026-08-19 사용자 화면 승인 뒤 south를 정본으로 승격했다.
+
+이유: 앞 방향 원본 두 포즈가 목·몸통·골반·다리 연결과 주인공 정체성을 이미 보존하고 있다. east와 같은
+작은 계약을 방향별로 독립 유지하면 실패한 자동 전신/파츠 생성이 승인본을 다시 오염시키지 않는다.
+
+검증: 추출 2회 frame SHA-256 일치, generated/interpolated pixel 0, Unity 6000.3.21f1 Editor D3D11 6 phase
+PASS, Windows Player Direct3D11 6 phase PASS, Intel Graphics, build warning 0. 같은 통합 Player에서 east를
+다시 캡처해 승인 당시 6 PNG와 SHA-256 바이트 일치 PASS. south 사용자 화면 승인 PASS.
+
+## 2026-08-19 / 승인 layered art 없이는 cutout을 fail closed하고 Player east 원본 접촉 포즈를 쓴다
+
+결정: 기존 가족 보행 source/writer/gate와 화면 실패한 자동 rigid-part 후보를 제거한다. 주인공 east는
+정본 4×2 시트의 두 east 접촉 포즈를 새 픽셀 없이 직접 게시하고 기존 `GaitPhase01`의 0.0/0.5에 연결한다.
+다른 방향과 착석/작업은 기존 renderer fallback을 유지한다.
+
+이유: 자동 rigid 파츠 후보는 IK 수치가 정상이어도 팔·다리 비율과 관절 실루엣이 원본과 달라졌다. 반면
+정본 접촉 포즈는 목·몸통·다리 연결과 캐릭터 정체성이 이미 승인된 픽셀이다. 부드러운 cutout 확장은
+사람이 12~18개 layer PSB를 승인한 뒤에만 다시 시도하며, Player east D3D11 사람 승인 전에는 확장하지 않는다.
+
+검증: Unity 6000.3.21f1 Editor D3D11 6 phase PASS, Windows Player Direct3D11 6 phase PASS,
+Intel Graphics에서 Editor/Player 동일 픽셀, build warning 0, 2026-08-19 사용자 화면 승인 PASS.
+
 ## 2026-08-19 / 패널을 교체할 때는 detach 후 Destroy한다
 
 결정: `ClearChildren`은 자식을 `Destroy`하기 전에 `SetParent(null, false)`로 먼저 떼어 낸다.

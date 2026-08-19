@@ -55,6 +55,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private SpriteRenderer _seatedUpperBodyRenderer;
         private Transform _visualRoot;
         private DirectionalSpriteAnimator _animator;
+        private PlayerNaturalWalkPresenter _playerNaturalWalk;
+        private const float PlayerNaturalTurnSeconds = 0.18f;
+        private int _playerNaturalTurnFromDirection = -1;
+        private int _playerNaturalTurnTargetDirection = -1;
+        private float _playerNaturalTurnElapsedSeconds;
         private OfficeCharacterSeatPoseCatalog _poseCatalog;
         private readonly List<OfficeGridCoordinate> _path = new List<OfficeGridCoordinate>();
         private readonly List<OfficeGridCoordinate> _upcomingPathCells =
@@ -590,6 +595,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _r5eForbiddenRigidbody2DCount = GetComponentsInChildren<Rigidbody2D>(true).Length;
             _r5eForbiddenNavMeshAgentCount =
                 GetComponentsInChildren<UnityEngine.AI.NavMeshAgent>(true).Length;
+        }
+
+        public void ConfigurePlayerNaturalWalk(PlayerNaturalWalkPresenter presenter)
+        {
+            _playerNaturalWalk = presenter;
         }
 
         internal void BindR5eTrace(
@@ -1682,6 +1692,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _animator.Tick(presentationDeltaTime);
             _animator.EndTilePresentationFrame();
             ApplyLocomotionFootPlantPresentation();
+            _playerNaturalWalk?.Present(
+                _animator.GaitPhase01,
+                _animator.CurrentDirection,
+                _animator.IsMoving,
+                _animator.IsOfficeSeatingPoseActive || IsOccupyingSeat || IsEnteringSeat,
+                _presentationAway,
+                _playerNaturalTurnTargetDirection >= 0,
+                PlayerNaturalTurnSeconds <= 0f
+                    ? 1f
+                    : _playerNaturalTurnElapsedSeconds / PlayerNaturalTurnSeconds,
+                _playerNaturalTurnFromDirection,
+                _playerNaturalTurnTargetDirection);
             if (Phase == OfficeRuntimeAgentPhase.FinishingWork)
                 _finishingWorkPresentationObserved = true;
             RecordSeatingFacingInvariant();
@@ -4456,6 +4478,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (_navigationSegmentDirection == requested) return false;
 
             StopMotion();
+            if (_playerNaturalWalk != null)
+            {
+                if (_playerNaturalTurnTargetDirection != requested)
+                {
+                    _playerNaturalTurnFromDirection = _animator.CurrentDirection;
+                    _playerNaturalTurnTargetDirection = requested;
+                    _playerNaturalTurnElapsedSeconds = 0f;
+                }
+                _animator.AccumulateStandingFacingRequest(requested, deltaTime);
+                _playerNaturalTurnElapsedSeconds += Mathf.Max(0f, deltaTime);
+                bool facingReady = _animator.IsReadyForInteractionFacing(requested);
+                bool gestureReady =
+                    _playerNaturalTurnElapsedSeconds + 0.000001f >= PlayerNaturalTurnSeconds;
+                if (!facingReady || !gestureReady)
+                {
+                    LastMovementBlocker =
+                        "player-natural-turn=" + _playerNaturalTurnFromDirection + "->" + requested +
+                        ":" + _playerNaturalTurnElapsedSeconds.ToString("F3");
+                    return true;
+                }
+
+                _playerNaturalTurnFromDirection = -1;
+                _playerNaturalTurnTargetDirection = -1;
+                _playerNaturalTurnElapsedSeconds = 0f;
+            }
             if (!_animator.IsReadyForInteractionFacing(requested))
             {
                 _animator.AccumulateStandingFacingRequest(requested, deltaTime);
