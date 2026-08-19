@@ -174,7 +174,8 @@ namespace FamilyCompany.Presentation.Unity.ContractGrowth
                 _bootstrap.State.Time.ElapsedMinutes,
                 _bootstrap.State.Contracts,
                 _bootstrap.State.Family,
-                _bootstrap.State.Company);
+                _bootstrap.State.Company,
+                _bootstrap.State.Growth.Technology);
             if (result.Completed)
             {
                 // The two rewards are reported separately on purpose: cash settles into the company

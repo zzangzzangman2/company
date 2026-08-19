@@ -618,10 +618,74 @@ namespace FamilyCompany.Editor
             Require(!technologyLine.Contains("₩"), "technology label never carries a cash amount");
 
             ValidateContractTechnologyGates();
+            ValidateContractTechnologyBonus();
 
             Debug.Log(
                 $"CONTRACT_TECHNOLOGY_REWARD_VALIDATION: PASS | technologies={CompanyTechnologyCatalog.All.Count} " +
                 $"contracts={ContractTechnologyGrantCatalog.TemplateCount} schema=11");
+        }
+
+        /// <summary>
+        /// Experience has to pay off while the work is being done, not only at the unlock gate. The
+        /// same job must take strictly fewer game minutes for a practised company than for a new one,
+        /// and the bonus must never run the other way.
+        /// </summary>
+        private static void ValidateContractTechnologyBonus()
+        {
+            var grants = ContractTechnologyGrantCatalog.ForTemplateIndex(2);
+            var novice = new CompanyTechnologyState();
+            AssertEqual(
+                CompanyTechnologyBonusRules.NeutralBasisPoints,
+                CompanyTechnologyBonusRules.WorkRateBasisPoints(novice, grants),
+                "a company with no experience works at the neutral rate");
+            AssertEqual(0, CompanyTechnologyBonusRules.QualityBonus(novice, grants), "no experience, no quality bonus");
+
+            // One contract's worth of points is level 1, which is still neutral: the payoff starts
+            // when the company has genuinely repeated the work.
+            var first = new CompanyTechnologyState();
+            first.ApplyGrants(grants);
+            AssertEqual(
+                CompanyTechnologyBonusRules.NeutralBasisPoints,
+                CompanyTechnologyBonusRules.WorkRateBasisPoints(first, grants),
+                "the first contract does not yet speed up the next one");
+
+            var practised = new CompanyTechnologyState();
+            for (var repeat = 0; repeat < 12; repeat++) practised.ApplyGrants(grants);
+            var practisedRate = CompanyTechnologyBonusRules.WorkRateBasisPoints(practised, grants);
+            Require(practisedRate > CompanyTechnologyBonusRules.NeutralBasisPoints,
+                "repeating a job speeds up the next one");
+            Require(CompanyTechnologyBonusRules.QualityBonus(practised, grants) > 0,
+                "repeating a job improves quality");
+
+            var master = new CompanyTechnologyState();
+            for (var repeat = 0; repeat < 200; repeat++) master.ApplyGrants(grants);
+            var masterRate = CompanyTechnologyBonusRules.WorkRateBasisPoints(master, grants);
+            AssertEqual(
+                CompanyTechnologyBonusRules.NeutralBasisPoints +
+                (CompanyTechnologyCatalog.MaximumLevel - 1) * CompanyTechnologyBonusRules.WorkRateBasisPointsPerLevel,
+                masterRate,
+                "the work rate bonus is capped at full mastery");
+
+            // The bonus has to actually shorten the job, and never lengthen it.
+            const int neutralMinutes = 60;
+            var noviceMinutes = CompanyTechnologyBonusRules.ApplyWorkRate(
+                neutralMinutes, CompanyTechnologyBonusRules.WorkRateBasisPoints(novice, grants));
+            var masterMinutes = CompanyTechnologyBonusRules.ApplyWorkRate(neutralMinutes, masterRate);
+            AssertEqual(neutralMinutes, noviceMinutes, "no experience costs the neutral minutes");
+            Require(masterMinutes < noviceMinutes, "a mastered job costs fewer game minutes");
+            Require(masterMinutes >= 1, "a person hour always costs at least one game minute");
+
+            // Deterministic: the same history always produces the same rate.
+            var replay = new CompanyTechnologyState();
+            for (var repeat = 0; repeat < 12; repeat++) replay.ApplyGrants(grants);
+            AssertEqual(
+                practisedRate,
+                CompanyTechnologyBonusRules.WorkRateBasisPoints(replay, grants),
+                "the work rate is a pure function of the technology history");
+
+            Debug.Log(
+                $"CONTRACT_TECHNOLOGY_BONUS_VALIDATION: PASS | neutral={noviceMinutes}m " +
+                $"mastered={masterMinutes}m rateCap={masterRate}bp");
         }
 
         /// <summary>
