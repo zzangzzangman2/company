@@ -1,0 +1,15 @@
+{
+    "contract": "FC-PLAYER-WALK-HUMANOID-V1",
+    "rigPrefabPath": "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx",
+    "walkClipPath": "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx",
+    "hipsTransform": "mixamorig:Hips",
+    "leftFootTransform": "mixamorig:LeftFoot",
+    "rightFootTransform": "mixamorig:RightFoot",
+    "headTransform": "mixamorig:Head",
+    "canvasWidth": 384,
+    "canvasHeight": 512,
+    "pixelsPerUnit": 324.0,
+    "cycleSeconds": 0.0,
+    "cycleDistanceOverride": 0.0,
+    "uniformScaleOverride": 0.0
+}
