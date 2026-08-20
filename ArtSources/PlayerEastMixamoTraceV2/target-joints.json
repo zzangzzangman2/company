@@ -1,0 +1,308 @@
+[
+  {
+    "pose": 0,
+    "kshopResampledIndex24": 0,
+    "rootUnwrappedSourcePx": 0.0,
+    "points": {
+      "pelvis": [
+        128,
+        174
+      ],
+      "leftHip": [
+        126,
+        175
+      ],
+      "rightHip": [
+        130,
+        175
+      ],
+      "leftKnee": [
+        143,
+        198
+      ],
+      "leftAnkle": [
+        154,
+        222
+      ],
+      "leftHeel": [
+        150,
+        233
+      ],
+      "leftToe": [
+        164,
+        230
+      ],
+      "rightKnee": [
+        112,
+        198
+      ],
+      "rightAnkle": [
+        98,
+        218
+      ],
+      "rightHeel": [
+        92,
+        225
+      ],
+      "rightToe": [
+        106,
+        233
+      ]
+    }
+  },
+  {
+    "pose": 1,
+    "kshopResampledIndex24": 4,
+    "rootUnwrappedSourcePx": 19.234993354838707,
+    "points": {
+      "pelvis": [
+        128,
+        175
+      ],
+      "leftHip": [
+        126,
+        176
+      ],
+      "rightHip": [
+        130,
+        176
+      ],
+      "leftKnee": [
+        140,
+        199
+      ],
+      "leftAnkle": [
+        135,
+        223
+      ],
+      "leftHeel": [
+        131,
+        233
+      ],
+      "leftToe": [
+        145,
+        233
+      ],
+      "rightKnee": [
+        128,
+        200
+      ],
+      "rightAnkle": [
+        106,
+        213
+      ],
+      "rightHeel": [
+        102,
+        219
+      ],
+      "rightToe": [
+        116,
+        222
+      ]
+    }
+  },
+  {
+    "pose": 2,
+    "kshopResampledIndex24": 8,
+    "rootUnwrappedSourcePx": 38.469986709677414,
+    "points": {
+      "pelvis": [
+        128,
+        173
+      ],
+      "leftHip": [
+        126,
+        174
+      ],
+      "rightHip": [
+        130,
+        174
+      ],
+      "leftKnee": [
+        134,
+        198
+      ],
+      "leftAnkle": [
+        118,
+        219
+      ],
+      "leftHeel": [
+        112,
+        226
+      ],
+      "leftToe": [
+        126,
+        233
+      ],
+      "rightKnee": [
+        145,
+        194
+      ],
+      "rightAnkle": [
+        139,
+        219
+      ],
+      "rightHeel": [
+        135,
+        226
+      ],
+      "rightToe": [
+        149,
+        229
+      ]
+    }
+  },
+  {
+    "pose": 3,
+    "kshopResampledIndex24": 12,
+    "rootUnwrappedSourcePx": 57.70498006451612,
+    "points": {
+      "pelvis": [
+        128,
+        174
+      ],
+      "leftHip": [
+        126,
+        175
+      ],
+      "rightHip": [
+        130,
+        175
+      ],
+      "leftKnee": [
+        112,
+        198
+      ],
+      "leftAnkle": [
+        98,
+        218
+      ],
+      "leftHeel": [
+        92,
+        225
+      ],
+      "leftToe": [
+        106,
+        233
+      ],
+      "rightKnee": [
+        143,
+        198
+      ],
+      "rightAnkle": [
+        154,
+        222
+      ],
+      "rightHeel": [
+        150,
+        233
+      ],
+      "rightToe": [
+        164,
+        230
+      ]
+    }
+  },
+  {
+    "pose": 4,
+    "kshopResampledIndex24": 16,
+    "rootUnwrappedSourcePx": 76.93997341935483,
+    "points": {
+      "pelvis": [
+        128,
+        175
+      ],
+      "leftHip": [
+        126,
+        176
+      ],
+      "rightHip": [
+        130,
+        176
+      ],
+      "leftKnee": [
+        128,
+        200
+      ],
+      "leftAnkle": [
+        106,
+        213
+      ],
+      "leftHeel": [
+        102,
+        219
+      ],
+      "leftToe": [
+        116,
+        222
+      ],
+      "rightKnee": [
+        140,
+        199
+      ],
+      "rightAnkle": [
+        135,
+        223
+      ],
+      "rightHeel": [
+        131,
+        233
+      ],
+      "rightToe": [
+        145,
+        233
+      ]
+    }
+  },
+  {
+    "pose": 5,
+    "kshopResampledIndex24": 20,
+    "rootUnwrappedSourcePx": 96.17496677419354,
+    "points": {
+      "pelvis": [
+        128,
+        173
+      ],
+      "leftHip": [
+        126,
+        174
+      ],
+      "rightHip": [
+        130,
+        174
+      ],
+      "leftKnee": [
+        145,
+        194
+      ],
+      "leftAnkle": [
+        139,
+        219
+      ],
+      "leftHeel": [
+        135,
+        226
+      ],
+      "leftToe": [
+        149,
+        229
+      ],
+      "rightKnee": [
+        134,
+        198
+      ],
+      "rightAnkle": [
+        118,
+        219
+      ],
+      "rightHeel": [
+        112,
+        226
+      ],
+      "rightToe": [
+        126,
+        233
+      ]
+    }
+  }
+]

@@ -2,6 +2,55 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-20 / 현재 작업 정본: KShopGo·Mixamo 추적 east 6포즈 재제작
+
+- 최종 외형은 빨간 캡 주인공의 2D 스프라이트다. **동작 정본은**
+  `Docs/KSHOPGO_MOVEMENT_TEARDOWN.md`의 KShopGo Walk와 다운로드된 Mixamo
+  `X Bot@Unarmed Walk Forward.fbx`다.
+- FBX는 Downloads와 `Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/`에 모델·걷기 클립 모두
+  존재한다. KShopGo Walk는 0.8초, 30fps, 24샘플이다. 새 6포즈는 0/4/8/12/16/20 샘플의
+  접지→회수/체중이동→전방 통과/착지 직전→반대 접지 순서를 추적해야 한다.
+- 사용자는 기존 원본의 다리 교차와 팔 자세는 승인했지만 v10 이후 후보의 신발 이중화, 접지면 뒤틀림,
+  하체 역주행, 상체와 하체 진행 방향 불일치를 반복해서 거부했다. v10~v13은 production 후보가 아니다.
+- 하체 좌우반전, 신발/종아리 조각 이동, ImageGen이 관절 타이밍을 발명하는 방식은 금지했다.
+  ImageGen은 Mixamo 관절 가이드를 잠근 뒤 2D 외형을 정리할 때만 쓸 수 있다.
+- 현재 출하 기본은 계속 `Legacy48`이며 승인된 `Player2DV2` 대체 보행은 없다. 다음 작업 범위는 주인공
+  east 6프레임뿐이다. Mixamo 대응 오버레이, 지지발 고정, swing 회수→교차→전방 착지, 상·하체 동방향,
+  actual GIF를 모두 통과하고 사용자 승인을 받기 전에는 다른 방향/가족/기본 런타임으로 승격하지 않는다.
+- 이동 수치는 speed `1.0`, acceleration `8.0`, cycle distance `0.99380799`로 한 타일에 두 걸음을 유지한다.
+  KShopGo의 1.5 unit/s와 1.2 unit stride는 월드 스케일이 달라 직접 복사하지 않는다.
+- Unity `PlayerWalkMotionReferenceExporter`는 다운로드된 Mixamo clip을 east `+90°`로 평가해
+  `PLAYER_WALK_MOTION_REFERENCE: PASS`를 기록했다. clip 길이는 `1.3666668s`, left-contact phase zero는
+  `0.2961111s`다.
+- 현행 2D target은 `(0.99380799/6)*180/1.55 = 19.234993px/pose`를 사용하며 계산된 heel/toe world
+  contact drift 최대값은 `0.765007px`다. raw Unity export는 ignored `Artifacts`에 재생성하고,
+  `ArtSources/PlayerEastMixamoTraceV2/`에는 파생 target, phase contract, guide와 재생성 source를 추적했다.
+  이 PASS는 motion/foot-lock 계약에만 해당한다.
+- V13 ImageGen whole sheet, 개별 P1/P2 ImageGen, LockedArtV2 raster warp는 모두 거부했다. 기존 lower donor로
+  P2/P5를 만들면 다리 방향·연결이 기괴해진다. 다음 단계는 V3 phase별 상체만 보존하고 P0~P5 lower를
+  locked `pelvis→hip→knee→ankle→heel/toe` 체인으로 각각 새로 저작하는 것이다.
+- 집 PC의 단일 재개 문서는 `Docs/HOME_PC_WALK_CHECKPOINT_2026-08-20.md`다.
+
+## 2026-08-20 / KShopGo 기준 연속 이동 + Mixamo 8방향 후보 (폐기된 역사 수치)
+
+> 아래 절의 speed `1.5`/stride `1.2`는 KShopGo world unit을 직접 복사하던 당시 기록이다. 현행 project
+> 정본은 위 절의 speed `1.0`/stride `0.99380799`이며 아래 수치를 runtime에 다시 적용하지 않는다.
+
+- APK 실물 재분석으로 KShopGo Walk가 `0.800s`, 30fps, 24샘플, 인플레이스이며 Idle↔Walk 전이가
+  exit time 없는 고정 `0.25s`임을 확인했다. `ApplyRootMotion=True` 42/52라는 플래그와 달리 모든 이동
+  클립 평균 root 속도는 0이고 시작·끝 XZ가 같다. feet stabilization/linear velocity blending/feet IK도
+  모두 꺼져 있다. `Docs/KSHOPGO_MOVEMENT_TEARDOWN.md`를 이 근거로 정정했다.
+- 자유 보행은 이제 segment 시작, 코너, 급반전에서 정지 pivot을 기다리지 않는다. logical root는
+  `DefaultMoveSpeed=1.5`, `DefaultAcceleration=8.0`으로 계속 적분하고 Sprite 방향은 같은 frame의 실제
+  변위를 즉시 따른다. 한 cycle stride는 `1.5 × 0.8 = 1.2 world unit`, cadence는 2.5 steps/s다.
+  `ShortShuffleStrideFraction=0`으로 짧은 입력의 0/3 두 프레임 스터터도 제거했다. 제자리 0.06초 pivot은
+  막힘·좌석·업무의 최종 facing 정렬에만 남는다.
+- `simulation-pure`와 Unity 6000.3.21f1 Bee Roslyn의 Simulation/Presentation.Unity/Editor 컴파일은
+  PASS했다. 기존 정지 반전 Player QA와 전환 QA도 연속 반전/전체 gait 계약으로 갱신했다.
+- 당시 Mixamo `canonical-protagonist-v1` 64장 후보를 재베이크 대상으로 기록했으나, 이후 실제 화면에서
+  3D primitive 외형과 바운스를 확인해 거부했다. Unity 로그인/라이선스 문제는 현재 경로의 blocker가 아니다.
+- 이 절은 아래 2026-08-19의 한 타일 한 주기·0.18초 고정발 회전 후보를 이동 정본으로 대체한다.
+
 ## 2026-08-19 / 주인공 자연 보행 V4 — 8단계 발 교대·0.18초 고정발 회전 후보
 
 - 기존 네 자세의 한 bitmap을 이동거리 20~30% 동안 끌던 주인공 보행을 `PlayerNaturalWalkPresenter`가
@@ -529,6 +578,48 @@
   integration QA pass. `Artifacts/StaminaRuntimeQa/four-family-overhead-bars.png` captures all four
   bars and `summary.txt` records the completed runtime round trip.
 
+## 2026-08-19 / Player Baked Walk V2 south 승인 후보
+
+- `company_unity_walk_final_analysis_33d9b5a.md`의 구조 변경안에 따라, 기존 납작 이미지의 중앙 하체 분할을
+  더 조정하지 않고 Editor 전용 PSB paper-doll + Unity 2D IK + PNG bake 경로를 추가했다.
+- 주인공 `south` 한 방향만 384×512/324 PPU의 17개 rigid layer와 8개 포즈로 제작했다. 얼굴·빨간 모자·머리·
+  재킷·몸통은 승인된 contact 픽셀을 유지하며, 좌우 팔·골반·허벅지·종아리·신발 ownership은 PSB에서 고정한다.
+- 베이크 결과는 런타임에서 단일 `SpriteRenderer`만 사용한다. PSB, rig prefab, `LimbSolver2D`, `IKManager2D`,
+  AnimationClip은 `Assets/FamilyCompany/Editor` 아래의 전용 authoring 입력이며 Player payload에 넣지 않는다.
+- 기본 런타임은 `Legacy48`이다. `PlayerNaturalWalkV1`은 `-familyCompanyPlayerNaturalWalkV1`, 완성된 V2는
+  `-familyCompanyPlayerBakedWalkV2`가 있어야만 활성화된다. 8방향 catalog가 없으면 V2 flag는 fail closed한다.
+- D3D11 숨김 Editor bake와 south static QA가 PASS했다. 8 PNG, 고정 canvas/PPU, hard alpha, waist 연결,
+  material alpha 단일 연결을 검사했다. 최대 support drift는 projected `0.000042px`/2D `0.000044px`,
+  0→4 contact-step 오차는 `0px`, 양쪽 passing lift는 `18px`다.
+- 아직 **production 승격 아님**: south 사람 승인, 나머지 7방향 독립 제작, 64프레임 catalog, actual normal
+  Windows D3D11 Player trace/캡처가 남았다. 게임/Unity 전면 창, Windows build, Downloads 배포는 실행하지 않았다.
+- `FC-WALK-GUARDRAIL-V1 확인: 0/3 해부학적 앞발 교대, 2/5 낮은 통과발 교대, 짧은 보폭, 동일 실루엣, 별도 전환 그림 금지, actual normal EXE 판정 전 미배포.`
+
+## 2026-08-20 / Mixamo Humanoid Walk V2 fail-closed 재구성 (거부된 연구 기록)
+
+- 최초 X Bot bake를 분석해 64장 중 pose 0/4/5/6이 8방향에서 byte-identical이고, 나머지도 2~3개
+  방향 변형뿐인 원인을 확인했다. `AnimationMode.SampleAnimationClip`이 미리 넣은 root yaw를 덮어썼고,
+  `continueOnValidationFailure=true`가 방향별 4.124~13.043% 높이 실패를 warning으로 삼킨 상태였다.
+- 베이커는 sample 뒤 yaw를 적용하고, 8 direction row hash/pose hash를 fail-closed 검사한다. 크기는 clip
+  보폭에 맞춘 `0.45522`가 아니라 8포즈 투영 실루엣 중앙값 380px로 정하며, runtime stride/8의 support
+  foot 궤도는 전체 RGBA frame 정수 픽셀 평행이동으로 결합한다.
+- Mixamo X Bot 표면은 pipeline probe로만 남기고 `canonical-protagonist-v1`이 같은 뼈에 빨간 뉴스보이
+  캡·흰 후드 윈드브레이커·줄무늬 셔츠·남색 바지·운동화의 닫힌 볼륨을 붙인다. 자동 분리 PSB/2D IK
+  종이인형 후보는 final art가 아니다.
+- Humanoid 검증 profile을 paper-doll profile과 분리했지만 우회 모드는 제거했다. hard alpha/canvas,
+  pelvis, material component, support drift, contact step, passing lift와 방향/포즈 고유성을 모두 통과해야
+  한다. 후보는 `PlayerBakedWalkHumanoidV2Candidate`에 격리되고, 전체 PASS 뒤에만 promotion 명령이
+  production `PlayerBakedWalkV2` 64장과 catalog를 갱신한다.
+- `PlayerBakedWalkV2PlayerQa`는 당시 D3D11 actual player 검증용으로 작성됐다. 당시 pipeline은 bake→검증→
+  promotion→Windows build→player QA를 수행했지만 후보 전체가 거부된 뒤 PowerShell entry point와 C#
+  production promotion을 영구 차단했다. 현행 gate나 재실행 명령이 아니다.
+- Unity 6000.3.21f1 Roslyn 독립 컴파일은 Editor 변경과 Player QA 모두 PASS했고 PowerShell parser도
+  PASS했다. 실제 Editor D3D bake는 현재 Codex sandbox가 Unity Licensing Client의 BIOS/MAC WMI 조회를
+  `Access denied`로 막아 미실행이다. 로컬 Personal entitlement와 headless entitlement 파일은
+  2026-09-19 갱신 상태라 사용자 로그인/라이선스 부재가 아니라 sandbox 경계다.
+- **production 승격 아님**: 생성됐던 candidate/runtime payload는 거부됐고 ignored `Artifacts`로 격리했다.
+  따라서 런타임 기본은 `Legacy48`이며 Humanoid production promotion은 실행할 수 없다.
+
 ## 기준선과 릴리스 판정
 
 | 항목 | 현재 값 |
@@ -582,13 +673,17 @@
 
 ## 열린 기술 부채와 제품 backlog
 
-1. 가족 4명 foot-anchored 리그 후보를 배포 실행본에서 마무리한다. clean Release build는 `8fa5fa74`로 이미
-   있으므로 남은 것은 D3D11 Player의 renderer support-world trace와 실제 캡처 사람 검토, 그리고 배포본
-   `BUILD_INFO` SHA를 HEAD와 맞추는 재배포다.
-2. 직원 후보 8인은 고용 시스템이 생긴 뒤에만 출근시킨다. 시작 roster나 09:00~09:03 가족 출근에 섞지 않는다.
-3. 소파/다인 좌석은 group atomic claim, 짝 이동, 취소/퇴장 해제, non-NorthWest pose 승인과 idle/emote QA를 추가한다.
-4. 오피스 확장은 현재 StarterOffice를 보존하며 단계별 면적/가구 해금으로 구현한다. 과거 요청서의 숫자를 검증 없이 새 정본으로 삼지 않는다.
-5. Utility AI의 생산 선택은 `OfficeAutonomyCoordinator`가 소유한다. Shadow scoring 결과를 생산 동작으로 오인하지 않는다.
+1. 완료된 `ArtSources/PlayerEastMixamoTraceV2/`의 0/4/8/12/16/20 관절·접지·foot-lock 계약 위에
+   주인공 east lower 6장을 완전한 physical-owner chain으로 새로 저작한다. v4~v13 lower나 거부된
+   ImageGen/raster-warp 결과를 보정해 재사용하지 않는다.
+2. east GIF의 회수→교차→전방 착지, 상·하체 동방향과 KShopGo식 연속 체중이동을 사용자가 승인하기 전에는
+   `Legacy48` 기본값을 바꾸지 않고 다른 방향·가족으로 확대하지 않는다.
+3. 걷기 승인 뒤에만 필요하면 Mixamo `Standing Idle`, `Sitting Idle`/`Sitting`, `Typing`, `Sit To Type`,
+   `Type To Sit`을 필요한 순서로 받는다. 걷기 gate에 추가 클립을 선행 조건으로 만들지 않는다.
+4. 직원 후보 8인은 고용 시스템이 생긴 뒤에만 출근시킨다. 시작 roster나 09:00~09:03 가족 출근에 섞지 않는다.
+5. 소파/다인 좌석은 group atomic claim, 짝 이동, 취소/퇴장 해제, non-NorthWest pose 승인과 idle/emote QA를 추가한다.
+6. 오피스 확장은 현재 StarterOffice를 보존하며 단계별 면적/가구 해금으로 구현한다. 과거 요청서의 숫자를 검증 없이 새 정본으로 삼지 않는다.
+7. Utility AI의 생산 선택은 `OfficeAutonomyCoordinator`가 소유한다. Shadow scoring 결과를 생산 동작으로 오인하지 않는다.
 
 ## 검증 상태
 
@@ -600,6 +695,10 @@
 | Windows D3D11 UI | `9144fa0e` 실제 native pointer | PASS — 녹색 preview 1클릭이 commit 1회·mutation 1회, 자금 `5,000,000→4,986,250`, furniture `52→53` |
 | Windows D3D11 사무실 | `9144fa0e` normal 처음하기 | PASS — 08:50→09:50 4인 보행, `currentLook=0`, `duplicatePivot=0`, `nonCardinal=0`, `collision=0` |
 | 가족 4명 보행 리그 | `8fa5fa74` | 진행 중 — foot-lock QA 192/192, Unity batch, `editor-broad` PASS. 배포 Player trace와 캡처 사람 검토 미실시 |
+| 주인공 2D Walk V2 / v4~v13 | local rejected research | REJECTED — 다리/팔 일부는 선호됐지만 발목 이중화, 역주행, 하체 방향 불일치와 KShopGo 위상 미추적으로 전체 후보 거부. production 미승격 |
+| Player east Mixamo Trace V2 | tracked derived motion contract | PASS — derived owner/phase와 target foot-lock `0.765007px`; raw export는 ignored Artifacts 전용이며 게임 raster/GIF 승인을 뜻하지 않음 |
+| Player east ImageGen / LockedArtV2 | tracked rejected evidence | REJECTED — owner/contact 이탈, P2/P5 교차·꺾임, noisy green. shipping frame 0 |
+| Mixamo Humanoid Baked V2 | rejected research | REJECTED — 3D primitive 인상, 정체성 불일치, 과한 바운스. production 재실행 금지 |
 | 최종 portable Windows build | 최종 `main` | **BLOCKED** — 배포본 `Downloads\Family`가 `befe937e`로 HEAD보다 뒤. 위 보행 gate 통과 후 HEAD로 재배포해야 함 |
 
 과거 개별 PASS는 해당 기능의 회귀 근거다. 최종 결합 SHA의 PASS를 대신하지 않는다.
@@ -617,6 +716,9 @@
    호출한다. FAIL/UNKNOWN이면 evidence 보존 후 해당 payload를 삭제하고 rollback하거나 current를 비워 둔다.
 
 ## 다른 PC에서 이어하기
+
+주인공 걷기는 먼저 `Docs/HOME_PC_WALK_CHECKPOINT_2026-08-20.md`의 체크포인트와 재현 명령을 따른다.
+일반 저장소/실행 절차는 아래와 같다.
 
 ```powershell
 git switch main

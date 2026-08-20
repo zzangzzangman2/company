@@ -200,22 +200,20 @@ namespace FamilyCompany.Editor
                 HarnessState state = HarnessState.Initial(direction);
                 OfficeNavPoint velocity = forward * speed;
                 Step(ref state, forward * deltaTime, forward * (speed * deltaTime), deltaTime);
-                bool observedPivot = false;
                 bool resumedReverse = false;
-                for (var frameIndex = 0; frameIndex < 180; frameIndex++)
-                {
-                    bool hold = OfficeSharedLocomotionRules.RequiresStationaryPivot(
+                int stationarySamples = 0;
+                Require(!OfficeSharedLocomotionRules.RequiresStationaryPivot(
                         state.Gait.DisplayDirection,
                         reverseDirection,
-                        state.Gait.Phase);
-                    OfficeNavPoint targetVelocity = hold
-                        ? new OfficeNavPoint(0f, 0f)
-                        : reverse * speed;
+                        state.Gait.Phase),
+                    MemberIds[member] + " reversal requested a controller-owned stop");
+                for (var frameIndex = 0; frameIndex < 180; frameIndex++)
+                {
                     OfficeMotionIntegrationResult motion =
                         OfficeNavigationMotionIntegrator.IntegrateVelocity(
                             velocity,
-                            targetVelocity,
-                            7.5f,
+                            reverse * speed,
+                            OfficeNavigationMotionIntegrator.DefaultAcceleration,
                             deltaTime);
                     velocity = motion.Velocity;
                     OfficeSharedLocomotionFrameResult frame = Step(
@@ -232,18 +230,19 @@ namespace FamilyCompany.Editor
                     }
                     if (frame.Phase == OfficeLocomotionPhase.Pivot)
                     {
-                        observedPivot = true;
                         if (frame.IsMoving) metrics.MovingDuringPivotFrames++;
                         Require(frame.DisplayDirection == reverseDirection,
                             MemberIds[member] + " pivot exposed an intermediate body direction");
                     }
+                    if (!frame.IsMoving) stationarySamples++;
                     if (frame.IsMoving && frame.DisplayDirection == reverseDirection)
                         resumedReverse = true;
                     if (resumedReverse && frameIndex > 20) break;
                 }
 
-                Require(observedPivot, MemberIds[member] + " reversal never entered pivot");
                 Require(resumedReverse, MemberIds[member] + " reversal never resumed in the new direction");
+                Require(stationarySamples <= 1,
+                    MemberIds[member] + " reversal inserted a visible stationary turn");
                 metrics.ReverseCases++;
             }
         }
@@ -268,7 +267,7 @@ namespace FamilyCompany.Editor
                         OfficeNavigationMotionIntegrator.IntegrateVelocity(
                             velocity,
                             target * speed,
-                            7.5f,
+                            OfficeNavigationMotionIntegrator.DefaultAcceleration,
                             deltaTime);
                     velocity = motion.Velocity;
                     OfficeSharedLocomotionFrameResult frame = Step(

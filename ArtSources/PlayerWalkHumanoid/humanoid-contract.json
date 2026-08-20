@@ -6,10 +6,14 @@
     "leftFootTransform": "mixamorig:LeftFoot",
     "rightFootTransform": "mixamorig:RightFoot",
     "headTransform": "mixamorig:Head",
-    "canvasWidth": 384,
+    "canvasWidth": 512,
     "canvasHeight": 512,
     "pixelsPerUnit": 324.0,
+    "feetViewportY": 0.20,
     "cycleSeconds": 0.0,
     "cycleDistanceOverride": 0.0,
-    "uniformScaleOverride": 0.0
+    "uniformScaleOverride": 0.0,
+    "targetVisibleHeightPx": 380.0,
+    "visualPreset": "canonical-protagonist-v1",
+    "outputRoot": "Assets/Resources/FamilyCompany/PlayerBakedWalkHumanoidV2Candidate"
 }

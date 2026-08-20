@@ -50,7 +50,7 @@ namespace FamilyCompany.Editor
             ValidateEightDirectionsAndStoppedFacing();
             ValidateProjectedSpriteFacingBasis();
             ValidateTileCenterRouting();
-            ValidateTileLockedPlantedFootGait();
+            ValidateReferenceCadencePlantedFootGait();
             ValidateVisibleMotionFrameCap();
             ValidateHighRefreshFirstAccelerationStep();
             ValidateActorScopedDebtTransitionsAndRoundRobin();
@@ -527,7 +527,7 @@ namespace FamilyCompany.Editor
                 OfficeMotionIntegrationResult motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
                     new OfficeNavPoint(0f, 0f),
                     new OfficeNavPoint(OfficeRuntimeAgent.DefaultMoveSpeed, 0f),
-                    7.5f,
+                    OfficeNavigationMotionIntegrator.DefaultAcceleration,
                     deltaTime);
                 var intended = new Vector2(motion.Displacement.X, motion.Displacement.Z);
                 Require(intended.sqrMagnitude > 0f && intended.sqrMagnitude < 0.0000001f,
@@ -642,23 +642,21 @@ namespace FamilyCompany.Editor
             }
         }
 
-        private static void ValidateTileLockedPlantedFootGait()
+        private static void ValidateReferenceCadencePlantedFootGait()
         {
-            float halfWidth = OfficeGridTilemapPresenter.TileWorldWidth * 0.5f;
-            float halfHeight = OfficeGridTilemapPresenter.TileWorldHeight * 0.5f;
-            float tileCenterDistance = Mathf.Sqrt(
-                halfWidth * halfWidth + halfHeight * halfHeight);
             float stride = OfficeLocomotionGaitRules.DefaultStrideLength;
-            Require(Mathf.Abs(tileCenterDistance - stride) <= 0.000001f,
-                $"Walk cycle is not locked to one tile: tile={tileCenterDistance:R} stride={stride:R}.");
+            float expectedStride = OfficeRuntimeAgent.DefaultMoveSpeed *
+                                   OfficeLocomotionGaitRules.ReferenceWalkCycleSeconds;
+            Require(Mathf.Abs(expectedStride - stride) <= 0.000001f,
+                $"Walk cycle does not match reference speed/cycle: expected={expectedStride:R} stride={stride:R}.");
 
             float stepsPerSecond = OfficeRuntimeAgent.DefaultMoveSpeed / stride * 2f;
             Require(stepsPerSecond >= 1.9f && stepsPerSecond <= 2.1f,
-                $"Normal walking cadence is outside the planted tycoon range: {stepsPerSecond:F3} steps/s.");
+                $"Normal walking cadence is outside the one-tile reference range: {stepsPerSecond:F3} steps/s.");
             Require(OfficeLocomotionGaitRules.DistanceFrame(0f, stride, 6) == 0 &&
                     OfficeLocomotionGaitRules.DistanceFrame(stride * 0.5f, stride, 6) == 3 &&
                     OfficeLocomotionGaitRules.DistanceFrame(stride, stride, 6) == 0,
-                "Left/right foot contacts do not exchange at half-tile and close at tile center.");
+                "Left/right foot contacts do not exchange at half-stride and close at the cycle boundary.");
 
             Require(Mathf.Abs(OfficeLocomotionGaitRules.PlantedFootPresentationOffset(0f, stride)) <=
                     0.000001f &&

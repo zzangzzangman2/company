@@ -642,7 +642,7 @@ namespace FamilyCompany.Editor
                     float changeRate = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                         new OfficeNavPoint(currentVelocity.x, currentVelocity.y),
                         new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
-                        7.5f,
+                        OfficeNavigationMotionIntegrator.DefaultAcceleration,
                         true);
                     OfficeMotionIntegrationResult integrated = OfficeNavigationMotionIntegrator.IntegrateVelocity(
                         new OfficeNavPoint(currentVelocity.x, currentVelocity.y),

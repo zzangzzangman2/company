@@ -605,12 +605,13 @@ namespace FamilyCompany.Editor
                 OfficeLocomotionGaitState.Initial(0), 0.10f, 0.06f, true, 0, stride);
             OfficeLocomotionGaitState shortStop = OfficeLocomotionGaitRules.Resolve(
                 shortMove, 0f, 0.05f, false, 0, stride);
-            Require(shortStop.Phase == OfficeLocomotionPhase.ShortShuffle,
-                "movement under 0.3 stride settles as a short shuffle");
+            Require(shortMove.Phase == OfficeLocomotionPhase.Walk &&
+                    shortStop.Phase == OfficeLocomotionPhase.Stopping,
+                "short movement uses the full gait instead of a two-frame shuffle");
             OfficeLocomotionGaitState settled = OfficeLocomotionGaitRules.Resolve(
                 shortStop, 0f, 0.06f, false, 0, stride);
             Require(settled.Phase == OfficeLocomotionPhase.Idle,
-                "short shuffle reaches idle after the 100ms settle window");
+                "short movement reaches idle after the settle window");
             checks += 2;
 
             OfficeLocomotionGaitState forward = SimulateDistance(0.45f, 12, 0.30f, 0);
@@ -619,6 +620,11 @@ namespace FamilyCompany.Editor
             Require(movingReverse.Phase != OfficeLocomotionPhase.Pivot &&
                     movingReverse.DisplayDirection == 4,
                 "actual reverse displacement never keeps the old forward-facing sprite");
+            Require(!OfficeSharedLocomotionRules.RequiresStationaryPivot(
+                    forward.DisplayDirection,
+                    4,
+                    forward.Phase),
+                "a locomotion reversal does not insert a controller-owned stop");
             OfficeLocomotionGaitState pivot = OfficeLocomotionGaitRules.Resolve(
                 forward, 0f, 0.03f, true, 4, stride);
             Require(pivot.Phase == OfficeLocomotionPhase.Pivot && pivot.DisplayDirection == 4,
@@ -637,7 +643,7 @@ namespace FamilyCompany.Editor
             Require(quarterTurn.Phase == OfficeLocomotionPhase.Pivot &&
                     quarterTurn.DisplayDirection == 2,
                 "a stopped 90-degree turn never exposes an intermediate body direction");
-            checks += 4;
+            checks += 5;
             return checks;
         }
 
@@ -791,23 +797,23 @@ namespace FamilyCompany.Editor
             float playerReverseRate = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(1f, 0f),
                 new OfficeNavPoint(-1f, 0f),
-                7.5f,
+                OfficeNavigationMotionIntegrator.DefaultAcceleration,
                 true);
             float npcReverseRate = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(1f, 0f),
                 new OfficeNavPoint(-1f, 0f),
-                7.5f,
+                OfficeNavigationMotionIntegrator.DefaultAcceleration,
                 false);
             float playerStopRate = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(1f, 0f),
                 new OfficeNavPoint(0f, 0f),
-                7.5f,
+                OfficeNavigationMotionIntegrator.DefaultAcceleration,
                 true);
-            Require(Math.Abs(playerReverseRate - 13.5f) <= 0.00001f,
+            Require(Math.Abs(playerReverseRate - 14.4f) <= 0.00001f,
                 "direct player reversal decelerates before changing direction");
-            Require(Math.Abs(npcReverseRate - 7.5f) <= 0.00001f,
+            Require(Math.Abs(npcReverseRate - OfficeNavigationMotionIntegrator.DefaultAcceleration) <= 0.00001f,
                 "NPC steering retains the canonical acceleration");
-            Require(Math.Abs(playerStopRate - 12.75f) <= 0.00001f,
+            Require(Math.Abs(playerStopRate - 13.6f) <= 0.00001f,
                 "direct player release stops faster than acceleration");
             checks += 3;
 

@@ -100,8 +100,19 @@
 ## 플레이어 도트 정본
 
 - `Assets/Art/Characters/Player/Pixel/HighMotion/player_pixel_walk8dir6_{a,b}_v1.png`
-- 14살 플레이어의 짧고 헝클어진 짙은 갈색 머리, 갈색 눈, 흰색 후드 윈드브레이커, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화를 고정한다. 모자는 쓰지 않는다.
+- 14살 플레이어의 짧고 헝클어진 짙은 갈색 머리, 갈색 눈, 작은 금색 장식의 빨간 뉴스보이 캡,
+  흰색 후드 윈드브레이커, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화를 고정한다.
 - 8방향×6프레임이며 파란 캡슐 placeholder와 구형 4방향 런타임을 대체한다.
+
+### Player 2D Walk V2 화면 후보 (source revision v3)
+
+- 게임 출력은 256×256, 180 PPU, Point, mipmap 없음, 무압축, bottom-center pivot의 단일 2D Sprite 48장이다.
+- 8방향 각각 6포즈를 사용한다. 빨간 캡·흰 후드·줄무늬 셔츠·남색 바지·운동화와 둥근 얼굴 비율이
+  전 방향에서 같은 인물로 읽혀야 한다.
+- 모자 꼭대기, 골반과 바닥선을 안정시키고, 짧은 보폭·낮은 passing foot·반대 팔과 다리의 교차를 쓴다.
+  3D 인형 인상, 뛰는 수직 bob, 프레임별 scale pop, 크로마 잔여는 실패다.
+- Mixamo `Unarmed Walk Forward`는 0.8초 timing과 관절 순서 참고일 뿐 최종 외형이나 런타임 형식이 아니다.
+- Humanoid/Mixamo primitive bake는 실제 화면에서 거부됐으며 final art 후보가 아니다.
 
 ## 누나 도트 정본
 

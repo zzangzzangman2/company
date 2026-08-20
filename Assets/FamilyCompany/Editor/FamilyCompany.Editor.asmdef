@@ -7,6 +7,8 @@
     "FamilyCompany.Infrastructure.Unity",
     "FamilyCompany.Presentation.Unity",
     "FamilyCompany.Qa.Core",
+    "Unity.2D.IK.Runtime",
+    "Unity.2D.Psdimporter.Editor",
     "Unity.TextMeshPro"
   ],
   "includePlatforms": [

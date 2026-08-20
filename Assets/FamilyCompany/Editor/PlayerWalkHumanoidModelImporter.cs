@@ -15,8 +15,8 @@ namespace FamilyCompany.Editor
         public const string AuthoringRoot =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/";
         public const string BaseRigAssetPath = AuthoringRoot + "PlayerHumanoidBase.fbx";
-        public const string BakedFrameRoot =
-            PlayerWalkHumanoidBaker.DefaultOutputRoot + "Frames/";
+        public const string BakedFrameRootPrefix =
+            "Assets/Resources/FamilyCompany/PlayerBakedWalkHumanoid";
 
         private bool InAuthoringRoot =>
             assetPath.StartsWith(AuthoringRoot, StringComparison.Ordinal);
@@ -75,7 +75,8 @@ namespace FamilyCompany.Editor
                 rigTexture.alphaIsTransparency = true;
                 return;
             }
-            if (!assetPath.StartsWith(BakedFrameRoot, StringComparison.Ordinal) ||
+            if (!assetPath.StartsWith(BakedFrameRootPrefix, StringComparison.Ordinal) ||
+                assetPath.IndexOf("/Frames/", StringComparison.Ordinal) < 0 ||
                 !assetPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) return;
 
             // Mirrors PlayerBakedWalkV2TextureImporter, because the humanoid frames feed the same

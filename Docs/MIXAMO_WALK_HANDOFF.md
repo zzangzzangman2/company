@@ -1,13 +1,26 @@
 # MIXAMO WALK HANDOFF — 걷기를 받아서 굽는 경로, 이어받는 문서
 
+> **2026-08-20 최종 방향:** 게임 주인공은 2D 스프라이트다. 이 문서의 휴머노이드 bake/promotion 절차는
+> 거부된 연구 기록이고 production에서 실행하지 않는다. Mixamo는 0.8초 타이밍과 관절 순서 참고에만 쓴다.
+> 현재 실행 정본은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`다.
+
+> **2026-08-20 정정:** 이 문서 아래의 `scale=0.45522`, 380px Humanoid 후보,
+> `PlayerBakedWalkHumanoidV1/V2` bake/promotion 설명은 X Bot 연구 기록이다. 현재 production 실행 정본은
+> `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`이며 X Bot 표면이나 Humanoid PNG를 승격하지 않는다.
+> 현재 runtime 값은 speed `1.0`, acceleration `8.0`, stride/cycle distance `0.99380799`다. KShopGo의
+> 0.8초/24샘플은 2D pose timing 참고이고 KShopGo world의 speed `1.5`/stride `1.2`는 직접 복사하지 않는다.
+> 현행 파생 trace 체크포인트는 `ArtSources/PlayerEastMixamoTraceV2/target-joints.json`,
+> `phase-contract.md`, skeleton guide와
+> `Docs/HOME_PC_WALK_CHECKPOINT_2026-08-20.md`가 소유한다.
+
 이 문서만 읽고 이어받을 수 있게 쓴다. 배경은 `Docs/WALK_RIG_SOURCE_DECISION.md`,
 측정 근거는 `Docs/KSHOPGO_MOVEMENT_TEARDOWN.md`에 있다.
 
-## 정본 소스는 Mixamo다 — 필요하면 지금 바로 더 받는다
+## 동작 참고 소스는 Mixamo다 — 추가 다운로드는 걷기 승인 뒤
 
 <https://www.mixamo.com/> (Adobe, 무료, 계정 필요). **사용자 계정으로 로그인되어 있다.**
-추가 클립이 필요하면 기다릴 것 없이 즉시 받을 수 있다. `Docs/DECISIONS.md`의
-"캐릭터 애니메이션 소스는 Mixamo다"가 정본 결정이다.
+현재 Walk에 필요한 X Bot과 `Unarmed Walk Forward`는 이미 프로젝트에 있다. 추가 클립은 east 걷기
+승인 뒤 idle/sitting/typing 연구를 시작할 때만 받는다. Mixamo는 관절 동작 정본이고 최종 게임 표면은 2D다.
 
 다음에 받을 후보(KShopGo는 클립 7개로 전부 처리했다):
 
@@ -18,8 +31,8 @@
 | `Sitting` | 좌석 착석 | 좌석 원화 448장 |
 | `Typing` | 업무 중 | 업무 원화 640장 |
 
-다운로드 설정은 아래 워크 클립 표와 같다. 좌석·업무 클립이 통과하면 원화 1,088장이 클립 2개로
-대체된다.
+추가 클립이 통과하더라도 기존 2D 좌석·업무 원화를 자동 대체하지 않는다. 별도 2D 출력·사용자 승인·runtime
+검증이 있어야 한다.
 
 ## 참고한 게임과 폴더
 
@@ -30,11 +43,11 @@
 
 둘 다 읽기 전용이다. 수정하지 않고 저장소에도 넣지 않는다.
 
-## 한 줄
+## 역사 기록의 한 줄
 
-걷기 사이클을 우리가 만들지 않는다. Mixamo에서 리그와 걷기 클립을 받아
+당시에는 걷기 사이클을 직접 만들지 않고 Mixamo에서 리그와 걷기 클립을 받아
 `PlayerWalkHumanoidBaker`에 넣고, 모델을 45도씩 돌려 **8방향 × 8포즈 = 64장 PNG**를 굽는다.
-런타임과 카탈로그는 변경하지 않는다.
+이 경로는 화면 검토 뒤 거부됐으며 런타임과 카탈로그를 더 이상 변경하지 않는다.
 
 ## 지금까지 된 것
 
@@ -178,7 +191,9 @@ Avatar를 `PlayerHumanoidBase.fbx`에서 복사하며, 텍스처를 Point 필터
 **베이스**를, `walkClipPath`는 **워크**를 가리켜야 한다. 둘을 같은 파일로 두면
 `SkinnedMeshRenderer`가 없다며 실패한다. 메시 1개에 클립 N개 — KShopGo와 같은 구조다.
 
-### 3. 베이크 실행
+### 3. 베이크 실행 — HISTORICAL / DO NOT RUN FOR PRODUCTION
+
+아래 명령은 거부된 Humanoid 연구를 재현하는 기록이다. 현재 walk art 제작이나 promotion에 실행하지 않는다.
 
 에디터 메뉴 `Family Company / Art / Bake Player Walk From Humanoid Rig`,
 또는 배치모드로:
@@ -195,10 +210,10 @@ PLAYER_WALK_HUMANOID_BAKER: plan | cycleSeconds=... clipCycleDistance=...
 requiredDistance=0.64117 scale=... leftPlantTime=... pitch=43.6975
 ```
 
-### 4. 카탈로그 승격
+### 4. 카탈로그 승격 — HISTORICAL / 현재 금지
 
-8방향 영수증이 모두 생기면 Codex가 만든 `PlayerBakedWalkV2CatalogBuilder`가 카탈로그를 만든다.
-런타임은 기본값이 `Legacy48`이므로 **저절로 바뀌지 않는다.** 비교는 플래그로 한다.
+과거에는 영수증 뒤 `PlayerBakedWalkV2CatalogBuilder`로 카탈로그를 만들 계획이었다. 실제 화면에서 3D
+primitive 인상과 바운스를 거부했으므로 지금은 이 승격을 실행하지 않는다. 런타임 기본은 `Legacy48`이다.
 
 ```text
 -familyCompanyPlayerBakedWalkV2
@@ -223,9 +238,10 @@ requiredDistance=0.64117 scale=... leftPlantTime=... pitch=43.6975
    기울기 때문에 초과할 수 있다. 초과하면 `cycleSeconds`를 줄여 상체 흔들림이 작은 구간만 쓰거나,
    클립을 다른 것으로 바꾼다.
 
-그리고 스케일은 우리가 고르지 않는다. 한 사이클이
-`strideWorld / visualScale = 0.99380799 / 1.55 = 0.64117` 월드 유닛을 덮도록
-`RequiredUniformScale`이 계산된다. 사람 크기를 우리 보폭에 맞추는 것이지 그 반대가 아니다.
+최초 probe는 한 사이클이 `strideWorld / visualScale`을 덮도록 사람 크기까지 root travel에 결합했지만
+Humanoid 연구 경로는 이를 폐기했지만 그 경로 자체도 production에서 거부됐다. 현행 2D trace는 runtime
+stride `0.99380799`, 180 PPU, visual scale 1.55에서 `19.234993px/pose`를 사용하고 heel/toe roll을
+나눠 support-foot drift를 검증한다.
 
 ## 카메라 각도 — 추측이 아니다
 
@@ -264,37 +280,40 @@ Codex는 2D 페이퍼돌 경로(`PlayerWalkRigV2Baker`, `LimbSolver2D` 요구)�
 | `PlayerBakedWalkCatalogV2.cs` | 변경 없음. 출력 형식을 맞출 뿐 |
 | `PlayerBakedWalkV2Validation.cs` | 변경 없음. 우리 출력을 검사하게 재사용 |
 
-두 경로는 같은 PNG 폴더에 쓴다. **동시에 굽지 말 것.** 나중에 쓴 쪽이 이긴다.
+역사적으로 출력 충돌 위험이 있었으나 현재 Humanoid bake/promotion은 금지되어 있다. production PNG 폴더에
+이 경로를 실행하지 않는다.
 
-## 아직 안 한 것
+## 당시 남았던 것 (현재는 중단)
 
-- **64장 승격.** 위 "막힌 곳 1, 2"가 남았다. 렌더는 되지만 검증을 통과하지 못한다.
+- **64장 재베이크·승격은 하지 않는다.** 최초 south 후보의 clipping은 연구 기록이며 2D v3 경로가 대체한다.
 - 방향별 실루엣 확인. 8방향 중 north(뒷모습)와 대각선이 픽셀 단위로 읽히는지는 눈으로 봐야 한다.
-- X Bot은 회색 로봇이다. 최종 캐릭터가 아니라 파이프라인 증명용 리그다. 우리 얼굴/의상을
-  텍스처로 얹는 작업은 별개다.
+- X Bot Renderer를 숨기고 Mixamo 뼈에 `canonical-protagonist-v1` 닫힌 볼륨을 붙이는 구현은 끝났다.
+  빨간 뉴스보이 캡·흰 후드·줄무늬 셔츠·남색 바지·운동화가 실제 8방향 캡처에서 읽히는지 확인해야 한다.
 - 나머지 클립(Idle / Run / Sitting / Typing). KShopGo는 7개로 전부 처리했다.
 
-## 그림과 별개인 문제 — 아직 안 고쳤다
+## 그림과 별개인 이동 문제 — 2026-08-20 수정 완료
 
 프레임이 완벽해도 이동 규칙이 딱딱하면 딱딱하다.
 `Assets/FamilyCompany/Simulation/Navigation/OfficeNavigationMotionRules.cs`의 값들이다.
 
 | 항목 | KShopGo | 우리 |
 | --- | --- | --- |
-| 회전 | `m_AngularSpeed = 1200` (사실상 즉시) | `PivotSeconds = 0.06f` 정지 피벗 |
-| 방향 확정 지연 | 없음 | `DefaultFacingStabilizationSeconds = 0.075f` |
-| 허용 방향 오차 | 없음 | `MaximumHeldFacingErrorDegrees = 30.5f` |
+| 회전 | `m_AngularSpeed = 1200` (사실상 즉시) | 이동 중 정지 gate 없음, 실제 변위 행 즉시 적용 |
+| 이동 | speed 1.5 / acceleration 8.0 | speed `1.0` / acceleration `8.0` |
+| Walk cadence | 0.8s, 1.2 unit/cycle | stride `0.99380799`, 약 `0.9938s/cycle` (`2.0125 steps/s`) |
+| 방향 확정 지연 | 없음 | 이동 frame은 stabilization/hysteresis 0 |
 | 회피 | `m_ObstacleAvoidanceType = 0` (끔) | 반경·예약 |
 | 도착 실패 | `WaitArriveWithTimeout` | 대응물 없음 |
 
-그리고 `ShortShuffleStrideFraction = 0.30f` 구간에서 `ShuffleFrame`이 프레임 0과 3만 내보낸다.
-타일 단위로 짧게 움직이는 사무실에서는 6프레임 사이클이 아니라 **2프레임 스터터**가 기본 재생이 된다.
+`ShortShuffleStrideFraction=0`으로 짧은 이동도 전체 gait를 진행한다. 제자리 `PivotSeconds=0.06`은
+막힘·좌석·업무 상호작용의 최종 facing 정렬에만 남고 자유 보행을 멈추지 않는다.
+KShopGo의 1.5/1.2는 다른 world scale의 참고값이며 우리 runtime에 직접 대입하지 않는다.
 
 이 파일은 순수 C#이라 `simulation-pure`로 검증되고 **플레이어 창을 띄우지 않는다.**
 `OfficeMovementFacingNavigationValidation`, `OfficeSharedLocomotionStrictValidation`,
-`OfficeNavigationRegressionSuite`(`PivotSeconds` 참조)가 현재 값을 고정하고 있으므로
-값 변경은 그 검증들도 같이 갱신해야 한다. `DECISIONS.md`에 planted pivot 규칙이 정본으로 적혀
-있으므로 **방향 결정 변경**으로 기록해야 한다.
+`OfficeMovementFacingNavigationValidation`, `OfficeSharedLocomotionStrictValidation`,
+`OfficeNavigationRegressionSuite`, actual Player reversal QA를 새 계약으로 갱신했다. `simulation-pure`와
+Simulation/Presentation.Unity/Editor Bee Roslyn 컴파일이 PASS했다.
 
 ## 작업 규칙 (이 저장소)
 

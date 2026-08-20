@@ -2,6 +2,10 @@
 
 이 안내는 특정 날짜의 작업 폴더를 복제하는 문서가 아니라, 어느 Windows PC에서든 현재 `main`을 안전하게 받아 실행하는 절차다.
 
+> **현재 주인공 걷기를 이어갈 때는 먼저
+> [HOME_PC_WALK_CHECKPOINT_2026-08-20.md](HOME_PC_WALK_CHECKPOINT_2026-08-20.md)를 읽는다.**
+> Mixamo/KShopGo motion contract는 PASS했지만 완성 lower art는 아직 없고 production은 `Legacy48`이다.
+
 ## 인계 상태
 
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0을 통과해 integration에 단일 merge되었다. 네 actor Work 0..5, 동일 좌석 atomic 정렬, exit/turn/first-walk, stationary endpoint, safe egress, furniture 0 오차를 확인했다.
@@ -15,6 +19,7 @@
 - Unity Hub와 Unity Editor `6000.3.21f1`
 - Windows Standalone Build Support
 - 저장소 접근 권한
+- 주인공 걷기 trace를 재생성할 때는 Python 3, `numpy`, `Pillow`
 
 처음 받는 PC에서는 원하는 작업 폴더에서 clone한다.
 

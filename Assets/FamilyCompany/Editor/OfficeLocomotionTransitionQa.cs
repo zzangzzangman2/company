@@ -23,7 +23,7 @@ namespace FamilyCompany.Editor
                 ValidateMember(catalog, entry.MemberId);
             Debug.Log(
                 "OFFICE_LOCOMOTION_TRANSITION_RUNTIME_QA_PASS | members=4 " +
-                "states=StartStep,Walk,Stopping,Idle,ShortShuffle,Pivot " +
+                "states=Walk,Stopping,Idle,Pivot continuousStart=true shortShuffle=false " +
                 "transitionSlots=256 uniqueTransitionArt=256");
         }
 
@@ -56,7 +56,7 @@ namespace FamilyCompany.Editor
                 animator.SetExternallyTicked(true);
 
                 TickMotion(animator, new Vector2(0f, -1f), new Vector2(0f, -0.03f), 0.016f);
-                RequirePhase(animator, OfficeLocomotionPhase.StartStep, true, memberId);
+                RequirePhase(animator, OfficeLocomotionPhase.Walk, false, memberId);
 
                 TickMotion(animator, new Vector2(0f, -1f), new Vector2(0f, -0.36f), 0.10f);
                 RequirePhase(animator, OfficeLocomotionPhase.Walk, false, memberId);
@@ -68,7 +68,7 @@ namespace FamilyCompany.Editor
 
                 TickMotion(animator, new Vector2(0f, -1f), new Vector2(0f, -0.04f), 0.016f);
                 TickStopped(animator, 0.02f);
-                RequirePhase(animator, OfficeLocomotionPhase.ShortShuffle, true, memberId);
+                RequirePhase(animator, OfficeLocomotionPhase.Stopping, true, memberId);
             }
             finally
             {

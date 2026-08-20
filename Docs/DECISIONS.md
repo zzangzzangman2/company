@@ -1,5 +1,65 @@
 # DECISIONS
 
+## 2026-08-20 / 주인공 east는 KShopGo·Mixamo locked whole-chain으로 다시 저작한다
+
+결정: 주인공 east 6포즈의 공개 motion 정본은 `ArtSources/PlayerEastMixamoTraceV2/target-joints.json`,
+`phase-contract.md`, skeleton guide다. KShopGo 0.8초 24샘플의 0/4/8/12/16/20 위상과 Mixamo physical
+left/right owner를 유지하고 project root advance `19.234993px/pose`를 결합한다. heel/toe target 최대 world
+drift `0.765007px`는 motion 계약 PASS다. raw Unity export는 ignored `Artifacts`에서만 재생성한다.
+
+결정: 기존 v3 상체는 phase별로 보존하지만 lower는 P0~P5 모두 locked
+`pelvis→hip→knee→ankle→heel/toe` 체인으로 새로 저작한다. lower mirror, screen-side owner, 신발/종아리 조각
+이동, V13/ImageGen/LockedArtV2 raster 재사용을 금지한다. 완성 east GIF 사용자 승인 전에는 Assets와
+`Legacy48` 기본값을 바꾸지 않는다.
+
+이유: v10~v13의 문제는 swing 높이만이 아니라 owner 역전, 미러된 골반·무릎, 이중 발목, 신발 용접과
+duplicate-contact micro-stutter였다. 기존 donor를 더 잘라 붙여서는 상체와 같은 방향의 연속 physical leg를
+만들 수 없다. 집 PC 재개점은 `Docs/HOME_PC_WALK_CHECKPOINT_2026-08-20.md`다.
+
+## 2026-08-20 / east swing 발 6/10/6px 보정 (거부된 조각 합성 연구 기록)
+
+결정: 주인공 east 6포즈의 팔·몸통·교차 보폭은 alternating v4 그대로 둔다. 지지발 최하단은 y=233,
+반대 swing 발은 두 반주기 모두 y=227/223/227로 고정한다. 두 운동화는 반전·변형하지 않고 통째로
+평행 이동한다. 다른 7방향은 바꾸지 않는다.
+
+이유: support/swing 실루엣만 분리한 v9도 swing 최하단이 support와 0~2px 차이인 포즈가 남아 화면에서
+양발 접지로 보였다. 신발 종류가 아니라 최하단 좌표를 수치로 강제해야 접촉면이 실제로 분리된다.
+
+검증: east 6포즈는 support/swing bottom `233/227, 233/223, 233/227`을 두 번 정확히 반복한다.
+actual Windows D3D11에서 8방향 loop, closeup 48장, overview 8장, cadence 1.9819~1.9979 steps/s로
+`PASS_NON_SHIPPING`을 기록했다.
+이 후보는 이후 발목/owner/하체 방향 결함을 확인해 거부했다. 위 locked whole-chain 결정으로 대체한다.
+
+## 2026-08-20 / 보행 위상은 한 타일마다 오른발·왼발 한 주기를 끝낸다
+
+결정: `DefaultMoveSpeed=1.0`, `DefaultStrideLength=0.99380799`를 사용한다. 이 stride는 320×160,
+180 PPU 등각 타일의 인접 중심 간 실제 월드 거리다. 6프레임은 한 타일 안에서 0·1·2 오른발 반주기와
+3·4·5 왼발 반주기를 정확히 한 번씩 재생한다. 가속 8.0, 실제 변위 방향, 이동 중 무정지 회전은 유지한다.
+
+이유: KShopGo의 `1.5 unit/s × 0.8s = 1.2 unit`을 우리 월드에 직접 대입하면 한 타일 0.99380799보다
+주기가 약 20% 길어 타일 경계마다 발 위상이 밀린다. 화면에서는 오른발 동작이 다음 타일까지 이어진 뒤
+왼발 묶음이 나와 `오른발 두 번→왼발 두 번`처럼 읽힌다. 외부 게임의 world unit은 우리 타일 단위와
+동일하다고 가정할 수 없다.
+
+검증: alternating v4 조립 뒤 actual Windows D3D11에서 8방향 cycle distance
+0.992947~1.008929, cadence 1.9823~2.0142 steps/s, 48 closeup과 8 overview를 기록했다. P0~P2는 승인
+그림 그대로이고 P3~P5 하체는 각 대응 프레임의 정확한 골반축 반사다. 사람 화면 승인은 통과했지만
+support-foot/contact-step 수치가 아직 미측정이므로 shipping 승격은 보류한다.
+
+## 2026-08-20 / 게임 주인공은 2D 스프라이트로 확정하고 Mixamo는 동작 참고로만 쓴다
+
+결정: 사무실 런타임의 주인공은 8방향×6포즈 단일 2D 스프라이트다. 실시간 3D 모델, Mixamo FBX,
+SkinnedMeshRenderer와 Animator를 플레이어 표현에 포함하지 않는다. Mixamo `Unarmed Walk Forward`와
+KShopGo는 0.8초 주기, 좌우 팔다리 교차, 낮은 통과발과 연속 방향 전환의 참고 자료로만 사용한다.
+
+이유: primitive volume을 Mixamo 뼈에 붙인 Humanoid bake는 실제 화면에서 주인공처럼 보이지 않았고,
+3D 인형 인상과 과한 상하 바운스가 2D 사무실·가족 에셋과 충돌했다. 반면 빨간 캡·흰 후드·줄무늬 셔츠를
+직접 그린 2D v3 후보는 동일한 이동값에서 정체성과 평면 합성을 유지한다.
+
+역사 검증 상태: 당시 Windows D3D11 actual player에서 8방향 loop, 48 closeup, 8 overview와
+2.4550~2.4879 steps/s를 확인했지만, 이후 project tile stride 결합과 하체 방향 결함 때문에 이 후보를
+거부했다. 현행 값은 위 한 타일 결정과 locked trace를 따르며 `Legacy48` 기본값을 바꾸지 않는다.
+
 ## 2026-08-19 / 주인공은 8단계 발 교대와 0.18초 planted cardinal turn을 쓴다
 
 결정: 주인공 moving presentation은 source-exact contact A/B 사이를 각 반주기 toe/pass/land로 나눠
@@ -1011,7 +1071,10 @@ diff 0건이다. Unity import batch도 192 Sprite, rootStep 19.2350px, cadence 2
 `FAST_QA_WINDOWS.cmd -Profile editor-broad`는 10.725초 PASS했다. clean build와 배포 D3D11 Player 사람
 검토가 끝날 때까지 릴리스 결정은 미완료다.
 
-## 캐릭터 애니메이션 소스는 Mixamo다 (2026-08-20)
+## 캐릭터 애니메이션 소스는 Mixamo다 (2026-08-20, 위 2D 결정으로 대체됨)
+
+이 절의 Humanoid bake/promotion 결론은 같은 날짜의 문서 맨 위 2D 결정으로 대체됐다. 아래 내용은
+반입한 FBX와 당시 검증 상태를 보존하는 역사 기록이다.
 
 결정: **월드 캐릭터의 걷기·대기·달리기·앉기 모션은 우리가 제작하지 않고 Mixamo에서 받는다.**
 <https://www.mixamo.com/> (Adobe, 무료, 계정 필요). 사용자 계정으로 로그인되어 있으므로
@@ -1060,3 +1123,50 @@ KShopGo는 게임플레이 네임스페이스가 `CryingSnow.FastFoodRush`인 �
 사용한 아트는 Synty POLYGON 유료 팩이다. **그 아트를 가져오지 않는다.** 참고한 것은
 설정값과 구조다.
 
+## Mixamo 보행 크기·외형·승격 계약 수정 (2026-08-20, 거부된 연구 기록)
+
+이 절은 primitive costume의 실제 화면 거부 전에 작성됐다. production pipeline으로 재실행하지 않는다.
+
+결정: Mixamo `Unarmed Walk Forward`의 root travel은 gait phase를 찾는 데만 쓰고 캐릭터 크기를 정하지
+않는다. 주인공은 380px 목표 실루엣으로 한 번 uniform scale하고, runtime stride/8에 대한 support-foot
+궤도는 프레임 전체 정수 픽셀 정렬로 결합한다. 애니메이션 샘플 뒤 모델 yaw를 적용해 독립 8방향을 만든다.
+
+결정: Mixamo X Bot은 Avatar/리타기팅 probe로만 남긴다. final 후보는 X Bot Renderer를 숨기고 같은 뼈에
+`canonical-protagonist-v1` 닫힌 볼륨을 붙인다. CANON의 빨간 뉴스보이 캡, 흰 후드 윈드브레이커,
+줄무늬 셔츠, 남색 바지와 운동화가 방향마다 보존돼야 한다. 자동 분리 2D paper-doll은 final art가 아니다.
+
+결정: Humanoid receipt는 paper-doll 1% 높이 규칙과 분리하되 검증을 약화한 warning 모드는 두지 않는다.
+hard alpha/canvas/pelvis/material component, foot lock/contact step/passing lift, 8개 고유 direction row와
+pose hash를 모두 통과해야 한다. 후보는 별도 root에 쓰고, 전부 PASS한 뒤에만 promotion 명령이 production
+64장과 catalog를 갱신한다. actual normal Windows D3D11 8방향 캡처 전에는 기본 런타임은 Legacy48이다.
+
+이유: 최초 X Bot 출력은 root travel에 맞춘 scale 0.45522 때문에 정본 주인공보다 현저히 작았고,
+`SampleAnimationClip`이 사전 yaw를 덮어써 방향별 PNG가 중복됐다. paper-doll의 pelvis-to-crown 1% 규칙을
+사람형 spine bob에 그대로 적용한 뒤 `continueOnValidationFailure`로 삼킨 것은 production gate가 아니었다.
+
+검증 상태: 당시 관련 Editor 코드와 PowerShell parser는 통과했지만, 실제 Humanoid 결과는 주인공 외형 불일치와
+과한 바운스로 전체 거부됐다. 당시 “실제 D3D11 실행이 남은 gate” 기록도 함께 취소한다. 현행
+`Tools/Invoke-PlayerWalkHumanoidPipeline.ps1`과 `PlayerWalkHumanoidPromotion`은 실행·승격 불가이며 2D east
+제작의 gate가 아니다.
+
+## KShopGo 기준 연속 회전·0.8초 cadence로 자유 보행을 교체한다 (2026-08-20, 위 한 타일 결정으로 수치 대체)
+
+결정: 자유 보행의 segment 시작, 45°/90° 코너, 135°/180° 반전에 `RequiresStationaryPivot` 정지 gate를
+사용하지 않는다. `OfficeRuntimeAgent`는 가속 적분을 계속하고, `DirectionalSpriteAnimator`는 같은 frame의
+실제 변위를 즉시 8방향으로 양자화한다. 제자리 `PivotSeconds=0.06`은 막힌 actor와 좌석·업무 상호작용의
+최종 facing 정렬에만 남긴다.
+
+결정: 공용 이동은 KShopGo의 직렬화 값을 기준으로 `DefaultMoveSpeed=1.5`,
+`DefaultAcceleration=8.0`을 사용한다. 실제 APK Walk는 0.800초/30fps이며 인플레이스이므로 한 주기 stride는
+`1.5 × 0.8 = 1.2 world unit`, 두 발 cadence는 2.5 steps/s로 둔다. 짧은 이동도 전체 gait를 진행하며
+`ShortShuffleStrideFraction=0`으로 0/3 두 프레임 스터터를 폐기한다.
+
+근거 수정: Animator 52개 중 42개의 `ApplyRootMotion=True`만으로 루트 모션 이동이라고 판단했던 이전 설명은
+폐기한다. Walk/Run 포함 모든 휴머노이드 클립은 평균 root 속도 0이고 시작·끝 XZ가 동일하며,
+`KeepOriginalPositionXZ=True`다. 52개 모두 feet stabilization/linear velocity blending이 꺼져 있고 상태의
+feet IK도 꺼져 있다. 자연스러움의 직접 근거는 24샘플 Walk의 프레임 간 보간, Idle↔Walk 0.25초 전이,
+연속 agent/controller 이동과 빠른 회전이다. 상세 수치는 `Docs/KSHOPGO_MOVEMENT_TEARDOWN.md`가 정본이다.
+
+검증: `simulation-pure` PASS, Unity 6000.3.21f1 Bee Roslyn으로 Simulation,
+Presentation.Unity, Editor 세 어셈블리 컴파일 PASS. Mixamo 후보의 actual normal D3D11 베이크·플레이어
+캡처 gate는 계속 별도이며 통과 전에는 `Legacy48` 기본값을 바꾸지 않는다.

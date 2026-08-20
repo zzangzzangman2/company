@@ -56,6 +56,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private Transform _visualRoot;
         private DirectionalSpriteAnimator _animator;
         private PlayerNaturalWalkPresenter _playerNaturalWalk;
+        private PlayerBakedWalkPresenterV2 _playerBakedWalk;
+        private PlayerWalkPresentationMode _playerWalkMode = PlayerWalkPresentationMode.Legacy48;
         private const float PlayerNaturalTurnSeconds = 0.18f;
         private int _playerNaturalTurnFromDirection = -1;
         private int _playerNaturalTurnTargetDirection = -1;
@@ -345,6 +347,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             : _animator.StrideLength;
         public int CurrentWalkFrame => _animator == null ? 0 : _animator.CurrentWalkFrame;
         public int CurrentDirection => _animator == null ? 0 : _animator.CurrentDirection;
+        public PlayerWalkPresentationMode PlayerWalkMode => _playerWalkMode;
+        public int VisibleWalkPose => _playerBakedWalk == null
+            ? -1
+            : _playerBakedWalk.VisibleWalkPose;
+        public int VisibleWalkDirection => _playerBakedWalk == null
+            ? -1
+            : _playerBakedWalk.VisibleWalkDirection;
+        public string VisibleWalkSpriteName => _playerBakedWalk == null
+            ? string.Empty
+            : _playerBakedWalk.VisibleWalkSpriteName;
+        public PlayerWalkSupportLegV2 VisibleSupportLeg => _playerBakedWalk == null
+            ? PlayerWalkSupportLegV2.None
+            : _playerBakedWalk.VisibleSupportLeg;
+        public Vector2 VisibleSupportFootWorld => _playerBakedWalk == null
+            ? Vector2.zero
+            : _playerBakedWalk.VisibleSupportFootWorld;
         public int ConfiguredLocomotionTransitionFrameCount => _animator == null
             ? 0
             : _animator.ConfiguredLocomotionTransitionFrameCount;
@@ -600,6 +618,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public void ConfigurePlayerNaturalWalk(PlayerNaturalWalkPresenter presenter)
         {
             _playerNaturalWalk = presenter;
+        }
+
+        public void ConfigurePlayerBakedWalk(PlayerBakedWalkPresenterV2 presenter)
+        {
+            _playerBakedWalk = presenter;
+        }
+
+        public void ConfigurePlayerWalkMode(PlayerWalkPresentationMode mode)
+        {
+            _playerWalkMode = mode;
         }
 
         internal void BindR5eTrace(
@@ -1704,6 +1732,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     : _playerNaturalTurnElapsedSeconds / PlayerNaturalTurnSeconds,
                 _playerNaturalTurnFromDirection,
                 _playerNaturalTurnTargetDirection);
+            _playerBakedWalk?.Present(
+                _animator.GaitPhase01,
+                _animator.CurrentDirection,
+                _animator.IsMoving,
+                _animator.IsOfficeSeatingPoseActive || IsOccupyingSeat || IsEnteringSeat,
+                _presentationAway,
+                _playerNaturalTurnTargetDirection >= 0,
+                PlayerNaturalTurnSeconds <= 0f
+                    ? 1f
+                    : _playerNaturalTurnElapsedSeconds / PlayerNaturalTurnSeconds,
+                _playerNaturalTurnFromDirection,
+                _playerNaturalTurnTargetDirection);
             if (Phase == OfficeRuntimeAgentPhase.FinishingWork)
                 _finishingWorkPresentationObserved = true;
             RecordSeatingFacingInvariant();
@@ -2021,7 +2061,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float changePerSecond = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
                 new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
-                7.5f,
+                OfficeNavigationMotionIntegrator.DefaultAcceleration,
                 false);
             OfficeMotionIntegrationResult motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
@@ -2174,7 +2214,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Vector2 desiredDirection = delta.sqrMagnitude > 0.000001f
                 ? delta.normalized
                 : Vector2.zero;
-            if (WaitForNavigationSegmentPivot(desiredDirection, deltaTime)) return;
+            TrackNavigationSegmentDirection(desiredDirection);
             Vector2 presentationSemanticDirection = desiredDirection;
             // Stay on the semantic segment until its exact cell-center arrival. Blending the root
             // toward the next leg cuts the inside corner: a route that is valid center-to-center
@@ -4314,25 +4354,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _desiredVelocity = targetVelocity;
                 return;
             }
-            Vector2 integrationTargetVelocity = targetVelocity;
-            // LeavingSeat deliberately moves away from the chair while the presentation remains
-            // locked to the seat facing. The normal pre-move pivot gate would otherwise wait for a
-            // direction change that the lock is correctly refusing, deadlocking the exit step.
-            bool preserveSeatFacingWhileLeaving =
-                Phase == OfficeRuntimeAgentPhase.LeavingSeat &&
-                _animator != null &&
-                _animator.IsOfficeSeatingFacingLocked;
-            bool waitingForPivot = !preserveSeatFacingWhileLeaving &&
-                                   RequiresPivotBeforeMoving(targetVelocity);
-            if (waitingForPivot) integrationTargetVelocity = Vector2.zero;
+            // Movement direction changes are continuous. Seat-facing remains a presentation lock
+            // during egress, but it no longer zeros the actor velocity just to turn a sprite row.
             float changePerSecond = OfficeNavigationMotionIntegrator.ResolveVelocityChangeRate(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
-                new OfficeNavPoint(integrationTargetVelocity.x, integrationTargetVelocity.y),
-                7.5f,
+                new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
+                OfficeNavigationMotionIntegrator.DefaultAcceleration,
                 _playerControlled);
             OfficeMotionIntegrationResult motion = OfficeNavigationMotionIntegrator.IntegrateVelocity(
                 new OfficeNavPoint(_currentVelocity.x, _currentVelocity.y),
-                new OfficeNavPoint(integrationTargetVelocity.x, integrationTargetVelocity.y),
+                new OfficeNavPoint(targetVelocity.x, targetVelocity.y),
                 changePerSecond,
                 deltaTime);
             _currentVelocity = new Vector2(motion.Velocity.X, motion.Velocity.Z);
@@ -4351,7 +4382,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _agentId,
                 before,
                 intended,
-                integrationTargetVelocity,
+                targetVelocity,
                 _lastActualDisplacement,
                 AgentRadius,
                 permittedSeatId,
@@ -4369,14 +4400,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 _currentVelocity = Vector2.zero;
                 if (targetVelocity.sqrMagnitude > 0.01f) _stuckSeconds += deltaTime;
-                LastMovementBlocker = waitingForPivot
-                    ? $"pivot={_animator.CurrentDirection}->{_animator.ResolveConfiguredTileDirection(targetVelocity, _animator.CurrentDirection)}:{_animator.LocomotionPhase}"
-                    : _world.Occupancy.DescribeMoveBlocker(
-                        _agentId,
-                        before,
-                        before + intended,
-                        AgentRadius,
-                        permittedSeatId);
+                LastMovementBlocker = _world.Occupancy.DescribeMoveBlocker(
+                    _agentId,
+                    before,
+                    before + intended,
+                    AgentRadius,
+                    permittedSeatId);
             }
             if (actual.sqrMagnitude > OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
                 LastMovementBlocker = string.Empty;
@@ -4458,68 +4487,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return reached;
         }
 
-        private bool RequiresPivotBeforeMoving(Vector2 targetVelocity)
+        private void TrackNavigationSegmentDirection(Vector2 segmentDirection)
         {
-            if (_animator == null || targetVelocity.sqrMagnitude <= 0.000001f) return false;
-            int current = _animator.CurrentDirection;
-            int target = _animator.ResolveConfiguredTileDirection(targetVelocity, current);
-            return OfficeSharedLocomotionRules.RequiresStationaryPivot(
-                current,
-                target,
-                _animator.LocomotionPhase);
-        }
-
-        private bool WaitForNavigationSegmentPivot(Vector2 segmentDirection, float deltaTime)
-        {
-            if (_animator == null || segmentDirection.sqrMagnitude <= 0.000001f) return false;
+            if (_animator == null || segmentDirection.sqrMagnitude <= 0.000001f) return;
             int requested = _animator.ResolveConfiguredTileDirection(
                 segmentDirection,
                 _animator.CurrentDirection);
-            if (_navigationSegmentDirection == requested) return false;
-
-            StopMotion();
-            if (_playerNaturalWalk != null)
-            {
-                if (_playerNaturalTurnTargetDirection != requested)
-                {
-                    _playerNaturalTurnFromDirection = _animator.CurrentDirection;
-                    _playerNaturalTurnTargetDirection = requested;
-                    _playerNaturalTurnElapsedSeconds = 0f;
-                }
-                _animator.AccumulateStandingFacingRequest(requested, deltaTime);
-                _playerNaturalTurnElapsedSeconds += Mathf.Max(0f, deltaTime);
-                bool facingReady = _animator.IsReadyForInteractionFacing(requested);
-                bool gestureReady =
-                    _playerNaturalTurnElapsedSeconds + 0.000001f >= PlayerNaturalTurnSeconds;
-                if (!facingReady || !gestureReady)
-                {
-                    LastMovementBlocker =
-                        "player-natural-turn=" + _playerNaturalTurnFromDirection + "->" + requested +
-                        ":" + _playerNaturalTurnElapsedSeconds.ToString("F3");
-                    return true;
-                }
-
-                _playerNaturalTurnFromDirection = -1;
-                _playerNaturalTurnTargetDirection = -1;
-                _playerNaturalTurnElapsedSeconds = 0f;
-            }
-            if (!_animator.IsReadyForInteractionFacing(requested))
-            {
-                _animator.AccumulateStandingFacingRequest(requested, deltaTime);
-                LastMovementBlocker =
-                    "segment-pivot=" + _animator.CurrentDirection + "->" + requested +
-                    ":" + _animator.LocomotionPhase;
-                return true;
-            }
-
+            if (_navigationSegmentDirection == requested) return;
             _navigationSegmentDirection = requested;
-            // At accelerated office speeds several simulation ticks can land in one rendered
-            // frame. Do not let the tail of the previous cardinal leg and the head of this leg
-            // combine into a diagonal screen displacement after the pivot completes mid-frame.
-            // The next presentation frame restores the normal movement budget.
-            _visibleFrameMovementBudgetWorld = 0f;
-            LastMovementBlocker = string.Empty;
-            return true;
+            _playerNaturalTurnFromDirection = -1;
+            _playerNaturalTurnTargetDirection = -1;
+            _playerNaturalTurnElapsedSeconds = 0f;
         }
 
         private void StopMotion(bool keepStuck = false)

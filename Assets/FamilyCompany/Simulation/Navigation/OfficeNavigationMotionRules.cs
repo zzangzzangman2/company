@@ -68,6 +68,7 @@ namespace FamilyCompany.Simulation.Navigation
     public static class OfficeNavigationMotionIntegrator
     {
         public const float MaximumStableStepSeconds = 0.05f;
+        public const float DefaultAcceleration = 8f;
         public const float FinalApproachSlowRadius = 0.48f;
         public const float MinimumArrivalSpeedScale = 0.24f;
 
@@ -492,18 +493,18 @@ namespace FamilyCompany.Simulation.Navigation
 
     public static class OfficeLocomotionGaitRules
     {
-        // One six-frame cycle represents two planted steps and exactly one projected office tile:
-        // sqrt((320 / 180 / 2)^2 + (160 / 180 / 2)^2) = 0.99380799 world units.
-        // At the normal 1.0-world-unit/second speed this is 2.01 steps/second. Every tile center
-        // therefore repeats the same contact phase instead of letting the feet drift against the
-        // floor grid over a long route.
+        // One complete right/left cycle owns exactly one isometric tile-centre segment. Importing
+        // KShopGo's 1.2-unit stride verbatim made our phase slip by about 20% at every tile because
+        // its world scale is not ours. At the 1.0-unit/s office speed this is a calm ~0.994 s cycle.
+        public const float ReferenceWalkCycleSeconds = 0.99380799f;
         public const float DefaultStrideLength = 0.99380799f;
         public const float StopSettleSeconds = 0.10f;
-        // A route corner owns one final heading. Hold that heading for one short planted interval
-        // before translation; never parade through unrelated intermediate sprite rows while the
-        // actor is standing on the same tile centre.
+        // A stationary blocked/interaction-facing request owns one final heading for this short
+        // planted interval. Free locomotion never waits for it before translation.
         public const float PivotSeconds = 0.06f;
-        public const float ShortShuffleStrideFraction = 0.30f;
+        // A two-frame contact shuffle made short office moves visibly stutter. Even the first
+        // measurable displacement now advances through the complete walk cycle.
+        public const float ShortShuffleStrideFraction = 0f;
         private const float MinimumDistance = 0.000001f;
 
         public static OfficeLocomotionGaitState Resolve(
@@ -844,14 +845,11 @@ namespace FamilyCompany.Simulation.Navigation
                 throw new ArgumentOutOfRangeException(nameof(displayDirection));
             if (requestedDirection < 0 || requestedDirection >= OfficeFacingHysteresisRules.DirectionCount)
                 throw new ArgumentOutOfRangeException(nameof(requestedDirection));
-            // Cell-centre routing makes every ordinary corner exactly two octants, so a >= 2 threshold
-            // planted the actor dead at each corner and then rotated it in two visible steps before
-            // it could resume. Quarter turns now keep walking; only near-reversals plant and turn,
-            // which is what a person actually does when doubling back.
-            return phase == OfficeLocomotionPhase.Pivot ||
-                   OfficeLocomotionGaitRules.DirectionDistance(
-                       displayDirection,
-                       requestedDirection) >= 3;
+            // Locomotion never inserts a controller-owned stop just to change direction. Actual
+            // displacement remains the facing authority, so acceleration can carry a corner or a
+            // reversal continuously. Stationary interaction alignment still uses the gait's
+            // short Pivot phase through AccumulateStandingFacingRequest; it is not a move gate.
+            return false;
         }
 
         public static bool IsInteractionFacingReady(

@@ -1,0 +1,136 @@
+{
+  "contract": "FC-PLAYER-EAST-MIXAMO-LOCKED-ART-V2-REJECTED-RESEARCH",
+  "status": "REJECTED_RESEARCH",
+  "rejectionReason": "Existing raster lower-body donors cannot preserve a coherent east-facing pelvis-to-toe chain; P2/P5 cross and bend unnaturally.",
+  "sourceUpperFrames": "ArtSources/PlayerEastMixamoTraceV2/SourceV3Frames",
+  "phaseDonors": {
+    "contact": "ArtSources/PlayerEastMixamoTraceV2/SourceV3Frames/player_east_walk_0_v2.png",
+    "loadRecovery": "ArtSources/PlayerEastMixamoTraceV2/SourceV3Frames/player_east_walk_1_v2.png",
+    "terminalLowPass": "ArtSources/PlayerEastMixamoTraceV2/RejectedResearch/normalized-low-pass-p5.png"
+  },
+  "targetJoints": "ArtSources/PlayerEastMixamoTraceV2/target-joints.json",
+  "sourceAlignmentDx": [
+    -1,
+    3,
+    0,
+    1,
+    4,
+    0
+  ],
+  "lowPassAlignmentDx": 0,
+  "lowerBodyMirrorUsed": false,
+  "isolatedShoeMoveUsed": false,
+  "wholeHipToShoeWarp": true,
+  "rootAdvanceSourcePx": 19.234993354838707,
+  "frameDurationMs": 133,
+  "metrics": [
+    {
+      "pose": 0,
+      "bbox": [
+        85,
+        24,
+        169,
+        233
+      ],
+      "lowerBbox": [
+        89,
+        171,
+        164,
+        233
+      ],
+      "bottom": 233,
+      "floorRunMinX": 102,
+      "floorRunMaxX": 104
+    },
+    {
+      "pose": 1,
+      "bbox": [
+        90,
+        24,
+        172,
+        233
+      ],
+      "lowerBbox": [
+        103,
+        171,
+        150,
+        233
+      ],
+      "bottom": 233,
+      "floorRunMinX": 136,
+      "floorRunMaxX": 143
+    },
+    {
+      "pose": 2,
+      "bbox": [
+        87,
+        24,
+        169,
+        233
+      ],
+      "lowerBbox": [
+        110,
+        171,
+        152,
+        233
+      ],
+      "bottom": 233,
+      "floorRunMinX": 121,
+      "floorRunMaxX": 124
+    },
+    {
+      "pose": 3,
+      "bbox": [
+        89,
+        24,
+        170,
+        233
+      ],
+      "lowerBbox": [
+        89,
+        171,
+        164,
+        233
+      ],
+      "bottom": 233,
+      "floorRunMinX": 102,
+      "floorRunMaxX": 104
+    },
+    {
+      "pose": 4,
+      "bbox": [
+        91,
+        24,
+        172,
+        233
+      ],
+      "lowerBbox": [
+        103,
+        171,
+        150,
+        233
+      ],
+      "bottom": 233,
+      "floorRunMinX": 136,
+      "floorRunMaxX": 143
+    },
+    {
+      "pose": 5,
+      "bbox": [
+        86,
+        24,
+        169,
+        233
+      ],
+      "lowerBbox": [
+        110,
+        171,
+        152,
+        233
+      ],
+      "bottom": 233,
+      "floorRunMinX": 121,
+      "floorRunMaxX": 124
+    }
+  ]
+}

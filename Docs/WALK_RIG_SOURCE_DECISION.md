@@ -1,8 +1,13 @@
 # WALK RIG SOURCE DECISION — 뼈대와 걷기 클립은 만들지 말고 가져온다
 
+> **2026-08-20 폐기 공지:** 아래 결론은 거부된 Humanoid bake 연구 기록이다. 실제 화면에서
+> primitive 3D 주인공과 과한 바운스가 2D 사무실에 맞지 않아 production 결정에서 제외했다.
+> 현재 정본은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`이며, 게임 출력은 8방향×6포즈 2D Sprite다.
+> Mixamo는 0.8초 timing과 반대 팔·다리 관절 순서를 참고하는 데만 사용한다.
+
 이 문서는 "걷는 모션이 자연스럽지 않다"를 그림 문제가 아니라 **소스 문제**로 다시 정의한다.
 
-## 결론 먼저
+## 당시 결론 (현재 폐기)
 
 우리 런타임은 이미 정답 구조다. 바꿀 것은 **베이커에 무엇을 먹이는가**뿐이다.
 
@@ -151,15 +156,15 @@ CC0라 출처 표기조차 필요 없다. 휴머노이드 리그이므로 리타
 
 | 항목 | KShopGo | 우리 (`OfficeNavigationMotionRules.cs`) |
 | --- | --- | --- |
-| 회전 | `m_AngularSpeed = 1200` (사실상 즉시) | `PivotSeconds = 0.06f` 정지 피벗 |
-| 방향 확정 지연 | 없음 | `DefaultFacingStabilizationSeconds = 0.075f` |
-| 허용 방향 오차 | 없음 | `MaximumHeldFacingErrorDegrees = 30.5f` |
+| 회전 | `m_AngularSpeed = 1200` (사실상 즉시) | 이동 중 정지 gate 없음, 실제 변위 행 즉시 적용 |
+| 이동 | speed 1.5 / acceleration 8.0 | speed `1.0` / acceleration `8.0` |
+| Walk cadence | 0.8s / 1.2 unit cycle | stride `0.99380799`, 약 `0.9938s/cycle` (`2.0125 steps/s`) |
+| 방향 확정 지연 | 없음 | 이동 frame은 stabilization/hysteresis 0 |
 | 회피 | `m_ObstacleAvoidanceType = 0` (끔) | 반경·예약 |
 | 도착 실패 | `WaitArriveWithTimeout` | **대응물 없음** |
 
-`StartStep` / `ShortShuffle` 구간(`ShortShuffleStrideFraction = 0.30f`)은 `ShuffleFrame`이
-프레임 0과 3만 내보낸다. 짧은 이동은 6프레임 사이클이 아니라 **2프레임 스터터**로 재생된다.
-타일 단위로 짧게 움직이는 사무실에서는 이것이 기본 재생이 된다.
+2026-08-20에 `ShortShuffleStrideFraction=0`으로 바꿔 짧은 이동도 전체 gait를 진행하게 했다.
+자유 보행 코너·반전의 planted pivot도 제거했고, 제자리 pivot은 상호작용 정렬에만 남겼다.
+KShopGo의 world unit은 우리 타일 크기와 다르므로 1.5/1.2를 직접 복사하지 않는다.
 
-이 다섯 줄은 그림이 오기 전에 **오늘 고칠 수 있고**, 지금 도트 스프라이트에도 그대로 적용된다.
-`simulation-pure`로 검증되므로 플레이어 창을 띄우지 않는다.
+이 이동 변경은 `simulation-pure`와 Unity Bee Roslyn 세 어셈블리 컴파일을 통과했다.

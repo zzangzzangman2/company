@@ -530,7 +530,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             renderer.sortingLayerName = "Default";
             var animator = root.AddComponent<DirectionalSpriteAnimator>();
             bool familyMember = Array.IndexOf(FamilyMemberIds, memberId) >= 0;
-            Sprite[] walkFrames = ResolveWalkFrames(memberId);
+            bool controlledPlayer = playerControlled &&
+                                    string.Equals(memberId, "player", StringComparison.Ordinal);
+            PlayerWalkPresentationMode walkMode = controlledPlayer
+                ? PlayerWalkPresentationModeResolver.Resolve()
+                : PlayerWalkPresentationMode.Legacy48;
+            Sprite[] walkFrames = walkMode == PlayerWalkPresentationMode.Player2DV2
+                ? Player2DWalkCatalogV2.LoadFrames()
+                : ResolveWalkFrames(memberId);
             animator.Configure(renderer, walkFrames);
             if (familyMember)
             {
@@ -549,10 +556,30 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             var actor = root.AddComponent<OfficeRuntimeAgent>();
             PlayerNaturalWalkPresenter playerNaturalWalk = null;
-            if (playerControlled && string.Equals(memberId, "player", StringComparison.Ordinal))
+            PlayerBakedWalkPresenterV2 playerBakedWalk = null;
+            if (controlledPlayer)
             {
-                playerNaturalWalk = root.AddComponent<PlayerNaturalWalkPresenter>();
-                playerNaturalWalk.Configure(renderer);
+                switch (walkMode)
+                {
+                    case PlayerWalkPresentationMode.Legacy48:
+                    case PlayerWalkPresentationMode.Player2DV2:
+                        break;
+                    case PlayerWalkPresentationMode.NaturalV1:
+                        playerNaturalWalk = root.AddComponent<PlayerNaturalWalkPresenter>();
+                        playerNaturalWalk.Configure(renderer);
+                        break;
+                    case PlayerWalkPresentationMode.BakedV2:
+                        PlayerBakedWalkCatalogV2 catalog = PlayerBakedWalkCatalogV2.LoadDefault();
+                        if (catalog == null)
+                            throw new InvalidOperationException(
+                                "PlayerBakedWalkV2 was requested but its Resources catalog is missing.");
+                        playerBakedWalk = root.AddComponent<PlayerBakedWalkPresenterV2>();
+                        playerBakedWalk.Configure(renderer, catalog);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(walkMode), walkMode, null);
+                }
+                Debug.Log("PLAYER_WALK_PRESENTATION_MODE: " + walkMode);
             }
             actor.Configure(
                 _bootstrap,
@@ -565,6 +592,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _assetSource.CharacterSeatPoseCatalog,
                 spawn);
             actor.ConfigurePlayerNaturalWalk(playerNaturalWalk);
+            actor.ConfigurePlayerBakedWalk(playerBakedWalk);
+            actor.ConfigurePlayerWalkMode(walkMode);
             if (playerControlled)
             {
                 var controller = root.AddComponent<OfficeRuntimePlayerController>();

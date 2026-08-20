@@ -527,7 +527,8 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
 - 용도: 가족회사식 회복·주말 활동의 실제 장소·가족 행동을 보여 주는 가로형 장면 카드/풀화면 배경. 버튼 목록·아이콘 세트가 아니다.
 - 제작: OpenAI 내장 ImageGen. 사용자의 기존 GPT 생성 에셋 권리 선언이 적용된다.
 - 정본 참조: `simul_polished_soft_render_vn_style_anchor_v3.png`는 화풍만, 플레이어 최신 HighMotion A와 누나·아빠·엄마 원화는 각 인물 정체성만 참조했다.
-- 플레이어 정본: 과거 빨간 뉴스보이캡 결정보다 최신 문서와 HighMotion 완료본이 우선한다. 12종 모두 **모자 없음, 짧고 헝클어진 짙은 갈색 머리**로 최종 교정했다.
+- 이 12종 VN 동작 시트 안에서는 **모자 없음, 짧고 헝클어진 짙은 갈색 머리**로 교정했다. 월드 조작 말의
+  최신 외형 정본은 `CANON.md`의 빨간 뉴스보이 캡이며, VN 시트의 무모자 상태를 월드 보행에 전파하지 않는다.
 - 규격: ImageGen 회수 원본 1672×941 RGB를 중앙 16:9 크롭·Lanczos 정규화하여 1920×1080 RGBA, 알파 255로 저장했다.
 - UI 경계: PNG 안에 읽을 수 있는 한글·영문·숫자, 버튼, 아이콘, 패널, 로고, 워터마크가 없다. `simul`의 세로 모바일 UI·화면 구조·좌표·패널 비율을 이식하지 않는다.
 - 구도: 1920×1080 PC 가로 풀화면에서 안전하게 크롭 가능한 넓은 장소 묘사, 눈높이 카메라, 중앙 70% 인물·핵심 소품 안전 영역.
@@ -726,3 +727,85 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   - `office_perimeter_wall_v1.png` — SHA-256 `4A9C6440EFCFBCEE4423531EBA797CAEA868D56107E29356CD631B32EE095FF2`, GUID `95d951b2b1370524c886b2944a8828dc`
   - `office_perimeter_cutaway_wall_v1.png` — SHA-256 `2E5EA9E9C0B167BD8230D04987CC2D51E1025FD8E0852373DF2451824A5E6214`, GUID `01b50657111c72a46a58758231288e8f`
   - `office_entrance_door_v1.png` — SHA-256 `869DB3D9DA8F98B50939D1F7EC917CF9C898B612CE9A95AE2A8A40540892B0F3`, GUID `bdb0baaefb381c84abbbb6802479ee22`
+
+## 2026-08-20 2D player walk source revision v3 / alternating assembly v4 / east footwear v10
+
+- 생성 도구: OpenAI ImageGen. 기존 정본 주인공의 빨간 뉴스보이 캡, 흰 후드 윈드브레이커, 줄무늬 셔츠,
+  남색 바지와 운동화를 유지하면서 8방향×6포즈, 고정 머리/골반 높이, 차분한 보폭, 반대 팔·다리 교차,
+  녹색 크로마 배경을 요청했다.
+- `ArtSources/PlayerWalk2DGenerated/player_walk8dir6_a_chroma_v3.png`
+  - south, southwest, west, northwest × 6포즈; 1,718,329 bytes
+  - SHA-256: `DCEAFD6F431070CA7961C25130998C0294309D6965EBDDD28F3A1452BE2E6490`
+- `ArtSources/PlayerWalk2DGenerated/player_walk8dir6_b_chroma_v3.png`
+  - north, northeast, east, southeast × 6포즈; 1,642,880 bytes
+  - SHA-256: `F0DD325FA70DF27E2A8173A70684D3184D189ED52ADB4ED38735B12270C6B476`
+- 변환: `Tools/Build-Player2DWalkV2Candidate.ps1`이 녹색을 제거하고 256×256 hard-alpha 48장으로 분리,
+  머리 꼭대기와 bottom-center를 정규화한다. `Tools/Build-Player2DWalkAlternatingV4.ps1`은 사용자가
+  승인한 P0~P2와 P3~P5의 팔·상체를 유지하고 P3~P5 하체만 P0~P2의 골반축 반사로 교체한다.
+  seam fraction은 0.70이며 런타임 root는 `Assets/Resources/FamilyCompany/Player2DWalkV2/`다.
+- east footwear v10: v9도 swing 최하단이 support와 0~2px 차이인 포즈가 남아 동시 접지로 거부됐다.
+  v10은 support bottom을 233으로 고정하고 swing bottom을 227/223/227로 강제한다. 양 반주기의
+  접지 간격은 정확히 6/10/6px이며 운동화는 강체 평행 이동만 한다. 다른 7방향 42 PNG와 east
+  상체·팔·교차 보폭은 v4와 동일하다.
+- QA: Unity 6000.3.21f1 actual Windows Player D3D11, 8방향 loop/48 closeup/8 overview,
+  한 타일 stride 0.99380799에서 cadence 1.9819~1.9979 steps/s. v4의 lower-body mirror mismatch 0은
+  east 신발 방향 교정으로 더 이상 최종 48장의 불변식이 아니다. 기존 bottom-12px lead-shoe 검출은 원근 방향의 두 신발을
+  분리하지 못해 3/8행만 판정 가능하므로 상태는 `PASS_NON_SHIPPING`; support-foot/contact-step은 미측정이다.
+- 사람 승인: 2026-08-20 사용자가 기존 두 GIF의 다리 교차와 팔 자세를 승인하고, 오른 반주기 뒤 왼
+  반주기가 오도록 순서만 교정하라고 확정했다. v4는 이 범위 밖의 상체 그림을 바꾸지 않는다.
+- 권리/배포: 프로젝트용 생성 파생물. 추적 크로마 원본은 ArtSources에 보존하고 게임에는 처리된 PNG만 포함한다.
+
+## 2026-08-20 2D player walk half-cycle source revision v5 (rejected research)
+
+- 생성 도구: OpenAI ImageGen built-in. v3를 정체성/스타일 참고로 사용하고, 한 번에 6포즈 대신
+  오른발 접지→오른발 지지→왼발 낮은 통과의 첫 반주기 3포즈만 4방향씩 생성했다.
+- `ArtSources/PlayerWalk2DGenerated/player_walk8dir3half_a_chroma_v5.png`
+  - south, southwest, west, northwest × 첫 반주기 3포즈; 1,478,559 bytes
+  - SHA-256: `49E5C964751834B584636195CD27B536B74570CAF19FFEF6563460E650AB1EDE`
+- `ArtSources/PlayerWalk2DGenerated/player_walk8dir3half_b_chroma_v5.png`
+  - north, northeast, east, southeast × 첫 반주기 3포즈; 1,446,468 bytes
+  - SHA-256: `7595FE81919AADC88978D3A4B8739A09B14BA94D60387F1F6AB9D0DB5F5A3A3E`
+- 조립 연구: `Build-Player2DWalkHalfCycleV5Candidate.ps1`과
+  `Build-Player2DWalkAlternatingV4.ps1`이 두 번째 반주기 하체를 골반축 반사한다.
+- 상태: REJECTED RESEARCH. lower-body mirror는 만들었지만 two-step gate가 northeast/east 2/8행만 통과했다.
+  Unity 후보/production 리소스에 복사하지 않는다.
+
+## 2026-08-20 Mixamo humanoid walk authoring inputs (rejected visual research)
+
+- 권리: Adobe Mixamo 캐릭터와 애니메이션은 게임을 포함한 개인·상업 프로젝트에서 royalty-free로 사용할
+  수 있다. 원본 재판매/재배포가 아니라 게임 내부의 baked derivative PNG만 런타임에 포함한다.
+  근거: <https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html>.
+- `Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidBase.fbx`
+  - 출처/이름: Mixamo `X Bot`, T-Pose, FBX for Unity
+  - 크기: 1,750,032 bytes
+  - SHA-256: `BA1FBC01DF013A102363E88E698719176A4366CE6B3C01AB500319DF55C37BA1`
+  - 상태: EDITOR-ONLY AVATAR/RETARGETING PROBE. X Bot 표면은 final art가 아니다.
+- `Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx`
+  - 출처/이름: Mixamo `Unarmed Walk Forward`, FBX for Unity, root motion 포함
+  - 크기: 417,392 bytes
+  - SHA-256: `1E8A4F23148893DA5E63CF4C508C180464AB834BEB8A12A570CF1A044C2168ED`
+  - 상태: EDITOR-ONLY CANONICAL WALK MOTION SOURCE.
+- 외형 파생 규칙: `PlayerWalkCanonicalVisualBuilder.cs`의 `canonical-protagonist-v1`. 외부 3D character
+  표면을 추가 반입하지 않고 Mixamo 뼈에 프로젝트 CANON 복장을 닫힌 primitive volume으로 결합했다.
+  실제 화면에서 주인공 정체성·2D 합성·바운스 기준을 통과하지 못해 2026-08-20 거부했다.
+- 출력 상태: `PlayerBakedWalkHumanoidV2Candidate`/`PlayerBakedWalkV2`는 연구 기록이며 production으로
+  승격하지 않는다. `PlayerWalkHumanoidPromotion.json`도 출하 승인 근거로 사용하지 않는다.
+- 당시 Humanoid 연구 결합 규격: speed `1.5`, acceleration `8.0`, cycle `0.8s`, stride `1.2`, 8 poses/cycle.
+  Mixamo 원본 root travel은 포즈 위상과 support foot 검출에만 사용하고 최종 사람 크기나 logical root
+  이동량으로 사용하지 않는다. 이 수치는 폐기된 Humanoid 연구 기록이며 현행 runtime에 적용하지 않는다.
+
+## 2026-08-20 Player East Mixamo Trace V2 (motion PASS / art incomplete)
+
+- 추적 패키지: `ArtSources/PlayerEastMixamoTraceV2/`.
+- raw motion: `PlayerWalkMotionReferenceExporter`가 Mixamo `PlayerHumanoidWalk.fbx`를 east `+90°`로
+  평가해 ignored `Artifacts/PlayerEastMixamoTraceCandidate/mixamo-east-6pose-joints.json`에 만든다. 원시
+  export는 공개 Git에 넣지 않고 파생된 2D 계약만 추적한다.
+- 2D contract: `target-joints.json`, `phase-contract.md`, `player-east-locked-skeleton-guide.png`.
+  stride `0.99380799`, PPU 180, scale 1.55에서 root advance `19.234993px/pose`; 계산된 heel/toe target
+  최대 contact drift `0.765007px` (`<=1px`). 이 수치는 raster art 승인값이 아니다.
+- source/style: `SourceV3Frames/` 6장은 phase별 상체·외형 참고다. lower pose donor로 사용하지 않는다.
+- rejected evidence: `RejectedImageGenInputs/` 3장과 `RejectedResearch/`의 LockedArtV2 sheet/GIF/receipt.
+  모두 shipping 사용 false이며 `Assets`로 승격하지 않는다.
+- final lower art: 미완료. 각 P0~P5를 완전한 physical-owner pelvis→toe chain으로 새로 저작하고 사용자 east
+  GIF 승인을 받은 뒤에만 candidate를 만든다. production은 계속 `Legacy48`이다.
+- 재현/해시/편집 prompt: `ArtSources/PlayerEastMixamoTraceV2/README.md`와 `SHA256SUMS.txt`.

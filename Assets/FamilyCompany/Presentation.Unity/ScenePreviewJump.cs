@@ -739,7 +739,7 @@ namespace FamilyCompany.Presentation.Unity
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
             yield return RunEightDirectionMovementQa();
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
-            yield return RunReversalPivotQa();
+            yield return RunContinuousReversalQa();
             if (QuitIfPlayerQaFailed(previousTimeScale)) yield break;
 
             _starterRuntime.ApplyLayoutForQa(OfficeGridLayouts.CreateStarterOfficeV1());
@@ -1380,23 +1380,20 @@ namespace FamilyCompany.Presentation.Unity
                 float observedGaitDistance = player.GaitDistance;
                 float observedGaitPhase = player.GaitPhase01;
                 OfficeLocomotionPhase observedLocomotionPhase = player.LocomotionPhase;
-                bool observedPivot = false;
                 bool movedDuringPivot = false;
                 bool observedProjection = false;
                 string observedSprite = string.Empty;
                 float started = Time.unscaledTime;
                 var observationFrames = 0;
                 // A cold Windows player can spend more than two scaled seconds in its first
-                // rendered frame. The intentional planted pivot needs up to four presentation
-                // frames, so retain a small real-time window and always sample at least eight
-                // rendered frames before deciding that held input produced no movement.
+                // rendered frame, so retain a small real-time window and always sample at least
+                // eight rendered frames before deciding that held input produced no movement.
                 while (observationFrames < 8 || Time.unscaledTime - started < 0.5f)
                 {
                     yield return null;
                     observationFrames++;
                     if (player.LocomotionPhase == OfficeLocomotionPhase.Pivot)
                     {
-                        observedPivot = true;
                         movedDuringPivot |= player.LastActualDisplacement.sqrMagnitude > 0.0000000001f;
                     }
                     if (player.LastActualDisplacement.sqrMagnitude > observedDisplacement.sqrMagnitude)
@@ -1451,8 +1448,7 @@ namespace FamilyCompany.Presentation.Unity
                     observedSpeed < OfficeRuntimeAgent.DefaultMoveSpeed * 0.75f ||
                     observedWalkFrame != expectedWalkFrame ||
                     Mathf.Abs(Mathf.DeltaAngle(observedGaitPhase * 360f, expectedGaitPhase * 360f)) > 0.05f ||
-                    (observedLocomotionPhase != OfficeLocomotionPhase.StartStep &&
-                     observedLocomotionPhase != OfficeLocomotionPhase.Walk))
+                    observedLocomotionPhase != OfficeLocomotionPhase.Walk)
                 {
                     FailPlayerQa(
                         52,
@@ -1476,7 +1472,7 @@ namespace FamilyCompany.Presentation.Unity
                     $"semanticDisplacement={observedSemanticDisplacement} actualSpeed={observedSpeed:F3} " +
                     $"semanticDir={observedSemanticDirection} motionDir={observedMotionDirection} " +
                      $"visualDir={observedVisualDirection} projected={observedProjection} " +
-                     $"pivotObserved={observedPivot} observationFrames={observationFrames} " +
+                     $"insertedMovePivot=false observationFrames={observationFrames} " +
                      $"locomotion={observedLocomotionPhase} gaitDistance={observedGaitDistance:F3} " +
                     $"gaitPhase={observedGaitPhase:F4} walkFrame={observedWalkFrame} " +
                     $"spriteAssetPath=Assets/Art/Characters/Player/Pixel/HighMotion/Frames/{observedSprite}.png");
@@ -1594,7 +1590,7 @@ namespace FamilyCompany.Presentation.Unity
             return DirectionalSpriteAnimator.ResolveDirectionFromAxes(facingAxes.x, facingAxes.y);
         }
 
-        private IEnumerator RunReversalPivotQa()
+        private IEnumerator RunContinuousReversalQa()
         {
             Dictionary<string, OfficeRuntimeAgent> actors = RequiredQaActors();
             if (actors == null) yield break;
@@ -1631,9 +1627,9 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             player.QaSetPlayerInput(Vector2.up);
-            bool plantedNorthFacingObserved = false;
             bool resumedNorth = false;
             int movingFrames = 0;
+            int stationaryFrames = 0;
             started = Time.time;
             while (Time.time - started < 3f)
             {
@@ -1641,7 +1637,7 @@ namespace FamilyCompany.Presentation.Unity
                 Vector2 displacement = player.AccumulatedFrameDisplacement;
                 if (displacement.sqrMagnitude <= 0.0000001f)
                 {
-                    if (player.CurrentDirection == upFacing) plantedNorthFacingObserved = true;
+                    stationaryFrames++;
                     continue;
                 }
 
@@ -1658,29 +1654,23 @@ namespace FamilyCompany.Presentation.Unity
                     yield break;
                 }
                 if (actualDirection != upFacing) continue;
-                if (!plantedNorthFacingObserved)
-                {
-                    player.QaSetPlayerInput(Vector2.zero);
-                    FailPlayerQa(54, "reverse acceleration started before a planted north-facing pivot");
-                    yield break;
-                }
                 resumedNorth = true;
                 break;
             }
             player.QaSetPlayerInput(Vector2.zero);
             yield return null;
-            if (!plantedNorthFacingObserved || !resumedNorth)
+            if (!resumedNorth || stationaryFrames > 1)
             {
                 FailPlayerQa(
                     54,
-                    $"reversal did not complete stop-pivot-resume: planted={plantedNorthFacingObserved} " +
+                    $"reversal did not remain continuous: stationaryFrames={stationaryFrames} " +
                     $"resumed={resumedNorth} movingFrames={movingFrames} direction={player.CurrentDirection} " +
                     $"locomotion={player.LocomotionPhase}");
                 yield break;
             }
             Debug.Log(
-                "STARTER_OFFICE_REVERSAL_PIVOT_QA_PASS | southWalk=true plantedNorthPivot=true " +
-                $"northResume=true movingFrames={movingFrames}");
+                "STARTER_OFFICE_CONTINUOUS_REVERSAL_QA_PASS | southWalk=true insertedPivot=false " +
+                $"northResume=true stationaryFrames={stationaryFrames} movingFrames={movingFrames}");
         }
 
         private IEnumerator RunMicroActionDestinationQa()

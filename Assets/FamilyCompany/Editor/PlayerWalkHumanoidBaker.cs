@@ -41,10 +41,23 @@ namespace FamilyCompany.Editor
         // ~1.4ms of a one-second clip is far finer than the eight poses we keep.
         private const int PhaseSampleCount = 720;
         public const float DefaultFeetViewportY = 0.14f;
+        public const float DefaultTargetVisibleHeightPx = 380f;
         // Deliberately NOT the V2 frame root. Both bakers target the same eight direction
         // names, so sharing a folder means whichever ran last silently wins.
         public const string DefaultOutputRoot =
             "Assets/Resources/FamilyCompany/PlayerBakedWalkHumanoidV1/";
+
+        private static readonly Vector2[] DirectionVectors =
+        {
+            Vector2.down,
+            new Vector2(-1f, -1f).normalized,
+            Vector2.left,
+            new Vector2(-1f, 1f).normalized,
+            Vector2.up,
+            new Vector2(1f, 1f).normalized,
+            Vector2.right,
+            new Vector2(1f, -1f).normalized
+        };
 
         [MenuItem("Family Company/Art/Bake Player Walk From Humanoid Rig")]
         public static void Run()
@@ -104,6 +117,7 @@ namespace FamilyCompany.Editor
             GameObject cameraHost = null;
             RenderTexture target = null;
             Texture2D pixels = null;
+            PlayerWalkCanonicalVisualBuilder.Handle canonicalVisual = null;
             try
             {
                 instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, previewScene);
@@ -116,21 +130,36 @@ namespace FamilyCompany.Editor
                 Transform rightFoot = FindRequired(instance.transform, contract.rightFootTransform);
                 Transform head = FindRequired(instance.transform, contract.headTransform);
 
+                if (string.Equals(
+                        contract.visualPreset,
+                        PlayerWalkCanonicalVisualBuilder.PresetId,
+                        StringComparison.Ordinal))
+                    canonicalVisual = PlayerWalkCanonicalVisualBuilder.Attach(instance);
+
                 AnimationMode.StartAnimationMode();
                 try
                 {
                     WalkCyclePlan plan = PlanCycle(instance, clip, hips, leftFoot, rightFoot, contract);
+                    cameraHost = new GameObject("PlayerWalkHumanoidBakeCamera");
+                    SceneManager.MoveGameObjectToScene(cameraHost, previewScene);
+                    Camera camera = cameraHost.AddComponent<Camera>();
+                    ConfigureCamera(camera, contract);
+
+                    plan.RequiredUniformScale = ResolveUniformScale(
+                        instance,
+                        clip,
+                        plan,
+                        camera,
+                        hips,
+                        contract,
+                        ModelYawDegrees(0));
                     ApplyUniformScale(instance, plan.RequiredUniformScale);
                     Debug.Log(
                         "PLAYER_WALK_HUMANOID_BAKER: plan | " +
                         $"cycleSeconds={plan.CycleSeconds:F4} clipCycleDistance={plan.MeasuredCycleDistance:F5} " +
                         $"requiredDistance={RequiredCycleWorldDistance:F5} scale={plan.RequiredUniformScale:F5} " +
+                        $"targetHeightPx={ResolveTargetVisibleHeightPx(contract):F1} " +
                         $"leftPlantTime={plan.LeftPlantStartSeconds:F4} pitch={OfficeCameraPitchDegrees:F4}");
-
-                    cameraHost = new GameObject("PlayerWalkHumanoidBakeCamera");
-                    SceneManager.MoveGameObjectToScene(cameraHost, previewScene);
-                    Camera camera = cameraHost.AddComponent<Camera>();
-                    ConfigureCamera(camera, contract);
 
                     target = CreateTarget(contract);
                     camera.targetTexture = target;
@@ -150,6 +179,9 @@ namespace FamilyCompany.Editor
                             leftFoot,
                             rightFoot,
                             head);
+
+                    string outputRoot = ResolveOutputRoot(contract);
+                    PlayerBakedWalkV2Validation.ValidateHumanoidDirectionSet(outputRoot);
                 }
                 finally
                 {
@@ -170,6 +202,7 @@ namespace FamilyCompany.Editor
                 if (pixels != null) Object.DestroyImmediate(pixels);
                 if (cameraHost != null) Object.DestroyImmediate(cameraHost);
                 if (instance != null) Object.DestroyImmediate(instance);
+                canonicalVisual?.Dispose();
             }
         }
 
@@ -188,9 +221,7 @@ namespace FamilyCompany.Editor
             Transform head)
         {
             string directionName = PlayerBakedWalkCatalogV2.DirectionNames[direction];
-            string outputRoot = string.IsNullOrWhiteSpace(contract.outputRoot)
-                ? DefaultOutputRoot
-                : NormalizeAssetPath(contract.outputRoot.TrimEnd('/')) + "/";
+            string outputRoot = ResolveOutputRoot(contract);
             string outputDirectory = NormalizeAssetPath(Path.Combine(
                 outputRoot + "Frames/",
                 directionName));
@@ -204,16 +235,42 @@ namespace FamilyCompany.Editor
                 pixelsPerUnit = contract.pixelsPerUnit,
                 strideWorld = OfficeLocomotionGaitRules.DefaultStrideLength,
                 visualScale = OfficeGridCharacterMover.UniformVisualScale,
+                validationProfile = PlayerBakedWalkV2Validation.HumanoidValidationProfile,
                 sourcePsbPath = contract.walkClipPath,
                 sourcePsbSha256 = Sha256(contract.rigPrefabPath),
                 poses = new PlayerBakedWalkV2BakePoseReceipt[PlayerBakedWalkCatalogV2.PoseCount]
             };
 
             float yaw = ModelYawDegrees(direction);
+            float directionUniformScale = contract.uniformScaleOverride > 0f
+                ? plan.RequiredUniformScale
+                : ResolveUniformScale(
+                    instance,
+                    clip,
+                    plan,
+                    camera,
+                    hips,
+                    contract,
+                    yaw);
+            Vector2 heading = DirectionVectors[direction];
+            float rootStepPx = receipt.strideWorld / PlayerBakedWalkCatalogV2.PoseCount *
+                               receipt.pixelsPerUnit / receipt.visualScale;
+            float feetViewportY = contract.feetViewportY > 0f
+                ? contract.feetViewportY
+                : DefaultFeetViewportY;
+            var contactCenterPx = new Vector2(
+                contract.canvasWidth * 0.5f,
+                contract.canvasHeight * feetViewportY);
             for (var pose = 0; pose < PlayerBakedWalkCatalogV2.PoseCount; pose++)
             {
-                instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0f, yaw, 0f));
+                instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
                 AnimationMode.SampleAnimationClip(instance, clip, plan.PoseSampleSeconds[pose]);
+
+                // SampleAnimationClip writes the root transform itself, so the direction yaw must be
+                // composed on top of the sampled pose. Setting it beforehand is silently discarded
+                // and renders all eight directions identically.
+                ApplyUniformScale(instance, directionUniformScale);
+                instance.transform.RotateAround(Vector3.zero, Vector3.up, yaw);
 
                 // The catalog stores in-place poses; the runtime advances the root itself. Drop the
                 // clip's own planar travel so every pose shares one origin, exactly as the V2 baker
@@ -225,18 +282,36 @@ namespace FamilyCompany.Editor
                 Vector2 leftAnchor = ToCanvasPx(camera, leftFoot.position, contract);
                 Vector2 rightAnchor = ToCanvasPx(camera, rightFoot.position, contract);
                 Vector2 pelvisAnchor = ToCanvasPx(camera, hips.position, contract);
+                Vector2 headAnchor = ToCanvasPx(camera, head.position, contract);
+
+                Render(camera, target, pixels, contract);
+                ForceHardAlpha(pixels);
+
+                // Visual size and runtime stride are independent. Align the sampled support foot
+                // to the exact in-place trajectory expected by the runtime instead of shrinking
+                // the whole character until the clip's authored root travel happens to match it.
+                Vector2 supportAnchor = pose < 4 ? leftAnchor : rightAnchor;
+                float supportPhase = pose % 4 - 1.5f;
+                Vector2 targetSupport = contactCenterPx - heading * (rootStepPx * supportPhase);
+                var pixelShift = new Vector2Int(
+                    Mathf.RoundToInt(targetSupport.x - supportAnchor.x),
+                    Mathf.RoundToInt(targetSupport.y - supportAnchor.y));
+                TranslatePixels(pixels, pixelShift);
+                Vector2 appliedShift = pixelShift;
+                leftAnchor += appliedShift;
+                rightAnchor += appliedShift;
+                pelvisAnchor += appliedShift;
+                headAnchor += appliedShift;
+
                 RequireAnchorInside(leftAnchor, contract, "leftFoot", directionName, pose);
                 RequireAnchorInside(rightAnchor, contract, "rightFoot", directionName, pose);
                 RequireAnchorInside(pelvisAnchor, contract, "pelvis", directionName, pose);
                 RequireAnchorInside(
-                    ToCanvasPx(camera, head.position, contract),
+                    headAnchor,
                     contract,
                     "head",
                     directionName,
                     pose);
-
-                Render(camera, target, pixels, contract);
-                ForceHardAlpha(pixels);
 
                 string outputPath = NormalizeAssetPath(Path.Combine(
                     outputDirectory,
@@ -250,7 +325,9 @@ namespace FamilyCompany.Editor
                     rootWorld = new Vector2(sampledRoot.x, sampledRoot.z),
                     leftFootAnchorPx = leftAnchor,
                     rightFootAnchorPx = rightAnchor,
-                    pelvisAnchorPx = pelvisAnchor
+                    pelvisAnchorPx = pelvisAnchor,
+                    leftFootHeightWorld = leftFoot.position.y,
+                    rightFootHeightWorld = rightFoot.position.y
                 };
             }
 
@@ -259,7 +336,7 @@ namespace FamilyCompany.Editor
             File.WriteAllText(receiptPath, JsonUtility.ToJson(receipt, true));
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             AssetDatabase.ImportAsset(receiptPath, ImportAssetOptions.ForceSynchronousImport);
-            PlayerBakedWalkV2Validation.ValidateReceiptAndPngs(receipt, direction);
+            PlayerBakedWalkV2Validation.ValidateHumanoidReceiptAndPngs(receipt, direction);
             Debug.Log($"PLAYER_WALK_HUMANOID_BAKER: direction={directionName} poses=8 OK");
         }
 
@@ -292,8 +369,8 @@ namespace FamilyCompany.Editor
                 ? Mathf.Min(contract.cycleSeconds, clip.length)
                 : clip.length;
             var times = new float[PhaseSampleCount];
-            var leftHeight = new float[PhaseSampleCount];
-            var rightHeight = new float[PhaseSampleCount];
+            var leftWorld = new Vector3[PhaseSampleCount];
+            var rightWorld = new Vector3[PhaseSampleCount];
             var travel = new float[PhaseSampleCount];
 
             Vector3 previousRoot = Vector3.zero;
@@ -304,8 +381,8 @@ namespace FamilyCompany.Editor
                 instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
                 AnimationMode.SampleAnimationClip(instance, clip, time);
                 Vector3 root = hips.position;
-                leftHeight[index] = leftFoot.position.y;
-                rightHeight[index] = rightFoot.position.y;
+                leftWorld[index] = leftFoot.position;
+                rightWorld[index] = rightFoot.position;
                 if (index == 0)
                 {
                     travel[index] = 0f;
@@ -325,7 +402,7 @@ namespace FamilyCompany.Editor
                     "cycleDistanceOverride in the contract so the stride can be reconstructed.");
             if (contract.cycleDistanceOverride > 0f) measured = contract.cycleDistanceOverride;
 
-            int plantIndex = FindLeftPlantStart(leftHeight, rightHeight);
+            int plantIndex = FindLeftPlantStart(leftWorld, rightWorld);
             float requiredScale = RequiredCycleWorldDistance / measured;
             if (contract.uniformScaleOverride > 0f) requiredScale = contract.uniformScaleOverride;
 
@@ -348,45 +425,60 @@ namespace FamilyCompany.Editor
         }
 
         /// <summary>
-        /// The left support phase starts where the left foot is planted and the right foot is
-        /// about to lift. Score every sample by how much lower the left foot sits than the right
-        /// and take the start of the widest such run, which is the heel strike.
+        /// The planted foot is the one standing still in the world while the other one travels.
+        /// Ankle height cannot decide this: at push-off the support ankle is raised, so a
+        /// lowest-ankle test selects the swing phase instead and puts the whole cycle half a
+        /// period out, which reads as hopping on one leg.
         /// </summary>
-        private static int FindLeftPlantStart(float[] leftHeight, float[] rightHeight)
+        private static int FindLeftPlantStart(Vector3[] leftWorld, Vector3[] rightWorld)
         {
-            int count = leftHeight.Length;
-            float leftFloor = leftHeight.Min();
-            float rightFloor = rightHeight.Min();
-            float span = Mathf.Max(leftHeight.Max() - leftFloor, rightHeight.Max() - rightFloor);
-            if (span <= 0.0001f)
-                throw new InvalidOperationException(
-                    "Walk clip never lifts either foot. This is not a walk cycle.");
-            float threshold = span * 0.15f;
+            // Index 0 and the last index are the same phase of a looping clip; scanning the
+            // duplicate would let a run wrap through itself.
+            int count = leftWorld.Length - 1;
+            if (count < 8)
+                throw new InvalidOperationException("Walk clip has too few phase samples.");
 
-            var planted = new bool[count];
+            var leftIsSlower = new bool[count];
+            var anyMotion = false;
             for (var index = 0; index < count; index++)
-                planted[index] = leftHeight[index] - leftFloor <= threshold &&
-                                 rightHeight[index] - rightFloor > threshold;
+            {
+                int next = (index + 1) % count;
+                float leftStep = HorizontalDistance(leftWorld[index], leftWorld[next]);
+                float rightStep = HorizontalDistance(rightWorld[index], rightWorld[next]);
+                leftIsSlower[index] = leftStep < rightStep;
+                if (leftStep > 0.000001f || rightStep > 0.000001f) anyMotion = true;
+            }
+            if (!anyMotion)
+                throw new InvalidOperationException(
+                    "Walk clip never moves either foot. This is not a walk cycle.");
 
             int bestStart = -1;
             int bestLength = 0;
             for (var index = 0; index < count; index++)
             {
-                if (!planted[index]) continue;
-                int length = 0;
-                while (length < count && planted[(index + length) % count]) length++;
+                // Only a run boundary can begin the support phase; otherwise every sample inside
+                // one run offers its own shorter tail as a candidate.
+                if (!leftIsSlower[index] || leftIsSlower[(index - 1 + count) % count]) continue;
+                var length = 0;
+                while (length < count && leftIsSlower[(index + length) % count]) length++;
                 if (length > bestLength)
                 {
                     bestLength = length;
                     bestStart = index;
                 }
-                index += Math.Max(0, length - 1);
             }
             if (bestStart < 0)
                 throw new InvalidOperationException(
                     "Could not find a left-foot support phase in the walk clip. The catalog " +
                     "requires poses 0-3 to stand on the left foot.");
             return bestStart;
+        }
+
+        private static float HorizontalDistance(Vector3 from, Vector3 to)
+        {
+            float dx = to.x - from.x;
+            float dz = to.z - from.z;
+            return Mathf.Sqrt(dx * dx + dz * dz);
         }
 
         private static float ResolveTimeAtTravel(
@@ -497,6 +589,108 @@ namespace FamilyCompany.Editor
             }
         }
 
+        private static void TranslatePixels(Texture2D pixels, Vector2Int shift)
+        {
+            if (shift == Vector2Int.zero) return;
+            int width = pixels.width;
+            int height = pixels.height;
+            Color32[] source = pixels.GetPixels32();
+            var destination = new Color32[source.Length];
+            for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            {
+                int targetX = x + shift.x;
+                int targetY = y + shift.y;
+                if (targetX < 0 || targetX >= width || targetY < 0 || targetY >= height) continue;
+                destination[targetY * width + targetX] = source[y * width + x];
+            }
+            pixels.SetPixels32(destination);
+            pixels.Apply(false, false);
+        }
+
+        private static float ResolveUniformScale(
+            GameObject instance,
+            AnimationClip clip,
+            WalkCyclePlan plan,
+            Camera camera,
+            Transform hips,
+            PlayerWalkHumanoidBakeContract contract,
+            float yawDegrees)
+        {
+            if (contract.uniformScaleOverride > 0f) return contract.uniformScaleOverride;
+
+            float targetHeightPx = ResolveTargetVisibleHeightPx(contract);
+            float measuredAtUnitScale = MeasureMedianVisibleHeightPxAtUnitScale(
+                instance,
+                clip,
+                plan,
+                camera,
+                hips,
+                contract,
+                yawDegrees);
+            if (measuredAtUnitScale <= 0.001f)
+                throw new InvalidOperationException(
+                    "Humanoid rig has no measurable rendered height at unit scale.");
+            return targetHeightPx / measuredAtUnitScale;
+        }
+
+        private static float MeasureMedianVisibleHeightPxAtUnitScale(
+            GameObject instance,
+            AnimationClip clip,
+            WalkCyclePlan plan,
+            Camera camera,
+            Transform hips,
+            PlayerWalkHumanoidBakeContract contract,
+            float yaw)
+        {
+            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true)
+                .Where(renderer => renderer.enabled && renderer.gameObject.activeInHierarchy)
+                .ToArray();
+            if (renderers.Length == 0)
+                throw new InvalidOperationException("Humanoid rig has no enabled renderer to measure.");
+
+            var heights = new List<float>(PlayerBakedWalkCatalogV2.PoseCount);
+            for (var pose = 0; pose < PlayerBakedWalkCatalogV2.PoseCount; pose++)
+            {
+                instance.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                AnimationMode.SampleAnimationClip(instance, clip, plan.PoseSampleSeconds[pose]);
+                ApplyUniformScale(instance, 1f);
+                instance.transform.RotateAround(Vector3.zero, Vector3.up, yaw);
+                Vector3 sampledRoot = hips.position;
+                instance.transform.position -= new Vector3(sampledRoot.x, 0f, sampledRoot.z);
+
+                float minimumY = float.PositiveInfinity;
+                float maximumY = float.NegativeInfinity;
+                foreach (Renderer renderer in renderers)
+                {
+                    Bounds bounds = renderer.bounds;
+                    Vector3 center = bounds.center;
+                    Vector3 extents = bounds.extents;
+                    for (var corner = 0; corner < 8; corner++)
+                    {
+                        var world = new Vector3(
+                            center.x + ((corner & 1) == 0 ? -extents.x : extents.x),
+                            center.y + ((corner & 2) == 0 ? -extents.y : extents.y),
+                            center.z + ((corner & 4) == 0 ? -extents.z : extents.z));
+                        float y = camera.WorldToViewportPoint(world).y * contract.canvasHeight;
+                        minimumY = Mathf.Min(minimumY, y);
+                        maximumY = Mathf.Max(maximumY, y);
+                    }
+                }
+                heights.Add(maximumY - minimumY);
+            }
+            heights.Sort();
+            int middle = heights.Count / 2;
+            return heights.Count % 2 == 0
+                ? (heights[middle - 1] + heights[middle]) * 0.5f
+                : heights[middle];
+        }
+
+        private static float ResolveTargetVisibleHeightPx(PlayerWalkHumanoidBakeContract contract) =>
+            contract.targetVisibleHeightPx > 0f
+                ? contract.targetVisibleHeightPx
+                : DefaultTargetVisibleHeightPx;
+
         private static Vector2 ToCanvasPx(
             Camera camera,
             Vector3 world,
@@ -541,6 +735,17 @@ namespace FamilyCompany.Editor
                 throw new InvalidOperationException("Humanoid walk contract has no rig prefab path.");
             if (string.IsNullOrWhiteSpace(contract.walkClipPath))
                 throw new InvalidOperationException("Humanoid walk contract has no walk clip path.");
+            if (!string.IsNullOrWhiteSpace(contract.visualPreset) &&
+                !string.Equals(
+                    contract.visualPreset,
+                    PlayerWalkCanonicalVisualBuilder.PresetId,
+                    StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "Unknown humanoid walk visual preset: " + contract.visualPreset);
+            float targetHeight = ResolveTargetVisibleHeightPx(contract);
+            if (targetHeight < 64f || targetHeight > contract.canvasHeight - 16f)
+                throw new InvalidOperationException(
+                    $"Humanoid target visible height {targetHeight:F1}px is outside the safe canvas range.");
         }
 
         private static void RequireHumanoidRig(GameObject instance)
@@ -618,6 +823,11 @@ namespace FamilyCompany.Editor
 
         private static string NormalizeAssetPath(string path) => path.Replace('\\', '/');
 
+        private static string ResolveOutputRoot(PlayerWalkHumanoidBakeContract contract) =>
+            string.IsNullOrWhiteSpace(contract.outputRoot)
+                ? DefaultOutputRoot
+                : NormalizeAssetPath(contract.outputRoot.TrimEnd('/')) + "/";
+
         private static string Sha256(string path)
         {
             using var algorithm = System.Security.Cryptography.SHA256.Create();
@@ -636,7 +846,7 @@ namespace FamilyCompany.Editor
         public string leftFootTransform = "mixamorig:LeftFoot";
         public string rightFootTransform = "mixamorig:RightFoot";
         public string headTransform = "mixamorig:Head";
-        public int canvasWidth = 384;
+        public int canvasWidth = 512;
         public int canvasHeight = 512;
         public float pixelsPerUnit = 324f;
 
@@ -648,6 +858,15 @@ namespace FamilyCompany.Editor
 
         /// <summary>Bypasses the measured stride-derived scale when a rig needs hand tuning.</summary>
         public float uniformScaleOverride;
+
+        /// <summary>
+        /// Median rendered silhouette height in pixels. This is deliberately independent from the
+        /// animation clip's root travel; runtime stride is enforced by support-foot alignment.
+        /// </summary>
+        public float targetVisibleHeightPx;
+
+        /// <summary>Optional closed-volume costume attached to the downloaded Mixamo skeleton.</summary>
+        public string visualPreset = string.Empty;
 
         /// <summary>
         /// Where the rig's ground plane sits in the canvas, 0..1 from the bottom. A pitched
@@ -662,5 +881,6 @@ namespace FamilyCompany.Editor
         /// separate from the V2 paper-doll root.
         /// </summary>
         public string outputRoot = string.Empty;
+
     }
 }

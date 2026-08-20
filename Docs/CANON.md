@@ -22,9 +22,15 @@
 - 런타임 의상 정본: 흰색 후드 윈드브레이커와 남색 트리밍, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화
 - 정본 범위: 플레이어를 월드에서 식별하는 조작 말의 외형이다. 별도 VN 초상화나 실존 사용자 얼굴을 의미하지 않는다.
 - 기반 디자인: 기존 `simul` 타이틀의 14살 플레이어 디자인
-- 런타임 이동 후보: 실제 moving은 `Player{East,South,North,West}ContactV1`의 source-exact 2포즈를 쓰고,
-  대각선은 west/east를 재사용한다. `HighMotion`은 idle/turn/착석/작업 fallback을 소유한다.
-- 런타임 방향: 남·남서·서·북서·북·북동·동·남동. 실제 게임 정규화 결과는 사용자 최종 승인 대기다.
+- 게임에 표시하는 주인공은 **2D 스프라이트**다. 실시간 3D 모델, SkinnedMeshRenderer, Animator,
+  Mixamo FBX를 런타임 주인공으로 사용하지 않는다.
+- 현재 출하 기본 이동은 `Legacy48`이다. `Player2DV2` east v10과 이후 v11~v13 연구 후보는 발목/신발 겹침,
+  하체 역방향, 상체와 골반 방향 불일치 또는 KShopGo 타이밍 미추적으로 사용자가 거부했다. 승인된 새 보행은 없다.
+- 다음 후보는 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의 `FC-WALK-GUARDRAIL-V2`를 따라 주인공 east
+  6프레임만 먼저 만든다. 사용자 GIF 승인과 actual player 검증 전에는 다른 방향·가족이나 기본 런타임으로 확대하지 않는다.
+- Unity가 ignored `Artifacts`에 만든 Mixamo raw trace와, `ArtSources/PlayerEastMixamoTraceV2/`에 추적한
+  파생 2D target-joint foot-lock은 PASS했다. root advance는 `19.234993px/pose`, target 최대 contact drift는
+  `0.765007px`다. 완성 하체 아트는 아직 없으며 이 수치를 raster/GIF 승인으로 오해하지 않는다.
 
 ### 누나
 
@@ -64,39 +70,45 @@
 - 런타임 이동 정본: `Assets/Art/Characters/Mother/Pixel/HighMotion/mother_pixel_walk8dir6_{a,b}_v1.png`
 - 런타임 방향: 남·남서·서·북서·북·북동·동·남동, 방향별 걷기 6프레임
 
-## 주인공 원본 접촉 보행 제작 정본
+## 주인공 2D 보행 제작 정본
 
-- 현재 실제 게임 후보는 `FC-PLAYER-NATURAL-WALK-V1`의 eight-pose V4다. source-exact contact 두 장
-  사이를 각 반주기 `toe→pass→land`로 나눠 한 타일당 8단계를 사용한다. 각 자세는 실제 이동거리 12.5%만
-  소유하고 왼발/오른발을 교대로 들어 접지발과 이동발을 구분한다. 상체와 정체성 픽셀, 원래 다리 굵기는
-  contact가 계속 소유하며 ImageGen이나 legacy HighMotion 픽셀은 사용하지 않는다.
-- 주인공 코너 회전은 0.18초 planted hold 동안 이전/중간 cardinal/목표 contact를 거친다. 이 시간에 logical
-  root는 타일 중심에 고정되고 그 뒤에만 다음 center-to-center translation이 시작된다.
-- `FC-PLAYER-EAST-CONTACT-V1`과 `FC-PLAYER-SOUTH-CONTACT-V1`은 단독 화면 승인을 받았고 north/west 및
-  diagonal mapping도 Editor/Windows Player 실행 게이트를 통과했다. 다만 최초 실제 게임 PPU 180 통합은
-  과대·부유·코너 scale pop으로 시각 실패했으므로, PPU 314/324 정규화 실제 게임 결과 전체가 사용자
-  최종 화면 승인 대기다.
-- source authority는 `Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png`이다.
-  `Tools/extract_player_east_contacts_v1.py`가 east 열 두 접촉 포즈를 픽셀 생성/보간 없이 게시한다.
-- 런타임 `PlayerEastContactPresenter`는 기존 이동의 `GaitPhase01`만 읽고 0.0/0.5 반주기에 두 포즈를
-  선택한다. logical root, stride, collision, arrival, depth 식은 바꾸지 않는다.
-- idle, 착석, 작업, 퇴장은 기존 `DirectionalSpriteAnimator`와 checked-in fallback이 소유한다.
-- south 정본은 같은 source authority의 south 열 두 접촉 포즈만 픽셀 생성/보간 없이 게시한다. 런타임
-  `PlayerSouthContactPresenter`는 south+moving에만 활성화되고 east presenter와 서로의 파일을 읽거나
-  덮어쓰지 않는다. 통합 Player의 east 6장도 기존 승인 캡처와 바이트 단위로 같음을 확인했다.
-- north/west 후보도 정본 시트의 해당 열 두 장씩만 독립 게시한다. source에 대각선이 없으므로 대각선
-  moving은 west/east exact contact를 수평 우선으로 재사용한다. 신규 대각선 픽셀이나 legacy generated
-  diagonal art를 주인공 production walk에 섞지 않는다. 이 6방향 후보는 사용자 최종 화면 승인 전이며
-  다른 가족으로 확대하지 않는다.
-- 이 presenter들은 시각 sprite만 교체한다. 실제 새 게임의 pathfinding, logical root, tile-center waypoint,
-  collision, arrival은 기존 `OfficeRuntimeAgent`가 계속 소유한다. D3D11 실제 사무실 8개 인접 타일 loop에서
-  center segment 최대 이탈 `0.00000053 world`, endpoint/visual-root/final-center 오차 0을 확인했다. contact는
-  동/서 PPU 314, 남/북 PPU 324, bottom padding 0이며 수치 PASS는 사람 화면 승인을 대신하지 않는다.
-- 과거 `FamilyWalkHalfCyclesV2`, `FamilyLocomotionRigV1`, `MotherSideWalkV3`, `MotherNorthWalkV2`,
-  `CharacterLocomotionIdentityV1` source/writer/gate는 2026-08-19에 삭제했다. 현재 재현 경로가 아니다.
-- 승인 layered PSB가 없으면 자동 분리 rigid cutout을 production에 게시하지 않는다. 사람이 원본을
-  12~18개 rigid layer로 나눈 경우에만 Unity 2D Animation east-only 후보를 다시 열고, D3D11 Player
-  사람 승인 전에는 범위를 넓히지 않는다.
+- **동작 정본은 KShopGo Walk와 Mixamo `Unarmed Walk Forward`다.** KShopGo의 0.8초·30fps·24샘플을
+  정규화한 0/4/8/12/16/20 샘플을 2D 여섯 포즈의 관절 기준으로 사용한다. 2D라는 이유로 보행을 새로
+  발명하거나 기존 PNG 하체를 좌우반전해서 채우지 않는다.
+- 다운로드/프로젝트 입력은 `C:/Users/godho/Downloads/X Bot.fbx`,
+  `C:/Users/godho/Downloads/X Bot@Unarmed Walk Forward.fbx`,
+  `Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidBase.fbx`,
+  `Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx`다.
+- Mixamo/3D는 관절·위상 참고이고 런타임 외형은 2D다. ImageGen은 잠근 골반·무릎·발목·앞코 가이드의
+  외형 정리에만 사용할 수 있으며 포즈와 접지 타이밍을 결정하지 않는다.
+- 하체 반전, 신발/종아리 조각 이동, 동일 contact 중복, 상체와 하체 방향 불일치는 모두 fail-closed다.
+  대응 오버레이와 east GIF를 사용자가 승인하기 전에는 `Assets`로 승격하지 않는다.
+
+- 최종 게임 출력은 256×256, bottom-center pivot, 180 PPU, Point, mipmap 없음, 무압축인 단일 2D Sprite
+  48장이다. 방향 순서는 남·남서·서·북서·북·북동·동·남동이고 방향마다 6포즈다.
+- Mixamo `Unarmed Walk Forward`와 KShopGo 분석값은 동작 참고다. 좌우 팔다리 교차,
+  낮은 passing foot, 연속 방향 전환을 관찰하되 Mixamo 캐릭터 표면이나 3D primitive 외형을 게임에 넣지 않는다.
+- 외형은 빨간 뉴스보이 캡, 짙은 갈색 머리와 눈, 흰 후드 윈드브레이커, 줄무늬 셔츠, 남색 바지와 운동화가
+  전 방향에서 읽혀야 한다. 머리 꼭대기와 bottom-center 바닥선을 정규화하고 상하 널뛰기는 허용하지 않는다.
+- 현행 motion/owner 정본은 `ArtSources/PlayerEastMixamoTraceV2/target-joints.json`과
+  `phase-contract.md`다. `SourceV3Frames/`는 phase별 상체·외형 참고이며 lower pose donor가 아니다.
+  `Tools/Build-Player2DWalkV2Candidate.ps1`와 기존 `Assets/Resources/FamilyCompany/Player2DWalkV2/Frames/`는
+  거부 후보 재현/회귀 기록으로만 남는다.
+- `PlayerBakedWalkHumanoidV2Candidate`와 `PlayerBakedWalkV2`의 primitive 휴머노이드 결과는 2026-08-20
+  화면 검토에서 **외형 불일치·3D 인형 인상·과한 바운스로 거부**됐다. 연구/회귀 기록일 뿐 production 후보가 아니다.
+- logical root, pathfinding, collision, arrival, distance-based gait phase와 actual-displacement 방향은
+  기존 `OfficeRuntimeAgent`가 계속 소유한다. 후보는 Sprite 표현만 교체한다.
+- 공용 이동 정본은 `1.0 world unit/s`, 가속 `8.0`, 한 보행 주기와 stride가 실제 등각 타일 중심 간 거리인
+  `0.99380799 world unit`이다. 즉 한 타일에서 오른발·왼발 한 번씩 정확히 두 걸음을 끝내며 cadence는
+  약 `2.0125 steps/s`다. KShopGo의 speed `1.5`/stride `1.2`는 다른 월드 스케일이라 직접 대입하지 않는다.
+  KShopGo의 `0.8s`는 pose timing reference이며 실제 project 정속 cycle은 `0.99380799s`다.
+  180 PPU와 visual scale 1.55에서 6포즈당 root advance는 `19.234993 source px/pose`다.
+  이동 중에는 45°/90°/180° 방향 변경을 위해 logical root를 멈추지 않으며, 매 frame 실제 변위가 가리키는
+  8방향 행으로 즉시 바꾼다. 짧은 이동도 2프레임 `ShortShuffle` 대신 전체 보행 위상을 쓴다.
+- 제자리 `PivotSeconds=0.06`은 막힌 상태나 좌석·업무 상호작용의 최종 정렬에만 남긴다. 자유 보행 경로의
+  segment 시작·급반전 앞에 강제 정지 gate로 사용하지 않는다.
+- 과거 source-exact contact, NaturalV1, HighMotion, layered PSB/2D IK와 Humanoid bake는 회귀·정체성
+  참고물이다. 새 production 입력으로 되돌리지 않는다.
 
 ## 향후 직원 후보 8인
 
