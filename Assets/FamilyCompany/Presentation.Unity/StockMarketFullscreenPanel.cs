@@ -108,6 +108,24 @@ namespace FamilyCompany.Presentation.Unity
         private long _previousClose;
         private long _lastTradePrice;
         private MarketOrderBookSide _lastTradeLevelSide = MarketOrderBookSide.Bid;
+
+        /// <summary>
+        /// Replays each minute's fills across the ladder the way SIMUL does. Without this the
+        /// outline sits on the touch, the ladder recentres on the touch every frame, and the border
+        /// never appears to move even though the price is changing.
+        /// </summary>
+        private MarketOrderBookReplayQueue _sweepQueue;
+
+        private long _sweepPreviousTradePrice;
+        private string _sweepPreviousKey = string.Empty;
+
+        /// <summary>Realtime seconds since the active step arrived, for the 420ms trade flash.</summary>
+        private float _sweepFlashSeconds;
+
+        private string _sweepFlashToken = string.Empty;
+
+        /// <summary>Depth tweens and the 520ms quantity badges the source draws inside each row.</summary>
+        private readonly OrderBookRowMotion _rowMotion = new OrderBookRowMotion();
         private string _catalogError;
 
         private GUIStyle _titleStyle;
@@ -180,6 +198,9 @@ namespace FamilyCompany.Presentation.Unity
                 return;
             }
 
+            // The sweep is presentation timing, so it runs on real seconds and keeps advancing
+            // even on the minutes where the clock produces no new canonical minute.
+            AdvanceSweepPlayback(Time.unscaledDeltaTime);
             var minutesToAdvance = ConsumeRealtimeGameMinutes(Time.unscaledDeltaTime);
             if (_realtimeQaObserving)
             {
@@ -1018,19 +1039,62 @@ namespace FamilyCompany.Presentation.Unity
             GUI.Label(new Rect(tableX + sideWidth, headerY + 7f, tableWidth - sideWidth * 2f, 20f), "가격", _centerStyle);
             GUI.Label(new Rect(tableX + tableWidth - sideWidth, headerY + 7f, sideWidth, 20f), "매수잔량", new GUIStyle(_smallStyle) { alignment = TextAnchor.MiddleLeft, normal = { textColor = UpRed } });
 
+            var cursor = _sweepQueue?.Cursor;
+            var sweepStep = cursor?.Step;
+            var sweepArrived = cursor != null && cursor.Arrived;
+            // While a sweep runs the ladder is anchored to the step being replayed instead of the
+            // live touch. Anchoring on the touch is what made the border look frozen: the ladder
+            // recentred every frame, so the outlined row was always the same screen row.
+            var anchorPrice = sweepStep.HasValue
+                ? sweepStep.Value.Price
+                : (long?)null;
+            var anchorSide = sweepStep.HasValue
+                ? sweepStep.Value.Side
+                : (MarketOrderBookSide?)null;
             var marketLevels = MarketOrderBookPresentationRules.BuildVisibleLevels(
                 _snapshot,
-                SelectedSecurity.PriceRuleMarket);
+                SelectedSecurity.PriceRuleMarket,
+                MarketOrderBookReplayQueue.VisibleRowsPerSide,
+                marketLevels: null,
+                // A level the sweep just emptied still has to render as a row for the arrived frame.
+                preserveEmptyMarketLevelPrices: sweepStep.HasValue,
+                touchReferencePrice: anchorPrice,
+                touchReferenceSide: anchorSide);
             var playerOrders = _runtimeSession?.PendingOrders
                 .Where(order => order.AssetId == SelectedSecurity.CompanyId)
                 .ToArray() ?? Array.Empty<MarketPendingOrder>();
             var levels = MarketOrderBookPresentationRules.WithPlayerOrders(
                 marketLevels,
                 playerOrders);
-            var outline = MarketOrderBookPresentationRules.CentralOutlineLevel(
-                levels,
-                _lastTradePrice,
-                _lastTradeLevelSide);
+            // SIMUL's rule: the active replay targets its exact execution row, and
+            // CentralOutlineLevel is only the idle fallback.
+            var outline = sweepStep.HasValue && sweepArrived
+                ? FindLevel(levels, sweepStep.Value.Side, sweepStep.Value.Price)
+                : null;
+            if (outline == null)
+            {
+                outline = MarketOrderBookPresentationRules.CentralOutlineLevel(
+                    levels,
+                    sweepStep?.Price ?? _lastTradePrice,
+                    sweepStep?.Side ?? _lastTradeLevelSide);
+            }
+
+            // The price the player picked keeps its own border, so it stays visible as the ladder
+            // scrolls under it rather than being lost the moment the price moves.
+            long? selectedPrice = null;
+            if (!_marketOrder &&
+                long.TryParse(_priceText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var typed) &&
+                typed > 0)
+                selectedPrice = typed;
+            var motionNow = Time.unscaledTime;
+            _rowMotion.Sweep(motionNow);
+            // Same choice the source makes: the draining row animates over the sweep step, so a
+            // faster playback speed drains proportionally faster.
+            var sweepStepSeconds = _sweepQueue == null
+                ? OrderBookRowMotion.MotionSeconds
+                : Math.Max(
+                    0.001f,
+                    _sweepQueue.CurrentPhaseDurationMicroseconds / 1_000_000f);
             var maxDepth = Math.Max(1, levels.Count == 0
                 ? 1
                 : levels.Max(level => level.Quantity + PlayerQuantityAt(level, playerOrders)));
@@ -1046,7 +1110,21 @@ namespace FamilyCompany.Presentation.Unity
                 DrawSolid(row, PanelSurface);
                 DrawSolid(new Rect(tableX + sideWidth, row.y, tableWidth - sideWidth * 2f, row.height), ask ? AskTint : BidTint);
                 DrawSolid(new Rect(row.x, row.yMax - 1f, row.width, 1f), MarketLine);
-                var depthWidth = sideWidth * Mathf.Clamp01(displayedQuantity / (float)maxDepth);
+                var isTradeDrain = sweepArrived && sweepStep.HasValue &&
+                    sweepStep.Value.Side == level.Side && sweepStep.Value.Price == level.Price;
+                var depthTarget = Mathf.Clamp01(displayedQuantity / (float)maxDepth);
+                _rowMotion.Observe(
+                    level.Side,
+                    level.Price,
+                    displayedQuantity,
+                    isTradeDrain,
+                    depthTarget,
+                    // The draining level tracks the sweep step; every other row uses the ordinary
+                    // quote motion, which is how the source picks between the two.
+                    isTradeDrain ? sweepStepSeconds : OrderBookRowMotion.MotionSeconds,
+                    motionNow,
+                    Time.unscaledDeltaTime);
+                var depthWidth = sideWidth * _rowMotion.DepthFor(level.Side, level.Price, depthTarget);
                 if (ask)
                     DrawSolid(new Rect(tableX + sideWidth - depthWidth, row.y + 5f, depthWidth, row.height - 10f), new Color(0.55f, 0.72f, 0.95f, 0.45f));
                 else
@@ -1056,6 +1134,24 @@ namespace FamilyCompany.Presentation.Unity
                     GUI.Label(new Rect(tableX + 5f, row.y + 13f, sideWidth - 10f, 22f), displayedQuantity > 0 ? $"{displayedQuantity:N0}" : "-", new GUIStyle(_numberStyle) { alignment = TextAnchor.MiddleRight });
                 else
                     GUI.Label(new Rect(tableX + tableWidth - sideWidth + 6f, row.y + 13f, sideWidth - 10f, 22f), displayedQuantity > 0 ? $"{displayedQuantity:N0}" : "-", new GUIStyle(_numberStyle) { alignment = TextAnchor.MiddleLeft });
+                var deltaLabel = _rowMotion.DeltaLabel(level.Side, level.Price, motionNow);
+                if (deltaLabel.Length > 0)
+                {
+                    var deltaColor = _rowMotion.DeltaIsIncrease(level.Side, level.Price)
+                        ? QuantityDeltaUp
+                        : QuantityDeltaTrade;
+                    var deltaRect = ask
+                        ? new Rect(tableX + 5f, row.y + 31f, sideWidth - 10f, 14f)
+                        : new Rect(tableX + tableWidth - sideWidth + 6f, row.y + 31f, sideWidth - 10f, 14f);
+                    GUI.Label(
+                        deltaRect,
+                        deltaLabel,
+                        new GUIStyle(_tinyStyle)
+                        {
+                            alignment = ask ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft,
+                            normal = { textColor = deltaColor }
+                        });
+                }
                 if (playerQuantity > 0)
                 {
                     var markerRect = ask
@@ -1074,6 +1170,25 @@ namespace FamilyCompany.Presentation.Unity
                     _detailTab = DetailTab.Order;
                     _orderSection = ask ? OrderSection.Buy : OrderSection.Sell;
                     _orderNotice = $"{level.Price:N0}원을 지정가로 선택했습니다.";
+                }
+                if (sweepArrived && sweepStep.HasValue &&
+                    sweepStep.Value.Side == level.Side && sweepStep.Value.Price == level.Price)
+                {
+                    // 420ms ease-out fade from 0.58 alpha, as in the source screen.
+                    var progress = Mathf.Clamp01(_sweepFlashSeconds / SweepFlashSeconds);
+                    var eased = 1f - Mathf.Pow(progress, 3f);
+                    var alpha = 0.58f * eased * 0.42f;
+                    if (alpha > 0.001f)
+                    {
+                        var flash = level.Side == MarketOrderBookSide.Ask ? SellBlue : UpRed;
+                        DrawSolid(priceRect, new Color(flash.r, flash.g, flash.b, alpha));
+                    }
+                }
+
+                if (selectedPrice.HasValue && level.Price == selectedPrice.Value)
+                {
+                    DrawSolid(priceRect, SelectedQuoteFill);
+                    DrawOutline(priceRect, SelectedQuoteGold, 2f);
                 }
                 if (outline != null && outline.Side == level.Side && outline.Price == level.Price)
                     DrawOutline(priceRect, outline.Side == MarketOrderBookSide.Ask ? SellBlue : UpRed, 2f);
@@ -1534,11 +1649,72 @@ namespace FamilyCompany.Presentation.Unity
             var view = _runtimeSession.ViewFor(selected.CompanyId);
             _marketMinute = _runtimeSession.MarketMinute;
             _previousClose = view.PreviousClose;
+            var previousSnapshot = _snapshot;
+            var previousTradePrice = _lastTradePrice;
             _lastTradePrice = view.LastTradePrice;
             _lastTradeLevelSide = view.LastTradeLevelSide;
             _snapshot = view.Snapshot;
+            EnqueueSweepForMinute(selected, previousTradePrice, previousSnapshot);
             if (string.IsNullOrWhiteSpace(_priceText))
                 _priceText = _lastTradePrice.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Queues one batch per canonical minute per security. The identity carries the day, the
+        /// minute, the pulse and the traded price, so re-entering the screen or switching back to a
+        /// security never replays a minute that already played.
+        /// </summary>
+        private void EnqueueSweepForMinute(
+            MarketSecurityDefinition selected,
+            long previousTradePrice,
+            MarketOrderBookSnapshot previousSnapshot)
+        {
+            if (_runtimeSession == null || selected == null || _lastTradePrice <= 0) return;
+            var sessionKey = $"{selected.CompanyId}:{CurrentDate:yyyyMMdd}";
+            if (_sweepQueue == null) _sweepQueue = new MarketOrderBookReplayQueue(sessionKey);
+            else _sweepQueue.EnsureSession(sessionKey);
+
+            var key = $"{sessionKey}:{_marketMinute}:{_lastTradePrice}";
+            if (string.Equals(_sweepPreviousKey, key, StringComparison.Ordinal)) return;
+            _sweepPreviousKey = key;
+
+            var reference = previousTradePrice > 0 ? previousTradePrice : _sweepPreviousTradePrice;
+            _sweepPreviousTradePrice = _lastTradePrice;
+            var batch = MarketOrderBookSweepBuilder.Build(
+                selected.CompanyId,
+                CurrentDate.ToString("yyyyMMdd", CultureInfo.InvariantCulture),
+                _marketMinute,
+                _runtimeSession.LiquidityPulse,
+                reference,
+                _lastTradePrice,
+                _lastTradeLevelSide,
+                selected.PriceRuleMarket,
+                previousSnapshot ?? _snapshot);
+            if (batch != null) _sweepQueue.Enqueue(batch);
+        }
+
+        private void AdvanceSweepPlayback(float unscaledDeltaSeconds)
+        {
+            if (_sweepQueue == null) return;
+            _sweepQueue.SetPlayback(
+                PlaybackAnimationRates[_playbackIndex] <= 0,
+                Math.Max(1, PlaybackAnimationRates[_playbackIndex]));
+            var previousToken = _sweepFlashToken;
+            _sweepQueue.TickMicroseconds((long)(Math.Max(0f, unscaledDeltaSeconds) * 1_000_000d));
+            _sweepFlashToken = SweepFlashToken();
+            // Restart the fade whenever the cursor lands on a new arrived step, which is the frame
+            // the border, the price axis and the tape all move together.
+            if (!string.Equals(previousToken, _sweepFlashToken, StringComparison.Ordinal))
+                _sweepFlashSeconds = 0f;
+            else if (_sweepFlashToken.Length > 0)
+                _sweepFlashSeconds += Math.Max(0f, unscaledDeltaSeconds);
+        }
+
+        private string SweepFlashToken()
+        {
+            var cursor = _sweepQueue?.Cursor;
+            if (cursor == null || !cursor.Arrived || !cursor.Step.HasValue) return string.Empty;
+            return $"{cursor.Batch.Identity}:{cursor.Step.Value.Sequence}";
         }
 
         private List<MarketSecurityDefinition> FilteredSecurities()
@@ -2008,6 +2184,35 @@ namespace FamilyCompany.Presentation.Unity
             GUI.color = color;
             GUI.DrawTexture(rect, _whiteTexture);
             GUI.color = previous;
+        }
+
+        /// <summary>Trade flash length from the source screen.</summary>
+        private const float SweepFlashSeconds = 0.42f;
+
+        /// <summary>Border colour SIMUL uses for the price the player selected.</summary>
+        private static readonly Color SelectedQuoteGold = new Color(0.878f, 0.663f, 0f, 1f);
+
+        /// <summary>Plate behind the selected price, #FFF2B8 in the source.</summary>
+        private static readonly Color SelectedQuoteFill = new Color(1f, 0.949f, 0.722f, 1f);
+
+        /// <summary>#16794E, a quote that grew.</summary>
+        private static readonly Color QuantityDeltaUp = new Color(0.086f, 0.475f, 0.306f, 1f);
+
+        /// <summary>#B42332, depth taken by an execution.</summary>
+        private static readonly Color QuantityDeltaTrade = new Color(0.706f, 0.137f, 0.196f, 1f);
+
+        private static MarketOrderBookLevel FindLevel(
+            IReadOnlyList<MarketOrderBookLevel> levels,
+            MarketOrderBookSide side,
+            long price)
+        {
+            for (var index = 0; index < levels.Count; index += 1)
+            {
+                var level = levels[index];
+                if (level.Side == side && level.Price == price) return level;
+            }
+
+            return null;
         }
 
         private void DrawOutline(Rect rect, Color color, float thickness)

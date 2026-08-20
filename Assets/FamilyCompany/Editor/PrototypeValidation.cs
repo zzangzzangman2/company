@@ -9,6 +9,7 @@ using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Core;
 using FamilyCompany.Simulation.Events;
 using FamilyCompany.Simulation.History;
+using FamilyCompany.Presentation.Unity;
 using FamilyCompany.Simulation.Market;
 using FamilyCompany.Simulation.Prototype;
 using FamilyCompany.Simulation.Technology;
@@ -619,10 +620,149 @@ namespace FamilyCompany.Editor
 
             ValidateContractTechnologyGates();
             ValidateContractTechnologyBonus();
+            ValidateOrderBookSweep();
 
             Debug.Log(
                 $"CONTRACT_TECHNOLOGY_REWARD_VALIDATION: PASS | technologies={CompanyTechnologyCatalog.All.Count} " +
                 $"contracts={ContractTechnologyGrantCatalog.TemplateCount} schema=11");
+        }
+
+        /// <summary>
+        /// The order book border has to actually travel. A sweep must produce one step per price
+        /// level the trade crossed, in order, and the ladder must anchor on the step being replayed
+        /// rather than on the live touch — anchoring on the touch is what made the border look
+        /// frozen while the price was moving.
+        /// </summary>
+        private static void ValidateOrderBookSweep()
+        {
+            var market = MarketPricingRules.GrowthMarketName;
+            var previous = 21_000L;
+            var target = MarketOrderBookPresentationRules.AdjacentPrice(previous, 1, market);
+            for (var step = 0; step < 3; step += 1)
+                target = MarketOrderBookPresentationRules.AdjacentPrice(target, 1, market);
+
+            var batch = MarketOrderBookSweepBuilder.Build(
+                "asset",
+                "20000103",
+                MarketSessionClock.OpenMinute + 5,
+                1,
+                previous,
+                target,
+                MarketOrderBookSide.Ask,
+                market,
+                null);
+            Require(batch != null, "a price move produces a sweep batch");
+            Require(batch.Steps.Count >= 2,
+                $"a multi-tick move sweeps more than one row, got {batch.Steps.Count}");
+
+            // Ordered, ascending for an upward move, and each sequence numbered in order.
+            for (var index = 0; index < batch.Steps.Count; index += 1)
+            {
+                AssertEqual(index, batch.Steps[index].Sequence, "sweep step sequence");
+                if (index == 0) continue;
+                Require(batch.Steps[index].Price > batch.Steps[index - 1].Price,
+                    "an upward sweep walks upward one level at a time");
+            }
+
+            AssertEqual(target, batch.Steps[batch.Steps.Count - 1].Price, "the sweep ends on the traded price");
+            Require(batch.Steps[batch.Steps.Count - 1].BoundaryCrossed, "the final step crosses the boundary");
+            Require(!batch.Steps[0].BoundaryCrossed, "an intermediate step does not cross the boundary");
+
+            // A minute that did not move the price still prints one step, as the source does for a
+            // synthetic per-pulse trade.
+            var flat = MarketOrderBookSweepBuilder.Build(
+                "asset", "20000103", MarketSessionClock.OpenMinute + 6, 1,
+                previous, previous, MarketOrderBookSide.Bid, market, null);
+            Require(flat != null && flat.Steps.Count == 1, "a flat minute prints exactly one step");
+
+            // The cap keeps a halt-sized gap from replaying into the next minute.
+            var far = previous;
+            for (var index = 0; index < 40; index += 1)
+                far = MarketOrderBookPresentationRules.AdjacentPrice(far, 1, market);
+            var capped = MarketOrderBookSweepBuilder.Build(
+                "asset", "20000103", MarketSessionClock.OpenMinute + 7, 1,
+                previous, far, MarketOrderBookSide.Ask, market, null);
+            Require(capped != null && capped.Steps.Count <= MarketOrderBookSweepBuilder.MaximumSteps,
+                "a large gap is capped");
+            AssertEqual(far, capped.Steps[capped.Steps.Count - 1].Price,
+                "a capped sweep still finishes on the traded price");
+
+            // The queue walks arriving -> draining for every step and ends idle.
+            var queue = new MarketOrderBookReplayQueue("asset:20000103");
+            Require(queue.Enqueue(batch), "the batch is admitted");
+            Require(queue.Enqueue(batch) == false, "the same batch identity is never replayed twice");
+            var arrivedPrices = new List<long>();
+            var guard = 0;
+            while (queue.HasActiveBatch && guard < 4000)
+            {
+                guard += 1;
+                queue.TickMicroseconds(8_000);
+                var cursor = queue.Cursor;
+                if (cursor == null || !cursor.Arrived || !cursor.Step.HasValue) continue;
+                var price = cursor.Step.Value.Price;
+                if (arrivedPrices.Count == 0 || arrivedPrices[arrivedPrices.Count - 1] != price)
+                    arrivedPrices.Add(price);
+            }
+
+            AssertEqual(batch.Steps.Count, arrivedPrices.Count,
+                "every sweep step gets its own arrived frame");
+            for (var index = 0; index < batch.Steps.Count; index += 1)
+                AssertEqual(batch.Steps[index].Price, arrivedPrices[index], "arrived rows follow the step order");
+
+            // The ladder anchored on a step keeps that step's row present even at zero quantity,
+            // otherwise the row the border sits on would disappear mid-sweep.
+            var ladderAsks = new List<MarketOrderBookLevel>();
+            var ladderBids = new List<MarketOrderBookLevel>();
+            var ladderAsk = MarketOrderBookPresentationRules.AdjacentPrice(previous, 1, market);
+            var ladderBid = previous;
+            for (var index = 0; index < MarketOrderBookRules.LevelCount; index += 1)
+            {
+                ladderAsks.Add(new MarketOrderBookLevel(MarketOrderBookSide.Ask, ladderAsk, 100));
+                ladderBids.Add(new MarketOrderBookLevel(MarketOrderBookSide.Bid, ladderBid, 100));
+                ladderAsk = MarketOrderBookPresentationRules.AdjacentPrice(ladderAsk, 1, market);
+                ladderBid = MarketOrderBookPresentationRules.AdjacentPrice(ladderBid, -1, market);
+            }
+
+            var snapshot = new MarketOrderBookSnapshot(ladderAsks, ladderBids, 100d, 100d, 100);
+            var anchored = MarketOrderBookPresentationRules.BuildVisibleLevels(
+                snapshot,
+                market,
+                MarketOrderBookReplayQueue.VisibleRowsPerSide,
+                marketLevels: null,
+                preserveEmptyMarketLevelPrices: true,
+                touchReferencePrice: batch.Steps[0].Price,
+                touchReferenceSide: batch.Steps[0].Side);
+            var found = false;
+            for (var index = 0; index < anchored.Count; index += 1)
+            {
+                if (anchored[index].Side != batch.Steps[0].Side) continue;
+                if (anchored[index].Price != batch.Steps[0].Price) continue;
+                found = true;
+                break;
+            }
+
+            Require(found, "the anchored ladder contains the row the sweep is replaying");
+
+            // The badge rule, including the case the source deliberately blanks.
+            var motion = new OrderBookRowMotion();
+            const float now = 100f;
+            motion.Observe(MarketOrderBookSide.Ask, previous, 500, false, 1f, 0.144f, now, 0.016f);
+            motion.Observe(MarketOrderBookSide.Ask, previous, 300, false, 1f, 0.144f, now, 0.016f);
+            AssertEqual(string.Empty, motion.DeltaLabel(MarketOrderBookSide.Ask, previous, now),
+                "a quote that merely shrank shows no label");
+            motion.Observe(MarketOrderBookSide.Ask, previous, 100, true, 1f, 0.144f, now, 0.016f);
+            Require(motion.DeltaLabel(MarketOrderBookSide.Ask, previous, now).Length > 0,
+                "an execution drain shows a signed label");
+            motion.Observe(MarketOrderBookSide.Ask, previous, 900, false, 1f, 0.144f, now, 0.016f);
+            Require(motion.DeltaLabel(MarketOrderBookSide.Ask, previous, now).StartsWith("+", StringComparison.Ordinal),
+                "a quote that grew shows a plus label");
+            AssertEqual(string.Empty,
+                motion.DeltaLabel(MarketOrderBookSide.Ask, previous, now + OrderBookRowMotion.DeltaSeconds + 0.01f),
+                "the label expires");
+
+            Debug.Log(
+                $"ORDER_BOOK_SWEEP_VALIDATION: PASS | steps={batch.Steps.Count} arrivedRows={arrivedPrices.Count} " +
+                $"cap={MarketOrderBookSweepBuilder.MaximumSteps} flash={OrderBookRowMotion.DeltaSeconds}s");
         }
 
         /// <summary>
