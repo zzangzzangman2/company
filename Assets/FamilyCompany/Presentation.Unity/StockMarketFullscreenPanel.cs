@@ -1108,7 +1108,23 @@ namespace FamilyCompany.Presentation.Unity
                 var playerQuantity = PlayerQuantityAt(level, playerOrders);
                 var displayedQuantity = level.Quantity + playerQuantity;
                 DrawSolid(row, PanelSurface);
-                DrawSolid(new Rect(tableX + sideWidth, row.y, tableWidth - sideWidth * 2f, row.height), ask ? AskTint : BidTint);
+                var priceCell = new Rect(tableX + sideWidth, row.y, tableWidth - sideWidth * 2f, row.height);
+                DrawSolid(priceCell, ask ? AskTint : BidTint);
+                if (selectedPrice.HasValue && level.Price == selectedPrice.Value)
+                    DrawSolid(priceCell, SelectedQuoteFill);
+                if (sweepArrived && sweepStep.HasValue &&
+                    sweepStep.Value.Side == level.Side && sweepStep.Value.Price == level.Price)
+                {
+                    // 420ms ease-out fade from 0.58 alpha, as in the source screen.
+                    var flashProgress = Mathf.Clamp01(_sweepFlashSeconds / SweepFlashSeconds);
+                    var flashAlpha = 0.58f * (1f - Mathf.Pow(flashProgress, 3f)) * 0.42f;
+                    if (flashAlpha > 0.001f)
+                    {
+                        var flashColor = ask ? SellBlue : UpRed;
+                        DrawSolid(priceCell, new Color(flashColor.r, flashColor.g, flashColor.b, flashAlpha));
+                    }
+                }
+
                 DrawSolid(new Rect(row.x, row.yMax - 1f, row.width, 1f), MarketLine);
                 var isTradeDrain = sweepArrived && sweepStep.HasValue &&
                     sweepStep.Value.Side == level.Side && sweepStep.Value.Price == level.Price;
@@ -1171,25 +1187,8 @@ namespace FamilyCompany.Presentation.Unity
                     _orderSection = ask ? OrderSection.Buy : OrderSection.Sell;
                     _orderNotice = $"{level.Price:N0}원을 지정가로 선택했습니다.";
                 }
-                if (sweepArrived && sweepStep.HasValue &&
-                    sweepStep.Value.Side == level.Side && sweepStep.Value.Price == level.Price)
-                {
-                    // 420ms ease-out fade from 0.58 alpha, as in the source screen.
-                    var progress = Mathf.Clamp01(_sweepFlashSeconds / SweepFlashSeconds);
-                    var eased = 1f - Mathf.Pow(progress, 3f);
-                    var alpha = 0.58f * eased * 0.42f;
-                    if (alpha > 0.001f)
-                    {
-                        var flash = level.Side == MarketOrderBookSide.Ask ? SellBlue : UpRed;
-                        DrawSolid(priceRect, new Color(flash.r, flash.g, flash.b, alpha));
-                    }
-                }
-
                 if (selectedPrice.HasValue && level.Price == selectedPrice.Value)
-                {
-                    DrawSolid(priceRect, SelectedQuoteFill);
                     DrawOutline(priceRect, SelectedQuoteGold, 2f);
-                }
                 if (outline != null && outline.Side == level.Side && outline.Price == level.Price)
                     DrawOutline(priceRect, outline.Side == MarketOrderBookSide.Ask ? SellBlue : UpRed, 2f);
             }
