@@ -472,7 +472,7 @@ namespace FamilyCompany.Presentation.Unity
             ApplyOfficeObservationCamera(true);
             SetSimulationPaused(false);
             ScenePreviewJump.ShowStarterOffice();
-            _notice = $"창업 자본 {PrototypeStateFactory.StartingCapitalWon:N0}원 · 네 식구의 오피스텔 회사를 시작합니다.";
+            _notice = $"아빠 퇴직금 {PrototypeStateFactory.StartingCapitalWon:N0}원 · 네 식구의 오피스텔 회사를 시작합니다.";
             if (createInitialSave) SaveSlotNow(slot);
         }
 

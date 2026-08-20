@@ -187,9 +187,15 @@ namespace FamilyCompany.Simulation.ContractGrowth
             if (requirement.Tier == ContractClientTier.T0LocalBusiness)
                 return new ContractTierProgress(requirement, true, 10_000, new[] { "회복용 동네 계약은 항상 열림" });
             var experience = summary.DomainExperienceHours(industry);
+            // The father's friend at a conglomerate is what gets a family workshop looked at by a
+            // prime vendor. It lowers only the finished-contract count; everything else still has to
+            // be earned, because an introduction gets the meeting, not the contract.
+            var requiredCompletedContracts = FatherIntroductionRules.RequiredCompletedContracts(
+                requirement.Tier,
+                requirement.CompletedContracts);
             var ratios = new[]
             {
-                Ratio(summary.CompletedContracts, requirement.CompletedContracts),
+                Ratio(summary.CompletedContracts, requiredCompletedContracts),
                 Ratio(summary.OnTimeRateBasisPoints, requirement.OnTimeRateBasisPoints),
                 Ratio(summary.AverageQuality, requirement.AverageQuality),
                 Ratio(summary.AverageClientSatisfaction, requirement.AverageClientSatisfaction),
@@ -201,7 +207,10 @@ namespace FamilyCompany.Simulation.ContractGrowth
             var unlocked = previousUnlocked && ratios.All(value => value >= 10_000);
             var labels = new[]
             {
-                $"완료 {summary.CompletedContracts}/{requirement.CompletedContracts}건",
+                FatherIntroductionRules.ProgressLabelKo(
+                    requirement.Tier,
+                    summary.CompletedContracts,
+                    requirement.CompletedContracts),
                 $"정시율 {summary.OnTimeRateBasisPoints / 100}%/{requirement.OnTimeRateBasisPoints / 100}%",
                 $"평균 품질 {summary.AverageQuality}/{requirement.AverageQuality}",
                 $"고객 만족 {summary.AverageClientSatisfaction}/{requirement.AverageClientSatisfaction}",

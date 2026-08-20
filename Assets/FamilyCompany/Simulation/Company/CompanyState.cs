@@ -26,10 +26,23 @@ namespace FamilyCompany.Simulation.Company
         public int Reputation { get; private set; }
         public IReadOnlyList<LedgerTransaction> Ledger => _ledger;
 
-        public void ContributeCapital(string transactionId, long elapsedMinute, long amountWon)
+        /// <summary>
+        /// Books an owner contribution. The description is a parameter so the opening balance can
+        /// name where the money came from; the family's entire starting cash is the father's
+        /// severance, and the ledger should say so rather than calling it generic founding capital.
+        /// </summary>
+        public void ContributeCapital(
+            string transactionId,
+            long elapsedMinute,
+            long amountWon,
+            string descriptionKo = "창업 자본금")
         {
             RequirePositive(amountWon);
-            Post(new LedgerTransaction(transactionId, elapsedMinute, "창업 자본금", new[]
+            Post(new LedgerTransaction(
+                transactionId,
+                elapsedMinute,
+                string.IsNullOrWhiteSpace(descriptionKo) ? "창업 자본금" : descriptionKo,
+                new[]
             {
                 new LedgerLine(AccountCode.Cash, amountWon, 0),
                 new LedgerLine(AccountCode.OwnerCapital, 0, amountWon)

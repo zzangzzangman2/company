@@ -621,10 +621,92 @@ namespace FamilyCompany.Editor
             ValidateContractTechnologyGates();
             ValidateContractTechnologyBonus();
             ValidateOrderBookSweep();
+            ValidateOpeningCapitalAndIntroduction();
 
             Debug.Log(
                 $"CONTRACT_TECHNOLOGY_REWARD_VALIDATION: PASS | technologies={CompanyTechnologyCatalog.All.Count} " +
                 $"contracts={ContractTechnologyGrantCatalog.TemplateCount} schema=11");
+        }
+
+        /// <summary>
+        /// The company opens on the father's severance and nothing else, and his friend at a
+        /// conglomerate only shortens the finished-contract count for the upper client tiers. An
+        /// introduction gets the meeting, not the contract, so every other bar has to stay put.
+        /// </summary>
+        private static void ValidateOpeningCapitalAndIntroduction()
+        {
+            var state = PrototypeStateFactory.Create();
+            AssertEqual(PrototypeStateFactory.StartingCapitalWon, state.Company.CashWon,
+                "the company opens on the father's severance");
+            AssertEqual(5_000_000L, PrototypeStateFactory.StartingCapitalWon, "the severance is 5,000,000 won");
+            Require(PrototypeStateFactory.OpeningCapitalReasonKo.Contains("퇴직금"),
+                "the opening ledger entry names the severance as the source");
+
+            // The introduction reaches only the prime and national tiers.
+            Require(!FatherIntroductionRules.Covers(ContractClientTier.T0LocalBusiness),
+                "a local business needs no introduction");
+            Require(!FatherIntroductionRules.Covers(ContractClientTier.T1RegionalSmallBusiness),
+                "a regional client needs no introduction");
+            Require(!FatherIntroductionRules.Covers(ContractClientTier.T2GrowthCompany),
+                "a growth company is reachable on merit");
+            Require(FatherIntroductionRules.Covers(ContractClientTier.T3PrimeVendor),
+                "the introduction reaches a prime vendor");
+            Require(FatherIntroductionRules.Covers(ContractClientTier.T4NationalEnterprise),
+                "the introduction reaches a national enterprise");
+
+            var requirements = ContractProgressionRules.TierRequirements;
+            for (var index = 0; index < requirements.Count; index += 1)
+            {
+                var requirement = requirements[index];
+                var discounted = FatherIntroductionRules.RequiredCompletedContracts(
+                    requirement.Tier,
+                    requirement.CompletedContracts);
+                Require(discounted <= requirement.CompletedContracts,
+                    $"the introduction never raises the bar for {requirement.Tier}");
+                if (!FatherIntroductionRules.Covers(requirement.Tier))
+                {
+                    AssertEqual(requirement.CompletedContracts, discounted,
+                        $"an uncovered tier keeps its count: {requirement.Tier}");
+                    continue;
+                }
+
+                Require(discounted < requirement.CompletedContracts,
+                    $"a covered tier is actually discounted: {requirement.Tier}");
+                Require(discounted >= FatherIntroductionRules.MinimumCompletedContracts,
+                    $"the discount never drops below the floor: {requirement.Tier}");
+                // The label has to say where the lower number came from.
+                var label = FatherIntroductionRules.ProgressLabelKo(
+                    requirement.Tier, 0, requirement.CompletedContracts);
+                Require(label.Contains("아빠의 소개"),
+                    $"the tier card explains the discount: {requirement.Tier}");
+            }
+
+            AssertEqual(8,
+                FatherIntroductionRules.RequiredCompletedContracts(ContractClientTier.T3PrimeVendor, 16),
+                "prime vendor drops from 16 to 8");
+            AssertEqual(14,
+                FatherIntroductionRules.RequiredCompletedContracts(ContractClientTier.T4NationalEnterprise, 28),
+                "national enterprise drops from 28 to 14");
+
+            // Only the count moved. The bars an introduction cannot buy have to still be there,
+            // otherwise a discounted count alone would open a prime vendor on day one.
+            for (var index = 0; index < requirements.Count; index += 1)
+            {
+                var requirement = requirements[index];
+                if (!FatherIntroductionRules.Covers(requirement.Tier)) continue;
+                Require(requirement.Reputation > 0, $"{requirement.Tier} still needs reputation");
+                Require(requirement.AverageQuality > 0, $"{requirement.Tier} still needs quality");
+                Require(requirement.OnTimeRateBasisPoints > 0, $"{requirement.Tier} still needs an on-time record");
+                Require(requirement.RelevantDomainExperienceHours > 0,
+                    $"{requirement.Tier} still needs domain hours");
+                Require((int)requirement.CompanyGrade > 0, $"{requirement.Tier} still needs a company grade");
+            }
+
+            Debug.Log(
+                "OPENING_CAPITAL_INTRODUCTION_VALIDATION: PASS | " +
+                $"severance={PrototypeStateFactory.StartingCapitalWon} " +
+                $"prime=16->{FatherIntroductionRules.RequiredCompletedContracts(ContractClientTier.T3PrimeVendor, 16)} " +
+                $"national=28->{FatherIntroductionRules.RequiredCompletedContracts(ContractClientTier.T4NationalEnterprise, 28)}");
         }
 
         /// <summary>
