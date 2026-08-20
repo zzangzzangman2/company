@@ -642,17 +642,22 @@ namespace FamilyCompany.Editor
             Require(PrototypeStateFactory.OpeningCapitalReasonKo.Contains("퇴직금"),
                 "the opening ledger entry names the severance as the source");
 
-            // The introduction reaches only the prime and national tiers.
+            // The introduction reaches exactly one tier: the mid-size client the family can
+            // actually service. A conglomerate handing work to a four-person workshop would
+            // contradict the premise that low technology keeps the big jobs out of reach.
             Require(!FatherIntroductionRules.Covers(ContractClientTier.T0LocalBusiness),
                 "a local business needs no introduction");
             Require(!FatherIntroductionRules.Covers(ContractClientTier.T1RegionalSmallBusiness),
                 "a regional client needs no introduction");
             Require(!FatherIntroductionRules.Covers(ContractClientTier.T2GrowthCompany),
                 "a growth company is reachable on merit");
-            Require(FatherIntroductionRules.Covers(ContractClientTier.T3PrimeVendor),
-                "the introduction reaches a prime vendor");
-            Require(FatherIntroductionRules.Covers(ContractClientTier.T4NationalEnterprise),
-                "the introduction reaches a national enterprise");
+            Require(FatherIntroductionRules.Covers(FatherIntroductionRules.IntroducedTier),
+                "the introduction reaches the mid-size tier it names");
+            Require(!FatherIntroductionRules.Covers(ContractClientTier.T4NationalEnterprise),
+                "a national enterprise is never shortcut by a friend");
+            Require(FatherIntroductionRules.IntroducedClientId.Length > 0 &&
+                    FatherIntroductionRules.IntroducedClientNameKo.Length > 0,
+                "the introduction names the company it comes from");
 
             var requirements = ContractProgressionRules.TierRequirements;
             for (var index = 0; index < requirements.Count; index += 1)
@@ -677,16 +682,23 @@ namespace FamilyCompany.Editor
                 // The label has to say where the lower number came from.
                 var label = FatherIntroductionRules.ProgressLabelKo(
                     requirement.Tier, 0, requirement.CompletedContracts);
-                Require(label.Contains("아빠의 소개"),
-                    $"the tier card explains the discount: {requirement.Tier}");
+                Require(label.Contains(FatherIntroductionRules.IntroducedClientNameKo) &&
+                        label.Contains("소개"),
+                    $"the tier card names the company behind the discount: {requirement.Tier}");
             }
 
             AssertEqual(8,
-                FatherIntroductionRules.RequiredCompletedContracts(ContractClientTier.T3PrimeVendor, 16),
-                "prime vendor drops from 16 to 8");
-            AssertEqual(14,
+                FatherIntroductionRules.RequiredCompletedContracts(FatherIntroductionRules.IntroducedTier, 16),
+                "the mid-size tier drops from 16 to 8");
+            AssertEqual(28,
                 FatherIntroductionRules.RequiredCompletedContracts(ContractClientTier.T4NationalEnterprise, 28),
-                "national enterprise drops from 28 to 14");
+                "the national tier keeps its full 28");
+
+            // The named company has to exist in the client mapping at the tier the rule claims,
+            // otherwise the copy would promise an introduction to a company that is not there.
+            var introduced = FatherIntroductionRules.IntroducedClientId;
+            Require(introduced.StartsWith("kr_", StringComparison.Ordinal),
+                "the introduced client id is a registry id");
 
             // Only the count moved. The bars an introduction cannot buy have to still be there,
             // otherwise a discounted count alone would open a prime vendor on day one.
@@ -705,7 +717,8 @@ namespace FamilyCompany.Editor
             Debug.Log(
                 "OPENING_CAPITAL_INTRODUCTION_VALIDATION: PASS | " +
                 $"severance={PrototypeStateFactory.StartingCapitalWon} " +
-                $"prime=16->{FatherIntroductionRules.RequiredCompletedContracts(ContractClientTier.T3PrimeVendor, 16)} " +
+                $"client={FatherIntroductionRules.IntroducedClientId} tier={FatherIntroductionRules.IntroducedTier} " +
+                $"midsize=16->{FatherIntroductionRules.RequiredCompletedContracts(FatherIntroductionRules.IntroducedTier, 16)} " +
                 $"national=28->{FatherIntroductionRules.RequiredCompletedContracts(ContractClientTier.T4NationalEnterprise, 28)}");
         }
 
