@@ -40,7 +40,11 @@ namespace FamilyCompany.Editor
         // Sample density used to find foot contacts and to integrate root travel. One sample per
         // ~1.4ms of a one-second clip is far finer than the eight poses we keep.
         private const int PhaseSampleCount = 720;
-        private const float FeetViewportY = 0.03f;
+        public const float DefaultFeetViewportY = 0.14f;
+        // Deliberately NOT the V2 frame root. Both bakers target the same eight direction
+        // names, so sharing a folder means whichever ran last silently wins.
+        public const string DefaultOutputRoot =
+            "Assets/Resources/FamilyCompany/PlayerBakedWalkHumanoidV1/";
 
         [MenuItem("Family Company/Art/Bake Player Walk From Humanoid Rig")]
         public static void Run()
@@ -184,8 +188,11 @@ namespace FamilyCompany.Editor
             Transform head)
         {
             string directionName = PlayerBakedWalkCatalogV2.DirectionNames[direction];
+            string outputRoot = string.IsNullOrWhiteSpace(contract.outputRoot)
+                ? DefaultOutputRoot
+                : NormalizeAssetPath(contract.outputRoot.TrimEnd('/')) + "/";
             string outputDirectory = NormalizeAssetPath(Path.Combine(
-                PlayerBakedWalkV2TextureImporter.FrameRoot,
+                outputRoot + "Frames/",
                 directionName));
             Directory.CreateDirectory(outputDirectory);
 
@@ -248,8 +255,7 @@ namespace FamilyCompany.Editor
             }
 
             string receiptPath = NormalizeAssetPath(
-                "Assets/Resources/FamilyCompany/PlayerBakedWalkV2/source-receipt-" +
-                directionName + ".json");
+                outputRoot + "source-receipt-" + directionName + ".json");
             File.WriteAllText(receiptPath, JsonUtility.ToJson(receipt, true));
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             AssetDatabase.ImportAsset(receiptPath, ImportAssetOptions.ForceSynchronousImport);
@@ -433,9 +439,12 @@ namespace FamilyCompany.Editor
             Vector3 viewport = camera.WorldToViewportPoint(Vector3.zero);
             float worldWidth = 2f * camera.orthographicSize * camera.aspect;
             float worldHeight = 2f * camera.orthographicSize;
+            float feetViewportY = contract.feetViewportY > 0f
+                ? contract.feetViewportY
+                : DefaultFeetViewportY;
             camera.transform.position +=
                 camera.transform.right * ((viewport.x - 0.5f) * worldWidth) +
-                camera.transform.up * ((viewport.y - FeetViewportY) * worldHeight);
+                camera.transform.up * ((viewport.y - feetViewportY) * worldHeight);
         }
 
         private static RenderTexture CreateTarget(PlayerWalkHumanoidBakeContract contract)
@@ -639,5 +648,19 @@ namespace FamilyCompany.Editor
 
         /// <summary>Bypasses the measured stride-derived scale when a rig needs hand tuning.</summary>
         public float uniformScaleOverride;
+
+        /// <summary>
+        /// Where the rig's ground plane sits in the canvas, 0..1 from the bottom. A pitched
+        /// camera projects the leading foot below that plane, so the default leaves room.
+        /// Zero uses <see cref="PlayerWalkHumanoidBaker.DefaultFeetViewportY"/>.
+        /// </summary>
+        public float feetViewportY;
+
+        /// <summary>
+        /// Where frames and receipts are written. Empty uses
+        /// <see cref="PlayerWalkHumanoidBaker.DefaultOutputRoot"/>, which is intentionally
+        /// separate from the V2 paper-doll root.
+        /// </summary>
+        public string outputRoot = string.Empty;
     }
 }

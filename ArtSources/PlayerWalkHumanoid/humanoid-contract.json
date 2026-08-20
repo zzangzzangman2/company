@@ -1,6 +1,6 @@
 {
     "contract": "FC-PLAYER-WALK-HUMANOID-V1",
-    "rigPrefabPath": "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx",
+    "rigPrefabPath": "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidBase.fbx",
     "walkClipPath": "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx",
     "hipsTransform": "mixamorig:Hips",
     "leftFootTransform": "mixamorig:LeftFoot",

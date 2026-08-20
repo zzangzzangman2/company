@@ -1010,3 +1010,53 @@ standing leg만 corridor clear하고 generated legs를 같은 hip에 결합한�
 diff 0건이다. Unity import batch도 192 Sprite, rootStep 19.2350px, cadence 2.0125로 PASS했고
 `FAST_QA_WINDOWS.cmd -Profile editor-broad`는 10.725초 PASS했다. clean build와 배포 D3D11 Player 사람
 검토가 끝날 때까지 릴리스 결정은 미완료다.
+
+## 캐릭터 애니메이션 소스는 Mixamo다 (2026-08-20)
+
+결정: **월드 캐릭터의 걷기·대기·달리기·앉기 모션은 우리가 제작하지 않고 Mixamo에서 받는다.**
+<https://www.mixamo.com/> (Adobe, 무료, 계정 필요). 사용자 계정으로 로그인되어 있으므로
+**추가 클립이 필요하면 즉시 받을 수 있다.** 받은 리그와 클립을 `PlayerWalkHumanoidBaker`에 넣어
+8방향 × 8포즈 PNG로 굽고, 게임은 계속 2D 스프라이트로 돈다. 3D는 작업실에만 존재한다.
+
+현재 반입된 것:
+
+| 파일 | 출처 | 설정 |
+| --- | --- | --- |
+| `PlayerHumanoidBase.fbx` | Mixamo `X Bot` | FBX For Unity, **T-Pose**, 1,750,032바이트 |
+| `PlayerHumanoidWalk.fbx` | Mixamo `Unarmed Walk Forward` | FBX For Unity, With Skin, 30fps, Keyframe Reduction none, In Place 해제, 417,392바이트 |
+
+즉시 받을 수 있는 다음 클립(KShopGo가 클립 7개로 전부 처리했다): `Idle`, `Standing Idle`,
+`Running`, `Sitting`, `Typing`. 다운로드 설정은 위 워크 클립과 동일하게 하고
+`Docs/MIXAMO_WALK_HANDOFF.md`의 표를 따른다.
+
+이유: 런타임이 요구하는 8방향 × 8포즈를 2D 페이퍼돌로 만들면 방향마다 리그 authoring과 걷기
+사이클 손 키잉이 필요하다. 8회다. 걷기 사이클 키잉은 애니메이터의 전문 작업이고, 이것이 며칠간
+진도가 나지 않은 원인이었다. 휴머노이드 리그는 클립 1개를 카메라 yaw 45도씩으로 8방향에
+재사용한다. `Docs/WALK_RIG_SOURCE_DECISION.md`에 비용 비교가 있다.
+
+거부한 대안: Synty POLYGON은 KShopGo가 실제로 쓴 팩이지만 상업 유료다
+(<https://syntystore.com/collections/polygon>). 무료 대안으로 충분하므로 채택하지 않았다.
+Quaternius(CC0, <https://quaternius.com/>)는 계정이 필요 없어 2순위 백업으로 남긴다.
+무료 2D 본 워크사이클 라이브러리는 사실상 존재하지 않으므로, 2D를 유지하면서 뼈대만 받아오는
+길은 없다.
+
+검증 상태: 파이프라인은 실제로 실행됐다. 클립 보폭 1.40847 유닛 측정, 스케일 0.45522 자동 계산,
+왼발 접지 0.2680초 검출, 8방향 렌더와 PNG 기록 통과. 아직 미완이다 —
+`ValidateVisibleHeight`(투영 pelvis에서 정수리까지 1%)가 페이퍼돌 전용 불변량이라 4.124%로
+실패하고, `ValidateReceiptFootLock`의 등방 투영 가정과 정본 카메라 피치가 미확정이다.
+`Docs/MIXAMO_WALK_HANDOFF.md`의 "막힌 곳 1, 2"에 상세가 있다.
+
+## 참고 자료 폴더 (2026-08-20)
+
+읽기 전용 참고물이다. **수정하지 않는다.** 저장소에 포함하지 않는다.
+
+| 대상 | 경로 | 무엇을 참고했나 |
+| --- | --- | --- |
+| KShopGo (`com.hclab.kshopgo` 1.15) | `C:\Users\godho\Downloads\com.hclab.kshopgo_1.15\com.hclab.kshopgo.apk` | 캐릭터 이동 방식. 3D 휴머노이드 + NavMeshAgent + 클립 7개. `m_AngularSpeed = 1200`, `m_ObstacleAvoidanceType = 0`, `WaitArriveWithTimeout`. 분해는 `Docs/KSHOPGO_MOVEMENT_TEARDOWN.md` |
+| simul (Flutter/Dart) | `C:\Users\godho\Documents\Codex\simul` | 주식 호가창 체결 구조. sweep 재생, `orderedFills`, 델타 배지 규칙. 이식은 `Docs/ORDER_BOOK_SWEEP_V1.md` |
+| Mixamo | <https://www.mixamo.com/> | 휴머노이드 리그와 걷기 클립의 실제 소스. 위 결정 참고 |
+
+KShopGo는 게임플레이 네임스페이스가 `CryingSnow.FastFoodRush`인 에셋스토어 템플릿 리스킨이며,
+사용한 아트는 Synty POLYGON 유료 팩이다. **그 아트를 가져오지 않는다.** 참고한 것은
+설정값과 구조다.
+
