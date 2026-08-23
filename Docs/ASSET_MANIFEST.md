@@ -1,8 +1,26 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-19
+최종 갱신: 2026-08-24
 
-## Player Natural Walk V4 eight-pose foot transfer (candidate, human approval pending)
+## Family 3D identity and motion prototype (active character path)
+
+- Locked identity inputs: `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/`
+  의 Player/Father/Mother/Older Sister front/left/back/three-quarter PNG 네 장.
+- Motion prototype: `Assets/FamilyCompany/Experimental/Family3DPrototype/`와 compact evidence
+  `ArtSources/Family3DPrototypeV3Evidence/`.
+- Third-party proxy: Styloo CC0 `allinone.fbx`; 출처와 라이선스는 같은 폴더의
+  `SOURCE_AND_LICENSE.md`. 이 모델은 motion/pipeline proxy이며 최종 가족 identity가 아니다.
+- Blender diagnostics: `ArtSources/Family3DBlenderPlayerDiagnosticsV1V2/`; V1/V2 모두 REJECTED이며
+  donor·수정 출발점·Unity 후보로 금지한다.
+- Final family meshes: 아직 없음. 한 캐릭터당 하나의 완전한 textured skinned body와 유효한 Humanoid
+  Avatar가 필요하다.
+- Existing 2D character assets below are retained only for current production migration, provenance,
+  and rollback analysis. They are forbidden as new 3D mesh, texture, decal, billboard, body-part donor,
+  motion source, or missing-model fallback.
+- Full authority: `FAMILY_3D_CHARACTER_CANON_2026-08-24.md` and
+  `FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`.
+
+## [RETIRED 2D] Player Natural Walk V4 eight-pose foot transfer
 
 - Contract: `FC-PLAYER-NATURAL-WALK-V1`.
 - Runtime: `Assets/Resources/FamilyCompany/PlayerNaturalWalkV1/Frames/`의 방향별 toe/pass/land 6장과 기존
@@ -25,7 +43,7 @@
   약하므로 대체했다. V3는 한 스침 pose를 거리 30% 동안 유지해 미끄러져 보이므로 대체했다. ImageGen
   3회 후보도 체크 배경·다리 겹침·정지 자세 회귀 때문에 모두 미사용이다.
 
-## Player East Source-Exact Contact V1 (in-game visual approval pending)
+## [RETIRED 2D] Player East Source-Exact Contact V1
 
 - Contract: `FC-PLAYER-EAST-CONTACT-V1`.
 - Canonical source: `Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png`, SHA-256
@@ -47,7 +65,7 @@
 - Rejected/removed: 자동 분리 rigid-part atlas와 과거 전 가족 생성 source/writer는 화면 승인 실패 후
   제거했다. 사람이 승인한 12~18 layer PSB 없이는 cutout rig를 production에 게시하지 않는다.
 
-## Player South Source-Exact Contact V1 (in-game visual approval pending)
+## [RETIRED 2D] Player South Source-Exact Contact V1
 
 - Contract: `FC-PLAYER-SOUTH-CONTACT-V1`.
 - Canonical source: east와 같은 `Assets/Art/Characters/Player/Pixel/player_pixel_walk4x2_v1.png`, SHA-256
@@ -66,7 +84,7 @@
 - Status: 단독 화면 승인은 받았지만 실제 게임 PPU 정규화 결과는 사용자 최종 화면 승인 대기다.
 - Rights: 기존 정본 시트와 동일한 프로젝트 소유 GPT 생성 아트이며 신규 제3자 에셋은 없다.
 
-## Player North/West Source-Exact Contact V1 (candidate, human approval pending)
+## [RETIRED 2D] Player North/West Source-Exact Contact V1
 
 - Contracts: `FC-PLAYER-NORTH-CONTACT-V1`, `FC-PLAYER-WEST-CONTACT-V1`.
 - Canonical source: 같은 `player_pixel_walk4x2_v1.png`; north column 2, west column 1을 각각 독립 추출한다.
@@ -79,7 +97,7 @@
   통합 뒤 north/west 각 6장도 직전 Player 캡처와 SHA-256 바이트 일치 PASS.
 - Status: 실행 게이트 PASS, 사용자 화면 승인 대기.
 
-## Player Diagonal Four-Direction Visual Mapping V1 (candidate, human approval pending)
+## [RETIRED 2D] Player Diagonal Four-Direction Visual Mapping V1
 
 - Contract: `FC-PLAYER-DIAGONAL-CARDINAL-MAP-V1`.
 - Source policy: 정본 4×2 시트에 대각선 아트가 없으므로 새 대각선 전신을 생성하지 않는다.
@@ -99,7 +117,7 @@
 아래 source/writer/gate 경로는 2026-08-19에 삭제했다. 현재 권한이나 재현 경로가 아니라 제거 전 계약의
 역사 기록이다. checked-in `HighMotion/Frames`는 non-east/좌석 fallback으로만 남는다.
 
-- Contract: `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`의
+- Contract: 2026-08-24에 삭제된 퇴역 2D locomotion 문서의
   `FC-CHARACTER-LOCOMOTION-GENERATION-V1` / `FC-FAMILY-LOCOMOTION-RIG-V1` /
   `FC-CHARACTER-LOCOMOTION-FOOT-LOCK-QA-V1`.
 - Scope: 가족 4명, 4×8방향×6위상=192 frame과 캐릭터별 A/B sheet 8장. 직원 후보 8명은 가족
@@ -113,7 +131,7 @@
   않는다. canonical identity의 얼굴·모자·옷 상체는 변형하지 않고, P1/P4에서 hip과 함께 1px 이동한다.
 - Rig source: `ArtSources/FamilyLocomotionRigV1/`의 manifest와 generated raw 5장. ImageGen은 방향별
   좌/우 허벅지·종아리/발 분리 파츠까지만 만들며 최종 발 좌표·위상·접지는 코드가 소유한다. raw SHA는
-  manifest와 `CHARACTER_LOCOMOTION_GENERATION_V1.md`에 고정했다.
+  manifest에 고정했다. 퇴역 2D 제작 문서는 2026-08-24에 삭제했다.
 - Derivation: 방향별 identity upper→garment seam의 기존 standing leg만 corridor clear→공용 좌/우 leg
   part를 hip/knee/foot control에 bake→upper와 hip을 같은 weight offset으로 합성→support marker 진행축
   drift 보정→5 canonical 방향과 3 full-frame mirror→hard-alpha frames/sheets/anchor catalog. 허리 cap,
@@ -794,18 +812,44 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   Mixamo 원본 root travel은 포즈 위상과 support foot 검출에만 사용하고 최종 사람 크기나 logical root
   이동량으로 사용하지 않는다. 이 수치는 폐기된 Humanoid 연구 기록이며 현행 runtime에 적용하지 않는다.
 
-## 2026-08-20 Player East Mixamo Trace V2 (motion PASS / art incomplete)
+## 2026-08-20 Player East Mixamo Trace V2 (motion PASS / isolated art candidate)
 
 - 추적 패키지: `ArtSources/PlayerEastMixamoTraceV2/`.
 - raw motion: `PlayerWalkMotionReferenceExporter`가 Mixamo `PlayerHumanoidWalk.fbx`를 east `+90°`로
   평가해 ignored `Artifacts/PlayerEastMixamoTraceCandidate/mixamo-east-6pose-joints.json`에 만든다. 원시
   export는 공개 Git에 넣지 않고 파생된 2D 계약만 추적한다.
 - 2D contract: `target-joints.json`, `phase-contract.md`, `player-east-locked-skeleton-guide.png`.
-  stride `0.99380799`, PPU 180, scale 1.55에서 root advance `19.234993px/pose`; 계산된 heel/toe target
-  최대 contact drift `0.765007px` (`<=1px`). 이 수치는 raster art 승인값이 아니다.
+  사용자 승인 long-stride 격리값 `1.49071199`, PPU 180, scale 1.55에서 root advance
+  `28.852490px/pose`; 계산된 heel/toe target 최대 contact drift `0.295020px` (`<=1px`). 이 수치는
+  production 전역 stride가 아니라 east 후보용이다.
 - source/style: `SourceV3Frames/` 6장은 phase별 상체·외형 참고다. lower pose donor로 사용하지 않는다.
-- rejected evidence: `RejectedImageGenInputs/` 3장과 `RejectedResearch/`의 LockedArtV2 sheet/GIF/receipt.
-  모두 shipping 사용 false이며 `Assets`로 승격하지 않는다.
-- final lower art: 미완료. 각 P0~P5를 완전한 physical-owner pelvis→toe chain으로 새로 저작하고 사용자 east
-  GIF 승인을 받은 뒤에만 candidate를 만든다. production은 계속 `Legacy48`이다.
-- 재현/해시/편집 prompt: `ArtSources/PlayerEastMixamoTraceV2/README.md`와 `SHA256SUMS.txt`.
+- rejected evidence: `RejectedImageGenInputs/` 3장, `RejectedResearch/`의 LockedArtV2 sheet/GIF/receipt,
+  README에 SHA/prompt가 기록된 home-PC ImageGen 2회다. 모두 shipping 사용 false이며 `Assets`로 승격하지
+  않는다.
+- isolated lower candidate: `PlayerEastWalkLockedArtAuthoring`이 P0~P5를 target의 physical owner별
+  pelvis→hip→knee→ankle→heel/toe chain에서 새로 rasterize해 ignored
+  `Artifacts/PlayerEastMixamoLockedArtV3/`에만 만든다. source lower, mirror, fragment move/warp는 쓰지 않는다.
+  `Test-PlayerEastWalkLockedArtV3.ps1` 기준 upper mismatch 0, hard alpha, joint coverage, 한 material component,
+  east shoe 12/12, unique frame 6/6을 통과했다. 두 다리를 각각 검정 outline한 초기 후보는 교차부가 분리된
+  조각처럼 보여 폐기했다. 수정본은 pelvis+두 leg의 실제 색 면을 pants core mask로 합친 뒤 mask 바깥에만
+  1px 외곽선을 만든다. 실제 1.55배 맵에서 얇게 읽힌 관절 외곽은 center와 heel/toe를 유지한 채 허벅지/무릎/
+  발목 full width를 약 `16.8/14.5/10.6px`로 보강하고 신발 collar도 넓혔다. 발목↔신발 내부의 둘러싸인
+  exact-black은 주변 depth 색으로 닫되 외부 검정 실루엣은 보존한다. long-stride 재저작의 내부 검정 outline은
+  포즈당 최대 `13px`(`<=60px`)이며, 별도 pelvis→thigh junction의
+  완전히 둘러싸인 exact-black outline은 6포즈 모두 `0`이다. 긴 골반 가로 highlight와 중앙 주름도 쓰지
+  않으며 motion-following hip bridge 뒤 최초 leg split은 pelvis 아래 최소 `17px`다(계약 `>=17px`).
+  눌려 보인 신발은 heel/toe를 유지한 채 vamp/heel/앞코와 heel panel을 보강했다. long-stride 재저작 뒤
+  12개 신발의 최소 색 높이는 `11px`, material 면적 `207px`, red `67px`, white `88px`이며 shoe overlap은 0이다.
+- actual tile-map QA: `Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/Qa/PlayerEastLockedArtTileQa.cs`
+  (meta GUID `e76b7300669847da8dd32e97006c0703`)가 normal new-game 13×13 맵과 실제 `OfficeRuntimeAgent`를 사용한다.
+  production catalog를 바꾸지 않고 외부 후보 6장을 pose-major 48-frame 배열의 east row에만 주입하며 player 외
+  가족 3명은 숨긴다. QA 소유 중에만 speed `1.5`, stride `1.490712`를 적용하고 종료 시 production
+  speed `1.0`, stride `0.993808`로 복구한다. Windows D3D11, editable furniture 0, PPU 180, scale 1.55,
+  cycle distance `1.498756`, VisualRoot offset 0, P0~P5 캡처를 PASS했다.
+- final lower art: 격리 static/actual tile-map gate PASS, 사용자 타일 맵 화면 승인 대기. 승인 뒤에만 Assets
+  candidate로 승격하며 production은 계속 `Legacy48`이다. 현재 배포 EXE는 바꾸지 않았다.
+- tile-step review: production은 `2 steps/tile`, `120.75 steps/min`, visible-height 대비 step `27.5%`다.
+  KShopGo 실제 영상·APK와 타일 RPG/실제 보행 비교 뒤 east 격리 후보에 speed `1.5`, stride `1.49071199`,
+  `1.333 steps/tile`, step/height `41.2%`를 적용했다. target root advance와 foot-lock을 함께 다시 만들었고
+  전역 상수는 바꾸지 않았다.
+- 퇴역 재현 해시는 `ArtSources/PlayerEastMixamoTraceV2/SHA256SUMS.txt`에 남고 2D 편집 README는 삭제했다.

@@ -156,7 +156,8 @@ public void SetDisplayName(string newDisplayName)
 - **결정론 유지**: 주기와 선택은 `StableRandom(agentId, elapsedMinute)`으로 뽑는다.
   프로젝트 규칙이 `UnityEngine.Random` 금지다
 
-`MOVEMENT_NATURALNESS_V1.md` 체크리스트 9번이 이것이고, 여기서 해결된다.
+현재 3D 캐릭터의 idle/micro-action 검수는 `FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`의 실제 게임
+재검수 뒤 별도 단계에서 다룬다.
 
 ---
 

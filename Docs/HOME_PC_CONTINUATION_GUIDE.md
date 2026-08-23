@@ -2,9 +2,10 @@
 
 이 안내는 특정 날짜의 작업 폴더를 복제하는 문서가 아니라, 어느 Windows PC에서든 현재 `main`을 안전하게 받아 실행하는 절차다.
 
-> **현재 주인공 걷기를 이어갈 때는 먼저
-> [HOME_PC_WALK_CHECKPOINT_2026-08-20.md](HOME_PC_WALK_CHECKPOINT_2026-08-20.md)를 읽는다.**
-> Mixamo/KShopGo motion contract는 PASS했지만 완성 lower art는 아직 없고 production은 `Legacy48`이다.
+> **현재 가족 캐릭터를 이어갈 때는 먼저
+> [FAMILY_3D_CHARACTER_CANON_2026-08-24.md](FAMILY_3D_CHARACTER_CANON_2026-08-24.md)와
+> [FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md](FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md)를 읽는다.**
+> 신규 캐릭터는 3D-only이며 기존 2D family asset은 신규 입력이나 fallback이 아니다.
 
 ## 인계 상태
 
@@ -19,7 +20,7 @@
 - Unity Hub와 Unity Editor `6000.3.21f1`
 - Windows Standalone Build Support
 - 저장소 접근 권한
-- 주인공 걷기 trace를 재생성할 때는 Python 3, `numpy`, `Pillow`
+- 3D character 작업에는 Blender 5.2.0 LTS와 Unity Humanoid import/QA 환경
 
 처음 받는 PC에서는 원하는 작업 폴더에서 clone한다.
 

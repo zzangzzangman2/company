@@ -10,26 +10,21 @@
 6. 회사 역사·시장·계약 작업이면 Docs/ULTIMATE_VISION.md, Docs/REAL_COMPANY_ALT_HISTORY.md, Docs/SIMUL_MARKET_PORT.md, Docs/CONTRACTS_V0_3.md
 7. 코드를 고치고 확인해야 하면 Docs/ITERATION_LOOP.md
 8. 작업과 직접 관련된 추가 문서
-9. 캐릭터 보행 프레임을 생성·편집·가져오기·검증하면 작업 시작 전에
-   `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`와 `Docs/FAMILY_WALK_ART_GUARDRAILS.md`를 모두 읽고
-   `FC-WALK-GUARDRAIL-V1` 확인 문구를 작업 로그에 남긴다. 현재 shipping writer/gate는 직원 8명을
-   포함하지 않는 가족 4명 전용 Character Locomotion Generation V1이다. 직원 확장은 가족 4명 실게임
-   품질 승인 뒤 같은 규칙을 적용하는 별도 단계다.
-   방향 문자열·catalog index·머리 방향만 맞는 것으로 승인하지 않는다. 각 실제 PNG와 Player closeup에서
-   머리/시선, 흉곽, 골반, 무릎, 양쪽 발목과 **두 신발 앞코**가 같은 화면 heading인지 확인하고, contact
-   A/B 사이에 지지 다리 ownership과 arm occlusion이 실제로 바뀌는지 확인한다. 같은 다리 swing 반복,
-   뒤발 앞코의 반대방향 회전, 정면으로 벌어진 발은 수치 motion PASS여도 무조건 FAIL이다.
-   프레임을 상체/실루엣 중심으로 매번 재센터링하지 않는다. `strideWorld / 6`을 현재 PPU와 캐릭터 scale로
-   환산한 프레임당 root 이동과 지지발의 반대방향 local 이동을 비교하고, P0~P2와 P3~P5의 실제 projected
-   support-foot drift를 각각 검사한다. P0~P2 left, P3~P5 right처럼 해부학적 ownership을 먼저 고정하며
-   두 발 중 유리한 발을 프레임마다 바꿔 고르는 best-case 검사는 금지한다. 명시된 발의 projected drift가
-   1px를 넘으면 FAIL이다. contact separation·world-step/body-height·cadence만으로 foot lock을 대신하지 않는다.
+9. 가족 캐릭터를 생성·편집·가져오기·검증하면 작업 시작 전에
+   `Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md`와
+   `Docs/FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`를 모두 읽는다. 모든 신규 Player/Father/Mother/Older
+   Sister 작업은 **3D 전용**이다. 기존 2D sprite·atlas·PSB·R-series·분리 팔다리·보행 프레임은 mesh,
+   texture, decal, billboard, motion donor, fallback으로 사용할 수 없다.
+   네 캐릭터는 각각 한 개의 완전한 skinned body와 유효한 Humanoid Avatar를 가져야 하며, 같은 walk clip,
+   clock, cadence, phase, root, SW/NW/NE/SE 방향 계약을 공유한다. original-resolution 360도 검토,
+   P0/P3 해부학적 앞발 교대, 여러 주기 영상, 실제 D3D11 사무실, bottom-centre 이동, 충돌 회피와 mute를
+   모두 통과하고 사용자가 승인하기 전에는 production/default/Downloads 실행본으로 승격하지 않는다.
 
 ## 필수 작업 규칙
 
 - `b397af9`의 사무실 관리 구매 클릭과 빈 사무실 자율 산책 회귀는 `a9c6885e`에서 수정되었고 실제 native
-  pointer 클릭과 normal 08:50→09:50 관측으로 확인되었다. 현재 열린 gate는 가족 4명 보행 리그의 출하
-  검증이며 아직 정상 릴리스는 아니다. `Docs/PROJECT_STATE.md` 맨 위를 먼저 읽고, 삭제된 이전 작업방
+  pointer 클릭과 normal 08:50→09:50 관측으로 확인되었다. 현재 열린 gate는 가족 4명의 최종 3D
+  mesh·Humanoid rig·실게임 검증이며 아직 정상 릴리스는 아니다. `Docs/PROJECT_STATE.md` 맨 위를 먼저 읽고, 삭제된 이전 작업방
   outputs나 `Docs/History/Reports`의 PASS를 현재 정상 증거로 재사용하지 않는다. 상태를 바꾸는 주장은
   normal 새 게임에서 다시 재현·검증한다.
 - 정본 개발 브랜치는 `main` 하나다. `agent/*`, 기능·임시 브랜치, 새 branch와 별도 worktree를 만들거나 전환하지 않는다.
@@ -56,7 +51,7 @@
   빌드 파이프라인을 의심한다.
 - 매 작업 종료 전에 Docs/PROJECT_STATE.md의 현재 상태, 완료 항목, 다음 작업, 검증 결과를 갱신한다.
 - 설정·구조·콘텐츠 방향을 바꾸면 Docs/DECISIONS.md에 날짜와 이유를 남긴다.
-- 캐릭터·나이·복장·에셋 정본을 바꾸면 Docs/CANON.md와 Docs/ASSET_MANIFEST.md를 함께 갱신한다.
+- 캐릭터·나이·복장·에셋 정본을 바꾸면 Docs/CANON.md, Docs/ASSET_MANIFEST.md와 3D 캐릭터 정본을 함께 갱신한다.
 - MonoBehaviour와 ScriptableObject에 장기 런타임 상태를 저장하지 않는다. 시뮬레이션 상태는 순수 C# 객체가 소유한다.
 - 시간은 시작 시점으로부터 흐른 정수 분 단위, 돈은 정수 원(long), 확률은 seed와 안정 키에 기반한 결정론으로 다룬다.
 - 저장 파일에는 씬 Transform이 아니라 게임의 의미 상태만 기록한다.

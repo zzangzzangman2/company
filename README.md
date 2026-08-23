@@ -4,14 +4,22 @@
 
 ## 최종 통합 후보 상태
 
+- **가족 캐릭터 신규 구현은 2026-08-24부터 3D 전용이다.** Player/Father/Mother/Older Sister의 기존 2D
+  sprite·atlas·PSB·R-series·분리 신체·보행 프레임은 mesh/texture/motion donor나 fallback으로 사용하지
+  않는다. 시작 문서는 `Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md`, 실행 순서는
+  `Docs/FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`다.
+- 네 가족 identity turnaround는 준비됐고, 공통 3D 보행·방향·루트·mute 구조는 Styloo proxy V3로만
+  검증됐다. 최종 네 가족 textured Humanoid mesh는 아직 없으며, proxy와 Blender V1/V2를 최종 캐릭터로
+  오인하지 않는다. production/default/Downloads 실행본은 사용자 승인 전 바꾸지 않는다.
+
 - **`b397af9`의 두 차단 회귀는 `a9c6885e`에서 수정되어 더 이상 현재 기준선이 아니다.** 배치 편집기의 pending
   분기는 preview 셀을 갱신한 뒤 같은 frame에서 `Input.GetMouseButtonDown(0)` → `ConfirmPreview()`까지
   진행하고, 빈 사무실 fallback은 `OfficeAutonomyCoordinator`의 destination 있는 타일 중심 산책으로 바뀌었다.
   실제 Windows native pointer 1회 클릭에서 자금 `5,000,000→4,986,250`, furniture `52→53`, 실제 Release
   Player normal 빈 사무실 08:50→09:50 관측에서 `currentLook=0`, `duplicatePivot=0`을 확인했다.
-- **현재 열린 gate는 가족 4명 보행 리그의 출하 검증이다.** 배포 실행본의 D3D11 renderer support-world trace와
-  실제 캡처 사람 검토가 아직 남아 있으므로 완료/정상 릴리스로 보고하지 않는다. 이 작업은 진행 중이며 정확한
-  범위와 재현 명령은 `Docs/CHARACTER_LOCOMOTION_GENERATION_V1.md`가 소유한다.
+- **현재 열린 gate는 가족 4명의 최종 3D mesh·rig·실게임 검증이다.** 각 역할은 한 몸/한 Humanoid Avatar,
+  공통 clip/clock/cadence, SW/NW/NE/SE 여러 주기, P0/P3 앞발 교대, bottom-centre 이동, 충돌 회피와 mute를
+  실제 D3D11에서 통과해야 한다.
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
 - 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고, GitHub history·tags·Releases·Actions 감사 결과 executable payload는 0입니다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`에서 도입한 CI guard가 향후 tracked Windows Player payload를 fail-closed 차단합니다.
 - 현재 실행 payload는 두 곳뿐이다. 저장소 `Builds/Windows/FamilyCompany_Playtest`는 clean HEAD `8fa5fa74`의
@@ -33,6 +41,8 @@
 - 가족 4명은 같은 10,000 체력 기준으로 시작하며, 업무 중 체력이 25%까지 내려가면 실제 배치·접근·사용 가능한 정수기·자판기·휴식 좌석을 찾아 회복한 뒤 원래 자리와 남은 업무로 돌아갑니다.
 - 캐릭터 방향과 걷기 애니메이션의 정본은 요청 방향이 아니라 프레임의 실제 이동량입니다. 빈 사무실 산책도
   destination을 가진 타일 중심 경로를 쓰며, 각 cardinal 구간의 pivot을 끝낸 뒤 translation합니다.
+- 현재 production의 2D 캐릭터는 3D migration 전 보호되는 legacy runtime일 뿐 신규 캐릭터 제작 입력이
+  아닙니다. 최종 3D 네 가족이 모두 사용자 승인을 받은 뒤 별도 migration commit으로만 교체합니다.
 - 기본 렌더는 `1920×1080`, native scale 1, pixel snap을 사용하고 작은 창은 compact UI로 대응합니다.
 - 주식은 회사 자금과 연결되며 시장 시간, 7+7 호가, 가격·시간 우선 FIFO, 수수료·세금, 결정론적 저장 규칙을 유지합니다.
 
@@ -81,6 +91,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 | 2 | [PROJECT_STATE.md](Docs/PROJECT_STATE.md) | 현재 통합/대기/미완료와 최신 검증 |
 | 3 | [CANON.md](Docs/CANON.md) | 가족·직원 후보·시각 콘텐츠 정본 |
 | 4 | [DECISIONS.md](Docs/DECISIONS.md) | 구조와 방향 결정의 이유 |
+| 가족 3D | [FAMILY_3D_CHARACTER_CANON_2026-08-24.md](Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md), [FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md](Docs/FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md) | 3D-only 캐릭터 정본·비용·제작·검수·다른 PC 인계 |
 | 구조 | [ARCHITECTURE.md](Docs/ARCHITECTURE.md) | 순수 시뮬레이션·저장·Unity 경계 |
 | 반복 루프 | [ITERATION_LOOP.md](Docs/ITERATION_LOOP.md), [FAST_QA_WINDOWS.md](Docs/FAST_QA_WINDOWS.md) | 변경 종류별 명령과 warm 캐시 규칙 |
 | 사무실·UI | [ART_STYLE.md](Docs/ART_STYLE.md), [OFFICE_BUILD_EDITOR_V1.md](Docs/OFFICE_BUILD_EDITOR_V1.md), [MAIN_NAVIGATION_HUD_V2.md](Docs/MAIN_NAVIGATION_HUD_V2.md), [FRONTEND_V0_4.md](Docs/FRONTEND_V0_4.md) | 현재 런타임 시각·편집·내비게이션 |
@@ -99,6 +110,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 - 회사 PC에서는 Unity/EXE를 전면 실행하지 않습니다. 컴파일·순수 로직 검증은 숨김 batchmode, 실제 렌더·IMGUI 캡처는 숨김 또는 비활성 오프스크린 Windows D3D11 창을 사용합니다.
 - 반복 확인은 `FAST_QA_WINDOWS.cmd`로 하고 `BUILD_WINDOWS.cmd`는 배포 후보에만 씁니다. `Library`, `Library/Bee`, `Artifacts/FastQa` 캐시는 일상 실행 사이에 삭제하지 않고, 새 worktree를 만들어 warm `Library`를 버리지 않습니다.
 - 제안서나 완료 보고서는 자동으로 정본이 아닙니다. 구현과 검증 후 `PROJECT_STATE.md`에 반영된 내용만 현재 상태입니다.
+- 기존 2D 가족 캐릭터 문서와 연구 산출물은 신규 mesh/texture/animation/fallback 권한이 아닙니다.
 - 회귀·실패·출처 미검증·self-PASS-only 실행본은 이름 변경이나 격리로 보존하지 않습니다. exact-root fence와 evidence-before-delete를 지키며 관련 payload만 삭제하고, 모든 regression oracle과 독립 gate를 통과한 새 build identity만 새로 빌드·승격합니다.
 - 최종 push 전에는 `.gitignore`와 tracked tree뿐 아니라 `origin/main`, 모든 active branch/tag tree, remote release asset에서 회귀·구 executable payload와 unknown identity가 0인지 확인합니다. tracked build는 일반 cleanup commit으로 제거하되, history rewrite/force-push는 exact audit·검증된 backup·collaborator re-clone 영향 승인 전에는 금지합니다.
 
