@@ -18,6 +18,20 @@
   retarget하므로 가족별 animation generation은 0회다. 크레딧은 첫 패스 `4 × U`, 역할별 3회 검수 예산
   `12 × U`이며, 공개 가격표에 3D 단가 `U`가 없어 인증된 workspace의 공식 cost estimator 전에는 총액을
   확정하지 않는다. 분석 당시 web balance는 10 credits였고 생성·credit spend는 0이다.
+- Unity AI Beta는 이 프로젝트의 Unity `6000.3.21f1`에서 설치 가능한 대안이지만 최종 가족 character를
+  바로 완성하는 end-to-end 대체안은 아니다. 공식 3D Object Generator는 simple single-part용
+  **static mesh placeholder prefab**을 만들며 SkinnedMeshRenderer, skeleton, skin weights, Humanoid Avatar를
+  제공하지 않는다. Higgsfield가 막힐 때 Player 한 명의 static base 후보를 만들고 Blender에서 원본 해상도
+  검수·retopology·rigging을 다시 하는 제한적 fallback은 가능하지만, 생성 결과만으로 승인하지 않는다.
+  현재 프로젝트에는 Unity AI package와 Cloud project link도 없다. 따라서 별도 사용자 승인 없이 package
+  설치, Cloud 연결, turnaround 업로드, credit 사용을 하지 않으며, 기존 Styloo motion proxy가 있는 현재
+  단계에서는 Unity AI static proxy를 추가 생성하지 않는다.
+- 회사 PC에서 `21075cd6`을 pull한 뒤 Unity `6000.3.21f1`을
+  `-batchmode -nographics -quit`로 열어 전체 script import/compile을 다시 수행했다. Tundra build와
+  `FamilyCompany.Presentation.Unity`, `FamilyCompany.Editor`, `Assembly-CSharp`,
+  `Assembly-CSharp-Editor` 컴파일은 PASS, Unity 종료 코드는 0이다. Styloo FBX의 기존 Avatar rig
+  configuration mismatch는 import warning으로 남지만 compile failure는 아니다. 이 실행에서 누락된
+  `Assets/FamilyCompany/Experimental/Family3DPrototype.meta`를 발견해 추적 대상으로 추가했다.
 - 다음 작업은 Player 한 명의 정확한 live cost estimate → 사용자 승인 → Player mesh generation/Blender
   원본 해상도 360도 검수 → Humanoid rig → 같은 motion showroom → 실제 D3D11 사무실 순서다.
 - production 2D runtime, 기본/Downloads 실행본은 3D 네 가족 전체 승인 전 보호한다. legacy 2D asset은

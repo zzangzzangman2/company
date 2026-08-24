@@ -1,5 +1,28 @@
 # DECISIONS
 
+## 2026-08-24 / Unity AI Beta는 static-base fallback이며 최종 character/rig의 직접 대체안이 아니다
+
+결정: Unity AI Beta의 3D Object Generator를 네 가족 최종 mesh/rig의 직접 공급자로 쓰지 않는다. 공식
+출력은 simple single-part prop용 static mesh prefab이며 완전한 skinned body, skeleton, skin weights와
+Unity Humanoid Avatar를 제공하지 않는다. Higgsfield가 접근·비용·품질에서 막힐 때만 Player 한 명의
+static base 후보를 생성하고, Blender 원본 해상도 360 검수, 필요 retopology, skinning과 Humanoid rig를
+처음부터 통과시키는 제한적 fallback으로 비교할 수 있다. 생성된 static prefab 자체는 PASS가 아니다.
+Player/Father/Mother/Older Sister의 현행 1순위는 `multi_image_to_3d` 비교 경로이며, 하나의 기존 Humanoid
+walk clip을 Unity에서 retarget한다. Unity Animation Generator로 가족별 walk를 새로 만들지 않는다.
+
+이유: 이 프로젝트의 열린 gate는 3D처럼 보이는 정적 실루엣이 아니라 **한 몸의 identity-matching
+SkinnedMesh + 유효한 Humanoid Avatar + 공통 보행 retarget**이다. Unity 공식 설명도 3D Object Generator를
+교체 가능한 prototype placeholder로 한정한다. 이미 Styloo V3가 scale, camera, shared motion 검증용 proxy를
+제공하므로 rig 없는 proxy를 하나 더 만드는 데 Cloud 연결과 credit을 쓰는 것은 열린 gate를 줄이지 않는다.
+
+운영 경계: 현재 프로젝트의 `Packages/manifest.json`에는 Unity AI package가 없고
+`ProjectSettings/ProjectSettings.asset`의 `cloudProjectId`/`organizationId`도 비어 있다. Unity AI 시험은
+package 설치, Unity Cloud project 연결, beta/third-party 약관, reference 업로드와 credit 사용을 수반하므로
+사용자 명시 승인 전에는 수행하지 않는다. 공식 근거는
+[Unity 3D Object Generator](https://unity.com/blog/unity-ai-3d-object-generator),
+[Unity AI 시작 절차](https://unity.com/blog/unity-ai-how-to-get-started),
+[Unity AI 데이터·생성물 안내](https://unity.com/features/ai)다.
+
 ## 2026-08-24 / 가족 신규 캐릭터는 3D-only, 보행은 공통 Humanoid contract로 전환한다
 
 결정: Player/Father/Mother/Older Sister의 신규 구현은 한 몸·한 Humanoid Avatar를 가진 3D character만
