@@ -20,6 +20,8 @@ namespace FamilyCompany.Experimental.Family3D
         public const float PathHalfExtent = 1.5f;
         public const float TurnDegreesPerSecond = 720f;
         public const float RouteLoopSeconds = PathHalfExtent * 8f / MovementSpeed;
+        private const int QaCaptureWidth = 1280;
+        private const int QaCaptureHeight = 720;
 
         [SerializeField] private Camera reviewCamera;
         [SerializeField] private Family3DWalkActor[] actors = Array.Empty<Family3DWalkActor>();
@@ -71,6 +73,12 @@ namespace FamilyCompany.Experimental.Family3D
         private readonly HashSet<int> observedAudioSourceIds = new HashSet<int>();
         private int maximumAudioSourcesObserved;
         private int audioAudibleRiskViolationFrames;
+        private RenderTexture qaRenderTexture;
+        private Texture2D qaReadbackTexture;
+        private int capturedVisualContentFrames;
+        private int visualContentViolationFrames;
+        private int minimumCapturedLumaRange = 255;
+        private int maximumCapturedLumaRange;
 
         // The fixed review camera is at world (+X, +Y, -Z). In that projection,
         // world -Z/-X/+Z/+X read as office SW/NW/NE/SE respectively.
@@ -451,7 +459,8 @@ namespace FamilyCompany.Experimental.Family3D
             }
             Directory.CreateDirectory(qaOutputDirectory);
             Directory.CreateDirectory(frameDirectory);
-            Screen.SetResolution(1280, 720, false);
+            Screen.SetResolution(QaCaptureWidth, QaCaptureHeight, false);
+            EnsureQaRenderTargets();
             float started = Time.realtimeSinceStartup;
             double startedMotionClock = motionClock;
             float nextCapture = started;
@@ -495,7 +504,7 @@ namespace FamilyCompany.Experimental.Family3D
                     phase.ToString("F9", CultureInfo.InvariantCulture)
                 }));
                 string file = Path.Combine(frameDirectory, "frame_" + qaFrame.ToString("D4") + ".png");
-                ScreenCapture.CaptureScreenshot(file, 1);
+                CaptureQaFrame(file);
                 qaFrame++;
                 nextCapture += captureInterval;
             }
@@ -506,9 +515,105 @@ namespace FamilyCompany.Experimental.Family3D
             File.WriteAllLines(
                 Path.Combine(qaOutputDirectory, "frame-metadata.csv"),
                 new[] { "frame,motionClock,direction,pose,phase" }.Concat(frameMetadata));
+            DisposeQaRenderTargets();
             yield return new WaitForSecondsRealtime(1f);
             bool passed = WriteQaReceipt();
             Application.Quit(passed ? 0 : 2);
+        }
+
+        private void EnsureQaRenderTargets()
+        {
+            if (reviewCamera == null)
+                throw new InvalidOperationException("QA review camera is missing.");
+            if (qaRenderTexture != null && qaReadbackTexture != null)
+                return;
+
+            qaRenderTexture = new RenderTexture(
+                QaCaptureWidth,
+                QaCaptureHeight,
+                24,
+                RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.Default)
+            {
+                name = "Family3D_QA_RenderTexture",
+                antiAliasing = 1,
+                useMipMap = false,
+                autoGenerateMips = false
+            };
+            if (!qaRenderTexture.Create())
+                throw new InvalidOperationException("Could not create the QA render target.");
+            qaReadbackTexture = new Texture2D(
+                QaCaptureWidth,
+                QaCaptureHeight,
+                TextureFormat.RGBA32,
+                false,
+                false)
+            {
+                name = "Family3D_QA_Readback"
+            };
+        }
+
+        private void CaptureQaFrame(string file)
+        {
+            RenderTexture previousTarget = reviewCamera.targetTexture;
+            RenderTexture previousActive = RenderTexture.active;
+            try
+            {
+                reviewCamera.targetTexture = qaRenderTexture;
+                reviewCamera.Render();
+                RenderTexture.active = qaRenderTexture;
+                qaReadbackTexture.ReadPixels(
+                    new Rect(0f, 0f, QaCaptureWidth, QaCaptureHeight),
+                    0,
+                    0,
+                    false);
+                qaReadbackTexture.Apply(false, false);
+                AuditQaVisualContent();
+                File.WriteAllBytes(file, ImageConversion.EncodeToPNG(qaReadbackTexture));
+            }
+            finally
+            {
+                reviewCamera.targetTexture = previousTarget;
+                RenderTexture.active = previousActive;
+            }
+        }
+
+        private void AuditQaVisualContent()
+        {
+            var pixels = qaReadbackTexture.GetRawTextureData<Color32>();
+            int minimumLuma = 255;
+            int maximumLuma = 0;
+            const int sampleStride = 997;
+            for (var index = 0; index < pixels.Length; index += sampleStride)
+            {
+                Color32 pixel = pixels[index];
+                int luma = (pixel.r * 54 + pixel.g * 183 + pixel.b * 19) >> 8;
+                minimumLuma = Mathf.Min(minimumLuma, luma);
+                maximumLuma = Mathf.Max(maximumLuma, luma);
+            }
+
+            int lumaRange = maximumLuma - minimumLuma;
+            minimumCapturedLumaRange = Mathf.Min(minimumCapturedLumaRange, lumaRange);
+            maximumCapturedLumaRange = Mathf.Max(maximumCapturedLumaRange, lumaRange);
+            if (maximumLuma >= 40 && lumaRange >= 24)
+                capturedVisualContentFrames++;
+            else
+                visualContentViolationFrames++;
+        }
+
+        private void DisposeQaRenderTargets()
+        {
+            if (qaRenderTexture != null)
+            {
+                qaRenderTexture.Release();
+                Destroy(qaRenderTexture);
+                qaRenderTexture = null;
+            }
+            if (qaReadbackTexture != null)
+            {
+                Destroy(qaReadbackTexture);
+                qaReadbackTexture = null;
+            }
         }
 
         private bool WriteQaReceipt()
@@ -552,6 +657,9 @@ namespace FamilyCompany.Experimental.Family3D
                              audioOutputViolationFrames == 0 &&
                              audioAudibleRiskViolationFrames == 0 &&
                              audioPostEnforcementViolationFrames == 0;
+            bool visualContentPass = qaFrame > 0 &&
+                                     capturedVisualContentFrames == qaFrame &&
+                                     visualContentViolationFrames == 0;
 
             var actorReceipts = new ActorReceipt[accumulators.Count];
             bool actorMotionPass = actorReceipts.Length == 4;
@@ -584,6 +692,7 @@ namespace FamilyCompany.Experimental.Family3D
                                       capturedDirectionsPass &&
                                       capturedDirectionSequencePass &&
                                       capturedFullRouteLoop &&
+                                      visualContentPass &&
                                       rootPass &&
                                       audioPass &&
                                       actorMotionPass;
@@ -605,6 +714,12 @@ namespace FamilyCompany.Experimental.Family3D
                 requestedMotionSeconds = qaDurationSeconds,
                 capturedMotionSeconds = capturedMotionSeconds,
                 capturedWallClockSeconds = capturedWallClockSeconds,
+                captureMethod = "CAMERA_RENDER_TEXTURE_READ_PIXELS",
+                capturedVisualContentFrames = capturedVisualContentFrames,
+                visualContentViolationFrames = visualContentViolationFrames,
+                minimumCapturedLumaRange = qaFrame > 0 ? minimumCapturedLumaRange : 0,
+                maximumCapturedLumaRange = maximumCapturedLumaRange,
+                visualContentPass = visualContentPass,
                 bgmMuted = audioPass,
                 audioListenerVolume = AudioListener.volume,
                 audioSourcesFound = audioSources.Length,
@@ -670,6 +785,12 @@ namespace FamilyCompany.Experimental.Family3D
             public float requestedMotionSeconds;
             public float capturedMotionSeconds;
             public float capturedWallClockSeconds;
+            public string captureMethod;
+            public int capturedVisualContentFrames;
+            public int visualContentViolationFrames;
+            public int minimumCapturedLumaRange;
+            public int maximumCapturedLumaRange;
+            public bool visualContentPass;
             public bool bgmMuted;
             public float audioListenerVolume;
             public int audioSourcesFound;

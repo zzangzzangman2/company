@@ -6,17 +6,69 @@
 
 - Locked identity inputs: `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/`
   의 Player/Father/Mother/Older Sister front/left/back/three-quarter PNG 네 장.
-- Motion prototype: `Assets/FamilyCompany/Experimental/Family3DPrototype/`와 compact evidence
-  `ArtSources/Family3DPrototypeV3Evidence/`.
-- Third-party proxy: Styloo CC0 `allinone.fbx`; 출처와 라이선스는 같은 폴더의
-  `SOURCE_AND_LICENSE.md`. 이 모델은 motion/pipeline proxy이며 최종 가족 identity가 아니다.
+- Current isolated models: 같은 폴더의 `Candidates/PlayerV3`, `Candidates/FatherV1`,
+  `Candidates/MotherV1`, `Candidates/OlderSisterV1`. 네 후보는 각 turnaround만 입력으로 완전히 새로
+  제작했으며 기존 2D/V1/V2/Styloo 또는 기존 mesh/texture/decal/motion donor·fallback을 사용하지 않았다.
+- Player FBX `player-v6-blender-humanoid-v3.fbx` SHA-256
+  `80CEEC5269D229D213DEBF17B90EB99FDB93B9DB60B8D3416AAB779D1A657EA9`; atlas
+  `player-v6-blender-identity-v3-atlas.png` SHA-256
+  `46DD6CA613465C5E65338701AECB8FF029CB22C0059716CEEC5C9ED7ED6D7C8F`.
+- Father FBX `father-blender-humanoid-v1.fbx` SHA-256
+  `417D28116037D23895AAA813089BD0EC25E1786370E60FECAE2BAB1B8761591F`; atlas
+  `father-blender-identity-v1-atlas.png` SHA-256
+  `6A271252664216266874DF5FDCD40775DFA3AF2D88747C4664C63E1D4ED334EA`.
+- Mother FBX `mother-blender-humanoid-v1.fbx` SHA-256
+  `59F0FB77C23FD9BD5457E2305E86DAFACD9BB3D62F4BE079ADA8D1CC65F85E01`; atlas
+  `mother-blender-identity-v1-atlas.png` SHA-256
+  `4FA4D826132C72787CA740E917BB0B29A958C31D47E062D6B7B2C4705722D9A2`.
+- Older Sister FBX `older-sister-blender-humanoid-v1.fbx` SHA-256
+  `51EE97D6278038EDA30E24D74E62C75FC4AA00086D0C119BF76F54A2FE0B15D4`; atlas
+  `older-sister-blender-identity-v1-atlas.png` SHA-256
+  `BAC4245933C91D5CDFBEADB9280F670CC7D1F93DA29B52BF9514EAA37B5EF48A`.
+- Structure: 각 후보 complete skinned body 1, material 1, atlas 1, bone 23, bottom-centre `Root`,
+  explicit Humanoid mapping. 공통 walk는
+  `Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx`다.
+- Blender round trip: `Tools/Blender/validate_family_humanoid_fbx.py`가 mesh/armature/material/UV layer를
+  각각 exactly one으로 검사하고 single active UV0을 강제한다. 최종 네 FBX PASS; active UV0은
+  `PlayerV3AtlasUV`, `IdentityAtlasUV`, `UVMap`, `OlderSisterV1AtlasUV`. Father 다중 UV0은 실제 D3D 화면에서
+  발견 후 sole `IdentityAtlasUV`로 교정했다.
+- Unity import: `Artifacts/Family3DIdentityCandidates/UnityImport/all-import-receipt.json` =
+  `PASS_VISUAL_AND_MOTION_REVIEW_REQUIRED`, `productionEligible: false`.
+- Isolated build/runtime: `Artifacts/Family3DIdentityCandidateV1/BuildRun3/build-receipt.json` =
+  `Succeeded`; `D3D11Run4Final/qa-receipt.json` = `AUTO_PASS_VISUAL_REVIEW_REQUIRED`, 420 frames,
+  13.9100847 s, visual 420/420, direction masks all `63`, route/root/audio/P0-P3 foot-alternation PASS.
+  검은 `ScreenCapture`였던 최초 두 run은 거부했고 최종 증거는 `RenderTexture + ReadPixels` luma gate다.
+- StarterOffice QA-only sources:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Runtime/Family3DStarterOfficeCandidateQa.cs`,
+  `Editor/Family3DStarterOfficeCandidateQaBuilder.cs`, generated isolated
+  `Scenes/Family3DStarterOfficeCandidateQa.unity`. Builder는 `Prototype01` copy와 read-only
+  `OfficeTileMigrationPreview`를 explicit build scenes로만 전달하며 Build Settings를 저장하지 않는다.
+- StarterOffice build receipt:
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/BuildRun6SinglePassFinal/build-receipt.json` =
+  `Succeeded`, `productionMutation: false`, `productionEligible: false`. Before/after SHA-256 동일:
+  `Prototype01` `5970EF496ACD81E7A0646A96807448E2283AB96F7D4866C234A09140D5872CD1`,
+  `OfficeTileMigrationPreview` `1EC8C2156D887F083CB5F4EB63BB46D5F9451C3F9CAC8C239688D86F7AD0DA1F`,
+  `EditorBuildSettings.asset` `010B57B9A51DE91C83FC9C7465DECFA0563214C74EA6A7E1DB5A991879890590`.
+- StarterOffice runtime receipt/log:
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/RuntimeRun6SinglePassFinal/`. Starter ready, 4 bindings,
+  official MovementLayout QA PASS, Player 8-direction mask `255`, static/interaction/penetration `0`;
+  adapter moving samples 4,165, Player moving 2,651, gait `0.000248..0.999476`; composite frames 3,
+  luma `199..216`, visual PASS.
+- StarterOffice mapping/coverage: 2D XY → production viewport → overlay ray/`Y=0`,
+  `yaw=(direction-4)*45°`, sprite-bounds scale. Layer 30은 QA 동안 base camera culling에서 제외하고 종료 시
+  원복해 최종 프레임에 네 후보를 한 번씩만 렌더한다. Standing/Navigating만 3D이며 approach/seated/work/
+  egress는 2D presentation을 복구한다. Player만 actual-office 8방향을 직접 이동했고 나머지 세 명은
+  binding/scale/standing을 검증했다. 네 명 shared walk는 isolated showroom PASS다.
+- Historical motion architecture only: Styloo CC0 proxy와 `ArtSources/Family3DPrototypeV3Evidence/`는
+  새 identity 후보의 source/donor/fallback이 아니며 production promotion 대상도 아니다.
 - Blender diagnostics: `ArtSources/Family3DBlenderPlayerDiagnosticsV1V2/`; V1/V2 모두 REJECTED이며
   donor·수정 출발점·Unity 후보로 금지한다.
-- Final family meshes: 아직 없음. 한 캐릭터당 하나의 완전한 textured skinned body와 유효한 Humanoid
-  Avatar가 필요하다.
 - Existing 2D character assets below are retained only for current production migration, provenance,
   and rollback analysis. They are forbidden as new 3D mesh, texture, decal, billboard, body-part donor,
   motion source, or missing-model fallback.
+- Status boundary: 네 결과는 isolated candidates이며 human visual review와 full-3D furniture
+  occlusion/seating gate가 남았다. `productionEligible: false`; production/default office/runtime,
+  Build Settings와 Downloads는 변경하지 않았다.
 - Full authority: `FAMILY_3D_CHARACTER_CANON_2026-08-24.md` and
   `FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`.
 

@@ -1,11 +1,69 @@
 # DECISIONS
 
-## 2026-08-24 / Higgsfield 영상은 Player pilot 근거이며 비용·Unity 호환·가족 전체 승인 증거가 아니다
+## 2026-08-24 / 실제 사무실 3D 후보는 QA-only overlay이며 Standing/Navigating까지만 허용한다
 
-결정: Higgsfield `multi_image_to_3d`를 Unity AI static object generator보다 Player 최종 character의
-우선 비교 경로로 유지한다. 다만 사용자가 링크한 `Kbf8yqauzF0` 영상은 paid-promotion capability evidence로만
-취급한다. 영상처럼 MCP를 연결했다는 이유로 Player/Father/Mother/Older Sister를 일괄 생성하거나 credit을
-사용하지 않는다. 정확한 pre-generation 단가와 Player 한 명의 별도 사용자 승인을 먼저 요구한다.
+결정: `Family3DStarterOfficeCandidateQaBuilder`가 production `Prototype01`을 Experimental scene으로
+복사하고 read-only `OfficeTileMigrationPreview`와 함께 explicit `BuildPlayerOptions.scenes`로만 빌드하는
+경로를 실제 사무실 QA 정본으로 사용한다. production scene/bootstrap/catalog와 Editor Build Settings는
+수정하지 않는다. `BuildRun6SinglePassFinal`은 `Succeeded`, `productionMutation: false`,
+`productionEligible: false`다. Before/after SHA-256은 `Prototype01`
+`5970EF496ACD81E7A0646A96807448E2283AB96F7D4866C234A09140D5872CD1`, preview
+`1EC8C2156D887F083CB5F4EB63BB46D5F9451C3F9CAC8C239688D86F7AD0DA1F`, EditorBuildSettings
+`010B57B9A51DE91C83FC9C7465DECFA0563214C74EA6A7E1DB5A991879890590`으로 각각 동일하다.
+
+결정: adapter 좌표는 production actor 2D XY → production camera viewport → overlay camera ray의
+`Y=0` 교점, 방향은 `yaw=(direction-4)*45°`, 크기는 live sprite bounds 기준이다. 실제 프레임에서 base
+camera와 overlay camera의 QA layer 30 이중 렌더를 발견했으므로 QA 동안 base culling에서 layer 30을
+제외하고 종료 시 원래 mask로 복구한다. 최종 composite에는 네 후보가 각각 한 번만 렌더되어야 한다.
+
+검증: `RuntimeRun6SinglePassFinal`은 Starter ready/4 bindings, project official MovementLayout QA,
+Player 8방향 mask `255`, static collision `0`, interaction `0`, penetration `0`을 PASS했다. adapter moving
+sample은 4,165 frames, Player moving은 2,651 frames, gait phase는 `0.000248..0.999476`; composite 3장은
+luma `199..216`으로 visual-content PASS다.
+
+운영 경계: 3D는 Standing/Navigating에만 표시한다. approach/seated/work/egress에서는 원래 2D presentation을
+복구한다. actual-office에서 8방향 이동을 직접 구동한 것은 Player뿐이며 나머지 세 명은 binding/scale/
+standing만 검증했다. 네 명 모두의 shared walk는 별도 isolated D3D showroom에서 검증했다. 따라서
+full-3D furniture occlusion/seating이 다음 office gate이고, 현 결과는 production 승인이나 교체가 아니다.
+
+## 2026-08-24 / 신규 Blender 4명은 독립 격리 후보이며 production 교체가 아니다
+
+결정: Player/Father/Mother/Older Sister를 네 개의 독립 Blender workstream으로 완성한 결과를
+`Family3DIdentityCandidateLab`과 generated `Family3DStarterOfficeCandidateQa` 두 QA-only scene에만
+연결한다. 네 병렬 작업은 사용자가 명시적으로 동시에 진행하라고 지시한 이번 작업의 예외다. 각 역할은
+자기 turnaround만 identity 입력으로 사용하며 기존 2D, Player V1/V2, Styloo, 기존 mesh/texture/decal/
+motion donor나 fallback을 사용하지 않는다.
+
+결정: 각 후보의 gate는 complete skinned body 1개, material 1개, atlas 1개, bone 23개, bottom-centre
+`Root`, explicit Humanoid mapping, 같은 shared walk다. canonical FBX/atlas SHA-256은 Player
+`80CEEC5269D229D213DEBF17B90EB99FDB93B9DB60B8D3416AAB779D1A657EA9` /
+`46DD6CA613465C5E65338701AECB8FF029CB22C0059716CEEC5C9ED7ED6D7C8F`, Father
+`417D28116037D23895AAA813089BD0EC25E1786370E60FECAE2BAB1B8761591F` /
+`6A271252664216266874DF5FDCD40775DFA3AF2D88747C4664C63E1D4ED334EA`, Mother
+`59F0FB77C23FD9BD5457E2305E86DAFACD9BB3D62F4BE079ADA8D1CC65F85E01` /
+`4FA4D826132C72787CA740E917BB0B29A958C31D47E062D6B7B2C4705722D9A2`, Older Sister
+`51EE97D6278038EDA30E24D74E62C75FC4AA00086D0C119BF76F54A2FE0B15D4` /
+`BAC4245933C91D5CDFBEADB9280F670CC7D1F93DA29B52BF9514EAA37B5EF48A`다.
+
+검증: generic FBX validator는 exactly one active UV layer/sole UV0을 fail-closed로 검사한다. 네 FBX
+재검증 PASS, active UV0은 `PlayerV3AtlasUV`, `IdentityAtlasUV`, `UVMap`,
+`OlderSisterV1AtlasUV`다. Father의 multi-UV0 결함은 실제 D3D 화면에서 발견해 sole
+`IdentityAtlasUV`로 수정했다. Unity all-import는 `PASS_VISUAL_AND_MOTION_REVIEW_REQUIRED`, BuildRun3은
+`Succeeded`, `D3D11Run4Final`은 `AUTO_PASS_VISUAL_REVIEW_REQUIRED`다. 마지막 run은 420 frames /
+13.9100847 s, visual 420/420, direction mask 네 개 모두 `63`, root/audio/P0-P3 foot alternation PASS다.
+검은 프레임인 최초 두 `ScreenCapture` run은 거부하고 `RenderTexture + ReadPixels` 및 luma gate를 쓴
+마지막 run만 자동 증거로 인정한다.
+
+운영 경계: 자동 gate 통과는 production 승인과 다르다. 네 후보는 모두 `productionEligible: false`이며
+human visual review와 남은 full-3D furniture occlusion/seating gate 뒤에도 별도 사용자 production
+migration 승인이 필요하다. 실제 production asset, office/default 경로와 Downloads 실행본은 바꾸지 않는다.
+
+## 2026-08-24 / [종료된 공급자 검토] Higgsfield 영상은 비용·Unity 호환·승인 증거가 아니다
+
+결정: 당시 Higgsfield `multi_image_to_3d`를 Unity AI static object generator보다 Player character의
+우선 비교 경로로 검토했다. 현재는 네 independent Blender candidates가 존재하므로 공급자 생성은 continuation
+gate가 아니며 이 검토는 종료됐다. 사용자가 링크한 `Kbf8yqauzF0` 영상은 paid-promotion capability evidence로만
+취급한다. 향후 사용자가 후보 거부 뒤 비교를 다시 열기 전에는 family sheet 업로드나 credit 사용을 하지 않는다.
 
 근거: 영상 전체 10:39에서 Higgsfield MCP device authorization, Blender character 검수, 실제 걷기·구르기·
 3단 공격, 여러 번 실패한 jump repair, neutral showroom은 확인된다. 반면 정확한 generation prompt/옵션과
@@ -21,20 +79,23 @@ cost/identity/rig/Unity gate를 닫지 않는다.
 한 명의 명시 승인만 순서대로 진행한다. estimator가 지원되지 않는 동안 실제 generation을 비용 probe로
 사용하지 않으며, balance가 10인 상태에서 같은 create를 재시도하지 않는다.
 
-## 2026-08-24 / Unity AI Beta는 static-base fallback이며 최종 character/rig의 직접 대체안이 아니다
+## 2026-08-24 / [대기 중 fallback] Unity AI Beta는 최종 character/rig의 직접 대체안이 아니다
 
 결정: Unity AI Beta의 3D Object Generator를 네 가족 최종 mesh/rig의 직접 공급자로 쓰지 않는다. 공식
 출력은 simple single-part prop용 static mesh prefab이며 완전한 skinned body, skeleton, skin weights와
 Unity Humanoid Avatar를 제공하지 않는다. Higgsfield가 접근·비용·품질에서 막힐 때만 Player 한 명의
 static base 후보를 생성하고, Blender 원본 해상도 360 검수, 필요 retopology, skinning과 Humanoid rig를
 처음부터 통과시키는 제한적 fallback으로 비교할 수 있다. 생성된 static prefab 자체는 PASS가 아니다.
-Player/Father/Mother/Older Sister의 현행 1순위는 `multi_image_to_3d` 비교 경로이며, 하나의 기존 Humanoid
-walk clip을 Unity에서 retarget한다. Unity Animation Generator로 가족별 walk를 새로 만들지 않는다.
+당시 Player/Father/Mother/Older Sister의 공급자 비교 1순위는 `multi_image_to_3d`였지만 현재 후보 네 명은
+Blender에서 이미 완성됐다. Unity AI는 사용자가 현재 후보를 거부하고 공급자 비교를 명시적으로 다시 열
+때만 fallback 후보가 된다. 하나의 기존 Humanoid walk clip을 Unity에서 retarget하며 Unity Animation
+Generator로 가족별 walk를 새로 만들지 않는다.
 
 이유: 이 프로젝트의 열린 gate는 3D처럼 보이는 정적 실루엣이 아니라 **한 몸의 identity-matching
 SkinnedMesh + 유효한 Humanoid Avatar + 공통 보행 retarget**이다. Unity 공식 설명도 3D Object Generator를
-교체 가능한 prototype placeholder로 한정한다. 이미 Styloo V3가 scale, camera, shared motion 검증용 proxy를
-제공하므로 rig 없는 proxy를 하나 더 만드는 데 Cloud 연결과 credit을 쓰는 것은 열린 gate를 줄이지 않는다.
+교체 가능한 prototype placeholder로 한정한다. 현재 네 Blender 후보, isolated shared-motion showroom,
+Player actual-office 이동 QA가 있으므로 rig 없는 proxy를 하나 더 만드는 데 Cloud 연결과 credit을 쓰는 것은
+열린 human visual/full-3D seating gate를 줄이지 않는다.
 
 운영 경계: 현재 프로젝트의 `Packages/manifest.json`에는 Unity AI package가 없고
 `ProjectSettings/ProjectSettings.asset`의 `cloudProjectId`/`organizationId`도 비어 있다. Unity AI 시험은
@@ -49,7 +110,8 @@ package 설치, Unity Cloud project 연결, beta/third-party 약관, reference �
 결정: Player/Father/Mother/Older Sister의 신규 구현은 한 몸·한 Humanoid Avatar를 가진 3D character만
 허용한다. 기존 2D sprite/atlas/PSB/R-series/분리 신체/보행 프레임은 mesh, texture, decal, billboard,
 motion donor, fallback으로 금지한다. 정체성은 네 turnaround가, 동작은 하나의 기존 Humanoid walk clip과
-공통 clock/cadence/phase/root가 소유한다. actual office 방향은 SW/NW/NE/SE 네 개다.
+공통 clock/cadence/phase/root가 소유한다. isolated showroom route는 SW/NW/NE/SE이고, actual-office
+Player movement gate는 production direction enum 여덟 방향을 모두 직접 샘플한다.
 
 결정: Higgsfield를 쓰더라도 가족당 textured+rigged `multi_image_to_3d` 한 번을 최소 단위로 계산하고,
 공격·회피·피격·죽음 GLB는 만들지 않는다. 공통 walk는 Unity에서 retarget한다. 따라서 최소 비용은

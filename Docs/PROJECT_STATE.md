@@ -2,53 +2,71 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-24 / 현재 정본: 가족 캐릭터 3D 전환, 최종 mesh 4개 대기
+## 2026-08-24 / 현재 정본: 신규 3D 후보 4명 + Player 실제 사무실 이동 gate PASS, 사람 화면 검수 대기
 
-- 신규 Player/Father/Mother/Older Sister 구현은 3D 전용이다. 정확한 외형·금지 항목·공통 보행 계약은
-  `FAMILY_3D_CHARACTER_CANON_2026-08-24.md`, 다른 PC/회사에서의 실행 순서와 Higgsfield 비용 계산은
-  `FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`가 소유한다.
-- 네 가족 front/left/back/three-quarter turnaround는
-  `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/`에 있다.
-  이 시트들은 생성 입력 후보이며 완성 mesh/rig 승인 증거가 아니다.
-- 공통 Humanoid walk/clock/cadence/root/direction/mute 구조는 `Family3DPrototypeV3 BuildRun3`과 compact
-  evidence로 검증했다. Styloo 4명은 같은 여성형 chibi motion proxy이므로 최종 가족 외형이 아니다.
-- Player Blender V1/V2는 시각 FAIL이며 donor·수정 출발점·Unity 후보로 사용하지 않는다. 최종 Player,
-  Father, Mother, Older Sister textured Humanoid mesh는 아직 없다.
-- Higgsfield 최소 작업 수는 textured+rigged `multi_image_to_3d` 네 번이다. 공통 walk는 기존 Unity clip을
-  retarget하므로 가족별 animation generation은 0회다. 크레딧은 첫 패스 `4 × U`, 역할별 3회 검수 예산
-  `12 × U`다. 인증된 free workspace에서 Player turnaround 한 장만 명시 승인 아래 업로드해 공식 CLI
-  `generate cost`를 실행했지만 서버가 `job_type 'multi_image_to_3d' does not support alpha v2 cost
-  estimation`을 반환했다. 이후 generation list와 transaction list는 비어 있고 balance는 그대로 10 credits라
-  생성·credit spend는 0이다. 로그인된 web search에도 3D 모델/견적 화면이 노출되지 않아 단가 `U`와 총액은
-  아직 미확정이다. 사용자가 가격 미확정 상태의 Player 1회 시험을 별도로 승인해 같은 upload와 설정으로
-  `generate create`를 제출했지만 서버가 작업 생성 전에 `not_enough_credits`로 거절했다. 재확인한 balance는
-  10, generation/transaction은 계속 0건이다. 따라서 이 exact textured+rigged 설정의 단가 하한만 `U > 10`
-  credits로 확정됐고 실제 mesh는 생성되지 않았다.
-- 사용자가 링크한 YouTube 영상 `Kbf8yqauzF0`(10:39)은 처음부터 끝까지 자막과 핵심 화면을 재검토했다.
-  영상은 실제 Higgsfield MCP device authorization, Blender에서 연 stylized 3D character, 걷기·구르기·3단
-  공격, 반복 실패한 jump 수정, 공용 showroom을 보여 주므로 Higgsfield가 현재 1순위 Player pilot인 근거를
-  강화한다. 그러나 `유료 광고 포함` 콘텐츠이며 정확한 prompt/3D 옵션, credit 사용량, Unity import,
-  Humanoid Avatar 유효성은 보여 주지 않는다. 따라서 기능 증거이지 비용·identity·production PASS 증거가
-  아니며 가족 전체 생성 권한도 아니다.
-- Unity AI Beta는 이 프로젝트의 Unity `6000.3.21f1`에서 설치 가능한 대안이지만 최종 가족 character를
-  바로 완성하는 end-to-end 대체안은 아니다. 공식 3D Object Generator는 simple single-part용
-  **static mesh placeholder prefab**을 만들며 SkinnedMeshRenderer, skeleton, skin weights, Humanoid Avatar를
-  제공하지 않는다. Higgsfield가 막힐 때 Player 한 명의 static base 후보를 만들고 Blender에서 원본 해상도
-  검수·retopology·rigging을 다시 하는 제한적 fallback은 가능하지만, 생성 결과만으로 승인하지 않는다.
-  현재 프로젝트에는 Unity AI package와 Cloud project link도 없다. 따라서 별도 사용자 승인 없이 package
-  설치, Cloud 연결, turnaround 업로드, credit 사용을 하지 않으며, 기존 Styloo motion proxy가 있는 현재
-  단계에서는 Unity AI static proxy를 추가 생성하지 않는다.
-- 회사 PC에서 `21075cd6`을 pull한 뒤 Unity `6000.3.21f1`을
-  `-batchmode -nographics -quit`로 열어 전체 script import/compile을 다시 수행했다. Tundra build와
-  `FamilyCompany.Presentation.Unity`, `FamilyCompany.Editor`, `Assembly-CSharp`,
-  `Assembly-CSharp-Editor` 컴파일은 PASS, Unity 종료 코드는 0이다. Styloo FBX의 기존 Avatar rig
-  configuration mismatch는 import warning으로 남지만 compile failure는 아니다. 이 실행에서 누락된
-  `Assets/FamilyCompany/Experimental/Family3DPrototype.meta`를 발견해 추적 대상으로 추가했다.
-- 다음 작업은 지원되는 pre-generation 가격 표시/공급자 확인 또는 한 정상 계정의 사용 가능한 추가
-  credits 확보 → 사용자 승인 → Player mesh generation/Blender 원본 해상도 360도 검수 → Humanoid rig →
-  같은 motion showroom → 실제 D3D11 사무실 순서다. 현재 10 credits로 같은 명령을 재시도하지 않는다.
-- production 2D runtime, 기본/Downloads 실행본은 3D 네 가족 전체 승인 전 보호한다. legacy 2D asset은
-  migration/rollback 분석용일 뿐 신규 mesh·texture·decal·billboard·motion donor·fallback으로 금지한다.
+- Player/Father/Mother/Older Sister 신규 구현은 네 turnaround만 identity 입력으로 사용해 Blender에서
+  각각 독립 제작했다. 기존 2D, Player V1/V2, Styloo, 기존 mesh/texture/decal/motion donor나 fallback은
+  사용하지 않았다. 네 결과는 모두 **isolated candidate**이며 production 교체·승인이 아니다.
+- 각 FBX는 complete skinned body 1개, material 1개, atlas 1개, bone 23개, bottom-centre `Root`, explicit
+  Unity Humanoid mapping을 가진다. Unity에서 모두 같은
+  `Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx`를 retarget한다.
+- 후보 정본과 SHA-256은 다음과 같다.
+  - Player `Candidates/PlayerV3/player-v6-blender-humanoid-v3.fbx`
+    `80CEEC5269D229D213DEBF17B90EB99FDB93B9DB60B8D3416AAB779D1A657EA9`; atlas
+    `46DD6CA613465C5E65338701AECB8FF029CB22C0059716CEEC5C9ED7ED6D7C8F`.
+  - Father `Candidates/FatherV1/father-blender-humanoid-v1.fbx`
+    `417D28116037D23895AAA813089BD0EC25E1786370E60FECAE2BAB1B8761591F`; atlas
+    `6A271252664216266874DF5FDCD40775DFA3AF2D88747C4664C63E1D4ED334EA`.
+  - Mother `Candidates/MotherV1/mother-blender-humanoid-v1.fbx`
+    `59F0FB77C23FD9BD5457E2305E86DAFACD9BB3D62F4BE079ADA8D1CC65F85E01`; atlas
+    `4FA4D826132C72787CA740E917BB0B29A958C31D47E062D6B7B2C4705722D9A2`.
+  - Older Sister `Candidates/OlderSisterV1/older-sister-blender-humanoid-v1.fbx`
+    `51EE97D6278038EDA30E24D74E62C75FC4AA00086D0C119BF76F54A2FE0B15D4`; atlas
+    `BAC4245933C91D5CDFBEADB9280F670CC7D1F93DA29B52BF9514EAA37B5EF48A`.
+  위 상대 경로의 기준은 `Assets/FamilyCompany/Experimental/Family3DPrototype/`이다.
+- generic `validate_family_humanoid_fbx.py`를 exactly-one UV layer/active sole UV0 fail-closed로 강화한 뒤
+  네 FBX를 모두 재검증해 PASS했다. active UV0은 Player `PlayerV3AtlasUV`, Father `IdentityAtlasUV`,
+  Mother `UVMap`, Older Sister `OlderSisterV1AtlasUV`다. Father의 초기 다중 UV0 문제는 실제 D3D 화면에서
+  발견했고 sole `IdentityAtlasUV`로 수정한 최종 FBX만 정본이다.
+- Unity all-import receipt는 `PASS_VISUAL_AND_MOTION_REVIEW_REQUIRED`다. 네 Avatar가 valid/human이고
+  skinned renderer 1개, material 1개, skin/bind bones 23개, required Humanoid mismatch 0을 기록하며
+  `productionEligible: false`다.
+- isolated identity showroom `Artifacts/Family3DIdentityCandidateV1/BuildRun3/`은 Unity
+  `6000.3.21f1` Windows build `Succeeded`다. `D3D11Run4Final`은
+  `AUTO_PASS_VISUAL_REVIEW_REQUIRED`: 420 frames/13.9100847 s, visual content 420/420, 네 방향 pose mask
+  모두 `63`, route/root continuity·audio mute·P0/P3 해부학적 lead-foot alternation을 PASS했다.
+- 최초 두 `ScreenCapture` 계열 run의 검은 프레임은 증거로 거부했다. 최종 run은 camera
+  `RenderTexture + ReadPixels`와 frame별 luma gate를 사용했으므로 검은 캡처를 자동 PASS할 수 없다.
+- actual-office QA-only adapter는
+  `Runtime/Family3DStarterOfficeCandidateQa.cs`, builder는
+  `Editor/Family3DStarterOfficeCandidateQaBuilder.cs`, generated scene은
+  `Scenes/Family3DStarterOfficeCandidateQa.unity`다. 위 상대 경로 기준은
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/`이다. Builder는 `Prototype01` copy와 read-only
+  `OfficeTileMigrationPreview`만 explicit build scenes로 사용하고 Editor Build Settings를 영구 변경하지 않는다.
+- `Artifacts/Family3DStarterOfficeCandidateQaV1/BuildRun6SinglePassFinal`은 `Succeeded`,
+  `productionMutation: false`, `productionEligible: false`다. before/after SHA-256은 `Prototype01`
+  `5970EF496ACD81E7A0646A96807448E2283AB96F7D4866C234A09140D5872CD1`, preview scene
+  `1EC8C2156D887F083CB5F4EB63BB46D5F9451C3F9CAC8C239688D86F7AD0DA1F`, EditorBuildSettings
+  `010B57B9A51DE91C83FC9C7465DECFA0563214C74EA6A7E1DB5A991879890590`으로 각각 동일하다.
+- `RuntimeRun6SinglePassFinal`은 Starter ready/4 bindings와 project official MovementLayout QA를 PASS했다.
+  Player 8-direction mask `255`, static collision `0`, interaction `0`, penetration `0`; adapter moving sample
+  4,165 frames, Player moving 2,651 frames, gait phase `0.000248..0.999476`; composite 3장, luma
+  `199..216`, visual-content PASS다.
+- adapter는 2D XY → production camera viewport → overlay ray/`Y=0`,
+  `yaw=(direction-4)*45°`, live sprite bounds scale을 사용한다. 실제 프레임에서 base camera와 overlay가
+  같은 QA layer 30을 이중 렌더하는 문제를 발견해 QA 동안 base culling에서 layer 30을 제외하고 종료 때
+  원복했다. 최종 프레임에는 네 후보가 각각 정확히 한 번만 보인다.
+- office coverage는 Standing/Navigating 3D만이다. approach/seated/work/egress는 원래 2D presentation을
+  복구한다. actual-office 8방향 이동을 직접 구동한 것은 Player 한 명이고, 나머지 세 명은 binding/scale/
+  standing을 검증했다. 네 명 모두의 shared walk는 isolated `D3D11Run4Final`에서 검증했다.
+- 다음 gate는 원본 해상도 4-view/turntable과 두 D3D final run의 사람 화면 검수 → full-3D furniture
+  occlusion/seating 지원 및 검증 → 사용자 승인이다. 그 뒤에도 별도 production migration 승인 전에는
+  교체하지 않는다.
+- Higgsfield/Unity AI Beta는 더 이상 후보 완성의 blocker가 아니다. 이전 Higgsfield 시험은 10 credits에서
+  생성 전 `not_enough_credits`로 끝나 generation/transaction 0건이었고, Unity AI는 rig 없는 static-base
+  fallback일 뿐이다. 계정 제한 우회, 무단 credit 사용, package/Cloud 연결은 하지 않는다.
+- 실제 production 2D runtime, `StarterOfficeV1` default 경로, 기본 실행본과 Downloads 배포본은 변경하지
+  않았다. 현재 네 후보와 모든 receipt는 `productionEligible: false`이며 human visual review required다.
 
 ## [퇴역 기록] 2026-08-21 / 8방향 24단계 자연 보행 V3
 
