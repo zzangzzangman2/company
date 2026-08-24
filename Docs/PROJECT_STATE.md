@@ -20,7 +20,10 @@
   `generate cost`를 실행했지만 서버가 `job_type 'multi_image_to_3d' does not support alpha v2 cost
   estimation`을 반환했다. 이후 generation list와 transaction list는 비어 있고 balance는 그대로 10 credits라
   생성·credit spend는 0이다. 로그인된 web search에도 3D 모델/견적 화면이 노출되지 않아 단가 `U`와 총액은
-  아직 미확정이다. 같은 estimator 재시도나 실제 generation으로 가격을 추측하지 않는다.
+  아직 미확정이다. 사용자가 가격 미확정 상태의 Player 1회 시험을 별도로 승인해 같은 upload와 설정으로
+  `generate create`를 제출했지만 서버가 작업 생성 전에 `not_enough_credits`로 거절했다. 재확인한 balance는
+  10, generation/transaction은 계속 0건이다. 따라서 이 exact textured+rigged 설정의 단가 하한만 `U > 10`
+  credits로 확정됐고 실제 mesh는 생성되지 않았다.
 - 사용자가 링크한 YouTube 영상 `Kbf8yqauzF0`(10:39)은 처음부터 끝까지 자막과 핵심 화면을 재검토했다.
   영상은 실제 Higgsfield MCP device authorization, Blender에서 연 stylized 3D character, 걷기·구르기·3단
   공격, 반복 실패한 jump 수정, 공용 showroom을 보여 주므로 Higgsfield가 현재 1순위 Player pilot인 근거를
@@ -41,9 +44,9 @@
   `Assembly-CSharp-Editor` 컴파일은 PASS, Unity 종료 코드는 0이다. Styloo FBX의 기존 Avatar rig
   configuration mismatch는 import warning으로 남지만 compile failure는 아니다. 이 실행에서 누락된
   `Assets/FamilyCompany/Experimental/Family3DPrototype.meta`를 발견해 추적 대상으로 추가했다.
-- 다음 작업은 지원되는 pre-generation 가격 표시 또는 공급자 확인으로 Player 한 명의 단가 확정 → 사용자
-  승인 → Player mesh generation/Blender 원본 해상도 360도 검수 → Humanoid rig → 같은 motion showroom →
-  실제 D3D11 사무실 순서다. 가격을 generation으로 역산하지 않는다.
+- 다음 작업은 지원되는 pre-generation 가격 표시/공급자 확인 또는 한 정상 계정의 사용 가능한 추가
+  credits 확보 → 사용자 승인 → Player mesh generation/Blender 원본 해상도 360도 검수 → Humanoid rig →
+  같은 motion showroom → 실제 D3D11 사무실 순서다. 현재 10 credits로 같은 명령을 재시도하지 않는다.
 - production 2D runtime, 기본/Downloads 실행본은 3D 네 가족 전체 승인 전 보호한다. legacy 2D asset은
   migration/rollback 분석용일 뿐 신규 mesh·texture·decal·billboard·motion donor·fallback으로 금지한다.
 

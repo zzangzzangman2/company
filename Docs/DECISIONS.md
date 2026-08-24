@@ -12,11 +12,14 @@
 credit history, Unity FBX/GLB importer, valid Humanoid Avatar, 네 방향 turnaround identity 보존은 제시되지
 않는다. 회사 PC의 공식 CLI `generate cost multi_image_to_3d`도 Player 한 장 업로드 뒤
 `does not support alpha v2 cost estimation`을 반환했다. generation/transaction은 0건이고 balance는 10
-credits 그대로다. 따라서 영상은 기술 가능성을 높이지만 열린 cost/identity/rig/Unity gate를 닫지 않는다.
+credits 그대로다. 이후 사용자가 가격 미확정 Player 1회 시험을 명시 승인해 exact textured+rigged 설정을
+제출했지만 작업 생성 전에 `not_enough_credits`가 반환됐고 balance 10, generation/transaction 0건이 다시
+확인됐다. 따라서 현 설정은 `U > 10`만 확정됐으며 영상은 기술 가능성을 높이지만 열린
+cost/identity/rig/Unity gate를 닫지 않는다.
 
 운영 경계: 계정 제한을 피하기 위한 다계정 순환은 하지 않는다. 한 정상 workspace에서 가격 확인과 Player
 한 명의 명시 승인만 순서대로 진행한다. estimator가 지원되지 않는 동안 실제 generation을 비용 probe로
-사용하지 않는다.
+사용하지 않으며, balance가 10인 상태에서 같은 create를 재시도하지 않는다.
 
 ## 2026-08-24 / Unity AI Beta는 static-base fallback이며 최종 character/rig의 직접 대체안이 아니다
 
