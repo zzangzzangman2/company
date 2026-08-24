@@ -16,8 +16,17 @@
   Father, Mother, Older Sister textured Humanoid mesh는 아직 없다.
 - Higgsfield 최소 작업 수는 textured+rigged `multi_image_to_3d` 네 번이다. 공통 walk는 기존 Unity clip을
   retarget하므로 가족별 animation generation은 0회다. 크레딧은 첫 패스 `4 × U`, 역할별 3회 검수 예산
-  `12 × U`이며, 공개 가격표에 3D 단가 `U`가 없어 인증된 workspace의 공식 cost estimator 전에는 총액을
-  확정하지 않는다. 분석 당시 web balance는 10 credits였고 생성·credit spend는 0이다.
+  `12 × U`다. 인증된 free workspace에서 Player turnaround 한 장만 명시 승인 아래 업로드해 공식 CLI
+  `generate cost`를 실행했지만 서버가 `job_type 'multi_image_to_3d' does not support alpha v2 cost
+  estimation`을 반환했다. 이후 generation list와 transaction list는 비어 있고 balance는 그대로 10 credits라
+  생성·credit spend는 0이다. 로그인된 web search에도 3D 모델/견적 화면이 노출되지 않아 단가 `U`와 총액은
+  아직 미확정이다. 같은 estimator 재시도나 실제 generation으로 가격을 추측하지 않는다.
+- 사용자가 링크한 YouTube 영상 `Kbf8yqauzF0`(10:39)은 처음부터 끝까지 자막과 핵심 화면을 재검토했다.
+  영상은 실제 Higgsfield MCP device authorization, Blender에서 연 stylized 3D character, 걷기·구르기·3단
+  공격, 반복 실패한 jump 수정, 공용 showroom을 보여 주므로 Higgsfield가 현재 1순위 Player pilot인 근거를
+  강화한다. 그러나 `유료 광고 포함` 콘텐츠이며 정확한 prompt/3D 옵션, credit 사용량, Unity import,
+  Humanoid Avatar 유효성은 보여 주지 않는다. 따라서 기능 증거이지 비용·identity·production PASS 증거가
+  아니며 가족 전체 생성 권한도 아니다.
 - Unity AI Beta는 이 프로젝트의 Unity `6000.3.21f1`에서 설치 가능한 대안이지만 최종 가족 character를
   바로 완성하는 end-to-end 대체안은 아니다. 공식 3D Object Generator는 simple single-part용
   **static mesh placeholder prefab**을 만들며 SkinnedMeshRenderer, skeleton, skin weights, Humanoid Avatar를
@@ -32,8 +41,9 @@
   `Assembly-CSharp-Editor` 컴파일은 PASS, Unity 종료 코드는 0이다. Styloo FBX의 기존 Avatar rig
   configuration mismatch는 import warning으로 남지만 compile failure는 아니다. 이 실행에서 누락된
   `Assets/FamilyCompany/Experimental/Family3DPrototype.meta`를 발견해 추적 대상으로 추가했다.
-- 다음 작업은 Player 한 명의 정확한 live cost estimate → 사용자 승인 → Player mesh generation/Blender
-  원본 해상도 360도 검수 → Humanoid rig → 같은 motion showroom → 실제 D3D11 사무실 순서다.
+- 다음 작업은 지원되는 pre-generation 가격 표시 또는 공급자 확인으로 Player 한 명의 단가 확정 → 사용자
+  승인 → Player mesh generation/Blender 원본 해상도 360도 검수 → Humanoid rig → 같은 motion showroom →
+  실제 D3D11 사무실 순서다. 가격을 generation으로 역산하지 않는다.
 - production 2D runtime, 기본/Downloads 실행본은 3D 네 가족 전체 승인 전 보호한다. legacy 2D asset은
   migration/rollback 분석용일 뿐 신규 mesh·texture·decal·billboard·motion donor·fallback으로 금지한다.
 

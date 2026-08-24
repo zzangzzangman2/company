@@ -1,5 +1,23 @@
 # DECISIONS
 
+## 2026-08-24 / Higgsfield 영상은 Player pilot 근거이며 비용·Unity 호환·가족 전체 승인 증거가 아니다
+
+결정: Higgsfield `multi_image_to_3d`를 Unity AI static object generator보다 Player 최종 character의
+우선 비교 경로로 유지한다. 다만 사용자가 링크한 `Kbf8yqauzF0` 영상은 paid-promotion capability evidence로만
+취급한다. 영상처럼 MCP를 연결했다는 이유로 Player/Father/Mother/Older Sister를 일괄 생성하거나 credit을
+사용하지 않는다. 정확한 pre-generation 단가와 Player 한 명의 별도 사용자 승인을 먼저 요구한다.
+
+근거: 영상 전체 10:39에서 Higgsfield MCP device authorization, Blender character 검수, 실제 걷기·구르기·
+3단 공격, 여러 번 실패한 jump repair, neutral showroom은 확인된다. 반면 정확한 generation prompt/옵션과
+credit history, Unity FBX/GLB importer, valid Humanoid Avatar, 네 방향 turnaround identity 보존은 제시되지
+않는다. 회사 PC의 공식 CLI `generate cost multi_image_to_3d`도 Player 한 장 업로드 뒤
+`does not support alpha v2 cost estimation`을 반환했다. generation/transaction은 0건이고 balance는 10
+credits 그대로다. 따라서 영상은 기술 가능성을 높이지만 열린 cost/identity/rig/Unity gate를 닫지 않는다.
+
+운영 경계: 계정 제한을 피하기 위한 다계정 순환은 하지 않는다. 한 정상 workspace에서 가격 확인과 Player
+한 명의 명시 승인만 순서대로 진행한다. estimator가 지원되지 않는 동안 실제 generation을 비용 probe로
+사용하지 않는다.
+
 ## 2026-08-24 / Unity AI Beta는 static-base fallback이며 최종 character/rig의 직접 대체안이 아니다
 
 결정: Unity AI Beta의 3D Object Generator를 네 가족 최종 mesh/rig의 직접 공급자로 쓰지 않는다. 공식
