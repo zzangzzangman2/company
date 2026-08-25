@@ -1,5 +1,25 @@
 # DECISIONS
 
+## 2026-08-26 / Father V18 원인 순서를 뒤집는다 — pose strength가 1번, cadence는 2번
+
+결정: 기존 V22 텔레메트리(180프레임)와 `Family3DWalkActor.cs` 판독만으로 원인을 재측정한 결과, 미끄러짐의
+주원인은 cadence 불일치가 아니라 `poseStrength=0.45`다. `ApplyPoseStrength()`가 모든 본을 rest 포즈 쪽으로
+45%만 slerp하므로 보폭이 함께 깎이고, 다리가 만드는 보폭(사이클당 0.29~0.34 신장)이 몸의 이동(0.56 신장)에
+1.66~1.92배 못 미친다. 이 차이가 매 사이클 0.33~0.40 u의 강제 슬립이다.
+
+두 번째로, `Family3DWalkActor.cs:293`이 `ApplyNaturalSdFootPlants`를 `dedicatedNaturalSdWalk` 뒤에 두어
+V18 경로에서는 접지 판정과 `SolveTwoBonePlant` 발 고정이 전혀 실행되지 않는다. 접지 구속도 없고 계측도
+없었으므로 V22의 foot-contact 근거는 전부 무효로 본다.
+
+따라서 `CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md`의 cause 1은 2차로 강등하고 cause 6을 1번으로
+승격하며, 같은 문서 5단계의 "native 0.6초 cadence 우선 시험"은 폐기한다. 0.6초를 강제하면 보행 속도가
+1.63 u/s(현재 1.9배)여야 하므로 사무실 보행에서 불가능하다. 사이클 타임은 클립 길이가 아니라 실측 보폭과
+실측 속도에서 역산한다(full strength 기준 1.15~1.33초 추정).
+
+작업 순서는 pose strength 복원 → 접지 구속 연결 → 연속 캡처 교체 → 사이클 역산이다. 이 분석에 크레딧을
+쓰지 않았고 런타임/씬을 수정하지 않았다. `productionEligible=false`와 유료 job 금지는 그대로 유지한다.
+근거와 재현 방법은 `FATHER_V18_MOVEMENT_ROOT_CAUSE_2026-08-26.md`에 있다.
+
 ## 2026-08-25 / Father V18 V18~V22를 모두 미승인 진단본으로 봉인한다
 
 결정: 사용자 최종 화면 판정에 따라 V18 정적 root 이동부터 V22 native-run + `0.45` + exact-albedo까지

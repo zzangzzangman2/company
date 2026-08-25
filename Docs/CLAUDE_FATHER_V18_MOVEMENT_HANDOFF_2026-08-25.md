@@ -6,6 +6,12 @@ Branch/base before this handoff: `main` / `340e45a651561709bb1a717c668b077582daa
 Current status: `USER_VISUAL_REJECTED_MOVEMENT_NOT_PROPERLY_AUDITED`
 Production: `productionMutation=false`, `productionEligible=false`
 
+> **Superseded in two places — read
+> [FATHER_V18_MOVEMENT_ROOT_CAUSE_2026-08-26.md](FATHER_V18_MOVEMENT_ROOT_CAUSE_2026-08-26.md) first.**
+> Measurement of the existing V22 telemetry on 2026-08-26 inverted the cause ranking below and found
+> `Recommended next sequence` step 5 to point the wrong way. Cause 6 (`poseStrength = 0.45`) is the
+> primary defect; cause 1 (cadence) is secondary. Everything else in this document still stands.
+
 ## What the user actually wants
 
 Father V18 must move in the real game with convincing temporal motion comparable to
@@ -123,8 +129,10 @@ timing was not watched. V22 is diagnostic evidence only.
    `Family3DWalkActor.LockedCycleSeconds` is `0.99380799f` (`Family3DWalkActor.cs:14`); the imported run
    clip is `0.6000000238` seconds. Both values are recorded together in the V22 build receipt as
    `walkClipLength` and `lockedCycleSeconds`, so the mismatch is measured, not inferred. The legs
-   therefore cycle at 0.6037× authored cadence while translation stays independent, which is the
-   textbook cause of skating. Start here.
+   therefore cycle at 0.6037× authored cadence while translation stays independent. ~~Start here.~~
+   **Demoted on 2026-08-26: real but secondary.** Measurement showed the stride-matched cycle at full
+   pose strength is 1.15–1.33 s, i.e. *longer* than the current 0.99380799 s, so this is not where the
+   slip comes from. See the root-cause document.
 2. **No stride-to-speed calibration.**
    Imported root motion is discarded and no measurement matches planted-foot travel to map distance.
 3. **The prior 10 fps comparison was not a real-time recording.**
@@ -138,6 +146,15 @@ timing was not watched. V22 is diagnostic evidence only.
 6. **Pose strength 0.45 may hide motion.**
    It was chosen from silhouettes and may worsen stride mismatch. Re-evaluate only after measuring
    real-time cadence and speed.
+   **Promoted on 2026-08-26 to the primary defect — confirmed, not suspected.**
+   `ApplyPoseStrength()` slerps every bone 45 % of the way from rest to the animated pose, so the leg
+   swing that produces the stride is cut with it. The legs deliver 0.29–0.34 body heights per cycle
+   while the body travels 0.56, so the body outruns the feet by 1.66×–1.92×. Fix this first.
+7. **Foot planting never runs on this code path — added 2026-08-26.**
+   `Family3DWalkActor.cs:293` gates `ApplyNaturalSdFootPlants` behind `dedicatedNaturalSdWalk`, which is
+   `false` for Father V18. The contact latch and the `SolveTwoBonePlant` world-space plant never
+   execute, so there is no ground constraint at all, and `leftFootPlanted`/`rightFootPlanted` are
+   `false` in 180 of 180 samples. Any foot-contact evidence from V22 is void.
 
 ## Current code touchpoints
 
@@ -176,8 +193,13 @@ written. Paid/raw source assets and receipts were preserved.
 3. Record Unity continuously in real time.
 4. Put source cadence, Unity cadence, root speed, ankle world velocity, and foot-contact duration on one
    time axis.
-5. First test native 0.6-second cadence and calculate stride-matched translation; do not select another
-   pose-strength value from stills.
+5. ~~First test native 0.6-second cadence and calculate stride-matched translation~~ — **wrong
+   direction, corrected 2026-08-26.** Forcing the native 0.6 s cadence requires the Father to walk at
+   1.63 u/s, about 1.9× his current office speed. Instead: restore `poseStrength` to 1.0, give this path
+   a ground constraint, replace the capture, and only then solve cycle time from measured stride and
+   measured speed (expected 1.15–1.33 s). Full order in
+   [FATHER_V18_MOVEMENT_ROOT_CAUSE_2026-08-26.md](FATHER_V18_MOVEMENT_ROOT_CAUSE_2026-08-26.md).
+   Still true: do not select another pose-strength value from stills.
 6. Add turn/start/stop blending only after forward locomotion no longer skates.
 7. Show the user a direct source-vs-game movement comparison before claiming a pass.
 

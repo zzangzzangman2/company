@@ -16,9 +16,15 @@
 - 현재 V22 진단 구성은 run-644의 native mesh/avatar/skin/clip, 정지 시 idle-0 motion, pose strength
   `0.45`, `Unlit/Texture` exact albedo, actual Father `OfficeRuntimeAgent` root, one-time projected-height
   scale이다. production에는 들어가지 않았고 `productionMutation=false`, `productionEligible=false`다.
-- 가장 먼저 확인할 결함은 authored run clip `0.6000000238s`를
-  `Family3DWalkActor.LockedCycleSeconds=0.99380799s`로 늘린 cadence 불일치와 stride/map-speed 미보정이다.
-  그다음 연속 30/60 fps 캡처, 발 접지 속도 측정, 회전/start/stop blend를 검증한다.
+- **2026-08-26 측정으로 원인 순서가 뒤집혔다.** 가장 먼저 고칠 결함은 cadence가 아니라
+  `poseStrength=0.45`다. `ApplyPoseStrength()`가 모든 본을 rest에서 애니메이션 포즈 쪽으로 45%만
+  slerp하므로 보폭이 같이 깎인다. 다리는 사이클당 0.29~0.34 신장을 만드는데 몸은 0.56 신장을 이동해서
+  **몸이 발보다 1.66~1.92배 빨리 나간다.** 두 번째 결함은 `Family3DWalkActor.cs:293`이
+  `ApplyNaturalSdFootPlants`를 `dedicatedNaturalSdWalk` 뒤에 두어 V18 경로에서 접지 판정·발 고정 IK가
+  아예 실행되지 않는 것이다(런타임 영수증 `leftFootPlanted`/`rightFootPlanted`가 180/180 `false`).
+  cadence stretch(1.6563466×)는 실재하나 2차이며, full pose strength 기준 stride-matched 사이클은
+  1.15~1.33초로 현재 0.9938초보다 오히려 길다. native 0.6초로 가면 보행 속도가 1.9배 필요해 더 나빠진다.
+  작업 순서와 근거는 [FATHER_V18_MOVEMENT_ROOT_CAUSE_2026-08-26.md](FATHER_V18_MOVEMENT_ROOT_CAUSE_2026-08-26.md)를 따른다.
 - Higgsfield 생성은 detailed source 18 credits, idle 8, run 8까지 완료됐고 잔액은 76이다. 9-credit
   standard는 금지하며 새 유료 job은 사용자 명시 승인과 비용 재확인 전 제출하지 않는다.
 - 구형 V18~V21 빌드/런타임/씬/로그/중복 출력은 정리했다. paid/raw GLB, 생성 영수증, 현재 motion source,
