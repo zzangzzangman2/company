@@ -2,20 +2,33 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-25 / 현재 최우선 상태 오버라이드: Father V18 Higgsfield 외형 재구축
+## 2026-08-25 / 현재 최우선 상태: Father V18 움직임 미해결, Claude 핸드오프
 
-- 사용자는 기존 보행뿐 아니라 캐릭터 자체도 이상하다고 판정했고, 새로 제공한 귀여운 compact adult SD father
-  디자인과 최대한 동일한 외형으로 다시 만들 것을 요청했다. 기존 `FatherApprovedV14` 자산은 삭제·덮어쓰기
-  없이 과거 승인/비교본으로 보존하지만, 다음 후보의 외형 기준은 V18 디자인 타깃이다.
-- 집 PC에서 먼저 Higgsfield 3-day trial의 100 credits를 사용자가 직접 활성화하고, 공식 Blender plugin OAuth를
-  다시 연결한다. 회사 PC에서는 input upload와 cost preflight만 했고 generation은 제출하지 않아 사용 credits는
-  `0`이다.
-- 허용된 첫 generation은 `tripo_h3_1_multiview_to_3d`, 4 views, detailed geometry, detailed texture,
-  face limit 50,000, PBR/quad/rig/animation off, seed 48217인 정적 textured GLB 한 건이다. 2026-08-25 실제
-  preflight cost는 `18.0 credits`; 제출 직전 재확인하고 비용이 바뀌면 중단한다.
-- 입력, 정확한 params, 외형/보행 gate와 금지 목록은
-  [FATHER_V18_HIGGSFIELD_HOME_HANDOFF_2026-08-25.md](FATHER_V18_HIGGSFIELD_HOME_HANDOFF_2026-08-25.md)가 정본이다.
-  정적 결과를 사용자가 직접 승인하기 전에는 rig/걷기/Unity로 넘어가지 않으며 `productionEligible=false`다.
+- 사용자 최종 판정은 `USER_VISUAL_REJECTED_MOVEMENT_NOT_PROPERLY_AUDITED`다. V18 정적 root 이동,
+  V19 idle-body/run-retarget, V20 native run 100%, V21 pose-strength 비교, V22 native run + `0.45` +
+  exact albedo 어느 것도 움직임 합격본이 아니다. 자동 route/foot-lead/정지 시트 PASS는 사용자 화면 승인을
+  대체하지 않는다.
+- 원본 `Downloads/캐릭.mp4`는 639.418초, 1280×720, 30 fps이며 실제 in-game movement 구간은
+  `305.93..354.90s`다. 이전에 적혀 있던 `304..368s`는 shot 경계 재측정 결과 틀렸다. `354.90s` 이후는
+  4일차 3D 쇼룸 turntable이므로 cadence 기준으로 쓰면 안 된다. cadence 측정용으로 잘라 쓸 최장 클린
+  구간은 `305.93..318.33s`(12.40초)다. 기존 QA는 매 6번째 moving frame을 캡처해 10 fps로 재생했으므로
+  실시간 동작 검증이 아니었다.
+- 현재 V22 진단 구성은 run-644의 native mesh/avatar/skin/clip, 정지 시 idle-0 motion, pose strength
+  `0.45`, `Unlit/Texture` exact albedo, actual Father `OfficeRuntimeAgent` root, one-time projected-height
+  scale이다. production에는 들어가지 않았고 `productionMutation=false`, `productionEligible=false`다.
+- 가장 먼저 확인할 결함은 authored run clip `0.6000000238s`를
+  `Family3DWalkActor.LockedCycleSeconds=0.99380799s`로 늘린 cadence 불일치와 stride/map-speed 미보정이다.
+  그다음 연속 30/60 fps 캡처, 발 접지 속도 측정, 회전/start/stop blend를 검증한다.
+- Higgsfield 생성은 detailed source 18 credits, idle 8, run 8까지 완료됐고 잔액은 76이다. 9-credit
+  standard는 금지하며 새 유료 job은 사용자 명시 승인과 비용 재확인 전 제출하지 않는다.
+- 구형 V18~V21 빌드/런타임/씬/로그/중복 출력은 정리했다. paid/raw GLB, 생성 영수증, 현재 motion source,
+  V22 scene/evidence, stash는 보존했다.
+- handoff 정리 후 `git diff --check`, motion/static source SHA-256 5건, Blender prep Python 구문 2건,
+  Unity `6000.3.21f1` `FAST_QA_WINDOWS.cmd -Profile editor-broad`를 다시 확인했다. Fast QA는 변경 28개를
+  import/compile해 `PASS`, total `58.936s`, compile `55.396s`를 기록했다. 이는 코드/에셋 정합성 검증이며
+  사용자 움직임 화면 승인으로 해석하지 않는다.
+- 다음 작업의 정본은
+  [CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md](CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md)다.
 
 ## 2026-08-25 / 현재 최우선 상태 오버라이드: Father V14 stylized SD 보행 J
 

@@ -1,0 +1,155 @@
+{
+  "contract": "FC-FATHER-V18-HIGGSFIELD-IDLE-RUN-UNITY-PREP-V1",
+  "sourceIdleGlb": "father-v18-idle-0.glb",
+  "sourceIdleGlbSha256": "179A9F9B60FF2E8829A3E9D0E60A0D03349235F8830163104ACC6FAB300A42AC",
+  "sourceRunGlb": "father-v18-run-644.glb",
+  "sourceRunGlbSha256": "AA8BF9A8043A6A4E26F141AA1D8F581B9C81BF854518A999D8496CD3446FC01F",
+  "outputIdleFbx": "C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-idle.fbx",
+  "outputIdleFbxSha256": "3DB1D5414174F07F9395CE030047D98860A27F448C099AE757AD72E2922CB47B",
+  "outputRunFbx": "C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-run-644.fbx",
+  "outputRunFbxSha256": "8CD7A186BB3600FC92F27F29E7CBF9941516211C3E71D85DBC1DC1D428A1924E",
+  "outputTexture": "C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-albedo.png",
+  "outputTextureSha256": "F9A09FE0B1901125A00C8D0C87FF585E1D86E2A927949672BC44C68776DCCE7C",
+  "sameGeometry": false,
+  "sameTopology": true,
+  "sameUvs": true,
+  "sameSkinWeights": false,
+  "sameBindSkeleton": false,
+  "sameEmbeddedTexture": true,
+  "idleMeshHash": "70995537271F67E06753FFD3E835379EFF462EB19F29A09201C3577500432D9D",
+  "runMeshHash": "E58383657FCEA47B16484FE5D0AFFEB76502DEC87E8560E5D5AC0F6D9BC3052E",
+  "idleMeshComponentHashes": {
+    "geometry": "2B442674E0761E537C209F3B2204E295632468467BC74FE4A7E0529CF51A71A4",
+    "topology": "EE1804F4DAE30065EF54EC32739B264FF4695B3BA9062C3063F94B38030ECED8",
+    "weights": "DA063BC56815306DF1957C0E4513163C3C9779D32A71D0000D87EBF504CC75A7",
+    "uvs": "5C2A08ED853210A9446A38783F12F7FAA5E3EBAC8F2375738C7DEB641463FCBF"
+  },
+  "runMeshComponentHashes": {
+    "geometry": "3AC245C766F02BEF220B535D7CAC53C457E56165DD7DF05B83091DDBCEAD9373",
+    "topology": "EE1804F4DAE30065EF54EC32739B264FF4695B3BA9062C3063F94B38030ECED8",
+    "weights": "7D192209F681FC6901B0171BA203EF62DF1BC9D0CF98B1CAC59F543BE7972BC7",
+    "uvs": "5C2A08ED853210A9446A38783F12F7FAA5E3EBAC8F2375738C7DEB641463FCBF"
+  },
+  "armatureHash": "2D1A0B7E5FC5749B74A7C20B6951F4FF1E71AF90296609D70C21AD758F0D1211",
+  "packedTextureHash": "55C26092588D28CA90153F2361334DB6D2CA3FB7C8206DF2941F92A1A859C253",
+  "idle": {
+    "boneNames": [
+      "Head",
+      "Hips",
+      "LeftArm",
+      "LeftFoot",
+      "LeftForeArm",
+      "LeftHand",
+      "LeftLeg",
+      "LeftShoulder",
+      "LeftToeBase",
+      "LeftUpLeg",
+      "RightArm",
+      "RightFoot",
+      "RightForeArm",
+      "RightHand",
+      "RightLeg",
+      "RightShoulder",
+      "RightToeBase",
+      "RightUpLeg",
+      "Spine",
+      "Spine01",
+      "Spine02",
+      "head_end",
+      "headfront",
+      "neck"
+    ],
+    "boneCount": 24,
+    "meshHash": "70995537271F67E06753FFD3E835379EFF462EB19F29A09201C3577500432D9D",
+    "armatureHash": "2D1A0B7E5FC5749B74A7C20B6951F4FF1E71AF90296609D70C21AD758F0D1211",
+    "packedTextureHash": "55C26092588D28CA90153F2361334DB6D2CA3FB7C8206DF2941F92A1A859C253",
+    "vertexCount": 28924,
+    "polygonCount": 48733,
+    "vertexGroupCount": 24,
+    "weightedVertexCount": 28924,
+    "actionFrameStart": 0.8000000715255737,
+    "actionFrameEnd": 96.80000305175781,
+    "normalizationSourceBoundsMin": [
+      -0.31068968772888184,
+      -0.5412421226501465,
+      -0.08713025599718094
+    ],
+    "normalizationSourceBoundsMax": [
+      0.5461248159408569,
+      0.4708181619644165,
+      1.914453387260437
+    ],
+    "normalizedBoundsMin": [
+      -0.4284072518348694,
+      -0.5060301423072815,
+      0.0
+    ],
+    "normalizedBoundsMax": [
+      0.4284072518348694,
+      0.5060301423072815,
+      2.0015835762023926
+    ]
+  },
+  "run": {
+    "boneNames": [
+      "Head",
+      "Hips",
+      "LeftArm",
+      "LeftFoot",
+      "LeftForeArm",
+      "LeftHand",
+      "LeftLeg",
+      "LeftShoulder",
+      "LeftToeBase",
+      "LeftUpLeg",
+      "RightArm",
+      "RightFoot",
+      "RightForeArm",
+      "RightHand",
+      "RightLeg",
+      "RightShoulder",
+      "RightToeBase",
+      "RightUpLeg",
+      "Spine",
+      "Spine01",
+      "Spine02",
+      "head_end",
+      "headfront",
+      "neck"
+    ],
+    "boneCount": 24,
+    "meshHash": "E58383657FCEA47B16484FE5D0AFFEB76502DEC87E8560E5D5AC0F6D9BC3052E",
+    "armatureHash": "E53524705A626192A3A51BDBBD4B91D1E1AE1E6242F02F56868A753529355DE1",
+    "packedTextureHash": "55C26092588D28CA90153F2361334DB6D2CA3FB7C8206DF2941F92A1A859C253",
+    "vertexCount": 28924,
+    "polygonCount": 48733,
+    "vertexGroupCount": 24,
+    "weightedVertexCount": 28924,
+    "actionFrameStart": 1.0,
+    "actionFrameEnd": 19.0,
+    "normalizationSourceBoundsMin": [
+      -0.2573499381542206,
+      -0.5784509778022766,
+      -0.002465240890160203
+    ],
+    "normalizationSourceBoundsMax": [
+      0.2188526839017868,
+      0.6750531792640686,
+      1.5399296283721924
+    ],
+    "normalizedBoundsMin": [
+      -0.2381013035774231,
+      -0.6267520785331726,
+      0.0
+    ],
+    "normalizedBoundsMax": [
+      0.2381013035774231,
+      0.6267520785331726,
+      1.5423948764801025
+    ]
+  },
+  "removedAuxiliaryObject": "Icosphere",
+  "retargetPolicy": "Render only the idle-0 skinned body; consume run-644 as a Humanoid motion source so independently generated run skin/bind data never replaces or overlaps the visible body",
+  "rootMotionPolicy": "OfficeRuntimeAgent owns translation/yaw; imported animation root curves are locked/baked in Unity",
+  "productionEligible": false
+}

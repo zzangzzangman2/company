@@ -24,6 +24,10 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Scenes/OfficeTileMigrationPreview.unity";
         public const string QaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DStarterOfficeCandidateQa.unity";
+        public const string FatherV18StaticQaScenePath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldStaticMapQa.unity";
+        public const string FatherV18MotionQaScenePath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldNativeRunMapQaV22.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -32,10 +36,29 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/OlderSisterV1/older-sister-blender-humanoid-v1.fbx";
         public const string FatherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherApprovedV14NaturalWalkRigV1/father-approved-v14-natural-walk-rig-v1.fbx";
+        public const string FatherV18StaticModelPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx";
+        public const string FatherV18StaticTexturePath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
+        public const string FatherV18MotionIdleClipPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-idle.fbx";
+        // The video imports each generated animation GLB with its own mesh, skin, and bind pose.
+        // Use run-644's native body while moving instead of retargeting its non-identical skin onto
+        // the independently generated idle-0 body (V19's stretched-leg failure).
+        public const string FatherV18MotionModelPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-run-644.fbx";
+        public const string FatherV18MotionRunClipPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-run-644.fbx";
+        public const string FatherV18MotionTexturePath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-albedo.png";
         public const string MotherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/MotherV1/mother-blender-humanoid-v1.fbx";
         public const string DefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/BuildRun1";
+        public const string FatherV18StaticDefaultBuildRoot =
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldStaticMapBuildV18";
+        public const string FatherV18MotionDefaultBuildRoot =
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldNativeRunMapBuildV22";
 
         private static readonly CandidateDefinition[] Candidates =
         {
@@ -48,14 +71,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         [MenuItem("Family Company/Experimental/Build Starter Office 3D Candidate QA")]
         public static void BuildMenu()
         {
-            Build(ResolveBuildRoot());
+            Build(ResolveBuildRoot(false), false);
         }
 
         [MenuItem("Family Company/Experimental/Create Starter Office 3D Candidate QA Scene Only")]
         public static void CreateSceneOnlyMenu()
         {
             ThrowIfInteractiveSceneIsDirty();
-            AssetBundle bundle = LoadAssets();
+            AssetBundle bundle = LoadAssets(false);
             CreateIsolatedQaScene(bundle);
             Debug.Log("FAMILY_3D_STARTER_OFFICE_QA_SCENE: PASS | " + QaScenePath);
         }
@@ -64,7 +87,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         {
             try
             {
-                Build(ResolveBuildRoot());
+                Build(ResolveBuildRoot(false), false);
                 Debug.Log("FAMILY_3D_STARTER_OFFICE_QA_BUILD: PASS");
                 EditorApplication.Exit(0);
             }
@@ -80,7 +103,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         {
             try
             {
-                AssetBundle bundle = LoadAssets();
+                AssetBundle bundle = LoadAssets(false);
                 CreateIsolatedQaScene(bundle);
                 Debug.Log("FAMILY_3D_STARTER_OFFICE_QA_SCENE: PASS | " + QaScenePath);
                 EditorApplication.Exit(0);
@@ -93,7 +116,45 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             }
         }
 
-        private static void Build(string buildRoot)
+        public static void BuildFatherV18StaticFromCommandLine()
+        {
+            try
+            {
+                Build(ResolveBuildRoot(true), true);
+                Debug.Log("FAMILY_3D_FATHER_V18_STATIC_MAP_QA_BUILD: PASS");
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                Debug.LogError(
+                    "FAMILY_3D_FATHER_V18_STATIC_MAP_QA_BUILD: FAIL | " + exception.Message);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        public static void BuildFatherV18MotionFromCommandLine()
+        {
+            try
+            {
+                Build(ResolveBuildRoot(false, true), false, true);
+                Debug.Log("FAMILY_3D_FATHER_V18_HIGGSFIELD_MOTION_MAP_QA_BUILD: PASS");
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                Debug.LogError(
+                    "FAMILY_3D_FATHER_V18_HIGGSFIELD_MOTION_MAP_QA_BUILD: FAIL | " +
+                    exception.Message);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        private static void Build(
+            string buildRoot,
+            bool fatherV18StaticOnly,
+            bool fatherV18MotionOnly = false)
         {
             ThrowIfInteractiveSceneIsDirty();
             string productionSceneBefore = Sha256Asset(ProductionScenePath);
@@ -101,16 +162,22 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             string buildSettingsBefore = CaptureBuildSettings();
             string buildSettingsFileBefore = Sha256File(ProjectPath("ProjectSettings/EditorBuildSettings.asset"));
 
-            AssetBundle bundle = LoadAssets();
+            AssetBundle bundle = LoadAssets(fatherV18StaticOnly, fatherV18MotionOnly);
             int qaLayer = CreateIsolatedQaScene(bundle);
 
             Directory.CreateDirectory(buildRoot);
-            string executablePath = Path.Combine(buildRoot, "FamilyCompanyStarterOffice3DCandidateQa.exe");
+            string executablePath = Path.Combine(
+                buildRoot,
+                fatherV18StaticOnly
+                    ? "FamilyCompanyFatherV18HiggsfieldStaticMapQa.exe"
+                    : fatherV18MotionOnly
+                        ? "FamilyCompanyFatherV18HiggsfieldMotionMapQa.exe"
+                    : "FamilyCompanyStarterOffice3DCandidateQa.exe");
             var options = new BuildPlayerOptions
             {
                 // ScenePreviewJump intentionally installs only when the real additive office scene
                 // is present in the player. Keep both paths explicit; never persist Build Settings.
-                scenes = new[] { QaScenePath, PreviewScenePath },
+                scenes = new[] { bundle.QaScenePath, PreviewScenePath },
                 locationPathName = executablePath,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.Development
@@ -150,12 +217,21 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     " errors=" + report.summary.totalErrors);
         }
 
-        private static AssetBundle LoadAssets()
+        private static AssetBundle LoadAssets(
+            bool fatherV18StaticOnly,
+            bool fatherV18MotionOnly = false)
         {
-            var prefabs = new GameObject[Candidates.Length];
-            for (var index = 0; index < Candidates.Length; index++)
+            if (fatherV18StaticOnly && fatherV18MotionOnly)
+                throw new InvalidOperationException("Father V18 static and motion modes are mutually exclusive.");
+            CandidateDefinition[] definitions = fatherV18StaticOnly
+                ? new[] { new CandidateDefinition("father", FatherV18StaticModelPath) }
+                : fatherV18MotionOnly
+                    ? new[] { new CandidateDefinition("father", FatherV18MotionModelPath) }
+                : Candidates;
+            var prefabs = new GameObject[definitions.Length];
+            for (var index = 0; index < definitions.Length; index++)
             {
-                CandidateDefinition definition = Candidates[index];
+                CandidateDefinition definition = definitions[index];
                 AssetDatabase.ImportAsset(
                     definition.ModelPath,
                     ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
@@ -163,16 +239,74 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 if (prefab == null)
                     throw new InvalidOperationException(
                         "Candidate prefab did not load: " + definition.ModelPath);
-                Animator animator = prefab.GetComponent<Animator>();
-                if (animator == null || animator.avatar == null ||
-                    !animator.avatar.isValid || !animator.avatar.isHuman)
-                    throw new InvalidOperationException(
-                        definition.FamilyId + " candidate is missing a valid Humanoid Avatar.");
-                int rendererCount = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true).Length;
-                if (rendererCount != 1)
-                    throw new InvalidOperationException(
-                        definition.FamilyId + " expected one SkinnedMeshRenderer; found " + rendererCount + ".");
+                if (fatherV18StaticOnly)
+                {
+                    int meshCount = prefab.GetComponentsInChildren<MeshRenderer>(true).Length;
+                    int skinnedCount = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true).Length;
+                    if (meshCount != 1 || skinnedCount != 0)
+                        throw new InvalidOperationException(
+                            "Father V18 static candidate must contain one MeshRenderer and no " +
+                            "SkinnedMeshRenderer; mesh=" + meshCount + " skinned=" + skinnedCount + ".");
+                }
+                else
+                {
+                    Animator animator = prefab.GetComponent<Animator>();
+                    if (animator == null || animator.avatar == null ||
+                        !animator.avatar.isValid || !animator.avatar.isHuman)
+                        throw new InvalidOperationException(
+                            definition.FamilyId + " candidate is missing a valid Humanoid Avatar.");
+                    int rendererCount = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true).Length;
+                    if (rendererCount != 1)
+                        throw new InvalidOperationException(
+                            definition.FamilyId + " expected one SkinnedMeshRenderer; found " +
+                            rendererCount + ".");
+                }
                 prefabs[index] = prefab;
+            }
+
+            if (fatherV18StaticOnly)
+            {
+                AssetDatabase.ImportAsset(
+                    FatherV18StaticTexturePath,
+                    ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(FatherV18StaticTexturePath);
+                if (texture == null)
+                    throw new InvalidOperationException(
+                        "Father V18 static texture did not load: " + FatherV18StaticTexturePath);
+                return new AssetBundle(
+                    prefabs,
+                    null,
+                    null,
+                    texture,
+                    definitions,
+                    true,
+                    false,
+                    FatherV18StaticQaScenePath);
+            }
+
+            if (fatherV18MotionOnly)
+            {
+                AssetDatabase.ImportAsset(
+                    FatherV18MotionTexturePath,
+                    ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(FatherV18MotionTexturePath);
+                if (texture == null)
+                    throw new InvalidOperationException(
+                        "Father V18 motion texture did not load: " + FatherV18MotionTexturePath);
+
+                AnimationClip idleClip = LoadHumanClip(FatherV18MotionIdleClipPath, "Idle");
+                AnimationClip runClip = LoadHumanClip(
+                    FatherV18MotionRunClipPath,
+                    "Lean_Forward_Sprint_inplace");
+                return new AssetBundle(
+                    prefabs,
+                    runClip,
+                    idleClip,
+                    texture,
+                    definitions,
+                    false,
+                    true,
+                    FatherV18MotionQaScenePath);
             }
 
             AssetDatabase.ImportAsset(
@@ -186,38 +320,87 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             if (walkClip == null)
                 throw new InvalidOperationException(
                     "Shared Humanoid walk clip did not load: " + WalkClipPath);
-            return new AssetBundle(prefabs, walkClip);
+            return new AssetBundle(
+                prefabs,
+                walkClip,
+                null,
+                null,
+                definitions,
+                false,
+                false,
+                QaScenePath);
+        }
+
+        private static AnimationClip LoadHumanClip(string assetPath, string nameFragment)
+        {
+            AssetDatabase.ImportAsset(
+                assetPath,
+                ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AnimationClip[] clips = AssetDatabase.LoadAllAssetsAtPath(assetPath)
+                .OfType<AnimationClip>()
+                .Where(candidate =>
+                    !candidate.name.StartsWith("__preview__", StringComparison.Ordinal) &&
+                    candidate.isHumanMotion)
+                .ToArray();
+            AnimationClip clip = clips.FirstOrDefault(candidate =>
+                                     candidate.name.IndexOf(
+                                         nameFragment,
+                                         StringComparison.OrdinalIgnoreCase) >= 0) ??
+                                 clips.FirstOrDefault();
+            if (clip == null)
+                throw new InvalidOperationException(
+                    "Humanoid clip containing '" + nameFragment + "' did not load: " + assetPath);
+            return clip;
         }
 
         private static int CreateIsolatedQaScene(AssetBundle bundle)
         {
             EnsureAssetFolder("Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes");
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(QaScenePath) != null &&
-                !AssetDatabase.DeleteAsset(QaScenePath))
-                throw new InvalidOperationException("Could not replace isolated QA scene: " + QaScenePath);
-            if (!AssetDatabase.CopyAsset(ProductionScenePath, QaScenePath))
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(bundle.QaScenePath) != null &&
+                !AssetDatabase.DeleteAsset(bundle.QaScenePath))
+                throw new InvalidOperationException(
+                    "Could not replace isolated QA scene: " + bundle.QaScenePath);
+            if (!AssetDatabase.CopyAsset(ProductionScenePath, bundle.QaScenePath))
                 throw new InvalidOperationException(
                     "Could not copy production scene to isolated QA path. Source was not written.");
-            AssetDatabase.ImportAsset(QaScenePath, ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(
+                bundle.QaScenePath,
+                ImportAssetOptions.ForceSynchronousImport);
 
-            Scene scene = EditorSceneManager.OpenScene(QaScenePath, OpenSceneMode.Single);
+            Scene scene = EditorSceneManager.OpenScene(bundle.QaScenePath, OpenSceneMode.Single);
             int qaLayer = FindUnusedSceneLayer(scene);
             var root = new GameObject("~Family3DStarterOfficeCandidateQa_ExperimentalOnly");
             var qa = root.AddComponent<Family3DStarterOfficeCandidateQa>();
             Camera camera = CreateOverlayCamera(root.transform, qaLayer);
             CreateCandidateLight(root.transform, qaLayer);
-            qa.Configure(
-                bundle.Prefabs[0],
-                bundle.Prefabs[1],
-                bundle.Prefabs[2],
-                bundle.Prefabs[3],
-                bundle.WalkClip,
-                camera,
-                qaLayer);
+            if (bundle.FatherV18StaticOnly)
+                qa.ConfigureFatherStaticRootMotionOnly(
+                    bundle.Prefabs[0],
+                    bundle.StaticAlbedo,
+                    camera,
+                    qaLayer);
+            else if (bundle.FatherV18MotionOnly)
+                qa.ConfigureFatherHiggsfieldIdleRun(
+                    bundle.Prefabs[0],
+                    bundle.StaticAlbedo,
+                    bundle.IdleClip,
+                    bundle.WalkClip,
+                    camera,
+                    qaLayer);
+            else
+                qa.Configure(
+                    bundle.Prefabs[0],
+                    bundle.Prefabs[1],
+                    bundle.Prefabs[2],
+                    bundle.Prefabs[3],
+                    bundle.WalkClip,
+                    camera,
+                    qaLayer);
             EditorUtility.SetDirty(qa);
             EditorSceneManager.MarkSceneDirty(scene);
-            if (!EditorSceneManager.SaveScene(scene, QaScenePath))
-                throw new InvalidOperationException("Could not save isolated QA scene: " + QaScenePath);
+            if (!EditorSceneManager.SaveScene(scene, bundle.QaScenePath))
+                throw new InvalidOperationException(
+                    "Could not save isolated QA scene: " + bundle.QaScenePath);
             return qaLayer;
         }
 
@@ -281,15 +464,19 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             string buildSettingsAfter,
             bool productionMutation)
         {
-            var assets = new CandidateReceipt[Candidates.Length];
-            for (var index = 0; index < Candidates.Length; index++)
+            var assets = new CandidateReceipt[bundle.Definitions.Length];
+            for (var index = 0; index < bundle.Definitions.Length; index++)
             {
+                Animator animator = bundle.Prefabs[index].GetComponent<Animator>();
                 assets[index] = new CandidateReceipt
                 {
-                    familyId = Candidates[index].FamilyId,
-                    modelAsset = Candidates[index].ModelPath,
-                    modelSha256 = Sha256Asset(Candidates[index].ModelPath),
-                    humanoidAvatar = bundle.Prefabs[index].GetComponent<Animator>().avatar.name
+                    familyId = bundle.Definitions[index].FamilyId,
+                    modelAsset = bundle.Definitions[index].ModelPath,
+                    modelSha256 = Sha256Asset(bundle.Definitions[index].ModelPath),
+                    humanoidAvatar = animator == null || animator.avatar == null
+                        ? string.Empty
+                        : animator.avatar.name,
+                    staticRootMotionOnly = bundle.FatherV18StaticOnly
                 };
             }
 
@@ -302,7 +489,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 productionMutation = productionMutation,
                 productionEligible = false,
                 productionScene = ProductionScenePath,
-                isolatedScene = QaScenePath,
+                isolatedScene = bundle.QaScenePath,
                 productionSceneSha256Before = productionSceneBefore,
                 productionSceneSha256After = productionSceneAfter,
                 previewScene = PreviewScenePath,
@@ -319,19 +506,57 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 coordinateMapping =
                     "production Camera.WorldToViewportPoint(actor XY/Z) -> overlay ViewportPointToRay -> Y=0 plane; raw XZ fallback",
                 directionMapping = "direction South..SE 0..7 -> yaw=(direction-4)*45 degrees",
-                motionMapping =
-                    "Position + LastActualDisplacement + GaitPhase01 + CurrentDirection -> Family3DWalkActor",
-                scalePolicy = "live production SpriteRenderer bounds projected viewport height",
+                motionMapping = bundle.FatherV18StaticOnly
+                    ? "actual Father OfficeRuntimeAgent position + direction -> static V18 root translation/yaw; no limb rig"
+                    : bundle.FatherV18MotionOnly
+                        ? "actual Father OfficeRuntimeAgent position/direction/GaitPhase01 -> native run-644 body/skin/clip; idle-0 Humanoid clip only while stationary; applyRootMotion=false"
+                    : "Position + LastActualDisplacement + GaitPhase01 + CurrentDirection -> Family3DWalkActor",
+                scalePolicy = bundle.FatherV18StaticOnly
+                    ? "every frame source Father sprite projected bounds height == V18 renderer projected bounds height; <=0.5% error; grounded"
+                    : bundle.FatherV18MotionOnly
+                        ? "one locked uniform scale calibrated from idle-0 projected bounds to the live Father sprite; no per-pose rescaling"
+                    : "live production SpriteRenderer bounds projected viewport height",
                 source2DPolicy =
                     "QA-only Renderer.forceRenderingOff; sorting layer/order and transform depth never assigned",
                 supportedPhases = new[] { "Idle(standing)", "Navigating(walking)" },
                 unsupportedSeatedPolicy =
                     "seat approach/transitions/work/egress skip 3D and restore original 2D presentation",
-                walkClipAsset = WalkClipPath,
-                walkClipSha256 = Sha256Asset(WalkClipPath),
-                walkClipName = bundle.WalkClip.name,
-                walkClipLength = bundle.WalkClip.length,
-                lockedCycleSeconds = Family3DWalkActor.LockedCycleSeconds,
+                fatherV18StaticOnly = bundle.FatherV18StaticOnly,
+                fatherV18MotionOnly = bundle.FatherV18MotionOnly,
+                staticMapScaleTolerance = Family3DStarterOfficeCandidateQa.StaticMapScaleTolerance,
+                staticTextureAsset = bundle.FatherV18StaticOnly
+                    ? FatherV18StaticTexturePath
+                    : bundle.FatherV18MotionOnly
+                        ? FatherV18MotionTexturePath
+                        : string.Empty,
+                staticTextureSha256 = bundle.FatherV18StaticOnly
+                    ? Sha256Asset(FatherV18StaticTexturePath)
+                    : bundle.FatherV18MotionOnly
+                        ? Sha256Asset(FatherV18MotionTexturePath)
+                        : string.Empty,
+                idleClipAsset = bundle.FatherV18MotionOnly
+                    ? FatherV18MotionIdleClipPath
+                    : string.Empty,
+                idleClipSha256 = bundle.FatherV18MotionOnly
+                    ? Sha256Asset(FatherV18MotionIdleClipPath)
+                    : string.Empty,
+                idleClipName = bundle.IdleClip == null ? string.Empty : bundle.IdleClip.name,
+                idleClipLength = bundle.IdleClip == null ? 0f : bundle.IdleClip.length,
+                walkClipAsset = bundle.FatherV18StaticOnly
+                    ? string.Empty
+                    : bundle.FatherV18MotionOnly
+                        ? FatherV18MotionRunClipPath
+                        : WalkClipPath,
+                walkClipSha256 = bundle.FatherV18StaticOnly
+                    ? string.Empty
+                    : bundle.FatherV18MotionOnly
+                        ? Sha256Asset(FatherV18MotionRunClipPath)
+                        : Sha256Asset(WalkClipPath),
+                walkClipName = bundle.WalkClip == null ? string.Empty : bundle.WalkClip.name,
+                walkClipLength = bundle.WalkClip == null ? 0f : bundle.WalkClip.length,
+                lockedCycleSeconds = bundle.FatherV18StaticOnly
+                    ? 0f
+                    : Family3DWalkActor.LockedCycleSeconds,
                 candidates = assets,
                 buildResult = report.summary.result.ToString(),
                 buildBytes = (long)report.summary.totalSize
@@ -339,16 +564,29 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             File.WriteAllText(Path.Combine(buildRoot, "build-receipt.json"), json);
         }
 
-        private static string ResolveBuildRoot()
+        private static string ResolveBuildRoot(
+            bool fatherV18StaticOnly,
+            bool fatherV18MotionOnly = false)
         {
             string projectRoot = ProjectPath(string.Empty);
-            string root = Path.GetFullPath(Path.Combine(projectRoot, DefaultBuildRoot));
+            string root = Path.GetFullPath(Path.Combine(
+                projectRoot,
+                fatherV18StaticOnly
+                    ? FatherV18StaticDefaultBuildRoot
+                    : fatherV18MotionOnly
+                        ? FatherV18MotionDefaultBuildRoot
+                        : DefaultBuildRoot));
+            string outputArgument = fatherV18StaticOnly
+                ? "-family3d-father-v18-static-qa-build-output"
+                : fatherV18MotionOnly
+                    ? "-family3d-father-v18-motion-qa-build-output"
+                    : "-family3d-starter-office-qa-build-output";
             string[] args = Environment.GetCommandLineArgs();
             for (var index = 0; index < args.Length - 1; index++)
             {
                 if (!string.Equals(
                         args[index],
-                        "-family3d-starter-office-qa-build-output",
+                        outputArgument,
                         StringComparison.OrdinalIgnoreCase))
                     continue;
                 root = Path.GetFullPath(args[index + 1]);
@@ -445,6 +683,15 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             public string source2DPolicy;
             public string[] supportedPhases;
             public string unsupportedSeatedPolicy;
+            public bool fatherV18StaticOnly;
+            public bool fatherV18MotionOnly;
+            public float staticMapScaleTolerance;
+            public string staticTextureAsset;
+            public string staticTextureSha256;
+            public string idleClipAsset;
+            public string idleClipSha256;
+            public string idleClipName;
+            public float idleClipLength;
             public string walkClipAsset;
             public string walkClipSha256;
             public string walkClipName;
@@ -462,18 +709,39 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             public string modelAsset;
             public string modelSha256;
             public string humanoidAvatar;
+            public bool staticRootMotionOnly;
         }
 
         private sealed class AssetBundle
         {
-            public AssetBundle(GameObject[] prefabs, AnimationClip walkClip)
+            public AssetBundle(
+                GameObject[] prefabs,
+                AnimationClip walkClip,
+                AnimationClip idleClip,
+                Texture2D staticAlbedo,
+                CandidateDefinition[] definitions,
+                bool fatherV18StaticOnly,
+                bool fatherV18MotionOnly,
+                string qaScenePath)
             {
                 Prefabs = prefabs;
                 WalkClip = walkClip;
+                IdleClip = idleClip;
+                StaticAlbedo = staticAlbedo;
+                Definitions = definitions;
+                FatherV18StaticOnly = fatherV18StaticOnly;
+                FatherV18MotionOnly = fatherV18MotionOnly;
+                QaScenePath = qaScenePath;
             }
 
             public GameObject[] Prefabs { get; }
             public AnimationClip WalkClip { get; }
+            public AnimationClip IdleClip { get; }
+            public Texture2D StaticAlbedo { get; }
+            public CandidateDefinition[] Definitions { get; }
+            public bool FatherV18StaticOnly { get; }
+            public bool FatherV18MotionOnly { get; }
+            public string QaScenePath { get; }
         }
 
         private readonly struct CandidateDefinition

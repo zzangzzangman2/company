@@ -18,6 +18,7 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private Transform visualRoot;
         [SerializeField] private Animator animator;
         [SerializeField] private AnimationClip walkClip;
+        [SerializeField] private AnimationClip idleClip;
         [SerializeField] private Vector3 pathCenter;
         [SerializeField] private Color labelColor = Color.white;
         [SerializeField, Range(0f, 1f)] private float poseStrength = 1f;
@@ -25,6 +26,8 @@ namespace FamilyCompany.Experimental.Family3D
 
         private PlayableGraph graph;
         private AnimationClipPlayable clipPlayable;
+        private AnimationClipPlayable idlePlayable;
+        private AnimationMixerPlayable clipMixer;
         private Transform leftFoot;
         private Transform rightFoot;
         private Transform hips;
@@ -69,11 +72,14 @@ namespace FamilyCompany.Experimental.Family3D
         private bool rightFootContactLocked;
         private bool hasLastRootPose;
         private bool initialized;
+        private float moveBlend01;
+        private double idleClock;
 
         public string FamilyId => familyId;
         public Vector3 PathCenter => pathCenter;
         public Color LabelColor => labelColor;
         public AnimationClip WalkClip => walkClip;
+        public AnimationClip IdleClip => idleClip;
         public float PhaseOffset => phaseOffset;
         public float StandingHeight => standingHeight;
         public float PoseStrength => poseStrength;
@@ -89,12 +95,14 @@ namespace FamilyCompany.Experimental.Family3D
             Vector3 center,
             Color color,
             float animationPoseStrength = 1f,
-            bool useDedicatedNaturalSdWalk = false)
+            bool useDedicatedNaturalSdWalk = false,
+            AnimationClip stationaryIdleClip = null)
         {
             familyId = id;
             visualRoot = modelRoot;
             animator = modelAnimator;
             walkClip = sharedWalkClip;
+            idleClip = stationaryIdleClip;
             pathCenter = center;
             labelColor = color;
             poseStrength = Mathf.Clamp01(animationPoseStrength);
@@ -167,7 +175,24 @@ namespace FamilyCompany.Experimental.Family3D
                 clipPlayable.SetApplyFootIK(true);
                 clipPlayable.SetApplyPlayableIK(true);
                 AnimationPlayableOutput output = AnimationPlayableOutput.Create(graph, "Walk", animator);
-                output.SetSourcePlayable(clipPlayable);
+                if (idleClip != null)
+                {
+                    idlePlayable = AnimationClipPlayable.Create(graph, idleClip);
+                    idlePlayable.SetApplyFootIK(true);
+                    idlePlayable.SetApplyPlayableIK(true);
+                    clipMixer = AnimationMixerPlayable.Create(graph, 2, true);
+                    graph.Connect(idlePlayable, 0, clipMixer, 0);
+                    graph.Connect(clipPlayable, 0, clipMixer, 1);
+                    clipMixer.SetInputWeight(0, 1f);
+                    clipMixer.SetInputWeight(1, 0f);
+                    output.SetSourcePlayable(clipMixer);
+                    moveBlend01 = 0f;
+                    idleClock = 0d;
+                }
+                else
+                {
+                    output.SetSourcePlayable(clipPlayable);
+                }
                 graph.Play();
                 phaseOffset = FindLeftForwardContactPhase();
             }
@@ -197,6 +222,16 @@ namespace FamilyCompany.Experimental.Family3D
             lastRootWorldPosition = worldPosition;
             lastRootWorldRotation = rootRotation;
             hasLastRootPose = true;
+        }
+
+        public void RebaseVisualRootAfterScale()
+        {
+            Initialize();
+            visualLocalPosition = visualRoot.localPosition;
+            visualLocalRotation = visualRoot.localRotation;
+            standingHeight = MeasureStandingHeight();
+            ResetFootPlants();
+            hasLastRootPose = false;
         }
 
         public PoseSnapshot ReadPoseSnapshot()
@@ -234,6 +269,17 @@ namespace FamilyCompany.Experimental.Family3D
             {
                 double clipTime = phase * walkClip.length;
                 clipPlayable.SetTime(clipTime);
+                if (idleClip != null)
+                {
+                    idleClock += Time.unscaledDeltaTime;
+                    idlePlayable.SetTime(idleClock % Math.Max(idleClip.length, 0.0001f));
+                    moveBlend01 = Mathf.MoveTowards(
+                        moveBlend01,
+                        isMoving ? 1f : 0f,
+                        Time.unscaledDeltaTime / 0.12f);
+                    clipMixer.SetInputWeight(0, 1f - moveBlend01);
+                    clipMixer.SetInputWeight(1, moveBlend01);
+                }
                 graph.Evaluate(0f);
 
                 if (poseStrength < 0.9999f)
@@ -560,6 +606,11 @@ namespace FamilyCompany.Experimental.Family3D
             const int sampleCount = 180;
             float bestLead = float.NegativeInfinity;
             float bestPhase = 0f;
+            if (idleClip != null)
+            {
+                clipMixer.SetInputWeight(0, 0f);
+                clipMixer.SetInputWeight(1, 1f);
+            }
             for (var sample = 0; sample < sampleCount; sample++)
             {
                 float phase = sample / (float)sampleCount;
@@ -574,6 +625,11 @@ namespace FamilyCompany.Experimental.Family3D
                     continue;
                 bestLead = lead;
                 bestPhase = phase;
+            }
+            if (idleClip != null)
+            {
+                clipMixer.SetInputWeight(0, 1f);
+                clipMixer.SetInputWeight(1, 0f);
             }
             return bestPhase;
         }
@@ -611,6 +667,8 @@ namespace FamilyCompany.Experimental.Family3D
             }
             ResetFootPlants();
             hasLastRootPose = false;
+            moveBlend01 = 0f;
+            idleClock = 0d;
             initialized = false;
         }
 

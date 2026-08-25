@@ -30,6 +30,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherApprovedV14NaturalWalkRigModelPath =
             CandidateRoot +
             "FatherApprovedV14NaturalWalkRigV1/father-approved-v14-natural-walk-rig-v1.fbx";
+        public const string FatherV18HiggsfieldMotionModelPath =
+            CandidateRoot +
+            "FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-idle.fbx";
+        public const string FatherV18HiggsfieldRunClipPath =
+            CandidateRoot +
+            "FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-run-644.fbx";
 
         private static readonly string[] IdentityHumanoidBoneNames =
         {
@@ -65,7 +71,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                    string.Equals(path, OlderSisterCandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherApprovedV14CandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherApprovedV14NaturalWalkRigModelPath, StringComparison.Ordinal) ||
+                   IsFatherV18HiggsfieldMotion(path) ||
                    IsRuntime2DV2Candidate(path);
+        }
+
+        private static bool IsFatherV18HiggsfieldMotion(string path)
+        {
+            return string.Equals(path, FatherV18HiggsfieldMotionModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherV18HiggsfieldRunClipPath, StringComparison.Ordinal);
         }
 
         public static bool IsRuntime2DV2Candidate(string path)
@@ -86,7 +99,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             var importer = (ModelImporter)assetImporter;
             importer.animationType = ModelImporterAnimationType.Human;
             importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
-            importer.importAnimation = proxy;
+            importer.importAnimation = proxy || IsFatherV18HiggsfieldMotion(assetPath);
             importer.importBlendShapes = false;
             importer.importVisibility = false;
             importer.importCameras = false;
@@ -100,8 +113,58 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 importer.isReadable = true;
                 importer.humanDescription = IsFatherApprovedV14Rig(assetPath)
                     ? CreateExplicitFatherApprovedV14HumanDescription(importer.humanDescription)
-                    : CreateExplicitIdentityHumanDescription(importer.humanDescription);
+                    : IsFatherV18HiggsfieldMotion(assetPath)
+                        ? CreateExplicitFatherV18HiggsfieldHumanDescription(importer.humanDescription)
+                        : CreateExplicitIdentityHumanDescription(importer.humanDescription);
+                if (IsFatherV18HiggsfieldMotion(assetPath))
+                {
+                    ModelImporterClipAnimation[] clips = importer.defaultClipAnimations;
+                    for (var index = 0; index < clips.Length; index++)
+                    {
+                        clips[index].loopTime = true;
+                        clips[index].loopPose = true;
+                        clips[index].lockRootRotation = true;
+                        clips[index].lockRootHeightY = true;
+                        clips[index].lockRootPositionXZ = true;
+                        clips[index].keepOriginalOrientation = true;
+                        clips[index].keepOriginalPositionY = true;
+                        clips[index].keepOriginalPositionXZ = true;
+                    }
+                    if (clips.Length > 0)
+                        importer.clipAnimations = clips;
+                }
             }
+        }
+
+        private static HumanDescription CreateExplicitFatherV18HiggsfieldHumanDescription(
+            HumanDescription description)
+        {
+            description.human = new[]
+            {
+                Map("Hips", "Hips"),
+                Map("Spine", "Spine02"),
+                Map("Chest", "Spine01"),
+                Map("UpperChest", "Spine"),
+                Map("Neck", "neck"),
+                Map("Head", "Head"),
+                Map("LeftShoulder", "LeftShoulder"),
+                Map("LeftUpperArm", "LeftArm"),
+                Map("LeftLowerArm", "LeftForeArm"),
+                Map("LeftHand", "LeftHand"),
+                Map("RightShoulder", "RightShoulder"),
+                Map("RightUpperArm", "RightArm"),
+                Map("RightLowerArm", "RightForeArm"),
+                Map("RightHand", "RightHand"),
+                Map("LeftUpperLeg", "LeftUpLeg"),
+                Map("LeftLowerLeg", "LeftLeg"),
+                Map("LeftFoot", "LeftFoot"),
+                Map("LeftToes", "LeftToeBase"),
+                Map("RightUpperLeg", "RightUpLeg"),
+                Map("RightLowerLeg", "RightLeg"),
+                Map("RightFoot", "RightFoot"),
+                Map("RightToes", "RightToeBase")
+            };
+            return description;
         }
 
         private static bool IsFatherApprovedV14Rig(string path)

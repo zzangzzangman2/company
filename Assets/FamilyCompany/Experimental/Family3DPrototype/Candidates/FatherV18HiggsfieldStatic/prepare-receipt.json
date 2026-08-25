@@ -1,0 +1,38 @@
+{
+  "contract": "FC-FATHER-V18-HIGGSFIELD-STATIC-UNITY-PREP-V1",
+  "sourceGlb": "father-v18-tripo-h31-detailed.glb",
+  "sourceGlbSha256": "90789F4F3C0411DA526B8FD8EEBA734E8E77062AA9793EE0D8142160B92E8DFD",
+  "outputFbx": "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx",
+  "outputFbxSha256": "589D4CED62894EA27F3D4469019EDC3A4A845BD672AEF1664FC8AE0542305D5A",
+  "outputTexture": "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png",
+  "outputTextureSha256": "618F33856F2DD722EBFC1782DCB4BF5709D04E3721B4DB9E88F1A5BDDBEAAA9E",
+  "meshCount": 1,
+  "vertexCount": 28895,
+  "polygonCount": 49192,
+  "materialCount": 1,
+  "imageCount": 1,
+  "imageWidth": 4096,
+  "imageHeight": 4096,
+  "sourceBoundsMin": [
+    -0.1364067941904068,
+    -0.20345044136047363,
+    -0.48935484886169434
+  ],
+  "sourceBoundsMax": [
+    0.13675926625728607,
+    0.20345620810985565,
+    0.48982223868370056
+  ],
+  "unityPrepBoundsMin": [
+    -0.13658303022384644,
+    -0.20345333218574524,
+    0.0
+  ],
+  "unityPrepBoundsMax": [
+    0.13658303022384644,
+    0.20345333218574524,
+    0.9791771173477173
+  ],
+  "normalization": "Blender XY centered; Blender Z grounded; FBX -Z forward/Y up; no rig or animation added",
+  "productionEligible": false
+}

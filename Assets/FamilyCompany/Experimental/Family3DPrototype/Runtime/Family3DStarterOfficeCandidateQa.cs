@@ -21,6 +21,7 @@ namespace FamilyCompany.Experimental.Family3D
         public const string Contract = "FC-FAMILY-3D-STARTER-OFFICE-CANDIDATE-QA-V1";
         public const int RequiredActorCount = 4;
         public const float MovementEpsilonSqr = 0.000001f;
+        public const float StaticMapScaleTolerance = 0.005f;
         private const int MaximumFatherCompositeFrames = 180;
 
         [Header("Candidate prefabs (Experimental only)")]
@@ -29,6 +30,10 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private GameObject fatherCandidate;
         [SerializeField] private GameObject motherCandidate;
         [SerializeField] private AnimationClip sharedHumanoidWalkClip;
+        [SerializeField] private AnimationClip fatherHiggsfieldIdleClip;
+        [SerializeField] private bool fatherStaticRootMotionOnly;
+        [SerializeField] private bool fatherHiggsfieldIdleRun;
+        [SerializeField] private Texture2D fatherStaticAlbedo;
 
         [Header("Isolated overlay")]
         [SerializeField] private Camera qaOverlayCamera;
@@ -82,6 +87,58 @@ namespace FamilyCompany.Experimental.Family3D
             qaLayer = Mathf.Clamp(isolatedLayer, 0, 31);
             fallbackOfficeWorldToQaScale = Mathf.Max(0.0001f, fallbackScale);
             groundY = qaGroundY;
+            fatherStaticRootMotionOnly = false;
+            fatherHiggsfieldIdleRun = false;
+            fatherHiggsfieldIdleClip = null;
+            fatherStaticAlbedo = null;
+        }
+
+        public void ConfigureFatherStaticRootMotionOnly(
+            GameObject father,
+            Texture2D albedo,
+            Camera overlayCamera,
+            int isolatedLayer,
+            float fallbackScale = 1f,
+            float qaGroundY = 0f)
+        {
+            playerCandidate = null;
+            olderSisterCandidate = null;
+            fatherCandidate = father;
+            motherCandidate = null;
+            sharedHumanoidWalkClip = null;
+            fatherStaticAlbedo = albedo;
+            qaOverlayCamera = overlayCamera;
+            qaLayer = Mathf.Clamp(isolatedLayer, 0, 31);
+            fallbackOfficeWorldToQaScale = Mathf.Max(0.0001f, fallbackScale);
+            groundY = qaGroundY;
+            fatherStaticRootMotionOnly = true;
+            fatherHiggsfieldIdleRun = false;
+            fatherHiggsfieldIdleClip = null;
+        }
+
+        public void ConfigureFatherHiggsfieldIdleRun(
+            GameObject father,
+            Texture2D albedo,
+            AnimationClip idleClip,
+            AnimationClip runClip,
+            Camera overlayCamera,
+            int isolatedLayer,
+            float fallbackScale = 1f,
+            float qaGroundY = 0f)
+        {
+            playerCandidate = null;
+            olderSisterCandidate = null;
+            fatherCandidate = father;
+            motherCandidate = null;
+            sharedHumanoidWalkClip = runClip;
+            fatherHiggsfieldIdleClip = idleClip;
+            fatherStaticAlbedo = albedo;
+            qaOverlayCamera = overlayCamera;
+            qaLayer = Mathf.Clamp(isolatedLayer, 0, 31);
+            fallbackOfficeWorldToQaScale = Mathf.Max(0.0001f, fallbackScale);
+            groundY = qaGroundY;
+            fatherStaticRootMotionOnly = false;
+            fatherHiggsfieldIdleRun = true;
         }
 
         /// <summary>
@@ -111,11 +168,15 @@ namespace FamilyCompany.Experimental.Family3D
 
         private IEnumerator Start()
         {
+            Application.runInBackground = true;
             float autoQuitSeconds;
             try
             {
                 autoQuitSeconds = ResolveAutoQuitSeconds();
-                fatherMapWalkQa = HasCommandLineFlag("-family3d-father-map-walk-qa");
+                fatherMapWalkQa =
+                    HasCommandLineFlag("-family3d-father-map-walk-qa") ||
+                    HasCommandLineFlag("-family3d-father-v18-static-map-qa") ||
+                    HasCommandLineFlag("-family3d-father-v18-motion-map-qa");
             }
             catch (Exception exception)
             {
@@ -258,10 +319,15 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMovingSampleFrames++;
                     if (HasExplicitRuntimeOutput() &&
                         compositeCapturedFrames < MaximumFatherCompositeFrames &&
-                        (fatherMovingSampleFrames == 1 || fatherMovingSampleFrames % 6 == 0))
+                        (fatherMovingSampleFrames == 1 ||
+                         fatherMovingSampleFrames % (fatherStaticRootMotionOnly ? 12 : 6) == 0))
                         CaptureCompositeQaFrame(
                             sourceOfficeCamera,
-                            "father-stylized-sd-map-walk-v17",
+                            fatherStaticRootMotionOnly
+                                ? "father-v18-higgsfield-static-map-walk"
+                                : fatherHiggsfieldIdleRun
+                                    ? "father-v18-higgsfield-idle-run-map-walk"
+                                : "father-stylized-sd-map-walk-v17",
                             father);
                 }
             }
@@ -296,8 +362,10 @@ namespace FamilyCompany.Experimental.Family3D
 
             fatherProofRouteActive = true;
             Debug.Log(
-                "FAMILY_3D_FATHER_NATURAL_WALK_QA: starting two continuous circuits on one " +
-                "actual Starter Office map; productionEligible=false.",
+                "FAMILY_3D_FATHER_MAP_MOVE_QA: starting two continuous circuits on one " +
+                "actual Starter Office map; staticRootMotionOnly=" +
+                fatherStaticRootMotionOnly + " higgsfieldIdleRun=" +
+                fatherHiggsfieldIdleRun + " productionEligible=false.",
                 this);
 
             for (var circuit = 0; circuit < 2; circuit++)
@@ -309,7 +377,12 @@ namespace FamilyCompany.Experimental.Family3D
                     OfficeGridCoordinate target = loop[leg + 1];
                     if (!father.QaMoveToCell(
                             target,
-                            "father-stylized-sd-map-walk-v17-c" + circuit + "-leg" + leg))
+                            (fatherStaticRootMotionOnly
+                                ? "father-v18-higgsfield-static-map-walk"
+                                : fatherHiggsfieldIdleRun
+                                    ? "father-v18-higgsfield-idle-run-map-walk"
+                                : "father-stylized-sd-map-walk-v17") +
+                            "-c" + circuit + "-leg" + leg))
                     {
                         Fail("Father natural-walk proof route was rejected at circuit " +
                              circuit + ", leg " + leg + ".");
@@ -335,9 +408,14 @@ namespace FamilyCompany.Experimental.Family3D
             fatherProofRouteCompleted = true;
             fatherProofRouteCircuit = 2;
             fatherProofRouteLeg = -1;
-            WriteRuntimeReceipt("FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE");
+            WriteRuntimeReceipt(
+                fatherStaticRootMotionOnly
+                    ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
+                    : fatherHiggsfieldIdleRun
+                        ? "FATHER_V18_HIGGSFIELD_IDLE_RUN_MAP_PROOF_COMPLETE"
+                    : "FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE");
             Debug.Log(
-                "FAMILY_3D_FATHER_NATURAL_WALK_QA: COMPLETE | circuits=2 captures=" +
+                "FAMILY_3D_FATHER_MAP_MOVE_QA: COMPLETE | circuits=2 captures=" +
                 compositeCapturedFrames + " productionEligible=false",
                 this);
             yield return new WaitForEndOfFrame();
@@ -434,9 +512,9 @@ namespace FamilyCompany.Experimental.Family3D
             }
 
             CandidateDefinition[] definitions = CandidateDefinitions();
-            if (liveActors.Count != definitions.Length)
+            if (liveActors.Count != RequiredActorCount)
                 throw new InvalidOperationException(
-                    $"Expected {definitions.Length} Starter Office actors; found {liveActors.Count}.");
+                    $"Expected {RequiredActorCount} live Starter Office actors; found {liveActors.Count}.");
 
             Camera sourceOfficeCamera = Camera.main;
             ExcludeQaLayerFromSourceCamera(sourceOfficeCamera);
@@ -475,8 +553,18 @@ namespace FamilyCompany.Experimental.Family3D
             SetLayerRecursively(host, qaLayer);
 
             GameObject model = Instantiate(definition.Prefab, host.transform, false);
-            model.name = definition.FamilyId + "_CandidateCompleteSkinnedBody";
+            model.name = definition.FamilyId + "_CandidateModel";
             SetLayerRecursively(model, qaLayer);
+
+            if (fatherStaticRootMotionOnly &&
+                string.Equals(definition.FamilyId, "father", StringComparison.Ordinal))
+                return CreateStaticFatherBinding(
+                    definition,
+                    actor,
+                    sourceOfficeCamera,
+                    sourceRenderer,
+                    host,
+                    model);
 
             SkinnedMeshRenderer[] skinned = model.GetComponentsInChildren<SkinnedMeshRenderer>(true);
             if (skinned.Length != 1)
@@ -503,6 +591,10 @@ namespace FamilyCompany.Experimental.Family3D
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             skinned[0].updateWhenOffscreen = true;
 
+            if (fatherHiggsfieldIdleRun &&
+                string.Equals(definition.FamilyId, "father", StringComparison.Ordinal))
+                ApplyFatherV18HiggsfieldMaterial(skinned);
+
             Bounds candidateBounds = EncapsulateBounds(skinned);
             float candidateHeight = Mathf.Max(candidateBounds.size.y, 0.0001f);
             float spriteViewportHeight = MeasureSpriteViewportHeight(sourceRenderer, sourceOfficeCamera);
@@ -514,7 +606,8 @@ namespace FamilyCompany.Experimental.Family3D
                     0.0001f);
             }
 
-            bool useFatherNaturalSdWalk = definition.Prefab == fatherCandidate;
+            bool useFatherNaturalSdWalk =
+                definition.Prefab == fatherCandidate && !fatherHiggsfieldIdleRun;
             if (useFatherNaturalSdWalk)
                 targetHeight *= 0.55f;
 
@@ -524,7 +617,9 @@ namespace FamilyCompany.Experimental.Family3D
             model.transform.position += Vector3.up * (groundY - candidateBounds.min.y);
 
             var walkActor = host.AddComponent<Family3DWalkActor>();
-            const float poseStrength = 1f;
+            float poseStrength = fatherHiggsfieldIdleRun
+                ? ResolveFatherMotionPoseStrength()
+                : 1f;
             walkActor.Configure(
                 definition.FamilyId,
                 model.transform,
@@ -533,7 +628,8 @@ namespace FamilyCompany.Experimental.Family3D
                 qaPosition,
                 Color.white,
                 poseStrength,
-                useFatherNaturalSdWalk);
+                useFatherNaturalSdWalk,
+                fatherHiggsfieldIdleRun ? fatherHiggsfieldIdleClip : null);
 
             var binding = new Binding(
                 definition.FamilyId,
@@ -550,6 +646,114 @@ namespace FamilyCompany.Experimental.Family3D
                 poseStrength);
 
             host.SetActive(true);
+            if (fatherHiggsfieldIdleRun)
+            {
+                ApplyExactStaticMapScale(binding, sourceOfficeCamera, true);
+                walkActor.RebaseVisualRootAfterScale();
+            }
+            return binding;
+        }
+
+        private void ApplyFatherV18HiggsfieldMaterial(Renderer[] renderers)
+        {
+            if (fatherStaticAlbedo == null)
+                throw new InvalidOperationException("Father V18 motion albedo is missing.");
+            // The source texture already contains the stylized colour and baked surface variation.
+            // V19 copied the FBX Standard material and then hit it with a 1.2 directional light,
+            // washing teal/charcoal into cyan/white. Use exact sRGB albedo without scene lighting.
+            Shader shader = Shader.Find("Unlit/Texture") ?? Shader.Find("Sprites/Default");
+            if (shader == null)
+                throw new InvalidOperationException(
+                    "Father V18 exact-albedo unlit shader is missing.");
+            for (var index = 0; index < renderers.Length; index++)
+            {
+                Renderer renderer = renderers[index];
+                var material = new Material(shader)
+                {
+                    name = "FatherV18HiggsfieldMotion_ExactAlbedoUnlit_QaRuntimeMaterial"
+                };
+                material.mainTexture = fatherStaticAlbedo;
+                material.color = Color.white;
+                renderer.sharedMaterial = material;
+            }
+        }
+
+        private Binding CreateStaticFatherBinding(
+            CandidateDefinition definition,
+            OfficeRuntimeAgent actor,
+            Camera sourceOfficeCamera,
+            SpriteRenderer sourceRenderer,
+            GameObject host,
+            GameObject model)
+        {
+            Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+            int meshRendererCount = model.GetComponentsInChildren<MeshRenderer>(true).Length;
+            int skinnedRendererCount = model.GetComponentsInChildren<SkinnedMeshRenderer>(true).Length;
+            if (renderers.Length != 1 || meshRendererCount != 1 || skinnedRendererCount != 0)
+            {
+                DestroyQaObject(host);
+                throw new InvalidOperationException(
+                    definition.FamilyId +
+                    " static candidate must contain exactly one MeshRenderer and no " +
+                    "SkinnedMeshRenderer; renderers=" + renderers.Length +
+                    " mesh=" + meshRendererCount + " skinned=" + skinnedRendererCount + ".");
+            }
+            if (fatherStaticAlbedo == null)
+            {
+                DestroyQaObject(host);
+                throw new InvalidOperationException("Father V18 static albedo is missing.");
+            }
+
+            Material sourceMaterial = renderers[0].sharedMaterial;
+            Shader shader = sourceMaterial == null ? Shader.Find("Standard") : sourceMaterial.shader;
+            if (shader == null)
+            {
+                DestroyQaObject(host);
+                throw new InvalidOperationException("Father V18 static material shader is missing.");
+            }
+            var qaMaterial = sourceMaterial == null
+                ? new Material(shader)
+                : new Material(sourceMaterial);
+            qaMaterial.name = "FatherV18HiggsfieldStatic_QaRuntimeMaterial";
+            qaMaterial.mainTexture = fatherStaticAlbedo;
+            qaMaterial.color = Color.white;
+            renderers[0].sharedMaterial = qaMaterial;
+
+            float sourceViewportHeight = MeasureBoundsViewportHeight(
+                sourceRenderer.bounds,
+                sourceOfficeCamera);
+            float candidateViewportHeight = MeasureBoundsViewportHeight(
+                EncapsulateBounds(renderers),
+                qaOverlayCamera);
+            if (sourceViewportHeight <= 0.000001f || candidateViewportHeight <= 0.000001f)
+            {
+                DestroyQaObject(host);
+                throw new InvalidOperationException(
+                    "Father V18 static map-scale projection could not be measured.");
+            }
+
+            float appliedScale = sourceViewportHeight / candidateViewportHeight;
+            model.transform.localScale *= appliedScale;
+            Bounds scaledBounds = EncapsulateBounds(renderers);
+            model.transform.position += Vector3.up * (groundY - scaledBounds.min.y);
+
+            var binding = new Binding(
+                definition.FamilyId,
+                actor,
+                host,
+                model,
+                null,
+                renderers,
+                sourceRenderer,
+                sourceRenderer.bounds.size.y,
+                sourceViewportHeight,
+                scaledBounds.size.y,
+                appliedScale,
+                0f,
+                true);
+
+            host.SetActive(true);
+            ApplyExactStaticMapScale(binding, sourceOfficeCamera, true);
             return binding;
         }
 
@@ -584,9 +788,18 @@ namespace FamilyCompany.Experimental.Family3D
             float gaitPhase01 = Mathf.Repeat(binding.Agent.GaitPhase01, 1f);
             bool isMoving =
                 binding.Agent.LastActualDisplacement.sqrMagnitude > MovementEpsilonSqr;
-            double motionClock =
-                (gaitPhase01 - binding.WalkActor.PhaseOffset) * Family3DWalkActor.LockedCycleSeconds;
-            binding.WalkActor.Tick(motionClock, worldPosition, worldRotation, isMoving);
+            if (binding.StaticRootMotionOnly)
+            {
+                binding.Host.transform.SetPositionAndRotation(worldPosition, worldRotation);
+                ApplyExactStaticMapScale(binding, sourceOfficeCamera, false);
+            }
+            else
+            {
+                double motionClock =
+                    (gaitPhase01 - binding.WalkActor.PhaseOffset) *
+                    Family3DWalkActor.LockedCycleSeconds;
+                binding.WalkActor.Tick(motionClock, worldPosition, worldRotation, isMoving);
+            }
             binding.LastObservedDisplacement = binding.Agent.LastActualDisplacement;
             binding.LastObservedGaitPhase01 = gaitPhase01;
             binding.LastObservedDirection = binding.Agent.CurrentDirection;
@@ -603,6 +816,60 @@ namespace FamilyCompany.Experimental.Family3D
                     binding.MaximumObservedGaitPhase01,
                     gaitPhase01);
             }
+        }
+
+        private void ApplyExactStaticMapScale(
+            Binding binding,
+            Camera sourceOfficeCamera,
+            bool throwOnMismatch)
+        {
+            Renderer[] renderers = binding.Model.GetComponentsInChildren<Renderer>(true);
+            float targetViewportHeight = MeasureBoundsViewportHeight(
+                binding.MainSource.Renderer.bounds,
+                sourceOfficeCamera);
+            float currentViewportHeight = MeasureBoundsViewportHeight(
+                EncapsulateBounds(renderers),
+                qaOverlayCamera);
+            if (targetViewportHeight <= 0.000001f || currentViewportHeight <= 0.000001f)
+            {
+                if (throwOnMismatch)
+                    throw new InvalidOperationException(
+                        "Father V18 static map-scale projection became unmeasurable.");
+                return;
+            }
+
+            float correction = targetViewportHeight / currentViewportHeight;
+            binding.Model.transform.localScale *= correction;
+            binding.AppliedModelScale *= correction;
+            Bounds bounds = EncapsulateBounds(renderers);
+            binding.Model.transform.position += Vector3.up * (groundY - bounds.min.y);
+            bounds = EncapsulateBounds(renderers);
+
+            float actualViewportHeight = MeasureBoundsViewportHeight(bounds, qaOverlayCamera);
+            float ratio = actualViewportHeight / targetViewportHeight;
+            float scaleError = Mathf.Abs(ratio - 1f);
+            float groundError = Mathf.Abs(bounds.min.y - groundY);
+            binding.LastScaleMatchRatio = ratio;
+            binding.MinimumScaleMatchRatio = Mathf.Min(binding.MinimumScaleMatchRatio, ratio);
+            binding.MaximumScaleMatchRatio = Mathf.Max(binding.MaximumScaleMatchRatio, ratio);
+            binding.MaximumScaleError = Mathf.Max(binding.MaximumScaleError, scaleError);
+            binding.MaximumGroundError = Mathf.Max(binding.MaximumGroundError, groundError);
+            binding.Target3DHeight = bounds.size.y;
+
+            if (scaleError <= StaticMapScaleTolerance && groundError <= 0.001f)
+                return;
+
+            string reason =
+                "Father V18 static map-scale gate failed: targetViewport=" +
+                targetViewportHeight.ToString("F6", CultureInfo.InvariantCulture) +
+                " actualViewport=" +
+                actualViewportHeight.ToString("F6", CultureInfo.InvariantCulture) +
+                " ratio=" + ratio.ToString("F6", CultureInfo.InvariantCulture) +
+                " groundError=" + groundError.ToString("F6", CultureInfo.InvariantCulture) + ".";
+            if (throwOnMismatch)
+                throw new InvalidOperationException(reason);
+            Fail(reason);
+            Application.Quit(2);
         }
 
         private void CaptureCompositeQaFrame(
@@ -666,7 +933,9 @@ namespace FamilyCompany.Experimental.Family3D
 
         private void RecordFatherCaptureSample(Binding binding, int frameIndex)
         {
-            Family3DWalkActor.PoseSnapshot pose = binding.WalkActor.ReadPoseSnapshot();
+            Family3DWalkActor.PoseSnapshot pose = binding.WalkActor == null
+                ? default
+                : binding.WalkActor.ReadPoseSnapshot();
             fatherCaptureSamples.Add(new FatherCaptureSample
             {
                 frameIndex = frameIndex,
@@ -769,6 +1038,31 @@ namespace FamilyCompany.Experimental.Family3D
             return Mathf.Abs(topViewport.y - bottomViewport.y);
         }
 
+        private static float MeasureBoundsViewportHeight(Bounds bounds, Camera camera)
+        {
+            if (camera == null)
+                return 0f;
+            Vector3 minimum = bounds.min;
+            Vector3 maximum = bounds.max;
+            float minimumY = float.PositiveInfinity;
+            float maximumY = float.NegativeInfinity;
+            for (var x = 0; x < 2; x++)
+            for (var y = 0; y < 2; y++)
+            for (var z = 0; z < 2; z++)
+            {
+                Vector3 corner = new Vector3(
+                    x == 0 ? minimum.x : maximum.x,
+                    y == 0 ? minimum.y : maximum.y,
+                    z == 0 ? minimum.z : maximum.z);
+                Vector3 viewport = camera.WorldToViewportPoint(corner);
+                if (viewport.z <= 0f)
+                    return 0f;
+                minimumY = Mathf.Min(minimumY, viewport.y);
+                maximumY = Mathf.Max(maximumY, viewport.y);
+            }
+            return Mathf.Max(0f, maximumY - minimumY);
+        }
+
         private float ResolveQaHeightForViewport(float spriteViewportHeight, Vector3 qaGround)
         {
             if (qaOverlayCamera == null || spriteViewportHeight <= 0.000001f)
@@ -783,7 +1077,7 @@ namespace FamilyCompany.Experimental.Family3D
 
         private bool BindingsStillMatchStarter()
         {
-            if (starter == null || starter.Actors.Count != bindings.Count)
+            if (starter == null || starter.Actors.Count != RequiredActorCount)
                 return false;
             for (var index = 0; index < bindings.Count; index++)
             {
@@ -808,8 +1102,15 @@ namespace FamilyCompany.Experimental.Family3D
                 throw new InvalidOperationException("Starter Office must be ready before candidate binding.");
             if (qaOverlayCamera == null)
                 throw new InvalidOperationException("QA overlay camera is not configured.");
-            if (sharedHumanoidWalkClip == null || !sharedHumanoidWalkClip.isHumanMotion)
+            if ((fatherStaticRootMotionOnly || fatherHiggsfieldIdleRun) &&
+                fatherStaticAlbedo == null)
+                throw new InvalidOperationException("Father V18 albedo is missing.");
+            if (!fatherStaticRootMotionOnly &&
+                (sharedHumanoidWalkClip == null || !sharedHumanoidWalkClip.isHumanMotion))
                 throw new InvalidOperationException("Shared Humanoid walk clip is missing or not Humanoid.");
+            if (fatherHiggsfieldIdleRun &&
+                (fatherHiggsfieldIdleClip == null || !fatherHiggsfieldIdleClip.isHumanMotion))
+                throw new InvalidOperationException("Father V18 Higgsfield idle clip is missing or not Humanoid.");
             CandidateDefinition[] definitions = CandidateDefinitions();
             for (var index = 0; index < definitions.Length; index++)
             {
@@ -821,6 +1122,13 @@ namespace FamilyCompany.Experimental.Family3D
 
         private CandidateDefinition[] CandidateDefinitions()
         {
+            if (fatherStaticRootMotionOnly || fatherHiggsfieldIdleRun)
+            {
+                return new[]
+                {
+                    new CandidateDefinition("father", fatherCandidate)
+                };
+            }
             return new[]
             {
                 new CandidateDefinition("player", playerCandidate),
@@ -911,6 +1219,12 @@ namespace FamilyCompany.Experimental.Family3D
                         target3DHeight = binding.Target3DHeight,
                         appliedModelScale = binding.AppliedModelScale,
                         poseStrength = binding.PoseStrength,
+                        staticRootMotionOnly = binding.StaticRootMotionOnly,
+                        lastScaleMatchRatio = binding.LastScaleMatchRatio,
+                        minimumScaleMatchRatio = binding.MinimumScaleMatchRatio,
+                        maximumScaleMatchRatio = binding.MaximumScaleMatchRatio,
+                        maximumScaleError = binding.MaximumScaleError,
+                        maximumGroundError = binding.MaximumGroundError,
                         sourceSortingLayerId = binding.MainSource.SortingLayerId,
                         sourceSortingLayerName = binding.MainSource.SortingLayerName,
                         sourceSortingOrder = binding.MainSource.SortingOrder,
@@ -941,18 +1255,29 @@ namespace FamilyCompany.Experimental.Family3D
                     productionEligible = false,
                     starterReady = starter != null && starter.IsReady,
                     actorCount = bindings.Count,
+                    starterActorCount = starter == null ? 0 : starter.Actors.Count,
+                    fatherStaticRootMotionOnly = fatherStaticRootMotionOnly,
+                    fatherHiggsfieldIdleRun = fatherHiggsfieldIdleRun,
                     coordinateMapping =
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
                         "Camera.ViewportPointToRay -> Y=ground plane; raw (x,y)->(x,groundY,y) fallback",
                     directionMapping = "South..SE direction 0..7 -> yaw=(direction-4)*45 degrees",
                     scalePolicy =
-                        "live SpriteRenderer bounds viewport height / QA projected viewport height per metre",
+                        fatherStaticRootMotionOnly
+                            ? "every frame: live Father SpriteRenderer projected bounds height == " +
+                              "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
+                            : fatherHiggsfieldIdleRun
+                                ? "one locked uniform model scale calibrated from idle-0 projected bounds to the live Father sprite; no per-pose rescaling"
+                            : "live SpriteRenderer bounds viewport height / QA projected viewport height per metre",
                     supportedPhases = new[] { "Idle(standing)", "Navigating(walking)" },
                     unsupportedPhasePolicy =
                         "Approaching/alignment/seating/work/egress/outside skip 3D and restore original 2D forceRenderingOff",
                     sortingDepthPolicy =
                         "sortingLayerID/name/order and source transform Z are observed only and never assigned",
-                    sharedCycleSeconds = Family3DWalkActor.LockedCycleSeconds,
+                    sharedCycleSeconds = fatherStaticRootMotionOnly
+                        ? 0f
+                        : Family3DWalkActor.LockedCycleSeconds,
+                    staticMapScaleTolerance = StaticMapScaleTolerance,
                     movingSampleFrames = movingSampleFrames,
                     fatherMapWalkQa = fatherMapWalkQa,
                     fatherMapWalkSourceFamilyId = fatherMapWalkQa ? "father" : string.Empty,
@@ -1049,11 +1374,43 @@ namespace FamilyCompany.Experimental.Family3D
             return 0f;
         }
 
+        private static float ResolveFatherMotionPoseStrength()
+        {
+            // Native run-644 is authored for the video's short, chunky low-poly character. At
+            // 1.0 it overextends this Father's longer legs into a split-kick. Visual A/B at
+            // 0.45/0.62/0.78 selected 0.45: alternating steps and arm swing remain without the
+            // stretched-leg silhouette.
+            const float defaultStrength = 0.45f;
+            string[] args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length - 1; index++)
+            {
+                if (!string.Equals(
+                        args[index],
+                        "-family3d-father-v18-motion-pose-strength",
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!float.TryParse(
+                        args[index + 1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out float strength) ||
+                    strength < 0.25f || strength > 1f)
+                    throw new InvalidOperationException(
+                        "Father V18 motion pose strength must be in [0.25, 1].");
+                return strength;
+            }
+            return defaultStrength;
+        }
+
         private void OnApplicationQuit()
         {
             WriteRuntimeReceipt(
                 fatherProofRouteCompleted
-                    ? "FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE"
+                    ? fatherStaticRootMotionOnly
+                        ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
+                        : fatherHiggsfieldIdleRun
+                            ? "FATHER_V18_HIGGSFIELD_IDLE_RUN_MAP_PROOF_COMPLETE"
+                        : "FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE"
                     : IsBound
                         ? "APPLICATION_QUIT_AFTER_BIND"
                         : "APPLICATION_QUIT_UNBOUND");
@@ -1076,6 +1433,9 @@ namespace FamilyCompany.Experimental.Family3D
             public bool productionEligible;
             public bool starterReady;
             public int actorCount;
+            public int starterActorCount;
+            public bool fatherStaticRootMotionOnly;
+            public bool fatherHiggsfieldIdleRun;
             public string coordinateMapping;
             public string directionMapping;
             public string scalePolicy;
@@ -1083,6 +1443,7 @@ namespace FamilyCompany.Experimental.Family3D
             public string unsupportedPhasePolicy;
             public string sortingDepthPolicy;
             public float sharedCycleSeconds;
+            public float staticMapScaleTolerance;
             public int movingSampleFrames;
             public bool fatherMapWalkQa;
             public string fatherMapWalkSourceFamilyId;
@@ -1128,6 +1489,12 @@ namespace FamilyCompany.Experimental.Family3D
             public float target3DHeight;
             public float appliedModelScale;
             public float poseStrength;
+            public bool staticRootMotionOnly;
+            public float lastScaleMatchRatio;
+            public float minimumScaleMatchRatio;
+            public float maximumScaleMatchRatio;
+            public float maximumScaleError;
+            public float maximumGroundError;
             public int sourceSortingLayerId;
             public string sourceSortingLayerName;
             public int sourceSortingOrder;
@@ -1173,7 +1540,8 @@ namespace FamilyCompany.Experimental.Family3D
                 float sourceSpriteViewportHeight,
                 float target3DHeight,
                 float appliedModelScale,
-                float poseStrength)
+                float poseStrength,
+                bool staticRootMotionOnly = false)
             {
                 FamilyId = familyId;
                 Agent = agent;
@@ -1189,8 +1557,10 @@ namespace FamilyCompany.Experimental.Family3D
                 Target3DHeight = target3DHeight;
                 AppliedModelScale = appliedModelScale;
                 PoseStrength = poseStrength;
+                StaticRootMotionOnly = staticRootMotionOnly;
                 WasSupportedLastFrame = true;
                 MinimumObservedGaitPhase01 = 1f;
+                MinimumScaleMatchRatio = float.PositiveInfinity;
             }
 
             public string FamilyId { get; }
@@ -1201,9 +1571,15 @@ namespace FamilyCompany.Experimental.Family3D
             public RendererState MainSource { get; }
             public float SourceSpriteWorldHeight { get; }
             public float SourceSpriteViewportHeight { get; }
-            public float Target3DHeight { get; }
-            public float AppliedModelScale { get; }
+            public float Target3DHeight { get; set; }
+            public float AppliedModelScale { get; set; }
             public float PoseStrength { get; }
+            public bool StaticRootMotionOnly { get; }
+            public float LastScaleMatchRatio { get; set; }
+            public float MinimumScaleMatchRatio { get; set; }
+            public float MaximumScaleMatchRatio { get; set; }
+            public float MaximumScaleError { get; set; }
+            public float MaximumGroundError { get; set; }
             public int UnsupportedPhaseFallbackCount { get; set; }
             public bool WasSupportedLastFrame { get; set; }
             public Vector2 LastObservedDisplacement { get; set; }

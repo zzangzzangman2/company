@@ -2,6 +2,41 @@
 
 최종 갱신: 2026-08-25
 
+## Father V18 Higgsfield sources and unresolved V22 diagnostic
+
+- Current status: `USER_VISUAL_REJECTED_MOVEMENT_NOT_PROPERLY_AUDITED`,
+  `productionMutation=false`, `productionEligible=false`. V18~V22 are diagnostic/rejected iterations,
+  not a current visual candidate.
+- Source video: `Downloads/캐릭.mp4`, SHA-256
+  `39DB58386FC8FFF7CF6D173A5552538C6D01F64959AEDC60495A8DC3E263843E`. The motion authority range is
+  in-game footage `305.93..354.90s`; the longest clean cadence window inside it is `305.93..318.33s`.
+  The previously recorded `304..368s` / `368..384s` pair was wrong: `354.90s` onward is the Day-4 3D
+  showroom turntable, and the Blender viewport check is at `294..298s`.
+- Paid jobs and generated GLBs:
+  - detailed Tripo H3.1 source job `7373376e-2b09-4b1a-ba1c-15847c6d626f`, 18 credits, SHA-256
+    `90789F4F3C0411DA526B8FD8EEBA734E8E77062AA9793EE0D8142160B92E8DFD`
+  - idle job `f63f18c3-f5f9-4d6c-9e1a-4f762d20a25f`, 8 credits, SHA-256
+    `179A9F9B60FF2E8829A3E9D0E60A0D03349235F8830163104ACC6FAB300A42AC`
+  - run job `83c62f11-ea31-4888-9844-0c8f3a8970f3`, 8 credits, SHA-256
+    `AA8BF9A8043A6A4E26F141AA1D8F581B9C81BF854518A999D8496CD3446FC01F`
+- Motion source assets remain under
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/`.
+  The folder name records the paid-source iteration; V22 still consumes it. Idle FBX SHA-256 is
+  `3DB1D5414174F07F9395CE030047D98860A27F448C099AE757AD72E2922CB47B`, run FBX
+  `8CD7A186BB3600FC92F27F29E7CBF9941516211C3E71D85DBC1DC1D428A1924E`, albedo
+  `F9A09FE0B1901125A00C8D0C87FF585E1D86E2A927949672BC44C68776DCCE7C`.
+- Detailed static source is preserved under `Candidates/FatherV18HiggsfieldStatic/` because it is the
+  paid appearance source and recovery reference. Static FBX SHA-256 is
+  `589D4CED62894EA27F3D4469019EDC3A4A845BD672AEF1664FC8AE0542305D5A`; albedo SHA-256 is
+  `618F33856F2DD722EBFC1782DCB4BF5709D04E3721B4DB9E88F1A5BDDBEAAA9E`.
+- V22 diagnostic scene is
+  `Scenes/Family3DFatherV18HiggsfieldNativeRunMapQaV22.unity`. Its native run body + `0.45` pose
+  strength + exact albedo configuration completed the isolated route, but real-time movement was not
+  validated. Old V18~V21 builds, scenes, logs, duplicate presentations, and temporary audit sheets were
+  removed; raw sources/receipts and current V22 evidence were preserved.
+- Full continuation instructions:
+  [CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md](CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md).
+
 ## User-owned-base direct conversion proofs (current, isolated, not production)
 
 - The user explicitly attests ownership of `Downloads/test.7z` (Mika) and

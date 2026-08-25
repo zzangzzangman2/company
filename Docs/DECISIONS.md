@@ -1,5 +1,26 @@
 # DECISIONS
 
+## 2026-08-25 / Father V18 V18~V22를 모두 미승인 진단본으로 봉인한다
+
+결정: 사용자 최종 화면 판정에 따라 V18 정적 root 이동부터 V22 native-run + `0.45` + exact-albedo까지
+어느 것도 자연스러운 움직임 합격본으로 취급하지 않는다. 현재 상태는
+`USER_VISUAL_REJECTED_MOVEMENT_NOT_PROPERLY_AUDITED`이며 자동 route 완료, foot-lead 부호 변화, 정지
+contact sheet는 합격 근거가 아니다.
+
+V19의 독립 idle body/run motion retarget과 lit Standard material은 각각 다리 변형과 색 날림을 만들었으므로
+재사용하지 않는다. V22의 native run body/skin/clip과 exact albedo는 이 두 공간적 문제를 줄인 진단 구성일
+뿐이다. pose strength `0.45`도 정지 silhouette A/B로 고른 값이므로 고정된 정답이 아니다.
+
+움직임 검증은 원본 30 fps와 Unity 연속 30/60 fps를 같은 시간축에 놓고 수행한다. 먼저 imported run
+`0.6000000238s`와 `LockedCycleSeconds=0.99380799s`의 cadence 차이, map translation과 stride 길이, 발 접지
+속도를 측정한다. 그다음 yaw blend와 start/stop 전환을 검증한다. sparse screenshot을 10 fps로 재생한 파일은
+실시간 움직임 증거로 사용하지 않는다.
+
+유료 source/idle/run job과 영수증은 보존하지만 새 생성은 사용자 명시 승인과 비용 재확인 전 금지한다.
+9-credit standard는 계속 금지한다. production/default scene은 수정하지 않고
+`productionEligible=false`를 유지한다. 다음 구현 판단은
+`CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md`를 따른다.
+
 ## 2026-08-25 / 팔이 정지한 H를 폐기하고 실제 SD timing 기반 J로 교체한다
 
 결정: 사용자가 H 실제 화면에서 걷기가 못생기고 뻣뻣하게 미끄러지며 팔이 가만히 있다고 판정했다.
