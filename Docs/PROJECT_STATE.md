@@ -2,7 +2,248 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-24 / 현재 정본: 신규 3D 후보 4명 + Player 실제 사무실 이동 gate PASS, 사람 화면 검수 대기
+## 2026-08-25 / 현재 최우선 상태 오버라이드: Father V18 Higgsfield 외형 재구축
+
+- 사용자는 기존 보행뿐 아니라 캐릭터 자체도 이상하다고 판정했고, 새로 제공한 귀여운 compact adult SD father
+  디자인과 최대한 동일한 외형으로 다시 만들 것을 요청했다. 기존 `FatherApprovedV14` 자산은 삭제·덮어쓰기
+  없이 과거 승인/비교본으로 보존하지만, 다음 후보의 외형 기준은 V18 디자인 타깃이다.
+- 집 PC에서 먼저 Higgsfield 3-day trial의 100 credits를 사용자가 직접 활성화하고, 공식 Blender plugin OAuth를
+  다시 연결한다. 회사 PC에서는 input upload와 cost preflight만 했고 generation은 제출하지 않아 사용 credits는
+  `0`이다.
+- 허용된 첫 generation은 `tripo_h3_1_multiview_to_3d`, 4 views, detailed geometry, detailed texture,
+  face limit 50,000, PBR/quad/rig/animation off, seed 48217인 정적 textured GLB 한 건이다. 2026-08-25 실제
+  preflight cost는 `18.0 credits`; 제출 직전 재확인하고 비용이 바뀌면 중단한다.
+- 입력, 정확한 params, 외형/보행 gate와 금지 목록은
+  [FATHER_V18_HIGGSFIELD_HOME_HANDOFF_2026-08-25.md](FATHER_V18_HIGGSFIELD_HOME_HANDOFF_2026-08-25.md)가 정본이다.
+  정적 결과를 사용자가 직접 승인하기 전에는 rig/걷기/Unity로 넘어가지 않으며 `productionEligible=false`다.
+
+## 2026-08-25 / 현재 최우선 상태 오버라이드: Father V14 stylized SD 보행 J
+
+- 사용자가 실제 GIF를 보고 V13을 즉시 문제 있다고 판정했다. V13은 `USER_VISUAL_REJECTED`이며 자동 QA와
+  4장 정지 시트는 합격 근거가 아니다. 확대 검수한 원본 24프레임에는 바지/다리가 한 검은 기둥으로
+  합쳐지고 신발이 떨어져 보이는 구간, 이동하는 root 위에 지지 없이 같은 자세가 끌리는 발 미끄러짐,
+  약한 무릎/체중 이동, 비대칭으로 고정된 팔, 18→19 방향 전환과 23→0 루프 점프가 있었다.
+- 정적 `FatherApprovedV14`/Proof23 외형은 사용자 승인 상태를 그대로 유지한다. 외형 좌표는 다시 만들지
+  않았다. Proof25를 감사해 두 신발 1,228개 weight membership이 A-pose 손가락으로 잘못 전이된 것을
+  확인했고, Proof26은 승인 신발 좌표를 바꾸지 않고 왼발/오른발 bone에만 각각 재배정했다. 새 격리 FBX는
+  `Candidates/FatherApprovedV14NaturalWalkRigV1/father-approved-v14-natural-walk-rig-v1.fbx`, SHA-256
+  `0A4AE8A1620A9E7F85BF0A072DCB7B5553D2C584DC550A38EAC0DE2349383773`이다.
+- G 후보는 shared human clip을 감쇠하지 않았다. `Family3DWalkActor`의 Father 전용 SD 2족 보행이
+  좌우 반대 위상 허벅지/무릎, 짧은 두 발 접지, 작은 골반 체중 이동, 몸 옆의 작은 반대팔 스윙, 짧은
+  two-bone foot plant를 사용한다. 실제 Father `OfficeRuntimeAgent`가 동일 Starter Office의 3x3 외곽을
+  두 바퀴 이동하며 180프레임을 캡처했다. 첫 한 바퀴 113프레임 전체와 실제 다음 프레임까지 확대 검수해
+  신발 분리, 지속 발 끌림, 다리 비이족성, 팔 벌림, 거인 축척, 레이아웃 전환, 루프 끝 점프가 없음을 확인했다.
+- 격리 build/runtime은 `FatherApprovedV14NaturalWalkV14BuildG` /
+  `FatherApprovedV14NaturalWalkMapRuntimeV14G`이다. runtime receipt는
+  `FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE`, build와 runtime 모두 `productionMutation: false`,
+  `productionEligible: false`다. production scene, preview, EditorBuildSettings의 before/after SHA는 동일하다.
+  사용자는 실제 GIF를 보고 걷기가 너무 흐물거리고 징그럽다고 판정했다. G는
+  `USER_VISUAL_REJECTED_FLOPPY_RUBBERY_MOTION`이며 재사용하지 않는다.
+- H는 G의 lateral hips 이동과 IK residual pelvis 이동을 모두 제거했다. 연속 sine 다리 곡선을
+  접지–통과–스윙–착지 key-pose 곡선으로 바꾸고, 접지 보정은 주기의 `0.11`까지만 허용하며 관절별
+  보정 각도를 제한했다. 팔 진폭은 `±0.025`, 무릎 굽힘은 `0.23`, 허벅지 진폭은 `0.14`로 줄였다.
+  `FatherApprovedV14FirmSdWalkMapRuntimeV15H`의 첫 회전 114프레임 전체에서 골반/몸통 흔들림과 고무 같은
+  하체 늘어짐이 사라졌는지 확대 검수했다. 사용자는 H도 걷기가 못생기고 팔이 사실상 정지해 있다고
+  판정했다. H는 `USER_VISUAL_REJECTED_STIFF_GLIDING_STATIC_ARMS`이며 재사용하지 않는다.
+- J는 사용자 지시에 따라 실제 Blue Archive SD 카페 보행/선택 동작을 프레임 단위로 다시 관찰하고,
+  저작물이나 asset을 복사하지 않은 채 동작 원리만 반영했다. 몸통/머리 실루엣은 읽기 쉽게 고정하되
+  지지 다리는 긴 구간 뒤로 밀고, 반대 다리는 짧은 구간에 무릎을 들어 회수한다. 팔꿈지는 계속 굽힌 채
+  양손이 허리 앞/몸 뒤로 분명히 교대하는 반대 스윙을 한다. `0.88s` cycle, upper-leg `0.18`, swing-knee
+  `0.34`, arm front/back `±0.16`, forearm bend `-0.24`이며 pelvis translation은 계속 `0`이다.
+  `FatherApprovedV14StylizedSdWalkMapRuntimeV17J`의 실제 첫 회전 110프레임 전체를 확대 검수해 팔 교대,
+  좌우 신발/무릎 회수, 8개 route leg와 4개 방향, 끝 경계를 확인했다. build/runtime은
+  `FatherApprovedV14StylizedSdWalkV17BuildJ` / `FatherApprovedV14StylizedSdWalkMapRuntimeV17J`, build와
+  runtime 모두 `productionMutation: false`, `productionEligible: false`다. J도 사용자 GIF 합격 전에는
+  후보일 뿐이며 자동 PASS로 합격 처리하지 않는다.
+
+## 2026-08-24 / 현재 최우선 상태 오버라이드: 사용자 소유 Mika/Yuuka 직접 개조
+
+- **최신 사용자 화면 판정:** Older Sister의 connected-clothes 정적 후보
+  `SisterProof66ConnectedClothesApprovalCandidate`는 사용자가 "합격"으로 판정했다. 이는 외형/연결 방식의
+  화면 승인이고, 아직 rig transfer·걷기·Unity·production 승격 승인은 아니다. Player는 계속
+  `FAIL_CLOSED / DIAGNOSTIC_ONLY`; Father의 v12까지는 탈락했고 최신 v14/Proof23은 사용자가
+  `USER_VISUAL_APPROVED_STATIC`으로 승인했다. Father v14는 이후 118본 rig transfer, Unity Humanoid import,
+  공유 걷기와 실제 StarterOffice 복제본 D3D11 수치 QA까지 통과했지만, 사용자가 V4 GIF에서 거인처럼 큰
+  축척, 2족 보행으로 읽히지 않는 다리, 기괴한 팔 동작을 확인해
+  `USER_VISUAL_REJECTED_GIANT_SCALE_NON_BIPEDAL_ARM_MOTION`으로 불합격했다. 정적 v14와 rig 승인은 유지하며,
+  현재 열린 gate는 shared human clip을 쓰지 않는 Father 전용 SD 보행과 맵 축척 V5다.
+- Mother는 사용자 소유 Mika 얼굴·눈·chestnut hair·원본 3-digit 손을 좌표/가중치 그대로 유지하고,
+  VRoid Studio 2.14.0 built-in Body_0/Body_1/Body_3를 연속 피부·한 장 의상·맞물린 신발로 변형한
+  v11은 사용자가 목–몸 분리 틈을 발견해 `USER_VISUAL_REJECTED_NECK_DISCONNECTION`으로 폐기했다. 수정본
+  `MotherProof13ShortConnectedNeckGate`도 사용자가 얇고 길며 꺾인 흰 목 실루엣을 발견해
+  `USER_VISUAL_REJECTED_CREEPY_THIN_NECK`으로 폐기했다. 이후 `MotherProof15ChibiNeckHiddenGate`의 8방향
+  내부 검수에서 목처럼 보이던 회색 직사각형이 실제로는 Mika 얼굴 메시의 rear-lower shell임을 확인해 해당
+  후보도 `USER_VISUAL_REJECTED_EXPOSED_REAR_FACE_SHELL`로 봉인했다. 이어서
+  `MotherProof21RoundedUnderChinGate`는 목을 지나치게 숨겨 사용자가
+  `USER_VISUAL_REJECTED_NO_VISIBLE_NECK`으로 폐기했다. 최신 `MotherProof26ApprovedYuukaNeckShapeGate`는
+  합격한 누나 `SisterProof66ConnectedClothesApprovalCandidate`의 `SisterProof46SmoothNeckBridge`
+  160 vertices/120 polygons와 위가 좁고 아래가 넓은 taper를 직접 복사한다. 엄마 체형에 X/Y `1.80` fit,
+  Z `1.105..1.225` overlap으로만 조절해 연속 피부 메시 안에 병합했고, Mika head rigid world drop은
+  `0.035`로 되돌려 목이 실제로 보이면서 턱·블라우스 양쪽과 겹치게 했다. rear-lower face polygon 80개만
+  숨기고 앞턱·귀·눈·머리카락 및 local 좌표/weights는 보존한다. 몸통 중앙/카라 `0.045` lift도 유지한다.
+  사용자 2D 권위의 dusty-peach cardigan,
+  cream blouse, dark-teal calf A-line skirt, dark-brown shoes, 표면 밀착 단추와 왼손목 시계를 반영했다.
+  정적 컬러/회색 4면과 24-frame appearance-only turntable 내부 QA, 원본 Mika 전체 좌표/weights·151 bones,
+  native hand 좌표/weights exact, `test3.zst` 제외 gate와 목 근접 3면/회전 8면 검수는 PASS했다. 현재 상태는
+  사용자가 정적 외형을 승인하여 `USER_VISUAL_APPROVED_STATIC`; rig transfer·걷기·Unity import·production 승격은 다음 게이트 전까지 보류한다.
+- 현행 fail-closed gate는 (1) 떠 있는/겹친 garment assembly part 0과 곡면 접점, (2) 사용자가 후속 승인한
+  Mika/Yuuka 원본 3-digit SD 손을 변형 손상 없이 그대로 유지하고 receipt에도 정확히 기록하는 것이다.
+  사용자는 후속 대화에서 부모/누나가 같은 젊은 chibi 비율로 읽히는 점은 그대로 유지해도 된다고 승인했으므로,
+  과거의 역할별 성인 나이 실루엣 요구는 현재 외형 차단 gate가 아니다.
+
+- **Older Sister Proof22 사용자 탈락:** `SisterProof22DirectionGate`와 32-frame GIF도
+  `USER_VISUAL_REJECTED_CONNECTIONS`다. 원본 Yuuka 얼굴·눈·머리·3-digit 손 보존은 유효하지만,
+  팔–어깨, 목선, 상의–허리, 반바지 좌우·가랑이가 겹친 별도 표면으로 남아 회전에서 틈·단차가 보였다.
+  낮은 검은 임시 신발도 2D 권위의 완전한 맨발과 다르다. 다음 누나 proof는 상의 아래의 연속된
+  shoulder/torso skin, 허리·좌우 통·가랑이가 하나인 connected shorts, 같은 메시의 piping material region,
+  다리와 이어진 완전한 맨발을 정적 4면에서 먼저 통과해야 한다. Proof22는 Unity/GIF/production 근거가 아니다.
+- Father의 과거 `FatherAdultMorph6SurfaceGate`는 후면 eye/socket 노출과 성인 비율 수치는 고쳤지만 큰
+  Yuuka 눈, 젊은 여성 landmark, bob/helmet hair, boxy suit 때문에 `DIAGNOSTIC_ONLY_STYLE_FAIL`로 봉인했다.
+  최신 정적 후보 `FatherProof6VoxelContinuousOfficeGate`는 기존 FatherProof3의 사용자 소유 Yuuka 얼굴,
+  짧은 회색 머리, 안경, 표정, 원본 3-digit 손과 118-bone rig를 그대로 유지한다. 실패한 torso·sleeve·cuff·
+  forearm·pelvis·trouser volume은 결과 파츠로 남기지 않고 `0.0045` voxel union과 10회 organic relax로 한
+  연속 표면으로 재구성했다. 누나 정적 합격본의 `SisterProof46SmoothNeckBridge` 160 vertices/120 polygons를
+  같은 body object에 병합하고 셔츠 neckline과 겹쳤다. 셔츠·소매·팔·바지·벨트는 같은 표면이며, 단추·버클·
+  시계만 표면 밀착 액세서리다. 4면 컬러/회색과 24-frame appearance turntable, 원본 전체/손 좌표·weights 및
+  118 bone-name exact gate는 통과했지만, 사용자가 사다리꼴 상체·두꺼운 골반 띠·상하체가 따로 노는 낮은
+  외형 품질을 지적해 `USER_VISUAL_REJECTED_UPPER_LOWER_BODY_QUALITY`로 폐기했다. rig transfer·걷기·Unity
+  import·production 승격은 금지하며, 이 voxel-union 몸통은 다음 후보의 베이스로 재사용하지 않는다.
+  후속 `FatherProof8ShoulderWaistQualityGate`는 VRoid Studio 2.14.0의 실제 M00 male Body 2617 표면으로
+  shoulder fold와 골반 상자 문제를 제거했지만, 사용자가 눌린 얼굴과 가시처럼 가는 팔을 발견해
+  `USER_VISUAL_REJECTED_SQUASHED_FACE_SPIKE_ARMS`로 폐기했다. `FatherProof10FaceRoundedArmGate`도 사용자가
+  휘어진 팔과 턱 아래 겹친 rear-cranium 음영을 지적해 `USER_VISUAL_REJECTED_WARPED_ARMS_DOUBLE_CHIN`으로
+  폐기했다. `FatherProof18SealedArmSingleJawGate`는 head shell·눈·안경·머리의 X `0.91`, Y `0.96`,
+  Z `1.10` anti-squash 보정을 유지하되, 턱 아래로 내려오던 기존 rear coverage는 render에서 제외하고
+  턱선 위에서 끝나며 머리카락 뒤에 놓인 rounded cranium으로 대체했다. 팔은 휘어진 male-surface forearm을
+  제거하고 각 측면마다 shoulder–wrist 한 메시, 15 rings/24 segments, shirt/skin material-only 경계로
+  재구성했다. 시작·끝 단면은 몸통과 native hand 안에 묻히며 4면에서 겨드랑이/손목 틈이 없다. native hand
+  island 좌표/weights와 118 bone names는 exact지만, 새 rear-cranium에 UV-mapped face material을 잘못 넣어
+  뒤통수가 흰 피부색으로 드러났으므로 `USER_VISUAL_REJECTED_REAR_CRANIUM_COLOR_MISMATCH`로 폐기했다. 최신
+  `FatherProof19RearHairColorGate`는 형상과 얼굴 피부는 그대로 두고 rear-cranium만 short-hair under-cap과
+  동일한 UV-independent `FatherCharcoalHair`로 교체해 흰 후면 패치를 제거했지만, 사용자가 뒤에서 셔츠색
+  엉덩이가 보이는 것을 지적해 `USER_VISUAL_REJECTED_SHIRT_COLORED_SEAT`로 폐기했다. 원인은 VRoid authored
+  trouser를 source Z `0.940`에서 잘라 Father Z 약 `0.400` 아래까지만 남겼기 때문이다. 최신
+  `FatherProof21TuckedShirtTrouserSeatGate`는 trouser의 authored waist/seat를 source Z `1.125`까지 유지해
+  Father Z 약 `0.476`까지 올리고, 셔츠 밑단은 source Z `1.040`으로 올려 waistband 안에 넣었다. 따라서
+  앞·옆·뒤에서 엉덩이는 전부 charcoal trousers로 이어지고 blue shirt hip fragment는 없다. 후속
+  `FatherProof22TaperedTrouserWaistGate`는 authored waistband 립의 좌우 선반이 아직 남아 내부 폐기했다. 최신
+  `FatherProof23FlushWaistGate`는 trouser Z `0.425..0.476` half-width를 `0.109..0.108`로 평탄화하고 shirt
+  Z `0.440..0.490`을 안으로 tuck해 belt–shirt–trouser가 한 줄로 이어진다. 뒤통수·팔·턱 수정, native hand
+  좌표/weights 및 118 bone names exact도 유지한다. 컬러/회색 4면과 24-frame 360도 turntable 내부 QA를
+  통과했고 사용자가 `USER_VISUAL_APPROVED_STATIC`으로 승인했다. 승인 blend에서 118본과 원본 body 좌표/weights
+  hash를 유지한 채 새 의상/팔다리에 4-influence weight transfer를 적용해
+  `Candidates/FatherApprovedV14/father-approved-v14-rigged.fbx`를 만들었다. Unity Humanoid Avatar는 valid/human,
+  complete SkinnedMeshRenderer 1개, 18,427/18,427 weighted vertices다. 첫 실제 맵 render에서 공유 clip의 진폭이
+  과해 다리가 벌어지는 것을 화면으로 발견해 불합격 처리하고, 승인 정적 rest pose 대비 회전/이동 진폭을
+  `0.32`로 감쇠했다. 최종 `FatherApprovedV14MapWalkRuntime4`는 D3D11 24-frame visual-content PASS,
+  movement sample `3,495`, 모델 moving frame `2,481`, 8방향 mask `255`, gait phase
+  `0.000824..0.999747`, replan/static/interaction/agent penetration 모두 `0`이다. 실제 `Prototype01`과 preview,
+  EditorBuildSettings before/after SHA는 동일해 맵 수정은 필요 없었다. 그러나 사용자가 실제 GIF에서 거인
+  스케일, 비2족 다리, 기괴한 팔 동작을 확인했으므로 motion V4는
+  `USER_VISUAL_REJECTED_GIANT_SCALE_NON_BIPEDAL_ARM_MOTION`으로 봉인한다. `poseStrength 0.32`와 shared human
+  clip 감쇠 방식은 재사용하지 않는다. 정적 v14/Proof24 rig 승인만 유지하며 production 승격은 금지한다.
+  후속 V13은 shared clip을 완전히 우회하고 `HumanPoseHandler`로 SD 전용 보행을 구현했다. 기존 viewport
+  height의 `0.55`, upper-leg `±0.05`, swing-knee `-0.09`, arm down `-0.48`, arm swing `±0.008`이며
+  torso/head/hips는 승인 rest pose로 복원한다. 팔을 내릴 때 바지가 같이 끌리던 원인은 nearest-surface
+  transfer가 바지에 넣은 arm/hand membership `1,604`개였고, Proof25에서 모두 제거했다. 팔 영향만 있던
+  `927`개 바지 정점은 pelvis/thigh/calf 체인으로 재배치했으며 forbidden influence after는 `0`이다.
+  새 FBX SHA는 `88734B5F16598B2027FC7F54139F27E17C6912755E2907F09EB97CBC72497094`, Unity Humanoid는
+  valid/human이다. `FatherApprovedV14MapWalkRuntimeV13`은 D3D11 moving `2,502`, direction mask `255`, gait
+  `0.000826..0.999978`, composite `24`, collision/penetration/replan `0`이다. V13도 사용자 실제 GIF 화면
+  승인 전 production 승격은 금지한다.
+- Player `PlayerOriginalSurface15PolishedGate`도 원본 3-digit 손·118본·weights는 보존했지만 큰 dome/helmet
+  cap, 불명확한 brim, 후면 face/eye aperture 노출, 상의의 큰 V-hole과 열린 어깨 seam 때문에
+  `FAIL_CLOSED / DIAGNOSTIC_ONLY`다. Proof16은 몸에 맞는 원본 coherent jacket surface, 후면 scalp/socket
+  차폐, 납작한 단일 newsboy crown+brim 경로로 재시도하며 GIF/Unity는 계속 금지한다.
+
+- **동일 날짜 내부 진단 결과:** 수치 topology 통과를 화면 합격으로 오인하지 않기 위해 아래 시도를 모두
+  `DIAGNOSTIC_ONLY_*_FAIL`로 봉인했다.
+  - Mother `MotherTextureFirst1`: 원본 Mika surface 재사용으로 조립 티는 줄었지만 fantasy dress,
+    허리길이 머리, 장식, teen face가 남아 identity FAIL.
+  - Father/Mother `HeadOnlyMorphPrototype`: rig/weight hash와 vertex 이동은 검증됐지만 face shell만 바꾸자
+    EyeMouth plane/UV/socket/lash/hairline이 따로 남아 검은 눈구멍·pinched mask chin이 생겨 visual FAIL.
+  - Player `Proof10TopologyGate`: 각 의상이 1 component/closed/all-quad여도 모자·상의·바지·신발이 상자처럼
+    읽혀 style FAIL. `Proof11SilhouetteGate`는 donor-fitted 바지·신발이 개선됐지만 cap 관통, blazer형 lapel,
+    검은 V-neck gap, 분리된 원통 hood 때문에 아직 style FAIL 상태다.
+  - Mother `MotherConnectedTopology1`: cardigan/blouse/skirt/loafer/hair의 자동 manifold gate는 통과했지만
+    직사각 cardigan, tube sleeve, cone/slab 의상, curtain+sphere hair, ball loafer와 약 2.5등신 child read로
+    44세 실루엣을 통과하지 못했다.
+  - Older Sister `SisterProof4ProportionGate`: 다리 직선화·슬림화와 toe capsule 제거는 개선됐지만 tank/shorts가
+    여전히 절차형 volume이고 arm seam·oval-pad foot·부족한 20세 body cue가 남아 style FAIL.
+  - Father `FatherCoordinatedHead1`: socket void와 iris 정렬은 개선됐지만 balloon/Wii-avatar face, decal eye,
+    pasted ear, helmet hair, remesh chin ripple로 polished anime/46세 외형에 실패했다.
+- 따라서 현행 작업은 primitive/cage/voxel 외형을 더 다듬는 단계가 아니라, Mika/Yuuka의 이미 몸에 맞는
+  고품질 donor face·ear·hair·garment surface를 직접 crop/reshape하고 필요한 socket/UV/material을 함께
+  고치는 단계다. 위 진단본 어느 것도 사용자 제시·GIF·Unity 후보가 아니다.
+
+- 사용자는 절차형 Runtime-2D V2/Final3/Final4 외형을 화면에서 명시적으로 탈락시켰다. 아래의 구조,
+  Humanoid, build, walk PASS는 역사적 진단 자료일 뿐이며 현행 외형 후보가 아니다.
+- 사용자는 `Downloads/test.7z`와 `Downloads/test2.targz`의 소유권을 명시적으로 확인하고, 그 안의
+  Mika/Yuuka 기존 3D 얼굴·눈·몸·손·리그를 직접 수정해 네 가족 캐릭터를 만들도록 지시했다. 따라서
+  현재 작업은 새 절차형 얼굴/몸을 만드는 흐름이 아니라, 해당 두 베이스를 격리된 로컬 proof에서 직접
+  개조하는 흐름이다. 가족 HighMotion 2D는 여전히 역할별 머리·의상·색·나이·실루엣 authority다.
+- archive 안에는 제3자가 검증할 수 있는 license/transfer 문서가 없으므로 이 소유권 기록은 사용자의
+  attestation이다. 현재 산출물은 사용자가 요청한 개인용·로컬 시각 proof로만 취급한다. 명시적 화면 승인과
+  별도 provenance/shipping 결정 전에는 production/default Unity 경로로 복사, 공개 배포, 판매, 원본 payload
+  commit을 하지 않는다.
+- `test3.zst`/Sakurako는 계속 완전 제외한다. bundled LICENSE가 NAT GAMES/NEXON 소유·비상업·ripped
+  asset이라고 명시하며, 사용자가 제외를 지시했다. 격리 보관본 외에는 어떤 모델/측정/텍스처/리그 입력에도
+  사용하지 않는다.
+- 현재 직접 개조 연구는 Player=Yuuka, Mother=Mika, Older Sister=Yuuka, Father=Yuuka의 기존 proof를
+  모두 탈락 기준선으로 보존하고 위 세 원인을 분리 진단하는 단계다. 큰 opaque EyeMouth mouth plate는 원본 eye/face topology와
+  분리된 32-polygon component만 삭제하고 작은 표면 밀착 mouth volume으로 교체한다. 어떤 proof도 사용자
+  합격 전에는 Unity 통합 대상이 아니다.
+
+## [현재 오버라이드로 대체됨] 2026-08-24 / Runtime-2D V2 Final3 네 명
+
+- 기존 V1 네 명과 V1 turnaround는 `USER_VISUAL_REJECTED`다. 아래 V1의 Humanoid/Unity/D3D PASS는
+  과거 구조 증거일 뿐 시각 승인이나 production 근거가 아니다. 현재 외형 authority는
+  `Docs/FAMILY_3D_RUNTIME2D_V2_STYLE_LOCK_2026-08-24.md`, 실제 runtime HighMotion 2D(P0), 현재
+  high-resolution neutral art(P1) 순서다.
+- Player/Father/Mother/Older Sister는 네 병렬 작업 흐름과 상호 교차검수로 새 topology/atlas/23-bone
+  Humanoid 후보를 만들었다. 첫 결과 중 Father/Mother/Older Sister는 놀란 눈, 턱 아래 틈, block bow,
+  긴 목과 손발 때문에 내부 시각 gate에서 탈락했고 Final2로 다시 만들었다. Final2 전체 24방향 검수에서
+  Father 주머니 outline과 Older Sister 반바지 piping이 측면에서 뜨는 문제를 다시 발견했고, Final3는 둘을
+  몸/의상 곡면과 공유하는 filled surface로 교정했다. 독립 재검수 결과 현재 네 역할 모두
+  **사용자 합격/불합격 판정용 WIP**로 제시할 수 있으나, 상용 anime-game 마케팅 완성도나 production
+  승인을 뜻하지 않는다.
+- 현재 isolated 후보와 SHA-256:
+  - Player `Candidates/PlayerV4/player-runtime2d-humanoid-v4.fbx`
+    `E58A5F8BA8AC4762C6725C72904FD481F34E041448B37B76231592159AF7CBEC`; atlas
+    `5C59CD5D3849F6728B9C14DCD9E727B875627B8C7A861FF84D9CF9A50BEC6EFA`.
+  - Father `Candidates/FatherV2/father-blender-humanoid-v2.fbx`
+    `3BCE9817601FAE8B28DC243A886F7A42F85656147E9B3AFEA946C215BE5F3389`; atlas
+    `6632287537E03766978D7FD1F88F013268ED41D226088E611A1FAE3BAD2D06EA`.
+  - Mother `Candidates/MotherV2/mother-blender-humanoid-v2.fbx`
+    `995E349444A0940727D8C49CD7C1BC20BE6363AE60B578662BE394A6D39AA587`; atlas
+    `CAF17B633AECE52400E030319CF63B2E16F93895323B189D0FAD0513B3F342BF`.
+  - Older Sister `Candidates/OlderSisterV2/older-sister-blender-humanoid-v2.fbx`
+    `81219B4B6E787CF3F736E09B6F02FAEB7AC915AAB359D4534CD25188C4846249`; atlas
+    `452201D1643DC20268C71279B5D086D809086F9DFA256B2B4676C08AD6D90A59`.
+  위 상대 경로 기준은 `Assets/FamilyCompany/Experimental/Family3DPrototype/`이다.
+- Blender fresh-FBX round trip은 네 명 모두 complete skinned mesh 1, armature 1, material 1, UV0 1,
+  bones 23, required missing 0, unweighted/invalid-weight 0으로 PASS했다. Unity Final3 all-import receipt
+  `Artifacts/Family3DRuntime2DV2/UnityImport/all-import-receipt.json` SHA-256
+  `DA247AFD5CCC4A3A661DF568468B74E2427E4B0C2AF555BE6E6CB4E91FDE2BA1`도 네 Avatar valid/human,
+  renderer/material/UV 1, bind/skin bones 23, Humanoid missing/mismatch 0을 기록한다.
+- isolated Unity build `Artifacts/Family3DRuntime2DV2/BuildRun2/`은 Unity `6000.3.21f1` Windows build
+  `Succeeded`이며 build receipt SHA-256은
+  `C938F201D9A1190D125DFADDDB48386A50845C21BA8623427E72AC3AEC7A22AB`이다. D3D11 실제 shared-walk run
+  `D3D11Run2/qa-receipt.json`은 420/420 visual frames, 13.906058 s, direction pose masks 전부 `63`,
+  route/root/audio/P0-P3 lead-foot alternation을 PASS했고 receipt SHA-256은
+  `4D675CD7D03EDFF35FD1775024FDDE7C0F763CDF1B6D1BB29B59FADB163CCC54`다. Blender 2D 비교/GIF는
+  `VisualReviewFinal3/`, 실제 Unity 걷기 GIF/MP4는 `D3D11ReviewFinal3/`에 있다.
+- DeviantArt 공개 preview PNG 세 장과 사용자가 `Downloads`에 제공한 Mika/Yuuka archive는 ignored
+  `Artifacts/ExternalReferenceStudy/`에서만 추상 비율, iris/sclera, hair-clump, limb taper, toon 언어를
+  관찰한다. 사용자는 Mika/Yuuka archive 소유권을 주장했지만 파일 안에 이를 검증하는 license/transfer
+  문서는 없으므로 원본 FBX/mesh/texture/rig는 후보에 복사하거나 Unity import하지 않는다. `test3.zst`의
+  Sakurako는 bundled LICENSE가 NAT GAMES/NEXON 소유·상업 사용 금지·ripped asset이라고 명시했고 사용자
+  지시에 따라 참고 세트에서 제외·격리했다. 가족 자체 2D가 계속 identity authority다.
+- 현재 한계는 측면 깊이, hair/cloth secondary motion, 손발과 의상 일부의 procedural 단순화다. 다음
+  gate는 사용자가 비교표·turntable·Unity walk GIF에서 역할별 합격/불합격을 정하는 것이다. 명시적
+  승인 전 전부 `productionEligible: false`; production/default/StarterOffice/Downloads는 변경하지 않는다.
+
+## [사용자 시각 탈락 기록] 2026-08-24 / 신규 3D V1 네 명 + Player 실제 사무실 이동 자동 gate PASS
 
 - Player/Father/Mother/Older Sister 신규 구현은 네 turnaround만 identity 입력으로 사용해 Blender에서
   각각 독립 제작했다. 기존 2D, Player V1/V2, Styloo, 기존 mesh/texture/decal/motion donor나 fallback은

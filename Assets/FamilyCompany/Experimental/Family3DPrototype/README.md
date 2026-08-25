@@ -1,4 +1,9 @@
-# Family 3D Identity Candidate Lab V1
+# Family 3D Identity Candidate Lab
+
+> **V1 VISUAL REJECTION:** The user rejected PlayerV3/FatherV1/MotherV1/OlderSisterV1 after viewing
+> their GIFs. They are diagnostic history only even where automated Unity/Humanoid/D3D checks pass.
+> Do not promote, present as approved, or use their mesh/atlas/renders as V2 donors. Active visual
+> authority is `Docs/FAMILY_3D_RUNTIME2D_V2_STYLE_LOCK_2026-08-24.md` and the family's actual 2D art.
 
 This folder is a strictly isolated 3D experiment created after the project moved family-character
 work to 3D. All new family-character work must follow
@@ -8,6 +13,30 @@ R-series candidates, and runtime frame slices are forbidden inputs for this 3D p
 The folder does not alter the production family sprite catalog, production scene, default
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
+
+## Father V14 stylized SD walk J (current isolated review candidate)
+
+The user-approved static `FatherApprovedV14`/Proof23 appearance remains unchanged. V13 is now
+`USER_VISUAL_REJECTED`: enlarged review of both GIFs and all 24 source frames exposed detached shoes,
+merged/dragged legs, weak support transfer, asymmetric arms, a layout transition and a loop jump.
+Automated PASS and four-frame sheets are not acceptance evidence.
+
+Proof26 fixes the remaining rig defect without changing approved static coordinates: 1,228 shoe
+memberships transferred to finger bones are removed, and each shoe is bound only to its anatomical
+Foot bone. The current candidate is
+`Candidates/FatherApprovedV14NaturalWalkRigV1/father-approved-v14-natural-walk-rig-v1.fbx`, SHA-256
+`0A4AE8A1620A9E7F85BF0A072DCB7B5553D2C584DC550A38EAC0DE2349383773`.
+
+The user rejected G as `USER_VISUAL_REJECTED_FLOPPY_RUBBERY_MOTION` and H as
+`USER_VISUAL_REJECTED_STIFF_GLIDING_STATIC_ARMS`. J keeps the approved mesh, materials, scale and
+Proof26 rig. A frame review of actual Blue Archive SD cafe/select GIFs informed only the motion
+principles: a long support-leg sweep, fast lifted recovery, and a visible bent-elbow counter-swing.
+No external art, model, rig, texture, or animation asset is copied into this project.
+`-family3d-father-map-walk-qa` drives the actual Father agent around one same-map 3x3 perimeter for
+two circuits and refuses the Player movement-layout alias mode. J evidence lives under
+`FatherApprovedV14StylizedSdWalkV17BuildJ` and `FatherApprovedV14StylizedSdWalkMapRuntimeV17J`; all
+110 frames of the first circuit were enlarged and reviewed. It remains `productionEligible: false`
+until the user approves the actual GIF.
 
 ## Locked motion contract
 
@@ -52,7 +81,7 @@ Canonical FBX/atlas SHA-256 pairs:
 Run Unity `6000.3.21f1` with:
 
 ```powershell
-& '<UNITY_EDITOR>\Unity.exe' -batchmode -nographics -quit `
+& '<UNITY_EDITOR>\Unity.exe' -batchmode -quit `
   -projectPath '<REPOSITORY>' `
   -executeMethod FamilyCompany.Experimental.Family3D.Editor.Family3DIdentityCandidateBuilder.BuildFromCommandLine `
   -family3d-build-output '<REPOSITORY>\Artifacts\Family3DIdentityCandidateV1\BuildRun3' `
@@ -142,3 +171,35 @@ Full-3D furniture occlusion and seating remain the next office gate.
 Human original-resolution visual review remains required. All candidates and both QA players are
 isolated with `productionEligible: false`; production assets, the real office/default executable,
 Build Settings, and Downloads builds are unchanged.
+
+### FatherApprovedV14 actual-map walk proof
+
+The user-approved static Father v14 is rigged/exported by
+`Tools/Blender/rig_export_father_approved_v14.py` and imported from
+`Candidates/FatherApprovedV14/father-approved-v14-rigged.fbx`. The QA-only runtime flag
+`-family3d-father-map-walk-qa` temporarily binds that visual model to the existing authoritative
+Player movement-layout subject, so the exact eight-direction, corridor and collision oracle can be
+reused without changing production state or scenes. Other family candidates remain hidden and their
+2D presentations remain authoritative during this focused proof.
+
+The full command adds the flag to the D3D11 pass above. The V4 motion candidate used
+`poseStrength: 0.32`, blending the shared Humanoid clip toward the approved rest pose after an
+earlier full-strength run exposed an unacceptable wide stride. Evidence is under
+`Artifacts/Family3DStarterOfficeCandidateQaV1/FatherApprovedV14MapWalkRuntime4`: 3,495 movement
+samples, 2,481 Father-visual moving frames, direction mask 255, gait phase 0.000824..0.999747,
+24 composite frames with visual-content PASS, and zero replans, blocked static/interaction attempts,
+or agent penetrations. The copied-scene build receipt confirms identical before/after hashes for
+`Prototype01`, the preview scene and EditorBuildSettings. The user then rejected the GIF for giant
+map scale, non-bipedal leg readability, and grotesque arm motion. V4 is sealed as
+`USER_VISUAL_REJECTED_GIANT_SCALE_NON_BIPEDAL_ARM_MOTION`; its shared-human-clip damping approach
+must not be reused. Static Father v14 and its valid rig remain approved; production remains blocked.
+
+The replacement V13 bypasses the shared human clip and drives only a compact Humanoid muscle
+profile: 55% map height, upper-leg ±0.05, swing-knee -0.09, arm-down -0.48 and arm swing ±0.008.
+During that work, lowering the arms exposed 1,604 erroneous arm/hand memberships on trouser
+vertices from nearest-surface transfer. Proof25 removes them, reassigns 927 orphaned trouser
+vertices to pelvis/thigh/calf and verifies zero forbidden trouser influences. The replacement FBX
+SHA-256 is `88734B5F16598B2027FC7F54139F27E17C6912755E2907F09EB97CBC72497094`. V13 D3D11 evidence is
+under `FatherApprovedV14MapWalkRuntimeV13`: moving 2,502, direction mask 255, gait
+0.000826..0.999978, 24 composites, and zero collision/penetration/replan violations. Human visual
+review is still required.

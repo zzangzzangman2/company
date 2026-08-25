@@ -1,8 +1,93 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-24
+최종 갱신: 2026-08-25
 
-## Family 3D identity and motion prototype (active character path)
+## User-owned-base direct conversion proofs (current, isolated, not production)
+
+- The user explicitly attests ownership of `Downloads/test.7z` (Mika) and
+  `Downloads/test2.targz` (Yuuka) and directed that their existing face, eyes, body, hands, topology,
+  textures, weights, and rigs be modified directly for the family characters.
+- Current proof families live only under `Artifacts/Family3DPlayerHumanV5/`,
+  `Artifacts/Family3DOwnedBaseConversion/`, and the raw audit under
+  `Artifacts/Family3DHumanBaseStudy/`. They are visual WIP and `productionEligible: false`.
+- The archives do not contain an independently verifiable license/transfer document. The current
+  scope is therefore the user's requested private local proof; no source-payload commit, production
+  Unity import, public redistribution, or sale is authorized by this manifest.
+- `test3.zst`/Sakurako remains excluded and quarantined because its bundled LICENSE identifies
+  NAT GAMES/NEXON ownership, noncommercial restriction, and a ripped asset.
+- The procedural Runtime-2D V2/Final3 entries below are rejected historical evidence, not current
+  visual candidates.
+
+### FatherApprovedV14 stylized SD walk candidate J
+
+- Canonical isolated FBX: `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/
+  FatherApprovedV14NaturalWalkRigV1/father-approved-v14-natural-walk-rig-v1.fbx`, SHA-256
+  `0A4AE8A1620A9E7F85BF0A072DCB7B5553D2C584DC550A38EAC0DE2349383773`.
+- Static appearance authority remains the user-approved Proof23. Proof25 and Proof26 change rig
+  weights only: `Artifacts/Family3DOwnedBaseConversion/FatherProof25RigWeightSanitizeGate/` and
+  `Artifacts/Family3DOwnedBaseConversion/FatherProof26ShoeFootWeightGate/`.
+- Proof25 removed `1,604` accidental arm/hand memberships from the trouser surface and reassigned
+  `927` vertices that otherwise had no allowed lower-body influence. Forbidden trouser arm/hand
+  influences after sanitation: `0`.
+- Proof26 additionally removes `1,228` accidental finger memberships from the two shoes and binds
+  each approved shoe only to its anatomical Foot bone. Static geometry/materials remain unchanged.
+- G was rejected as `USER_VISUAL_REJECTED_FLOPPY_RUBBERY_MOTION`; H was rejected as
+  `USER_VISUAL_REJECTED_STIFF_GLIDING_STATIC_ARMS`. Neither motion is reusable.
+- J preserves the same approved mesh/material/scale and Proof26 rig. Reference study of actual
+  Blue Archive SD GIF frames informed only the long support sweep, fast lifted recovery, and clear
+  bent-elbow counter-swing; no external art, model, rig, texture, or animation asset was imported.
+  Evidence: `FatherApprovedV14StylizedSdWalkV17BuildJ` /
+  `FatherApprovedV14StylizedSdWalkMapRuntimeV17J`. The actual Father traverses the same-map perimeter
+  twice; 180 source frames were captured and all 110 first-circuit frames were reviewed.
+- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. V4, V13, G and H are sealed user
+  visual failures and must not be reused.
+
+## [USER_VISUAL_REJECTED] Family 3D Runtime-2D V2 identity candidates
+
+- All four prior V1 characters and their turnaround inputs are `USER_VISUAL_REJECTED`. Their hashes,
+  automated passes, and D3D runs below are historical structural evidence only.
+- Active authority: `Docs/FAMILY_3D_RUNTIME2D_V2_STYLE_LOCK_2026-08-24.md`. Runtime HighMotion 2D is
+  P0 for silhouette/proportion/hair/outfit; current high-resolution neutral art is P1 for face and
+  detail. No pixels are copied into the new mesh, atlas, decal, billboard, or runtime fallback.
+- Final3 isolated payloads (relative to
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/`):
+  - `Candidates/PlayerV4/player-runtime2d-humanoid-v4.fbx`
+    `E58A5F8BA8AC4762C6725C72904FD481F34E041448B37B76231592159AF7CBEC`; atlas
+    `5C59CD5D3849F6728B9C14DCD9E727B875627B8C7A861FF84D9CF9A50BEC6EFA`.
+  - `Candidates/FatherV2/father-blender-humanoid-v2.fbx`
+    `3BCE9817601FAE8B28DC243A886F7A42F85656147E9B3AFEA946C215BE5F3389`; atlas
+    `6632287537E03766978D7FD1F88F013268ED41D226088E611A1FAE3BAD2D06EA`.
+  - `Candidates/MotherV2/mother-blender-humanoid-v2.fbx`
+    `995E349444A0940727D8C49CD7C1BC20BE6363AE60B578662BE394A6D39AA587`; atlas
+    `CAF17B633AECE52400E030319CF63B2E16F93895323B189D0FAD0513B3F342BF`.
+  - `Candidates/OlderSisterV2/older-sister-blender-humanoid-v2.fbx`
+    `81219B4B6E787CF3F736E09B6F02FAEB7AC915AAB359D4534CD25188C4846249`; atlas
+    `452201D1643DC20268C71279B5D086D809086F9DFA256B2B4676C08AD6D90A59`.
+- Builders: `Tools/Blender/build_player_v6_blender_identity_v3.py` in `runtime-2d-v2` mode,
+  `build_father_blender_identity_v2.py`, `build_mother_blender_identity_v2.py`, and
+  `build_older_sister_blender_identity_v2.py`. Every final FBX has one complete skinned mesh,
+  armature, material, UV0, 23 bones, no missing required bone, and no invalid/unweighted vertex.
+- Unity exact allow-list/import: `Editor/Family3DPrototypeModelImporter.cs` and
+  `Editor/Family3DRuntime2DV2CandidateValidator.cs`. Final all-import receipt
+  `Artifacts/Family3DRuntime2DV2/UnityImport/all-import-receipt.json` SHA-256
+  `DA247AFD5CCC4A3A661DF568468B74E2427E4B0C2AF555BE6E6CB4E91FDE2BA1` = PASS, four valid Human
+  Avatars, one renderer/material/UV each, 23 bind/skin bones, mapping mismatch 0.
+- Isolated common-walk build: `Editor/Family3DRuntime2DV2CandidateBuilder.cs`, generated experimental
+  scene/materials only, `Artifacts/Family3DRuntime2DV2/BuildRun2/build-receipt.json` = `Succeeded`,
+  SHA-256 `C938F201D9A1190D125DFADDDB48386A50845C21BA8623427E72AC3AEC7A22AB`.
+  `D3D11Run2/qa-receipt.json` = `AUTO_PASS_VISUAL_REVIEW_REQUIRED`, SHA-256
+  `4D675CD7D03EDFF35FD1775024FDDE7C0F763CDF1B6D1BB29B59FADB163CCC54`: Direct3D11, 420/420 visual
+  frames, 13.906058 s, four direction masks `63`, route/root/audio/P0-P3 foot alternation PASS.
+- Human evidence: `Artifacts/Family3DRuntime2DV2/VisualReviewFinal3/` contains actual runtime 2D
+  versus new 3D and four individual/combined 24-frame turntable GIFs;
+  `D3D11ReviewFinal3/` contains the real Unity walk GIF/MP4/contact sheet. These are user-decision WIP,
+  not marketing or identity approval. Until explicit user approval every V2 file remains isolated and
+  `productionEligible: false`; production/default/StarterOffice/Downloads are unchanged.
+- External Blue Archive previews and the user-provided Mika/Yuuka archives are ignored,
+  reference-only proportion/style studies. Their meshes, textures, rigs, materials, and UVs are not
+  project donors. User-excluded `test3.zst`/Sakurako is not part of the study or candidate inputs.
+
+## [USER_VISUAL_REJECTED] Family 3D identity and motion prototype V1
 
 - Locked identity inputs: `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/`
   의 Player/Father/Mother/Older Sister front/left/back/three-quarter PNG 네 장.

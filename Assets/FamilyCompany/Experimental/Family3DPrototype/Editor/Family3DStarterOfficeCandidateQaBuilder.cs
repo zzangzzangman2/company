@@ -31,7 +31,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string OlderSisterModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/OlderSisterV1/older-sister-blender-humanoid-v1.fbx";
         public const string FatherModelPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV1/father-blender-humanoid-v1.fbx";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherApprovedV14NaturalWalkRigV1/father-approved-v14-natural-walk-rig-v1.fbx";
         public const string MotherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/MotherV1/mother-blender-humanoid-v1.fbx";
         public const string DefaultBuildRoot =

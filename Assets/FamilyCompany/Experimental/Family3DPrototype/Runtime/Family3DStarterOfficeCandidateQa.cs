@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 
 namespace FamilyCompany.Experimental.Family3D
@@ -20,6 +21,7 @@ namespace FamilyCompany.Experimental.Family3D
         public const string Contract = "FC-FAMILY-3D-STARTER-OFFICE-CANDIDATE-QA-V1";
         public const int RequiredActorCount = 4;
         public const float MovementEpsilonSqr = 0.000001f;
+        private const int MaximumFatherCompositeFrames = 180;
 
         [Header("Candidate prefabs (Experimental only)")]
         [SerializeField] private GameObject playerCandidate;
@@ -38,11 +40,19 @@ namespace FamilyCompany.Experimental.Family3D
         private readonly List<Binding> bindings = new List<Binding>(RequiredActorCount);
         private readonly Dictionary<Camera, int> sourceCameraCullingMasks =
             new Dictionary<Camera, int>();
+        private readonly List<FatherCaptureSample> fatherCaptureSamples =
+            new List<FatherCaptureSample>(MaximumFatherCompositeFrames);
         private StarterOfficeRuntimeBootstrap starter;
         private bool bindAttemptActive;
         private bool shuttingDown;
         private int movingSampleFrames;
         private int compositeCapturedFrames;
+        private int fatherMovingSampleFrames;
+        private bool fatherMapWalkQa;
+        private bool fatherProofRouteActive;
+        private bool fatherProofRouteCompleted;
+        private int fatherProofRouteCircuit = -1;
+        private int fatherProofRouteLeg = -1;
         private int minimumCompositeLumaRange = 255;
         private int maximumCompositeLumaRange;
 
@@ -105,6 +115,7 @@ namespace FamilyCompany.Experimental.Family3D
             try
             {
                 autoQuitSeconds = ResolveAutoQuitSeconds();
+                fatherMapWalkQa = HasCommandLineFlag("-family3d-father-map-walk-qa");
             }
             catch (Exception exception)
             {
@@ -147,6 +158,13 @@ namespace FamilyCompany.Experimental.Family3D
             try
             {
                 BindAll();
+                if (fatherMapWalkQa)
+                {
+                    if (HasCommandLineFlag("-familyCompanyMovementLayoutQa"))
+                        throw new InvalidOperationException(
+                            "Dedicated Father map-walk proof cannot be combined with the multi-layout movement QA.");
+                    StartCoroutine(RunFatherMapWalkProof());
+                }
                 WriteRuntimeReceipt("BOUND");
             }
             catch (Exception exception)
@@ -226,9 +244,178 @@ namespace FamilyCompany.Experimental.Family3D
             if (anyMoving)
             {
                 movingSampleFrames++;
-                if (HasExplicitRuntimeOutput() && compositeCapturedFrames < 3 &&
+                if (!fatherMapWalkQa && HasExplicitRuntimeOutput() && compositeCapturedFrames < 3 &&
                     (movingSampleFrames == 1 || movingSampleFrames % 120 == 0))
                     CaptureCompositeQaFrame(sourceOfficeCamera);
+            }
+
+            if (fatherMapWalkQa)
+            {
+                Binding father = bindings.Find(candidate =>
+                    string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
+                if (fatherProofRouteActive && father != null && father.IsMoving)
+                {
+                    fatherMovingSampleFrames++;
+                    if (HasExplicitRuntimeOutput() &&
+                        compositeCapturedFrames < MaximumFatherCompositeFrames &&
+                        (fatherMovingSampleFrames == 1 || fatherMovingSampleFrames % 6 == 0))
+                        CaptureCompositeQaFrame(
+                            sourceOfficeCamera,
+                            "father-stylized-sd-map-walk-v17",
+                            father);
+                }
+            }
+        }
+
+        private IEnumerator RunFatherMapWalkProof()
+        {
+            yield return null;
+            Binding fatherBinding = bindings.Find(candidate =>
+                string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
+            if (fatherBinding == null || starter == null || starter.World == null)
+            {
+                Fail("Father natural-walk proof could not resolve the live Father binding/runtime world.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            OfficeRuntimeAgent father = fatherBinding.Agent;
+            if (!TryFindClearFatherLoop(father.AgentRadius, out OfficeGridCoordinate[] loop))
+            {
+                Fail("Father natural-walk proof could not find a clear 3x3 perimeter loop.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            ParkOtherActorsForFatherLoop(father, loop);
+            father.QaTeleportToCell(loop[0]);
+            father.QaSetDirectMovementInput(Vector2.zero);
+            Time.timeScale = 1f;
+            yield return null;
+            yield return new WaitForEndOfFrame();
+
+            fatherProofRouteActive = true;
+            Debug.Log(
+                "FAMILY_3D_FATHER_NATURAL_WALK_QA: starting two continuous circuits on one " +
+                "actual Starter Office map; productionEligible=false.",
+                this);
+
+            for (var circuit = 0; circuit < 2; circuit++)
+            {
+                fatherProofRouteCircuit = circuit;
+                for (var leg = 0; leg < loop.Length - 1; leg++)
+                {
+                    fatherProofRouteLeg = leg;
+                    OfficeGridCoordinate target = loop[leg + 1];
+                    if (!father.QaMoveToCell(
+                            target,
+                            "father-stylized-sd-map-walk-v17-c" + circuit + "-leg" + leg))
+                    {
+                        Fail("Father natural-walk proof route was rejected at circuit " +
+                             circuit + ", leg " + leg + ".");
+                        Application.Quit(2);
+                        yield break;
+                    }
+
+                    float deadline = Time.realtimeSinceStartup + 12f;
+                    while (!father.QaReachedCell(target) &&
+                           Time.realtimeSinceStartup < deadline)
+                        yield return null;
+                    if (!father.QaReachedCell(target))
+                    {
+                        Fail("Father natural-walk proof timed out at circuit " +
+                             circuit + ", leg " + leg + ".");
+                        Application.Quit(2);
+                        yield break;
+                    }
+                }
+            }
+
+            fatherProofRouteActive = false;
+            fatherProofRouteCompleted = true;
+            fatherProofRouteCircuit = 2;
+            fatherProofRouteLeg = -1;
+            WriteRuntimeReceipt("FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE");
+            Debug.Log(
+                "FAMILY_3D_FATHER_NATURAL_WALK_QA: COMPLETE | circuits=2 captures=" +
+                compositeCapturedFrames + " productionEligible=false",
+                this);
+            yield return new WaitForEndOfFrame();
+            Application.Quit(0);
+        }
+
+        private bool TryFindClearFatherLoop(
+            float radius,
+            out OfficeGridCoordinate[] loop)
+        {
+            int[,] offsets =
+            {
+                { 0, 0 }, { 1, 0 }, { 2, 0 }, { 2, 1 }, { 2, 2 },
+                { 1, 2 }, { 0, 2 }, { 0, 1 }, { 0, 0 }
+            };
+            for (var y = 1; y < starter.World.Grid.Height - 3; y++)
+            {
+                for (var x = 1; x < starter.World.Grid.Width - 3; x++)
+                {
+                    var candidate = new OfficeGridCoordinate[offsets.GetLength(0)];
+                    bool valid = true;
+                    for (var index = 0; index < candidate.Length; index++)
+                    {
+                        candidate[index] = new OfficeGridCoordinate(
+                            x + offsets[index, 0],
+                            y + offsets[index, 1]);
+                        if (!starter.World.Grid.IsWalkable(candidate[index]))
+                        {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if (!valid)
+                        continue;
+                    for (var index = 0; index < candidate.Length - 1; index++)
+                    {
+                        Vector2 from = starter.World.Presenter.CellCenterWorld(candidate[index]);
+                        Vector2 to = starter.World.Presenter.CellCenterWorld(candidate[index + 1]);
+                        if (starter.World.Occupancy.CanTraverseStatic(from, to, radius, string.Empty))
+                            continue;
+                        valid = false;
+                        break;
+                    }
+                    if (valid)
+                    {
+                        loop = candidate;
+                        return true;
+                    }
+                }
+            }
+            loop = Array.Empty<OfficeGridCoordinate>();
+            return false;
+        }
+
+        private void ParkOtherActorsForFatherLoop(
+            OfficeRuntimeAgent father,
+            IReadOnlyCollection<OfficeGridCoordinate> loop)
+        {
+            var occupied = new HashSet<OfficeGridCoordinate>(loop);
+            var parking = new List<OfficeGridCoordinate>();
+            for (var y = 1; y < starter.World.Grid.Height - 1; y++)
+            for (var x = 1; x < starter.World.Grid.Width - 1; x++)
+            {
+                var cell = new OfficeGridCoordinate(x, y);
+                if (!occupied.Contains(cell) && starter.World.Grid.IsWalkable(cell))
+                    parking.Add(cell);
+            }
+
+            int parkingIndex = parking.Count - 1;
+            foreach (OfficeRuntimeAgent actor in starter.Actors)
+            {
+                if (actor == null || actor == father)
+                    continue;
+                if (parkingIndex < 0)
+                    throw new InvalidOperationException(
+                        "Father natural-walk proof has no parking cell for " + actor.AgentId + ".");
+                actor.QaTeleportToCell(parking[parkingIndex--]);
+                actor.QaSetDirectMovementInput(Vector2.zero);
             }
         }
 
@@ -327,19 +514,26 @@ namespace FamilyCompany.Experimental.Family3D
                     0.0001f);
             }
 
+            bool useFatherNaturalSdWalk = definition.Prefab == fatherCandidate;
+            if (useFatherNaturalSdWalk)
+                targetHeight *= 0.55f;
+
             float appliedScale = targetHeight / candidateHeight;
             model.transform.localScale *= appliedScale;
             candidateBounds = EncapsulateBounds(skinned);
             model.transform.position += Vector3.up * (groundY - candidateBounds.min.y);
 
             var walkActor = host.AddComponent<Family3DWalkActor>();
+            const float poseStrength = 1f;
             walkActor.Configure(
                 definition.FamilyId,
                 model.transform,
                 animator,
                 sharedHumanoidWalkClip,
                 qaPosition,
-                Color.white);
+                Color.white,
+                poseStrength,
+                useFatherNaturalSdWalk);
 
             var binding = new Binding(
                 definition.FamilyId,
@@ -352,7 +546,8 @@ namespace FamilyCompany.Experimental.Family3D
                 sourceRenderer.bounds.size.y,
                 spriteViewportHeight,
                 targetHeight,
-                appliedScale);
+                appliedScale,
+                poseStrength);
 
             host.SetActive(true);
             return binding;
@@ -361,6 +556,14 @@ namespace FamilyCompany.Experimental.Family3D
         private void UpdateBinding(Binding binding, Camera sourceOfficeCamera)
         {
             binding.EnsureSeatedProtectionSnapshot();
+            if (fatherMapWalkQa &&
+                !string.Equals(binding.FamilyId, "father", StringComparison.Ordinal))
+            {
+                binding.SetSource2DHidden(false);
+                binding.SetCandidateVisible(false);
+                binding.IsMoving = false;
+                return;
+            }
             bool supported = IsStandingOrWalkingPhase(binding.Agent.Phase);
             if (!supported)
             {
@@ -379,13 +582,15 @@ namespace FamilyCompany.Experimental.Family3D
             Vector3 worldPosition = MapOfficeActorToQaGround(binding.Agent, sourceOfficeCamera);
             Quaternion worldRotation = MapOfficeDirectionToUnityYaw(binding.Agent.CurrentDirection);
             float gaitPhase01 = Mathf.Repeat(binding.Agent.GaitPhase01, 1f);
+            bool isMoving =
+                binding.Agent.LastActualDisplacement.sqrMagnitude > MovementEpsilonSqr;
             double motionClock =
                 (gaitPhase01 - binding.WalkActor.PhaseOffset) * Family3DWalkActor.LockedCycleSeconds;
-            binding.WalkActor.Tick(motionClock, worldPosition, worldRotation);
+            binding.WalkActor.Tick(motionClock, worldPosition, worldRotation, isMoving);
             binding.LastObservedDisplacement = binding.Agent.LastActualDisplacement;
             binding.LastObservedGaitPhase01 = gaitPhase01;
             binding.LastObservedDirection = binding.Agent.CurrentDirection;
-            binding.IsMoving = binding.LastObservedDisplacement.sqrMagnitude > MovementEpsilonSqr;
+            binding.IsMoving = isMoving;
             if (binding.IsMoving)
             {
                 binding.MovingFrameCount++;
@@ -400,7 +605,10 @@ namespace FamilyCompany.Experimental.Family3D
             }
         }
 
-        private void CaptureCompositeQaFrame(Camera sourceOfficeCamera)
+        private void CaptureCompositeQaFrame(
+            Camera sourceOfficeCamera,
+            string filePrefix = "office-moving",
+            Binding captureBinding = null)
         {
             if (sourceOfficeCamera == null || qaOverlayCamera == null)
                 return;
@@ -433,8 +641,10 @@ namespace FamilyCompany.Experimental.Family3D
                 Directory.CreateDirectory(frames);
                 string path = Path.Combine(
                     frames,
-                    "office-moving-" + compositeCapturedFrames.ToString("D2") + ".png");
+                    filePrefix + "-" + compositeCapturedFrames.ToString("D2") + ".png");
                 File.WriteAllBytes(path, ImageConversion.EncodeToPNG(readback));
+                if (captureBinding != null)
+                    RecordFatherCaptureSample(captureBinding, compositeCapturedFrames);
                 compositeCapturedFrames++;
             }
             catch (Exception exception)
@@ -452,6 +662,32 @@ namespace FamilyCompany.Experimental.Family3D
                 Destroy(readback);
                 RenderTexture.ReleaseTemporary(target);
             }
+        }
+
+        private void RecordFatherCaptureSample(Binding binding, int frameIndex)
+        {
+            Family3DWalkActor.PoseSnapshot pose = binding.WalkActor.ReadPoseSnapshot();
+            fatherCaptureSamples.Add(new FatherCaptureSample
+            {
+                frameIndex = frameIndex,
+                realtimeSeconds = Time.realtimeSinceStartup,
+                routeCircuit = fatherProofRouteCircuit,
+                routeLeg = fatherProofRouteLeg,
+                officePosition = binding.Agent.Position,
+                rootWorldPosition = binding.Host == null
+                    ? Vector3.zero
+                    : binding.Host.transform.position,
+                gaitPhase01 = binding.LastObservedGaitPhase01,
+                direction = binding.LastObservedDirection,
+                actualDisplacement = binding.LastObservedDisplacement,
+                leftFootLocal = pose.leftFootLocal,
+                rightFootLocal = pose.rightFootLocal,
+                leftFootWorld = pose.leftFootWorld,
+                rightFootWorld = pose.rightFootWorld,
+                hipsLocal = pose.hipsLocal,
+                leftFootPlanted = pose.leftFootPlanted,
+                rightFootPlanted = pose.rightFootPlanted
+            });
         }
 
         private static int AuditLumaRange(Texture2D texture)
@@ -674,6 +910,7 @@ namespace FamilyCompany.Experimental.Family3D
                         sourceSpriteViewportHeight = binding.SourceSpriteViewportHeight,
                         target3DHeight = binding.Target3DHeight,
                         appliedModelScale = binding.AppliedModelScale,
+                        poseStrength = binding.PoseStrength,
                         sourceSortingLayerId = binding.MainSource.SortingLayerId,
                         sourceSortingLayerName = binding.MainSource.SortingLayerName,
                         sourceSortingOrder = binding.MainSource.SortingOrder,
@@ -717,6 +954,15 @@ namespace FamilyCompany.Experimental.Family3D
                         "sortingLayerID/name/order and source transform Z are observed only and never assigned",
                     sharedCycleSeconds = Family3DWalkActor.LockedCycleSeconds,
                     movingSampleFrames = movingSampleFrames,
+                    fatherMapWalkQa = fatherMapWalkQa,
+                    fatherMapWalkSourceFamilyId = fatherMapWalkQa ? "father" : string.Empty,
+                    fatherMovingSampleFrames = fatherMovingSampleFrames,
+                    fatherProofRoutePolicy = fatherMapWalkQa
+                        ? "actual Father OfficeRuntimeAgent; one clear 3x3 perimeter; two continuous circuits"
+                        : string.Empty,
+                    fatherProofRouteCompleted = fatherProofRouteCompleted,
+                    fatherCaptureSampleCount = fatherCaptureSamples.Count,
+                    fatherCaptureSamples = fatherCaptureSamples.ToArray(),
                     compositeCapturedFrames = compositeCapturedFrames,
                     minimumCompositeLumaRange = compositeCapturedFrames > 0
                         ? minimumCompositeLumaRange
@@ -769,6 +1015,17 @@ namespace FamilyCompany.Experimental.Family3D
             return false;
         }
 
+        private static bool HasCommandLineFlag(string flag)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length; index++)
+            {
+                if (string.Equals(args[index], flag, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
         private static float ResolveAutoQuitSeconds()
         {
             string[] args = Environment.GetCommandLineArgs();
@@ -794,7 +1051,12 @@ namespace FamilyCompany.Experimental.Family3D
 
         private void OnApplicationQuit()
         {
-            WriteRuntimeReceipt(IsBound ? "APPLICATION_QUIT_AFTER_BIND" : "APPLICATION_QUIT_UNBOUND");
+            WriteRuntimeReceipt(
+                fatherProofRouteCompleted
+                    ? "FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE"
+                    : IsBound
+                        ? "APPLICATION_QUIT_AFTER_BIND"
+                        : "APPLICATION_QUIT_UNBOUND");
         }
 
         private void OnDisable()
@@ -822,11 +1084,39 @@ namespace FamilyCompany.Experimental.Family3D
             public string sortingDepthPolicy;
             public float sharedCycleSeconds;
             public int movingSampleFrames;
+            public bool fatherMapWalkQa;
+            public string fatherMapWalkSourceFamilyId;
+            public int fatherMovingSampleFrames;
+            public string fatherProofRoutePolicy;
+            public bool fatherProofRouteCompleted;
+            public int fatherCaptureSampleCount;
+            public FatherCaptureSample[] fatherCaptureSamples;
             public int compositeCapturedFrames;
             public int minimumCompositeLumaRange;
             public int maximumCompositeLumaRange;
             public bool compositeVisualContentPass;
             public RuntimeCandidateReceipt[] candidates;
+        }
+
+        [Serializable]
+        private sealed class FatherCaptureSample
+        {
+            public int frameIndex;
+            public float realtimeSeconds;
+            public int routeCircuit;
+            public int routeLeg;
+            public Vector2 officePosition;
+            public Vector3 rootWorldPosition;
+            public float gaitPhase01;
+            public int direction;
+            public Vector2 actualDisplacement;
+            public Vector3 leftFootLocal;
+            public Vector3 rightFootLocal;
+            public Vector3 leftFootWorld;
+            public Vector3 rightFootWorld;
+            public Vector3 hipsLocal;
+            public bool leftFootPlanted;
+            public bool rightFootPlanted;
         }
 
         [Serializable]
@@ -837,6 +1127,7 @@ namespace FamilyCompany.Experimental.Family3D
             public float sourceSpriteViewportHeight;
             public float target3DHeight;
             public float appliedModelScale;
+            public float poseStrength;
             public int sourceSortingLayerId;
             public string sourceSortingLayerName;
             public int sourceSortingOrder;
@@ -881,7 +1172,8 @@ namespace FamilyCompany.Experimental.Family3D
                 float sourceSpriteWorldHeight,
                 float sourceSpriteViewportHeight,
                 float target3DHeight,
-                float appliedModelScale)
+                float appliedModelScale,
+                float poseStrength)
             {
                 FamilyId = familyId;
                 Agent = agent;
@@ -896,6 +1188,7 @@ namespace FamilyCompany.Experimental.Family3D
                 SourceSpriteViewportHeight = sourceSpriteViewportHeight;
                 Target3DHeight = target3DHeight;
                 AppliedModelScale = appliedModelScale;
+                PoseStrength = poseStrength;
                 WasSupportedLastFrame = true;
                 MinimumObservedGaitPhase01 = 1f;
             }
@@ -910,6 +1203,7 @@ namespace FamilyCompany.Experimental.Family3D
             public float SourceSpriteViewportHeight { get; }
             public float Target3DHeight { get; }
             public float AppliedModelScale { get; }
+            public float PoseStrength { get; }
             public int UnsupportedPhaseFallbackCount { get; set; }
             public bool WasSupportedLastFrame { get; set; }
             public Vector2 LastObservedDisplacement { get; set; }

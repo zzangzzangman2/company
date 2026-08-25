@@ -1,14 +1,14 @@
 # Family 3D Identity Turnarounds V1
 
-Status: `LOCKED_IDENTITY_INPUTS / NOT_FINISHED_MESHES`
+Status: `REJECTED_IDENTITY_INPUTS / DIAGNOSTIC_HISTORY_ONLY`
 
-These four sheets are the only identity inputs for new Player, Father, Mother, and Older Sister 3D
-meshes. They are not walking sprites and must not be combined with any existing 2D family frame,
-atlas, limb donor, or R-series candidate.
+These four sheets were used for the rejected first Blender pass. On 2026-08-24 the user rejected all
+four resulting identities because they did not resemble the existing 2D family; the Player sheet
+also removed the mandatory red newsboy cap. They must not be used as identity inputs for V2.
 
-Each sheet contains one consistent full body in front, left-side, back, and front-three-quarter
-neutral views. All crowns and soles are present. The sheets establish visible identity only; they do
-not prove topology, UVs, skinning, rigging, animation, or production eligibility.
+The files remain only to explain the rejected V1 lineage. See
+`Docs/FAMILY_3D_RUNTIME2D_V2_STYLE_LOCK_2026-08-24.md` for the replacement source order and visual
+contract. No rejected mesh, atlas, texture, or rendered pixel may become a V2 donor.
 
 `IDENTITY_TURNAROUND_REVIEW.md` preserves the enlarged visual review, source hierarchy, and exact
 generation prompts used for these sheets.

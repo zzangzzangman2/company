@@ -1,5 +1,142 @@
 # DECISIONS
 
+## 2026-08-25 / 팔이 정지한 H를 폐기하고 실제 SD timing 기반 J로 교체한다
+
+결정: 사용자가 H 실제 화면에서 걷기가 못생기고 뻣뻣하게 미끄러지며 팔이 가만히 있다고 판정했다.
+H를 `USER_VISUAL_REJECTED_STIFF_GLIDING_STATIC_ARMS`로 봉인한다. G를 제거하면서 팔/무릎까지 과도하게
+줄인 H 수치는 다시 사용하지 않는다.
+
+사용자 지시에 따라 실제 Blue Archive SD 카페 보행과 선택 애니메이션을 원본 GIF 프레임으로 조사했다.
+외부 animation asset은 가져오지 않고, 긴 지지 sweep 뒤의 빠른 무릎 회수와 굽힌 팔의 명확한 반대 스윙만
+동작 원리로 반영한다. J는 승인 `FatherApprovedV14` 외형/축척과 Proof26 rig를 그대로 유지하고 pelvis
+translation을 계속 금지한다. actual-map first circuit 110프레임을 전부 확대 검수했지만 사용자 판정 전에는
+`USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`다.
+
+## 2026-08-25 / 흐물거리는 G를 폐기하고 골반 고정 firm-key-pose H로 교체한다
+
+결정: 사용자가 실제 G GIF를 보고 걷기가 너무 흐물거리고 징그럽다고 판정했다. G를
+`USER_VISUAL_REJECTED_FLOPPY_RUBBERY_MOTION`으로 봉인한다. G의 lateral hip transfer, 장시간 CCD foot
+plant, residual pelvis translation, 연속 sine leg curve 조합은 다시 사용하지 않는다.
+
+H는 승인 외형과 Proof26 rig를 유지하고 motion만 바꾼다. 골반 위치 보정은 전부 제거하고 다리는
+접지 hold–통과–스윙–착지 key pose 사이에서만 움직인다. foot lock은 `0.11` cycle로 짧게 제한하고
+각 관절 보정각을 제한하며 pelvis residual correction은 하지 않는다. 실제 Father same-map 두 회전과
+첫 회전 114프레임 전체를 다시 검수한다. H도 사용자 합격 전에는 `productionEligible: false`다.
+
+## 2026-08-25 / V13을 화면 불합격으로 봉인하고 Proof26 자연 SD 보행 G를 사용자 판정 후보로 둔다
+
+결정: 자동 QA와 4장 정지 시트만 통과한 V13을 합격 후보로 보지 않는다. 사용자가 실제 GIF에서 문제를
+지적한 뒤 GIF 두 개와 원본 24프레임을 확대 검수해 신발 분리, 바지/다리 합침, 이동 root 위 발 끌림,
+약한 무릎/체중 이동, 비대칭 팔, 방향/레이아웃/루프 불연속을 확인했다. V13은
+`USER_VISUAL_REJECTED`이며 V4와 함께 재사용하지 않는다.
+
+원인과 수정: Proof25는 바지 arm/hand weight를 정리했지만 두 신발의 `1,228`개 membership은 여전히
+A-pose 손가락 bone을 지배 weight로 갖고 있었다. Proof26은 사용자 승인 Proof23의 정적 좌표와 재질을
+바꾸지 않고 각 신발을 해부학적 왼발/오른발 bone에만 묶는다. 새 FBX SHA-256은
+`0A4AE8A1620A9E7F85BF0A072DCB7B5553D2C584DC550A38EAC0DE2349383773`이다.
+
+결정: 새 보행은 shared human clip을 약화하는 방식이 아니라 Father 전용 SD 2족 곡선과 foot plant를
+사용한다. 실제 Father agent가 같은 Starter Office에서 3x3 외곽을 두 바퀴 걷게 하며 Player alias와
+movement-layout multi-scene 캡처를 금지한다. G의 180 source frame 중 첫 회전 113프레임 전체와 루프 다음
+프레임을 육안 검수했다. 내부 검수 통과는 사용자 합격이 아니므로 G도 `productionEligible: false`를
+유지하고 production/default/Downloads/배포 실행본에 승격하지 않는다.
+
+## 2026-08-25 / 아빠 V4 보행을 폐기하고 weight-sanitized SD 전용 보행 V13으로 교체한다
+
+결정: 실제 맵에서 거대한 체격, 양팔을 계속 벌린 자세, 두 발 지지로 읽히지 않는 V4를
+`USER_VISUAL_REJECTED_GIANT_SCALE_NON_BIPEDAL_ARM_MOTION`으로 봉인한다. V4의 shared human clip
+샘플링과 `poseStrength 0.32` 조합은 아빠 보행에 다시 사용하지 않는다.
+
+원인과 수정: A-pose body의 nearest-surface weight transfer가 손 가까이 있던 바지 정점에 팔·손 bone
+membership `1,604`개를 넣어, 팔을 내릴수록 바지가 검은 가시처럼 찢어졌다. Proof25는 바지 influence를
+pelvis/spine/thigh/calf로 제한하고 허용 weight가 사라진 `927`개 정점을 위치에 따라 재배정했다. 새 FBX
+SHA-256은 `88734B5F16598B2027FC7F54139F27E17C6912755E2907F09EB97CBC72497094`이며 잘못된 바지
+arm/hand influence는 `0`, Unity Avatar는 valid/human이다.
+
+결정: V13은 승인된 정적 자세를 매 frame 복구하고 `HumanPoseHandler`로 작은 반대팔 스윙, 좁은 교대
+보폭, 낮은 무릎 굽힘만 적용한다. 맵 표시는 이전 viewport match의 55%로 줄이고 torso/head/hips bob과
+twist는 넣지 않는다. D3D11 actual-map 결과는 moving `2,502`, direction mask `255`, gait phase
+`0.000826..0.999978`, composite `24`, collision/penetration/replan `0`이다.
+
+운영 경계: 자동 QA 통과는 시각 합격이 아니다. V13 actual-map GIF를 사용자가 합격시키기 전까지
+`productionEligible: false`이며 production scene/default/배포 실행본은 바꾸지 않는다.
+
+## 2026-08-24 / manifold 수치만 통과한 절차형 cage·voxel 결과를 후보로 승격하지 않는다
+
+결정: Player Proof10, Mother ConnectedTopology1, Older Sister Proof4는 각 의상별 1 component,
+boundary 0, nonmanifold 0 같은 자동 topology gate를 충족했지만 실제 화면에서 box/slab/tube/cone/ball로
+읽혔다. Father CoordinatedHead1도 socket void 제거에는 성공했지만 balloon face, decal eye, pasted ear,
+helmet hair가 남았다. 이 결과들은 모두 `DIAGNOSTIC_ONLY_STYLE_FAIL`이며 color/GIF/Unity로 승격하지 않는다.
+
+후속 경로: primitive cage나 voxel 외피를 반복 보정하지 않는다. 사용자 소유 Mika/Yuuka의 몸에 이미 맞는
+face·ear·hair·garment·shoe surface를 직접 crop/reshape하고, 얼굴은 socket backing과 EyeMouth/UV/aperture/
+sclera/iris/brow를 함께 고친다. 구조 receipt보다 정면·3Q·측면·후면의 실제 silhouette와 표면 일체감이
+우선한다.
+
+## 2026-08-24 / 원본 Mika/Yuuka 3-digit SD 손은 사용자 후속 승인으로 그대로 유지한다
+
+결정: 손 감사에서 Yuuka/Mika 원본 리그 자체가 손마다 세 finger chain만 갖고 원본 렌더도 세 갈래 SD
+손임을 확인한 뒤, 사용자가 이 원형은 그대로 유지해도 된다고 후속 승인했다. 따라서 5손가락 topology/bone
+증설은 중단한다. 다만 receipt의 모호한 `handTopology: true`를 5손가락 품질 증거로 쓰지 않으며, 이후에는
+`original 3-digit stylized hand retained`라고 정확히 기록하고 원본 대비 추가 찌그러짐·누락만 검수한다.
+
+## 2026-08-24 / Older Sister Proof22 GIF도 연결부 불량으로 사용자 탈락이다
+
+결정: `SisterProof22DirectionGate`는 원본 Yuuka 얼굴·눈·머리·손을 보존했지만 32-frame 회전에서
+팔–어깨, 목선, 상의–허리, 반바지 좌우·가랑이가 실제로 이어지지 않은 겹친 표면으로 드러나 사용자가
+탈락시켰다. 등급을 `USER_VISUAL_REJECTED_CONNECTIONS`로 내리고 GIF·Unity·production 근거로 사용하지
+않는다. 손 승인도 전체 캐릭터 또는 의상 연결 승인으로 확대 해석하지 않는다.
+
+다음 proof는 상의 아래의 연속된 shoulder/torso skin을 만들고, 반바지는 허리·좌우 통·가랑이가 한 connected
+mesh여야 한다. 흰 piping은 별도 띠가 아니라 같은 garment mesh의 material region이어야 하며, 맨다리와
+완전한 맨발도 visible seam 없이 이어져야 한다. 이 구조를 정적 4면에서 먼저 통과한 뒤에만 새 GIF를 만든다.
+
+같은 gate에서 Player `OriginalSurface15`는 탈락시킨다. 원본 손·rig·weights 보존과 cap의 closed-component
+수치는 dome/helmet cap, 보이지 않는 brim, 후면 face/eye aperture, V-hole/open shoulder seam을 상쇄하지
+못한다. 다음 Player proof는 몸에 맞는 원본 coherent garment를 통째로 쓰고, 후면 차폐와 뉴스보이캡
+실루엣을 실제 4면 화면으로 먼저 통과해야 한다.
+
+## 2026-08-24 / Mika/Yuuka 직접 개조 1차 proof도 시각 탈락시키고 구조 receipt 우선 판정을 금지한다
+
+결정: Player Proof8, Mother Proof5, Older Sister Proof3, Father Proof2를 포함한 현 직접 개조 결과를
+`USER_VISUAL_REJECTED`로 기록한다. 원본 face/eye/hand topology, bone count, armature modifier 보존 여부는
+진단 수치일 뿐 화면 합격을 대신하지 않는다.
+
+실패 원인은 세 가지다. 첫째, 새로 만든 모자·옷·포켓·벨트·시계·리본이 원본 곡면과 연결되지 않은
+판/박스로 떠 보여 `no visible assembly-part look`을 위반했다. 둘째, receipt의 `handTopology: true`와
+달리 실제 렌더 손이 두세 갈래 갈퀴형으로 읽힌다. 셋째, 46세 아빠·44세 엄마·20세 누나가 모두 같은
+소녀 얼굴이며 머리와 옷만 달라 역할별 나이 실루엣이 없다.
+
+후속 결정: 새 파츠를 단순 primitive로 겹쳐 붙이는 빌드는 중단한다. 원본 skinned surface 직접 편집,
+또는 실제 seam 연결·용접과 변형 검증을 통과한 일체형 메시만 허용한다. 손은 모든 승인 각도에서
+사용자가 승인한 원본 3-digit stylized hand와 손바닥이 추가 변형 없이 보이는 close-up 렌더로 검증한다. 부모/누나는 눈·턱·광대·눈썹·얼굴 폭과 체격을
+실제 topology/landmark 수준에서 달리해야 한다. 세 gate 통과 전 새 GIF와 Unity 연결을 금지한다.
+
+## 2026-08-24 / V1 네 명을 시각 탈락시키고 실제 2D 기반의 귀여운 anime-game V2로 재제작한다
+
+결정: 사용자가 V1 GIF 네 명을 원본 2D와 닮지 않고 징그럽다고 명시적으로 탈락시켰으므로, 이전
+turnaround/FBX/atlas/render와 모든 자동 PASS는 diagnostic history로만 보존한다. V1을 수정 출발점,
+identity donor, 사용자 승인 근거, production 후보로 사용하지 않는다.
+
+결정: V2 identity authority는 실제 runtime HighMotion 2D(P0)와 현행 high-resolution neutral art(P1)다.
+2D는 silhouette, 등신, 눈, 머리, 복장, palette를 관찰하는 reference일 뿐 픽셀을 texture/decal/billboard/
+geometry로 복사하지 않는다. Player/Father/Mother/Older Sister는 네 workstream에서 동시에 clean-room
+topology/atlas/23-bone rig를 만들고 root가 첫 정면과 3Q를 교차검수한다.
+
+결정: 사용자가 요청한 품질 언어는 매우 귀엽고 polished anime-game presentation이다. 큰 홍채와 좁은
+흰자, 짧고 부드러운 턱, 작은 코·입, pointed hair clump, tapered limb, 밝은 무광 toon을 공통으로 쓰며
+Mii·점토·장난감·소시지 관절·구슬 목/손목·helmet hair는 fail-closed한다. 각 가족의 실제 2D 정체성이
+외부 스타일보다 항상 우선한다.
+
+외부 참고 경계: 사용자 요청으로 DeviantArt Halano의 Hikari/Yuuka/Mika 공개 미리보기 세 장만
+`Artifacts/ExternalReferenceStudy/`에 격리 저장해 비율·홍채·hair clump·limb taper를 관찰했다. 페이지는
+원 모델 저작권자를 NEXON Games/NAT GAMES로 표시했고 현재 탭은 download login이 잠겨 있었다. 외부 FBX,
+mesh, texture, rig는 다운로드·Unity import·복제하지 않는다.
+
+승인 순서: 네 명의 actual 2D-vs-3D 비교표와 개별/통합 turntable GIF를 사람에게 먼저 제시한다. 구조
+round-trip과 isolated Unity QA를 병행할 수 있지만 사용자 시각 승인 전에는 모든 V2가
+`productionEligible: false`이고 production/default/Downloads를 변경하지 않는다.
+
 ## 2026-08-24 / 실제 사무실 3D 후보는 QA-only overlay이며 Standing/Navigating까지만 허용한다
 
 결정: `Family3DStarterOfficeCandidateQaBuilder`가 production `Prototype01`을 Experimental scene으로
@@ -1389,3 +1526,35 @@ cadence/stride만 적용해 팔 스윙이 V6와 다르며 누나는 유효 후�
 서명된 24포즈·4주기 visual review, 알려진 실패 누나 패키지 배제를 확인한다. 2026-08-23 실행 결과
 `167 checks / 5 failures / buildExecuted=no`로 fail-closed했다. 신규 상태 자체는
 `CreateNewGameEmptyOfficeV1()`와 `includeInteriorFurniture:false`로 확인했다.
+
+## Runtime-2D V2 Final3는 외부 게임 asset donor 없이 사용자 판정용으로만 잠근다 (2026-08-24)
+
+결정: 실제 family HighMotion 2D를 P0 identity authority, current high-resolution neutral art를 P1로 둔
+독자 3D 네 명만 후보로 사용한다. Final2 24방향 검수에서 발견한 Father detached pocket outline과 Older
+Sister detached shorts piping은 각각 torso/shorts와 곡면을 공유하는 filled surface로 교체한 Final3만
+현행이다. Player와 Mother는 이미 통과한 결과를 보존했다. 네 명 모두 fresh-FBX/Unity Humanoid/공통 walk/
+D3D11 구조 gate와 독립 24방향 사용자 표시 gate를 통과했지만 명시적 사용자 승인 전에는
+`productionEligible: false`다.
+
+결정: 공개 Blue Archive preview와 사용자가 제공한 Mika/Yuuka archive는 추상적인 비율·눈·팔다리 taper·
+hair-clump/toon 관찰만 허용한다. 사용자의 소유권 주장은 기록하지만 archive 내부에 underlying game-origin
+asset의 license/transfer 문서가 없으므로 mesh/texture/UV/material/rig donor, Unity import, commit, shipping은
+금지한다. `test3.zst`/Sakurako는 bundled LICENSE가 NAT GAMES/NEXON 소유, 상업 사용 금지, ripped라고
+명시했고 사용자 지시에 따라 연구 입력에서 제외했다.
+
+검증: Final3 VisualReview는 개별/통합 GIF 모두 24프레임이며 독립 검수 PASS다. Unity BuildRun2는
+`Succeeded`; D3D11Run2는 420/420 visual frames, 13.906058초, 네 방향 pose mask `63`, route/root/audio와
+네 역할 P0/P3 lead-foot alternation PASS다. production/default/StarterOffice/Downloads는 변경하지 않았다.
+
+## 사용자 소유 Mika/Yuuka 직접 개조가 절차형 Final3/Final4를 대체한다 (2026-08-24)
+
+결정: 사용자가 절차형 Final3/Final4 외형을 사람답지 않고 기존 2D와 닮지 않았다고 명시적으로 탈락시킨
+뒤, 본인 소유라고 확인한 `test.7z`와 `test2.targz`의 기존 3D 캐릭터를 직접 수정하도록 지시했다. 따라서
+현행 분기는 Mika/Yuuka의 실제 face/eye/body/hand topology, skin weights, rig를 격리된 로컬 proof에서
+유지·수정하고, 가족 HighMotion 2D를 기준으로 머리·의상·색·나이 실루엣을 바꾼다. 이전 no-donor 결정은
+절차형 historical branch에만 적용한다.
+
+경계: archive 내부에 독립 검증 가능한 license/transfer 문서는 없으므로 현재 근거는 사용자의 ownership
+attestation이다. 이 결정은 개인용 로컬 시각 proof만 허용하며, 사용자 화면 승인과 별도 provenance/shipping
+결정 전에는 production/default Unity import, 원본 payload commit, 공개 재배포, 판매를 허용하지 않는다.
+`test3.zst`/Sakurako는 bundled LICENSE와 사용자 지시에 따라 계속 완전 제외한다.

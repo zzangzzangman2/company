@@ -23,6 +23,11 @@ def parse_args():
     parser.add_argument("--output", required=True)
     parser.add_argument("--reference", required=True)
     parser.add_argument("--quality", choices=("draft", "final"), default="draft")
+    parser.add_argument(
+        "--identity-style",
+        choices=("turnaround-v1", "runtime-2d-v2"),
+        default="turnaround-v1",
+    )
     return parser.parse_args(argv)
 
 
@@ -30,6 +35,9 @@ ARGS = parse_args()
 OUTPUT = os.path.abspath(ARGS.output)
 REFERENCE = os.path.abspath(ARGS.reference)
 QUALITY = ARGS.quality
+IDENTITY_STYLE = ARGS.identity_style
+RUNTIME_2D_STYLE = IDENTITY_STYLE == "runtime-2d-v2"
+VARIANT = "v4-runtime2d" if RUNTIME_2D_STYLE else "v3"
 os.makedirs(OUTPUT, exist_ok=True)
 
 
@@ -83,12 +91,37 @@ PALETTE = {
     "mouth": (0.42, 0.045, 0.028),
     "sole": (0.80, 0.82, 0.83),
     "metal": (0.63, 0.67, 0.70),
+    "cap_red": (0.60, 0.018, 0.024),
+    "cap_shadow": (0.33, 0.006, 0.008),
+    "cap_highlight": (0.78, 0.035, 0.025),
+    "gold": (0.98, 0.58, 0.035),
 }
+if RUNTIME_2D_STYLE:
+    # Pale, clean anime-game palette.  The prior candidate's warm, high-contrast
+    # skin made the face read as a plastic mascot rather than the runtime sprite.
+    PALETTE.update(
+        {
+            "skin": (1.00, 0.73, 0.57),
+            "skin_light": (1.00, 0.86, 0.75),
+            "skin_blush": (1.00, 0.54, 0.49),
+            "hair": (0.085, 0.030, 0.014),
+            "hair_highlight": (0.205, 0.070, 0.028),
+            "iris": (0.48, 0.155, 0.025),
+            "white": (0.985, 0.990, 0.995),
+            "white_shadow": (0.84, 0.88, 0.93),
+            "cap_red": (0.82, 0.020, 0.018),
+            "cap_shadow": (0.48, 0.006, 0.008),
+            "cap_highlight": (1.00, 0.045, 0.025),
+            "red": (0.90, 0.010, 0.012),
+            "yellow": (0.92, 0.38, 0.020),
+            "mouth": (0.70, 0.055, 0.035),
+        }
+    )
 ATLAS_KEYS = tuple(PALETTE.keys())
 ATLAS_COLS = 5
-ATLAS_ROWS = 4
+ATLAS_ROWS = int(math.ceil(len(ATLAS_KEYS) / ATLAS_COLS))
 ATLAS_SIZE = 640 if QUALITY == "final" else 320
-ATLAS_PATH = os.path.join(OUTPUT, "player-v6-blender-identity-v3-atlas.png")
+ATLAS_PATH = os.path.join(OUTPUT, "player-runtime2d-identity-v4-atlas.png" if RUNTIME_2D_STYLE else "player-v6-blender-identity-v3-atlas.png")
 
 
 def clamp01(value):
@@ -96,7 +129,7 @@ def clamp01(value):
 
 
 def make_atlas():
-    image = bpy.data.images.new("PlayerV3IdentityAtlas", width=ATLAS_SIZE, height=ATLAS_SIZE, alpha=True)
+    image = bpy.data.images.new("PlayerV4Runtime2DIdentityAtlas" if RUNTIME_2D_STYLE else "PlayerV3IdentityAtlas", width=ATLAS_SIZE, height=ATLAS_SIZE, alpha=True)
     pixels = [0.0] * (ATLAS_SIZE * ATLAS_SIZE * 4)
     cell_w = ATLAS_SIZE // ATLAS_COLS
     cell_h = ATLAS_SIZE // ATLAS_ROWS
@@ -126,6 +159,11 @@ def make_atlas():
                 grain = grain * 0.20 + math.sin((lx * 0.22) + (ly * 0.055)) * 0.80
             elif key.startswith("skin"):
                 strength = 0.007
+            if RUNTIME_2D_STYLE:
+                # The approved 2D runtime identity uses clean, deliberate color
+                # blocks.  Surface noise was a major source of the rejected
+                # clay-doll look, so the V4 visual-identity candidate is flat.
+                strength = 0.0
             offset = (y * ATLAS_SIZE + x) * 4
             pixels[offset + 0] = clamp01(base[0] + grain * strength)
             pixels[offset + 1] = clamp01(base[1] + grain * strength)
@@ -142,24 +180,49 @@ ATLAS_IMAGE = make_atlas()
 
 
 def build_character_material():
-    material = bpy.data.materials.new("M_PlayerV3_IdentityAtlas")
+    material = bpy.data.materials.new("M_PlayerV4_Runtime2D_IdentityAtlas" if RUNTIME_2D_STYLE else "M_PlayerV3_IdentityAtlas")
     material.use_nodes = True
     nodes = material.node_tree.nodes
     links = material.node_tree.links
     for node in list(nodes):
         nodes.remove(node)
     output = nodes.new("ShaderNodeOutputMaterial")
-    bsdf = nodes.new("ShaderNodeBsdfPrincipled")
     texture = nodes.new("ShaderNodeTexImage")
     texture.image = ATLAS_IMAGE
-    texture.interpolation = "Linear"
+    texture.interpolation = "Closest" if RUNTIME_2D_STYLE else "Linear"
     texture.extension = "EXTEND"
-    links.new(texture.outputs["Color"], bsdf.inputs["Base Color"])
-    if "Roughness" in bsdf.inputs:
-        bsdf.inputs["Roughness"].default_value = 0.61
-    if "Specular IOR Level" in bsdf.inputs:
-        bsdf.inputs["Specular IOR Level"].default_value = 0.28
-    links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+    if RUNTIME_2D_STYLE:
+        # Review-only two-band toon lighting.  The atlas remains the sole
+        # production texture, while the Blender evidence avoids wax/plastic
+        # highlights and keeps every family color readable.
+        diffuse = nodes.new("ShaderNodeBsdfDiffuse")
+        diffuse.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+        shader_to_rgb = nodes.new("ShaderNodeShaderToRGB")
+        ramp = nodes.new("ShaderNodeValToRGB")
+        ramp.color_ramp.interpolation = "CONSTANT"
+        ramp.color_ramp.elements[0].position = 0.20
+        ramp.color_ramp.elements[0].color = (0.79, 0.82, 0.88, 1.0)
+        ramp.color_ramp.elements[1].position = 0.34
+        ramp.color_ramp.elements[1].color = (1.0, 1.0, 1.0, 1.0)
+        multiply = nodes.new("ShaderNodeMixRGB")
+        multiply.blend_type = "MULTIPLY"
+        multiply.inputs[0].default_value = 1.0
+        emission = nodes.new("ShaderNodeEmission")
+        emission.inputs["Strength"].default_value = 0.90
+        links.new(diffuse.outputs["BSDF"], shader_to_rgb.inputs["Shader"])
+        links.new(shader_to_rgb.outputs["Color"], ramp.inputs["Fac"])
+        links.new(texture.outputs["Color"], multiply.inputs[1])
+        links.new(ramp.outputs["Color"], multiply.inputs[2])
+        links.new(multiply.outputs["Color"], emission.inputs["Color"])
+        links.new(emission.outputs["Emission"], output.inputs["Surface"])
+    else:
+        bsdf = nodes.new("ShaderNodeBsdfPrincipled")
+        links.new(texture.outputs["Color"], bsdf.inputs["Base Color"])
+        if "Roughness" in bsdf.inputs:
+            bsdf.inputs["Roughness"].default_value = 0.61
+        if "Specular IOR Level" in bsdf.inputs:
+            bsdf.inputs["Specular IOR Level"].default_value = 0.28
+        links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
     return material
 
 
@@ -175,7 +238,7 @@ def palette_tile(key):
 
 
 def assign_uv_tile(obj, key):
-    layer = obj.data.uv_layers.new(name="PlayerV3AtlasUV")
+    layer = obj.data.uv_layers.new(name="PlayerRuntime2DV4AtlasUV" if RUNTIME_2D_STYLE else "PlayerV3AtlasUV")
     col, row = palette_tile(key)
     tile_w = 1.0 / ATLAS_COLS
     tile_h = 1.0 / ATLAS_ROWS
@@ -423,6 +486,35 @@ def ribbon(name, rows, palette_key, weights, thickness=0.012):
     return create_mesh(name, vertices, faces, palette_key, vertex_weights, smooth=False)
 
 
+def surface_ribbon(name, rows, palette_key, weights, surface_y, columns=10, offset=0.002):
+    """Lay a colored panel directly on a curved front surface.
+
+    rows are ``(z, half_width, x_center)``.  Unlike ``ribbon``, this helper has
+    no boxed side wall that can read as a detached plate in profile.  Each
+    vertex follows the supplied torso surface and sits only ``offset`` metres
+    outward, so clothing graphics remain visible without creating a second
+    silhouette.
+    """
+    vertices = []
+    faces = []
+    vertex_weights = []
+    for row_index, (z, half_width, x_center) in enumerate(rows):
+        mapping = weights[row_index] if isinstance(weights, list) else weights
+        for column in range(columns + 1):
+            t = column / columns
+            x = x_center - half_width + (2.0 * half_width * t)
+            vertices.append((x, surface_y(z, x) - offset, z))
+            vertex_weights.append(dict(mapping))
+    stride = columns + 1
+    for row_index in range(len(rows) - 1):
+        first = row_index * stride
+        second = (row_index + 1) * stride
+        for column in range(columns):
+            # Winding faces the negative-Y character front used by this rig.
+            faces.append((first + column, first + column + 1, second + column + 1, second + column))
+    return create_mesh(name, vertices, faces, palette_key, vertex_weights, smooth=False)
+
+
 def shoe_shell(name, x_center, slices, palette_key, bone):
     """Create a rounded sneaker with a flat sole and an ankle-height heel.
 
@@ -490,7 +582,8 @@ def eye_patch(name, center, width, height, depth, palette_key, bone="Head", segm
 def head_deform(normal, point):
     nz = normal.z
     cheek = 1.0 + 0.085 * math.exp(-((nz + 0.18) / 0.30) ** 2)
-    chin = 1.0 - 0.24 * max(0.0, -nz) ** 1.65
+    chin_amount = 0.055 if RUNTIME_2D_STYLE else 0.24
+    chin = 1.0 - chin_amount * max(0.0, -nz) ** 1.65
     point.x *= cheek * chin
     point.y *= 1.0 - 0.08 * max(0.0, -nz)
     if normal.y < 0.0:
@@ -501,40 +594,100 @@ def head_deform(normal, point):
 
 # --- New body topology -----------------------------------------------------
 
-HEAD = ellipsoid("HeadSkin", (0.0, -0.015, 2.725), (0.338, 0.295, 0.388), "skin", "Head", 52, 32, head_deform)
-ellipsoid("Ear.L", (0.341, 0.000, 2.690), (0.055, 0.040, 0.082), "skin", "Head", 24, 16)
-ellipsoid("Ear.R", (-0.341, 0.000, 2.690), (0.055, 0.040, 0.082), "skin", "Head", 24, 16)
-tube("EarFold.L", ((0.358, -0.031, 2.735), (0.372, -0.043, 2.695), (0.358, -0.035, 2.655)), (0.009, 0.012, 0.007), "skin_light", [{"Head": 1.0}] * 3, 10, 0.72)
-tube("EarFold.R", ((-0.358, -0.031, 2.735), (-0.372, -0.043, 2.695), (-0.358, -0.035, 2.655)), (0.009, 0.012, 0.007), "skin_light", [{"Head": 1.0}] * 3, 10, 0.72)
+HEAD = ellipsoid(
+    "HeadSkin",
+    (0.0, -0.018, 2.715 if RUNTIME_2D_STYLE else 2.725),
+    # Final4 keeps the 2D silhouette while restoring real side volume.  The
+    # prior runtime candidate was only 79% as deep as wide and read flat in
+    # three-quarter views; this clean-room ellipsoid is now about 85%.
+    (0.372, 0.318, 0.372) if RUNTIME_2D_STYLE else (0.338, 0.295, 0.388),
+    "skin",
+    "Head",
+    52,
+    32,
+    head_deform,
+)
+ear_x = 0.369 if RUNTIME_2D_STYLE else 0.341
+ear_radii = (0.046, 0.034, 0.067) if RUNTIME_2D_STYLE else (0.055, 0.040, 0.082)
+ellipsoid("Ear.L", (ear_x, 0.000, 2.690), ear_radii, "skin", "Head", 24, 16)
+ellipsoid("Ear.R", (-ear_x, 0.000, 2.690), ear_radii, "skin", "Head", 24, 16)
+if not RUNTIME_2D_STYLE:
+    tube("EarFold.L", ((0.358, -0.031, 2.735), (0.372, -0.043, 2.695), (0.358, -0.035, 2.655)), (0.009, 0.012, 0.007), "skin_light", [{"Head": 1.0}] * 3, 10, 0.72)
+    tube("EarFold.R", ((-0.358, -0.031, 2.735), (-0.372, -0.043, 2.695), (-0.358, -0.035, 2.655)), (0.009, 0.012, 0.007), "skin_light", [{"Head": 1.0}] * 3, 10, 0.72)
 
 for sign, suffix in ((1.0, "L"), (-1.0, "R")):
-    x = 0.126 * sign
-    eye_patch("EyeSclera." + suffix, (x, -0.302, 2.735), 0.083, 0.105, 0.007, "eye_white")
-    eye_patch("Iris." + suffix, (x, -0.311, 2.731), 0.043, 0.061, 0.004, "iris")
-    eye_patch("Pupil." + suffix, (x, -0.317, 2.731), 0.021, 0.039, 0.003, "pupil")
-    eye_patch("EyeGlint." + suffix, (x - 0.014 * sign, -0.329, 2.760), 0.008, 0.014, 0.002, "eye_white", segments=18)
+    x = (0.145 if RUNTIME_2D_STYLE else 0.126) * sign
+    sclera_width = 0.082 if RUNTIME_2D_STYLE else 0.083
+    sclera_height = 0.100 if RUNTIME_2D_STYLE else 0.105
+    iris_width = 0.075 if RUNTIME_2D_STYLE else 0.043
+    iris_height = 0.095 if RUNTIME_2D_STYLE else 0.061
+    pupil_width = 0.034 if RUNTIME_2D_STYLE else 0.021
+    pupil_height = 0.054 if RUNTIME_2D_STYLE else 0.039
+    eye_patch("EyeSclera." + suffix, (x, -0.333 if RUNTIME_2D_STYLE else -0.307, 2.740 if RUNTIME_2D_STYLE else 2.744), sclera_width, sclera_height, 0.005, "eye_white")
+    eye_patch("Iris." + suffix, (x, -0.340 if RUNTIME_2D_STYLE else -0.314, 2.735 if RUNTIME_2D_STYLE else 2.739), iris_width, iris_height, 0.003, "iris")
+    eye_patch("Pupil." + suffix, (x, -0.345 if RUNTIME_2D_STYLE else -0.319, 2.735 if RUNTIME_2D_STYLE else 2.739), pupil_width, pupil_height, 0.002, "pupil")
+    eye_patch("EyeGlint." + suffix, (x - 0.018 * sign, -0.356 if RUNTIME_2D_STYLE else -0.330, 2.770 if RUNTIME_2D_STYLE else 2.774), 0.008, 0.015, 0.0015, "eye_white", segments=18)
+    if RUNTIME_2D_STYLE:
+        eye_patch("EyeGlintSmall." + suffix, (x + 0.020 * sign, -0.356, 2.716), 0.0045, 0.0065, 0.0012, "eye_white", segments=16)
     tube(
         "UpperLid." + suffix,
-        ((x - 0.073 * sign, -0.316, 2.765), (x, -0.327, 2.815), (x + 0.075 * sign, -0.315, 2.770)),
-        (0.008, 0.011, 0.006),
+        ((x - 0.080 * sign, -0.346, 2.778), (x, -0.355, 2.830), (x + 0.081 * sign, -0.345, 2.782)) if RUNTIME_2D_STYLE else ((x - 0.072 * sign, -0.320, 2.780), (x, -0.329, 2.828), (x + 0.073 * sign, -0.319, 2.784)),
+        (0.0040, 0.0060, 0.0035) if RUNTIME_2D_STYLE else (0.008, 0.011, 0.006),
         "hair",
         [{"Head": 1.0}] * 3,
         10,
         0.55,
     )
+    if RUNTIME_2D_STYLE:
+        outer_x = x + 0.071 * sign
+        tube(
+            "OuterLash." + suffix,
+            ((outer_x, -0.350, 2.783), (outer_x + 0.022 * sign, -0.349, 2.800)),
+            (0.0038, 0.0023),
+            "hair",
+            [{"Head": 1.0}] * 2,
+            9,
+            0.62,
+        )
     tube(
         "Brow." + suffix,
-        ((x - 0.071 * sign, -0.310, 2.867), (x, -0.322, 2.885), (x + 0.069 * sign, -0.311, 2.866)),
-        (0.006, 0.010, 0.005),
+        ((x - 0.056 * sign, -0.336, 2.864), (x, -0.346, 2.879), (x + 0.056 * sign, -0.337, 2.864)) if RUNTIME_2D_STYLE else ((x - 0.071 * sign, -0.310, 2.867), (x, -0.322, 2.885), (x + 0.069 * sign, -0.311, 2.866)),
+        (0.0032, 0.0046, 0.0028) if RUNTIME_2D_STYLE else (0.006, 0.010, 0.005),
         "hair",
         [{"Head": 1.0}] * 3,
         9,
         0.55,
     )
-    ellipsoid("Cheek." + suffix, (0.214 * sign, -0.307, 2.624), (0.045, 0.010, 0.020), "skin_blush", "Head", 20, 12)
+    if not RUNTIME_2D_STYLE:
+        ellipsoid(
+            "Cheek." + suffix,
+            (0.210 * sign, -0.307, 2.624),
+            (0.045, 0.010, 0.020),
+            "skin_blush",
+            "Head",
+            20,
+            12,
+        )
 
-ellipsoid("Nose", (0.0, -0.329, 2.655), (0.018, 0.014, 0.025), "skin_light", "Head", 20, 12)
-tube("Smile", ((-0.066, -0.328, 2.574), (0.0, -0.338, 2.558), (0.067, -0.328, 2.574)), (0.005, 0.007, 0.004), "mouth", [{"Head": 1.0}] * 3, 10, 0.52)
+if not RUNTIME_2D_STYLE:
+    ellipsoid(
+        "Nose",
+        (0.0, -0.329, 2.655),
+        (0.018, 0.014, 0.025),
+        "skin_light",
+        "Head",
+        20,
+        12,
+    )
+tube(
+    "Smile",
+    ((-0.033, -0.355, 2.588), (0.0, -0.360, 2.580), (0.034, -0.355, 2.588)) if RUNTIME_2D_STYLE else ((-0.066, -0.328, 2.574), (0.0, -0.338, 2.558), (0.067, -0.328, 2.574)),
+    (0.0025, 0.0032, 0.0020) if RUNTIME_2D_STYLE else (0.005, 0.007, 0.004),
+    "mouth",
+    [{"Head": 1.0}] * 3,
+    10,
+    0.52,
+)
 
 
 def hair_cap():
@@ -552,8 +705,8 @@ def hair_cap():
             theta = 0.055 + (theta_max - 0.055) * t
             point = Vector(
                 (
-                    0.365 * math.sin(theta) * math.cos(phi),
-                    0.323 * math.sin(theta) * math.sin(phi) + 0.014,
+                    (0.369 if RUNTIME_2D_STYLE else 0.365) * math.sin(theta) * math.cos(phi),
+                    (0.350 if RUNTIME_2D_STYLE else 0.323) * math.sin(theta) * math.sin(phi) + 0.014,
                     2.765 + 0.410 * math.cos(theta),
                 )
             )
@@ -579,10 +732,10 @@ for index, (root_x, tip_x) in enumerate(zip(front_roots, front_tips)):
     tip_z = 2.770 + 0.022 * abs(index - 3)
     hair_lock(
         "HairBang.%02d" % index,
-        (root_x * 0.70, -0.205, root_z),
-        (root_x, -0.302, 3.020),
-        (tip_x, -0.345, 2.885),
-        (tip_x, -0.325, tip_z),
+        (root_x * 0.70, -0.225 if RUNTIME_2D_STYLE else -0.205, root_z),
+        (root_x, -0.328 if RUNTIME_2D_STYLE else -0.302, 3.020),
+        (tip_x, -0.371 if RUNTIME_2D_STYLE else -0.345, 2.885),
+        (tip_x, -0.351 if RUNTIME_2D_STYLE else -0.325, tip_z),
         0.060 if index in (2, 3, 4) else 0.052,
         "hair_highlight" if index in (1, 4) else "hair",
         roll=math.radians((index - 3) * 1.8),
@@ -649,26 +802,99 @@ for index, x in enumerate((-0.285, -0.225, -0.165, -0.105, -0.035, 0.035, 0.105,
         "hair_highlight" if index in (2, 7) else "hair",
     )
 
-for index, (root, a, b, tip, width) in enumerate(
-    (
-        ((-0.050, 0.005, 3.105), (-0.095, 0.000, 3.195), (-0.095, -0.010, 3.235), (-0.145, -0.010, 3.205), 0.034),
-        ((0.015, 0.015, 3.125), (0.025, 0.010, 3.225), (0.075, 0.010, 3.255), (0.105, 0.005, 3.205), 0.036),
-        ((0.105, 0.030, 3.110), (0.175, 0.035, 3.190), (0.225, 0.035, 3.205), (0.245, 0.020, 3.160), 0.031),
+if not RUNTIME_2D_STYLE:
+    for index, (root, a, b, tip, width) in enumerate(
+        (
+            ((-0.050, 0.005, 3.105), (-0.095, 0.000, 3.195), (-0.095, -0.010, 3.235), (-0.145, -0.010, 3.205), 0.034),
+            ((0.015, 0.015, 3.125), (0.025, 0.010, 3.225), (0.075, 0.010, 3.255), (0.105, 0.005, 3.205), 0.036),
+            ((0.105, 0.030, 3.110), (0.175, 0.035, 3.190), (0.225, 0.035, 3.205), (0.245, 0.020, 3.160), 0.031),
+        )
+    ):
+        hair_lock("HairCrown.%02d" % index, root, a, b, tip, width, "hair_highlight" if index == 1 else "hair")
+
+
+if RUNTIME_2D_STYLE:
+    # The red newsboy cap is the strongest Player identity token in the actual
+    # HighMotion sprites.  Build it as real skinned geometry: broad soft crown,
+    # fitted band, short bill, panel seams, top button, and the tiny gold pin.
+    cap_rings = (
+        ((0.0, 0.010, 3.000), 0.392, 0.360),
+        ((0.0, 0.014, 3.075), 0.420, 0.378),
+        ((0.0, 0.020, 3.190), 0.392, 0.360),
+        ((0.0, 0.026, 3.285), 0.302, 0.278),
+        ((0.0, 0.030, 3.345), 0.072, 0.065),
     )
-):
-    hair_lock("HairCrown.%02d" % index, root, a, b, tip, width, "hair_highlight" if index == 1 else "hair")
+    loft(
+        "Runtime2DNewsboyCapCrown",
+        cap_rings,
+        "cap_red",
+        tuple({"Head": 1.0} for _ in cap_rings),
+        48,
+        exponent=2.15,
+    )
+    elliptical_band(
+        "Runtime2DNewsboyCapBand",
+        2.985,
+        3.055,
+        0.005,
+        0.398,
+        0.365,
+        "cap_shadow",
+        ({"Head": 1.0}, {"Head": 1.0}),
+        segments=48,
+    )
+    shoe_shell(
+        "Runtime2DNewsboyCapBill",
+        0.0,
+        (
+            (-0.238, 0.360, 3.002, 0.050),
+            (-0.360, 0.350, 2.992, 0.055),
+            (-0.505, 0.300, 2.982, 0.045),
+            (-0.565, 0.205, 2.981, 0.030),
+        ),
+        "cap_red",
+        "Head",
+    )
+    ellipsoid("Runtime2DNewsboyCapButton", (0.0, 0.030, 3.365), (0.045, 0.040, 0.027), "cap_highlight", "Head", 22, 12)
+    for seam_index, angle_degrees in enumerate((-62.0, -30.0, 0.0, 30.0, 62.0)):
+        angle = math.radians(angle_degrees)
+        x = math.sin(angle) * 0.300
+        y = -math.cos(angle) * 0.240
+        tube(
+            "Runtime2DNewsboyCapSeam.%02d" % seam_index,
+            ((0.0, 0.004, 3.348), (x * 0.58, y * 0.58, 3.255), (x, y, 3.075)),
+            (0.008, 0.007, 0.006),
+            "cap_shadow",
+            [{"Head": 1.0}] * 3,
+            10,
+            0.55,
+        )
+    ellipsoid("Runtime2DNewsboyCapGoldPin", (-0.285, -0.337, 3.048), (0.025, 0.010, 0.017), "gold", "Head", 18, 10)
 
 # Neck and tailored hoodie torso.
-ellipsoid("NeckSkin", (0.0, 0.0, 2.325), (0.104, 0.092, 0.135), "skin", {"Neck": 0.8, "Head": 0.2}, 28, 18)
+ellipsoid("NeckSkin", (0.0, 0.0, 2.330 if RUNTIME_2D_STYLE else 2.325), (0.101, 0.090, 0.112) if RUNTIME_2D_STYLE else (0.104, 0.092, 0.135), "skin", {"Neck": 0.8, "Head": 0.2}, 28, 18)
 torso_specs = (
-    ((0.0, 0.018, 1.455), 0.325, 0.195),
-    ((0.0, 0.015, 1.525), 0.342, 0.202),
-    ((0.0, 0.012, 1.720), 0.356, 0.211),
-    ((0.0, 0.010, 1.940), 0.382, 0.218),
-    ((0.0, 0.007, 2.105), 0.414, 0.218),
-    ((0.0, 0.004, 2.205), 0.426, 0.202),
-    ((0.0, 0.001, 2.270), 0.342, 0.166),
-    ((0.0, 0.000, 2.290), 0.290, 0.145),
+    (
+        ((0.0, 0.018, 1.455), 0.255, 0.170),
+        ((0.0, 0.015, 1.525), 0.270, 0.178),
+        ((0.0, 0.012, 1.720), 0.282, 0.184),
+        ((0.0, 0.010, 1.940), 0.300, 0.190),
+        ((0.0, 0.007, 2.105), 0.320, 0.191),
+        ((0.0, 0.004, 2.205), 0.326, 0.180),
+        ((0.0, 0.001, 2.270), 0.280, 0.151),
+        ((0.0, 0.000, 2.290), 0.238, 0.132),
+    )
+    if RUNTIME_2D_STYLE
+    else (
+        ((0.0, 0.018, 1.455), 0.325, 0.195),
+        ((0.0, 0.015, 1.525), 0.342, 0.202),
+        ((0.0, 0.012, 1.720), 0.356, 0.211),
+        ((0.0, 0.010, 1.940), 0.382, 0.218),
+        ((0.0, 0.007, 2.105), 0.414, 0.218),
+        ((0.0, 0.004, 2.205), 0.426, 0.202),
+        ((0.0, 0.001, 2.270), 0.342, 0.166),
+        ((0.0, 0.000, 2.290), 0.290, 0.145),
+    )
 )
 torso_weights = (
     {"Hips": 0.72, "Spine": 0.28},
@@ -681,6 +907,28 @@ torso_weights = (
     {"UpperChest": 1.0},
 )
 loft("HoodieTailoredTorso", torso_specs, "white", torso_weights, 40, exponent=2.05)
+
+
+def torso_front_surface_y(z, x):
+    """Return the exact negative-Y superellipse surface of the hoodie torso."""
+    lower = torso_specs[0]
+    upper = torso_specs[-1]
+    for index in range(len(torso_specs) - 1):
+        candidate_lower = torso_specs[index]
+        candidate_upper = torso_specs[index + 1]
+        if candidate_lower[0][2] <= z <= candidate_upper[0][2]:
+            lower = candidate_lower
+            upper = candidate_upper
+            break
+    z0 = lower[0][2]
+    z1 = upper[0][2]
+    t = 0.0 if abs(z1 - z0) < 1.0e-8 else max(0.0, min(1.0, (z - z0) / (z1 - z0)))
+    center_y = lower[0][1] + (upper[0][1] - lower[0][1]) * t
+    radius_x = lower[1] + (upper[1] - lower[1]) * t
+    radius_y = lower[2] + (upper[2] - lower[2]) * t
+    normalized_x = min(0.999999, abs(x) / max(radius_x, 1.0e-6))
+    normalized_y = max(0.0, 1.0 - normalized_x ** 2.05) ** (1.0 / 2.05)
+    return center_y - radius_y * normalized_y
 
 # Shirt is inset into the opening rather than being a second inflated torso.
 shirt_rows = (
@@ -695,67 +943,157 @@ shirt_weights = (
     {"Chest": 0.70, "UpperChest": 0.30},
     {"UpperChest": 1.0},
 )
-ribbon("StripedShirtBase", shirt_rows, "navy", list(shirt_weights), thickness=0.016)
-for stripe_index, z in enumerate((1.625, 1.815, 2.005)):
-    mapping = {"Spine": 1.0} if stripe_index == 0 else ({"Chest": 1.0} if stripe_index == 1 else {"UpperChest": 0.35, "Chest": 0.65})
-    ribbon(
-        "ShirtYellowStripe.%02d" % stripe_index,
-        ((z - 0.040, 0.124 + stripe_index * 0.004, -0.249, 0.0), (z + 0.040, 0.124 + stripe_index * 0.004, -0.249, 0.0)),
-        "yellow",
-        mapping,
-        thickness=0.010,
-    )
-ribbon("ShirtRedCollar", ((2.195, 0.109, -0.234, 0.0), (2.245, 0.090, -0.221, 0.0)), "red", {"UpperChest": 1.0}, thickness=0.012)
-
-# Open-front edges and metal zipper teeth.
-for sign, side in ((1.0, "L"), (-1.0, "R")):
-    x = 0.124 * sign
-    tube(
-        "HoodieOpenEdge." + side,
-        ((x, -0.232, 1.485), (x, -0.252, 1.840), (x, -0.235, 2.190), (0.105 * sign, -0.205, 2.275)),
-        (0.012, 0.011, 0.011, 0.010),
+if RUNTIME_2D_STYLE:
+    # All front clothing graphics follow the torso surface.  The previous boxed
+    # ribbons sat 4-6 cm forward and produced an obvious detached double plate
+    # in side/turntable views.
+    surface_ribbon(
+        "StripedShirtBase",
+        tuple((z, half_width, x_center) for z, half_width, _, x_center in shirt_rows),
         "navy",
-        (
-            {"Spine": 1.0},
-            {"Spine": 0.45, "Chest": 0.55},
-            {"UpperChest": 0.62, "Chest": 0.38},
-            {"UpperChest": 1.0},
-        ),
-        12,
-        0.66,
+        list(shirt_weights),
+        torso_front_surface_y,
+        columns=12,
+        offset=0.0025,
     )
-    for tooth_index in range(11):
-        z = 1.535 + tooth_index * 0.058
-        bone = "Spine" if z < 1.80 else ("Chest" if z < 2.10 else "UpperChest")
+    for stripe_index, z in enumerate((1.625, 1.815, 2.005)):
+        mapping = {"Spine": 1.0} if stripe_index == 0 else ({"Chest": 1.0} if stripe_index == 1 else {"UpperChest": 0.35, "Chest": 0.65})
+        stripe_half_height = 0.022
+        stripe_half_width = (0.108, 0.113, 0.116)[stripe_index]
+        surface_ribbon(
+            "ShirtYellowStripe.%02d" % stripe_index,
+            ((z - stripe_half_height, stripe_half_width, 0.0), (z + stripe_half_height, stripe_half_width, 0.0)),
+            "yellow",
+            mapping,
+            torso_front_surface_y,
+            columns=12,
+            offset=0.0040,
+        )
+    surface_ribbon(
+        "ShirtRedCollar",
+        ((2.195, 0.109, 0.0), (2.245, 0.090, 0.0)),
+        "red",
+        {"UpperChest": 1.0},
+        torso_front_surface_y,
+        columns=12,
+        offset=0.0040,
+    )
+
+    # Open-front edges, zipper teeth, chest blocks, and pocket marks are also
+    # paint-like surface geometry: visible head-on, silhouette-neutral in side.
+    for sign, side in ((1.0, "L"), (-1.0, "R")):
+        x = 0.124 * sign
+        surface_ribbon(
+            "HoodieOpenEdge." + side,
+            ((1.485, 0.007, x), (1.840, 0.007, x), (2.190, 0.007, x), (2.275, 0.006, 0.105 * sign)),
+            "navy",
+            [
+                {"Spine": 1.0},
+                {"Spine": 0.45, "Chest": 0.55},
+                {"UpperChest": 0.62, "Chest": 0.38},
+                {"UpperChest": 1.0},
+            ],
+            torso_front_surface_y,
+            columns=3,
+            offset=0.0050,
+        )
+        for tooth_index in range(11):
+            z = 1.535 + tooth_index * 0.058
+            bone = "Spine" if z < 1.80 else ("Chest" if z < 2.10 else "UpperChest")
+            surface_ribbon(
+                "ZipperTooth.%s.%02d" % (side, tooth_index),
+                ((z - 0.003, 0.010, x), (z + 0.003, 0.010, x)),
+                "metal",
+                {bone: 1.0},
+                torso_front_surface_y,
+                columns=3,
+                offset=0.0060,
+            )
+
+        chest_x = 0.218 * sign
+        surface_ribbon(
+            "ChestNavy." + side,
+            ((2.055, 0.087, chest_x), (2.125, 0.087, chest_x)),
+            "navy",
+            {"UpperChest": 0.45, "Chest": 0.55},
+            torso_front_surface_y,
+            columns=8,
+            offset=0.0030,
+        )
+        surface_ribbon(
+            "ChestRed." + side,
+            ((2.125, 0.087, chest_x), (2.178, 0.087, chest_x)),
+            "red",
+            {"UpperChest": 0.75, "Chest": 0.25},
+            torso_front_surface_y,
+            columns=8,
+            offset=0.0032,
+        )
+        surface_ribbon(
+            "PocketPiping." + side,
+            ((1.690, 0.006, 0.230 * sign), (1.765, 0.007, 0.212 * sign), (1.825, 0.005, 0.190 * sign)),
+            "navy",
+            [
+                {"Spine": 0.72, "Chest": 0.28},
+                {"Spine": 0.60, "Chest": 0.40},
+                {"Spine": 0.45, "Chest": 0.55},
+            ],
+            torso_front_surface_y,
+            columns=3,
+            offset=0.0040,
+        )
+else:
+    ribbon("StripedShirtBase", shirt_rows, "navy", list(shirt_weights), thickness=0.016)
+    for stripe_index, z in enumerate((1.625, 1.815, 2.005)):
+        mapping = {"Spine": 1.0} if stripe_index == 0 else ({"Chest": 1.0} if stripe_index == 1 else {"UpperChest": 0.35, "Chest": 0.65})
+        ribbon(
+            "ShirtYellowStripe.%02d" % stripe_index,
+            ((z - 0.040, 0.124 + stripe_index * 0.004, -0.249, 0.0), (z + 0.040, 0.124 + stripe_index * 0.004, -0.249, 0.0)),
+            "yellow",
+            mapping,
+            thickness=0.010,
+        )
+    ribbon("ShirtRedCollar", ((2.195, 0.109, -0.234, 0.0), (2.245, 0.090, -0.221, 0.0)), "red", {"UpperChest": 1.0}, thickness=0.012)
+    for sign, side in ((1.0, "L"), (-1.0, "R")):
+        x = 0.124 * sign
         tube(
-            "ZipperTooth.%s.%02d" % (side, tooth_index),
-            ((x - 0.009 * sign, -0.242, z), (x + 0.009 * sign, -0.242, z)),
-            (0.004, 0.004),
-            "metal",
-            [{bone: 1.0}, {bone: 1.0}],
-            8,
-            0.70,
+            "HoodieOpenEdge." + side,
+            ((x, -0.232, 1.485), (x, -0.252, 1.840), (x, -0.235, 2.190), (0.105 * sign, -0.205, 2.275)),
+            (0.012, 0.011, 0.011, 0.010),
+            "navy",
+            ({"Spine": 1.0}, {"Spine": 0.45, "Chest": 0.55}, {"UpperChest": 0.62, "Chest": 0.38}, {"UpperChest": 1.0}),
+            12,
+            0.66,
+        )
+        for tooth_index in range(11):
+            z = 1.535 + tooth_index * 0.058
+            bone = "Spine" if z < 1.80 else ("Chest" if z < 2.10 else "UpperChest")
+            tube(
+                "ZipperTooth.%s.%02d" % (side, tooth_index),
+                ((x - 0.009 * sign, -0.242, z), (x + 0.009 * sign, -0.242, z)),
+                (0.004, 0.004),
+                "metal",
+                [{bone: 1.0}, {bone: 1.0}],
+                8,
+                0.70,
+            )
+        chest_x = 0.276 * sign
+        ribbon("ChestNavy." + side, ((2.055, 0.087, -0.245, chest_x), (2.125, 0.087, -0.245, chest_x)), "navy", {"UpperChest": 0.45, "Chest": 0.55}, 0.012)
+        ribbon("ChestRed." + side, ((2.125, 0.087, -0.246, chest_x), (2.178, 0.087, -0.242, chest_x)), "red", {"UpperChest": 0.75, "Chest": 0.25}, 0.012)
+        tube(
+            "PocketPiping." + side,
+            ((0.300 * sign, -0.244, 1.690), (0.275 * sign, -0.258, 1.765), (0.245 * sign, -0.250, 1.825)),
+            (0.009, 0.011, 0.008),
+            "navy",
+            ({"Spine": 0.72, "Chest": 0.28}, {"Spine": 0.60, "Chest": 0.40}, {"Spine": 0.45, "Chest": 0.55}),
+            10,
+            0.58,
         )
 
-# Chest color blocks, back wrap bands, pockets, and layered hem.
-for sign, side in ((1.0, "L"), (-1.0, "R")):
-    x = 0.276 * sign
-    ribbon("ChestNavy." + side, ((2.055, 0.087, -0.245, x), (2.125, 0.087, -0.245, x)), "navy", {"UpperChest": 0.45, "Chest": 0.55}, 0.012)
-    ribbon("ChestRed." + side, ((2.125, 0.087, -0.246, x), (2.178, 0.087, -0.242, x)), "red", {"UpperChest": 0.75, "Chest": 0.25}, 0.012)
-    tube(
-        "PocketPiping." + side,
-        ((0.300 * sign, -0.244, 1.690), (0.275 * sign, -0.258, 1.765), (0.245 * sign, -0.250, 1.825)),
-        (0.009, 0.011, 0.008),
-        "navy",
-        ({"Spine": 0.72, "Chest": 0.28}, {"Spine": 0.60, "Chest": 0.40}, {"Spine": 0.45, "Chest": 0.55}),
-        10,
-        0.58,
-    )
-
-elliptical_band("BackNavyBand", 2.045, 2.120, 0.010, 0.424, 0.237, "navy", ({"Chest": 0.60, "UpperChest": 0.40}, {"Chest": 0.35, "UpperChest": 0.65}), math.radians(12), math.radians(168), 30)
-elliptical_band("BackRedBand", 2.120, 2.172, 0.010, 0.418, 0.238, "red", ({"Chest": 0.25, "UpperChest": 0.75}, {"UpperChest": 1.0}), math.radians(12), math.radians(168), 30)
-elliptical_band("HoodieHemNavy", 1.455, 1.520, 0.018, 0.350, 0.211, "navy", ({"Hips": 0.66, "Spine": 0.34}, {"Hips": 0.52, "Spine": 0.48}), segments=40)
-elliptical_band("HoodieHemWhite", 1.515, 1.548, 0.017, 0.355, 0.214, "white_shadow", ({"Hips": 0.48, "Spine": 0.52}, {"Hips": 0.42, "Spine": 0.58}), segments=40)
+elliptical_band("BackNavyBand", 2.045, 2.120, 0.010, 0.320 if RUNTIME_2D_STYLE else 0.424, 0.200 if RUNTIME_2D_STYLE else 0.237, "navy", ({"Chest": 0.60, "UpperChest": 0.40}, {"Chest": 0.35, "UpperChest": 0.65}), math.radians(12), math.radians(168), 30)
+elliptical_band("BackRedBand", 2.120, 2.172, 0.010, 0.316 if RUNTIME_2D_STYLE else 0.418, 0.201 if RUNTIME_2D_STYLE else 0.238, "red", ({"Chest": 0.25, "UpperChest": 0.75}, {"UpperChest": 1.0}), math.radians(12), math.radians(168), 30)
+elliptical_band("HoodieHemNavy", 1.455, 1.520, 0.018, 0.270 if RUNTIME_2D_STYLE else 0.350, 0.180 if RUNTIME_2D_STYLE else 0.211, "navy", ({"Hips": 0.66, "Spine": 0.34}, {"Hips": 0.52, "Spine": 0.48}), segments=40)
+elliptical_band("HoodieHemWhite", 1.515, 1.548, 0.017, 0.276 if RUNTIME_2D_STYLE else 0.355, 0.183 if RUNTIME_2D_STYLE else 0.214, "white_shadow", ({"Hips": 0.48, "Spine": 0.52}, {"Hips": 0.42, "Spine": 0.58}), segments=40)
 
 # Flattened draped hood with seam and dark inner collar.
 hood_specs = (
@@ -775,11 +1113,18 @@ for sign, side in ((1.0, "L"), (-1.0, "R")):
 
 # Sleeves use continuous multi-ring tubes with elbow blend loops.
 for sign, side, prefix in ((1.0, "L", "Left"), (-1.0, "R", "Right")):
-    shoulder = Vector((0.382 * sign, 0.000, 2.185))
-    upper_mid = Vector((0.530 * sign, -0.006, 2.015))
-    elbow = Vector((0.650 * sign, -0.012, 1.820))
-    fore_mid = Vector((0.725 * sign, -0.017, 1.650))
-    wrist = Vector((0.782 * sign, -0.020, 1.500))
+    if RUNTIME_2D_STYLE:
+        shoulder = Vector((0.305 * sign, 0.000, 2.170))
+        upper_mid = Vector((0.405 * sign, -0.006, 2.005))
+        elbow = Vector((0.480 * sign, -0.012, 1.810))
+        fore_mid = Vector((0.515 * sign, -0.017, 1.635))
+        wrist = Vector((0.545 * sign, -0.020, 1.485))
+    else:
+        shoulder = Vector((0.382 * sign, 0.000, 2.185))
+        upper_mid = Vector((0.530 * sign, -0.006, 2.015))
+        elbow = Vector((0.650 * sign, -0.012, 1.820))
+        fore_mid = Vector((0.725 * sign, -0.017, 1.650))
+        wrist = Vector((0.782 * sign, -0.020, 1.500))
     sleeve_weights = (
         {prefix + "UpperArm": 1.0},
         {prefix + "UpperArm": 1.0},
@@ -787,33 +1132,47 @@ for sign, side, prefix in ((1.0, "L", "Left"), (-1.0, "R", "Right")):
         {prefix + "LowerArm": 1.0},
         {prefix + "LowerArm": 0.82, prefix + "Hand": 0.18},
     )
-    ellipsoid("SleeveShoulder." + side, shoulder, (0.138, 0.126, 0.145), "white", {prefix + "UpperArm": 0.88, prefix + "Shoulder": 0.12}, 30, 18)
-    tube("HoodieSleeve." + side, (shoulder, upper_mid, elbow, fore_mid, wrist), (0.132, 0.127, 0.121, 0.110, 0.101), "white", sleeve_weights, 26, 0.94)
+    shoulder_radii = (0.111, 0.105, 0.122) if RUNTIME_2D_STYLE else (0.138, 0.126, 0.145)
+    sleeve_radii = (0.106, 0.098, 0.086, 0.075, 0.066) if RUNTIME_2D_STYLE else (0.132, 0.127, 0.121, 0.110, 0.101)
+    ellipsoid("SleeveShoulder." + side, shoulder, shoulder_radii, "white", {prefix + "UpperArm": 0.88, prefix + "Shoulder": 0.12}, 30, 18)
+    tube("HoodieSleeve." + side, (shoulder, upper_mid, elbow, fore_mid, wrist), sleeve_radii, "white", sleeve_weights, 26, 0.94)
     cuff_axis = (wrist - fore_mid).normalized()
     cuff_start = wrist - cuff_axis * 0.055
     cuff_end = wrist + cuff_axis * 0.095
-    tube("CuffNavy." + side, (cuff_start, cuff_end), (0.111, 0.105), "navy", [{prefix + "LowerArm": 0.75, prefix + "Hand": 0.25}, {prefix + "LowerArm": 0.35, prefix + "Hand": 0.65}], 22, 0.95)
+    cuff_radii = (0.073, 0.069) if RUNTIME_2D_STYLE else (0.111, 0.105)
+    tube("CuffNavy." + side, (cuff_start, cuff_end), cuff_radii, "navy", [{prefix + "LowerArm": 0.75, prefix + "Hand": 0.25}, {prefix + "LowerArm": 0.35, prefix + "Hand": 0.65}], 22, 0.95)
     white_start = cuff_start - cuff_axis * 0.030
-    tube("CuffWhiteStripe." + side, (white_start, cuff_start), (0.113, 0.112), "white_shadow", [{prefix + "LowerArm": 1.0}] * 2, 20, 0.95)
+    white_cuff_radii = (0.075, 0.073) if RUNTIME_2D_STYLE else (0.113, 0.112)
+    tube("CuffWhiteStripe." + side, (white_start, cuff_start), white_cuff_radii, "white_shadow", [{prefix + "LowerArm": 1.0}] * 2, 20, 0.95)
 
-    palm_center = Vector((0.808 * sign, -0.022, 1.398))
-    ellipsoid("Palm." + side, palm_center, (0.080, 0.056, 0.124), "skin", prefix + "Hand", 28, 18)
-    finger_x_offsets = (-0.043, -0.014, 0.015, 0.043)
-    for finger_index, local_x in enumerate(finger_x_offsets):
-        finger_x = palm_center.x + local_x * sign
-        top = Vector((finger_x, -0.030, 1.365))
-        length = 0.112 - abs(finger_index - 1.5) * 0.008
-        bottom = Vector((finger_x + 0.005 * sign, -0.035, 1.365 - length))
-        tube("Finger.%s.%02d" % (side, finger_index), (top, (top + bottom) * 0.5, bottom), (0.0140, 0.013, 0.008), "skin", [{prefix + "Hand": 1.0}] * 3, 12, 0.78)
-    thumb_root = Vector((palm_center.x - 0.050 * sign, -0.032, 1.425))
-    thumb_tip = Vector((palm_center.x - 0.098 * sign, -0.045, 1.345))
-    tube("Thumb." + side, (thumb_root, (thumb_root + thumb_tip) * 0.5 + Vector((0.0, -0.006, 0.012)), thumb_tip), (0.017, 0.014, 0.008), "skin", [{prefix + "Hand": 1.0}] * 3, 12, 0.82)
+    palm_center = Vector(((0.558 if RUNTIME_2D_STYLE else 0.808) * sign, -0.022, 1.385 if RUNTIME_2D_STYLE else 1.398))
+    palm_radii = (0.054, 0.040, 0.080) if RUNTIME_2D_STYLE else (0.080, 0.056, 0.124)
+    ellipsoid("Palm." + side, palm_center, palm_radii, "skin", prefix + "Hand", 28, 18)
+    if not RUNTIME_2D_STYLE:
+        finger_x_offsets = (-0.043, -0.014, 0.015, 0.043)
+        for finger_index, local_x in enumerate(finger_x_offsets):
+            finger_x = palm_center.x + local_x * sign
+            top = Vector((finger_x, -0.030, 1.365))
+            length = 0.112 - abs(finger_index - 1.5) * 0.008
+            bottom = Vector((finger_x + 0.005 * sign, -0.035, 1.365 - length))
+            tube("Finger.%s.%02d" % (side, finger_index), (top, (top + bottom) * 0.5, bottom), (0.0140, 0.013, 0.008), "skin", [{prefix + "Hand": 1.0}] * 3, 12, 0.78)
+        thumb_root = Vector((palm_center.x - 0.050 * sign, -0.032, 1.425))
+        thumb_tip = Vector((palm_center.x - 0.098 * sign, -0.045, 1.345))
+        tube("Thumb." + side, (thumb_root, (thumb_root + thumb_tip) * 0.5 + Vector((0.0, -0.006, 0.012)), thumb_tip), (0.017, 0.014, 0.008), "skin", [{prefix + "Hand": 1.0}] * 3, 12, 0.82)
 
 # Trousers: full pelvis and deformation-friendly legs with knee/ankle blend loops.
 pelvis_specs = (
-    ((0.0, 0.008, 1.400), 0.275, 0.180),
-    ((0.0, 0.004, 1.505), 0.300, 0.188),
-    ((0.0, 0.000, 1.610), 0.285, 0.180),
+    (
+        ((0.0, 0.008, 1.400), 0.218, 0.155),
+        ((0.0, 0.004, 1.505), 0.238, 0.162),
+        ((0.0, 0.000, 1.610), 0.230, 0.157),
+    )
+    if RUNTIME_2D_STYLE
+    else (
+        ((0.0, 0.008, 1.400), 0.275, 0.180),
+        ((0.0, 0.004, 1.505), 0.300, 0.188),
+        ((0.0, 0.000, 1.610), 0.285, 0.180),
+    )
 )
 loft("TrouserPelvis", pelvis_specs, "denim", ({"Hips": 1.0}, {"Hips": 1.0}, {"Hips": 0.82, "Spine": 0.18}), 36, exponent=2.55)
 tube("FlySeam", ((0.0, -0.187, 1.575), (0.0, -0.195, 1.475), (0.0, -0.183, 1.410)), (0.005, 0.007, 0.004), "denim_highlight", [{"Hips": 1.0}] * 3, 9, 0.60)
@@ -827,7 +1186,7 @@ for sign, side in ((1.0, "L"), (-1.0, "R")):
     )
 
 for sign, side, prefix in ((1.0, "L", "Left"), (-1.0, "R", "Right")):
-    x = 0.158 * sign
+    x = (0.120 if RUNTIME_2D_STYLE else 0.158) * sign
     points = (
         (x, 0.002, 1.530),
         (x, 0.002, 1.285),
@@ -844,20 +1203,32 @@ for sign, side, prefix in ((1.0, "L", "Left"), (-1.0, "R", "Right")):
         {prefix + "LowerLeg": 1.0},
         {prefix + "LowerLeg": 0.72, prefix + "Foot": 0.28},
     )
-    tube("TrouserLeg." + side, points, (0.154, 0.150, 0.146, 0.142, 0.137, 0.136), "denim", leg_weights, 28, 0.92)
-    tube("TrouserCuff." + side, ((x, -0.010, 0.420), (x, -0.012, 0.290)), (0.147, 0.145), "denim_highlight", ({prefix + "LowerLeg": 0.85, prefix + "Foot": 0.15}, {prefix + "LowerLeg": 0.48, prefix + "Foot": 0.52}), 26, 0.93)
+    leg_radii = (0.116, 0.112, 0.106, 0.098, 0.090, 0.084) if RUNTIME_2D_STYLE else (0.154, 0.150, 0.146, 0.142, 0.137, 0.136)
+    tube("TrouserLeg." + side, points, leg_radii, "denim", leg_weights, 28, 0.92)
+    cuff_leg_radii = (0.091, 0.088) if RUNTIME_2D_STYLE else (0.147, 0.145)
+    tube("TrouserCuff." + side, ((x, -0.010, 0.420), (x, -0.012, 0.290)), cuff_leg_radii, "denim_highlight", ({prefix + "LowerLeg": 0.85, prefix + "Foot": 0.15}, {prefix + "LowerLeg": 0.48, prefix + "Foot": 0.52}), 26, 0.93)
 
+    sneaker_upper_slices = (
+        ((0.135, 0.096, 0.045, 0.265), (0.062, 0.103, 0.045, 0.272), (-0.065, 0.112, 0.045, 0.232), (-0.192, 0.121, 0.045, 0.185), (-0.295, 0.114, 0.045, 0.137))
+        if RUNTIME_2D_STYLE
+        else ((0.165, 0.125, 0.045, 0.295), (0.075, 0.136, 0.045, 0.305), (-0.080, 0.150, 0.045, 0.260), (-0.235, 0.166, 0.045, 0.205), (-0.365, 0.158, 0.045, 0.150))
+    )
     shoe_shell(
         "SneakerUpper." + side,
         x,
-        ((0.165, 0.125, 0.045, 0.295), (0.075, 0.136, 0.045, 0.305), (-0.080, 0.150, 0.045, 0.260), (-0.235, 0.166, 0.045, 0.205), (-0.365, 0.158, 0.045, 0.150)),
+        sneaker_upper_slices,
         "white",
         prefix + "Foot",
+    )
+    sneaker_sole_slices = (
+        ((0.145, 0.105, 0.018, 0.060), (0.020, 0.116, 0.018, 0.062), (-0.155, 0.125, 0.018, 0.064), (-0.315, 0.122, 0.018, 0.062))
+        if RUNTIME_2D_STYLE
+        else ((0.175, 0.137, 0.018, 0.065), (0.020, 0.158, 0.018, 0.068), (-0.190, 0.174, 0.018, 0.070), (-0.390, 0.169, 0.018, 0.068))
     )
     shoe_shell(
         "SneakerSole." + side,
         x,
-        ((0.175, 0.137, 0.018, 0.065), (0.020, 0.158, 0.018, 0.068), (-0.190, 0.174, 0.018, 0.070), (-0.390, 0.169, 0.018, 0.068)),
+        sneaker_sole_slices,
         "sole",
         prefix + "Foot",
     )
@@ -866,15 +1237,16 @@ for sign, side, prefix in ((1.0, "L", "Left"), (-1.0, "R", "Right")):
     for lace_index in range(4):
         y = -0.255 + lace_index * 0.047
         z = 0.245 + lace_index * 0.018
-        tube("ShoeLace.%s.%02d" % (side, lace_index), ((x - 0.085, y, z), (x + 0.085, y, z)), (0.008, 0.008), "white_shadow", [{prefix + "Foot": 1.0}] * 2, 9, 0.70)
-    outer_x = x + 0.150 * sign
+        lace_half_width = 0.060 if RUNTIME_2D_STYLE else 0.085
+        tube("ShoeLace.%s.%02d" % (side, lace_index), ((x - lace_half_width, y, z), (x + lace_half_width, y, z)), (0.006, 0.006) if RUNTIME_2D_STYLE else (0.008, 0.008), "white_shadow", [{prefix + "Foot": 1.0}] * 2, 9, 0.70)
+    outer_x = x + (0.108 if RUNTIME_2D_STYLE else 0.150) * sign
     tube("ShoeNavyMark." + side, ((outer_x, 0.035, 0.165), (outer_x, -0.100, 0.158), (outer_x, -0.235, 0.130)), (0.018, 0.022, 0.014), "navy", [{prefix + "Foot": 1.0}] * 3, 10, 0.52)
     tube("ShoeRedMark." + side, ((outer_x + 0.002 * sign, -0.105, 0.157), (outer_x + 0.002 * sign, -0.175, 0.145)), (0.020, 0.016), "red", [{prefix + "Foot": 1.0}] * 2, 10, 0.52)
 
 
 def build_armature():
-    data = bpy.data.armatures.new("PlayerV3_HumanoidArmature")
-    rig = bpy.data.objects.new("PlayerV3_HumanoidRig", data)
+    data = bpy.data.armatures.new("PlayerV4Runtime2D_HumanoidArmature" if RUNTIME_2D_STYLE else "PlayerV3_HumanoidArmature")
+    rig = bpy.data.objects.new("PlayerV4Runtime2D_HumanoidRig" if RUNTIME_2D_STYLE else "PlayerV3_HumanoidRig", data)
     bpy.context.collection.objects.link(rig)
     rig.show_in_front = True
     bpy.context.view_layer.objects.active = rig
@@ -902,16 +1274,22 @@ def build_armature():
     add("Head", (0.0, 0.0, 2.410), (0.0, 0.0, 3.125), "Neck", connected=True)
 
     for sign, side in ((1.0, "Left"), (-1.0, "Right")):
-        x = 0.158 * sign
+        x = (0.120 if RUNTIME_2D_STYLE else 0.158) * sign
         add(side + "UpperLeg", (x, 0.0, 1.535), (x, 0.0, 1.050), "Hips")
         add(side + "LowerLeg", (x, 0.0, 1.050), (x, -0.006, 0.420), side + "UpperLeg", connected=True)
         add(side + "Foot", (x, -0.006, 0.420), (x, -0.200, 0.170), side + "LowerLeg", connected=True)
         add(side + "Toes", (x, -0.200, 0.170), (x, -0.420, 0.135), side + "Foot", connected=True)
 
-        add(side + "Shoulder", (0.070 * sign, 0.0, 2.235), (0.382 * sign, 0.0, 2.185), "UpperChest")
-        add(side + "UpperArm", (0.382 * sign, 0.0, 2.185), (0.650 * sign, -0.012, 1.820), side + "Shoulder", connected=True)
-        add(side + "LowerArm", (0.650 * sign, -0.012, 1.820), (0.782 * sign, -0.020, 1.500), side + "UpperArm", connected=True)
-        add(side + "Hand", (0.782 * sign, -0.020, 1.500), (0.812 * sign, -0.025, 1.255), side + "LowerArm", connected=True)
+        if RUNTIME_2D_STYLE:
+            add(side + "Shoulder", (0.060 * sign, 0.0, 2.220), (0.305 * sign, 0.0, 2.170), "UpperChest")
+            add(side + "UpperArm", (0.305 * sign, 0.0, 2.170), (0.480 * sign, -0.012, 1.810), side + "Shoulder", connected=True)
+            add(side + "LowerArm", (0.480 * sign, -0.012, 1.810), (0.545 * sign, -0.020, 1.485), side + "UpperArm", connected=True)
+            add(side + "Hand", (0.545 * sign, -0.020, 1.485), (0.560 * sign, -0.025, 1.294), side + "LowerArm", connected=True)
+        else:
+            add(side + "Shoulder", (0.070 * sign, 0.0, 2.235), (0.382 * sign, 0.0, 2.185), "UpperChest")
+            add(side + "UpperArm", (0.382 * sign, 0.0, 2.185), (0.650 * sign, -0.012, 1.820), side + "Shoulder", connected=True)
+            add(side + "LowerArm", (0.650 * sign, -0.012, 1.820), (0.782 * sign, -0.020, 1.500), side + "UpperArm", connected=True)
+            add(side + "Hand", (0.782 * sign, -0.020, 1.500), (0.812 * sign, -0.025, 1.255), side + "LowerArm", connected=True)
 
     bpy.ops.object.mode_set(mode="OBJECT")
     rig["humanoidContract"] = "FC-FAMILY-SHARED-HUMANOID-V1"
@@ -928,13 +1306,13 @@ for part in CHARACTER_PARTS:
 bpy.context.view_layer.objects.active = HEAD
 bpy.ops.object.join()
 BODY = bpy.context.object
-BODY.name = "PlayerV3_CompleteSkinnedBody"
+BODY.name = "PlayerV4Runtime2D_CompleteSkinnedBody" if RUNTIME_2D_STYLE else "PlayerV3_CompleteSkinnedBody"
 for polygon in BODY.data.polygons:
     polygon.material_index = 0
 while len(BODY.data.materials) > 1:
     BODY.data.materials.pop(index=1)
 BODY.parent = RIG
-armature_modifier = BODY.modifiers.new(name="PlayerV3_HumanoidSkin", type="ARMATURE")
+armature_modifier = BODY.modifiers.new(name="PlayerV4Runtime2D_HumanoidSkin" if RUNTIME_2D_STYLE else "PlayerV3_HumanoidSkin", type="ARMATURE")
 armature_modifier.object = RIG
 armature_modifier.use_vertex_groups = True
 
@@ -1018,12 +1396,23 @@ scene.render.image_settings.color_mode = "RGBA"
 scene.render.image_settings.color_depth = "8"
 scene.render.film_transparent = False
 scene.render.use_file_extension = True
+if RUNTIME_2D_STYLE:
+    # A restrained silhouette line is part of the review presentation only;
+    # production Unity rendering will use the corresponding shared toon shader.
+    scene.render.use_freestyle = True
+    scene.render.line_thickness = 0.72
+    freestyle = scene.view_layers[0].freestyle_settings
+    line_style = freestyle.linesets[0].linestyle
+    line_style.color = (0.075, 0.050, 0.055)
+    line_style.thickness = 0.72
 scene.world.use_nodes = True
 world_background = scene.world.node_tree.nodes.get("Background")
-world_background.inputs["Color"].default_value = (0.060, 0.068, 0.082, 1.0)
-world_background.inputs["Strength"].default_value = 0.34
+world_background.inputs["Color"].default_value = (0.085, 0.095, 0.120, 1.0) if RUNTIME_2D_STYLE else (0.060, 0.068, 0.082, 1.0)
+world_background.inputs["Strength"].default_value = 0.48 if RUNTIME_2D_STYLE else 0.34
 try:
-    scene.view_settings.look = "AgX - Medium High Contrast"
+    scene.view_settings.look = "AgX - Medium Low Contrast" if RUNTIME_2D_STYLE else "AgX - Medium High Contrast"
+    if RUNTIME_2D_STYLE:
+        scene.view_settings.exposure = 0.35
 except TypeError:
     pass
 
@@ -1065,7 +1454,7 @@ STATIC_RENDER_PATHS = []
 clear_pose()
 for view_name, camera_location in STATIC_VIEWS.items():
     point_camera(camera_location)
-    path = os.path.join(OUTPUT, "player-v6-blender-%s-v3-%s.png" % (view_name, QUALITY))
+    path = os.path.join(OUTPUT, "player-runtime2d-%s-v4-%s.png" % (view_name, QUALITY) if RUNTIME_2D_STYLE else "player-v6-blender-%s-v3-%s.png" % (view_name, QUALITY))
     scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
     STATIC_RENDER_PATHS.append(path)
@@ -1077,7 +1466,7 @@ if QUALITY == "final":
     point_camera((5.25, -5.55, 1.78))
     for pose_name, left_forward in (("p0-left-contact", True), ("p3-right-contact", False)):
         apply_walk_contact(left_forward)
-        path = os.path.join(OUTPUT, "player-v6-blender-deform-%s-v3.png" % pose_name)
+        path = os.path.join(OUTPUT, "player-runtime2d-deform-%s-v4.png" % pose_name if RUNTIME_2D_STYLE else "player-v6-blender-deform-%s-v3.png" % pose_name)
         scene.render.filepath = path
         bpy.ops.render.render(write_still=True)
         DEFORMATION_RENDER_PATHS.append(path)
@@ -1092,7 +1481,7 @@ if QUALITY == "final":
         angle = 2.0 * math.pi * index / 24.0
         radius = 7.5
         point_camera((math.sin(angle) * radius, -math.cos(angle) * radius, 1.72))
-        path = os.path.join(turntable_directory, "player-v6-turntable-%02d.png" % index)
+        path = os.path.join(turntable_directory, ("player-runtime2d-v4-turntable-%02d.png" if RUNTIME_2D_STYLE else "player-v6-turntable-%02d.png") % index)
         scene.render.filepath = path
         bpy.ops.render.render(write_still=True)
         TURNTABLE_RENDER_PATHS.append(path)
@@ -1108,7 +1497,7 @@ bpy.ops.object.select_all(action="DESELECT")
 BODY.select_set(True)
 RIG.select_set(True)
 bpy.context.view_layer.objects.active = RIG
-fbx_path = os.path.join(OUTPUT, "player-v6-blender-humanoid-v3.fbx")
+fbx_path = os.path.join(OUTPUT, "player-runtime2d-humanoid-v4.fbx" if RUNTIME_2D_STYLE else "player-v6-blender-humanoid-v3.fbx")
 bpy.ops.export_scene.fbx(
     filepath=fbx_path,
     use_selection=True,
@@ -1123,21 +1512,24 @@ bpy.ops.export_scene.fbx(
     embed_textures=True,
 )
 
-blend_path = os.path.join(OUTPUT, "player-v6-blender-identity-v3.blend")
+blend_path = os.path.join(OUTPUT, "player-runtime2d-identity-v4.blend" if RUNTIME_2D_STYLE else "player-v6-blender-identity-v3.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend_path)
 
 world_bounds = [BODY.matrix_world @ Vector(corner) for corner in BODY.bound_box]
 bounds_min = [min(point[index] for point in world_bounds) for index in range(3)]
 bounds_max = [max(point[index] for point in world_bounds) for index in range(3)]
 receipt = {
-    "contract": "FC-PLAYER-V6-BLENDER-IDENTITY-V3",
+    "contract": "FC-PLAYER-RUNTIME2D-IDENTITY-V4" if RUNTIME_2D_STYLE else "FC-PLAYER-V6-BLENDER-IDENTITY-V3",
     "status": "CANDIDATE_VISUAL_REVIEW_REQUIRED_DO_NOT_PROMOTE",
     "quality": QUALITY,
     "sourcePolicy": {
         "newTopology": True,
         "rejectedV1V2MeshImported": False,
-        "legacy2DAssetUsed": False,
+        "legacy2DAssetUsed": RUNTIME_2D_STYLE,
+        "legacy2DUse": "VISUAL_IDENTITY_REFERENCE_ONLY_NO_PIXEL_OR_GEOMETRY_TRANSFER" if RUNTIME_2D_STYLE else "NONE",
         "turnaroundUsedAsDecalOrTexture": False,
+        "externalAnimeReferenceUse": "ABSTRACT_PROPORTION_SANITY_ONLY" if RUNTIME_2D_STYLE else "NONE",
+        "externalMeshTextureRigImportedOrCopied": False,
     },
     "reference": {
         "path": REFERENCE,
@@ -1176,5 +1568,5 @@ receipt_path = os.path.join(OUTPUT, "build-receipt.json")
 with open(receipt_path, "w", encoding="utf-8") as handle:
     json.dump(receipt, handle, ensure_ascii=False, indent=2)
 
-print("PLAYER_V3_BUILD: PASS")
+print("PLAYER_RUNTIME2D_V4_BUILD: PASS" if RUNTIME_2D_STYLE else "PLAYER_V3_BUILD: PASS")
 print(json.dumps(receipt, ensure_ascii=False, indent=2))

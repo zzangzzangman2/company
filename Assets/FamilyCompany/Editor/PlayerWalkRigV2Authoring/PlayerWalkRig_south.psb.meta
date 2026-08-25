@@ -4,9 +4,9 @@ ScriptedImporter:
   internalIDToNameTable: []
   externalObjects: {}
   serializedVersion: 2
-  userData:
-  assetBundleName:
-  assetBundleVariant:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
   script: {fileID: 11500000, guid: b2a9591990af98743ba3ff7cf1000886, type: 3}
   textureImporterSettings:
     alphaSource: 1
@@ -71,12 +71,12 @@ ScriptedImporter:
     textureFormatSet: 0
     applyGammaDecoding: 0
   singleSpriteImportData:
-  - name:
-    originalName:
+  - name: 
+    originalName: 
     pivot: {x: 0, y: 0}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 0
@@ -88,7 +88,7 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 0, y: 0}
@@ -96,11 +96,11 @@ ScriptedImporter:
   multiSpriteImportData: []
   layeredSpriteImportData:
   - name: hat
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 177
@@ -112,17 +112,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 177, y: 4}
     spritePosition: {x: 117, y: 304}
   - name: hair_front
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 339
@@ -134,17 +134,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 339, y: 4}
     spritePosition: {x: 109, y: 274}
   - name: neck_head_face
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -156,17 +156,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 4}
     spritePosition: {x: 107, y: 216}
   - name: hand_L
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 273
@@ -178,17 +178,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 273, y: 201}
     spritePosition: {x: 110, y: 115}
   - name: forearm_L
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 281
@@ -200,17 +200,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 281, y: 121}
     spritePosition: {x: 107, y: 119}
   - name: upper_arm_L
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 123
@@ -222,17 +222,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 123, y: 121}
     spritePosition: {x: 110, y: 168}
   - name: shoe_L
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 411
@@ -244,17 +244,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 411, y: 121}
     spritePosition: {x: 149, y: 1}
   - name: shin_L
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 464
@@ -266,17 +266,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 464, y: 121}
     spritePosition: {x: 162, y: 29}
   - name: thigh_L
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -288,17 +288,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 285}
     spritePosition: {x: 163, y: 72}
   - name: torso
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 4
@@ -310,17 +310,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 121}
     spritePosition: {x: 138, y: 90}
   - name: pelvis
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 194
@@ -332,17 +332,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 194, y: 121}
     spritePosition: {x: 155, y: 82}
   - name: hand_R
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 328
@@ -354,17 +354,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 328, y: 201}
     spritePosition: {x: 230, y: 116}
   - name: forearm_R
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 347
@@ -376,17 +376,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 347, y: 121}
     spritePosition: {x: 222, y: 119}
   - name: upper_arm_R
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 123
@@ -398,17 +398,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 123, y: 201}
     spritePosition: {x: 216, y: 168}
   - name: shoe_R
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 190
@@ -420,17 +420,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 190, y: 201}
     spritePosition: {x: 193, y: 1}
   - name: shin_R
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 243
@@ -442,17 +442,17 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 243, y: 201}
     spritePosition: {x: 203, y: 29}
   - name: thigh_R
-    originalName:
+    originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
     border: {x: 0, y: 0, z: 0, w: 0}
-    customData:
+    customData: 
     rect:
       serializedVersion: 2
       x: 43
@@ -464,7 +464,7 @@ ScriptedImporter:
     spriteOutline: []
     vertices: []
     spritePhysicsOutline: []
-    indices:
+    indices: 
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 43, y: 285}
@@ -507,12 +507,12 @@ ScriptedImporter:
   tileTemplate: {instanceID: 0}
   padding: 4
   spriteSizeExpand: 2
-  skeletonAssetReferenceID:
+  skeletonAssetReferenceID: 
   pipeline: {instanceID: 0}
-  pipelineVersion:
+  pipelineVersion: 
   spriteCategoryList:
     categories: []
-  spritePackingTag:
+  spritePackingTag: 
   resliceFromLayer: 0
   pSDLayerImportSetting: []
   psdLayers:
@@ -693,8 +693,8 @@ ScriptedImporter:
   platformSettingsDirtyTick: 0
   spriteSizeExpandChanged: 1
   generateGOHierarchy: 0
-  textureAssetName:
-  prefabAssetName:
-  spriteLibAssetName:
-  skeletonAssetName:
+  textureAssetName: 
+  prefabAssetName: 
+  spriteLibAssetName: 
+  skeletonAssetName: 
   secondarySpriteTextures: []

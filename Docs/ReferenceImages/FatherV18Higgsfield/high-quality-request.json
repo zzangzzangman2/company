@@ -1,0 +1,26 @@
+{
+  "job_type": "tripo_h3_1_multiview_to_3d",
+  "input_order": [
+    "01_front.png",
+    "02_left.png",
+    "03_back.png",
+    "04_right.png"
+  ],
+  "params": {
+    "auto_size": false,
+    "face_limit": 50000,
+    "geometry_quality": "detailed",
+    "orientation": "default",
+    "pbr": false,
+    "quad": false,
+    "texture": true,
+    "texture_alignment": "original_image",
+    "texture_quality": "detailed",
+    "texture_seed": 48217
+  },
+  "expected_cost_credits_as_of_2026_08_25": 18.0,
+  "max_jobs_before_user_review": 1,
+  "enable_rigging": false,
+  "enable_animation": false,
+  "productionEligible": false
+}

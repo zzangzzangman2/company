@@ -17,6 +17,19 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             CandidateRoot + "MotherV1/mother-blender-humanoid-v1.fbx";
         public const string OlderSisterCandidateModelPath =
             CandidateRoot + "OlderSisterV1/older-sister-blender-humanoid-v1.fbx";
+        public const string PlayerRuntime2DV2CandidateModelPath =
+            CandidateRoot + "PlayerV4/player-runtime2d-humanoid-v4.fbx";
+        public const string FatherRuntime2DV2CandidateModelPath =
+            CandidateRoot + "FatherV2/father-blender-humanoid-v2.fbx";
+        public const string MotherRuntime2DV2CandidateModelPath =
+            CandidateRoot + "MotherV2/mother-blender-humanoid-v2.fbx";
+        public const string OlderSisterRuntime2DV2CandidateModelPath =
+            CandidateRoot + "OlderSisterV2/older-sister-blender-humanoid-v2.fbx";
+        public const string FatherApprovedV14CandidateModelPath =
+            CandidateRoot + "FatherApprovedV14/father-approved-v14-rigged.fbx";
+        public const string FatherApprovedV14NaturalWalkRigModelPath =
+            CandidateRoot +
+            "FatherApprovedV14NaturalWalkRigV1/father-approved-v14-natural-walk-rig-v1.fbx";
 
         private static readonly string[] IdentityHumanoidBoneNames =
         {
@@ -49,7 +62,18 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             return string.Equals(path, PlayerCandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherCandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, MotherCandidateModelPath, StringComparison.Ordinal) ||
-                   string.Equals(path, OlderSisterCandidateModelPath, StringComparison.Ordinal);
+                   string.Equals(path, OlderSisterCandidateModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherApprovedV14CandidateModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherApprovedV14NaturalWalkRigModelPath, StringComparison.Ordinal) ||
+                   IsRuntime2DV2Candidate(path);
+        }
+
+        public static bool IsRuntime2DV2Candidate(string path)
+        {
+            return string.Equals(path, PlayerRuntime2DV2CandidateModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherRuntime2DV2CandidateModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, MotherRuntime2DV2CandidateModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, OlderSisterRuntime2DV2CandidateModelPath, StringComparison.Ordinal);
         }
 
         private void OnPreprocessModel()
@@ -74,8 +98,57 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             {
                 importer.meshCompression = ModelImporterMeshCompression.Off;
                 importer.isReadable = true;
-                importer.humanDescription = CreateExplicitIdentityHumanDescription(importer.humanDescription);
+                importer.humanDescription = IsFatherApprovedV14Rig(assetPath)
+                    ? CreateExplicitFatherApprovedV14HumanDescription(importer.humanDescription)
+                    : CreateExplicitIdentityHumanDescription(importer.humanDescription);
             }
+        }
+
+        private static bool IsFatherApprovedV14Rig(string path)
+        {
+            return string.Equals(path, FatherApprovedV14CandidateModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherApprovedV14NaturalWalkRigModelPath, StringComparison.Ordinal);
+        }
+
+        private static HumanDescription CreateExplicitFatherApprovedV14HumanDescription(
+            HumanDescription description)
+        {
+            var mappings = new[]
+            {
+                Map("Hips", "Bip001 Pelvis"),
+                Map("Spine", "Bip001 Spine"),
+                Map("Chest", "Bip001 Spine1"),
+                Map("Neck", "Bip001 Neck"),
+                Map("Head", "Bip001 Head"),
+                Map("LeftShoulder", "Bip001 L Clavicle"),
+                Map("LeftUpperArm", "Bip001 L UpperArm"),
+                Map("LeftLowerArm", "Bip001 L Forearm"),
+                Map("LeftHand", "Bip001 L Hand"),
+                Map("RightShoulder", "Bip001 R Clavicle"),
+                Map("RightUpperArm", "Bip001 R UpperArm"),
+                Map("RightLowerArm", "Bip001 R Forearm"),
+                Map("RightHand", "Bip001 R Hand"),
+                Map("LeftUpperLeg", "Bip001 L Thigh"),
+                Map("LeftLowerLeg", "Bip001 L Calf"),
+                Map("LeftFoot", "Bip001 L Foot"),
+                Map("LeftToes", "Bip001 L Toe0"),
+                Map("RightUpperLeg", "Bip001 R Thigh"),
+                Map("RightLowerLeg", "Bip001 R Calf"),
+                Map("RightFoot", "Bip001 R Foot"),
+                Map("RightToes", "Bip001 R Toe0")
+            };
+            description.human = mappings;
+            return description;
+        }
+
+        private static HumanBone Map(string humanName, string boneName)
+        {
+            return new HumanBone
+            {
+                humanName = humanName,
+                boneName = boneName,
+                limit = new HumanLimit { useDefaultValues = true }
+            };
         }
 
         private static HumanDescription CreateExplicitIdentityHumanDescription(HumanDescription description)
