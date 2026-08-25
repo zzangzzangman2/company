@@ -23,7 +23,7 @@
   standard는 금지하며 새 유료 job은 사용자 명시 승인과 비용 재확인 전 제출하지 않는다.
 - 구형 V18~V21 빌드/런타임/씬/로그/중복 출력은 정리했다. paid/raw GLB, 생성 영수증, 현재 motion source,
   V22 scene/evidence, stash는 보존했다.
-- handoff 정리 후 `git diff --check`, motion/static source SHA-256 5건, Blender prep Python 구문 2건,
+- handoff 정리 후 사람이 작성한 C#/MD/PY/JSON scoped `git diff --check`, motion/static source SHA-256 5건,
   Unity `6000.3.21f1` `FAST_QA_WINDOWS.cmd -Profile editor-broad`를 다시 확인했다. Fast QA는 변경 28개를
   import/compile해 `PASS`, total `58.936s`, compile `55.396s`를 기록했다. 이는 코드/에셋 정합성 검증이며
   사용자 움직임 화면 승인으로 해석하지 않는다.

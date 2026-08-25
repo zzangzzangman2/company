@@ -186,7 +186,8 @@ written. Paid/raw source assets and receipts were preserved.
 - Unity `6000.3.21f1` isolated Windows build: PASS
 - D3D11 actual Starter Office route execution: PASS
 - repository `FAST_QA_WINDOWS.cmd -Profile editor-broad`: PASS
-- `git diff --check`: no whitespace errors other than line-ending warnings
+- human-authored C#/MD/PY/JSON `git diff --check`: PASS; generated Unity scene/meta retain the
+  serializer's blank-value whitespace
 - production scene, preview scene, and `EditorBuildSettings.asset` before/after hashes unchanged
 
 These checks prove isolation and execution only. They do not prove movement quality.
@@ -211,20 +212,20 @@ corrected in place — see `Source video audit`.
 | five code touchpoints + V22 scene present | working tree | all present |
 | preserved stash intact | `git stash list` | present as `stash@{0}` |
 | V22 build/runtime evidence retained, V18–V21 removed | `Artifacts/Family3DStarterOfficeCandidateQaV1/` | only V22 remains |
-| `git diff --check` clean | `git diff --check` | only CRLF warnings |
+| human-authored C#/MD/PY/JSON whitespace clean | scoped `git diff --check` | PASS; Unity-generated YAML excluded |
 
 Repository state at verification: `main` level with `origin/main` after `git fetch` (0 ahead, 0 behind),
 base `340e45a6`. `Artifacts/` is covered by `.gitignore:1`, so the 1.04 GB V22 player build is local
 evidence only and is not part of any commit.
 
-Two facts a future agent should know before committing: the 180 files in
+Two facts a future agent should know about the committed handoff: the 180 files in
 `FatherV18HiggsfieldNativeRunMapRuntimeV22R1/frames/` are the sparse every-sixth-frame capture that
-unresolved cause 3 rejects, not a real-time recording; and staging the pending work adds 21 files
-totalling 32.0 MB, of which the 10.7 MB motion albedo PNG would become the repository's second-largest
+unresolved cause 3 rejects, not a real-time recording; and the handoff commit adds 21 new files plus
+7 modified files, totalling 32.0 MB, of which the 10.7 MB motion albedo PNG is the repository's second-largest
 blob after the existing 16.0 MB `ThirdParty/StylooChibi/allinone.fbx`. That is within existing practice
 for this repository, which commits binaries directly and has no Git LFS tracking rules.
 
-`Candidates/FatherV18HiggsfieldStatic/` must be committed alongside the code even though V18 static was
-rejected: `Family3DStarterOfficeCandidateQaBuilder.cs`, `Family3DStarterOfficeCandidateQa.cs`, and
-`Tools/Blender/prepare_father_v18_higgsfield_static_unity.py` all still reference it, so committing the
-code without those assets would push a broken asset reference.
+`Candidates/FatherV18HiggsfieldStatic/` is intentionally committed alongside the code even though V18 static
+was rejected: `Family3DStarterOfficeCandidateQaBuilder.cs`, `Family3DStarterOfficeCandidateQa.cs`, and
+`Tools/Blender/prepare_father_v18_higgsfield_static_unity.py` all still reference it. Omitting those assets
+would leave a broken asset reference.
