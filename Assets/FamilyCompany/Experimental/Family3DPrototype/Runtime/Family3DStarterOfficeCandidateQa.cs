@@ -24,6 +24,23 @@ namespace FamilyCompany.Experimental.Family3D
         public const float StaticMapScaleTolerance = 0.005f;
         private const int MaximumFatherCompositeFrames = 180;
 
+        // Capture contract, rewritten 2026-08-26.
+        //
+        // The V22 capture wrote one telemetry sample only when it wrote a PNG, and it wrote a PNG
+        // every sixth moving frame. Because a 1280x720 encode is slow and its cost varies, the
+        // samples landed at a mean interval of 0.0973 s with a 0.5327 s worst case — an effective
+        // 10.3 fps against a ~1 s gait cycle, right at the Nyquist boundary. 17.4 s of run should
+        // hold about 17.5 phase wraps and only 12 were observable, so reading the period off the
+        // wraps produced 1.389 s, an aliasing artifact rather than a measurement.
+        //
+        // Two changes remove that. Time.captureDeltaTime pins the simulation to a fixed step, so a
+        // slow encode can no longer stretch the gait between samples, and telemetry is recorded on
+        // every moving frame regardless of whether that frame is also written to disk. PNGs stay on
+        // a stride purely to bound disk cost; they are no longer what defines the sample rate.
+        private const float FatherCaptureDeltaSeconds = 1f / 60f;
+        private const int MaximumFatherTelemetrySamples = 3600;
+        private const int FatherCompositeFrameStride = 2;
+
         [Header("Candidate prefabs (Experimental only)")]
         [SerializeField] private GameObject playerCandidate;
         [SerializeField] private GameObject olderSisterCandidate;
@@ -46,7 +63,8 @@ namespace FamilyCompany.Experimental.Family3D
         private readonly Dictionary<Camera, int> sourceCameraCullingMasks =
             new Dictionary<Camera, int>();
         private readonly List<FatherCaptureSample> fatherCaptureSamples =
-            new List<FatherCaptureSample>(MaximumFatherCompositeFrames);
+            new List<FatherCaptureSample>(MaximumFatherTelemetrySamples);
+        private double fatherCaptureSimulationSeconds;
         private StarterOfficeRuntimeBootstrap starter;
         private bool bindAttemptActive;
         private bool shuttingDown;
@@ -224,6 +242,12 @@ namespace FamilyCompany.Experimental.Family3D
                     if (HasCommandLineFlag("-familyCompanyMovementLayoutQa"))
                         throw new InvalidOperationException(
                             "Dedicated Father map-walk proof cannot be combined with the multi-layout movement QA.");
+
+                    // Pinned only after the office reports ready, so the readiness wait above keeps
+                    // running on real time and its timeout still means what it says. From here the
+                    // route advances in exact fixed steps and the wall clock only bounds the run
+                    // through the realtime auto-quit.
+                    Time.captureDeltaTime = FatherCaptureDeltaSeconds;
                     StartCoroutine(RunFatherMapWalkProof());
                 }
                 WriteRuntimeReceipt("BOUND");
@@ -317,18 +341,25 @@ namespace FamilyCompany.Experimental.Family3D
                 if (fatherProofRouteActive && father != null && father.IsMoving)
                 {
                     fatherMovingSampleFrames++;
-                    if (HasExplicitRuntimeOutput() &&
-                        compositeCapturedFrames < MaximumFatherCompositeFrames &&
-                        (fatherMovingSampleFrames == 1 ||
-                         fatherMovingSampleFrames % (fatherStaticRootMotionOnly ? 12 : 6) == 0))
-                        CaptureCompositeQaFrame(
-                            sourceOfficeCamera,
-                            fatherStaticRootMotionOnly
-                                ? "father-v18-higgsfield-static-map-walk"
-                                : fatherHiggsfieldIdleRun
-                                    ? "father-v18-higgsfield-idle-run-map-walk"
-                                : "father-stylized-sd-map-walk-v17",
-                            father);
+                    fatherCaptureSimulationSeconds += Time.captureDeltaTime > 0f
+                        ? Time.captureDeltaTime
+                        : Time.unscaledDeltaTime;
+                    if (HasExplicitRuntimeOutput())
+                    {
+                        if (fatherCaptureSamples.Count < MaximumFatherTelemetrySamples)
+                            RecordFatherCaptureSample(father, fatherMovingSampleFrames);
+                        int stride = fatherStaticRootMotionOnly ? 12 : FatherCompositeFrameStride;
+                        if (compositeCapturedFrames < MaximumFatherCompositeFrames &&
+                            (fatherMovingSampleFrames == 1 ||
+                             fatherMovingSampleFrames % stride == 0))
+                            CaptureCompositeQaFrame(
+                                sourceOfficeCamera,
+                                fatherStaticRootMotionOnly
+                                    ? "father-v18-higgsfield-static-map-walk"
+                                    : fatherHiggsfieldIdleRun
+                                        ? "father-v18-higgsfield-idle-run-map-walk"
+                                    : "father-stylized-sd-map-walk-v17");
+                    }
                 }
             }
         }
@@ -939,7 +970,11 @@ namespace FamilyCompany.Experimental.Family3D
             fatherCaptureSamples.Add(new FatherCaptureSample
             {
                 frameIndex = frameIndex,
+                // realtimeSeconds keeps the wall clock for diagnosing encode cost. Rate maths must
+                // use simulationSeconds: once captureDeltaTime is pinned the two deliberately
+                // diverge, and the wall clock is the one that stretches under a slow PNG write.
                 realtimeSeconds = Time.realtimeSinceStartup,
+                simulationSeconds = (float)fatherCaptureSimulationSeconds,
                 routeCircuit = fatherProofRouteCircuit,
                 routeLeg = fatherProofRouteLeg,
                 officePosition = binding.Agent.Position,
@@ -1287,6 +1322,8 @@ namespace FamilyCompany.Experimental.Family3D
                         : string.Empty,
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
                     fatherCaptureSampleCount = fatherCaptureSamples.Count,
+                    fatherCaptureDeltaSeconds = Time.captureDeltaTime,
+                    fatherCaptureSimulationSeconds = (float)fatherCaptureSimulationSeconds,
                     fatherCaptureSamples = fatherCaptureSamples.ToArray(),
                     compositeCapturedFrames = compositeCapturedFrames,
                     minimumCompositeLumaRange = compositeCapturedFrames > 0
@@ -1421,6 +1458,11 @@ namespace FamilyCompany.Experimental.Family3D
         private void OnDisable()
         {
             shuttingDown = true;
+            // Time.captureDeltaTime is global and survives leaving play mode, so an Editor run of
+            // this QA would otherwise leave the Editor pinned to a fixed step after the scene
+            // stops. Released here rather than only on quit, because the built player exits anyway
+            // and the Editor is the case that would actually be damaged.
+            Time.captureDeltaTime = 0f;
             ReleaseBindings();
             RestoreSourceCameraCullingMasks();
         }
@@ -1453,6 +1495,8 @@ namespace FamilyCompany.Experimental.Family3D
             public string fatherProofRoutePolicy;
             public bool fatherProofRouteCompleted;
             public int fatherCaptureSampleCount;
+            public float fatherCaptureDeltaSeconds;
+            public float fatherCaptureSimulationSeconds;
             public FatherCaptureSample[] fatherCaptureSamples;
             public int compositeCapturedFrames;
             public int minimumCompositeLumaRange;
@@ -1466,6 +1510,7 @@ namespace FamilyCompany.Experimental.Family3D
         {
             public int frameIndex;
             public float realtimeSeconds;
+            public float simulationSeconds;
             public int routeCircuit;
             public int routeLeg;
             public Vector2 officePosition;
