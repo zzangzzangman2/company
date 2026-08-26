@@ -1,5 +1,32 @@
 # DECISIONS
 
+## 2026-08-26 / 참조 0건 구문서 9개를 삭제한다
+
+결정: `Docs/` 최상단에서 README·AGENTS·CLAUDE·다른 문서·코드·스크립트 어디에서도 참조되지 않고 마지막
+갱신이 2026-08-20 이전인 문서 9개를 삭제한다.
+
+- 2026-08-10 `PROTOTYPE_0_1.md`, `SIMUL_HARVEST_V1.md`
+- 2026-08-14 `LIVE_PATCH_V1.md`, `STAMINA_NEEDS_INTEGRATION_PLAN.md`,
+  `FAMILY_COMPANY_SEATING_TRANSITIONS_DEPTH_CANDIDATE_2026-08-14.md`,
+  `RENDER_CLARITY_AUDIT_2026-08-14.md`, `SEATED_CHAIR_BACKREST_V1.md`
+- 2026-08-15 `OFFICE_UI_P0_VISUAL_SPEC.md`
+- 2026-08-20 `OPENING_PREMISE_V1.md`
+
+이유: 날짜만으로 고르지 않았다. 파일명과 확장자 없는 이름 두 가지로 tracked 소스 663개를 전수 검색해 참조가
+0건인 것만 골랐다. `AGENTS.md`와 `README.md`가 필독으로 지정한 문서는 날짜가 오래되어도 남긴다
+(`REAL_COMPANY_ALT_HISTORY.md`, `CONTRACTS_V0_3.md`, `SIMUL_MARKET_PORT.md`, `ULTIMATE_VISION.md`,
+`DO_NOTS.md` 등).
+
+보류: `UI_REMASTER_V3.md`는 같은 조건(참조 0건, 2026-08-14)에 걸렸지만 삭제하지 않았다. 이 문서가 정의한
+팔레트가 `MainNavigationHudPresenter.cs`에 실제 상수로 들어가 있고 `UiRemasterTypographyValidation.cs`와
+`TitleMoneyRainValidation.cs`가 현재 PASS 게이트로 그 규격을 강제한다. 끝난 보고서가 아니라 살아있는 시각
+정본이다.
+
+`RENDER_CLARITY_AUDIT_2026-08-14.md`는 `RenderClarity*` 코드와 로그 태그 이름만 겹칠 뿐 코드가 문서를
+인용하지 않는 완료된 감사 보고서라 삭제 대상에 포함했다.
+
+복구가 필요하면 `git show 91619d47:Docs/<파일명>`으로 되살린다.
+
 ## 2026-08-26 / Father V18 원인 순서를 뒤집는다 — pose strength가 1번, cadence는 2번
 
 결정: 기존 V22 텔레메트리(180프레임)와 `Family3DWalkActor.cs` 판독만으로 원인을 재측정한 결과, 미끄러짐의
