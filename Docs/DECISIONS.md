@@ -1,5 +1,32 @@
 # DECISIONS
 
+## 2026-08-26 / 보행 위상은 거리로 구동하고, 클립은 자기 보폭을 선언한다
+
+결정: Father V18의 3D 클립 위상을 오피스 에이전트의 `gaitPhase01`이 아니라 누적 `GaitDistance`를 그
+클립의 보폭으로 나눈 값으로 구동한다. `fatherMotionStrideOfficeUnits`가 그 보폭이며 실측으로 푼다.
+
+이유: `OfficeLocomotionGaitRules`는 `DefaultStrideLength` 이동마다 한 보행 사이클을 완성하는 **거리
+구동**이고, `DirectionalSpriteAnimator.ConfigureLocomotion`은 다른 stride 값을 예외로 거부한다. 즉 2D
+케이던스는 프로젝트 전역으로 잠겨 있어 오피스 쪽은 움직일 수 없다. 보폭이 다른 3D 클립을 재생 속도로
+맞추려는 시도는 원리적으로 불가능하며, 그 전제 위에 있던 근본원인 문서 4단계("stride와 speed로 cycle
+time을 산출하라")는 폐기한다. `gaitPhase01`은 랩되므로 비정수 보폭비에서 매 사이클 불연속이 생기지만
+`GaitDistance`는 단조 증가라 그렇지 않다.
+
+같은 자리에서 고친 것:
+
+- `phaseOffset`이 상쇄되고 있었다. 호출부가 `LockedCycleSeconds`를 곱하고 actor가 나누므로
+  `FindLeftForwardContactPhase`가 무효였고 발 고정이 임의 위상에서 돌았다. 좌우 접지 96/48 → 73/63.
+- `Unlit/Texture`가 빌드에서 스트립돼 `Sprites/Default`로 조용히 폴백하고 있었다. 씬이 참조하는 머티리얼
+  애셋으로 고정하고 폴백을 제거해 예외로 바꿨다. 조용한 대체가 V18~V22 다섯 번을 망친 원인이다.
+- 소스 액션을 644 `Lean_Forward_Sprint`에서 613 `Casual_Walk_inplace`로 교체했다(8 credits, 잔액 68).
+  같은 Tripo 베이스라 몸이 동일하다. 2사이클 클립이므로 임포터에서 프레임 16~58로 1사이클 트리밍한다.
+
+결과: 정합 `0.9995배`, 사이클당 슬립 `-0.0004 u`. 수정 전은 poseStrength 0.45에서 1.66~1.92배였다.
+
+한계: 시각 승인은 아직 사용자 몫이며 `productionEligible=false`다. 회전/출발/정지 블렌딩과 idle 외
+상태는 없고, 생성된 머리 실루엣이 승인 디자인의 "짧게 옆으로 넘긴 머리"와 다르다.
+
+
 ## 2026-08-26 / Father V18은 생성물이 아니라 수신부를 고친다
 
 결정: 새 Higgsfield job을 제출하기 전에 Unity 수신부의 결함 3건을 먼저 고친다. 근거는 원본 영상

@@ -46,6 +46,14 @@
 - The video this Father is calibrated against is `Downloads/rpg.mp4`, the same file as the recorded
   `캐릭.mp4` under a new name; the SHA-256 above matches it byte for byte. Its creator drives their
   character with the **same action 644**, which is why the paid output is not the suspect here.
+- **Moving clip replaced 2026-08-26.** Higgsfield action 613 `Casual_Walk_inplace`, job
+  `d291f1a9-35b6-4659-9e32-abff3e9b8126`, 8 credits, balance 76 to 68, output GLB SHA-256
+  `69FE2BA505CEAC04DED773CF7953EA45BF818B656CFAB63AC830CFCB27D0DA4E`. Rigged from the same Tripo
+  base `model_url` as idle-0 and run-644 at `height_meters` 1.7, so the body is identical: 28,924
+  vertices, 24 bones, matching topology, UVs and embedded texture. Unity assets are under
+  `Candidates/FatherV18HiggsfieldCasualWalk613/`. Action 644 `Lean_Forward_Sprint` is kept as
+  history only; measured on the source GLBs it drops the hips 15 percent and bobs them 3.7x more
+  because it carries a flight phase, and its stride implies 1.79 u/s against a 0.666 u/s office walk.
 - Full continuation instructions:
   [CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md](CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md).
 

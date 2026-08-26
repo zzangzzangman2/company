@@ -2,6 +2,40 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-26 / Father V18 보행 정합 완료 — 걷기 액션 교체 + 렌더/위상 버그 3건 수정
+
+증거: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldCasualWalkRuntimeV26R1`
+(`Artifacts/`는 `.gitignore` 대상, 로컬 증거). 루트 2바퀴 완주, 표본 1344개, 캡처 60.0 fps 고정.
+
+- **최종 정합 0.9995배.** 클립 사이클당 이동 `0.7744 u` 대 보폭 실측 `0.7747 u`, 사이클당 슬립
+  `-0.0004 u`(신장의 0.02%)로 측정 노이즈 수준이다. 수정 전 기준값은 poseStrength 0.45에서
+  1.66~1.92배, 1.0에서 0.841배였다.
+- **소스 액션을 교체했다.** Higgsfield action 613 `Casual_Walk_inplace`, 8 credits, 잔액 76 → 68.
+  `model_url`은 idle-0/run-644와 같은 Tripo 베이스라 몸이 동일하다(정점 28,924, 본 24, topology/UV/
+  텍스처 일치). 644 `Lean_Forward_Sprint`는 소스 GLB 실측에서 엉덩이를 15% 낮추고 상하 진폭이 3.7배인
+  전력질주였고, 보폭이 1.79 u/s를 함의해 0.666 u/s 사무실 보행과 2.7배 어긋났다. 히스토리로만 보존한다.
+- **`Unlit/Texture`가 빌드에서 스트립되고 있었다.** 런타임 `Shader.Find`로만 만들던 머티리얼이라 참조가
+  0건이었고, 플레이어에서 `null`을 받아 `?? Shader.Find("Sprites/Default")`로 조용히 폴백했다. 스프라이트
+  셰이더는 정점 컬러를 곱하고 `ZWrite Off`라 3D 스킨드 메시를 어둡게 뭉갠다. **V18~V22 플레이어 실행이
+  전부 이 상태였고**, V19의 `USER_VISUAL_REJECTED_STRETCHED_LEGS_WASHED_COLOR`를 포함한 반복된 색상
+  불만이 최소한 부분적으로 이것이다. 씬이 참조하는 머티리얼 애셋으로 고정하고 폴백을 제거해 예외로 바꿨다.
+- **`phaseOffset`이 수식에서 상쇄되고 있었다.** 호출부가 `LockedCycleSeconds`를 곱하고 actor가 다시
+  나누므로 `FindLeftForwardContactPhase`의 접지 정렬이 한 번도 적용되지 않았다. 발 고정이 보폭 중 임의
+  지점에서 돌아 좌우가 96/48로 어긋났고, 정렬 후 73/63으로 대칭이 됐다.
+- **보행 위상은 시간이 아니라 거리로 진행한다.** `OfficeLocomotionGaitRules`가 `DefaultStrideLength`
+  이동마다 한 사이클을 완성하고 `DirectionalSpriteAnimator.ConfigureLocomotion`이 다른 stride를 예외로
+  거부하므로 2D 케이던스는 전역 고정이다. 따라서 보폭이 다른 클립은 재타이밍으로 맞출 수 없고, 에이전트의
+  누적 `GaitDistance`를 그 클립의 보폭으로 나눠 구동해야 한다. `gaitPhase01`과 달리 단조 증가라 비정수
+  보폭비에서도 랩 불연속이 없다. 근본원인 문서 4단계의 "cycle time을 산출하라"는 이 전제 위에 있었으므로
+  폐기한다.
+- 계측 상수: office→QA 배율 `0.9082`, 오피스 사이클당 이동 `0.9026 u`,
+  `fatherMotionStrideOfficeUnits = 0.8526`. `target3DHeight`는 걷기 `1.4820` / 스프린트 `1.6080`으로
+  클립의 포즈 바운즈를 읽는 투영 높이 보정 때문에 클립마다 다르며 클립 안에서는 안정적이다.
+- 유료 알베도 3종 전부 `4096x4096 BC7` 실측 PASS이며 `Family3DHiggsfieldAlbedoImportValidation`이
+  Fast QA broad에서 PNG IHDR과 대조해 강제한다.
+- **남은 것은 사용자 시각 승인이다.** `productionEligible=false`를 유지한다. 아직 없는 것: 회전/출발/정지
+  블렌딩, idle 외 상태, 머리 실루엣이 승인 디자인(짧게 옆으로 넘긴 머리)과 다른 문제.
+
 ## 2026-08-26 / V23 실측: 수신부 3건은 고쳐졌고, 남은 원인은 소스 액션이다
 
 증거는 `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldNativeRunMapRuntimeV23R1`

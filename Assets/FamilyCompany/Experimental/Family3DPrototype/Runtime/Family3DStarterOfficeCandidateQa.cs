@@ -1453,15 +1453,18 @@ namespace FamilyCompany.Experimental.Family3D
         /// at DefaultStrideLength for every actor and DirectionalSpriteAnimator throws on any other
         /// value, so a clip with a different stride is matched here instead of there.
         ///
-        /// Solve it, do not guess it. Measured V24 numbers: the office covers 0.9026 QA units per
-        /// gait cycle at the 0.99380799 office stride, so the office-to-QA scale is 0.9083. Divide a
-        /// clip's measured QA stride by that scale. Casual_Walk's source foot sweep is 0.695x the
-        /// sprint's, and the sprint measured 1.0727 QA units, which puts this walk near 0.7455 QA
-        /// units and therefore near 0.8208 office units. Re-measure after every clip change.
+        /// Solve it, do not guess it. The office covers 0.9026 QA units per gait cycle at the
+        /// 0.99380799 office stride, so the office-to-QA scale is 0.9083; divide a clip's measured
+        /// QA stride by that scale. V25 ran at 0.8208 and measured a 0.7744 QA stride against
+        /// 0.7455 of travel, a 0.963x match, which solved to this 0.8526; V26 then measured 0.9995x
+        /// with 0.0004 u of slip per cycle. Re-measure after every clip change. target3DHeight is
+        /// 1.4820 for this walk against 1.6080 for the sprint because the projected-height
+        /// calibration reads the model's bounds in its current pose, so it is stable within a clip
+        /// and moves between clips, and stride scales with it.
         /// </summary>
         private static float ResolveFatherMotionStrideOfficeUnits()
         {
-            const float defaultStrideOfficeUnits = 0.8208f;
+            const float defaultStrideOfficeUnits = 0.8526f;
             string[] args = Environment.GetCommandLineArgs();
             for (var index = 0; index < args.Length - 1; index++)
             {
