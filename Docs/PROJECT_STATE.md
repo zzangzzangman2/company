@@ -2,27 +2,26 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-26 / 현재 Father 최우선 후보: 정적 외형 + clean-biped V4 + Claude action 613 V69
+## 2026-08-26 / 현재 Father 최우선 후보: 정적 외형 + clean-biped V4 + Claude action 613 V72
 
 - 사용자가 V66을 `Claude 걷기를 그대로 쓰지 않고 임의로 바꾼 보행`으로 기각했다. V66은
   `USER_VISUAL_REJECTED_WRONG_MOTION_SOURCE`이며 재사용하지 않는다.
-- V67은 첨부 기준 MP4와 같은 `Casual_Walk_inplace` action 613을 `poseStrength=1.0`으로 복원했지만,
-  사용자가 실제 화면에서 손·팔이 이상하다고 지적했다. V68은 어깨/손목 원인을 분리한 중간본이며 V69가
-  현재 후보다.
-- V69도 절차적/handcrafted 보행을 실행하지 않는다. action 613의 hip/knee/torso/head와 반대 팔 타이밍을
-  유지하고, SD 비율에 맞지 않아 손을 어깨 높이로 보내던 팔 앞뒤 진폭만 `0.58`로 맞춘다. 어깨와 손목은
-  승인 정적 rest, 팔꿈치는 작은 굽힘 범위로 제한한다.
+- V67은 action 613 보행을 복원했지만 손·팔 이상이 남았고, V69도 사용자가 실제 GIF에서 `너무
+  흐물거린다`고 기각했다. Humanoid arm/forearm muscle 진폭만 줄이는 방식은 재사용하지 않는다.
+- V72는 action 613의 hip/knee/pelvis/torso/head와 map 이동을 유지하되, 어깨부터 손가락까지 정적 기준
+  hierarchy를 매 프레임 rigid하게 복원한다. 상완 root만 몸 쪽 `4°`, 실제 측정 정면축 기준 반대 앞뒤
+  swing 최대 `2°`를 적용한다. 팔꿈치·손목·손가락은 각자 변형되지 않는다.
 - 외형/skin은 V66에서 만든 `FatherV18CleanBipedRigV4`와 정적 FBX surface material을 그대로 쓴다.
   셔츠·칼라 안정 component 38개, cross-side `0`, arm+leg mixed `0` 계약을 유지한다.
 - map contract는 action-613 pair의 facing `-16.9219°`, stride `0.675`, locked cycle
   `0.99380799s`, corner `360°/s`다.
 - hidden 720p 실제 맵에서 telemetry `1,344`, 30 fps PNG `673`, 두 회로를 완료했다. 확대 one-cycle
   30프레임에서 손이 소매에 붙고 손목 뒤집힘·어깨 으쓱임이 사라졌으며 작은 반대 팔 스윙은 남았다.
-  손의 골반 상대 최고 높이는 V68 L/R `+0.08/+0.07`에서 V69 `0.00/-0.00`으로 내려왔다. 전체 맵에서
+  손의 골반 상대 높이는 V72 L `-0.07..-0.00`, R `-0.10..-0.07`이다. 전체 맵에서
   torn shirt, third leg, separated shoe, backward torso, wrong facing은 보이지 않았다.
   자동 판정은 사용자 승인을 대신하지 않는다.
 - 상세:
-  [FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_V69_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_V69_QA_2026-08-26.md).
+  [FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_V72_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_V72_QA_2026-08-26.md).
   상태는 `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`다.
   Higgsfield 사용 0 credits, 잔액 68; production/default/Downloads/배포본은 변경하지 않았다.
 

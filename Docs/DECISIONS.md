@@ -1,6 +1,19 @@
 # DECISIONS
 
-## 2026-08-26 / Father V18 V69는 Claude 보행을 유지하고 SD 팔·손 리타깃만 제한한다
+## 2026-08-26 / Father V18 V72는 정적 팔·손 hierarchy를 rigid하게 유지한다
+
+결정: 사용자가 V69의 실제 GIF도 팔·손이 흐물거린다고 기각했으므로 Humanoid arm/forearm muscle을
+축소 리타깃하는 방식을 폐기한다. V72는 초기화 때 정적 기준의 shoulder-to-finger local transform을
+캡처하고, action 613을 샘플한 뒤 매 프레임 그 hierarchy 전체를 복원한다.
+
+팔꿈치·손목·손가락은 개별적으로 애니메이션하지 않는다. 실제 toe-forward에서 측정한 현행 정면축으로
+상완 root만 몸 쪽 `4°` tuck하고, 보행 위상에 맞춰 좌우 반대로 최대 `2°` 앞뒤 회전한다. action 613의
+하체·골반·몸통·머리와 map 이동/방향은 유지한다.
+
+hidden 720p 실제 맵 673 PNG/telemetry 1,344/two circuits를 다시 만들었다. 사용자 합격 전이므로
+`USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`다.
+
+## [사용자 팔·손 기각·V72로 대체] 2026-08-26 / Father V18 V69는 Claude 보행을 유지하고 SD 팔·손 리타깃만 제한한다
 
 결정: V67에서 복원한 action 613의 hip/knee/torso/head, 보행 위상, 이동과 방향을 유지한다. 사용자가
 실제 화면에서 지적한 손·팔만 고친다. V66 절차 보행으로 돌아가거나 새 걷기를 합성하지 않는다.

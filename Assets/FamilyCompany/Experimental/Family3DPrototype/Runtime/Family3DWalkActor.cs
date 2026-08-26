@@ -118,6 +118,7 @@ namespace FamilyCompany.Experimental.Family3D
         private Vector3 clipReferenceBodyPosition;
         private Quaternion clipReferenceBodyRotation = Quaternion.identity;
         private bool clipRetargetReady;
+        private TransformRest[] approvedRigidArmPose = Array.Empty<TransformRest>();
         private float moveBlend01;
         private double idleClock;
 
@@ -640,6 +641,7 @@ namespace FamilyCompany.Experimental.Family3D
             }
             for (var muscle = 0; muscle < clipSanitizationReferenceMuscles.Length; muscle++)
                 clipSanitizationReferenceMuscles[muscle] /= sampleCount;
+            CaptureApprovedRigidArmPose();
             // Calibrate the fixed target-avatar walking plane from a full-weight action frame,
             // never from the idle/walk transition. Subsequent samples are projected only in the
             // lateral dimension of this same plane.
@@ -699,40 +701,13 @@ namespace FamilyCompany.Experimental.Family3D
             RetargetClipDeltaToRest(neckNodDownUp, 1f);
             RetargetClipDeltaToRest(headNodDownUp, 1f);
 
-            // Retain the clip's arm front/back and elbow curves, changing only the T-pose-relative
-            // down/up baseline so both arms hang beside the torso while visibly counter-swinging.
-            // The source avatar's Down-Up channels lift one V4 hand to shoulder height, while the
-            // Claude reference keeps both hands below the waist. Lock only this cross-avatar
-            // baseline; the full opposite Front-Back curves below still own the visible swing.
-            sampledHumanPose.muscles[leftArmDownUp] = -0.98f;
-            sampledHumanPose.muscles[rightArmDownUp] = -0.98f;
-            // Preserve action 613's opposite timing, but fit its long human-arm arc to the short
-            // SD arms. Full amplitude puts the rear hand near shoulder height and visually pulls
-            // it away from the sleeve; 0.58 keeps a readable counter-swing beside the hips.
-            RetargetClipDeltaToRest(leftArmFrontBack, 0.58f);
-            RetargetClipDeltaToRest(rightArmFrontBack, 0.58f);
-            CopyRestMuscle(leftArmTwistInOut);
-            CopyRestMuscle(rightArmTwistInOut);
-            CopyRestMuscle(leftForearmTwistInOut);
-            CopyRestMuscle(rightForearmTwistInOut);
-            RetargetClipDeltaToTarget(
-                leftForearmStretch,
-                restHumanPose.muscles[leftForearmStretch] - 0.22f,
-                0.45f);
-            RetargetClipDeltaToTarget(
-                rightForearmStretch,
-                restHumanPose.muscles[rightForearmStretch] - 0.22f,
-                0.45f);
-            LimitNaturalElbow(leftForearmStretch);
-            LimitNaturalElbow(rightForearmStretch);
             humanPoseHandler.SetHumanPose(ref sampledHumanPose);
-            // Keep the shoulder base and wrist seam identical to the approved static body. Upper
-            // arm and forearm rotations remain animated, so action 613 still supplies the opposite
-            // timing; only the shrug and palm-flip artifacts are removed.
-            RestoreBoneRest(leftShoulder);
-            RestoreBoneRest(rightShoulder);
-            RestoreBoneRest(leftHand);
-            RestoreBoneRest(rightHand);
+            // The source Humanoid arm curves deform each short SD segment independently, which
+            // makes the elbow, wrist and fingers look rubbery even at reduced amplitude. Restore
+            // the approved hanging arm as one rigid hierarchy, then rotate only the upper-arm root
+            // by a tiny opposite swing. The action still owns legs, pelvis and torso unchanged.
+            RestoreApprovedRigidArmPose();
+            ApplyApprovedRigidArmSwing(lastSampledPhase01, isMoving);
             if (isMoving)
             {
                 if (!clipFootPlaneReady)
@@ -832,12 +807,101 @@ namespace FamilyCompany.Experimental.Family3D
                 1f);
         }
 
-        private void LimitNaturalElbow(int index)
+        private void CaptureApprovedRigidArmPose()
         {
-            sampledHumanPose.muscles[index] = Mathf.Clamp(
-                sampledHumanPose.muscles[index],
-                restHumanPose.muscles[index] - 0.34f,
-                restHumanPose.muscles[index] - 0.14f);
+            sampledHumanPose.bodyPosition = restHumanPose.bodyPosition;
+            sampledHumanPose.bodyRotation = restHumanPose.bodyRotation;
+            Array.Copy(
+                restHumanPose.muscles,
+                sampledHumanPose.muscles,
+                restHumanPose.muscles.Length);
+            sampledHumanPose.muscles[leftArmDownUp] = -0.98f;
+            sampledHumanPose.muscles[rightArmDownUp] = -0.98f;
+            CopyRestMuscle(leftArmFrontBack);
+            CopyRestMuscle(rightArmFrontBack);
+            CopyRestMuscle(leftArmTwistInOut);
+            CopyRestMuscle(rightArmTwistInOut);
+            CopyRestMuscle(leftForearmTwistInOut);
+            CopyRestMuscle(rightForearmTwistInOut);
+            CopyRestMuscle(leftForearmStretch);
+            CopyRestMuscle(rightForearmStretch);
+            humanPoseHandler.SetHumanPose(ref sampledHumanPose);
+            RestoreBoneRest(leftShoulder);
+            RestoreBoneRest(rightShoulder);
+
+            Transform leftRoot = leftShoulder != null ? leftShoulder : leftUpperArm;
+            Transform rightRoot = rightShoulder != null ? rightShoulder : rightUpperArm;
+            var result = new System.Collections.Generic.List<TransformRest>();
+            for (var index = 0; index < restPose.Length; index++)
+            {
+                Transform current = restPose[index].Transform;
+                if (current == null)
+                    continue;
+                bool isLeft = leftRoot != null &&
+                              (current == leftRoot || current.IsChildOf(leftRoot));
+                bool isRight = rightRoot != null &&
+                               (current == rightRoot || current.IsChildOf(rightRoot));
+                if (!isLeft && !isRight)
+                    continue;
+                result.Add(new TransformRest(
+                    current,
+                    current.localPosition,
+                    current.localRotation,
+                    current.localScale));
+            }
+            approvedRigidArmPose = result.ToArray();
+        }
+
+        private void RestoreApprovedRigidArmPose()
+        {
+            for (var index = 0; index < approvedRigidArmPose.Length; index++)
+            {
+                TransformRest rest = approvedRigidArmPose[index];
+                if (rest.Transform == null)
+                    continue;
+                rest.Transform.localPosition = rest.LocalPosition;
+                rest.Transform.localRotation = rest.LocalRotation;
+                rest.Transform.localScale = rest.LocalScale;
+            }
+        }
+
+        private void ApplyApprovedRigidArmSwing(float phase, bool isMoving)
+        {
+            if (!isMoving)
+                return;
+            Vector3 bodyForward = visualRoot.TransformDirection(clipSagittalForwardLocal);
+            bodyForward.y = 0f;
+            if (bodyForward.sqrMagnitude <= 0.000001f)
+                return;
+            bodyForward.Normalize();
+            Vector3 bodySide = Vector3.Cross(Vector3.up, bodyForward).normalized;
+            RotateRigidArmTowardBody(leftUpperArm, leftHand, bodyForward, bodySide);
+            RotateRigidArmTowardBody(rightUpperArm, rightHand, bodyForward, bodySide);
+            const float maximumSwingDegrees = 2f;
+            float swing = maximumSwingDegrees * Mathf.Cos(phase * Mathf.PI * 2f);
+            RotateBoneAroundWorldAxis(leftUpperArm, bodySide, -swing);
+            RotateBoneAroundWorldAxis(rightUpperArm, bodySide, swing);
+        }
+
+        private static void RotateRigidArmTowardBody(
+            Transform upperArm,
+            Transform hand,
+            Vector3 bodyForward,
+            Vector3 bodySide)
+        {
+            if (upperArm == null || hand == null)
+                return;
+            Vector3 current = hand.position - upperArm.position;
+            if (current.sqrMagnitude <= 0.0000001f)
+                return;
+            const float tuckDegrees = 4f;
+            Vector3 plus = Quaternion.AngleAxis(tuckDegrees, bodyForward) * current;
+            Vector3 minus = Quaternion.AngleAxis(-tuckDegrees, bodyForward) * current;
+            Vector3 desired = Mathf.Abs(Vector3.Dot(plus, bodySide)) <
+                              Mathf.Abs(Vector3.Dot(minus, bodySide))
+                ? plus
+                : minus;
+            upperArm.rotation = Quaternion.FromToRotation(current, desired) * upperArm.rotation;
         }
 
         private void LimitClipKneeExtension(int index)
