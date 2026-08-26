@@ -83,6 +83,7 @@ namespace FamilyCompany.Experimental.Family3D
         private bool fatherMapWalkQa;
         private float fatherMotionStrideOfficeUnits;
         private float fatherMotionYawDegreesPerSecond;
+        private bool fatherMotionYawSweep;
         private bool fatherProofRouteActive;
         private bool fatherProofRouteCompleted;
         private int fatherProofRouteCircuit = -1;
@@ -213,7 +214,14 @@ namespace FamilyCompany.Experimental.Family3D
                 delta.y = 0f;
                 if (delta.sqrMagnitude > 1e-8f)
                 {
-                    binding.TravelYaw = Quaternion.LookRotation(delta.normalized, Vector3.up);
+                    // The imported body faces -Z, not +Z. Measured by holding the actor at 15 degree
+                    // steps through a full turn and photographing each: the back of the head is what
+                    // the camera sees from yaw 90 through 255 and the face from 270 through 90,
+                    // which is the opposite of what LookRotation alone produces. Negating the travel
+                    // direction is what makes the body, the stride and the path agree; before this
+                    // the character walked with his back to where he was going, which is what read
+                    // as sliding and as legs moving sideways under a body facing elsewhere.
+                    binding.TravelYaw = Quaternion.LookRotation(-delta.normalized, Vector3.up);
                     binding.HasTravelYaw = true;
                 }
             }
@@ -235,6 +243,17 @@ namespace FamilyCompany.Experimental.Family3D
         /// </summary>
         private Quaternion ResolveBlendedYaw(Binding binding, Vector3 groundPosition)
         {
+            // Diagnostic sweep: hold the actor at a known yaw that steps 45 degrees every 40 moving
+            // frames, so a single run photographs all eight facings and the mapping from yaw to the
+            // side the camera sees can be read off the frames instead of inferred.
+            if (fatherMotionYawSweep)
+            {
+                float swept = 15f * Mathf.Floor(fatherMovingSampleFrames / 8f);
+                binding.BlendedYaw = Quaternion.Euler(0f, swept, 0f);
+                binding.HasBlendedYaw = true;
+                return binding.BlendedYaw;
+            }
+
             Quaternion target = ResolveTravelYaw(binding, groundPosition);
             if (!binding.HasBlendedYaw)
             {
@@ -322,6 +341,7 @@ namespace FamilyCompany.Experimental.Family3D
                     Time.captureDeltaTime = FatherCaptureDeltaSeconds;
                     fatherMotionStrideOfficeUnits = ResolveFatherMotionStrideOfficeUnits();
                     fatherMotionYawDegreesPerSecond = ResolveFatherMotionYawDegreesPerSecond();
+                    fatherMotionYawSweep = HasCommandLineFlag("-family3d-father-v18-motion-yaw-sweep");
                     StartCoroutine(RunFatherMapWalkProof());
                 }
                 WriteRuntimeReceipt("BOUND");
