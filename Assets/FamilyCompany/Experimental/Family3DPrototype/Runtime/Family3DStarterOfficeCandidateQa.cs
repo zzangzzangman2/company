@@ -65,6 +65,7 @@ namespace FamilyCompany.Experimental.Family3D
         // See Docs/FATHER_V18_FACING_OFFSET_METHOD.md.
         [SerializeField] private float fatherMotionFacingOffsetDegreesAsset = 90f;
         [SerializeField] private float fatherMotionStrideOfficeUnitsAsset;
+        [SerializeField] private bool fatherClipMuscleDeltaRetargetAsset;
         [SerializeField] private Texture2D fatherStaticAlbedo;
 
         // Serialized rather than resolved by Shader.Find at runtime. Unity strips any shader no
@@ -177,6 +178,7 @@ namespace FamilyCompany.Experimental.Family3D
             int isolatedLayer,
             float facingOffsetDegrees = 90f,
             float strideOfficeUnits = 0f,
+            bool clipMuscleDeltaRetarget = false,
             float fallbackScale = 1f,
             float qaGroundY = 0f)
         {
@@ -197,6 +199,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherCleanBipedNaturalWalk = false;
             fatherMotionFacingOffsetDegreesAsset = facingOffsetDegrees;
             fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
+            fatherClipMuscleDeltaRetargetAsset = clipMuscleDeltaRetarget;
         }
 
         public void ConfigureFatherCleanBipedNaturalWalk(
@@ -841,7 +844,8 @@ namespace FamilyCompany.Experimental.Family3D
                 Color.white,
                 poseStrength,
                 useFatherNaturalSdWalk,
-                fatherHiggsfieldIdleRun ? fatherHiggsfieldIdleClip : null);
+                fatherHiggsfieldIdleRun ? fatherHiggsfieldIdleClip : null,
+                fatherHiggsfieldIdleRun && ResolveClipMuscleDeltaRetarget(fatherClipMuscleDeltaRetargetAsset));
             if (fatherCleanBipedNaturalWalk)
             {
                 walkActor.ConfigureNaturalSdStyle(
@@ -1230,6 +1234,7 @@ namespace FamilyCompany.Experimental.Family3D
                 rightHandLocal = pose.rightHandLocal,
                 hipsLocal = pose.hipsLocal,
                 toeForwardLocal = pose.toeForwardLocal,
+                torsoUpLocal = pose.torsoUpLocal,
                 motionPhase01 = pose.motionPhase01,
                 leftFootPlanted = pose.leftFootPlanted,
                 rightFootPlanted = pose.rightFootPlanted
@@ -1750,6 +1755,19 @@ namespace FamilyCompany.Experimental.Family3D
             return defaultTurnSeconds;
         }
 
+        /// <summary>
+        /// Per-candidate default, overridable both ways from the command line so the same build can
+        /// be compared with and without the retarget.
+        /// </summary>
+        private static bool ResolveClipMuscleDeltaRetarget(bool assetDefault)
+        {
+            if (HasCommandLineFlag("-family3d-father-v18-motion-clip-delta-retarget"))
+                return true;
+            if (HasCommandLineFlag("-family3d-father-v18-motion-no-clip-delta-retarget"))
+                return false;
+            return assetDefault;
+        }
+
         private float ResolveFatherMotionFacingOffsetDegrees()
         {
             float defaultOffsetDegrees = fatherMotionFacingOffsetDegreesAsset;
@@ -1950,6 +1968,7 @@ namespace FamilyCompany.Experimental.Family3D
             public Vector3 rightHandLocal;
             public Vector3 hipsLocal;
             public Vector3 toeForwardLocal;
+            public Vector3 torsoUpLocal;
             public float motionPhase01;
             public bool leftFootPlanted;
             public bool rightFootPlanted;

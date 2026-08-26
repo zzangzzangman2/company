@@ -60,6 +60,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         //
         // Both values solved by Docs/FATHER_V18_FACING_OFFSET_METHOD.md. They belong to this
         // body-and-clip pair: the same clip on the clean biped body measured 11.65 and 0.7285.
+        // Solved for this body-and-clip pair; see Docs/FATHER_V18_FACING_OFFSET_METHOD.md.
         public const float FatherV18CasualWalkFacingOffsetDegrees = 90f;
         public const float FatherV18CasualWalkStrideOfficeUnits = 0.8526f;
 
@@ -458,7 +459,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     camera,
                     qaLayer,
                     FatherV18CasualWalkFacingOffsetDegrees,
-                    FatherV18CasualWalkStrideOfficeUnits);
+                    FatherV18CasualWalkStrideOfficeUnits,
+                    false);
             else
                 qa.Configure(
                     bundle.Prefabs[0],

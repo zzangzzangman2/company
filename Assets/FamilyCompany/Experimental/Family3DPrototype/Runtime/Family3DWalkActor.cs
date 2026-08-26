@@ -23,6 +23,17 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private Color labelColor = Color.white;
         [SerializeField, Range(0f, 1f)] private float poseStrength = 1f;
         [SerializeField] private bool dedicatedNaturalSdWalk;
+
+        /// <summary>
+        /// Play the imported clip as an offset from its own mean pose rather than as an absolute
+        /// pose. Unity's muscle values are absolute against the avatar's T-pose reference, so a clip
+        /// authored on a T-posed rig lands wrong on a rig whose bind pose is not one. The clean
+        /// biped rig is built by weighting a static mesh whose arms hang at the sides, so its
+        /// reference is an I-pose, and the Casual_Walk clip rendered on it with the torso pitched
+        /// about 37 degrees forward. Subtracting the clip's own mean removes whatever reference it
+        /// was authored against and leaves only the motion, which is then added to this rig's rest.
+        /// </summary>
+        [SerializeField] private bool clipMuscleDeltaRetarget;
         [SerializeField, Range(0f, 10f)] private float naturalSdTorsoUprightDegrees = 5f;
         [SerializeField, Range(0f, 12f)] private float naturalSdArmOutwardDegrees = 2f;
         [SerializeField, Range(0f, 18f)] private float naturalSdArmSwingDegrees = 6f;
@@ -73,6 +84,12 @@ namespace FamilyCompany.Experimental.Family3D
         private bool hasLastRootPose;
         private bool initialized;
         private float lastSampledPhase01;
+        private HumanPose clipSampledPose;
+        private HumanPose clipRetargetOutputPose;
+        private float[] clipReferenceMuscles;
+        private Vector3 clipReferenceBodyPosition;
+        private Quaternion clipReferenceBodyRotation = Quaternion.identity;
+        private bool clipRetargetReady;
         private float moveBlend01;
         private double idleClock;
 
@@ -107,7 +124,8 @@ namespace FamilyCompany.Experimental.Family3D
             Color color,
             float animationPoseStrength = 1f,
             bool useDedicatedNaturalSdWalk = false,
-            AnimationClip stationaryIdleClip = null)
+            AnimationClip stationaryIdleClip = null,
+            bool useClipMuscleDeltaRetarget = false)
         {
             familyId = id;
             visualRoot = modelRoot;
@@ -118,6 +136,7 @@ namespace FamilyCompany.Experimental.Family3D
             labelColor = color;
             poseStrength = Mathf.Clamp01(animationPoseStrength);
             dedicatedNaturalSdWalk = useDedicatedNaturalSdWalk;
+            clipMuscleDeltaRetarget = useClipMuscleDeltaRetarget;
         }
 
         public void ConfigureNaturalSdStyle(
@@ -222,6 +241,8 @@ namespace FamilyCompany.Experimental.Family3D
                 }
                 graph.Play();
                 phaseOffset = FindLeftForwardContactPhase();
+                if (clipMuscleDeltaRetarget)
+                    InitializeClipMuscleDeltaRetarget();
             }
 
             SamplePose(0d, false);
@@ -289,6 +310,18 @@ namespace FamilyCompany.Experimental.Family3D
             return sum.sqrMagnitude < 1e-10f ? Vector3.zero : sum.normalized;
         }
 
+        /// <summary>
+        /// Hips-to-head direction in host-local space, normalized. Zero when the head is unmapped.
+        /// </summary>
+        private Vector3 MeasureTorsoUpLocal()
+        {
+            if (head == null || hips == null)
+                return Vector3.zero;
+            Vector3 v = transform.InverseTransformPoint(head.position) -
+                        transform.InverseTransformPoint(hips.position);
+            return v.sqrMagnitude < 1e-10f ? Vector3.zero : v.normalized;
+        }
+
         public PoseSnapshot ReadPoseSnapshot()
         {
             Initialize();
@@ -299,6 +332,7 @@ namespace FamilyCompany.Experimental.Family3D
             return new PoseSnapshot
             {
                 toeForwardLocal = toeForward,
+                torsoUpLocal = MeasureTorsoUpLocal(),
                 leftFootLocal = leftLocal,
                 rightFootLocal = rightLocal,
                 leftFootWorld = leftFoot.position,
@@ -352,6 +386,9 @@ namespace FamilyCompany.Experimental.Family3D
                 }
                 graph.Evaluate(0f);
 
+                if (clipRetargetReady)
+                    ApplyClipMuscleDeltaRetarget();
+
                 if (poseStrength < 0.9999f)
                     ApplyPoseStrength();
             }
@@ -368,6 +405,110 @@ namespace FamilyCompany.Experimental.Family3D
                 UpdateNaturalSdFootContacts(Mathf.Repeat(phase - phaseOffset, 1f));
             else
                 ResetFootPlants();
+        }
+
+        /// <summary>
+        /// Captures this rig's rest muscles and the clip's own mean pose, once. The mean is taken
+        /// over a whole cycle of the moving clip with the idle input muted, so it is the clip's own
+        /// neutral rather than any particular frame of it.
+        /// </summary>
+        private void InitializeClipMuscleDeltaRetarget()
+        {
+            humanPoseHandler = new HumanPoseHandler(animator.avatar, animator.transform);
+            restHumanPose = new HumanPose();
+            humanPoseHandler.GetHumanPose(ref restHumanPose);
+            if (restHumanPose.muscles == null ||
+                restHumanPose.muscles.Length != HumanTrait.MuscleCount)
+                throw new InvalidOperationException(
+                    familyId + " could not capture a complete Humanoid rest pose for retargeting.");
+
+            clipSampledPose = new HumanPose();
+            clipRetargetOutputPose = new HumanPose
+            {
+                muscles = new float[HumanTrait.MuscleCount]
+            };
+            clipReferenceMuscles = new float[HumanTrait.MuscleCount];
+
+            const int sampleCount = 120;
+            if (idleClip != null)
+            {
+                clipMixer.SetInputWeight(0, 0f);
+                clipMixer.SetInputWeight(1, 1f);
+            }
+            var positionSum = Vector3.zero;
+            // Averaging quaternions by summing components is only valid when they are close and
+            // consistently signed, which successive frames of one walk cycle are once each is
+            // aligned to the first.
+            Quaternion rotationSum = default;
+            var first = true;
+            for (var sample = 0; sample < sampleCount; sample++)
+            {
+                clipPlayable.SetTime(sample / (float)sampleCount * walkClip.length);
+                graph.Evaluate(0f);
+                humanPoseHandler.GetHumanPose(ref clipSampledPose);
+                for (var muscle = 0; muscle < clipReferenceMuscles.Length; muscle++)
+                    clipReferenceMuscles[muscle] += clipSampledPose.muscles[muscle];
+                positionSum += clipSampledPose.bodyPosition;
+                Quaternion rotation = clipSampledPose.bodyRotation;
+                if (first)
+                {
+                    rotationSum = rotation;
+                    first = false;
+                }
+                else
+                {
+                    if (Quaternion.Dot(rotationSum, rotation) < 0f)
+                        rotation = new Quaternion(-rotation.x, -rotation.y, -rotation.z, -rotation.w);
+                    rotationSum = new Quaternion(
+                        rotationSum.x + rotation.x,
+                        rotationSum.y + rotation.y,
+                        rotationSum.z + rotation.z,
+                        rotationSum.w + rotation.w);
+                }
+            }
+            for (var muscle = 0; muscle < clipReferenceMuscles.Length; muscle++)
+                clipReferenceMuscles[muscle] /= sampleCount;
+            clipReferenceBodyPosition = positionSum / sampleCount;
+            clipReferenceBodyRotation = Normalize(rotationSum);
+            if (idleClip != null)
+            {
+                clipMixer.SetInputWeight(0, 1f);
+                clipMixer.SetInputWeight(1, 0f);
+            }
+            clipRetargetReady = true;
+        }
+
+        private static Quaternion Normalize(Quaternion value)
+        {
+            float magnitude = Mathf.Sqrt(
+                value.x * value.x + value.y * value.y + value.z * value.z + value.w * value.w);
+            return magnitude < 0.000001f
+                ? Quaternion.identity
+                : new Quaternion(
+                    value.x / magnitude,
+                    value.y / magnitude,
+                    value.z / magnitude,
+                    value.w / magnitude);
+        }
+
+        /// <summary>
+        /// Reads the pose the graph just produced, removes the clip's own neutral, and writes the
+        /// remainder onto this rig's rest pose.
+        /// </summary>
+        private void ApplyClipMuscleDeltaRetarget()
+        {
+            humanPoseHandler.GetHumanPose(ref clipSampledPose);
+            for (var muscle = 0; muscle < clipRetargetOutputPose.muscles.Length; muscle++)
+                clipRetargetOutputPose.muscles[muscle] =
+                    restHumanPose.muscles[muscle] +
+                    (clipSampledPose.muscles[muscle] - clipReferenceMuscles[muscle]);
+            clipRetargetOutputPose.bodyPosition =
+                restHumanPose.bodyPosition +
+                (clipSampledPose.bodyPosition - clipReferenceBodyPosition);
+            clipRetargetOutputPose.bodyRotation =
+                restHumanPose.bodyRotation *
+                (Quaternion.Inverse(clipReferenceBodyRotation) * clipSampledPose.bodyRotation);
+            humanPoseHandler.SetHumanPose(ref clipRetargetOutputPose);
         }
 
         private void InitializeNaturalSdPose()
@@ -814,6 +955,12 @@ namespace FamilyCompany.Experimental.Family3D
             /// Docs/FATHER_V18_FACING_OFFSET_METHOD.md solves the facing offset from.
             /// </summary>
             public Vector3 toeForwardLocal;
+
+            /// <summary>
+            /// Host-local hips-to-head direction. Its lean off vertical is the torso pitch, which
+            /// is what a bad retarget reference shows up as.
+            /// </summary>
+            public Vector3 torsoUpLocal;
             public float motionPhase01;
             public float footLead;
             public bool leftFootPlanted;
