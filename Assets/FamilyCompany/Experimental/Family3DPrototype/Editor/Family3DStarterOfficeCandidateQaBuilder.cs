@@ -60,6 +60,18 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldNativeRunMapBuildV22";
 
+        /// <summary>
+        /// The QA scene must reference this material as an asset. Unity strips any shader that no
+        /// scene or material asset pulls in, so the old runtime <c>Shader.Find("Unlit/Texture")</c>
+        /// resolved in the Editor and returned null in every built player, silently falling back to
+        /// Sprites/Default and rendering the Father as a dark vertex-coloured silhouette.
+        /// </summary>
+        public const string ExactAlbedoMaterialPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/" +
+            "FatherV18HiggsfieldExactAlbedoUnlit.mat";
+
+        private const string ExactAlbedoShaderName = "Unlit/Texture";
+
         private static readonly CandidateDefinition[] Candidates =
         {
             new CandidateDefinition("player", PlayerModelPath),
@@ -353,6 +365,44 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             return clip;
         }
 
+        /// <summary>
+        /// Creates or repairs the scene-referenced Unlit/Texture material. Shader.Find is safe here
+        /// because this runs in the Editor; the point of the asset is that the scene reference
+        /// carries the shader into the player, where Shader.Find would not.
+        /// </summary>
+        private static Material EnsureExactAlbedoMaterial()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(ExactAlbedoMaterialPath);
+            if (existing != null &&
+                existing.shader != null &&
+                string.Equals(existing.shader.name, ExactAlbedoShaderName, StringComparison.Ordinal))
+                return existing;
+
+            Shader shader = Shader.Find(ExactAlbedoShaderName);
+            if (shader == null)
+                throw new InvalidOperationException(
+                    ExactAlbedoShaderName + " is not available in this Editor installation.");
+
+            string directory = Path.GetDirectoryName(ProjectPath(ExactAlbedoMaterialPath));
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            var material = new Material(shader)
+            {
+                name = "FatherV18HiggsfieldExactAlbedoUnlit",
+                color = Color.white
+            };
+            AssetDatabase.CreateAsset(material, ExactAlbedoMaterialPath);
+            AssetDatabase.ImportAsset(
+                ExactAlbedoMaterialPath,
+                ImportAssetOptions.ForceSynchronousImport);
+            var created = AssetDatabase.LoadAssetAtPath<Material>(ExactAlbedoMaterialPath);
+            if (created == null)
+                throw new InvalidOperationException(
+                    "Could not create " + ExactAlbedoMaterialPath + ".");
+            return created;
+        }
+
         private static int CreateIsolatedQaScene(AssetBundle bundle)
         {
             EnsureAssetFolder("Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes");
@@ -377,12 +427,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 qa.ConfigureFatherStaticRootMotionOnly(
                     bundle.Prefabs[0],
                     bundle.StaticAlbedo,
+                    EnsureExactAlbedoMaterial(),
                     camera,
                     qaLayer);
             else if (bundle.FatherV18MotionOnly)
                 qa.ConfigureFatherHiggsfieldIdleRun(
                     bundle.Prefabs[0],
                     bundle.StaticAlbedo,
+                    EnsureExactAlbedoMaterial(),
                     bundle.IdleClip,
                     bundle.WalkClip,
                     camera,

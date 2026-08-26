@@ -52,6 +52,15 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool fatherHiggsfieldIdleRun;
         [SerializeField] private Texture2D fatherStaticAlbedo;
 
+        // Serialized rather than resolved by Shader.Find at runtime. Unity strips any shader no
+        // scene or material asset references, and Unlit/Texture was in exactly that position: the
+        // editor found it, every built player did not, and the code quietly fell back to
+        // Sprites/Default. A sprite shader on a skinned 3D mesh multiplies by vertex colour and
+        // runs with ZWrite off, which is why V18 through V22 all rendered the Father as a dark,
+        // depth-sorted-wrong silhouette while his albedo was correct the whole time. Referencing a
+        // material asset from the scene is what actually keeps the shader in the build.
+        [SerializeField] private Material fatherExactAlbedoMaterial;
+
         [Header("Isolated overlay")]
         [SerializeField] private Camera qaOverlayCamera;
         [SerializeField, Range(0, 31)] private int qaLayer = 31;
@@ -114,6 +123,7 @@ namespace FamilyCompany.Experimental.Family3D
         public void ConfigureFatherStaticRootMotionOnly(
             GameObject father,
             Texture2D albedo,
+            Material exactAlbedoMaterial,
             Camera overlayCamera,
             int isolatedLayer,
             float fallbackScale = 1f,
@@ -125,6 +135,7 @@ namespace FamilyCompany.Experimental.Family3D
             motherCandidate = null;
             sharedHumanoidWalkClip = null;
             fatherStaticAlbedo = albedo;
+            fatherExactAlbedoMaterial = exactAlbedoMaterial;
             qaOverlayCamera = overlayCamera;
             qaLayer = Mathf.Clamp(isolatedLayer, 0, 31);
             fallbackOfficeWorldToQaScale = Mathf.Max(0.0001f, fallbackScale);
@@ -137,6 +148,7 @@ namespace FamilyCompany.Experimental.Family3D
         public void ConfigureFatherHiggsfieldIdleRun(
             GameObject father,
             Texture2D albedo,
+            Material exactAlbedoMaterial,
             AnimationClip idleClip,
             AnimationClip runClip,
             Camera overlayCamera,
@@ -151,6 +163,7 @@ namespace FamilyCompany.Experimental.Family3D
             sharedHumanoidWalkClip = runClip;
             fatherHiggsfieldIdleClip = idleClip;
             fatherStaticAlbedo = albedo;
+            fatherExactAlbedoMaterial = exactAlbedoMaterial;
             qaOverlayCamera = overlayCamera;
             qaLayer = Mathf.Clamp(isolatedLayer, 0, 31);
             fallbackOfficeWorldToQaScale = Mathf.Max(0.0001f, fallbackScale);
@@ -692,14 +705,25 @@ namespace FamilyCompany.Experimental.Family3D
             // The source texture already contains the stylized colour and baked surface variation.
             // V19 copied the FBX Standard material and then hit it with a 1.2 directional light,
             // washing teal/charcoal into cyan/white. Use exact sRGB albedo without scene lighting.
-            Shader shader = Shader.Find("Unlit/Texture") ?? Shader.Find("Sprites/Default");
-            if (shader == null)
+            if (fatherExactAlbedoMaterial == null || fatherExactAlbedoMaterial.shader == null)
                 throw new InvalidOperationException(
-                    "Father V18 exact-albedo unlit shader is missing.");
+                    "Father V18 exact-albedo material is missing. It must be a scene-referenced " +
+                    "material asset; resolving the shader by name at runtime silently degrades to " +
+                    "Sprites/Default in a built player.");
+            // Fail rather than substitute. The previous fallback to Sprites/Default is what let a
+            // stripped shader look like a working build for five iterations.
+            if (!string.Equals(
+                    fatherExactAlbedoMaterial.shader.name,
+                    "Unlit/Texture",
+                    StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "Father V18 exact-albedo material must use Unlit/Texture, not " +
+                    fatherExactAlbedoMaterial.shader.name +
+                    ". The albedo already carries the stylized colour and baked shading.");
             for (var index = 0; index < renderers.Length; index++)
             {
                 Renderer renderer = renderers[index];
-                var material = new Material(shader)
+                var material = new Material(fatherExactAlbedoMaterial)
                 {
                     name = "FatherV18HiggsfieldMotion_ExactAlbedoUnlit_QaRuntimeMaterial"
                 };
