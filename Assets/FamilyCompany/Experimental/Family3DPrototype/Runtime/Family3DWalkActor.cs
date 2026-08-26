@@ -290,8 +290,13 @@ namespace FamilyCompany.Experimental.Family3D
             // reset after every sample; the bottom-centre host above it remains the sole root.
             visualRoot.localPosition = visualLocalPosition;
             visualRoot.localRotation = visualLocalRotation;
-            if (dedicatedNaturalSdWalk && isMoving)
-                ApplyNaturalSdFootPlants(phase);
+            // Ungated on 2026-08-26. The imported-clip branch previously had no ground constraint
+            // of any kind, so leftFootPlanted/rightFootPlanted were false in 180 of 180 V22 samples
+            // and QA could neither prevent slip nor detect it. Both branches align phase 0 to the
+            // left foot's forward contact — the SD path by construction, the imported path through
+            // FindLeftForwardContactPhase — which is the alignment ApplyFootPlant expects.
+            if (isMoving)
+                ApplyFootPlants(phase);
         }
 
         private void InitializeNaturalSdPose()
@@ -414,7 +419,7 @@ namespace FamilyCompany.Experimental.Family3D
             return value * value * (3f - 2f * value);
         }
 
-        private void ApplyNaturalSdFootPlants(float phase)
+        private void ApplyFootPlants(float phase)
         {
             ApplyFootPlant(
                 Mathf.Repeat(phase, 1f),

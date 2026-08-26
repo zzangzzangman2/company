@@ -1376,11 +1376,13 @@ namespace FamilyCompany.Experimental.Family3D
 
         private static float ResolveFatherMotionPoseStrength()
         {
-            // Native run-644 is authored for the video's short, chunky low-poly character. At
-            // 1.0 it overextends this Father's longer legs into a split-kick. Visual A/B at
-            // 0.45/0.62/0.78 selected 0.45: alternating steps and arm swing remain without the
-            // stretched-leg silhouette.
-            const float defaultStrength = 0.45f;
+            // Restored to 1.0 on 2026-08-26. The previous 0.45 came from a still-silhouette A/B
+            // that judged the split-kick without measuring travel. ApplyPoseStrength slerps every
+            // bone toward the rest pose, so damping the silhouette also halved the stride: the legs
+            // delivered 0.29-0.34 body heights per cycle against 0.56 of body travel, forcing
+            // 0.33-0.40 u of slip every cycle. Re-measure stride against office speed before
+            // selecting any value below 1.0, and never select one from stills again.
+            const float defaultStrength = 1f;
             string[] args = Environment.GetCommandLineArgs();
             for (var index = 0; index < args.Length - 1; index++)
             {
