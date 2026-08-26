@@ -301,13 +301,19 @@ namespace FamilyCompany.Experimental.Family3D
             // and QA could neither prevent slip nor detect it. Both branches align phase 0 to the
             // left foot's forward contact — the SD path by construction, the imported path through
             // FindLeftForwardContactPhase — which is the alignment ApplyFootPlant expects.
-            // Contact-aligned, not clip-aligned. ApplyFootPlant treats leg phase 0 as the moment of
-            // contact, but clip phase 0 is wherever the exported clip happens to start.
-            // FindLeftForwardContactPhase measures where the left foot actually reaches its forward
-            // contact, so subtract it here. Before 2026-08-26 phaseOffset cancelled out of the
-            // caller's arithmetic entirely and the plant window ran at an arbitrary point in the
-            // stride, which is why the two feet latched for unequal numbers of frames.
-            if (isMoving)
+            // Contact-aligned, not clip-aligned: ApplyFootPlant treats leg phase 0 as contact while
+            // clip phase 0 is wherever the export happens to start, so FindLeftForwardContactPhase
+            // is subtracted here rather than cancelling out of the caller's arithmetic as it did
+            // before 2026-08-26.
+            //
+            // Restricted back to the SD path the same day. SolveTwoBonePlant pins the foot to a
+            // world point and force-rotates the leg to reach it, which the authored SD walk can
+            // absorb because its stance is procedural. On the imported-clip path the user saw
+            // rubbery legs and an apparent third limb: any lateral error between facing and travel
+            // drags the pinned foot sideways and the solver stretches the leg to keep reaching. The
+            // imported path already carries a ground constraint through SetApplyFootIK, so it does
+            // not need this one, and a solver that deforms the mesh is worse than none.
+            if (dedicatedNaturalSdWalk && isMoving)
                 ApplyFootPlants(Mathf.Repeat(phase - phaseOffset, 1f));
         }
 

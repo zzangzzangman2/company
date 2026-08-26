@@ -194,7 +194,38 @@ namespace FamilyCompany.Experimental.Family3D
         /// is +Z, therefore North (4) is yaw 0 and the exact mapping is (direction - 4) * 45.
         /// </summary>
         /// <summary>
-        /// Turns the host toward the office facing at a bounded rate rather than snapping.
+        /// Faces the direction the actor actually travels, measured from its own ground positions.
+        ///
+        /// The octant table is not that direction. MapOfficeDirectionToUnityYaw spaces the eight
+        /// office facings 45 degrees apart in QA world space, but the office-to-QA ground mapping
+        /// does not scale X and Z equally, so a diagonal leg travels at 54.7 degrees while the table
+        /// says 45. Measured over a full V27 route the error alternated +9.7 and -9.7 degrees by
+        /// octant, which is the sqrt(2) skew of that mapping, and the feet swept that far off the
+        /// travel line every frame. Deriving the facing from consecutive ground positions removes
+        /// the skew by construction and needs no table. The table remains the fallback for the
+        /// frames before the actor has moved at all.
+        /// </summary>
+        private static Quaternion ResolveTravelYaw(Binding binding, Vector3 groundPosition)
+        {
+            if (binding.HasQaGroundPosition)
+            {
+                Vector3 delta = groundPosition - binding.LastQaGroundPosition;
+                delta.y = 0f;
+                if (delta.sqrMagnitude > 1e-8f)
+                {
+                    binding.TravelYaw = Quaternion.LookRotation(delta.normalized, Vector3.up);
+                    binding.HasTravelYaw = true;
+                }
+            }
+            binding.LastQaGroundPosition = groundPosition;
+            binding.HasQaGroundPosition = true;
+            return binding.HasTravelYaw
+                ? binding.TravelYaw
+                : MapOfficeDirectionToUnityYaw(binding.Agent.CurrentDirection);
+        }
+
+        /// <summary>
+        /// Turns the host toward the travel direction at a bounded rate rather than snapping.
         ///
         /// The office resolves facing to eight octants, so a corner is a 90 degree step delivered in
         /// one frame. At the office walking speed the Father covers about 0.17 units while turning
@@ -202,9 +233,9 @@ namespace FamilyCompany.Experimental.Family3D
         /// covers none. Only the first frame after binding adopts the target outright, so a spawn
         /// does not spin; every later change, a 180 degree reversal included, is rate bounded.
         /// </summary>
-        private Quaternion ResolveBlendedYaw(Binding binding)
+        private Quaternion ResolveBlendedYaw(Binding binding, Vector3 groundPosition)
         {
-            Quaternion target = MapOfficeDirectionToUnityYaw(binding.Agent.CurrentDirection);
+            Quaternion target = ResolveTravelYaw(binding, groundPosition);
             if (!binding.HasBlendedYaw)
             {
                 binding.BlendedYaw = target;
@@ -869,7 +900,7 @@ namespace FamilyCompany.Experimental.Family3D
             binding.SetCandidateVisible(true);
 
             Vector3 worldPosition = MapOfficeActorToQaGround(binding.Agent, sourceOfficeCamera);
-            Quaternion worldRotation = ResolveBlendedYaw(binding);
+            Quaternion worldRotation = ResolveBlendedYaw(binding, worldPosition);
             float gaitPhase01 = Mathf.Repeat(binding.Agent.GaitPhase01, 1f);
             bool isMoving =
                 binding.Agent.LastActualDisplacement.sqrMagnitude > MovementEpsilonSqr;
@@ -1787,6 +1818,14 @@ namespace FamilyCompany.Experimental.Family3D
             /// </summary>
             public Quaternion BlendedYaw { get; set; } = Quaternion.identity;
             public bool HasBlendedYaw { get; set; }
+
+            /// <summary>
+            /// Previous ground position, used to face the direction the actor actually moves in.
+            /// </summary>
+            public Vector3 LastQaGroundPosition { get; set; }
+            public bool HasQaGroundPosition { get; set; }
+            public Quaternion TravelYaw { get; set; } = Quaternion.identity;
+            public bool HasTravelYaw { get; set; }
             public int ObservedDirectionMask { get; set; }
             public float MinimumObservedGaitPhase01 { get; set; }
             public float MaximumObservedGaitPhase01 { get; set; }
