@@ -27,7 +27,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldStaticMapQa.unity";
         public const string FatherV18MotionQaScenePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedNaturalWalkMapQaV39.unity";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CasualWalkMapQaV40.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -45,9 +45,30 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         // independently generated idle-0 body (V19's stretched-leg failure). The moving clip is
         // Casual_Walk_inplace as of 2026-08-26; run-644 was a sprint and is kept only as history.
         public const string FatherV18MotionModelPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV1/father-v18-clean-biped-rig-v1.fbx";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
+        // The body is the clean biped rig, the motion is the paid Higgsfield Casual_Walk_inplace
+        // clip. Both are Humanoid, so the clip retargets through the avatar; this is clip
+        // retargeting, not the cross-job skin mixing that produced V19's stretched legs. The user
+        // approved this walk on the Higgsfield body and asked for it back on the better-looking
+        // clean biped body, so the two are combined rather than one replacing the other.
+        // The Casual_Walk clip runs on its own native Higgsfield body, which is the configuration
+        // the user approved. Retargeting the same clip onto the clean biped body was tried on
+        // 2026-08-26 and rejected: Humanoid retargeting between the two avatars bends the torso
+        // forward and drops the head, the same posture failure the user reported against V36. The
+        // clean biped assets stay in the repository as the better-looking body for a walk authored
+        // on it, but a clip authored on one body does not transfer to the other.
+        //
+        // Both values solved by Docs/FATHER_V18_FACING_OFFSET_METHOD.md. They belong to this
+        // body-and-clip pair: the same clip on the clean biped body measured 11.65 and 0.7285.
+        public const float FatherV18CasualWalkFacingOffsetDegrees = 90f;
+        public const float FatherV18CasualWalkStrideOfficeUnits = 0.8526f;
+
+        public const string FatherV18MotionIdleClipPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-idle.fbx";
+        public const string FatherV18MotionWalkClipPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
         public const string FatherV18MotionTexturePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV1/father-v18-clean-biped-rig-v1-albedo.png";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-albedo.png";
         public const string MotherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/MotherV1/mother-blender-humanoid-v1.fbx";
         public const string DefaultBuildRoot =
@@ -55,7 +76,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldStaticMapBuildV18";
         public const string FatherV18MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedNaturalWalkMapBuildV39";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CasualWalkMapBuildV40";
 
         /// <summary>
         /// The QA scene must reference this material as an asset. Unity strips any shader that no
@@ -180,7 +201,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 fatherV18StaticOnly
                     ? "FamilyCompanyFatherV18HiggsfieldStaticMapQa.exe"
                     : fatherV18MotionOnly
-                        ? "FamilyCompanyFatherV18CleanBipedNaturalWalkMapQa.exe"
+                        ? "FamilyCompanyFatherV18CasualWalkMapQa.exe"
                     : "FamilyCompanyStarterOffice3DCandidateQa.exe");
             var options = new BuildPlayerOptions
             {
@@ -303,10 +324,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     throw new InvalidOperationException(
                         "Father V18 motion texture did not load: " + FatherV18MotionTexturePath);
 
+                AnimationClip idleClip = LoadHumanClip(FatherV18MotionIdleClipPath, "Idle");
+                AnimationClip motionWalkClip = LoadHumanClip(
+                    FatherV18MotionWalkClipPath,
+                    "Casual_Walk_inplace");
                 return new AssetBundle(
                     prefabs,
-                    null,
-                    null,
+                    motionWalkClip,
+                    idleClip,
                     texture,
                     definitions,
                     false,
@@ -424,12 +449,16 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     camera,
                     qaLayer);
             else if (bundle.FatherV18MotionOnly)
-                qa.ConfigureFatherCleanBipedNaturalWalk(
+                qa.ConfigureFatherHiggsfieldIdleRun(
                     bundle.Prefabs[0],
                     bundle.StaticAlbedo,
                     EnsureExactAlbedoMaterial(),
+                    bundle.IdleClip,
+                    bundle.WalkClip,
                     camera,
-                    qaLayer);
+                    qaLayer,
+                    FatherV18CasualWalkFacingOffsetDegrees,
+                    FatherV18CasualWalkStrideOfficeUnits);
             else
                 qa.Configure(
                     bundle.Prefabs[0],

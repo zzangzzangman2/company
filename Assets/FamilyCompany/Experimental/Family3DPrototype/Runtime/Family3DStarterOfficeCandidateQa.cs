@@ -57,6 +57,14 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool fatherStaticRootMotionOnly;
         [SerializeField] private bool fatherHiggsfieldIdleRun;
         [SerializeField] private bool fatherCleanBipedNaturalWalk;
+
+        // Facing offset and stride belong to the body-and-clip pair, not to the project. Putting
+        // the Casual_Walk clip on the clean biped body moved the offset from 90 degrees to 11.65
+        // and the stride from 0.8526 to 0.7285, so both are configured per candidate and the
+        // command line only overrides them for tuning.
+        // See Docs/FATHER_V18_FACING_OFFSET_METHOD.md.
+        [SerializeField] private float fatherMotionFacingOffsetDegreesAsset = 90f;
+        [SerializeField] private float fatherMotionStrideOfficeUnitsAsset;
         [SerializeField] private Texture2D fatherStaticAlbedo;
 
         // Serialized rather than resolved by Shader.Find at runtime. Unity strips any shader no
@@ -167,6 +175,8 @@ namespace FamilyCompany.Experimental.Family3D
             AnimationClip runClip,
             Camera overlayCamera,
             int isolatedLayer,
+            float facingOffsetDegrees = 90f,
+            float strideOfficeUnits = 0f,
             float fallbackScale = 1f,
             float qaGroundY = 0f)
         {
@@ -185,6 +195,8 @@ namespace FamilyCompany.Experimental.Family3D
             fatherStaticRootMotionOnly = false;
             fatherHiggsfieldIdleRun = true;
             fatherCleanBipedNaturalWalk = false;
+            fatherMotionFacingOffsetDegreesAsset = facingOffsetDegrees;
+            fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
         }
 
         public void ConfigureFatherCleanBipedNaturalWalk(
@@ -1738,9 +1750,9 @@ namespace FamilyCompany.Experimental.Family3D
             return defaultTurnSeconds;
         }
 
-        private static float ResolveFatherMotionFacingOffsetDegrees()
+        private float ResolveFatherMotionFacingOffsetDegrees()
         {
-            const float defaultOffsetDegrees = 90f;
+            float defaultOffsetDegrees = fatherMotionFacingOffsetDegreesAsset;
             string[] args = Environment.GetCommandLineArgs();
             for (var index = 0; index < args.Length - 1; index++)
             {
@@ -1786,9 +1798,11 @@ namespace FamilyCompany.Experimental.Family3D
             return defaultDegreesPerSecond;
         }
 
-        private static float ResolveFatherMotionStrideOfficeUnits()
+        private float ResolveFatherMotionStrideOfficeUnits()
         {
-            const float defaultStrideOfficeUnits = 0.8526f;
+            float defaultStrideOfficeUnits = fatherMotionStrideOfficeUnitsAsset > 0f
+                ? fatherMotionStrideOfficeUnitsAsset
+                : 0.8526f;
             string[] args = Environment.GetCommandLineArgs();
             for (var index = 0; index < args.Length - 1; index++)
             {
