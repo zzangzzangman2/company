@@ -83,6 +83,7 @@ namespace FamilyCompany.Experimental.Family3D
         private bool fatherMapWalkQa;
         private float fatherMotionStrideOfficeUnits;
         private float fatherMotionYawDegreesPerSecond;
+        private float fatherMotionFacingOffsetDegrees;
         private bool fatherMotionYawSweep;
         private bool fatherProofRouteActive;
         private bool fatherProofRouteCompleted;
@@ -206,7 +207,10 @@ namespace FamilyCompany.Experimental.Family3D
         /// the skew by construction and needs no table. The table remains the fallback for the
         /// frames before the actor has moved at all.
         /// </summary>
-        private static Quaternion ResolveTravelYaw(Binding binding, Vector3 groundPosition)
+        private static Quaternion ResolveTravelYaw(
+            Binding binding,
+            Vector3 groundPosition,
+            float facingOffsetDegrees)
         {
             if (binding.HasQaGroundPosition)
             {
@@ -214,14 +218,14 @@ namespace FamilyCompany.Experimental.Family3D
                 delta.y = 0f;
                 if (delta.sqrMagnitude > 1e-8f)
                 {
-                    // The imported body faces -Z, not +Z. Measured by holding the actor at 15 degree
-                    // steps through a full turn and photographing each: the back of the head is what
-                    // the camera sees from yaw 90 through 255 and the face from 270 through 90,
-                    // which is the opposite of what LookRotation alone produces. Negating the travel
-                    // direction is what makes the body, the stride and the path agree; before this
-                    // the character walked with his back to where he was going, which is what read
-                    // as sliding and as legs moving sideways under a body facing elsewhere.
-                    binding.TravelYaw = Quaternion.LookRotation(-delta.normalized, Vector3.up);
+                    // The imported body's forward is not +Z, so LookRotation alone points it wrong.
+                    // The offset is a measured property of this rig, not a guess: hold the actor at
+                    // known yaw values with -family3d-father-v18-motion-yaw-sweep, photograph each,
+                    // and read off which yaw shows the back of the head. Do not infer it from foot
+                    // swing or toe direction; a swing axis is symmetric and carries no sign.
+                    binding.TravelYaw =
+                        Quaternion.LookRotation(delta.normalized, Vector3.up) *
+                        Quaternion.Euler(0f, facingOffsetDegrees, 0f);
                     binding.HasTravelYaw = true;
                 }
             }
@@ -254,7 +258,8 @@ namespace FamilyCompany.Experimental.Family3D
                 return binding.BlendedYaw;
             }
 
-            Quaternion target = ResolveTravelYaw(binding, groundPosition);
+            Quaternion target = ResolveTravelYaw(
+                binding, groundPosition, fatherMotionFacingOffsetDegrees);
             if (!binding.HasBlendedYaw)
             {
                 binding.BlendedYaw = target;
@@ -341,6 +346,7 @@ namespace FamilyCompany.Experimental.Family3D
                     Time.captureDeltaTime = FatherCaptureDeltaSeconds;
                     fatherMotionStrideOfficeUnits = ResolveFatherMotionStrideOfficeUnits();
                     fatherMotionYawDegreesPerSecond = ResolveFatherMotionYawDegreesPerSecond();
+                    fatherMotionFacingOffsetDegrees = ResolveFatherMotionFacingOffsetDegrees();
                     fatherMotionYawSweep = HasCommandLineFlag("-family3d-father-v18-motion-yaw-sweep");
                     StartCoroutine(RunFatherMapWalkProof());
                 }
@@ -1445,6 +1451,7 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherCaptureSampleCount = fatherCaptureSamples.Count,
                     fatherMotionStrideOfficeUnits = fatherMotionStrideOfficeUnits,
                     fatherMotionYawDegreesPerSecond = fatherMotionYawDegreesPerSecond,
+                    fatherMotionFacingOffsetDegrees = fatherMotionFacingOffsetDegrees,
                     fatherCaptureDeltaSeconds = Time.captureDeltaTime,
                     fatherCaptureSimulationSeconds = (float)fatherCaptureSimulationSeconds,
                     fatherCaptureSamples = fatherCaptureSamples.ToArray(),
@@ -1555,6 +1562,35 @@ namespace FamilyCompany.Experimental.Family3D
         /// Raising it toward a snap defeats the blend; lowering it makes the Father visibly walk
         /// sideways out of corners.
         /// </summary>
+        /// <summary>
+        /// Yaw added after LookRotation so the body's own forward, not Unity's +Z, ends up along
+        /// travel. Overridable so the four right-angle candidates can be compared in one sitting
+        /// rather than argued about.
+        /// </summary>
+        private static float ResolveFatherMotionFacingOffsetDegrees()
+        {
+            const float defaultOffsetDegrees = 90f;
+            string[] args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length - 1; index++)
+            {
+                if (!string.Equals(
+                        args[index],
+                        "-family3d-father-v18-motion-facing-offset-degrees",
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!float.TryParse(
+                        args[index + 1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out float degrees) ||
+                    degrees < -360f || degrees > 360f)
+                    throw new InvalidOperationException(
+                        "Father V18 facing offset must be in [-360, 360] degrees.");
+                return degrees;
+            }
+            return defaultOffsetDegrees;
+        }
+
         private static float ResolveFatherMotionYawDegreesPerSecond()
         {
             const float defaultDegreesPerSecond = 360f;
@@ -1689,6 +1725,7 @@ namespace FamilyCompany.Experimental.Family3D
             public int fatherCaptureSampleCount;
             public float fatherMotionStrideOfficeUnits;
             public float fatherMotionYawDegreesPerSecond;
+            public float fatherMotionFacingOffsetDegrees;
             public float fatherCaptureDeltaSeconds;
             public float fatherCaptureSimulationSeconds;
             public FatherCaptureSample[] fatherCaptureSamples;
