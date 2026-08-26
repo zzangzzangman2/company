@@ -14,7 +14,24 @@ The folder does not alter the production family sprite catalog, production scene
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
 
-## Father V18 clean-biped Claude walk V72 (current isolated review candidate)
+## Father V18 native action-613 walk V73 (current isolated review candidate)
+
+V73 follows the direct Higgsfield application contract. The action-613 walk FBX is the single
+authority for the visible mesh, Avatar, bind skeleton, skin weights, and `Casual_Walk_inplace`
+clip. It runs at `poseStrength=1.0` with no separate-idle cross-retarget, muscle-delta remap,
+anatomical sanitation, rigid-arm replacement, or procedural gait. The approved static FBX surface
+material and 4096 albedo remain the surface authority.
+
+Map tuning is native facing `90°`, stride `0.8526`, locked cycle `0.99380799s`, and corner turn
+`360°/s`. The hidden 720p Player completed two actual Office circuits with 1,344 telemetry samples
+and 673 PNGs at 30 fps. Review media is under `outputs/father-v18-native613-v73-review`, including a
+30 fps close cycle, non-looping close full route, non-looping actual full-map GIF, and eight
+30-frame straight/turn sheets.
+
+V73 is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. Higgsfield usage is 0 credits
+(balance 68), and production/default/Downloads/deployed executables are unchanged.
+
+## Father V18 clean-biped Claude walk V72 (user-rejected arm-override history)
 
 V72 keeps the paid static Father V18 appearance, the exact static-FBX surface material, and the
 stable-shirt `FatherV18CleanBipedRigV4`. It restores the Claude-reference

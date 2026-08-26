@@ -2,7 +2,27 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-26 / 현재 Father 최우선 후보: 정적 외형 + clean-biped V4 + Claude action 613 V72
+## 2026-08-26 / 현재 Father 최우선 후보: native action-613 package V73
+
+- 사용자가 V72의 실제 화면에서 팔이 뒤에 고정되고 손·팔이 흐물거린다고 기각했다. 원인은 action 613
+  자체가 아니라 정적-derived V4 mesh/skin에 다른 FBX의 Humanoid clip을 리타깃한 뒤, 원본 팔 동작을
+  T-pose-derived rigid hierarchy로 덮어쓴 혼합 경로였다. V72는
+  `USER_VISUAL_REJECTED_ARM_OVERRIDE`이며 재사용하지 않는다.
+- V73은 `Downloads/rpg.mp4`의 직접 적용 방식대로 action-613 walk FBX 하나를 visible mesh, Avatar,
+  bind skeleton, skin weights, `Casual_Walk_inplace` clip의 공동 권위로 사용한다. muscle-delta retarget,
+  anatomical sanitation, rigid-arm restore, procedural gait는 모두 끈다. 정적 승인 외형의 surface material과
+  4096 albedo만 그대로 적용한다.
+- map contract는 native facing `90°`, stride `0.8526`, locked cycle `0.99380799s`, corner `360°/s`다.
+  hidden 720p 실제 맵 두 바퀴에서 telemetry `1,344`, 30 fps PNG `673`, `22.4s`를 기록했다.
+- 화면 픽셀 직접 추적으로 네 직선 구간 × 30 frames와 네 회전 구간 × 30 frames를 확대 검수했다. 팔은
+  좌우 반대 위상으로 연속 스윙하고, third leg·옷 파열·분리 신발·방향 점프는 보이지 않았다. 두 바퀴
+  경계 frame `336 -> 337`도 연속이다. 자동 판정은 사용자 승인을 대신하지 않는다.
+- 상세:
+  [FATHER_V18_NATIVE_613_WALK_V73_QA_2026-08-26.md](FATHER_V18_NATIVE_613_WALK_V73_QA_2026-08-26.md).
+  상태는 `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`다.
+  추가 Higgsfield 사용 `0 credits`, 잔액 `68`; production/default/Downloads/배포본은 변경하지 않았다.
+
+## [사용자 팔·손 기각·V73으로 대체] 2026-08-26 / 정적 외형 + clean-biped V4 + Claude action 613 V72
 
 - 사용자가 V66을 `Claude 걷기를 그대로 쓰지 않고 임의로 바꾼 보행`으로 기각했다. V66은
   `USER_VISUAL_REJECTED_WRONG_MOTION_SOURCE`이며 재사용하지 않는다.

@@ -1,6 +1,18 @@
 # DECISIONS
 
-## 2026-08-26 / Father V18 V72는 정적 팔·손 hierarchy를 rigid하게 유지한다
+## 2026-08-26 / Father V18 V73은 action-613 FBX를 mesh/Avatar/skin/clip 한 패키지로 직접 적용한다
+
+결정: `Downloads/rpg.mp4`처럼 생성된 action FBX를 한 패키지로 적용한다. V72가 사용한
+`FatherV18CleanBipedRigV4 + 다른 FBX Humanoid clip + T-pose-derived rigid arms` 혼합은 사용자 화면에서
+팔이 뒤에 고정되고 손이 흐물거리는 결과를 냈으므로 폐기한다.
+
+V73은 action-613 walk FBX 하나에서 visible mesh, Avatar, bind skeleton, skin weights,
+`Casual_Walk_inplace` clip을 모두 가져온다. 원본 본 애니메이션 뒤에 muscle/anatomy/arm 보정을 덧씌우지
+않는다. 표면만 승인 정적 material/4096 albedo를 사용한다. 방향 `90°`, stride `0.8526`, corner
+`360°/s`로 실제 맵을 두 바퀴 기록했다. 사용자 합격 전 `productionEligible=false`; 추가 Higgsfield
+사용은 0 credits다.
+
+## [사용자 팔·손 기각·V73으로 대체] 2026-08-26 / Father V18 V72는 정적 팔·손 hierarchy를 rigid하게 유지한다
 
 결정: 사용자가 V69의 실제 GIF도 팔·손이 흐물거린다고 기각했으므로 Humanoid arm/forearm muscle을
 축소 리타깃하는 방식을 폐기한다. V72는 초기화 때 정적 기준의 shoulder-to-finger local transform을

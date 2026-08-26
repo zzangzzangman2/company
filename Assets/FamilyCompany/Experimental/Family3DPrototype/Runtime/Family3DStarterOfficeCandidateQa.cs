@@ -122,6 +122,12 @@ namespace FamilyCompany.Experimental.Family3D
         private bool FatherUsesCleanBipedCasualWalk =>
             fatherHiggsfieldIdleRun && fatherClipAnatomicalSanitizationAsset;
 
+        private bool FatherUsesNative613Package =>
+            fatherHiggsfieldIdleRun &&
+            fatherHiggsfieldIdleClip == null &&
+            !fatherClipMuscleDeltaRetargetAsset &&
+            !fatherClipAnatomicalSanitizationAsset;
+
         public void Configure(
             GameObject player,
             GameObject olderSister,
@@ -562,6 +568,8 @@ namespace FamilyCompany.Experimental.Family3D
                                 sourceOfficeCamera,
                                 fatherStaticRootMotionOnly
                                     ? "father-v18-higgsfield-static-map-walk"
+                                    : FatherUsesNative613Package
+                                        ? "father-v18-native-613-map-walk"
                                     : FatherUsesCleanBipedCasualWalk
                                         ? "father-v18-clean-biped-casual-walk-map"
                                     : fatherCleanBipedNaturalWalk
@@ -622,6 +630,8 @@ namespace FamilyCompany.Experimental.Family3D
                             target,
                             (fatherStaticRootMotionOnly
                                 ? "father-v18-higgsfield-static-map-walk"
+                                : FatherUsesNative613Package
+                                    ? "father-v18-native-613-map-walk"
                                 : FatherUsesCleanBipedCasualWalk
                                     ? "father-v18-clean-biped-casual-walk-map"
                                 : fatherCleanBipedNaturalWalk
@@ -658,6 +668,8 @@ namespace FamilyCompany.Experimental.Family3D
             WriteRuntimeReceipt(
                 fatherStaticRootMotionOnly
                     ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
+                    : FatherUsesNative613Package
+                        ? "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
                     : FatherUsesCleanBipedCasualWalk
                         ? "FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_MAP_PROOF_COMPLETE"
                     : fatherCleanBipedNaturalWalk
@@ -1416,7 +1428,7 @@ namespace FamilyCompany.Experimental.Family3D
             if (!fatherStaticRootMotionOnly && !fatherCleanBipedNaturalWalk &&
                 (sharedHumanoidWalkClip == null || !sharedHumanoidWalkClip.isHumanMotion))
                 throw new InvalidOperationException("Shared Humanoid walk clip is missing or not Humanoid.");
-            if (fatherHiggsfieldIdleRun &&
+            if (fatherHiggsfieldIdleRun && !FatherUsesNative613Package &&
                 (fatherHiggsfieldIdleClip == null || !fatherHiggsfieldIdleClip.isHumanMotion))
                 throw new InvalidOperationException("Father V18 Higgsfield idle clip is missing or not Humanoid.");
             CandidateDefinition[] definitions = CandidateDefinitions();
@@ -1569,6 +1581,7 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherHiggsfieldIdleRun = fatherHiggsfieldIdleRun,
                     fatherCleanBipedNaturalWalk = fatherCleanBipedNaturalWalk,
                     fatherCleanBipedCasualWalk = FatherUsesCleanBipedCasualWalk,
+                    fatherNative613Package = FatherUsesNative613Package,
                     coordinateMapping =
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
                         "Camera.ViewportPointToRay -> Y=ground plane; raw (x,y)->(x,groundY,y) fallback",
@@ -1579,6 +1592,8 @@ namespace FamilyCompany.Experimental.Family3D
                         fatherStaticRootMotionOnly
                             ? "every frame: live Father SpriteRenderer projected bounds height == " +
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
+                            : FatherUsesNative613Package
+                                ? "one locked uniform scale from the native action-613 rendered bounds; visible mesh/Avatar/skin/clip share one FBX; static-FBX surface material; no idle cross-retarget, anatomical sanitation, rigid-arm override, or procedural gait"
                             : FatherUsesCleanBipedCasualWalk
                                 ? "one locked uniform model scale calibrated from idle projected bounds; clean V4 T-pose/heat-map skin with stable whole shirt/collar panels; static-FBX surface material; Claude-reference Casual_Walk_inplace action 613 at poseStrength=1 and full authored sagittal/arm dynamics"
                             : fatherCleanBipedNaturalWalk
@@ -1930,6 +1945,8 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherProofRouteCompleted
                     ? fatherStaticRootMotionOnly
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
+                        : FatherUsesNative613Package
+                            ? "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
                         : FatherUsesCleanBipedCasualWalk
                             ? "FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_MAP_PROOF_COMPLETE"
                         : fatherCleanBipedNaturalWalk
@@ -1969,6 +1986,7 @@ namespace FamilyCompany.Experimental.Family3D
             public bool fatherHiggsfieldIdleRun;
             public bool fatherCleanBipedNaturalWalk;
             public bool fatherCleanBipedCasualWalk;
+            public bool fatherNative613Package;
             public string coordinateMapping;
             public string directionMapping;
             public string scalePolicy;

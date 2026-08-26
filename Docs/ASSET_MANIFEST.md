@@ -2,7 +2,24 @@
 
 최종 갱신: 2026-08-26
 
-## Father V18 clean-biped Claude walk V72 (current isolated review candidate)
+## Father V18 native action-613 walk V73 (current isolated review candidate)
+
+- Model/Avatar/bind-skeleton/skin/motion authority is one asset:
+  `Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx`,
+  SHA-256 `F344B7E057B6732A1715D5E2CA49A825D866FC59BFB3BFE975C55443694C566E`.
+- Motion is `Casual_Walk_inplace` at `poseStrength=1.0`; no separate idle cross-retarget,
+  muscle-delta retarget, anatomical sanitation, rigid-arm restore, or procedural gait.
+- Surface is `Materials/FatherV18HiggsfieldStaticSurface.mat` plus static 4096 albedo SHA-256
+  `618F33856F2DD722EBFC1782DCB4BF5709D04E3721B4DB9E88F1A5BDDBEAAA9E`.
+- Scene/build/runtime: `Scenes/Family3DFatherV18Native613WalkMapQaV73.unity`,
+  `FatherV18Native613WalkMapBuildV73`, `FatherV18Native613WalkRuntimeV73HiFpsR2`.
+- Runtime: 673 PNG at 30 fps, 1,344 telemetry, two circuits, cycle `0.99380799s`, facing `90°`,
+  stride `0.8526`, corner `360°/s`.
+- Review media: `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-native613-v73-review`.
+- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`, extra Higgsfield use `0 credits`,
+  balance `68`; production/default/Downloads/deployed executables unchanged.
+
+## Father V18 clean-biped Claude walk V72 (user-rejected arm-override history)
 
 - Appearance/rig authority: paid static Father V18 +
   `Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx`, SHA-256
