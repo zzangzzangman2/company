@@ -14,7 +14,42 @@ The folder does not alter the production family sprite catalog, production scene
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
 
-## Father V14 stylized SD walk J (current isolated review candidate)
+## Father V18 clean-biped natural walk V39 (current isolated review candidate)
+
+The user rejected the prior imported Father V18 walk after viewing the actual video: fixing the
+measured +90-degree facing offset solved direction only, while the malformed moving skeleton/skin
+still produced a third-leg silhouette, rubber motion and nearly static arms. That moving mesh,
+skeleton, weights and clip are not reused here.
+
+`Candidates/FatherV18CleanBipedRigV1/father-v18-clean-biped-rig-v1.fbx` keeps the paid static Father
+V18 appearance exactly: 28,895 vertices, 49,192 polygons, the same topology/UV/material slots and a
+maximum rest-coordinate delta of `6.143906e-8`. Only a clean 24-bone biped armature and deterministic
+weights were added. Cross-left/right and arm+leg mixed weight counts are both zero, and no vertex has
+more than two influences. FBX SHA-256:
+`83C6892C1C0F8BDC6081F3D8086BFCD5D4E4F3008F843F4ED07730FD94AB4F2F`.
+
+V39 embeds no generated/shared motion clip. `Family3DWalkActor` drives a 0.88-second SD biped cycle:
+alternating support and bent-knee recovery, a small body-side counter-swing of the arms, a centred
+pelvis, and a tiny upward-only body rise. The V35 world-space impact IK was removed after telemetry
+showed a one-frame 0.23-unit pull; contact flags remain phase telemetry, not an automatic visual-pass
+claim.
+
+The user rejected V36 after seeing hidden-looking arms and a hunched silhouette. V37 then exposed a
+separate implementation error: direct arm/posture corrections used host `+Z` even though the measured
+model forward is local `-X`. V39 consistently resolves body forward as `-transform.right` and body
+side as `transform.forward`, starts the arms from the paid static rest pose, straightens the torso by
+5 degrees, and applies only 2-degree outward placement, 6-degree opposite swing and 22-degree elbow
+bend. The selected V38 style-B run and V39 defaults produce 169/169 byte-identical map PNGs.
+
+The actual Father OfficeRuntimeAgent completed two same-map perimeter circuits. All 169 rendered
+frames were enlarged and reviewed, not just a four-frame sheet. No third leg/cone, detached shoe,
+mesh melting, leg crossing, giant scale, wrong direction, or loop jump was visible. Evidence is
+`FatherV18CleanBipedNaturalWalkMapBuildV39` and the external workspace runtime
+`outputs/father-v18-clean-biped-map-runtime-v39-final`. This is still
+`USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`; only the user can approve the GIF.
+No production/default/Downloads/deployed executable changed, and no Higgsfield credits were spent.
+
+## Father V14 stylized SD walk J (superseded rejected history)
 
 The user-approved static `FatherApprovedV14`/Proof23 appearance remains unchanged. V13 is now
 `USER_VISUAL_REJECTED`: enlarged review of both GIFs and all 24 source frames exposed detached shoes,

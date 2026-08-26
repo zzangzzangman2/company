@@ -12,7 +12,7 @@ namespace FamilyCompany.Experimental.Family3D
     public sealed class Family3DWalkActor : MonoBehaviour
     {
         public const float LockedCycleSeconds = 0.99380799f;
-        private const float FatherSdCycleSeconds = 0.88f;
+        public const float FatherSdCycleSeconds = 0.88f;
 
         [SerializeField] private string familyId = string.Empty;
         [SerializeField] private Transform visualRoot;
@@ -23,6 +23,10 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private Color labelColor = Color.white;
         [SerializeField, Range(0f, 1f)] private float poseStrength = 1f;
         [SerializeField] private bool dedicatedNaturalSdWalk;
+        [SerializeField, Range(0f, 10f)] private float naturalSdTorsoUprightDegrees = 5f;
+        [SerializeField, Range(0f, 12f)] private float naturalSdArmOutwardDegrees = 2f;
+        [SerializeField, Range(0f, 18f)] private float naturalSdArmSwingDegrees = 6f;
+        [SerializeField, Range(0f, 24f)] private float naturalSdElbowBendDegrees = 22f;
 
         private PlayableGraph graph;
         private AnimationClipPlayable clipPlayable;
@@ -43,6 +47,10 @@ namespace FamilyCompany.Experimental.Family3D
         private Transform rightLowerArm;
         private Transform leftHand;
         private Transform rightHand;
+        private Transform spine;
+        private Transform chest;
+        private Transform neck;
+        private Transform head;
         private Vector3 visualLocalPosition;
         private Quaternion visualLocalRotation;
         private float phaseOffset;
@@ -55,15 +63,7 @@ namespace FamilyCompany.Experimental.Family3D
         private int rightUpperLegFrontBack = -1;
         private int leftLowerLegStretch = -1;
         private int rightLowerLegStretch = -1;
-        private int leftArmDownUp = -1;
-        private int rightArmDownUp = -1;
-        private int leftArmFrontBack = -1;
-        private int rightArmFrontBack = -1;
-        private int leftForearmStretch = -1;
-        private int rightForearmStretch = -1;
         private Vector3 hipsRestLocalPosition;
-        private Vector3 leftFootPlantWorld;
-        private Vector3 rightFootPlantWorld;
         private Vector3 lastRootWorldPosition;
         private Quaternion lastRootWorldRotation;
         private bool leftFootPlanted;
@@ -72,6 +72,7 @@ namespace FamilyCompany.Experimental.Family3D
         private bool rightFootContactLocked;
         private bool hasLastRootPose;
         private bool initialized;
+        private float lastSampledPhase01;
         private float moveBlend01;
         private double idleClock;
 
@@ -87,6 +88,10 @@ namespace FamilyCompany.Experimental.Family3D
         public bool DedicatedNaturalSdWalk => dedicatedNaturalSdWalk;
         public bool LeftFootPlanted => leftFootContactLocked;
         public bool RightFootPlanted => rightFootContactLocked;
+        public float NaturalSdTorsoUprightDegrees => naturalSdTorsoUprightDegrees;
+        public float NaturalSdArmOutwardDegrees => naturalSdArmOutwardDegrees;
+        public float NaturalSdArmSwingDegrees => naturalSdArmSwingDegrees;
+        public float NaturalSdElbowBendDegrees => naturalSdElbowBendDegrees;
 
         private float ResolveCycleSeconds()
         {
@@ -113,6 +118,18 @@ namespace FamilyCompany.Experimental.Family3D
             labelColor = color;
             poseStrength = Mathf.Clamp01(animationPoseStrength);
             dedicatedNaturalSdWalk = useDedicatedNaturalSdWalk;
+        }
+
+        public void ConfigureNaturalSdStyle(
+            float torsoUprightDegrees,
+            float armOutwardDegrees,
+            float armSwingDegrees,
+            float elbowBendDegrees)
+        {
+            naturalSdTorsoUprightDegrees = Mathf.Clamp(torsoUprightDegrees, 0f, 10f);
+            naturalSdArmOutwardDegrees = Mathf.Clamp(armOutwardDegrees, 0f, 12f);
+            naturalSdArmSwingDegrees = Mathf.Clamp(armSwingDegrees, 0f, 18f);
+            naturalSdElbowBendDegrees = Mathf.Clamp(elbowBendDegrees, 0f, 24f);
         }
 
         private void OnEnable()
@@ -164,6 +181,10 @@ namespace FamilyCompany.Experimental.Family3D
             rightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
             leftHand = animator.GetBoneTransform(HumanBodyBones.LeftHand);
             rightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+            spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+            chest = animator.GetBoneTransform(HumanBodyBones.Chest);
+            neck = animator.GetBoneTransform(HumanBodyBones.Neck);
+            head = animator.GetBoneTransform(HumanBodyBones.Head);
             if (leftFoot == null || rightFoot == null || hips == null)
                 throw new InvalidOperationException(familyId + " is missing Humanoid foot or hips mappings.");
             hipsRestLocalPosition = hips.localPosition;
@@ -240,20 +261,62 @@ namespace FamilyCompany.Experimental.Family3D
             hasLastRootPose = false;
         }
 
+        /// <summary>
+        /// Ankle-to-toe direction in host-local space, both feet averaged, y removed. Returns zero
+        /// when the rig has no toe bones, which the caller must treat as "unknown" rather than
+        /// "forward is +Z".
+        /// </summary>
+        private Vector3 MeasureToeForwardLocal()
+        {
+            var sum = Vector3.zero;
+            var count = 0;
+            if (leftToes != null && leftFoot != null)
+            {
+                sum += transform.InverseTransformPoint(leftToes.position) -
+                       transform.InverseTransformPoint(leftFoot.position);
+                count++;
+            }
+            if (rightToes != null && rightFoot != null)
+            {
+                sum += transform.InverseTransformPoint(rightToes.position) -
+                       transform.InverseTransformPoint(rightFoot.position);
+                count++;
+            }
+            if (count == 0)
+                return Vector3.zero;
+            sum /= count;
+            sum.y = 0f;
+            return sum.sqrMagnitude < 1e-10f ? Vector3.zero : sum.normalized;
+        }
+
         public PoseSnapshot ReadPoseSnapshot()
         {
             Initialize();
             Vector3 leftLocal = transform.InverseTransformPoint(leftFoot.position);
             Vector3 rightLocal = transform.InverseTransformPoint(rightFoot.position);
             Vector3 hipsLocal = transform.InverseTransformPoint(hips.position);
+            Vector3 toeForward = MeasureToeForwardLocal();
             return new PoseSnapshot
             {
+                toeForwardLocal = toeForward,
                 leftFootLocal = leftLocal,
                 rightFootLocal = rightLocal,
                 leftFootWorld = leftFoot.position,
                 rightFootWorld = rightFoot.position,
+                leftHandLocal = leftHand == null
+                    ? Vector3.zero
+                    : transform.InverseTransformPoint(leftHand.position),
+                rightHandLocal = rightHand == null
+                    ? Vector3.zero
+                    : transform.InverseTransformPoint(rightHand.position),
                 hipsLocal = hipsLocal,
-                footLead = leftLocal.z - rightLocal.z,
+                motionPhase01 = lastSampledPhase01,
+                // The clean Father rig's authored forward is local -X (the runtime host carries
+                // the verified +90 degree facing offset). Its local Z is lateral, so using Z here
+                // would report leg spacing as stride and could not detect alternating steps.
+                footLead = dedicatedNaturalSdWalk
+                    ? leftLocal.x - rightLocal.x
+                    : leftLocal.z - rightLocal.z,
                 leftFootPlanted = leftFootContactLocked,
                 rightFootPlanted = rightFootContactLocked,
                 standingHeight = Mathf.Max(standingHeight, 0.0001f),
@@ -267,6 +330,7 @@ namespace FamilyCompany.Experimental.Family3D
             double cycleSeconds = ResolveCycleSeconds();
             double normalized = sharedMotionClock / cycleSeconds + phaseOffset;
             float phase = Mathf.Repeat((float)normalized, 1f);
+            lastSampledPhase01 = phase;
             if (dedicatedNaturalSdWalk)
             {
                 ApplyNaturalSdPose(phase, isMoving);
@@ -296,25 +360,14 @@ namespace FamilyCompany.Experimental.Family3D
             // reset after every sample; the bottom-centre host above it remains the sole root.
             visualRoot.localPosition = visualLocalPosition;
             visualRoot.localRotation = visualLocalRotation;
-            // Ungated on 2026-08-26. The imported-clip branch previously had no ground constraint
-            // of any kind, so leftFootPlanted/rightFootPlanted were false in 180 of 180 V22 samples
-            // and QA could neither prevent slip nor detect it. Both branches align phase 0 to the
-            // left foot's forward contact — the SD path by construction, the imported path through
-            // FindLeftForwardContactPhase — which is the alignment ApplyFootPlant expects.
-            // Contact-aligned, not clip-aligned: ApplyFootPlant treats leg phase 0 as contact while
-            // clip phase 0 is wherever the export happens to start, so FindLeftForwardContactPhase
-            // is subtracted here rather than cancelling out of the caller's arithmetic as it did
-            // before 2026-08-26.
-            //
-            // Restricted back to the SD path the same day. SolveTwoBonePlant pins the foot to a
-            // world point and force-rotates the leg to reach it, which the authored SD walk can
-            // absorb because its stance is procedural. On the imported-clip path the user saw
-            // rubbery legs and an apparent third limb: any lateral error between facing and travel
-            // drags the pinned foot sideways and the solver stretches the leg to keep reaching. The
-            // imported path already carries a ground constraint through SetApplyFootIK, so it does
-            // not need this one, and a solver that deforms the mesh is worse than none.
+            // V35 telemetry exposed a 0.23-unit one-frame snap from the remaining impact IK. The
+            // clean rig now uses only its continuous authored leg curves and records the anatomical
+            // stance phase as telemetry. Bone coordinates around host turns are not a visual-slip
+            // acceptance metric; no world-space solver is allowed to pull the mesh.
             if (dedicatedNaturalSdWalk && isMoving)
-                ApplyFootPlants(Mathf.Repeat(phase - phaseOffset, 1f));
+                UpdateNaturalSdFootContacts(Mathf.Repeat(phase - phaseOffset, 1f));
+            else
+                ResetFootPlants();
         }
 
         private void InitializeNaturalSdPose()
@@ -338,12 +391,6 @@ namespace FamilyCompany.Experimental.Family3D
             rightUpperLegFrontBack = FindMuscle("Right Upper Leg Front-Back");
             leftLowerLegStretch = FindMuscle("Left Lower Leg Stretch");
             rightLowerLegStretch = FindMuscle("Right Lower Leg Stretch");
-            leftArmDownUp = FindMuscle("Left Arm Down-Up");
-            rightArmDownUp = FindMuscle("Right Arm Down-Up");
-            leftArmFrontBack = FindMuscle("Left Arm Front-Back");
-            rightArmFrontBack = FindMuscle("Right Arm Front-Back");
-            leftForearmStretch = FindMuscle("Left Forearm Stretch");
-            rightForearmStretch = FindMuscle("Right Forearm Stretch");
         }
 
         private void ApplyNaturalSdPose(float phase, bool isMoving)
@@ -363,29 +410,17 @@ namespace FamilyCompany.Experimental.Family3D
                 ApplyNaturalSdLeg(rightLegPhase, rightUpperLegFrontBack, rightLowerLegStretch);
             }
 
-            // Blue Archive-style SD motion keeps the torso readable while the bent arms make a
-            // clear opposite swing. H failed because reducing the rubbery pelvis also reduced the
-            // arms until they looked frozen.
-            AddMuscle(leftArmDownUp, -0.60f);
-            AddMuscle(rightArmDownUp, -0.60f);
-            AddMuscle(leftForearmStretch, -0.24f);
-            AddMuscle(rightForearmStretch, -0.24f);
-            if (isMoving)
-            {
-                float legLead = EvaluateStylizedStepLead(phase);
-                AddMuscle(leftArmFrontBack, -0.16f * legLead);
-                AddMuscle(rightArmFrontBack, 0.16f * legLead);
-                // The forward hand closes toward the waist while the rear elbow opens slightly.
-                // This keeps the counter-swing readable after the map camera scales the actor down.
-                AddMuscle(leftForearmStretch, 0.045f * legLead);
-                AddMuscle(rightForearmStretch, -0.045f * legLead);
-            }
-
             humanPoseHandler.SetHumanPose(ref sampledHumanPose);
             RestoreApprovedUpperBodyRest();
-            // No procedural pelvis translation. The G candidate combined a lateral hips offset
-            // with IK residual correction and made the entire lower body wobble and stretch.
-            hips.localPosition = hipsRestLocalPosition;
+            ApplyNaturalSdUprightPosture();
+            ApplyNaturalSdArms(phase, isMoving);
+            // Keep the pelvis centred: the rejected G candidate's lateral shift looked rubbery.
+            // A small, always-upward double-step rise gives the SD body readable weight without
+            // pulling either planted leg below the floor.
+            float bodyRise = isMoving
+                ? 0.014f * (0.5f - 0.5f * Mathf.Cos(phase * Mathf.PI * 4f))
+                : 0f;
+            hips.localPosition = hipsRestLocalPosition + Vector3.up * bodyRise;
         }
 
         private void ApplyNaturalSdLeg(
@@ -396,8 +431,8 @@ namespace FamilyCompany.Experimental.Family3D
             float lead = EvaluateStylizedStepLead(legPhase);
             float swingBend = EvaluateStylizedSwingKnee(legPhase);
 
-            AddMuscle(upperLegFrontBack, 0.18f * lead);
-            AddMuscle(lowerLegStretch, -0.34f * swingBend);
+            AddMuscle(upperLegFrontBack, 0.21f * lead);
+            AddMuscle(lowerLegStretch, -0.46f * swingBend);
         }
 
         private static float EvaluateStylizedStepLead(float phase)
@@ -437,96 +472,20 @@ namespace FamilyCompany.Experimental.Family3D
             return value * value * (3f - 2f * value);
         }
 
-        private void ApplyFootPlants(float phase)
+        private void UpdateNaturalSdFootContacts(float phase)
         {
-            ApplyFootPlant(
-                Mathf.Repeat(phase, 1f),
-                leftUpperLeg,
-                leftLowerLeg,
-                leftFoot,
-                ref leftFootPlanted,
-                ref leftFootPlantWorld,
-                ref leftFootContactLocked);
-            ApplyFootPlant(
-                Mathf.Repeat(phase + 0.5f, 1f),
-                rightUpperLeg,
-                rightLowerLeg,
-                rightFoot,
-                ref rightFootPlanted,
-                ref rightFootPlantWorld,
-                ref rightFootContactLocked);
+            leftFootContactLocked = IsNaturalSdContactPhase(Mathf.Repeat(phase, 1f));
+            rightFootContactLocked = IsNaturalSdContactPhase(Mathf.Repeat(phase + 0.5f, 1f));
+            leftFootPlanted = leftFootContactLocked;
+            rightFootPlanted = rightFootContactLocked;
         }
 
-        private static void ApplyFootPlant(
-            float legPhase,
-            Transform upperLeg,
-            Transform lowerLeg,
-            Transform foot,
-            ref bool planted,
-            ref Vector3 plantWorld,
-            ref bool contactLocked)
+        private static bool IsNaturalSdContactPhase(float legPhase)
         {
-            const float contactLockEnd = 0.05f;
-            const float toeOffEnd = 0.11f;
-            if (legPhase >= toeOffEnd)
-            {
-                planted = false;
-                contactLocked = false;
-                return;
-            }
-
-            if (!planted)
-            {
-                plantWorld = foot.position;
-                planted = true;
-            }
-            contactLocked = legPhase < contactLockEnd;
-
-            // Only stabilize the impact. The authored backward stance sweep owns the visible
-            // contact; a long IK lock would reintroduce G's rubbery leg deformation.
-            float release01 = Mathf.SmoothStep(
-                0f,
-                1f,
-                Mathf.InverseLerp(contactLockEnd, toeOffEnd, legPhase));
-            Vector3 target = Vector3.Lerp(plantWorld, foot.position, release01);
-            SolveTwoBonePlant(upperLeg, lowerLeg, foot, target);
-        }
-
-        private static void SolveTwoBonePlant(
-            Transform upperLeg,
-            Transform lowerLeg,
-            Transform foot,
-            Vector3 target)
-        {
-            if (upperLeg == null || lowerLeg == null || foot == null)
-                return;
-
-            for (var iteration = 0; iteration < 2; iteration++)
-            {
-                RotateJointToward(lowerLeg, foot, target, 0.45f, 6f);
-                RotateJointToward(upperLeg, foot, target, 0.35f, 5f);
-            }
-        }
-
-        private static void RotateJointToward(
-            Transform joint,
-            Transform effector,
-            Vector3 target,
-            float strength,
-            float maximumDegrees)
-        {
-            Vector3 current = effector.position - joint.position;
-            Vector3 desired = target - joint.position;
-            if (current.sqrMagnitude <= 0.0000001f || desired.sqrMagnitude <= 0.0000001f)
-                return;
-            Quaternion correction = Quaternion.FromToRotation(current, desired);
-            float correctionDegrees = Quaternion.Angle(Quaternion.identity, correction);
-            if (correctionDegrees > maximumDegrees)
-                correction = Quaternion.Slerp(
-                    Quaternion.identity,
-                    correction,
-                    maximumDegrees / correctionDegrees);
-            joint.rotation = Quaternion.Slerp(Quaternion.identity, correction, strength) * joint.rotation;
+            legPhase = Mathf.Repeat(legPhase, 1f);
+            // Forward heel contact begins just before phase wrap; the foot then owns the ground
+            // through the long backward stance sweep and releases when the knee recovery starts.
+            return legPhase >= 0.95f || legPhase < 0.56f;
         }
 
         private void ResetFootPlants()
@@ -548,6 +507,148 @@ namespace FamilyCompany.Experimental.Family3D
                 rest.Transform.localRotation = rest.LocalRotation;
                 rest.Transform.localScale = rest.LocalScale;
             }
+        }
+
+        private void ApplyNaturalSdUprightPosture()
+        {
+            if (spine == null || chest == null || naturalSdTorsoUprightDegrees <= 0.001f)
+                return;
+
+            ResolveNaturalSdBodyAxes(out Vector3 bodyForward, out Vector3 bodySide);
+            Vector3 current = chest.position - spine.position;
+            if (current.sqrMagnitude <= 0.0000001f)
+                return;
+
+            Vector3 plus = Quaternion.AngleAxis(
+                naturalSdTorsoUprightDegrees,
+                bodySide) * current;
+            Vector3 minus = Quaternion.AngleAxis(
+                -naturalSdTorsoUprightDegrees,
+                bodySide) * current;
+            Vector3 desired = Vector3.Dot(plus, bodyForward) < Vector3.Dot(minus, bodyForward)
+                ? plus
+                : minus;
+            spine.rotation = Quaternion.FromToRotation(current, desired) * spine.rotation;
+
+            // Keep the face level after moving the upper-body mass back over the hips. This makes
+            // the short-neck SD silhouette read upright instead of turning the head with the lean.
+            if (neck != null && head != null)
+            {
+                Vector3 neckToHead = head.position - neck.position;
+                if (neckToHead.sqrMagnitude > 0.0000001f)
+                    neck.rotation = Quaternion.FromToRotation(
+                        neckToHead,
+                        Vector3.up * neckToHead.magnitude) * neck.rotation;
+            }
+        }
+
+        private void ApplyNaturalSdArms(float phase, bool isMoving)
+        {
+            RestoreBoneRest(leftUpperArm);
+            RestoreBoneRest(rightUpperArm);
+            RestoreBoneRest(leftLowerArm);
+            RestoreBoneRest(rightLowerArm);
+            RestoreBoneRest(leftHand);
+            RestoreBoneRest(rightHand);
+
+            ResolveNaturalSdBodyAxes(out Vector3 bodyForward, out Vector3 bodySide);
+            RotateArmOutward(leftUpperArm, leftHand, bodyForward, bodySide);
+            RotateArmOutward(rightUpperArm, rightHand, bodyForward, bodySide);
+
+            float swing = isMoving
+                ? naturalSdArmSwingDegrees * Mathf.Cos(phase * Mathf.PI * 2f)
+                : 0f;
+            RotateBoneAroundWorldAxis(leftUpperArm, bodySide, -swing);
+            RotateBoneAroundWorldAxis(rightUpperArm, bodySide, swing);
+            BendElbowForward(leftLowerArm, leftHand, bodyForward, bodySide);
+            BendElbowForward(rightLowerArm, rightHand, bodyForward, bodySide);
+        }
+
+        private void RestoreBoneRest(Transform target)
+        {
+            if (target == null)
+                return;
+            for (var index = 0; index < restPose.Length; index++)
+            {
+                TransformRest rest = restPose[index];
+                if (rest.Transform != target)
+                    continue;
+                target.localPosition = rest.LocalPosition;
+                target.localRotation = rest.LocalRotation;
+                target.localScale = rest.LocalScale;
+                return;
+            }
+        }
+
+        private void RotateArmOutward(
+            Transform upperArm,
+            Transform hand,
+            Vector3 bodyForward,
+            Vector3 bodySide)
+        {
+            if (upperArm == null || hand == null || naturalSdArmOutwardDegrees <= 0.001f)
+                return;
+            Vector3 current = hand.position - upperArm.position;
+            if (current.sqrMagnitude <= 0.0000001f)
+                return;
+            float currentSide = Vector3.Dot(hand.position - hips.position, bodySide);
+            float outwardSign = currentSide >= 0f ? 1f : -1f;
+            Vector3 plus = Quaternion.AngleAxis(
+                naturalSdArmOutwardDegrees,
+                bodyForward) * current;
+            Vector3 minus = Quaternion.AngleAxis(
+                -naturalSdArmOutwardDegrees,
+                bodyForward) * current;
+            Vector3 desired = Vector3.Dot(plus, bodySide) * outwardSign >
+                              Vector3.Dot(minus, bodySide) * outwardSign
+                ? plus
+                : minus;
+            upperArm.rotation = Quaternion.FromToRotation(current, desired) * upperArm.rotation;
+        }
+
+        private void BendElbowForward(
+            Transform lowerArm,
+            Transform hand,
+            Vector3 bodyForward,
+            Vector3 bodySide)
+        {
+            if (lowerArm == null || hand == null || naturalSdElbowBendDegrees <= 0.001f)
+                return;
+            Vector3 current = hand.position - lowerArm.position;
+            if (current.sqrMagnitude <= 0.0000001f)
+                return;
+            Vector3 plus = Quaternion.AngleAxis(
+                naturalSdElbowBendDegrees,
+                bodySide) * current;
+            Vector3 minus = Quaternion.AngleAxis(
+                -naturalSdElbowBendDegrees,
+                bodySide) * current;
+            Vector3 desired = Vector3.Dot(plus, bodyForward) > Vector3.Dot(minus, bodyForward)
+                ? plus
+                : minus;
+            lowerArm.rotation = Quaternion.FromToRotation(current, desired) * lowerArm.rotation;
+        }
+
+        private static void RotateBoneAroundWorldAxis(
+            Transform bone,
+            Vector3 axis,
+            float degrees)
+        {
+            if (bone == null || Mathf.Abs(degrees) <= 0.001f)
+                return;
+            bone.rotation = Quaternion.AngleAxis(degrees, axis) * bone.rotation;
+        }
+
+        private void ResolveNaturalSdBodyAxes(
+            out Vector3 bodyForward,
+            out Vector3 bodySide)
+        {
+            // The candidate comparison and yaw sweep proved that this rig's authored forward is
+            // local -X, not Unity local +Z. The host therefore carries a +90-degree yaw offset.
+            // Derive posture and arm axes from the same measured contract; using transform.forward
+            // here bends the torso sideways and swings the hands out of the walking plane.
+            bodyForward = -transform.right;
+            bodySide = transform.forward;
         }
 
         private bool IsProceduralLimbBone(Transform candidate)
@@ -702,7 +803,18 @@ namespace FamilyCompany.Experimental.Family3D
             public Vector3 rightFootLocal;
             public Vector3 leftFootWorld;
             public Vector3 rightFootWorld;
+            public Vector3 leftHandLocal;
+            public Vector3 rightHandLocal;
             public Vector3 hipsLocal;
+
+            /// <summary>
+            /// Host-local direction from ankle to toes, averaged over both feet and flattened to
+            /// the ground plane. This is the rig's anatomical forward, and unlike the foot swing
+            /// axis it is not symmetric, so it carries a sign. It is what
+            /// Docs/FATHER_V18_FACING_OFFSET_METHOD.md solves the facing offset from.
+            /// </summary>
+            public Vector3 toeForwardLocal;
+            public float motionPhase01;
             public float footLead;
             public bool leftFootPlanted;
             public bool rightFootPlanted;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,20 +21,36 @@ namespace FamilyCompany.Experimental.Family3D.Editor
     /// </summary>
     public static class Family3DHiggsfieldAlbedoImportValidation
     {
-        private static readonly string[] AlbedoPaths =
+        private const string CandidateRoot =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates";
+
+        /// <summary>
+        /// Discovered, not listed. A hardcoded list only guards the albedos someone remembered to
+        /// add to it: the clean biped rig's 4096 albedo landed on 2026-08-26 importing at 2048 with
+        /// lossy compression, exactly the defect this gate exists to stop, and slipped through
+        /// because it was not on the list. Anything named *-albedo.png under Candidates is covered
+        /// from the moment it appears.
+        /// </summary>
+        private static string[] DiscoverAlbedoPaths()
         {
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
-            "FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-albedo.png",
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
-            "FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png",
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
-            "FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-albedo.png"
-        };
+            if (!Directory.Exists(CandidateRoot))
+                return Array.Empty<string>();
+            string[] found = Directory
+                .GetFiles(CandidateRoot, "*-albedo.png", SearchOption.AllDirectories)
+                .Select(path => path.Replace(Path.DirectorySeparatorChar, '/'))
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .ToArray();
+            if (found.Length == 0)
+                throw new InvalidOperationException(
+                    "No *-albedo.png found under " + CandidateRoot +
+                    "; the gate would pass by checking nothing.");
+            return found;
+        }
 
         public static void Run()
         {
             var lines = new List<string>();
-            foreach (string path in AlbedoPaths)
+            foreach (string path in DiscoverAlbedoPaths())
                 lines.Add(Validate(path));
             Debug.Log(
                 "FAMILY_3D_HIGGSFIELD_ALBEDO_IMPORT: PASS | " + string.Join(" | ", lines));

@@ -1,6 +1,42 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-25
+최종 갱신: 2026-08-26
+
+## Father V18 clean-biped natural walk V39 (current isolated review candidate)
+
+- Appearance source remains the paid static Father V18 FBX
+  `Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx`, SHA-256
+  `589D4CED62894EA27F3D4469019EDC3A4A845BD672AEF1664FC8AE0542305D5A`. The rebuild does not use
+  the rejected CasualWalk613 moving mesh, skin, skeleton, or animation clip.
+- Canonical clean rig:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV1/
+  father-v18-clean-biped-rig-v1.fbx`, SHA-256
+  `83C6892C1C0F8BDC6081F3D8086BFCD5D4E4F3008F843F4ED07730FD94AB4F2F`.
+  Atlas SHA-256 is `618F33856F2DD722EBFC1782DCB4BF5709D04E3721B4DB9E88F1A5BDDBEAAA9E`; preparation receipt
+  SHA-256 is `E69F351AEDE3E2547E0A5355C29A01575B771E5F18B9ACFB7877E40059D23305`.
+- Geometry contract: exact static topology/UV/material slots, 28,895 vertices, 49,192 polygons,
+  maximum rest vertex delta `6.143906e-8`; clean 24-bone/22-deform-bone armature, all 28,895 vertices
+  weighted, maximum two influences, cross-side vertices `0`, arm+leg mixed vertices `0`.
+- Motion contract: no embedded/imported animation. Unity drives a handcrafted 0.88-second two-contact
+  SD biped cycle with bent-knee recovery, body-side opposite arm swing, centred pelvis and no
+  world-space two-bone foot pull. V39 uses the measured local `-X` model-forward contract, a 5-degree
+  upright torso correction, 2-degree outward arms, 6-degree opposite swing and 22-degree elbow bend.
+- V36 was user-rejected as `USER_VISUAL_REJECTED_HIDDEN_ARMS_HUNCHED_SILHOUETTE`. V37's first direct
+  arm implementation used the wrong host axis and is diagnostic only. V38 compared two corrected-axis
+  styles; selected style B became the V39 defaults. V39 and V38 style B match in 169/169 PNG frames.
+- Isolated scene/build: `Scenes/Family3DFatherV18CleanBipedNaturalWalkMapQaV39.unity` /
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedNaturalWalkMapBuildV39`.
+  Runtime evidence is outside the repository under
+  `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-map-runtime-v39-final`.
+  It contains 169 rendered frames covering two complete map circuits, a seamless one-circuit GIF,
+  enlarged tracked GIF, and full-map MP4s.
+- Human review inspected all 169 enlarged rendered frames. No third leg/cone, detached shoe, mesh
+  melting, lateral leg crossing, giant scale, wrong route direction, or loop-end jump was visible.
+  Raw foot-bone transform coordinates are explicitly not a slip acceptance gate because host turns
+  make them disagree with the deforming shoe pixels; the actual GIF is the authority.
+- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`.
+  This rebuild spent `0` Higgsfield credits; remaining balance is `68`. Production/default/Downloads
+  and deployed executables are unchanged.
 
 ## Father V18 Higgsfield sources and unresolved V22 diagnostic
 

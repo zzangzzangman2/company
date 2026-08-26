@@ -2,6 +2,68 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-26 / clean biped 리그 인수 완료 — 방향 검증됨, 알베도 회귀 1건 차단
+
+Codex가 만든 `FatherV18CleanBipedRigV1`이 현재 후보다. 이후 작업은 Claude가 단독으로 잇는다.
+
+- **방향 검증됨.** `fatherMotionFacingOffsetDegrees = 90`이 이 리그에도 맞다. 몸 정면과 이동 방향의
+  각도차 **중앙값 0.19도**(평균 3.92는 코너 회전 지연 포함). 판정 근거와 방법은
+  [FATHER_V18_FACING_OFFSET_METHOD.md](FATHER_V18_FACING_OFFSET_METHOD.md)에 정본으로 남겼다.
+- **리그 품질이 힉스필드보다 낫다.** 발 스윙이 발가락 방향과 **62:1**로 정렬돼 있다(힉스필드는
+  1.6~3.5:1). 보폭 0.36 신장으로 정상 범위다. 팔이 옆선에 있고 다리 변형도 없다.
+- **한때 파탄으로 보였던 수치는 전부 계측 착시였다.** `leftFootLocal` 등은 호스트 로컬이라 이 경로에서
+  캐릭터의 경로 순회가 섞여 들어온다(골반이 호스트 기준 `2.485` 이동, 힉스필드는 `0.025`). 골반을 빼지
+  않으면 스윙 정렬이 `0.14`, 보폭 정합이 `0.1615배`로 읽힌다. **팔다리 진폭은 항상
+  `footLocal - hipsLocal`로 잰다.**
+- **알베도 회귀 1건을 잡았다.** 새 리그의 4096 알베도가 `maxTextureSize 2048` + 손실압축으로
+  임포트되고 있었다. 8월 26일에 고쳤던 것과 같은 결함이고, 게이트가 고정 목록이라 새 파일이 그대로
+  빠져나갔다. **게이트를 자동 탐색으로 바꿨다** — `Candidates` 아래 `*-albedo.png`는 생기는 즉시
+  검사 대상이 된다. 현재 4종 전부 `4096x4096 BC7` PASS.
+- **계측 도구 추가.** `PoseSnapshot.toeForwardLocal`(발목→발가락, 호스트 로컬)을 영수증에 기록한다.
+  방향 오프셋을 `K = -atan2(F.x, F.z)`로 즉시 풀 수 있고, 다음 리그 교체 때 재검증이 몇 분이면 끝난다.
+- 참조되지 않는 중간 씬 V32~V38(2.8MB)을 삭제했다. 빌더가 쓰는 것은 V39 하나다.
+- `FAST_QA_WINDOWS.cmd -Profile editor-broad` PASS. `productionEligible=false`와 Higgsfield 잔액 68
+  유지. production/default/Downloads/배포본은 건드리지 않았다.
+- 남은 것: 코너 회전 지연(초당 360도, 코너에서 약 0.3초 옆걸음)과 사용자 시각 승인.
+
+## 2026-08-26 / 현재 Father 최우선 후보: V18 정적 외형 + clean biped V39, 사용자 승인 대기
+
+- 사용자가 실제 영상을 보고 기존 V18 imported walk를 `다리가 3개`, `흐물흐물`, `팔이 가만히 있음`,
+  `캐릭터 자체가 이상함`으로 판정했다. 아래의 "Father V18 보행 정합 완료"는 자동/계측 단계의 과거 기록이며
+  **시각 합격을 뜻하지 않는다**. moving FBX의 skeleton/weights/clip은 새 후보에 재사용하지 않는다.
+- 새 후보는 유료 정적 `FatherV18HiggsfieldStatic`의 외형을 그대로 쓴다. 28,895 vertices, 49,192 polygons,
+  topology/UV/material slot을 보존하고 clean 24-bone biped armature와 결정적 skin weights만 추가했다. rest 상태
+  최대 정점 오차는 `6.143906e-8`, 좌우 교차 weight `0`, arm+leg 혼합 weight `0`, 정점당 최대 influence `2`다.
+  정본 FBX는 `Candidates/FatherV18CleanBipedRigV1/father-v18-clean-biped-rig-v1.fbx`, SHA-256
+  `83C6892C1C0F8BDC6081F3D8086BFCD5D4E4F3008F843F4ED07730FD94AB4F2F`다.
+- clean-biped V36도 사용자가 실제 프레임에서 `팔은 이게 뭐니`, `허리가 곱추야?`라고 지적해
+  `USER_VISUAL_REJECTED_HIDDEN_ARMS_HUNCHED_SILHOUETTE`로 봉인한다. V37은 팔/상체 보정축에 host `+Z`를
+  잘못 써 일부 방향에서 팔을 옆으로 튀긴 진단본이고, V38은 올바른 모델축으로 style A/B를 비교한 조정본이다.
+- Unity V39는 shared human clip이나 생성 motion clip을 쓰지 않는다. 0.88초 SD 2족 cycle에서 두 다리가
+  반대 위상으로 지지/회복하고, 회복 무릎을 분명히 굽히며, 팔은 몸 옆에서 작게 반대 스윙한다. 좌우 골반
+  흔들림과 발을 월드에 잡아당기던 two-bone IK는 제거했고 작은 수직 rise만 남겼다.
+- 모델의 실측 정면 `local -X`에서 body forward=`-transform.right`, body side=`transform.forward`를
+  일관되게 사용한다. 정적 옆선에서 상체 중심을 뒤로 `5°` 세우고 얼굴은 수평으로 유지한다. 팔은 rest
+  pose에서 바깥 `2°`, 앞뒤 `6°` 반대 swing, 팔꿈치 `22°`만 적용해 손이 몸 뒤로 사라지거나 긴 막대처럼
+  보이지 않게 했다. 이 값은 V38 두 후보의 169프레임 전체 비교 뒤 선택했고 V39 기본값으로 고정했다.
+- 실제 Starter Office Father agent가 같은 3x3 외곽을 두 바퀴 이동했다. 60 fps telemetry `1,344` samples와
+  7.5 fps 실제 렌더 `169` frames 전부를 여섯 장의 확대 시트와 전체 영상으로 육안 검수했다. 전 프레임에서
+  보이는 다리는 정확히 둘이며 extra limb/cone, 분리 신발, mesh melting, 다리 교차, 거인 축척은 없었다.
+  양발의 전방 도달/굽힌 무릎 회복과 반대팔 스윙이 보이고 방향·코너도 일관된다.
+- raw foot-bone local/world 좌표는 host 회전 구간에서 화면의 변형 신발 위치와 일치하지 않는 큰 변화를
+  포함하므로 발 미끄럼 자동 합격 수치로 쓰지 않는다. `compositeVisualContentPass`도 판정 근거가 아니라 캡처
+  유효성 확인일 뿐이다. 최종 판정은 실제 GIF 전체를 보는 사용자 시각 승인이다.
+- 한 route circuit `7.950477 u`를 정확히 9 motion cycles로 맞춘 stride는 `0.8833864 u`다. 동일 route
+  지점의 두 번째 회로 seam은 position `0`, yaw `0°`, wrapped motion phase delta `0.0000868`이다.
+- 빌드/런타임: `FatherV18CleanBipedNaturalWalkMapBuildV39` /
+  `outputs/father-v18-clean-biped-map-runtime-v39-final`. 상태는
+  `FATHER_V18_CLEAN_BIPED_NATURAL_MAP_PROOF_COMPLETE`, `productionMutation=false`,
+  **`productionEligible=false`**다. user approval 전에는 승격하지 않는다.
+- Unity/Player는 `-batchmode -nographics`와 hidden process로만 실행했고 `MainWindowHandle`을 감시했다.
+  종료 후 Unity/Player/Blender process는 없다. production/default/Downloads/배포 실행본은 변경하지 않았다.
+- 이번 rebuild의 Higgsfield 사용량은 `0 credits`; 잔액은 `68` 그대로다. 상세 근거와 재현 경로는
+  [FATHER_V18_CLEAN_BIPED_NATURAL_WALK_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_NATURAL_WALK_QA_2026-08-26.md)에 있다.
+
 ## 2026-08-26 / Father V18 보행 정합 완료 — 걷기 액션 교체 + 렌더/위상 버그 3건 수정
 
 증거: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldCasualWalkRuntimeV26R1`

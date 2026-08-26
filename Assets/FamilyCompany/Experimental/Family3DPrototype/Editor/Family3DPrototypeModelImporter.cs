@@ -48,6 +48,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18HiggsfieldCasualWalkClipPath =
             CandidateRoot +
             "FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
+        public const string FatherV18CleanBipedRigPath =
+            CandidateRoot +
+            "FatherV18CleanBipedRigV1/father-v18-clean-biped-rig-v1.fbx";
 
         private static readonly string[] IdentityHumanoidBoneNames =
         {
@@ -83,6 +86,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                    string.Equals(path, OlderSisterCandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherApprovedV14CandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherApprovedV14NaturalWalkRigModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherV18CleanBipedRigPath, StringComparison.Ordinal) ||
                    IsFatherV18HiggsfieldMotion(path) ||
                    IsRuntime2DV2Candidate(path);
         }
@@ -127,6 +131,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 importer.isReadable = true;
                 importer.humanDescription = IsFatherApprovedV14Rig(assetPath)
                     ? CreateExplicitFatherApprovedV14HumanDescription(importer.humanDescription)
+                    : string.Equals(assetPath, FatherV18CleanBipedRigPath, StringComparison.Ordinal)
+                        ? CreateExplicitFatherV18CleanBipedHumanDescription(importer.humanDescription)
                     : IsFatherV18HiggsfieldMotion(assetPath)
                         ? CreateExplicitFatherV18HiggsfieldHumanDescription(importer.humanDescription)
                         : CreateExplicitIdentityHumanDescription(importer.humanDescription);
@@ -174,6 +180,37 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 Map("Spine", "Spine02"),
                 Map("Chest", "Spine01"),
                 Map("UpperChest", "Spine"),
+                Map("Neck", "neck"),
+                Map("Head", "Head"),
+                Map("LeftShoulder", "LeftShoulder"),
+                Map("LeftUpperArm", "LeftArm"),
+                Map("LeftLowerArm", "LeftForeArm"),
+                Map("LeftHand", "LeftHand"),
+                Map("RightShoulder", "RightShoulder"),
+                Map("RightUpperArm", "RightArm"),
+                Map("RightLowerArm", "RightForeArm"),
+                Map("RightHand", "RightHand"),
+                Map("LeftUpperLeg", "LeftUpLeg"),
+                Map("LeftLowerLeg", "LeftLeg"),
+                Map("LeftFoot", "LeftFoot"),
+                Map("LeftToes", "LeftToeBase"),
+                Map("RightUpperLeg", "RightUpLeg"),
+                Map("RightLowerLeg", "RightLeg"),
+                Map("RightFoot", "RightFoot"),
+                Map("RightToes", "RightToeBase")
+            };
+            return description;
+        }
+
+        private static HumanDescription CreateExplicitFatherV18CleanBipedHumanDescription(
+            HumanDescription description)
+        {
+            description.human = new[]
+            {
+                Map("Hips", "Hips"),
+                Map("Spine", "Spine"),
+                Map("Chest", "Spine01"),
+                Map("UpperChest", "Spine02"),
                 Map("Neck", "neck"),
                 Map("Head", "Head"),
                 Map("LeftShoulder", "LeftShoulder"),

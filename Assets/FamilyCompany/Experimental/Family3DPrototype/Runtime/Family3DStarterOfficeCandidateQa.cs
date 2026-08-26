@@ -39,7 +39,13 @@ namespace FamilyCompany.Experimental.Family3D
         // a stride purely to bound disk cost; they are no longer what defines the sample rate.
         private const float FatherCaptureDeltaSeconds = 1f / 60f;
         private const int MaximumFatherTelemetrySamples = 3600;
-        private const int FatherCompositeFrameStride = 2;
+        // Measured from the forced proof route: one circuit advances 7.950477 Unity/office gait
+        // units. Nine procedural cycles per circuit makes position, facing and foot phase close on
+        // the same frame, avoiding the 0.32-cycle GIF seam seen with the inherited 0.8526 value.
+        private const float FatherCleanBipedNaturalStrideOfficeUnits = 0.8833864f;
+        // 60 fps telemetry stays exhaustive, while every eighth frame yields a 7.5 fps visual
+        // proof covering both 11.2-second route circuits instead of V33's first six seconds only.
+        private const int FatherCompositeFrameStride = 8;
 
         [Header("Candidate prefabs (Experimental only)")]
         [SerializeField] private GameObject playerCandidate;
@@ -50,6 +56,7 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private AnimationClip fatherHiggsfieldIdleClip;
         [SerializeField] private bool fatherStaticRootMotionOnly;
         [SerializeField] private bool fatherHiggsfieldIdleRun;
+        [SerializeField] private bool fatherCleanBipedNaturalWalk;
         [SerializeField] private Texture2D fatherStaticAlbedo;
 
         // Serialized rather than resolved by Shader.Find at runtime. Unity strips any shader no
@@ -120,6 +127,7 @@ namespace FamilyCompany.Experimental.Family3D
             groundY = qaGroundY;
             fatherStaticRootMotionOnly = false;
             fatherHiggsfieldIdleRun = false;
+            fatherCleanBipedNaturalWalk = false;
             fatherHiggsfieldIdleClip = null;
             fatherStaticAlbedo = null;
         }
@@ -146,6 +154,7 @@ namespace FamilyCompany.Experimental.Family3D
             groundY = qaGroundY;
             fatherStaticRootMotionOnly = true;
             fatherHiggsfieldIdleRun = false;
+            fatherCleanBipedNaturalWalk = false;
             fatherHiggsfieldIdleClip = null;
         }
 
@@ -174,6 +183,33 @@ namespace FamilyCompany.Experimental.Family3D
             groundY = qaGroundY;
             fatherStaticRootMotionOnly = false;
             fatherHiggsfieldIdleRun = true;
+            fatherCleanBipedNaturalWalk = false;
+        }
+
+        public void ConfigureFatherCleanBipedNaturalWalk(
+            GameObject father,
+            Texture2D albedo,
+            Material exactAlbedoMaterial,
+            Camera overlayCamera,
+            int isolatedLayer,
+            float fallbackScale = 1f,
+            float qaGroundY = 0f)
+        {
+            playerCandidate = null;
+            olderSisterCandidate = null;
+            fatherCandidate = father;
+            motherCandidate = null;
+            sharedHumanoidWalkClip = null;
+            fatherHiggsfieldIdleClip = null;
+            fatherStaticAlbedo = albedo;
+            fatherExactAlbedoMaterial = exactAlbedoMaterial;
+            qaOverlayCamera = overlayCamera;
+            qaLayer = Mathf.Clamp(isolatedLayer, 0, 31);
+            fallbackOfficeWorldToQaScale = Mathf.Max(0.0001f, fallbackScale);
+            groundY = qaGroundY;
+            fatherStaticRootMotionOnly = false;
+            fatherHiggsfieldIdleRun = false;
+            fatherCleanBipedNaturalWalk = true;
         }
 
         /// <summary>
@@ -344,7 +380,9 @@ namespace FamilyCompany.Experimental.Family3D
                     // route advances in exact fixed steps and the wall clock only bounds the run
                     // through the realtime auto-quit.
                     Time.captureDeltaTime = FatherCaptureDeltaSeconds;
-                    fatherMotionStrideOfficeUnits = ResolveFatherMotionStrideOfficeUnits();
+                    fatherMotionStrideOfficeUnits = fatherCleanBipedNaturalWalk
+                        ? FatherCleanBipedNaturalStrideOfficeUnits
+                        : ResolveFatherMotionStrideOfficeUnits();
                     fatherMotionYawDegreesPerSecond = ResolveFatherMotionYawDegreesPerSecond();
                     fatherMotionFacingOffsetDegrees = ResolveFatherMotionFacingOffsetDegrees();
                     fatherMotionYawSweep = HasCommandLineFlag("-family3d-father-v18-motion-yaw-sweep");
@@ -456,6 +494,8 @@ namespace FamilyCompany.Experimental.Family3D
                                 sourceOfficeCamera,
                                 fatherStaticRootMotionOnly
                                     ? "father-v18-higgsfield-static-map-walk"
+                                    : fatherCleanBipedNaturalWalk
+                                        ? "father-v18-clean-biped-natural-map-walk"
                                     : fatherHiggsfieldIdleRun
                                         ? "father-v18-higgsfield-idle-run-map-walk"
                                     : "father-stylized-sd-map-walk-v17");
@@ -496,7 +536,8 @@ namespace FamilyCompany.Experimental.Family3D
                 "FAMILY_3D_FATHER_MAP_MOVE_QA: starting two continuous circuits on one " +
                 "actual Starter Office map; staticRootMotionOnly=" +
                 fatherStaticRootMotionOnly + " higgsfieldIdleRun=" +
-                fatherHiggsfieldIdleRun + " productionEligible=false.",
+                fatherHiggsfieldIdleRun + " cleanBipedNaturalWalk=" +
+                fatherCleanBipedNaturalWalk + " productionEligible=false.",
                 this);
 
             for (var circuit = 0; circuit < 2; circuit++)
@@ -510,6 +551,8 @@ namespace FamilyCompany.Experimental.Family3D
                             target,
                             (fatherStaticRootMotionOnly
                                 ? "father-v18-higgsfield-static-map-walk"
+                                : fatherCleanBipedNaturalWalk
+                                    ? "father-v18-clean-biped-natural-map-walk"
                                 : fatherHiggsfieldIdleRun
                                     ? "father-v18-higgsfield-idle-run-map-walk"
                                 : "father-stylized-sd-map-walk-v17") +
@@ -542,6 +585,8 @@ namespace FamilyCompany.Experimental.Family3D
             WriteRuntimeReceipt(
                 fatherStaticRootMotionOnly
                     ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
+                    : fatherCleanBipedNaturalWalk
+                        ? "FATHER_V18_CLEAN_BIPED_NATURAL_MAP_PROOF_COMPLETE"
                     : fatherHiggsfieldIdleRun
                         ? "FATHER_V18_HIGGSFIELD_IDLE_RUN_MAP_PROOF_COMPLETE"
                     : "FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE");
@@ -722,7 +767,7 @@ namespace FamilyCompany.Experimental.Family3D
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             skinned[0].updateWhenOffscreen = true;
 
-            if (fatherHiggsfieldIdleRun &&
+            if ((fatherHiggsfieldIdleRun || fatherCleanBipedNaturalWalk) &&
                 string.Equals(definition.FamilyId, "father", StringComparison.Ordinal))
                 ApplyFatherV18HiggsfieldMaterial(skinned);
 
@@ -739,7 +784,7 @@ namespace FamilyCompany.Experimental.Family3D
 
             bool useFatherNaturalSdWalk =
                 definition.Prefab == fatherCandidate && !fatherHiggsfieldIdleRun;
-            if (useFatherNaturalSdWalk)
+            if (useFatherNaturalSdWalk && !fatherCleanBipedNaturalWalk)
                 targetHeight *= 0.55f;
 
             float appliedScale = targetHeight / candidateHeight;
@@ -761,6 +806,34 @@ namespace FamilyCompany.Experimental.Family3D
                 poseStrength,
                 useFatherNaturalSdWalk,
                 fatherHiggsfieldIdleRun ? fatherHiggsfieldIdleClip : null);
+            if (fatherCleanBipedNaturalWalk)
+            {
+                walkActor.ConfigureNaturalSdStyle(
+                    ResolveCommandLineFloat(
+                        "-family3d-father-clean-biped-torso-upright-degrees",
+                        5f,
+                        0f,
+                        10f,
+                        "Father clean-biped torso upright"),
+                    ResolveCommandLineFloat(
+                        "-family3d-father-clean-biped-arm-outward-degrees",
+                        2f,
+                        0f,
+                        12f,
+                        "Father clean-biped arm outward"),
+                    ResolveCommandLineFloat(
+                        "-family3d-father-clean-biped-arm-swing-degrees",
+                        6f,
+                        0f,
+                        18f,
+                        "Father clean-biped arm swing"),
+                    ResolveCommandLineFloat(
+                        "-family3d-father-clean-biped-elbow-bend-degrees",
+                        22f,
+                        0f,
+                        24f,
+                        "Father clean-biped elbow bend"));
+            }
 
             var binding = new Binding(
                 definition.FamilyId,
@@ -777,7 +850,7 @@ namespace FamilyCompany.Experimental.Family3D
                 poseStrength);
 
             host.SetActive(true);
-            if (fatherHiggsfieldIdleRun)
+            if (fatherHiggsfieldIdleRun || fatherCleanBipedNaturalWalk)
             {
                 ApplyExactStaticMapScale(binding, sourceOfficeCamera, true);
                 walkActor.RebaseVisualRootAfterScale();
@@ -943,12 +1016,14 @@ namespace FamilyCompany.Experimental.Family3D
                 // own stride differs therefore cannot be matched by retiming; it has to be driven by
                 // the same distance against its own stride. GaitDistance is monotonic, so unlike
                 // gaitPhase01 it carries no wrap for a non-integer stride ratio to break on.
-                double clipCycles = fatherHiggsfieldIdleRun && fatherMotionStrideOfficeUnits > 0f
+                double clipCycles =
+                    (fatherHiggsfieldIdleRun || fatherCleanBipedNaturalWalk) &&
+                    fatherMotionStrideOfficeUnits > 0f
                     ? binding.Agent.GaitDistance / fatherMotionStrideOfficeUnits
                     : gaitPhase01;
                 double motionClock =
                     (clipCycles - binding.WalkActor.PhaseOffset) *
-                    Family3DWalkActor.LockedCycleSeconds;
+                    binding.WalkActor.CycleSeconds;
                 binding.WalkActor.Tick(motionClock, worldPosition, worldRotation, isMoving);
             }
             binding.LastObservedDisplacement = binding.Agent.LastActualDisplacement;
@@ -1115,7 +1190,11 @@ namespace FamilyCompany.Experimental.Family3D
                 rightFootLocal = pose.rightFootLocal,
                 leftFootWorld = pose.leftFootWorld,
                 rightFootWorld = pose.rightFootWorld,
+                leftHandLocal = pose.leftHandLocal,
+                rightHandLocal = pose.rightHandLocal,
                 hipsLocal = pose.hipsLocal,
+                toeForwardLocal = pose.toeForwardLocal,
+                motionPhase01 = pose.motionPhase01,
                 leftFootPlanted = pose.leftFootPlanted,
                 rightFootPlanted = pose.rightFootPlanted
             });
@@ -1264,10 +1343,11 @@ namespace FamilyCompany.Experimental.Family3D
                 throw new InvalidOperationException("Starter Office must be ready before candidate binding.");
             if (qaOverlayCamera == null)
                 throw new InvalidOperationException("QA overlay camera is not configured.");
-            if ((fatherStaticRootMotionOnly || fatherHiggsfieldIdleRun) &&
+            if ((fatherStaticRootMotionOnly || fatherHiggsfieldIdleRun ||
+                 fatherCleanBipedNaturalWalk) &&
                 fatherStaticAlbedo == null)
                 throw new InvalidOperationException("Father V18 albedo is missing.");
-            if (!fatherStaticRootMotionOnly &&
+            if (!fatherStaticRootMotionOnly && !fatherCleanBipedNaturalWalk &&
                 (sharedHumanoidWalkClip == null || !sharedHumanoidWalkClip.isHumanMotion))
                 throw new InvalidOperationException("Shared Humanoid walk clip is missing or not Humanoid.");
             if (fatherHiggsfieldIdleRun &&
@@ -1284,7 +1364,8 @@ namespace FamilyCompany.Experimental.Family3D
 
         private CandidateDefinition[] CandidateDefinitions()
         {
-            if (fatherStaticRootMotionOnly || fatherHiggsfieldIdleRun)
+            if (fatherStaticRootMotionOnly || fatherHiggsfieldIdleRun ||
+                fatherCleanBipedNaturalWalk)
             {
                 return new[]
                 {
@@ -1420,6 +1501,7 @@ namespace FamilyCompany.Experimental.Family3D
                     starterActorCount = starter == null ? 0 : starter.Actors.Count,
                     fatherStaticRootMotionOnly = fatherStaticRootMotionOnly,
                     fatherHiggsfieldIdleRun = fatherHiggsfieldIdleRun,
+                    fatherCleanBipedNaturalWalk = fatherCleanBipedNaturalWalk,
                     coordinateMapping =
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
                         "Camera.ViewportPointToRay -> Y=ground plane; raw (x,y)->(x,groundY,y) fallback",
@@ -1428,6 +1510,8 @@ namespace FamilyCompany.Experimental.Family3D
                         fatherStaticRootMotionOnly
                             ? "every frame: live Father SpriteRenderer projected bounds height == " +
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
+                            : fatherCleanBipedNaturalWalk
+                                ? "one locked uniform scale from the paid static Father V18 rest bounds; handcrafted two-contact SD biped cycle; no generated moving mesh"
                             : fatherHiggsfieldIdleRun
                                 ? "one locked uniform model scale calibrated from idle-0 projected bounds to the live Father sprite; no per-pose rescaling"
                             : "live SpriteRenderer bounds viewport height / QA projected viewport height per metre",
@@ -1456,6 +1540,12 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherCaptureSimulationSeconds = (float)fatherCaptureSimulationSeconds,
                     fatherCaptureSamples = fatherCaptureSamples.ToArray(),
                     compositeCapturedFrames = compositeCapturedFrames,
+                    compositeCaptureFrameStride = fatherStaticRootMotionOnly
+                        ? 12
+                        : FatherCompositeFrameStride,
+                    compositeCaptureFramesPerSecond = fatherStaticRootMotionOnly
+                        ? 5f
+                        : 60f / FatherCompositeFrameStride,
                     minimumCompositeLumaRange = compositeCapturedFrames > 0
                         ? minimumCompositeLumaRange
                         : 0,
@@ -1516,6 +1606,32 @@ namespace FamilyCompany.Experimental.Family3D
                     return true;
             }
             return false;
+        }
+
+        private static float ResolveCommandLineFloat(
+            string flag,
+            float fallback,
+            float minimum,
+            float maximum,
+            string label)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length - 1; index++)
+            {
+                if (!string.Equals(args[index], flag, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!float.TryParse(
+                        args[index + 1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out float value) ||
+                    value < minimum || value > maximum)
+                    throw new InvalidOperationException(
+                        label + " must be in [" + minimum.ToString(CultureInfo.InvariantCulture) +
+                        ", " + maximum.ToString(CultureInfo.InvariantCulture) + "].");
+                return value;
+            }
+            return fallback;
         }
 
         private static float ResolveAutoQuitSeconds()
@@ -1675,6 +1791,8 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherProofRouteCompleted
                     ? fatherStaticRootMotionOnly
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
+                        : fatherCleanBipedNaturalWalk
+                            ? "FATHER_V18_CLEAN_BIPED_NATURAL_MAP_PROOF_COMPLETE"
                         : fatherHiggsfieldIdleRun
                             ? "FATHER_V18_HIGGSFIELD_IDLE_RUN_MAP_PROOF_COMPLETE"
                         : "FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE"
@@ -1708,6 +1826,7 @@ namespace FamilyCompany.Experimental.Family3D
             public int starterActorCount;
             public bool fatherStaticRootMotionOnly;
             public bool fatherHiggsfieldIdleRun;
+            public bool fatherCleanBipedNaturalWalk;
             public string coordinateMapping;
             public string directionMapping;
             public string scalePolicy;
@@ -1730,6 +1849,8 @@ namespace FamilyCompany.Experimental.Family3D
             public float fatherCaptureSimulationSeconds;
             public FatherCaptureSample[] fatherCaptureSamples;
             public int compositeCapturedFrames;
+            public int compositeCaptureFrameStride;
+            public float compositeCaptureFramesPerSecond;
             public int minimumCompositeLumaRange;
             public int maximumCompositeLumaRange;
             public bool compositeVisualContentPass;
@@ -1755,7 +1876,11 @@ namespace FamilyCompany.Experimental.Family3D
             public Vector3 rightFootLocal;
             public Vector3 leftFootWorld;
             public Vector3 rightFootWorld;
+            public Vector3 leftHandLocal;
+            public Vector3 rightHandLocal;
             public Vector3 hipsLocal;
+            public Vector3 toeForwardLocal;
+            public float motionPhase01;
             public bool leftFootPlanted;
             public bool rightFootPlanted;
         }

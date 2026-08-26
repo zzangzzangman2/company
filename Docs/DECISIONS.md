@@ -1,5 +1,39 @@
 # DECISIONS
 
+## 2026-08-26 / Father V18은 정적 외형만 보존하고 clean biped로 다시 리깅한다
+
+결정: 사용자가 승인한 방향의 paid static Father V18 vertices/topology/UV/material은 유지하되, 사용자 영상에서
+세 번째 다리와 흐물거림을 만든 moving FBX의 skeleton, skin weights, mesh와 clip은 폐기한다. 정적 메시 위에
+좌우가 분리된 24-bone clean biped를 새로 만들고 Unity가 전용 0.88초 SD 보행을 절차적으로 구동한다.
+
+이유: 기존 imported walk의 방향 +90° 수정은 몸의 진행 방향만 해결했다. malformed skin/skeleton 때문에
+보행 중 lower body가 여러 limb처럼 겹치고 늘어나는 문제와, 팔/다리 동작의 미적 문제는 방향값으로 고칠 수
+없다. shared human clip을 약화시키는 V4/G/H 계열도 사용자가 giant/non-biped/rubbery/stiff로 이미 기각했다.
+
+구현 원칙:
+
+- 외형을 다시 생성하지 않는다. rest 최대 정점 오차 `6.143906e-8`, topology/UV/material 동일을 영수증으로
+  고정한다.
+- 좌우 교차 weight와 arm+leg mixed weight는 각각 `0`, vertex influence는 최대 `2`로 제한한다.
+- 두 다리는 명확한 반대 위상, 긴 지지 sweep과 굽힌 무릎 회복을 갖고, 두 팔은 몸 옆에서 작은 반대 swing을
+  한다. pelvis lateral sway는 금지하고 작은 upward-only rise만 허용한다.
+- V35에서 impact IK가 실제 bone 좌표를 한 프레임 `0.23 u` 끌어당긴 것이 드러났으므로, V36 이후 모든
+  world-space foot solver를 제거한다. contact bool은 anatomy phase telemetry일 뿐 자동 slip PASS가 아니다.
+- 실제 맵 두 바퀴의 169 rendered frames를 전부 확대 육안 검수한다. 4장 정지 시트나 자동 수치만으로
+  통과시키지 않는다.
+
+후속 시각 결정: V36은 사용자가 팔이 몸 뒤로 사라지고 허리가 곱추처럼 보인다고 지적해 기각했다. HumanPose
+arm muscle 보정을 버리고 승인 정적 arm rest에서 직접 bone rotation을 적용한다. 이 모델의 실측 forward는
+local `-X`이므로 posture/arm basis도 body forward=`-transform.right`, body side=`transform.forward`로
+고정한다. V39는 torso upright `5°`, arm outward `2°`, opposite swing `6°`, elbow bend `22°`다.
+
+결과: 선택한 V38 style B와 기본값 V39의 실제 map PNG는 `169/169` 바이트 동일하다. V39 확대 프레임 전부에서
+보이는 다리는 둘이고 extra limb/cone, 분리 신발, mesh melting, 다리 교차, 거인 축척, 잘못된 방향, seam
+jump가 보이지 않았다. 손은 몸 옆에서 계속 읽히며 팔꿈치가 굽고 상체 중심선은 머리 아래 골반 위에 놓인다.
+그러나 이 판정은 내부 후보 검수이며 사용자 합격이 아니다. `productionEligible=false`를 유지하고 실제 GIF
+승인 전에는 production/default/Downloads/배포본으로 옮기지 않는다. 신규 Higgsfield 사용량은 0 credits,
+잔액은 68이다.
+
 ## 2026-08-26 / 보행 위상은 거리로 구동하고, 클립은 자기 보폭을 선언한다
 
 결정: Father V18의 3D 클립 위상을 오피스 에이전트의 `gaitPhase01`이 아니라 누적 `GaitDistance`를 그

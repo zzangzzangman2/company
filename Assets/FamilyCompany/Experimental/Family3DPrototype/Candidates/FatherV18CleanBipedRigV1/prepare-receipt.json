@@ -1,0 +1,74 @@
+{
+  "contract": "FC-FATHER-V18-STATIC-APPEARANCE-CLEAN-BIPED-RIG-V1",
+  "sourceFbx": "C:/Users/godho/Documents/Codex/family_company_unity/Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx",
+  "sourceFbxSha256": "589D4CED62894EA27F3D4469019EDC3A4A845BD672AEF1664FC8AE0542305D5A",
+  "outputFbx": "C:/Users/godho/Documents/Codex/family_company_unity/Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV1/father-v18-clean-biped-rig-v1.fbx",
+  "outputFbxSha256": "83C6892C1C0F8BDC6081F3D8086BFCD5D4E4F3008F843F4ED07730FD94AB4F2F",
+  "sourceWorldVertexHash": "564B987F1A11B40658D174EBF4C889865704B2F79ACA710715DAD8BCD74BB3C6",
+  "postApplyWorldVertexHash": "B4EB3408513DE783CF13E4F232A31B2C9CFEBD2303F18DB891B34E903B0B7C77",
+  "riggedWorldVertexHashAtRest": "B4EB3408513DE783CF13E4F232A31B2C9CFEBD2303F18DB891B34E903B0B7C77",
+  "maximumRestVertexDelta": 6.143906154658885e-08,
+  "topologyUvHash": "5F1470A16BF5FA6CCD11A906D0ACBA36665A167B46205385B460C76A1F4F5323",
+  "sourceObjectMatrix": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      -0.00017623603343963623
+    ],
+    [
+      0.0,
+      1.0,
+      1.6292067073209182e-07,
+      -2.8833746910095215e-06
+    ],
+    [
+      0.0,
+      -1.6292067073209182e-07,
+      1.0,
+      0.48935484886169434
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "vertexCount": 28895,
+  "polygonCount": 49192,
+  "boneCount": 24,
+  "deformBoneCount": 22,
+  "maximumInfluencesPerVertex": 2,
+  "weightedVertexCount": 28895,
+  "crossSideVertexCount": 0,
+  "armLegMixedVertexCount": 0,
+  "weightVertexCounts": {
+    "Hips": 4938,
+    "Spine": 2747,
+    "Spine01": 2735,
+    "Spine02": 2273,
+    "neck": 1140,
+    "Head": 7669,
+    "LeftShoulder": 0,
+    "LeftArm": 175,
+    "LeftForeArm": 877,
+    "LeftHand": 1459,
+    "RightShoulder": 0,
+    "RightArm": 176,
+    "RightForeArm": 756,
+    "RightHand": 1066,
+    "LeftUpLeg": 1398,
+    "LeftLeg": 1247,
+    "LeftFoot": 3224,
+    "LeftToeBase": 0,
+    "RightUpLeg": 1234,
+    "RightLeg": 1349,
+    "RightFoot": 2953,
+    "RightToeBase": 0
+  },
+  "appearancePolicy": "Exact paid Father V18 static vertices/topology/UV/material slots retained; only a new biped armature, armature modifier, and deterministic skin weights were added",
+  "motionPolicy": "No generated motion clip is embedded; Unity QA drives a handcrafted two-contact SD biped cycle on this clean Humanoid rig",
+  "rejectedSourcePolicy": "CasualWalk613 moving FBX skeleton/weights are not reused",
+  "productionEligible": false
+}
