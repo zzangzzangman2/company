@@ -565,6 +565,8 @@ namespace FamilyCompany.Experimental.Family3D
             rightUpperLegFrontBack = FindMuscle("Right Upper Leg Front-Back");
             leftLowerLegStretch = FindMuscle("Left Lower Leg Stretch");
             rightLowerLegStretch = FindMuscle("Right Lower Leg Stretch");
+            leftArmDownUp = FindMuscle("Left Arm Down-Up");
+            rightArmDownUp = FindMuscle("Right Arm Down-Up");
         }
 
         /// <summary>
@@ -822,20 +824,33 @@ namespace FamilyCompany.Experimental.Family3D
             if (spine == null || head == null || hips == null)
                 return;
             Quaternion headWorldRotation = head.rotation;
-            const float targetLeanDegrees = 2f;
+            // V61 stopped correcting at two degrees regardless of sign. Its measured signed lean
+            // was -1.45 degrees on average (negative is backward), which is small numerically but
+            // unmistakably zombie-like on this short, large-headed body. Aim one degree into the
+            // anatomical travel direction instead of accepting either forward or backward lean.
+            const float targetForwardLeanDegrees = 1f;
+            Vector3 forwardWorld = visualRoot.TransformDirection(clipSagittalForwardLocal);
+            forwardWorld.y = 0f;
+            if (forwardWorld.sqrMagnitude <= 0.000001f)
+                forwardWorld = visualRoot.forward;
+            forwardWorld.Normalize();
+            float targetRadians = targetForwardLeanDegrees * Mathf.Deg2Rad;
+            Vector3 targetTorso =
+                Vector3.up * Mathf.Cos(targetRadians) +
+                forwardWorld * Mathf.Sin(targetRadians);
             for (var iteration = 0; iteration < 3; iteration++)
             {
                 Vector3 torso = head.position - hips.position;
                 if (torso.sqrMagnitude <= 0.0000001f)
                     break;
-                float lean = Vector3.Angle(torso, Vector3.up);
-                if (lean <= targetLeanDegrees + 0.05f)
+                float error = Vector3.Angle(torso, targetTorso);
+                if (error <= 0.05f)
                     break;
-                Vector3 axis = Vector3.Cross(torso, Vector3.up);
+                Vector3 axis = Vector3.Cross(torso, targetTorso);
                 if (axis.sqrMagnitude <= 0.0000001f)
                     break;
                 spine.rotation = Quaternion.AngleAxis(
-                    lean - targetLeanDegrees,
+                    error,
                     axis.normalized) * spine.rotation;
             }
             // Moving the upper-body mass must not make the face stare at the floor or ceiling.
@@ -858,6 +873,13 @@ namespace FamilyCompany.Experimental.Family3D
                 ApplyNaturalSdLeg(leftLegPhase, leftUpperLegFrontBack, leftLowerLegStretch);
                 ApplyNaturalSdLeg(rightLegPhase, rightUpperLegFrontBack, rightLowerLegStretch);
             }
+
+            // The clean V4 bind pose is a T-pose. Establish the same compact arms-at-sides base
+            // on every sample before adding a small counter-swing. Restoring the upper-arm bone
+            // transforms after SetHumanPose would put the T-pose back and visibly detach both
+            // sleeves/hands from the torso, as the rejected V64 diagnostic demonstrated.
+            sampledHumanPose.muscles[leftArmDownUp] = -0.95f;
+            sampledHumanPose.muscles[rightArmDownUp] = -0.95f;
 
             humanPoseHandler.SetHumanPose(ref sampledHumanPose);
             RestoreApprovedUpperBodyRest();
@@ -993,13 +1015,6 @@ namespace FamilyCompany.Experimental.Family3D
 
         private void ApplyNaturalSdArms(float phase, bool isMoving)
         {
-            RestoreBoneRest(leftUpperArm);
-            RestoreBoneRest(rightUpperArm);
-            RestoreBoneRest(leftLowerArm);
-            RestoreBoneRest(rightLowerArm);
-            RestoreBoneRest(leftHand);
-            RestoreBoneRest(rightHand);
-
             ResolveNaturalSdBodyAxes(out Vector3 bodyForward, out Vector3 bodySide);
             RotateArmOutward(leftUpperArm, leftHand, bodyForward, bodySide);
             RotateArmOutward(rightUpperArm, rightHand, bodyForward, bodySide);

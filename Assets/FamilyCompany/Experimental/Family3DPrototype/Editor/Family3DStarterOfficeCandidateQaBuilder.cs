@@ -27,7 +27,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldStaticMapQa.unity";
         public const string FatherV18MotionQaScenePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedCasualWalkMapQaV61.unity";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedNaturalWalkMapQaV66.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -40,24 +40,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx";
         public const string FatherV18StaticTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
-        // V61 pairs the paid static appearance with the clean V2 T-pose/heat-map rig. The moving
-        // Higgsfield mesh, skin and skeleton are deliberately not reused; only its separate
-        // Humanoid Casual_Walk_inplace action 613 clip is sampled at full strength.
+        // V66 pairs the paid static appearance with the clean V4 T-pose/heat-map rig. V4 keeps
+        // whole shirt/collar panels on the spine chain so arm swing cannot split the garment.
+        // Movement uses this body's own compact SD biped pose instead of retargeting action 613
+        // from a different body, which tore the shirt and bent the torso in V61-V63.
         public const string FatherV18MotionModelPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx";
-        //
-        // V58 measured a 0.99762 toe-forward concentration and +16.9219 degree anatomical yaw,
-        // so K=-atan2(F.x,F.z)=-16.9219. Stride is calibrated from the low-foot contact interval,
-        // not from the whole airborne swing range: hidden two-circuit runs at 0.65, 0.675, 0.70
-        // and 0.7226 found the lowest combined planted-foot world drift at 0.675. Both values
-        // belong to this exact clean-rig/action-613/posture pair.
-        public const float FatherV18CasualWalkFacingOffsetDegrees = -16.9219f;
-        public const float FatherV18CasualWalkStrideOfficeUnits = 0.675f;
-
-        public const string FatherV18MotionIdleClipPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-idle.fbx";
-        public const string FatherV18MotionWalkClipPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx";
         public const string FatherV18MotionTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
         public const string MotherModelPath =
@@ -67,19 +55,16 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldStaticMapBuildV18";
         public const string FatherV18MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedCasualWalkMapBuildV61";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedNaturalWalkMapBuildV66";
 
         /// <summary>
-        /// The QA scene must reference this material as an asset. Unity strips any shader that no
-        /// scene or material asset pulls in, so the old runtime <c>Shader.Find("Unlit/Texture")</c>
-        /// resolved in the Editor and returned null in every built player, silently falling back to
-        /// Sprites/Default and rendering the Father as a dark vertex-coloured silhouette.
+        /// The moving proof must use the exact imported static-model surface material. V61/V62
+        /// replaced it with Unlit/Texture and made the approved teal/charcoal appearance dark and
+        /// flat. This scene-referenced clone keeps the same shader and properties as the static FBX.
         /// </summary>
         public const string ExactAlbedoMaterialPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/" +
-            "FatherV18HiggsfieldExactAlbedoUnlit.mat";
-
-        private const string ExactAlbedoShaderName = "Unlit/Texture";
+            "FatherV18HiggsfieldStaticSurface.mat";
 
         private static readonly CandidateDefinition[] Candidates =
         {
@@ -159,14 +144,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             try
             {
                 Build(ResolveBuildRoot(false, true), false, true);
-                Debug.Log("FAMILY_3D_FATHER_V18_CLEAN_BIPED_CASUAL_WALK_MAP_QA_BUILD: PASS");
+                Debug.Log("FAMILY_3D_FATHER_V18_CLEAN_BIPED_NATURAL_WALK_MAP_QA_BUILD: PASS");
                 EditorApplication.Exit(0);
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
                 Debug.LogError(
-                    "FAMILY_3D_FATHER_V18_CLEAN_BIPED_CASUAL_WALK_MAP_QA_BUILD: FAIL | " +
+                    "FAMILY_3D_FATHER_V18_CLEAN_BIPED_NATURAL_WALK_MAP_QA_BUILD: FAIL | " +
                     exception.Message);
                 EditorApplication.Exit(1);
             }
@@ -192,7 +177,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 fatherV18StaticOnly
                     ? "FamilyCompanyFatherV18HiggsfieldStaticMapQa.exe"
                     : fatherV18MotionOnly
-                        ? "FamilyCompanyFatherV18CasualWalkMapQa.exe"
+                        ? "FamilyCompanyFatherV18NaturalWalkMapQa.exe"
                     : "FamilyCompanyStarterOffice3DCandidateQa.exe");
             var options = new BuildPlayerOptions
             {
@@ -315,14 +300,10 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     throw new InvalidOperationException(
                         "Father V18 motion texture did not load: " + FatherV18MotionTexturePath);
 
-                AnimationClip idleClip = LoadHumanClip(FatherV18MotionIdleClipPath, "Idle");
-                AnimationClip motionWalkClip = LoadHumanClip(
-                    FatherV18MotionWalkClipPath,
-                    "Casual_Walk_inplace");
                 return new AssetBundle(
                     prefabs,
-                    motionWalkClip,
-                    idleClip,
+                    null,
+                    null,
                     texture,
                     definitions,
                     false,
@@ -352,63 +333,54 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 QaScenePath);
         }
 
-        private static AnimationClip LoadHumanClip(string assetPath, string nameFragment)
-        {
-            AssetDatabase.ImportAsset(
-                assetPath,
-                ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-            AnimationClip[] clips = AssetDatabase.LoadAllAssetsAtPath(assetPath)
-                .OfType<AnimationClip>()
-                .Where(candidate =>
-                    !candidate.name.StartsWith("__preview__", StringComparison.Ordinal) &&
-                    candidate.isHumanMotion)
-                .ToArray();
-            AnimationClip clip = clips.FirstOrDefault(candidate =>
-                                     candidate.name.IndexOf(
-                                         nameFragment,
-                                         StringComparison.OrdinalIgnoreCase) >= 0) ??
-                                 clips.FirstOrDefault();
-            if (clip == null)
-                throw new InvalidOperationException(
-                    "Humanoid clip containing '" + nameFragment + "' did not load: " + assetPath);
-            return clip;
-        }
-
         /// <summary>
-        /// Creates or repairs the scene-referenced Unlit/Texture material. Shader.Find is safe here
-        /// because this runs in the Editor; the point of the asset is that the scene reference
-        /// carries the shader into the player, where Shader.Find would not.
+        /// Clones the approved static FBX material into a scene-referenced asset.
         /// </summary>
         private static Material EnsureExactAlbedoMaterial()
         {
-            var existing = AssetDatabase.LoadAssetAtPath<Material>(ExactAlbedoMaterialPath);
-            if (existing != null &&
-                existing.shader != null &&
-                string.Equals(existing.shader.name, ExactAlbedoShaderName, StringComparison.Ordinal))
-                return existing;
-
-            Shader shader = Shader.Find(ExactAlbedoShaderName);
-            if (shader == null)
+            GameObject staticPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                FatherV18StaticModelPath);
+            Renderer staticRenderer = staticPrefab == null
+                ? null
+                : staticPrefab.GetComponentInChildren<Renderer>(true);
+            Material source = staticRenderer == null ? null : staticRenderer.sharedMaterial;
+            if (source == null || source.shader == null)
                 throw new InvalidOperationException(
-                    ExactAlbedoShaderName + " is not available in this Editor installation.");
+                    "Father V18 static source material could not be loaded from " +
+                    FatherV18StaticModelPath);
+            Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                FatherV18StaticTexturePath);
+            if (albedo == null)
+                throw new InvalidOperationException(
+                    "Father V18 static albedo could not be loaded from " +
+                    FatherV18StaticTexturePath);
 
             string directory = Path.GetDirectoryName(ProjectPath(ExactAlbedoMaterialPath));
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
 
-            var material = new Material(shader)
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(ExactAlbedoMaterialPath);
+            if (existing == null)
             {
-                name = "FatherV18HiggsfieldExactAlbedoUnlit",
-                color = Color.white
-            };
-            AssetDatabase.CreateAsset(material, ExactAlbedoMaterialPath);
+                existing = new Material(source);
+                AssetDatabase.CreateAsset(existing, ExactAlbedoMaterialPath);
+            }
+            else
+            {
+                EditorUtility.CopySerialized(source, existing);
+            }
+            existing.name = "FatherV18HiggsfieldStaticSurface";
+            existing.mainTexture = albedo;
+            existing.color = Color.white;
+            EditorUtility.SetDirty(existing);
+            AssetDatabase.SaveAssets();
             AssetDatabase.ImportAsset(
                 ExactAlbedoMaterialPath,
                 ImportAssetOptions.ForceSynchronousImport);
             var created = AssetDatabase.LoadAssetAtPath<Material>(ExactAlbedoMaterialPath);
             if (created == null)
                 throw new InvalidOperationException(
-                    "Could not create " + ExactAlbedoMaterialPath + ".");
+                    "Could not create static-surface material " + ExactAlbedoMaterialPath + ".");
             return created;
         }
 
@@ -440,18 +412,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     camera,
                     qaLayer);
             else if (bundle.FatherV18MotionOnly)
-                qa.ConfigureFatherHiggsfieldIdleRun(
+                qa.ConfigureFatherCleanBipedNaturalWalk(
                     bundle.Prefabs[0],
                     bundle.StaticAlbedo,
                     EnsureExactAlbedoMaterial(),
-                    bundle.IdleClip,
-                    bundle.WalkClip,
                     camera,
-                    qaLayer,
-                    FatherV18CasualWalkFacingOffsetDegrees,
-                    FatherV18CasualWalkStrideOfficeUnits,
-                    false,
-                    true);
+                    qaLayer);
             else
                 qa.Configure(
                     bundle.Prefabs[0],

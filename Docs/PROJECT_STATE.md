@@ -2,36 +2,39 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-26 / 현재 Father 최우선 후보: V18 clean-biped V2 + action 613, V61 사용자 승인 대기
+## 2026-08-26 / 현재 Father 최우선 후보: 정적 외형 + clean-biped V4 + 전용 SD 보행 V66
 
-- 현재 판정 대상은 `Family3DFatherV18CleanBipedCasualWalkMapQaV61` 하나다. 유료 정적 Father V18의
-  topology/UV/material/texture와 체형을 유지하고, `FatherV18CleanBipedRigV2`의 T-pose bind 및 Blender
-  bone-heat 가중치에 원본 `Casual_Walk_inplace` action 613을 `poseStrength=1.0`으로 적용한다. 별도
-  절차 보행으로 대체하지 않는다.
-- V2 FBX는 28,895 vertices, 49,192 polygons, 24 bones/22 deform bones, 최대 4 influences이며 좌우 교차
-  vertex와 arm+leg 혼합 vertex는 모두 `0`이다. SHA-256은
-  `F72705D868199B36B40C51762ED8B3525E9CA1B6E09FE4802CAFE3C9C42256BF`다.
-- Unity에서는 잘못된 축으로 섞이던 leg lateral/twist와 spine/neck nod만 해부학적으로 정리한다. 원본
-  클립의 무릎 위상과 체중 이동은 유지하고, 팔은 몸 옆에서 작은 반대 swing만 남긴다. 모델 정면 오프셋은
-  실제 화면 이동 4후보 비교로 확정한 `-16.9219°`, 접지 픽셀 drift를 최소화한 stride는 `0.675`다.
-- 실제 맵 두 바퀴를 30 fps로 완주한 `673` PNG와 확대 추적 시트 전부를 육안 검수했다. 전 방향에서 다리는
-  둘로 읽히며 third-leg/늘어남/다리 교차/분리 신발/곱추/팔 벌림/거인 축척/잘못된 진행 방향이 보이지 않았다.
-  23-frame close loop의 seam pose jump는 인접 변화 p95의 `0.6226`배로 끝 점프도 보이지 않는다.
-- 계측은 보조 증거다: torso mean/max `2.0035°/2.0498°`, toe-forward concentration `0.99755`, 양발 평균
-  swing-plane ratio `32.12:1`, 반대 손-발 correlation `0.7846/0.8024`. 과거 작업지시서의
-  `stride/height 0.35~0.55`는 화면상 과도한 거위걸음을 만들었으므로 시각 합격선으로 폐기한다. V61의
-  접지 보정값은 `0.2177`이며 실제 전체 GIF가 최종 authority다.
-- 증거: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedCasualWalkRuntimeV61HiFps`와
-  외부 검수 폴더 `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-casual-walk-v61`.
-  상세는 [FATHER_V18_CLEAN_BIPED_CASUAL_WALK_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_CASUAL_WALK_QA_2026-08-26.md).
-- 상태는 `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, **`productionEligible=false`**다.
-  Higgsfield 추가 사용량은 `0 credits`, 잔액은 `68`. production/default/Downloads/배포 실행본은 변경하지
-  않았고 Unity/Blender/Player는 모두 hidden/background로만 실행했다.
+- 사용자가 기준으로 다시 지정한 유료 정적 Father V18의 topology/UV/material/texture와 체형을 그대로
+  유지한다. 움직이는 동안에도 머리, 얼굴, 셔츠, 팔·손, 바지, 두 발이 정적 기준처럼 또렷해야 한다.
+- V61은 사용자에게 `옷이 뜯김`, `상체가 뒤로 젖은 좀비`, `캐릭터 자체가 이상함`으로 기각됐다. 실제
+  진단에서 셔츠 중심 3,116 vertices 중 2,011개가 arm weight를 갖고 있었고 signed torso lean 평균은
+  `-1.4516°`였다. V61/V62의 Unlit material도 정적 FBX보다 어둡고 평평했다.
+- V63은 정적 material과 안정 torso panel을 적용했지만 다른 체형용 action 613 리타겟 실루엣이 남았다.
+  V64는 T-pose arm rest를 잘못 복원해 팔이 수평으로 벌어진 진단본이다. 둘 다 탈락이다.
+- 현재 후보 V66은 `FatherV18CleanBipedRigV4`를 쓴다. V4는 28,895 vertices/49,192 polygons,
+  24 bones/22 deform bones, 최대 4 influences, cross-side `0`, arm+leg mixed `0`이며 셔츠·칼라·허리
+  안정 panel 38개에서 limb membership 11,235개를 제거했다. FBX SHA-256은
+  `107DE6C4D2F36C1048746275B4E4E108447094705684D75AECF62CA1220F50B0`다.
+- action 613의 moving mesh/skeleton/skin/AnimationClip은 V66에서 사용하지 않는다. 리그 자체의 T-pose
+  계약에서 팔을 몸 옆으로 먼저 내리고, 0.88초 SD 2족 cycle을 거리로 구동한다. 팔은 outward `1°`,
+  서로 반대 swing `8°`, elbow bend `12°`; torso 추가 lean은 `0°`다. 골반 좌우 흔들림과 world-space
+  foot pull은 없고 작은 upward-only rise만 있다.
+- 방향은 실제 QA ground 이동 벡터 + clean-rig authored-forward `90°`, 코너 회전은 기존 360°/s 선형
+  blend를 유지한다. exact yaw `0/45/90/135/180/225/270/315°` 2K 시트를 별도로 만들었다.
+- V66 실제 맵 증거는 30 fps `673` PNG/telemetry `1,344`, 2K `169` PNG, 두 회로 완료다. 34-frame
+  확대 루프 전체와 8 yaw에서 옷 분리, third leg, 다리 교차, 분리 신발, 뒤젖힌 몸통, 수평 팔, 거인
+  축척은 보이지 않았다. 전체 맵 GIF에서 진행 방향·코너 회전과 loop seam도 확인했다.
+- 보조 수치: lateral foot sign 교차 `0/1,344`, 최소 발 간격 `0.2465`, 양팔 상관 `-0.99993`, 손과
+  반대 발 상관 `0.8215`, signed torso lean 사실상 `0°`. 자동 수치 PASS는 사용자 승인이 아니다.
+- 상세: [FATHER_V18_CLEAN_BIPED_NATURAL_WALK_V66_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_NATURAL_WALK_V66_QA_2026-08-26.md).
+  상태는 `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, **`productionEligible=false`**다.
+  추가 Higgsfield 사용량 `0 credits`, 잔액 `68`; production/default/Downloads/배포본은 변경하지 않았다.
 
-## [V61로 해결됨] 2026-08-26 / 목표: Codex 외형 + Claude 클립. 병목은 스키닝이며 Codex 작업지시서로 넘겼다
+## [V66으로 대체·V61 사용자 기각] 2026-08-26 / 과거 목표: Codex 외형 + Claude 클립
 
-- **사용자 확정 목표는 "Codex의 clean biped 외형 + Claude의 `Casual_Walk_inplace`(613) 클립"이고,
-  걸음걸이가 절대 우선이다.** 절차적 보행으로 대체하지 않는다.
+- 당시 목표는 "Codex의 clean biped 외형 + Claude의 `Casual_Walk_inplace`(613) 클립"이었다. 그러나
+  실제 V61 영상에서 옷 파열과 뒤로 젖힌 상체가 확인되어 이 조합은 사용자 기각됐다. 현행 V66은
+  외부 체형 클립 리타겟을 사용하지 않는다.
 - **리타겟 2종 모두 실패했다.** Unity Humanoid 직접 리타겟은 상체 기울기 `8.42도`, 근육값 차분
   리타겟은 `10.68도`로 더 나빠졌다. 후자가 실패한 것이 진단이다: 기준 포즈(T-pose) 문제라면 차분이
   고쳤어야 한다. 원인은 기준이 아니라 **스키닝 가중치**다. `classify_vertex()`가 정점을 높이 구간과
@@ -48,7 +51,7 @@
 - 새 계측: `PoseSnapshot.torsoUpLocal`(골반→머리, 호스트 로컬). 상체 기울기를 키 감소로 추정하던 것을
   대체한다. 이전에 10% 키 감소로 `37도`라 추정했으나 실측은 `8.42도`였다.
 
-## [V61로 대체됨] 2026-08-26 / clean biped 리그 V1 인수 — 방향 검증, 알베도 회귀 1건 차단
+## [V66으로 대체됨] 2026-08-26 / clean biped 리그 V1 인수 — 방향 검증, 알베도 회귀 1건 차단
 
 Codex가 만든 `FatherV18CleanBipedRigV1`이 현재 후보다. 이후 작업은 Claude가 단독으로 잇는다.
 
@@ -72,7 +75,7 @@ Codex가 만든 `FatherV18CleanBipedRigV1`이 현재 후보다. 이후 작업은
   유지. production/default/Downloads/배포본은 건드리지 않았다.
 - 남은 것: 코너 회전 지연(초당 360도, 코너에서 약 0.3초 옆걸음)과 사용자 시각 승인.
 
-## [사용자 기각·V61로 대체됨] 2026-08-26 / V18 정적 외형 + 절차형 clean biped V39
+## [사용자 기각·V66으로 대체됨] 2026-08-26 / V18 정적 외형 + 절차형 clean biped V39
 
 - 사용자가 실제 영상을 보고 기존 V18 imported walk를 `다리가 3개`, `흐물흐물`, `팔이 가만히 있음`,
   `캐릭터 자체가 이상함`으로 판정했다. 아래의 "Father V18 보행 정합 완료"는 자동/계측 단계의 과거 기록이며

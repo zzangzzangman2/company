@@ -2,13 +2,50 @@
 
 최종 갱신: 2026-08-26
 
-## Father V18 clean-biped action-613 walk V61 (current isolated review candidate)
+## Father V18 clean-biped natural walk V66 (current isolated review candidate)
 
+- Appearance authority: paid static FBX
+  `Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx`, SHA-256
+  `589D4CED62894EA27F3D4469019EDC3A4A845BD672AEF1664FC8AE0542305D5A`, and 4096 albedo
+  SHA-256 `618F33856F2DD722EBFC1782DCB4BF5709D04E3721B4DB9E88F1A5BDDBEAAA9E`.
+- Current rig: `Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx`, SHA-256
+  `107DE6C4D2F36C1048746275B4E4E108447094705684D75AECF62CA1220F50B0`. It retains 28,895
+  vertices/49,192 polygons and has 24 bones/22 deform bones, maximum four influences, rest maximum
+  vertex delta `6.143906e-8`, cross-side vertices `0`, and arm+leg mixed vertices `0`. Stable torso
+  components `38` sanitize `6,425` vertices and remove `11,235` torso-to-limb memberships.
+- Surface material: `Materials/FatherV18HiggsfieldStaticSurface.mat`. It clones the static FBX shader
+  and properties and uses the same albedo/white tint; V61/V62's dark Unlit replacement is retired.
+- Motion: no embedded/imported clip. Unity drives a 0.88-second, distance-driven two-contact SD
+  biped cycle. Arms start beside the body and use 1-degree outward placement, 8-degree opposite
+  swing and 12-degree elbow bend. Torso/head use the static rest posture, lateral pelvis sway and
+  world-space foot pull are disabled, and only a small upward rise remains.
+- The action-613 moving mesh, skeleton, skin and AnimationClip are not referenced by V66.
+- Scene/build/runtimes:
+  `Scenes/Family3DFatherV18CleanBipedNaturalWalkMapQaV66.unity`,
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedNaturalWalkMapBuildV66`,
+  `FatherV18CleanBipedNaturalWalkRuntimeV66HiFpsR1`, `FatherV18CleanBipedNaturalWalkRuntimeV66_2KR1`,
+  and `FatherV18CleanBipedNaturalWalkRuntimeV66YawSweep2K`.
+- External review media:
+  `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-natural-walk-v66-review`.
+  It contains the 34-frame close GIF/MP4/sheet, 30 fps full-map MP4, 15 fps full-map GIF, and the
+  paid-static-vs-moving exact 8-yaw 2K comparison.
+- Runtime: telemetry `1,344`, 30 fps captures `673`, 2K captures `169`, two circuits complete;
+  production mutation false. Auxiliary pose audit found foot lateral sign crossings `0/1,344`,
+  minimum left/right lateral separation `0.2465`, opposite-arm correlation `-0.99993`, and signed
+  torso lean approximately `0°`. These numbers do not replace user review.
+- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`. Extra Higgsfield use is
+  `0 credits`, balance `68`; production/default/Downloads/deployed executables are unchanged.
+
+## Father V18 clean-biped action-613 walk V61 (user-rejected history)
+
+- The user rejected the actual GIF for torn clothing and a backward zombie-like torso. Later audit
+  reproduced shirt-to-arm weight contamination and negative signed lean, so V61 is not an approved
+  or current candidate regardless of its former automatic/internal PASS notes.
 - Appearance authority remains the paid static Father V18 source FBX
   `Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx`, SHA-256
   `589D4CED62894EA27F3D4469019EDC3A4A845BD672AEF1664FC8AE0542305D5A`, and its 4096 albedo,
   SHA-256 `618F33856F2DD722EBFC1782DCB4BF5709D04E3721B4DB9E88F1A5BDDBEAAA9E`.
-- Current rig: `Candidates/FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx`, SHA-256
+- Historical rig: `Candidates/FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx`, SHA-256
   `F72705D868199B36B40C51762ED8B3525E9CA1B6E09FE4802CAFE3C9C42256BF`. It retains 28,895
   vertices/49,192 polygons and uses a 24-bone/22-deform-bone horizontal T-pose bind. Blender
   `ARMATURE_AUTO` bone-heat weights are capped at four influences; all vertices are weighted,
@@ -28,11 +65,9 @@
   `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedCasualWalkRuntimeV61HiFps`.
   External review media is under
   `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-casual-walk-v61`.
-- Human review covered every one of the 673 map frames and all enlarged tracking sheets, plus a
-  23-frame exact close loop. No third leg, rubber stretching, lateral crossing, detached shoe,
-  hunched torso, raised/static arms, giant scale, wrong facing, or loop-end jump was visible.
-- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`.
-  The user—not an automatic metric—owns acceptance. No additional Higgsfield credits were used;
+- The former internal review failed to notice the garment split and backward lean that the user
+  caught in the GIF. Status: `USER_VISUAL_REJECTED`, `productionMutation=false`,
+  `productionEligible=false`. No additional Higgsfield credits were used;
   balance remains `68`. Production/default/Downloads and deployed executables are unchanged.
 
 ## Father V18 clean-biped natural walk V39 (user-rejected procedural history)

@@ -14,7 +14,40 @@ The folder does not alter the production family sprite catalog, production scene
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
 
-## Father V18 clean-biped action-613 walk V61 (current isolated review candidate)
+## Father V18 clean-biped natural walk V66 (current isolated review candidate)
+
+V66 keeps the paid static Father V18 topology, UV, texture, proportions and the static FBX surface
+material. Its moving rig is
+`Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx`, SHA-256
+`107DE6C4D2F36C1048746275B4E4E108447094705684D75AECF62CA1220F50B0`. The rig has 28,895
+vertices, 49,192 polygons, 24 bones/22 deform bones, no cross-side or arm+leg mixed vertices, and
+keeps 38 whole shirt/collar/waist panels on the torso chain so arm motion cannot split them.
+
+No imported/generated motion clip is used. `Family3DWalkActor` drives a compact 0.88-second SD
+biped cycle from this rig's own T-pose contract: alternating support/recovery legs, bent recovery
+knees, no lateral pelvis sway, a tiny upward rise, and small opposite arms beside the body. The
+T-pose arms are first lowered through Humanoid muscles; reapplying their rest transforms is forbidden
+because the rejected V64 diagnostic proved that it restores horizontal arms. V66 defaults are torso
+lean 0°, arm outward 1°, opposite swing 8°, elbow bend 12°.
+
+The actual Father completed two map circuits with 1,344 telemetry samples, 673 rendered 30 fps
+frames, and 169 rendered 2K frames. A separate 2K sweep records exact yaw
+0/45/90/135/180/225/270/315°. Review media is under
+`outputs/father-v18-clean-biped-natural-walk-v66-review`: a 34-frame close GIF and all-frame sheet,
+full-map GIF/30 fps MP4, and paid-static-vs-moving exact 8-yaw comparison. The enlarged evidence does
+not show torn clothing, a third leg, lateral crossing, detached shoes, backward torso, horizontal
+arms, giant scale, wrong facing, or a loop jump.
+
+This is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. No production/default/Downloads/
+deployed executable changed, Unity/Blender/Player ran hidden/background only, and Higgsfield usage was
+0 credits (balance 68).
+
+## Father V18 clean-biped action-613 walk V61 (user-rejected history)
+
+The user rejected the actual V61 GIF for torn clothing and a backward zombie-like torso. Later
+diagnostics found 2,011 arm-contaminated vertices among 3,116 central torso vertices and mean signed
+torso lean `-1.4516°`. V61/V62 also used a dark Unlit surface unlike the approved static render.
+The former internal/automatic PASS is void.
 
 V61 preserves the paid static Father V18 appearance and replaces only its deformation contract.
 `Candidates/FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx` has a horizontal T-pose bind
@@ -35,8 +68,7 @@ giant scale, wrong facing or loop-end jump was visible. Evidence is in
 `FatherV18CleanBipedCasualWalkMapBuildV61`, `FatherV18CleanBipedCasualWalkRuntimeV61HiFps`, and the
 external review folder `outputs/father-v18-clean-biped-casual-walk-v61`.
 
-This is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`; only the user's review of the
-actual close and full-map GIFs can approve it. No additional Higgsfield credits were spent, and no
+This is `USER_VISUAL_REJECTED`, `productionEligible: false`. No additional Higgsfield credits were spent, and no
 production/default/Downloads/deployed executable was changed.
 
 ## Father V18 clean-biped natural walk V39 (user-rejected procedural history)

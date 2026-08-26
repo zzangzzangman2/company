@@ -104,6 +104,8 @@ namespace FamilyCompany.Experimental.Family3D
         private bool fatherMotionYawSweep;
         private int fatherCompositeFrameStride = DefaultFatherCompositeFrameStride;
         private int maximumFatherCompositeFrames = DefaultMaximumFatherCompositeFrames;
+        private int fatherCompositeCaptureWidth = 1280;
+        private int fatherCompositeCaptureHeight = 720;
         private bool fatherProofRouteActive;
         private bool fatherProofRouteCompleted;
         private int fatherProofRouteCircuit = -1;
@@ -382,6 +384,16 @@ namespace FamilyCompany.Experimental.Family3D
                     DefaultMaximumFatherCompositeFrames,
                     24,
                     900);
+                fatherCompositeCaptureWidth = ResolvePositiveIntArgument(
+                    "-family3d-father-map-capture-width",
+                    1280,
+                    1280,
+                    3840);
+                fatherCompositeCaptureHeight = ResolvePositiveIntArgument(
+                    "-family3d-father-map-capture-height",
+                    720,
+                    720,
+                    2160);
             }
             catch (Exception exception)
             {
@@ -876,25 +888,25 @@ namespace FamilyCompany.Experimental.Family3D
                 walkActor.ConfigureNaturalSdStyle(
                     ResolveCommandLineFloat(
                         "-family3d-father-clean-biped-torso-upright-degrees",
-                        5f,
+                        0f,
                         0f,
                         10f,
                         "Father clean-biped torso upright"),
                     ResolveCommandLineFloat(
                         "-family3d-father-clean-biped-arm-outward-degrees",
-                        2f,
+                        1f,
                         0f,
                         12f,
                         "Father clean-biped arm outward"),
                     ResolveCommandLineFloat(
                         "-family3d-father-clean-biped-arm-swing-degrees",
-                        6f,
+                        8f,
                         0f,
                         18f,
                         "Father clean-biped arm swing"),
                     ResolveCommandLineFloat(
                         "-family3d-father-clean-biped-elbow-bend-degrees",
-                        22f,
+                        12f,
                         0f,
                         24f,
                         "Father clean-biped elbow bend"));
@@ -927,30 +939,18 @@ namespace FamilyCompany.Experimental.Family3D
         {
             if (fatherStaticAlbedo == null)
                 throw new InvalidOperationException("Father V18 motion albedo is missing.");
-            // The source texture already contains the stylized colour and baked surface variation.
-            // V19 copied the FBX Standard material and then hit it with a 1.2 directional light,
-            // washing teal/charcoal into cyan/white. Use exact sRGB albedo without scene lighting.
+            // The user's accepted reference is the static FBX as rendered on this same map. Copy
+            // that exact surface material; replacing it with Unlit/Texture made V61/V62 dark and
+            // visibly changed the hair, shirt, trousers, hands and shoes.
             if (fatherExactAlbedoMaterial == null || fatherExactAlbedoMaterial.shader == null)
                 throw new InvalidOperationException(
-                    "Father V18 exact-albedo material is missing. It must be a scene-referenced " +
-                    "material asset; resolving the shader by name at runtime silently degrades to " +
-                    "Sprites/Default in a built player.");
-            // Fail rather than substitute. The previous fallback to Sprites/Default is what let a
-            // stripped shader look like a working build for five iterations.
-            if (!string.Equals(
-                    fatherExactAlbedoMaterial.shader.name,
-                    "Unlit/Texture",
-                    StringComparison.Ordinal))
-                throw new InvalidOperationException(
-                    "Father V18 exact-albedo material must use Unlit/Texture, not " +
-                    fatherExactAlbedoMaterial.shader.name +
-                    ". The albedo already carries the stylized colour and baked shading.");
+                    "Father V18 static-surface material is missing from the QA scene.");
             for (var index = 0; index < renderers.Length; index++)
             {
                 Renderer renderer = renderers[index];
                 var material = new Material(fatherExactAlbedoMaterial)
                 {
-                    name = "FatherV18HiggsfieldMotion_ExactAlbedoUnlit_QaRuntimeMaterial"
+                    name = "FatherV18HiggsfieldMotion_StaticSurface_QaRuntimeMaterial"
                 };
                 material.mainTexture = fatherStaticAlbedo;
                 material.color = Color.white;
@@ -1170,8 +1170,8 @@ namespace FamilyCompany.Experimental.Family3D
         {
             if (sourceOfficeCamera == null || qaOverlayCamera == null)
                 return;
-            const int width = 1280;
-            const int height = 720;
+            int width = fatherCompositeCaptureWidth;
+            int height = fatherCompositeCaptureHeight;
             RenderTexture target = RenderTexture.GetTemporary(
                 width,
                 height,
@@ -1572,13 +1572,15 @@ namespace FamilyCompany.Experimental.Family3D
                     coordinateMapping =
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
                         "Camera.ViewportPointToRay -> Y=ground plane; raw (x,y)->(x,groundY,y) fallback",
-                    directionMapping = "South..SE direction 0..7 -> yaw=(direction-4)*45 degrees",
+                    directionMapping =
+                        "measured QA ground displacement -> LookRotation + clean-rig 90 degree " +
+                        "authored-forward offset; 360 degrees/second corner blend",
                     scalePolicy =
                         fatherStaticRootMotionOnly
                             ? "every frame: live Father SpriteRenderer projected bounds height == " +
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
                             : FatherUsesCleanBipedCasualWalk
-                                ? "one locked uniform model scale calibrated from idle projected bounds; clean V2 T-pose/heat-map skin; Casual_Walk_inplace action 613 at poseStrength=1 with anatomical sanitation"
+                                ? "one locked uniform model scale calibrated from idle projected bounds; clean V4 T-pose/heat-map skin with stable whole shirt/collar panels; static-FBX surface material; Casual_Walk_inplace action 613 at poseStrength=1 with anatomical sanitation"
                             : fatherCleanBipedNaturalWalk
                                 ? "one locked uniform scale from the paid static Father V18 rest bounds; handcrafted two-contact SD biped cycle; no generated moving mesh"
                             : fatherHiggsfieldIdleRun
@@ -1591,7 +1593,9 @@ namespace FamilyCompany.Experimental.Family3D
                         "sortingLayerID/name/order and source transform Z are observed only and never assigned",
                     sharedCycleSeconds = fatherStaticRootMotionOnly
                         ? 0f
-                        : Family3DWalkActor.LockedCycleSeconds,
+                        : fatherCleanBipedNaturalWalk
+                            ? Family3DWalkActor.FatherSdCycleSeconds
+                            : Family3DWalkActor.LockedCycleSeconds,
                     staticMapScaleTolerance = StaticMapScaleTolerance,
                     movingSampleFrames = movingSampleFrames,
                     fatherMapWalkQa = fatherMapWalkQa,

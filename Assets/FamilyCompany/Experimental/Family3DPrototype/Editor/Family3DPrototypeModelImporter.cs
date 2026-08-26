@@ -54,6 +54,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18CleanBipedRigV2Path =
             CandidateRoot +
             "FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx";
+        public const string FatherV18CleanBipedRigV4Path =
+            CandidateRoot +
+            "FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx";
 
         private static readonly string[] IdentityHumanoidBoneNames =
         {
@@ -91,6 +94,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                    string.Equals(path, FatherApprovedV14NaturalWalkRigModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherV18CleanBipedRigPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherV18CleanBipedRigV2Path, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherV18CleanBipedRigV4Path, StringComparison.Ordinal) ||
                    IsFatherV18HiggsfieldMotion(path) ||
                    IsRuntime2DV2Candidate(path);
         }
@@ -136,7 +140,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 importer.humanDescription = IsFatherApprovedV14Rig(assetPath)
                     ? CreateExplicitFatherApprovedV14HumanDescription(importer.humanDescription)
                     : string.Equals(assetPath, FatherV18CleanBipedRigPath, StringComparison.Ordinal) ||
-                      string.Equals(assetPath, FatherV18CleanBipedRigV2Path, StringComparison.Ordinal)
+                      string.Equals(assetPath, FatherV18CleanBipedRigV2Path, StringComparison.Ordinal) ||
+                      string.Equals(assetPath, FatherV18CleanBipedRigV4Path, StringComparison.Ordinal)
                         ? CreateExplicitFatherV18CleanBipedHumanDescription(importer.humanDescription)
                     : IsFatherV18HiggsfieldMotion(assetPath)
                         ? CreateExplicitFatherV18HiggsfieldHumanDescription(importer.humanDescription)

@@ -1,6 +1,33 @@
 # DECISIONS
 
-## 2026-08-26 / Father V18 V61은 정적 외형 + clean T-pose skin + action 613을 사용한다
+## 2026-08-26 / Father V18 V66은 정적 외형 + clean V4 skin + 자체 SD 2족 보행을 사용한다
+
+결정: 사용자가 다시 지정한 paid static Father V18 외형과 정적 FBX surface material을 그대로 유지하고,
+`FatherV18CleanBipedRigV4` 위에서 이 리그 자체의 0.88초 SD 보행을 구동한다. action 613 moving mesh,
+skeleton, skin과 AnimationClip은 V66에서 사용하지 않는다.
+
+근거: V61 영상의 옷 파열은 셔츠 중심 3,116 vertices 중 2,011개가 arm weight를 가진 실제 skin
+오염이었고, 좀비 자세는 signed torso lean 평균 `-1.4516°`를 절댓값 허용치가 놓친 결과였다. V61/V62의
+Unlit material도 사용자가 기준으로 고른 정적 FBX와 다른 외형을 만들었다. V63에서 이 세 문제를 줄여도
+다른 체형용 클립의 리타겟 실루엣이 남았으므로, shared clip을 더 약화시키는 방향은 중단한다.
+
+구현 원칙:
+
+- V4는 셔츠·칼라·허리의 안정 component 38개를 spine chain에 유지하고 limb membership 11,235개를
+  제거한다. cross-side 및 arm+leg mixed vertex는 모두 0이다.
+- T-pose 팔은 HumanPose에서 몸 옆으로 먼저 내린다. 그 기준에서 outward 1°, 서로 반대 swing 8°,
+  elbow bend 12°만 더한다. V64처럼 rest transform을 다시 적용해 수평 팔을 만드는 코드는 금지한다.
+- 두 다리는 반대 위상, 긴 지지와 굽힌 무릎 회복을 사용한다. 골반 좌우 흔들림과 world-space foot pull은
+  금지하고 작은 upward-only rise만 허용한다.
+- 머리·척추·가슴은 정적 기준을 매 프레임 복원한다. 추가 torso lean은 0°다.
+- 방향은 실제 이동 벡터 + clean-rig 90° offset, 회전은 기존 360°/s 선형 corner blend다.
+- 자동 수치는 보조다. 34-frame 실제 확대 루프, 30 fps 전체 맵, 2K exact 8-yaw 비교를 사용자가 보고
+  승인하기 전에는 `productionEligible=false`다.
+
+V66은 격리 scene/build/runtime만 만들었다. production/default/Downloads/배포본은 변경하지 않았고,
+추가 Higgsfield 사용량은 0 credits, 잔액은 68이다.
+
+## [사용자 기각·V66으로 대체] 2026-08-26 / Father V18 V61은 정적 외형 + clean T-pose skin + action 613을 사용한다
 
 결정: 사용자가 기각한 V39 절차 보행을 현행 후보에서 내리고, 유료 정적 Father V18 외형을 유지한
 `FatherV18CleanBipedRigV2`에 원본 `Casual_Walk_inplace` action 613 Humanoid clip을 `poseStrength=1.0`으로
@@ -15,11 +42,11 @@
 `0.675`로 선택했다. 이전 작업지시서의 `stride/height 0.35~0.55`는 실제 화면에서 거위걸음을 유발하므로
 합격선에서 폐기한다. 자동 수치는 보조 진단이고 673-frame 전체 GIF 육안 검수와 사용자 판정이 우선한다.
 
-V61은 내부 확대 검수에서 third-leg/흐물거림/곱추/팔 벌림·정지/거인 축척/방향 오류/loop jump가 보이지
-않았다. 그러나 이는 사용자 승인과 다르므로 `productionEligible=false`를 유지한다. production/default/
-Downloads/배포본은 변경하지 않으며 Higgsfield 추가 비용도 쓰지 않는다.
+V61은 당시 내부 확대 검수에서 통과 후보로 잘못 기록했지만, 사용자가 실제 GIF에서 옷 파열과 뒤로 젖힌
+상체를 즉시 지적했다. 이후 weight/lean 진단으로 두 결함이 재현됐으므로 V61은 사용자 기각이며 자동/내부
+판정은 무효다. production/default/Downloads/배포본은 변경하지 않았고 Higgsfield 추가 비용도 쓰지 않았다.
 
-## [V61로 대체됨] 2026-08-26 / Father V18은 정적 외형만 보존하고 clean biped로 다시 리깅한다
+## [V66에서 재채택] 2026-08-26 / Father V18은 정적 외형만 보존하고 clean biped로 다시 리깅한다
 
 결정: 사용자가 승인한 방향의 paid static Father V18 vertices/topology/UV/material은 유지하되, 사용자 영상에서
 세 번째 다리와 흐물거림을 만든 moving FBX의 skeleton, skin weights, mesh와 clip은 폐기한다. 정적 메시 위에

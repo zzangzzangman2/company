@@ -86,8 +86,8 @@ def create_bone(edit_bones, name, head, tail, parent=None, deform=True):
 
 def build_armature(t_pose=False):
     suffix = "TPose" if t_pose else "SourcePose"
-    data = bpy.data.armatures.new("FatherV18CleanBipedV2_" + suffix + "_Skeleton")
-    armature = bpy.data.objects.new("FatherV18CleanBipedV2_" + suffix + "_Armature", data)
+    data = bpy.data.armatures.new("FatherV18CleanBipedV4_" + suffix + "_Skeleton")
+    armature = bpy.data.objects.new("FatherV18CleanBipedV4_" + suffix + "_Armature", data)
     bpy.context.scene.collection.objects.link(armature)
     bpy.context.view_layer.objects.active = armature
     armature.select_set(True)
@@ -211,6 +211,17 @@ def nearest_anatomical_bone(point, armature):
     )
 
 
+def nearest_bone_from(point, armature, candidates):
+    return min(
+        candidates,
+        key=lambda name: point_segment_distance(
+            point,
+            armature.data.bones[name].head_local,
+            armature.data.bones[name].tail_local,
+        ),
+    )
+
+
 def normalize_weights(weights):
     kept = sorted(
         ((name, value) for name, value in weights.items() if value > 0.000001),
@@ -223,12 +234,48 @@ def normalize_weights(weights):
     return {name: value / total for name, value in kept}
 
 
+def find_stable_torso_components(mesh):
+    adjacency = [set() for _ in mesh.data.vertices]
+    for edge in mesh.data.edges:
+        a, b = edge.vertices
+        adjacency[a].add(b)
+        adjacency[b].add(a)
+    unseen = set(range(len(mesh.data.vertices)))
+    stable = set()
+    stable_component_count = 0
+    while unseen:
+        seed = unseen.pop()
+        stack = [seed]
+        members = [seed]
+        while stack:
+            current = stack.pop()
+            linked = adjacency[current] & unseen
+            unseen.difference_update(linked)
+            stack.extend(linked)
+            members.extend(linked)
+        coordinates = [mesh.data.vertices[index].co for index in members]
+        minimum_z = min(co.z for co in coordinates)
+        maximum_z = max(co.z for co in coordinates)
+        maximum_side = max(abs(co.y) for co in coordinates)
+        # The static generator exports garment panels as disconnected surface islands. Shirt,
+        # collar, button and waistband islands remain within this compact torso envelope; actual
+        # sleeve/arm islands extend past |side| 0.20 or below z 0.43. Keeping each whole panel on
+        # the spine chain prevents a boundary inside one garment panel from opening under motion.
+        if minimum_z >= 0.43 and maximum_z <= 0.77 and maximum_side <= 0.20:
+            stable.update(members)
+            stable_component_count += 1
+    return stable, stable_component_count
+
+
 def sanitize_heat_weights(mesh, armature):
     index_to_name = {group.index: group.name for group in mesh.vertex_groups}
     sanitized = []
     automatic_unweighted = 0
     cross_side_removed = 0
     arm_leg_mixes_removed = 0
+    torso_core_vertices_sanitized = 0
+    torso_limb_memberships_removed = 0
+    stable_torso_vertices, stable_torso_component_count = find_stable_torso_components(mesh)
     for vertex in mesh.data.vertices:
         weights = {
             index_to_name[item.group]: float(item.weight)
@@ -268,6 +315,27 @@ def sanitize_heat_weights(mesh, armature):
             cross_side_removed += 1
             weights.pop(name, None)
 
+        # In the source down-pose the sleeves sit next to the shirt. Bone heat therefore assigned
+        # 2,011 of 3,116 core torso vertices to arm bones, including centre-shirt vertices at
+        # LeftShoulder=1.0. Arm swing then pulled the shirt apart. The central shirt volume is a
+        # spine surface, while the outer shoulder/sleeve transition remains heat weighted.
+        if (
+            vertex.index in stable_torso_vertices or
+            (0.49 <= vertex.co.z <= 0.72 and abs(vertex.co.y) <= 0.095)
+        ):
+            torso_core_vertices_sanitized += 1
+            centre_weights = {
+                name: value for name, value in weights.items() if name in CENTRE_BONES
+            }
+            torso_limb_memberships_removed += sum(
+                1 for name in weights if name not in CENTRE_BONES
+            )
+            weights = centre_weights
+            if not weights:
+                weights = {
+                    nearest_bone_from(vertex.co, armature, CENTRE_BONES): 1.0
+                }
+
         arm_total = sum(weights.get(name, 0.0) for name in ARM_BONES)
         leg_total = sum(weights.get(name, 0.0) for name in LEG_BONES)
         if arm_total > 0.000001 and leg_total > 0.000001:
@@ -298,6 +366,9 @@ def sanitize_heat_weights(mesh, armature):
         automatic_unweighted,
         cross_side_removed,
         arm_leg_mixes_removed,
+        torso_core_vertices_sanitized,
+        torso_limb_memberships_removed,
+        stable_torso_component_count,
     )
 
 
@@ -335,7 +406,7 @@ def apply_t_pose_bind(mesh, source_armature, weights_by_vertex):
     mesh.parent = None
     bpy.data.objects.remove(source_armature, do_unlink=True)
     mesh.parent = target_armature
-    modifier = mesh.modifiers.new("FatherV18CleanBipedV2", "ARMATURE")
+    modifier = mesh.modifiers.new("FatherV18CleanBipedV4", "ARMATURE")
     modifier.object = target_armature
     bpy.context.view_layer.update()
     return target_armature
@@ -380,8 +451,8 @@ def main():
             f"{maximum_rest_vertex_delta}"
         )
 
-    mesh.name = "FatherV18CleanBipedV2"
-    mesh.data.name = "FatherV18CleanBipedV2_Mesh"
+    mesh.name = "FatherV18CleanBipedV4"
+    mesh.data.name = "FatherV18CleanBipedV4_Mesh"
     source_armature = build_armature(t_pose=False)
     (
         weights_by_vertex,
@@ -390,6 +461,9 @@ def main():
         automatic_unweighted_vertices,
         cross_side_memberships_removed,
         arm_leg_mixes_removed,
+        torso_core_vertices_sanitized,
+        torso_limb_memberships_removed,
+        stable_torso_component_count,
     ) = rig_mesh_with_heat_map(mesh, source_armature)
     armature = apply_t_pose_bind(mesh, source_armature, weights_by_vertex)
     bpy.context.view_layer.update()
@@ -443,7 +517,7 @@ def main():
     )
 
     receipt = {
-        "contract": "FC-FATHER-V18-STATIC-APPEARANCE-CLEAN-BIPED-RIG-V2",
+        "contract": "FC-FATHER-V18-STATIC-APPEARANCE-CLEAN-BIPED-RIG-V4",
         "sourceFbx": input_fbx.as_posix(),
         "sourceFbxSha256": sha256(input_fbx),
         "outputFbx": output_fbx.as_posix(),
@@ -465,12 +539,15 @@ def main():
         "automaticUnweightedVertexCountBeforeFallback": automatic_unweighted_vertices,
         "crossSideMembershipsRemoved": cross_side_memberships_removed,
         "armLegMixedVerticesSanitized": arm_leg_mixes_removed,
+        "torsoCoreVerticesSanitized": torso_core_vertices_sanitized,
+        "torsoLimbMembershipsRemoved": torso_limb_memberships_removed,
+        "stableTorsoComponentCount": stable_torso_component_count,
         "weightVertexCounts": counts,
-        "weightingPolicy": "Blender ARMATURE_AUTO bone-heat weights computed against the anatomical source-pose skeleton, capped at four influences, with opposite-side and arm-leg contamination removed",
+        "weightingPolicy": "Blender ARMATURE_AUTO bone-heat weights computed against the anatomical source-pose skeleton, capped at four influences, with opposite-side, arm-leg, and shirt-core limb contamination removed",
         "bindPosePolicy": "The heat-weighted source surface and arm chain were transformed together into a horizontal T-pose; the exported armature rest pose is that T-pose",
         "appearancePolicy": "Exact paid Father V18 topology, UV, material slots, texture, and body proportions retained; only the arm vertices move to the required T-pose bind coordinates",
-        "motionPolicy": "No motion is embedded; Unity must validate this rig with the paid Casual_Walk_inplace action 613 at poseStrength 1.0",
-        "rejectedSourcePolicy": "The action-613 moving mesh, skeleton, and skin weights are not reused; only its separate Humanoid AnimationClip is allowed in Unity QA",
+        "motionPolicy": "No motion is embedded; Unity V66 drives a compact 0.88-second two-contact SD biped cycle from this rig's own T-pose contract",
+        "rejectedSourcePolicy": "The action-613 moving mesh, skeleton, skin weights, and AnimationClip are not used by the V66 QA candidate",
         "productionEligible": False,
     }
     receipt_path.write_text(
