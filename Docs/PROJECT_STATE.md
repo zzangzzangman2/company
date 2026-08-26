@@ -2,6 +2,34 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-26 / Father V18 결함 3건 수정, 움직임 검증은 아직 미완
+
+- 원본 영상은 `Downloads/rpg.mp4`로 이름만 바뀌었을 뿐 `캐릭.mp4`와 **동일 파일**이다(SHA-256
+  `39DB58386FC8FFF7CF6D173A5552538C6D01F64959AEDC60495A8DC3E263843E` 일치). 아래 2026-08-25 항목의
+  구간 분석은 이 파일에 그대로 유효하다.
+- 영상 창작자도 **같은 action 644**를 쓴다. 흐물거림은 생성물 결함이 아니라 Unity 수신부 결함이었다.
+  영상은 `higgsfield.ai/mcp`의 Claude Code 탭으로 MCP를 연결해 10개 액션(`base, idle-0, run-644,
+  attack1-97, attack2-221, attack3-102, dodge-158, hit-178, death-189, regular-jump-466`)을 생성했고
+  우리는 `idle-0`/`run-644` 2개만 보유한다.
+- 크레딧 0으로 결함 3건을 고쳤다(`0be347b8`, `26425e9e`).
+  1. 유료 4096×4096 알베도 2장이 `maxTextureSize 2048` + `Compressed`(품질 50)로 임포트되어 절반으로
+     깎인 뒤 손실압축됐다. 4096 + `CompressedHQ`(품질 100)로 올렸다. 2048은 아무도 지정하지 않은 Unity
+     기본값이었고 `Family3DPrototypeModelImporter`는 텍스처를 건드리지 않으므로 meta가 유일한 정본이다.
+  2. `ResolveFatherMotionPoseStrength()`의 `0.45`를 `1f`로 복원했다.
+  3. `SamplePose`의 접지 게이트를 풀어 imported-clip 경로에서도 발 고정이 실행된다. 두 경로 공용이
+     되었으므로 `ApplyNaturalSdFootPlants`를 `ApplyFootPlants`로 개명했다.
+- 새 게이트 `Family3DHiggsfieldAlbedoImportValidation`을 Fast QA `broadMethods`에 등록했다. 임포트된
+  Texture2D를 PNG IHDR과 직접 비교하며, 측정 결과 두 알베도 모두 `4096x4096 BC7`이다.
+- **검증된 것은 1번뿐이다.** 2·3번은 `editor-broad` 컴파일 PASS(18.5s)까지이며 움직임 품질은 확인되지
+  않았다. 확인하려면 V22 QA 플레이어를 빌드·실행해야 하고, 근본원인 문서가 요구하는 연속 30/60 fps
+  캡처가 아직 없다. `productionEligible=false`를 유지한다.
+- 남은 의심은 소스 액션 자체다. 644는 `Lean_Forward_Sprint`이고 영상 게임은 실제 질주라 맞지만 우리는
+  사무실 보행 `0.846 u/s`에 쓰고 있다. 1~3번 이후에도 어색하면 walk 액션 1건(8 credits, 잔액 76)이
+  다음 수순이며 사용자 명시 승인과 비용 재확인이 선행되어야 한다.
+- Higgsfield MCP 서버를 `~/.claude.json` user scope에 `higgsfield`(`https://mcp.higgsfield.ai/mcp`)로
+  등록했다. 상태는 `Needs authentication`이고, `claude mcp`에 auth 하위 명령이 없으므로 대화형
+  `/mcp`에서 사용자가 직접 로그인해야 한다. 인증 후 새 세션부터 도구가 붙는다.
+
 ## 2026-08-25 / 현재 최우선 상태: Father V18 움직임 미해결, Claude 핸드오프
 
 - 사용자 최종 판정은 `USER_VISUAL_REJECTED_MOVEMENT_NOT_PROPERLY_AUDITED`다. V18 정적 root 이동,

@@ -34,6 +34,18 @@
   strength + exact albedo configuration completed the isolated route, but real-time movement was not
   validated. Old V18~V21 builds, scenes, logs, duplicate presentations, and temporary audit sheets were
   removed; raw sources/receipts and current V22 evidence were preserved.
+- Import contract, added 2026-08-26: both paid albedos are 4096×4096 source PNGs and must reach the
+  GPU at that size. Until this date both imported at Unity's default `maxTextureSize 2048` with
+  `TextureImporterCompression.Compressed` at quality 50, so the paid texture was halved and then
+  lossily compressed; that is the measured cause of the "character is not sharp" report. They now
+  import at 4096 with `CompressedHQ` at quality 100 and measure `4096x4096 BC7`.
+  `Family3DPrototypeModelImporter` never touches texture import, so the `.png.meta` is the sole
+  authority. `Family3DHiggsfieldAlbedoImportValidation` is registered in the Fast QA `broadMethods`
+  and compares the imported `Texture2D` against the PNG IHDR on disk, so a downsample cannot return
+  silently.
+- The video this Father is calibrated against is `Downloads/rpg.mp4`, the same file as the recorded
+  `캐릭.mp4` under a new name; the SHA-256 above matches it byte for byte. Its creator drives their
+  character with the **same action 644**, which is why the paid output is not the suspect here.
 - Full continuation instructions:
   [CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md](CLAUDE_FATHER_V18_MOVEMENT_HANDOFF_2026-08-25.md).
 

@@ -11,6 +11,11 @@ Production: `productionMutation=false`, `productionEligible=false`
 > Measurement of the existing V22 telemetry on 2026-08-26 inverted the cause ranking below and found
 > `Recommended next sequence` step 5 to point the wrong way. Cause 6 (`poseStrength = 0.45`) is the
 > primary defect; cause 1 (cadence) is secondary. Everything else in this document still stands.
+>
+> **Causes 6 and 7 were fixed on 2026-08-26 (`0be347b8`, `26425e9e`), along with a defect neither
+> document had caught: both paid 4096×4096 albedos were importing at `maxTextureSize 2048` with lossy
+> `Compressed`, and now measure `4096x4096 BC7`.** Causes 2, 3, 4 and 5 are still open, movement
+> quality is still unverified, and `productionEligible=false` still stands.
 
 ## What the user actually wants
 
@@ -149,12 +154,15 @@ timing was not watched. V22 is diagnostic evidence only.
    **Promoted on 2026-08-26 to the primary defect — confirmed, not suspected.**
    `ApplyPoseStrength()` slerps every bone 45 % of the way from rest to the animated pose, so the leg
    swing that produces the stride is cut with it. The legs deliver 0.29–0.34 body heights per cycle
-   while the body travels 0.56, so the body outruns the feet by 1.66×–1.92×. Fix this first.
+   while the body travels 0.56, so the body outruns the feet by 1.66×–1.92×. ~~Fix this first.~~
+   **Fixed 2026-08-26: `ResolveFatherMotionPoseStrength()` returns `1f`. Stride not yet re-measured.**
 7. **Foot planting never runs on this code path — added 2026-08-26.**
    `Family3DWalkActor.cs:293` gates `ApplyNaturalSdFootPlants` behind `dedicatedNaturalSdWalk`, which is
    `false` for Father V18. The contact latch and the `SolveTwoBonePlant` world-space plant never
    execute, so there is no ground constraint at all, and `leftFootPlanted`/`rightFootPlanted` are
    `false` in 180 of 180 samples. Any foot-contact evidence from V22 is void.
+   **Fixed 2026-08-26: the gate is gone and the solver, now `ApplyFootPlants`, runs on both branches.
+   Whether its contact window suits a sprint clip is unverified until a real capture exists.**
 
 ## Current code touchpoints
 

@@ -1,5 +1,37 @@
 # DECISIONS
 
+## 2026-08-26 / Father V18은 생성물이 아니라 수신부를 고친다
+
+결정: 새 Higgsfield job을 제출하기 전에 Unity 수신부의 결함 3건을 먼저 고친다. 근거는 원본 영상
+`Downloads/rpg.mp4`(= `캐릭.mp4`, SHA-256 동일)를 전수 확인한 결과다. 영상 창작자는 우리와 **같은
+action 644**를 쓰는데 결과가 멀쩡하다. 따라서 흐물거림과 흐릿함의 원인은 생성물이 아니라 우리가 받아온
+뒤 적용한 설정이다.
+
+고친 것:
+
+1. 유료 4096×4096 알베도 2장이 `maxTextureSize 2048` + `TextureImporterCompression.Compressed`(품질
+   50)로 임포트되어 해상도가 절반으로 깎인 뒤 손실압축됐다. 4096 + `CompressedHQ`(품질 100)로 올렸다.
+   2048은 아무도 지정하지 않은 Unity 기본값이었다.
+2. `ResolveFatherMotionPoseStrength()`가 `0.45`를 반환했다. 이 값은 이동을 재지 않은 정지 실루엣
+   A/B에서 골랐고, `ApplyPoseStrength()`가 모든 본을 rest 쪽으로 slerp하므로 실루엣을 누르면서 보폭도
+   같이 반토막 냈다. `1f`로 복원한다. 앞으로 1.0 미만 값을 고를 때는 반드시 office 속도 대비 보폭을
+   실측한다. 정지 스틸로는 다시 고르지 않는다.
+3. `SamplePose`가 접지 solver를 `dedicatedNaturalSdWalk` 뒤에 두어 imported-clip 경로에 지면 구속이
+   전혀 없었다. 게이트를 풀었다. 두 경로 모두 phase 0이 왼발 전방 접지에 정렬돼 있으므로(SD는 구성상,
+   imported는 `FindLeftForwardContactPhase`로) 같은 solver가 성립한다.
+
+측정 게이트도 함께 둔다. `Family3DHiggsfieldAlbedoImportValidation`을 Fast QA `broadMethods`에
+등록했고, 임포트된 Texture2D를 PNG IHDR과 직접 비교해 유료 알베도의 다운샘플과 저품질 압축을 거부한다.
+사용자 증상("선명하지 않다")을 주석이 아니라 계측으로 막는다.
+
+한계: 검증된 것은 1번뿐이다(`4096x4096 BC7` 실측). 2·3번은 컴파일 PASS까지이며 움직임 품질은 연속
+30/60 fps 캡처 없이는 판정하지 않는다. `productionEligible=false`를 유지한다.
+
+다음: 이 3건 이후에도 어색하면 원인은 소스 액션이다. 644는 `Lean_Forward_Sprint`이고 우리는 그것을
+사무실 보행 `0.846 u/s`에 쓰고 있다. 그때는 walk 액션 1건(8 credits, 잔액 76)을 뽑되 사용자 명시
+승인과 비용 재확인을 먼저 거친다.
+
+
 ## 2026-08-26 / 참조 0건 구문서 9개를 삭제한다
 
 결정: `Docs/` 최상단에서 README·AGENTS·CLAUDE·다른 문서·코드·스크립트 어디에서도 참조되지 않고 마지막
