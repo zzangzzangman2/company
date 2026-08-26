@@ -1,8 +1,31 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-26
+최종 갱신: 2026-08-27
 
-## Father V18 native action-613 walk V73 (current isolated review candidate)
+## Father V18 clean-biped straight-arm walk V74 (current isolated review candidate)
+
+- Appearance/rig/lower-body authority: paid static Father V18 +
+  `Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx`, SHA-256
+  `107DE6C4D2F36C1048746275B4E4E108447094705684D75AECF62CA1220F50B0`.
+- Motion authority is V72's separate idle + Humanoid `Casual_Walk_inplace` action 613 pair. Walk
+  SHA-256 is `F344B7E057B6732A1715D5E2CA49A825D866FC59BFB3BFE975C55443694C566E`; idle SHA-256 is
+  `9F8A6FE05EEE94C538AEE2EC186AD2CB8D31D1B1FC27B13AB521B5CCBF5EB6FC`.
+- V72 legs/pelvis/torso/head sanitation is unchanged. Only the final arm post-process differs:
+  straight rigid static-reference arms and fixed body-side-axis opposite upper-arm swing `6°`;
+  elbow/wrist/finger/outward/tuck correction is zero.
+- Surface: `Materials/FatherV18HiggsfieldStaticSurface.mat` plus static 4096 albedo SHA-256
+  `618F33856F2DD722EBFC1782DCB4BF5709D04E3721B4DB9E88F1A5BDDBEAAA9E`.
+- Scene/build/runtime: `Scenes/Family3DFatherV18CleanBipedStableArmWalkMapQaV74.unity`,
+  `FatherV18CleanBipedStableArmWalkMapBuildV74`,
+  `FatherV18CleanBipedStableArmWalkRuntimeV74HiFpsR2`.
+- Runtime: 673 PNG at 30 fps, 1,344 telemetry, two circuits, cycle `0.99380799s`, facing
+  `-16.9219°`, stride `0.675`, corner `360°/s`.
+- Review media:
+  `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-straight-arm-walk-v74-review`.
+- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`, extra Higgsfield use `0 credits`;
+  production/default/Downloads/deployed executables unchanged.
+
+## Father V18 native action-613 walk V73 (user-rejected changed-leg-gait history)
 
 - Model/Avatar/bind-skeleton/skin/motion authority is one asset:
   `Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx`,
@@ -16,7 +39,7 @@
 - Runtime: 673 PNG at 30 fps, 1,344 telemetry, two circuits, cycle `0.99380799s`, facing `90°`,
   stride `0.8526`, corner `360°/s`.
 - Review media: `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-native613-v73-review`.
-- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`, extra Higgsfield use `0 credits`,
+- Status: `USER_VISUAL_REJECTED_CHANGED_LEG_GAIT`, `productionEligible=false`, extra Higgsfield use `0 credits`,
   balance `68`; production/default/Downloads/deployed executables unchanged.
 
 ## Father V18 clean-biped Claude walk V72 (user-rejected arm-override history)

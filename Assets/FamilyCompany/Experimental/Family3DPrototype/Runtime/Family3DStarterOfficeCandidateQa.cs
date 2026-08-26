@@ -66,6 +66,7 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool fatherClipAnatomicalSanitizationAsset;
         [SerializeField] private float fatherMotionStrideOfficeUnitsAsset;
         [SerializeField] private bool fatherClipMuscleDeltaRetargetAsset;
+        [SerializeField] private bool fatherClipStableBodySideArmsAsset;
         [SerializeField] private Texture2D fatherStaticAlbedo;
 
         // Serialized rather than resolved by Shader.Find at runtime. Unity strips any shader no
@@ -121,6 +122,9 @@ namespace FamilyCompany.Experimental.Family3D
 
         private bool FatherUsesCleanBipedCasualWalk =>
             fatherHiggsfieldIdleRun && fatherClipAnatomicalSanitizationAsset;
+
+        private bool FatherUsesStableBodySideArmWalk =>
+            FatherUsesCleanBipedCasualWalk && fatherClipStableBodySideArmsAsset;
 
         private bool FatherUsesNative613Package =>
             fatherHiggsfieldIdleRun &&
@@ -193,6 +197,7 @@ namespace FamilyCompany.Experimental.Family3D
             float strideOfficeUnits = 0f,
             bool clipMuscleDeltaRetarget = false,
             bool clipAnatomicalSanitization = false,
+            bool clipStableBodySideArms = false,
             float fallbackScale = 1f,
             float qaGroundY = 0f)
         {
@@ -215,6 +220,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
             fatherClipMuscleDeltaRetargetAsset = clipMuscleDeltaRetarget;
             fatherClipAnatomicalSanitizationAsset = clipAnatomicalSanitization;
+            fatherClipStableBodySideArmsAsset = clipStableBodySideArms;
         }
 
         public void ConfigureFatherCleanBipedNaturalWalk(
@@ -570,6 +576,8 @@ namespace FamilyCompany.Experimental.Family3D
                                     ? "father-v18-higgsfield-static-map-walk"
                                     : FatherUsesNative613Package
                                         ? "father-v18-native-613-map-walk"
+                                    : FatherUsesStableBodySideArmWalk
+                                        ? "father-v18-clean-biped-stable-arm-walk-map"
                                     : FatherUsesCleanBipedCasualWalk
                                         ? "father-v18-clean-biped-casual-walk-map"
                                     : fatherCleanBipedNaturalWalk
@@ -616,7 +624,8 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherStaticRootMotionOnly + " higgsfieldIdleRun=" +
                 fatherHiggsfieldIdleRun + " cleanBipedNaturalWalk=" +
                 fatherCleanBipedNaturalWalk + " cleanBipedCasualWalk=" +
-                FatherUsesCleanBipedCasualWalk + " productionEligible=false.",
+                FatherUsesCleanBipedCasualWalk + " stableBodySideArms=" +
+                FatherUsesStableBodySideArmWalk + " productionEligible=false.",
                 this);
 
             for (var circuit = 0; circuit < 2; circuit++)
@@ -632,6 +641,8 @@ namespace FamilyCompany.Experimental.Family3D
                                 ? "father-v18-higgsfield-static-map-walk"
                                 : FatherUsesNative613Package
                                     ? "father-v18-native-613-map-walk"
+                                : FatherUsesStableBodySideArmWalk
+                                    ? "father-v18-clean-biped-stable-arm-walk-map"
                                 : FatherUsesCleanBipedCasualWalk
                                     ? "father-v18-clean-biped-casual-walk-map"
                                 : fatherCleanBipedNaturalWalk
@@ -670,6 +681,8 @@ namespace FamilyCompany.Experimental.Family3D
                     ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
                     : FatherUsesNative613Package
                         ? "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+                    : FatherUsesStableBodySideArmWalk
+                        ? "FATHER_V18_CLEAN_BIPED_STABLE_ARM_WALK_MAP_PROOF_COMPLETE"
                     : FatherUsesCleanBipedCasualWalk
                         ? "FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_MAP_PROOF_COMPLETE"
                     : fatherCleanBipedNaturalWalk
@@ -894,7 +907,8 @@ namespace FamilyCompany.Experimental.Family3D
                 useFatherNaturalSdWalk,
                 fatherHiggsfieldIdleRun ? fatherHiggsfieldIdleClip : null,
                 fatherHiggsfieldIdleRun && ResolveClipMuscleDeltaRetarget(fatherClipMuscleDeltaRetargetAsset),
-                fatherHiggsfieldIdleRun && fatherClipAnatomicalSanitizationAsset);
+                fatherHiggsfieldIdleRun && fatherClipAnatomicalSanitizationAsset,
+                fatherHiggsfieldIdleRun && fatherClipStableBodySideArmsAsset);
             if (fatherCleanBipedNaturalWalk)
             {
                 walkActor.ConfigureNaturalSdStyle(
@@ -1581,6 +1595,7 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherHiggsfieldIdleRun = fatherHiggsfieldIdleRun,
                     fatherCleanBipedNaturalWalk = fatherCleanBipedNaturalWalk,
                     fatherCleanBipedCasualWalk = FatherUsesCleanBipedCasualWalk,
+                    fatherStableBodySideArmWalk = FatherUsesStableBodySideArmWalk,
                     fatherNative613Package = FatherUsesNative613Package,
                     coordinateMapping =
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
@@ -1594,6 +1609,8 @@ namespace FamilyCompany.Experimental.Family3D
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
                             : FatherUsesNative613Package
                                 ? "one locked uniform scale from the native action-613 rendered bounds; visible mesh/Avatar/skin/clip share one FBX; static-FBX surface material; no idle cross-retarget, anatomical sanitation, rigid-arm override, or procedural gait"
+                            : FatherUsesStableBodySideArmWalk
+                                ? "V72 clean V4 lower-body/torso/action-613 contract unchanged; static-FBX surface; only the final rigid-arm tuck is replaced by straight rigid arms with a fixed-axis 6-degree opposite upper-arm swing; no elbow/wrist/finger/outward/tuck correction"
                             : FatherUsesCleanBipedCasualWalk
                                 ? "one locked uniform model scale calibrated from idle projected bounds; clean V4 T-pose/heat-map skin with stable whole shirt/collar panels; static-FBX surface material; Claude-reference Casual_Walk_inplace action 613 at poseStrength=1 and full authored sagittal/arm dynamics"
                             : fatherCleanBipedNaturalWalk
@@ -1947,6 +1964,8 @@ namespace FamilyCompany.Experimental.Family3D
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
                         : FatherUsesNative613Package
                             ? "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+                        : FatherUsesStableBodySideArmWalk
+                            ? "FATHER_V18_CLEAN_BIPED_STABLE_ARM_WALK_MAP_PROOF_COMPLETE"
                         : FatherUsesCleanBipedCasualWalk
                             ? "FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_MAP_PROOF_COMPLETE"
                         : fatherCleanBipedNaturalWalk
@@ -1986,6 +2005,7 @@ namespace FamilyCompany.Experimental.Family3D
             public bool fatherHiggsfieldIdleRun;
             public bool fatherCleanBipedNaturalWalk;
             public bool fatherCleanBipedCasualWalk;
+            public bool fatherStableBodySideArmWalk;
             public bool fatherNative613Package;
             public string coordinateMapping;
             public string directionMapping;

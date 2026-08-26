@@ -14,7 +14,24 @@ The folder does not alter the production family sprite catalog, production scene
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
 
-## Father V18 native action-613 walk V73 (current isolated review candidate)
+## Father V18 clean-biped straight-arm walk V74 (current isolated review candidate)
+
+V74 restores V72's `FatherV18CleanBipedRigV4`, action-613 idle/walk pair, lower-body/pelvis/torso/
+head sanitation, facing `-16.9219°`, stride `0.675`, locked cycle `0.99380799s`, and corner turn
+`360°/s`. It does not reuse V73's native model/skin package and does not synthesize a new gait.
+
+Only the final arm post-process changes. The approved-static shoulder-to-finger hierarchy is
+restored rigid and straight beside the body, then each upper-arm root swings oppositely by at most
+`6°` around the clean rig's fixed body-side axis. There is no elbow, wrist, finger, outward, or
+behind-body tuck correction.
+
+The hidden 720p R2 Player completed two Office circuits with 1,344 telemetry samples and 673 PNGs at
+30 fps. All 673 enlarged frames were reviewed in 23 sequential sheets, plus four straight and four
+turn sheets. Review media is under `outputs/father-v18-clean-biped-straight-arm-walk-v74-review`.
+V74 is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. No Higgsfield credits were used,
+and production/default/Downloads/deployed executables are unchanged.
+
+## Father V18 native action-613 walk V73 (user-rejected changed-leg-gait history)
 
 V73 follows the direct Higgsfield application contract. The action-613 walk FBX is the single
 authority for the visible mesh, Avatar, bind skeleton, skin weights, and `Casual_Walk_inplace`
@@ -28,7 +45,9 @@ and 673 PNGs at 30 fps. Review media is under `outputs/father-v18-native613-v73-
 30 fps close cycle, non-looping close full route, non-looping actual full-map GIF, and eight
 30-frame straight/turn sheets.
 
-V73 is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. Higgsfield usage is 0 credits
+The user rejected V73 because replacing the whole native model/skin package also changed V72's leg
+motion when only the arms needed correction. V73 is `USER_VISUAL_REJECTED_CHANGED_LEG_GAIT`,
+`productionEligible: false`. Higgsfield usage is 0 credits
 (balance 68), and production/default/Downloads/deployed executables are unchanged.
 
 ## Father V18 clean-biped Claude walk V72 (user-rejected arm-override history)

@@ -2,7 +2,29 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-26 / 현재 Father 최우선 후보: native action-613 package V73
+## 2026-08-27 / 현재 Father 검토 후보: V72 하체 복원 + straight rigid arms V74
+
+- 사용자가 V73 실제 영상에서 `V72보다 다리 움직임까지 더 이상해졌다`고 기각했다. 팔만 수정해야
+  했는데 모델/Avatar/skin/bind skeleton 전체를 native action package로 바꾼 것이 원인이다. V73은
+  `USER_VISUAL_REJECTED_CHANGED_LEG_GAIT`이며 현행 후보로 재사용하지 않는다.
+- V74는 V72의 `FatherV18CleanBipedRigV4`, idle/walk pair, 하체·골반·몸통·머리 sanitation, facing
+  `-16.9219°`, stride `0.675`, cycle `0.99380799s`, corner `360°/s`를 복원했다. 절차 보행이나 V73
+  native package를 사용하지 않는다.
+- 변경은 최종 팔 처리 한 곳뿐이다. 정적 기준 shoulder-to-finger hierarchy를 곧고 rigid하게 복원한
+  뒤 upper-arm root만 fixed body-side axis 둘레로 좌우 반대 최대 `6°` swing한다. elbow/wrist/finger,
+  outward, behind-body tuck 보정은 모두 `0`이다.
+- V74 R2 hidden actual-map runtime은 telemetry `1,344`, 30 fps PNG `673`, `22.4000s`, 두 회로를
+  완료했다. V72와 Office 위치/root yaw/gait phase/motion phase가 전 sample에서 정확히 같고, foot/hips
+  95 percentile 차이는 `3.27e-5` 이하다. 전 673프레임을 23개 연속 확대 시트와 전체 경로 GIF로
+  검수했으며 옷 파열·third leg·분리 손·뒤로 젖힌 상체·방향 점프는 보이지 않았다.
+- 첫 R1의 V66식 elbow bend/outward 보정은 손이 앞으로 나온 로봇 자세를 만들어 내부 폐기했고 R2에는
+  포함하지 않았다. 자동/내부 판정은 사용자 합격을 대신하지 않는다.
+- 상세:
+  [FATHER_V18_CLEAN_BIPED_STRAIGHT_ARM_WALK_V74_QA_2026-08-27.md](FATHER_V18_CLEAN_BIPED_STRAIGHT_ARM_WALK_V74_QA_2026-08-27.md).
+  상태는 `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`다.
+  추가 Higgsfield 사용 `0 credits`; production/default/Downloads/배포본은 변경하지 않았다.
+
+## [사용자 하체 기각·V74로 대체] 2026-08-26 / native action-613 package V73
 
 - 사용자가 V72의 실제 화면에서 팔이 뒤에 고정되고 손·팔이 흐물거린다고 기각했다. 원인은 action 613
   자체가 아니라 정적-derived V4 mesh/skin에 다른 FBX의 Humanoid clip을 리타깃한 뒤, 원본 팔 동작을

@@ -32,6 +32,7 @@ namespace FamilyCompany.Experimental.Family3D
         /// </summary>
         [SerializeField] private bool clipMuscleDeltaRetarget;
         [SerializeField] private bool clipAnatomicalSanitization;
+        [SerializeField] private bool clipStableBodySideArms;
         [SerializeField, Range(0f, 10f)] private float naturalSdTorsoUprightDegrees = 5f;
         [SerializeField, Range(0f, 12f)] private float naturalSdArmOutwardDegrees = 2f;
         [SerializeField, Range(0f, 18f)] private float naturalSdArmSwingDegrees = 6f;
@@ -155,7 +156,8 @@ namespace FamilyCompany.Experimental.Family3D
             bool useDedicatedNaturalSdWalk = false,
             AnimationClip stationaryIdleClip = null,
             bool useClipMuscleDeltaRetarget = false,
-            bool useClipAnatomicalSanitization = false)
+            bool useClipAnatomicalSanitization = false,
+            bool useClipStableBodySideArms = false)
         {
             familyId = id;
             visualRoot = modelRoot;
@@ -168,6 +170,7 @@ namespace FamilyCompany.Experimental.Family3D
             dedicatedNaturalSdWalk = useDedicatedNaturalSdWalk;
             clipMuscleDeltaRetarget = useClipMuscleDeltaRetarget;
             clipAnatomicalSanitization = useClipAnatomicalSanitization;
+            clipStableBodySideArms = useClipStableBodySideArms;
         }
 
         public void ConfigureNaturalSdStyle(
@@ -207,6 +210,9 @@ namespace FamilyCompany.Experimental.Family3D
                     familyId + " is missing its visual root, Animator, or required shared walk clip.");
             if (animator.avatar == null || !animator.avatar.isValid || !animator.avatar.isHuman)
                 throw new InvalidOperationException(familyId + " does not have a valid Humanoid Avatar.");
+            if (clipStableBodySideArms && !clipAnatomicalSanitization)
+                throw new InvalidOperationException(
+                    familyId + " stable body-side arms require clip anatomical sanitation.");
 
             visualLocalPosition = visualRoot.localPosition;
             visualLocalRotation = visualRoot.localRotation;
@@ -704,10 +710,16 @@ namespace FamilyCompany.Experimental.Family3D
             humanPoseHandler.SetHumanPose(ref sampledHumanPose);
             // The source Humanoid arm curves deform each short SD segment independently, which
             // makes the elbow, wrist and fingers look rubbery even at reduced amplitude. Restore
-            // the approved hanging arm as one rigid hierarchy, then rotate only the upper-arm root
-            // by a tiny opposite swing. The action still owns legs, pelvis and torso unchanged.
+            // one stable hanging hierarchy. V72 then rotated it with a measured toe axis and tucked
+            // both arms, but the user correctly saw that as arms pinned behind the body. V74 keeps
+            // V72's lower-body/torso sanitation byte-for-byte and changes only this final arm step.
+            // No elbow, wrist, finger, outward or tuck correction runs: only both upper-arm roots
+            // rotate oppositely around the clean rig's verified fixed body-side axis.
             RestoreApprovedRigidArmPose();
-            ApplyApprovedRigidArmSwing(lastSampledPhase01, isMoving);
+            if (clipStableBodySideArms)
+                ApplyStableBodySideArmSwing(lastSampledPhase01, isMoving);
+            else
+                ApplyApprovedRigidArmSwing(lastSampledPhase01, isMoving);
             if (isMoving)
             {
                 if (!clipFootPlaneReady)
@@ -878,6 +890,17 @@ namespace FamilyCompany.Experimental.Family3D
             RotateRigidArmTowardBody(leftUpperArm, leftHand, bodyForward, bodySide);
             RotateRigidArmTowardBody(rightUpperArm, rightHand, bodyForward, bodySide);
             const float maximumSwingDegrees = 2f;
+            float swing = maximumSwingDegrees * Mathf.Cos(phase * Mathf.PI * 2f);
+            RotateBoneAroundWorldAxis(leftUpperArm, bodySide, -swing);
+            RotateBoneAroundWorldAxis(rightUpperArm, bodySide, swing);
+        }
+
+        private void ApplyStableBodySideArmSwing(float phase, bool isMoving)
+        {
+            if (!isMoving)
+                return;
+            ResolveNaturalSdBodyAxes(out _, out Vector3 bodySide);
+            const float maximumSwingDegrees = 6f;
             float swing = maximumSwingDegrees * Mathf.Cos(phase * Mathf.PI * 2f);
             RotateBoneAroundWorldAxis(leftUpperArm, bodySide, -swing);
             RotateBoneAroundWorldAxis(rightUpperArm, bodySide, swing);

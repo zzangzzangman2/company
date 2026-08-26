@@ -1,6 +1,21 @@
 # DECISIONS
 
-## 2026-08-26 / Father V18 V73은 action-613 FBX를 mesh/Avatar/skin/clip 한 패키지로 직접 적용한다
+## 2026-08-27 / Father V18 V74는 V72 하체를 복원하고 팔만 분리 수정한다
+
+결정: 사용자가 V73 실제 영상에서 V72보다 다리 움직임까지 더 이상해졌다고 기각했으므로, native
+action-613 mesh/Avatar/skin package 전체 교체를 폐기한다. 팔 문제를 고친다는 이유로 하체 source까지
+바꾸지 않는다. V73 상태는 `USER_VISUAL_REJECTED_CHANGED_LEG_GAIT`다.
+
+V74는 V72의 clean V4 rig, idle/walk pair, 하체·골반·몸통·머리 sanitation, facing `-16.9219°`,
+stride `0.675`, cycle `0.99380799s`, corner `360°/s`를 복원한다. 변경점은 clip sampling 뒤 팔 처리
+하나뿐이다. 정적 기준 shoulder-to-finger hierarchy를 곧고 rigid하게 복원하고 upper-arm root만 fixed
+body-side axis로 좌우 반대 최대 `6°` swing한다. elbow/wrist/finger/outward/behind-body tuck은 금지한다.
+
+hidden actual-map R2는 673 PNG/1,344 telemetry/two circuits를 완료했다. 전 673프레임을 연속 확대
+시트와 전체 경로 GIF로 검수했지만 최종 권위는 사용자다. 사용자 승인 전 `productionEligible=false`,
+추가 Higgsfield 사용 0 credits다.
+
+## [사용자 하체 기각·V74로 대체] 2026-08-26 / Father V18 V73은 action-613 FBX를 mesh/Avatar/skin/clip 한 패키지로 직접 적용한다
 
 결정: `Downloads/rpg.mp4`처럼 생성된 action FBX를 한 패키지로 적용한다. V72가 사용한
 `FatherV18CleanBipedRigV4 + 다른 FBX Humanoid clip + T-pose-derived rigid arms` 혼합은 사용자 화면에서
