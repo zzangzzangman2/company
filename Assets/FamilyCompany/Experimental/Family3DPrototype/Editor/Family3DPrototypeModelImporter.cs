@@ -51,6 +51,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18CleanBipedRigPath =
             CandidateRoot +
             "FatherV18CleanBipedRigV1/father-v18-clean-biped-rig-v1.fbx";
+        public const string FatherV18CleanBipedRigV2Path =
+            CandidateRoot +
+            "FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx";
 
         private static readonly string[] IdentityHumanoidBoneNames =
         {
@@ -87,6 +90,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                    string.Equals(path, FatherApprovedV14CandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherApprovedV14NaturalWalkRigModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherV18CleanBipedRigPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherV18CleanBipedRigV2Path, StringComparison.Ordinal) ||
                    IsFatherV18HiggsfieldMotion(path) ||
                    IsRuntime2DV2Candidate(path);
         }
@@ -131,7 +135,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 importer.isReadable = true;
                 importer.humanDescription = IsFatherApprovedV14Rig(assetPath)
                     ? CreateExplicitFatherApprovedV14HumanDescription(importer.humanDescription)
-                    : string.Equals(assetPath, FatherV18CleanBipedRigPath, StringComparison.Ordinal)
+                    : string.Equals(assetPath, FatherV18CleanBipedRigPath, StringComparison.Ordinal) ||
+                      string.Equals(assetPath, FatherV18CleanBipedRigV2Path, StringComparison.Ordinal)
                         ? CreateExplicitFatherV18CleanBipedHumanDescription(importer.humanDescription)
                     : IsFatherV18HiggsfieldMotion(assetPath)
                         ? CreateExplicitFatherV18HiggsfieldHumanDescription(importer.humanDescription)
@@ -139,6 +144,27 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 if (IsFatherV18HiggsfieldMotion(assetPath))
                 {
                     ModelImporterClipAnimation[] clips = importer.defaultClipAnimations;
+                    if (string.Equals(
+                            assetPath,
+                            FatherV18HiggsfieldCasualWalkClipPath,
+                            StringComparison.Ordinal) &&
+                        clips.Length == 0)
+                    {
+                        // Unity 6 can expose the FBX take as an implicit clip while returning an
+                        // empty defaultClipAnimations array. In that case the old loop silently did
+                        // nothing and the player sampled all 127 frames (two gait cycles) inside one
+                        // office cycle. Create the intended single-cycle clip explicitly.
+                        clips = new[]
+                        {
+                            new ModelImporterClipAnimation
+                            {
+                                name = "Casual_Walk_inplace",
+                                takeName = "Scene",
+                                firstFrame = 16f,
+                                lastFrame = 58f
+                            }
+                        };
+                    }
                     for (var index = 0; index < clips.Length; index++)
                     {
                         // Casual_Walk_inplace exports 127 frames holding two complete gait cycles,

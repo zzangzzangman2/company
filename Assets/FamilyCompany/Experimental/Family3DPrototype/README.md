@@ -14,7 +14,32 @@ The folder does not alter the production family sprite catalog, production scene
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
 
-## Father V18 clean-biped natural walk V39 (current isolated review candidate)
+## Father V18 clean-biped action-613 walk V61 (current isolated review candidate)
+
+V61 preserves the paid static Father V18 appearance and replaces only its deformation contract.
+`Candidates/FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx` has a horizontal T-pose bind
+and Blender bone-heat weights capped at four influences. Opposite-side and arm/leg contamination are
+both zero. The FBX SHA-256 is
+`F72705D868199B36B40C51762ED8B3525E9CA1B6E09FE4802CAFE3C9C42256BF`.
+
+The only time-varying source is the original `Casual_Walk_inplace` action 613 Humanoid clip at
+`poseStrength=1.0`. Its generated moving mesh, skeleton and weights are forbidden. Runtime
+sanitation removes invalid lateral/twist channels and keeps the torso upright while preserving the
+clip's biped timing, bent-knee recovery, vertical weight shift and small opposite arm swing beside
+the body. This is not the rejected V39 procedural gait.
+
+The actual Father agent completed two Office perimeter circuits at 30 fps. Every one of the 673 map
+frames and all enlarged tracking sheets was visually reviewed, including an exact 23-frame close
+loop. No third-leg silhouette, rubber limb, crossed legs, detached shoe, hunch, raised/static arms,
+giant scale, wrong facing or loop-end jump was visible. Evidence is in
+`FatherV18CleanBipedCasualWalkMapBuildV61`, `FatherV18CleanBipedCasualWalkRuntimeV61HiFps`, and the
+external review folder `outputs/father-v18-clean-biped-casual-walk-v61`.
+
+This is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`; only the user's review of the
+actual close and full-map GIFs can approve it. No additional Higgsfield credits were spent, and no
+production/default/Downloads/deployed executable was changed.
+
+## Father V18 clean-biped natural walk V39 (user-rejected procedural history)
 
 The user rejected the prior imported Father V18 walk after viewing the actual video: fixing the
 measured +90-degree facing offset solved direction only, while the malformed moving skeleton/skin

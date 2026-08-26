@@ -3,6 +3,17 @@
 작성: 2026-08-26 (Asia/Seoul) / 작성자: Claude
 대상: `Tools/Blender/build_father_v18_static_clean_biped_rig.py`
 
+## 완료 기록 (Codex, 2026-08-26)
+
+- `FatherV18CleanBipedRigV2`로 완료: horizontal T-pose bind, Blender `ARMATURE_AUTO` bone-heat,
+  최대 4 influences, cross-side `0`, arm+leg mixed `0`.
+- Unity에서 action 613을 `poseStrength=1.0`으로 적용한 V61 실제 맵 두 바퀴/673 frames를 전수 검수했다.
+  자세한 결과는
+  [FATHER_V18_CLEAN_BIPED_CASUAL_WALK_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_CASUAL_WALK_QA_2026-08-26.md)에 있다.
+- 아래의 `stride/height 0.35~0.55`는 작업 전 진단 가설이었다. 실제 화면에서는 거위걸음을 만들었으므로
+  **최종 합격선이 아니다**. 접지 픽셀 drift와 전체 GIF를 기준으로 V61 stride `0.675`를 선택했다.
+- `productionEligible=false`, 추가 Higgsfield 사용량 `0 credits`, 잔액 `68`을 유지한다.
+
 ## 목표 (변경 불가)
 
 **Codex의 clean biped 외형 + Claude의 `Casual_Walk_inplace`(action 613) 클립.**

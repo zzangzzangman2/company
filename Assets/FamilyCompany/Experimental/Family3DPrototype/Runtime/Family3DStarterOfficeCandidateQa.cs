@@ -22,7 +22,7 @@ namespace FamilyCompany.Experimental.Family3D
         public const int RequiredActorCount = 4;
         public const float MovementEpsilonSqr = 0.000001f;
         public const float StaticMapScaleTolerance = 0.005f;
-        private const int MaximumFatherCompositeFrames = 180;
+        private const int DefaultMaximumFatherCompositeFrames = 180;
 
         // Capture contract, rewritten 2026-08-26.
         //
@@ -45,7 +45,7 @@ namespace FamilyCompany.Experimental.Family3D
         private const float FatherCleanBipedNaturalStrideOfficeUnits = 0.8833864f;
         // 60 fps telemetry stays exhaustive, while every eighth frame yields a 7.5 fps visual
         // proof covering both 11.2-second route circuits instead of V33's first six seconds only.
-        private const int FatherCompositeFrameStride = 8;
+        private const int DefaultFatherCompositeFrameStride = 8;
 
         [Header("Candidate prefabs (Experimental only)")]
         [SerializeField] private GameObject playerCandidate;
@@ -59,11 +59,11 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool fatherCleanBipedNaturalWalk;
 
         // Facing offset and stride belong to the body-and-clip pair, not to the project. Putting
-        // the Casual_Walk clip on the clean biped body moved the offset from 90 degrees to 11.65
-        // and the stride from 0.8526 to 0.7285, so both are configured per candidate and the
-        // command line only overrides them for tuning.
+        // Each clean-rig/action revision is measured again, so both are configured per candidate
+        // and the command line only overrides them for controlled comparisons.
         // See Docs/FATHER_V18_FACING_OFFSET_METHOD.md.
         [SerializeField] private float fatherMotionFacingOffsetDegreesAsset = 90f;
+        [SerializeField] private bool fatherClipAnatomicalSanitizationAsset;
         [SerializeField] private float fatherMotionStrideOfficeUnitsAsset;
         [SerializeField] private bool fatherClipMuscleDeltaRetargetAsset;
         [SerializeField] private Texture2D fatherStaticAlbedo;
@@ -102,6 +102,8 @@ namespace FamilyCompany.Experimental.Family3D
         private float fatherMotionFacingOffsetDegrees;
         private float fatherMotionTurnSeconds;
         private bool fatherMotionYawSweep;
+        private int fatherCompositeFrameStride = DefaultFatherCompositeFrameStride;
+        private int maximumFatherCompositeFrames = DefaultMaximumFatherCompositeFrames;
         private bool fatherProofRouteActive;
         private bool fatherProofRouteCompleted;
         private int fatherProofRouteCircuit = -1;
@@ -114,6 +116,9 @@ namespace FamilyCompany.Experimental.Family3D
         public int BindingCount => bindings.Count;
         public bool ProductionMutation => false;
         public bool ProductionEligible => false;
+
+        private bool FatherUsesCleanBipedCasualWalk =>
+            fatherHiggsfieldIdleRun && fatherClipAnatomicalSanitizationAsset;
 
         public void Configure(
             GameObject player,
@@ -179,6 +184,7 @@ namespace FamilyCompany.Experimental.Family3D
             float facingOffsetDegrees = 90f,
             float strideOfficeUnits = 0f,
             bool clipMuscleDeltaRetarget = false,
+            bool clipAnatomicalSanitization = false,
             float fallbackScale = 1f,
             float qaGroundY = 0f)
         {
@@ -200,6 +206,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherMotionFacingOffsetDegreesAsset = facingOffsetDegrees;
             fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
             fatherClipMuscleDeltaRetargetAsset = clipMuscleDeltaRetarget;
+            fatherClipAnatomicalSanitizationAsset = clipAnatomicalSanitization;
         }
 
         public void ConfigureFatherCleanBipedNaturalWalk(
@@ -365,6 +372,16 @@ namespace FamilyCompany.Experimental.Family3D
                     HasCommandLineFlag("-family3d-father-map-walk-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-static-map-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-motion-map-qa");
+                fatherCompositeFrameStride = ResolvePositiveIntArgument(
+                    "-family3d-father-map-capture-stride",
+                    DefaultFatherCompositeFrameStride,
+                    1,
+                    12);
+                maximumFatherCompositeFrames = ResolvePositiveIntArgument(
+                    "-family3d-father-map-maximum-captures",
+                    DefaultMaximumFatherCompositeFrames,
+                    24,
+                    900);
             }
             catch (Exception exception)
             {
@@ -525,14 +542,16 @@ namespace FamilyCompany.Experimental.Family3D
                     {
                         if (fatherCaptureSamples.Count < MaximumFatherTelemetrySamples)
                             RecordFatherCaptureSample(father, fatherMovingSampleFrames);
-                        int stride = fatherStaticRootMotionOnly ? 12 : FatherCompositeFrameStride;
-                        if (compositeCapturedFrames < MaximumFatherCompositeFrames &&
+                        int stride = fatherStaticRootMotionOnly ? 12 : fatherCompositeFrameStride;
+                        if (compositeCapturedFrames < maximumFatherCompositeFrames &&
                             (fatherMovingSampleFrames == 1 ||
                              fatherMovingSampleFrames % stride == 0))
                             CaptureCompositeQaFrame(
                                 sourceOfficeCamera,
                                 fatherStaticRootMotionOnly
                                     ? "father-v18-higgsfield-static-map-walk"
+                                    : FatherUsesCleanBipedCasualWalk
+                                        ? "father-v18-clean-biped-casual-walk-map"
                                     : fatherCleanBipedNaturalWalk
                                         ? "father-v18-clean-biped-natural-map-walk"
                                     : fatherHiggsfieldIdleRun
@@ -576,7 +595,8 @@ namespace FamilyCompany.Experimental.Family3D
                 "actual Starter Office map; staticRootMotionOnly=" +
                 fatherStaticRootMotionOnly + " higgsfieldIdleRun=" +
                 fatherHiggsfieldIdleRun + " cleanBipedNaturalWalk=" +
-                fatherCleanBipedNaturalWalk + " productionEligible=false.",
+                fatherCleanBipedNaturalWalk + " cleanBipedCasualWalk=" +
+                FatherUsesCleanBipedCasualWalk + " productionEligible=false.",
                 this);
 
             for (var circuit = 0; circuit < 2; circuit++)
@@ -590,6 +610,8 @@ namespace FamilyCompany.Experimental.Family3D
                             target,
                             (fatherStaticRootMotionOnly
                                 ? "father-v18-higgsfield-static-map-walk"
+                                : FatherUsesCleanBipedCasualWalk
+                                    ? "father-v18-clean-biped-casual-walk-map"
                                 : fatherCleanBipedNaturalWalk
                                     ? "father-v18-clean-biped-natural-map-walk"
                                 : fatherHiggsfieldIdleRun
@@ -624,6 +646,8 @@ namespace FamilyCompany.Experimental.Family3D
             WriteRuntimeReceipt(
                 fatherStaticRootMotionOnly
                     ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
+                    : FatherUsesCleanBipedCasualWalk
+                        ? "FATHER_V18_CLEAN_BIPED_CASUAL_WALK_MAP_PROOF_COMPLETE"
                     : fatherCleanBipedNaturalWalk
                         ? "FATHER_V18_CLEAN_BIPED_NATURAL_MAP_PROOF_COMPLETE"
                     : fatherHiggsfieldIdleRun
@@ -845,7 +869,8 @@ namespace FamilyCompany.Experimental.Family3D
                 poseStrength,
                 useFatherNaturalSdWalk,
                 fatherHiggsfieldIdleRun ? fatherHiggsfieldIdleClip : null,
-                fatherHiggsfieldIdleRun && ResolveClipMuscleDeltaRetarget(fatherClipMuscleDeltaRetargetAsset));
+                fatherHiggsfieldIdleRun && ResolveClipMuscleDeltaRetarget(fatherClipMuscleDeltaRetargetAsset),
+                fatherHiggsfieldIdleRun && fatherClipAnatomicalSanitizationAsset);
             if (fatherCleanBipedNaturalWalk)
             {
                 walkActor.ConfigureNaturalSdStyle(
@@ -1543,6 +1568,7 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherStaticRootMotionOnly = fatherStaticRootMotionOnly,
                     fatherHiggsfieldIdleRun = fatherHiggsfieldIdleRun,
                     fatherCleanBipedNaturalWalk = fatherCleanBipedNaturalWalk,
+                    fatherCleanBipedCasualWalk = FatherUsesCleanBipedCasualWalk,
                     coordinateMapping =
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
                         "Camera.ViewportPointToRay -> Y=ground plane; raw (x,y)->(x,groundY,y) fallback",
@@ -1551,6 +1577,8 @@ namespace FamilyCompany.Experimental.Family3D
                         fatherStaticRootMotionOnly
                             ? "every frame: live Father SpriteRenderer projected bounds height == " +
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
+                            : FatherUsesCleanBipedCasualWalk
+                                ? "one locked uniform model scale calibrated from idle projected bounds; clean V2 T-pose/heat-map skin; Casual_Walk_inplace action 613 at poseStrength=1 with anatomical sanitation"
                             : fatherCleanBipedNaturalWalk
                                 ? "one locked uniform scale from the paid static Father V18 rest bounds; handcrafted two-contact SD biped cycle; no generated moving mesh"
                             : fatherHiggsfieldIdleRun
@@ -1584,10 +1612,10 @@ namespace FamilyCompany.Experimental.Family3D
                     compositeCapturedFrames = compositeCapturedFrames,
                     compositeCaptureFrameStride = fatherStaticRootMotionOnly
                         ? 12
-                        : FatherCompositeFrameStride,
+                        : fatherCompositeFrameStride,
                     compositeCaptureFramesPerSecond = fatherStaticRootMotionOnly
                         ? 5f
-                        : 60f / FatherCompositeFrameStride,
+                        : 60f / fatherCompositeFrameStride,
                     minimumCompositeLumaRange = compositeCapturedFrames > 0
                         ? minimumCompositeLumaRange
                         : 0,
@@ -1676,6 +1704,30 @@ namespace FamilyCompany.Experimental.Family3D
             return fallback;
         }
 
+        private static int ResolvePositiveIntArgument(
+            string flag,
+            int fallback,
+            int minimum,
+            int maximum)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length - 1; index++)
+            {
+                if (!string.Equals(args[index], flag, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!int.TryParse(
+                        args[index + 1],
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out int value) ||
+                    value < minimum || value > maximum)
+                    throw new InvalidOperationException(
+                        flag + " must be an integer in [" + minimum + ", " + maximum + "].");
+                return value;
+            }
+            return fallback;
+        }
+
         private static float ResolveAutoQuitSeconds()
         {
             string[] args = Environment.GetCommandLineArgs();
@@ -1705,14 +1757,10 @@ namespace FamilyCompany.Experimental.Family3D
         /// at DefaultStrideLength for every actor and DirectionalSpriteAnimator throws on any other
         /// value, so a clip with a different stride is matched here instead of there.
         ///
-        /// Solve it, do not guess it. The office covers 0.9026 QA units per gait cycle at the
-        /// 0.99380799 office stride, so the office-to-QA scale is 0.9083; divide a clip's measured
-        /// QA stride by that scale. V25 ran at 0.8208 and measured a 0.7744 QA stride against
-        /// 0.7455 of travel, a 0.963x match, which solved to this 0.8526; V26 then measured 0.9995x
-        /// with 0.0004 u of slip per cycle. Re-measure after every clip change. target3DHeight is
-        /// 1.4820 for this walk against 1.6080 for the sprint because the projected-height
-        /// calibration reads the model's bounds in its current pose, so it is stable within a clip
-        /// and moves between clips, and stride scales with it.
+        /// Solve it from planted-foot world drift, not from the whole airborne foot range. V61
+        /// compared hidden two-circuit runs at 0.65, 0.675, 0.70 and 0.7226; 0.675 produced the
+        /// smallest combined low-foot displacement. Re-measure after any clip, pose mapping, or
+        /// projected-height change.
         /// </summary>
         /// <summary>
         /// Turn rate in degrees per second. 360 puts a 90 degree corner at a quarter second, which
@@ -1878,6 +1926,8 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherProofRouteCompleted
                     ? fatherStaticRootMotionOnly
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
+                        : FatherUsesCleanBipedCasualWalk
+                            ? "FATHER_V18_CLEAN_BIPED_CASUAL_WALK_MAP_PROOF_COMPLETE"
                         : fatherCleanBipedNaturalWalk
                             ? "FATHER_V18_CLEAN_BIPED_NATURAL_MAP_PROOF_COMPLETE"
                         : fatherHiggsfieldIdleRun
@@ -1914,6 +1964,7 @@ namespace FamilyCompany.Experimental.Family3D
             public bool fatherStaticRootMotionOnly;
             public bool fatherHiggsfieldIdleRun;
             public bool fatherCleanBipedNaturalWalk;
+            public bool fatherCleanBipedCasualWalk;
             public string coordinateMapping;
             public string directionMapping;
             public string scalePolicy;

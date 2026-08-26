@@ -2,7 +2,40 @@
 
 최종 갱신: 2026-08-26
 
-## Father V18 clean-biped natural walk V39 (current isolated review candidate)
+## Father V18 clean-biped action-613 walk V61 (current isolated review candidate)
+
+- Appearance authority remains the paid static Father V18 source FBX
+  `Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx`, SHA-256
+  `589D4CED62894EA27F3D4469019EDC3A4A845BD672AEF1664FC8AE0542305D5A`, and its 4096 albedo,
+  SHA-256 `618F33856F2DD722EBFC1782DCB4BF5709D04E3721B4DB9E88F1A5BDDBEAAA9E`.
+- Current rig: `Candidates/FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx`, SHA-256
+  `F72705D868199B36B40C51762ED8B3525E9CA1B6E09FE4802CAFE3C9C42256BF`. It retains 28,895
+  vertices/49,192 polygons and uses a 24-bone/22-deform-bone horizontal T-pose bind. Blender
+  `ARMATURE_AUTO` bone-heat weights are capped at four influences; all vertices are weighted,
+  cross-side vertices are `0`, arm+leg mixed vertices are `0`, and 19 heat-map misses use the
+  recorded nearest-bone fallback. Preparation receipt SHA-256 is
+  `85B8250217F36028976212A4135D09504DFC4E15B79351D256C73B5180A15A5E`.
+- Motion authority is only the Humanoid `Casual_Walk_inplace` clip imported from action 613 FBX
+  `Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx`,
+  SHA-256 `F344B7E057B6732A1715D5E2CA49A825D866FC59BFB3BFE975C55443694C566E`. The rejected moving
+  mesh/skeleton/skin are not reused. Unity imports one loop from source frames 16..58 and samples it
+  at `poseStrength=1.0`; clip-anatomical sanitation does not synthesize a procedural gait.
+- V61 uses facing offset `-16.9219°` and contact-pixel-calibrated stride `0.675`. Torso mean/max is
+  `2.0035°/2.0498°`, toe-forward concentration `0.99755`, average foot swing-plane ratio `32.12:1`,
+  and opposite hand-foot correlations `0.7846/0.8024`.
+- Isolated scene/build/runtime: `Scenes/Family3DFatherV18CleanBipedCasualWalkMapQaV61.unity`,
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedCasualWalkMapBuildV61`, and
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedCasualWalkRuntimeV61HiFps`.
+  External review media is under
+  `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-casual-walk-v61`.
+- Human review covered every one of the 673 map frames and all enlarged tracking sheets, plus a
+  23-frame exact close loop. No third leg, rubber stretching, lateral crossing, detached shoe,
+  hunched torso, raised/static arms, giant scale, wrong facing, or loop-end jump was visible.
+- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`.
+  The user—not an automatic metric—owns acceptance. No additional Higgsfield credits were used;
+  balance remains `68`. Production/default/Downloads and deployed executables are unchanged.
+
+## Father V18 clean-biped natural walk V39 (user-rejected procedural history)
 
 - Appearance source remains the paid static Father V18 FBX
   `Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx`, SHA-256

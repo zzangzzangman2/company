@@ -27,7 +27,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldStaticMapQa.unity";
         public const string FatherV18MotionQaScenePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CasualWalkMapQaV40.unity";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedCasualWalkMapQaV61.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -40,36 +40,26 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx";
         public const string FatherV18StaticTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
-        // The video imports each generated animation GLB with its own mesh, skin, and bind pose.
-        // Use the moving clip's native body instead of retargeting its non-identical skin onto the
-        // independently generated idle-0 body (V19's stretched-leg failure). The moving clip is
-        // Casual_Walk_inplace as of 2026-08-26; run-644 was a sprint and is kept only as history.
+        // V61 pairs the paid static appearance with the clean V2 T-pose/heat-map rig. The moving
+        // Higgsfield mesh, skin and skeleton are deliberately not reused; only its separate
+        // Humanoid Casual_Walk_inplace action 613 clip is sampled at full strength.
         public const string FatherV18MotionModelPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
-        // The body is the clean biped rig, the motion is the paid Higgsfield Casual_Walk_inplace
-        // clip. Both are Humanoid, so the clip retargets through the avatar; this is clip
-        // retargeting, not the cross-job skin mixing that produced V19's stretched legs. The user
-        // approved this walk on the Higgsfield body and asked for it back on the better-looking
-        // clean biped body, so the two are combined rather than one replacing the other.
-        // The Casual_Walk clip runs on its own native Higgsfield body, which is the configuration
-        // the user approved. Retargeting the same clip onto the clean biped body was tried on
-        // 2026-08-26 and rejected: Humanoid retargeting between the two avatars bends the torso
-        // forward and drops the head, the same posture failure the user reported against V36. The
-        // clean biped assets stay in the repository as the better-looking body for a walk authored
-        // on it, but a clip authored on one body does not transfer to the other.
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV2/father-v18-clean-biped-rig-v2.fbx";
         //
-        // Both values solved by Docs/FATHER_V18_FACING_OFFSET_METHOD.md. They belong to this
-        // body-and-clip pair: the same clip on the clean biped body measured 11.65 and 0.7285.
-        // Solved for this body-and-clip pair; see Docs/FATHER_V18_FACING_OFFSET_METHOD.md.
-        public const float FatherV18CasualWalkFacingOffsetDegrees = 90f;
-        public const float FatherV18CasualWalkStrideOfficeUnits = 0.8526f;
+        // V58 measured a 0.99762 toe-forward concentration and +16.9219 degree anatomical yaw,
+        // so K=-atan2(F.x,F.z)=-16.9219. Stride is calibrated from the low-foot contact interval,
+        // not from the whole airborne swing range: hidden two-circuit runs at 0.65, 0.675, 0.70
+        // and 0.7226 found the lowest combined planted-foot world drift at 0.675. Both values
+        // belong to this exact clean-rig/action-613/posture pair.
+        public const float FatherV18CasualWalkFacingOffsetDegrees = -16.9219f;
+        public const float FatherV18CasualWalkStrideOfficeUnits = 0.675f;
 
         public const string FatherV18MotionIdleClipPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-idle.fbx";
         public const string FatherV18MotionWalkClipPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
         public const string FatherV18MotionTexturePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-albedo.png";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
         public const string MotherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/MotherV1/mother-blender-humanoid-v1.fbx";
         public const string DefaultBuildRoot =
@@ -77,7 +67,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldStaticMapBuildV18";
         public const string FatherV18MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CasualWalkMapBuildV40";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedCasualWalkMapBuildV61";
 
         /// <summary>
         /// The QA scene must reference this material as an asset. Unity strips any shader that no
@@ -169,14 +159,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             try
             {
                 Build(ResolveBuildRoot(false, true), false, true);
-                Debug.Log("FAMILY_3D_FATHER_V18_HIGGSFIELD_MOTION_MAP_QA_BUILD: PASS");
+                Debug.Log("FAMILY_3D_FATHER_V18_CLEAN_BIPED_CASUAL_WALK_MAP_QA_BUILD: PASS");
                 EditorApplication.Exit(0);
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
                 Debug.LogError(
-                    "FAMILY_3D_FATHER_V18_HIGGSFIELD_MOTION_MAP_QA_BUILD: FAIL | " +
+                    "FAMILY_3D_FATHER_V18_CLEAN_BIPED_CASUAL_WALK_MAP_QA_BUILD: FAIL | " +
                     exception.Message);
                 EditorApplication.Exit(1);
             }
@@ -460,7 +450,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     qaLayer,
                     FatherV18CasualWalkFacingOffsetDegrees,
                     FatherV18CasualWalkStrideOfficeUnits,
-                    false);
+                    false,
+                    true);
             else
                 qa.Configure(
                     bundle.Prefabs[0],

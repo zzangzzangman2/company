@@ -25,15 +25,13 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool dedicatedNaturalSdWalk;
 
         /// <summary>
-        /// Play the imported clip as an offset from its own mean pose rather than as an absolute
-        /// pose. Unity's muscle values are absolute against the avatar's T-pose reference, so a clip
-        /// authored on a T-posed rig lands wrong on a rig whose bind pose is not one. The clean
-        /// biped rig is built by weighting a static mesh whose arms hang at the sides, so its
-        /// reference is an I-pose, and the Casual_Walk clip rendered on it with the torso pitched
-        /// about 37 degrees forward. Subtracting the clip's own mean removes whatever reference it
-        /// was authored against and leaves only the motion, which is then added to this rig's rest.
+        /// Legacy full-muscle delta-retarget diagnostic. V61 leaves this disabled because moving
+        /// every muscle around the source mean also moves its unwanted hunch and cross-axis leg
+        /// offsets. The narrower anatomical sanitation path below keeps the action as the motion
+        /// source while correcting only the target-avatar channels that visibly fail.
         /// </summary>
         [SerializeField] private bool clipMuscleDeltaRetarget;
+        [SerializeField] private bool clipAnatomicalSanitization;
         [SerializeField, Range(0f, 10f)] private float naturalSdTorsoUprightDegrees = 5f;
         [SerializeField, Range(0f, 12f)] private float naturalSdArmOutwardDegrees = 2f;
         [SerializeField, Range(0f, 18f)] private float naturalSdArmSwingDegrees = 6f;
@@ -74,6 +72,34 @@ namespace FamilyCompany.Experimental.Family3D
         private int rightUpperLegFrontBack = -1;
         private int leftLowerLegStretch = -1;
         private int rightLowerLegStretch = -1;
+        private int leftUpperLegInOut = -1;
+        private int rightUpperLegInOut = -1;
+        private int leftUpperLegTwistInOut = -1;
+        private int rightUpperLegTwistInOut = -1;
+        private int leftLowerLegTwistInOut = -1;
+        private int rightLowerLegTwistInOut = -1;
+        private int leftFootTwistInOut = -1;
+        private int rightFootTwistInOut = -1;
+        private int leftArmDownUp = -1;
+        private int rightArmDownUp = -1;
+        private int leftArmFrontBack = -1;
+        private int rightArmFrontBack = -1;
+        private int leftArmTwistInOut = -1;
+        private int rightArmTwistInOut = -1;
+        private int leftForearmTwistInOut = -1;
+        private int rightForearmTwistInOut = -1;
+        private int leftForearmStretch = -1;
+        private int rightForearmStretch = -1;
+        private int spineFrontBack = -1;
+        private int chestFrontBack = -1;
+        private int upperChestFrontBack = -1;
+        private int neckNodDownUp = -1;
+        private int headNodDownUp = -1;
+        private float[] clipSanitizationReferenceMuscles;
+        private Vector3 clipSagittalForwardLocal = Vector3.forward;
+        private float leftFootPlaneLateral;
+        private float rightFootPlaneLateral;
+        private bool clipFootPlaneReady;
         private Vector3 hipsRestLocalPosition;
         private Vector3 lastRootWorldPosition;
         private Quaternion lastRootWorldRotation;
@@ -125,7 +151,8 @@ namespace FamilyCompany.Experimental.Family3D
             float animationPoseStrength = 1f,
             bool useDedicatedNaturalSdWalk = false,
             AnimationClip stationaryIdleClip = null,
-            bool useClipMuscleDeltaRetarget = false)
+            bool useClipMuscleDeltaRetarget = false,
+            bool useClipAnatomicalSanitization = false)
         {
             familyId = id;
             visualRoot = modelRoot;
@@ -137,6 +164,7 @@ namespace FamilyCompany.Experimental.Family3D
             poseStrength = Mathf.Clamp01(animationPoseStrength);
             dedicatedNaturalSdWalk = useDedicatedNaturalSdWalk;
             clipMuscleDeltaRetarget = useClipMuscleDeltaRetarget;
+            clipAnatomicalSanitization = useClipAnatomicalSanitization;
         }
 
         public void ConfigureNaturalSdStyle(
@@ -240,6 +268,8 @@ namespace FamilyCompany.Experimental.Family3D
                     output.SetSourcePlayable(clipPlayable);
                 }
                 graph.Play();
+                if (clipAnatomicalSanitization)
+                    InitializeClipAnatomicalSanitization();
                 phaseOffset = FindLeftForwardContactPhase();
                 if (clipMuscleDeltaRetarget)
                     InitializeClipMuscleDeltaRetarget();
@@ -389,6 +419,9 @@ namespace FamilyCompany.Experimental.Family3D
                 if (clipRetargetReady)
                     ApplyClipMuscleDeltaRetarget();
 
+                if (clipAnatomicalSanitization)
+                    ApplyClipAnatomicalSanitization(isMoving);
+
                 if (poseStrength < 0.9999f)
                     ApplyPoseStrength();
             }
@@ -532,6 +565,281 @@ namespace FamilyCompany.Experimental.Family3D
             rightUpperLegFrontBack = FindMuscle("Right Upper Leg Front-Back");
             leftLowerLegStretch = FindMuscle("Left Lower Leg Stretch");
             rightLowerLegStretch = FindMuscle("Right Lower Leg Stretch");
+        }
+
+        /// <summary>
+        /// Keeps the paid clip's alternating leg, knee and opposite-arm timing at poseStrength=1,
+        /// while mapping its joint ranges and neutral posture to this shorter avatar. This is not
+        /// a replacement gait: action 613 remains the sole time-varying motion source.
+        /// </summary>
+        private void InitializeClipAnatomicalSanitization()
+        {
+            if (clipMuscleDeltaRetarget)
+                throw new InvalidOperationException(
+                    familyId + " cannot combine full-muscle delta retargeting with anatomical sanitation.");
+            humanPoseHandler = new HumanPoseHandler(animator.avatar, animator.transform);
+            restHumanPose = new HumanPose();
+            humanPoseHandler.GetHumanPose(ref restHumanPose);
+            if (restHumanPose.muscles == null ||
+                restHumanPose.muscles.Length != HumanTrait.MuscleCount)
+                throw new InvalidOperationException(
+                    familyId + " could not capture a complete Humanoid rest pose for sanitation.");
+            sampledHumanPose = new HumanPose
+            {
+                muscles = new float[HumanTrait.MuscleCount]
+            };
+            leftUpperLegFrontBack = FindMuscle("Left Upper Leg Front-Back");
+            rightUpperLegFrontBack = FindMuscle("Right Upper Leg Front-Back");
+            leftLowerLegStretch = FindMuscle("Left Lower Leg Stretch");
+            rightLowerLegStretch = FindMuscle("Right Lower Leg Stretch");
+            leftUpperLegInOut = FindMuscle("Left Upper Leg In-Out");
+            rightUpperLegInOut = FindMuscle("Right Upper Leg In-Out");
+            leftUpperLegTwistInOut = FindMuscle("Left Upper Leg Twist In-Out");
+            rightUpperLegTwistInOut = FindMuscle("Right Upper Leg Twist In-Out");
+            leftLowerLegTwistInOut = FindMuscle("Left Lower Leg Twist In-Out");
+            rightLowerLegTwistInOut = FindMuscle("Right Lower Leg Twist In-Out");
+            leftFootTwistInOut = FindMuscle("Left Foot Twist In-Out");
+            rightFootTwistInOut = FindMuscle("Right Foot Twist In-Out");
+            leftArmDownUp = FindMuscle("Left Arm Down-Up");
+            rightArmDownUp = FindMuscle("Right Arm Down-Up");
+            leftArmFrontBack = FindMuscle("Left Arm Front-Back");
+            rightArmFrontBack = FindMuscle("Right Arm Front-Back");
+            leftArmTwistInOut = FindMuscle("Left Arm Twist In-Out");
+            rightArmTwistInOut = FindMuscle("Right Arm Twist In-Out");
+            leftForearmTwistInOut = FindMuscle("Left Forearm Twist In-Out");
+            rightForearmTwistInOut = FindMuscle("Right Forearm Twist In-Out");
+            leftForearmStretch = FindMuscle("Left Forearm Stretch");
+            rightForearmStretch = FindMuscle("Right Forearm Stretch");
+            spineFrontBack = FindMuscle("Spine Front-Back");
+            chestFrontBack = FindMuscle("Chest Front-Back");
+            upperChestFrontBack = FindMuscle("UpperChest Front-Back");
+            neckNodDownUp = FindMuscle("Neck Nod Down-Up");
+            headNodDownUp = FindMuscle("Head Nod Down-Up");
+
+            clipSanitizationReferenceMuscles = new float[HumanTrait.MuscleCount];
+            const int sampleCount = 120;
+            if (idleClip != null)
+            {
+                clipMixer.SetInputWeight(0, 0f);
+                clipMixer.SetInputWeight(1, 1f);
+            }
+            var referencePose = new HumanPose();
+            for (var sample = 0; sample < sampleCount; sample++)
+            {
+                clipPlayable.SetTime(sample / (float)sampleCount * walkClip.length);
+                graph.Evaluate(0f);
+                humanPoseHandler.GetHumanPose(ref referencePose);
+                for (var muscle = 0; muscle < clipSanitizationReferenceMuscles.Length; muscle++)
+                    clipSanitizationReferenceMuscles[muscle] += referencePose.muscles[muscle];
+            }
+            for (var muscle = 0; muscle < clipSanitizationReferenceMuscles.Length; muscle++)
+                clipSanitizationReferenceMuscles[muscle] /= sampleCount;
+            // Calibrate the fixed target-avatar walking plane from a full-weight action frame,
+            // never from the idle/walk transition. Subsequent samples are projected only in the
+            // lateral dimension of this same plane.
+            clipPlayable.SetTime(0d);
+            graph.Evaluate(0f);
+            ApplyClipAnatomicalSanitization(true);
+            if (idleClip != null)
+            {
+                clipMixer.SetInputWeight(0, 1f);
+                clipMixer.SetInputWeight(1, 0f);
+            }
+        }
+
+        private void ApplyClipAnatomicalSanitization(bool isMoving)
+        {
+            humanPoseHandler.GetHumanPose(ref sampledHumanPose);
+            // Action 613 is labelled in-place but still carries source-avatar ground drift. Keep
+            // its authored vertical weight shift and pelvis rotation, but let the office route own
+            // ground translation. Replacing bodyRotation with the target rest rotation is invalid:
+            // the source and target Humanoid body frames differ by roughly 90 degrees.
+            sampledHumanPose.bodyPosition = new Vector3(
+                restHumanPose.bodyPosition.x,
+                sampledHumanPose.bodyPosition.y,
+                restHumanPose.bodyPosition.z);
+            if (isMoving)
+            {
+                // The source and target avatars disagree on their lateral leg axes. Preserve
+                // action 613's front/back and knee timing, but remove every lateral/twist channel
+                // that can turn one thigh, shin or shoe into the rejected third-leg fan.
+                CopyRestMuscle(leftUpperLegInOut);
+                CopyRestMuscle(rightUpperLegInOut);
+                CopyRestMuscle(leftUpperLegTwistInOut);
+                CopyRestMuscle(rightUpperLegTwistInOut);
+                CopyRestMuscle(leftLowerLegTwistInOut);
+                CopyRestMuscle(rightLowerLegTwistInOut);
+                CopyRestMuscle(leftFootTwistInOut);
+                CopyRestMuscle(rightFootTwistInOut);
+
+                // Action 613 was authored for a taller body. On the short SD legs its unmodified
+                // reach reads as a locked-knee goose step, so keep the authored alternation while
+                // reducing only the front/back excursion. Keep a small amount of knee flexion at
+                // every phase; amplifying both signs around the mean made the contact leg snap
+                // completely straight in V49-V52.
+                ScaleClipDelta(leftUpperLegFrontBack, 0.72f);
+                ScaleClipDelta(rightUpperLegFrontBack, 0.72f);
+                ScaleClipDelta(leftLowerLegStretch, 1.25f);
+                ScaleClipDelta(rightLowerLegStretch, 1.25f);
+                LimitClipKneeExtension(leftLowerLegStretch);
+                LimitClipKneeExtension(rightLowerLegStretch);
+            }
+
+            // The source clip curls its taller avatar through the chest and then compensates with
+            // the neck. On this large-headed SD body that reads as a hunch even when the
+            // hips-to-head vector is numerically vertical. Keep pelvis weight shift and body
+            // rotation, but take the forward/back spine and gaze baselines from the approved rest
+            // appearance.
+            CopyRestMuscle(spineFrontBack);
+            CopyRestMuscle(chestFrontBack);
+            CopyRestMuscle(upperChestFrontBack);
+            CopyRestMuscle(neckNodDownUp);
+            CopyRestMuscle(headNodDownUp);
+
+            // Retain the clip's arm front/back and elbow curves, changing only the T-pose-relative
+            // down/up baseline so both arms hang beside the torso while visibly counter-swinging.
+            sampledHumanPose.muscles[leftArmDownUp] = -0.95f;
+            sampledHumanPose.muscles[rightArmDownUp] = -0.95f;
+            RetargetClipDeltaToRest(leftArmFrontBack, 0.09f);
+            RetargetClipDeltaToRest(rightArmFrontBack, 0.09f);
+            CopyRestMuscle(leftArmTwistInOut);
+            CopyRestMuscle(rightArmTwistInOut);
+            CopyRestMuscle(leftForearmTwistInOut);
+            CopyRestMuscle(rightForearmTwistInOut);
+            sampledHumanPose.muscles[leftForearmStretch] = Mathf.Clamp(
+                restHumanPose.muscles[leftForearmStretch] - 0.12f,
+                -1f,
+                1f);
+            sampledHumanPose.muscles[rightForearmStretch] = Mathf.Clamp(
+                restHumanPose.muscles[rightForearmStretch] - 0.12f,
+                -1f,
+                1f);
+            humanPoseHandler.SetHumanPose(ref sampledHumanPose);
+            if (isMoving)
+            {
+                if (!clipFootPlaneReady)
+                    CaptureClipFootPlane();
+                RemoveResidualFootLateral(
+                    leftUpperLeg,
+                    leftFoot,
+                    leftFootPlaneLateral);
+                RemoveResidualFootLateral(
+                    rightUpperLeg,
+                    rightFoot,
+                    rightFootPlaneLateral);
+            }
+            ApplyClipUprightCalibration();
+        }
+
+        private void CaptureClipFootPlane()
+        {
+            clipSagittalForwardLocal = MeasureToeForwardLocal();
+            if (clipSagittalForwardLocal.sqrMagnitude <= 0.000001f)
+                clipSagittalForwardLocal = Vector3.forward;
+            clipSagittalForwardLocal.Normalize();
+            Vector3 lateral =
+                Vector3.Cross(Vector3.up, clipSagittalForwardLocal).normalized;
+            Vector3 hipsLocal = visualRoot.InverseTransformPoint(hips.position);
+            leftFootPlaneLateral = Vector3.Dot(
+                visualRoot.InverseTransformPoint(leftFoot.position) - hipsLocal,
+                lateral);
+            rightFootPlaneLateral = Vector3.Dot(
+                visualRoot.InverseTransformPoint(rightFoot.position) - hipsLocal,
+                lateral);
+            clipFootPlaneReady = true;
+        }
+
+        private void RemoveResidualFootLateral(
+            Transform upperLeg,
+            Transform foot,
+            float targetFootLateral)
+        {
+            if (!clipFootPlaneReady)
+                return;
+            Vector3 lateral =
+                Vector3.Cross(Vector3.up, clipSagittalForwardLocal).normalized;
+            Vector3 hipsLocal = visualRoot.InverseTransformPoint(hips.position);
+            Vector3 upperLegLocal = visualRoot.InverseTransformPoint(upperLeg.position);
+            Vector3 footLocal = visualRoot.InverseTransformPoint(foot.position);
+            Vector3 hipToFootLocal = footLocal - upperLegLocal;
+            Vector3 planarLocal = hipToFootLocal -
+                                  Vector3.Dot(hipToFootLocal, lateral) * lateral;
+            if (planarLocal.sqrMagnitude <= 0.000001f)
+                return;
+            float upperLegLateral = Vector3.Dot(
+                upperLegLocal - hipsLocal,
+                lateral);
+            float desiredBoneLateral = targetFootLateral - upperLegLateral;
+            float planarLength = Mathf.Sqrt(Mathf.Max(
+                0.000001f,
+                hipToFootLocal.sqrMagnitude -
+                desiredBoneLateral * desiredBoneLateral));
+            Vector3 desiredLocal =
+                planarLocal.normalized * planarLength +
+                lateral * desiredBoneLateral;
+            Vector3 currentWorld = visualRoot.TransformDirection(hipToFootLocal);
+            Vector3 desiredWorld = visualRoot.TransformDirection(desiredLocal);
+            Quaternion footWorldRotation = foot.rotation;
+            upperLeg.rotation =
+                Quaternion.FromToRotation(currentWorld, desiredWorld) * upperLeg.rotation;
+            // Keep the authored shoe orientation and toe roll; only the leg swing plane moves.
+            foot.rotation = footWorldRotation;
+        }
+
+        private void CopyRestMuscle(int index)
+        {
+            sampledHumanPose.muscles[index] = restHumanPose.muscles[index];
+        }
+
+        private void ScaleClipDelta(int index, float scale)
+        {
+            float mean = clipSanitizationReferenceMuscles[index];
+            sampledHumanPose.muscles[index] = Mathf.Clamp(
+                mean + (sampledHumanPose.muscles[index] - mean) * scale,
+                -1f,
+                1f);
+        }
+
+        private void RetargetClipDeltaToRest(int index, float scale)
+        {
+            float mean = clipSanitizationReferenceMuscles[index];
+            sampledHumanPose.muscles[index] = Mathf.Clamp(
+                restHumanPose.muscles[index] +
+                (sampledHumanPose.muscles[index] - mean) * scale,
+                -1f,
+                1f);
+        }
+
+        private void LimitClipKneeExtension(int index)
+        {
+            sampledHumanPose.muscles[index] = Mathf.Min(
+                sampledHumanPose.muscles[index],
+                restHumanPose.muscles[index] - 0.075f);
+        }
+
+        private void ApplyClipUprightCalibration()
+        {
+            if (spine == null || head == null || hips == null)
+                return;
+            Quaternion headWorldRotation = head.rotation;
+            const float targetLeanDegrees = 2f;
+            for (var iteration = 0; iteration < 3; iteration++)
+            {
+                Vector3 torso = head.position - hips.position;
+                if (torso.sqrMagnitude <= 0.0000001f)
+                    break;
+                float lean = Vector3.Angle(torso, Vector3.up);
+                if (lean <= targetLeanDegrees + 0.05f)
+                    break;
+                Vector3 axis = Vector3.Cross(torso, Vector3.up);
+                if (axis.sqrMagnitude <= 0.0000001f)
+                    break;
+                spine.rotation = Quaternion.AngleAxis(
+                    lean - targetLeanDegrees,
+                    axis.normalized) * spine.rotation;
+            }
+            // Moving the upper-body mass must not make the face stare at the floor or ceiling.
+            head.rotation = headWorldRotation;
         }
 
         private void ApplyNaturalSdPose(float phase, bool isMoving)

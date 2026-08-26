@@ -84,9 +84,10 @@ def create_bone(edit_bones, name, head, tail, parent=None, deform=True):
     return bone
 
 
-def build_armature():
-    data = bpy.data.armatures.new("FatherV18CleanBiped_Skeleton")
-    armature = bpy.data.objects.new("FatherV18CleanBiped_Armature", data)
+def build_armature(t_pose=False):
+    suffix = "TPose" if t_pose else "SourcePose"
+    data = bpy.data.armatures.new("FatherV18CleanBipedV2_" + suffix + "_Skeleton")
+    armature = bpy.data.objects.new("FatherV18CleanBipedV2_" + suffix + "_Armature", data)
     bpy.context.scene.collection.objects.link(armature)
     bpy.context.view_layer.objects.active = armature
     armature.select_set(True)
@@ -102,6 +103,9 @@ def build_armature():
     create_bone(bones, "head_end", (0.0, 0.0, 0.920), (0.0, 0.0, 1.010), "Head", False)
     create_bone(bones, "headfront", (0.0, 0.0, 0.855), (0.100, 0.0, 0.855), "Head", False)
 
+    upper_arm_length = math.sqrt(0.033 * 0.033 + 0.135 * 0.135)
+    forearm_length = math.sqrt(0.015 * 0.015 + 0.130 * 0.130)
+    hand_length = math.sqrt(0.012 * 0.012 + 0.095 * 0.095)
     for side, sign in (("Left", 1.0), ("Right", -1.0)):
         create_bone(
             bones,
@@ -110,25 +114,29 @@ def build_armature():
             (0.0, sign * 0.112, 0.700),
             "Spine02",
         )
-        create_bone(
-            bones,
-            side + "Arm",
-            (0.0, sign * 0.112, 0.700),
-            (0.0, sign * 0.145, 0.565),
-            side + "Shoulder",
-        )
+        if t_pose:
+            arm_head = Vector((0.0, sign * 0.112, 0.700))
+            arm_tail = arm_head + Vector((0.0, sign * upper_arm_length, 0.0))
+            forearm_tail = arm_tail + Vector((0.0, sign * forearm_length, 0.0))
+            hand_tail = forearm_tail + Vector((0.0, sign * hand_length, 0.0))
+        else:
+            arm_head = Vector((0.0, sign * 0.112, 0.700))
+            arm_tail = Vector((0.0, sign * 0.145, 0.565))
+            forearm_tail = Vector((0.0, sign * 0.160, 0.435))
+            hand_tail = Vector((0.012, sign * 0.160, 0.340))
+        create_bone(bones, side + "Arm", arm_head, arm_tail, side + "Shoulder")
         create_bone(
             bones,
             side + "ForeArm",
-            (0.0, sign * 0.145, 0.565),
-            (0.0, sign * 0.160, 0.435),
+            arm_tail,
+            forearm_tail,
             side + "Arm",
         )
         create_bone(
             bones,
             side + "Hand",
-            (0.0, sign * 0.160, 0.435),
-            (0.012, sign * 0.160, 0.340),
+            forearm_tail,
+            hand_tail,
             side + "ForeArm",
         )
         create_bone(
@@ -165,100 +173,172 @@ def build_armature():
     return armature
 
 
-def smooth_pair(lower_name, upper_name, value, lower, upper):
-    if upper <= lower:
-        return {lower_name: 1.0}
-    t = max(0.0, min(1.0, (value - lower) / (upper - lower)))
-    t = t * t * (3.0 - 2.0 * t)
-    return {lower_name: 1.0 - t, upper_name: t}
+ARM_BONES = {
+    name
+    for name in DEFORM_BONES
+    if "Shoulder" in name or "Arm" in name or "Hand" in name
+}
+LEG_BONES = {
+    name
+    for name in DEFORM_BONES
+    if "Leg" in name or "Foot" in name or "Toe" in name
+}
+CENTRE_BONES = {"Hips", "Spine", "Spine01", "Spine02", "neck", "Head"}
 
 
-def classify_vertex(point):
-    x, y, z = point
-    side = "Left" if y >= 0.0 else "Right"
-    lateral = abs(y)
-
-    # The paid detailed source is a single static surface with arms resting beside the body.
-    # Separate the outer arm/hand columns from the trouser columns before assigning any weights;
-    # no vertex is ever allowed to blend between a hand and a leg or between left and right legs.
-    if z < 0.28:
-        arm_vertex = False
-    elif z < 0.53:
-        arm_vertex = lateral > 0.116
-    elif z < 0.72:
-        shoulder_threshold = 0.108 + (z - 0.53) * 0.050
-        arm_vertex = lateral > shoulder_threshold
-    else:
-        arm_vertex = False
-
-    if arm_vertex:
-        if z < 0.425:
-            return {side + "Hand": 1.0}
-        if z < 0.475:
-            return smooth_pair(side + "Hand", side + "ForeArm", z, 0.425, 0.475)
-        if z < 0.555:
-            return {side + "ForeArm": 1.0}
-        if z < 0.610:
-            return smooth_pair(side + "ForeArm", side + "Arm", z, 0.555, 0.610)
-        if z < 0.685:
-            return {side + "Arm": 1.0}
-        return smooth_pair(side + "Arm", side + "Shoulder", z, 0.685, 0.725)
-
-    if z >= 0.755:
-        return {"Head": 1.0}
-    if z >= 0.710:
-        return smooth_pair("Spine02", "neck", z, 0.710, 0.755)
-    if z >= 0.650:
-        return smooth_pair("Spine01", "Spine02", z, 0.650, 0.710)
-    if z >= 0.580:
-        return smooth_pair("Spine", "Spine01", z, 0.580, 0.650)
-    if z >= 0.505:
-        return smooth_pair("Hips", "Spine", z, 0.505, 0.580)
-
-    # Belt, fly, crotch bridge, and the top trouser band must remain one rigid pelvis surface.
-    # Splitting these vertices by Y makes the zipper and belt open into a false third limb.
-    if z >= 0.435:
-        return {"Hips": 1.0}
-    if z >= 0.255 and lateral < 0.036:
-        centre_leg = side + ("UpLeg" if z >= 0.285 else "Leg")
-        return smooth_pair("Hips", centre_leg, lateral, 0.008, 0.036)
-    if z >= 0.385:
-        return smooth_pair(side + "UpLeg", "Hips", z, 0.385, 0.435)
-    if z >= 0.315:
-        return {side + "UpLeg": 1.0}
-    if z >= 0.255:
-        return smooth_pair(side + "Leg", side + "UpLeg", z, 0.255, 0.315)
-    if z >= 0.145:
-        return {side + "Leg": 1.0}
-    if z >= 0.095:
-        return smooth_pair(side + "Foot", side + "Leg", z, 0.095, 0.145)
-    # The detailed shoes are assembled from many overlapping shell components. Keep every shell,
-    # lace, sole, and trouser cuff rigidly on its anatomical Foot bone; toe blending tears those
-    # disconnected shells into the dangling flaps visible in the rejected generated rig.
-    return {side + "Foot": 1.0}
+def point_segment_distance(point, head, tail):
+    segment = tail - head
+    denominator = segment.length_squared
+    if denominator <= 1e-12:
+        return (point - head).length
+    t = max(0.0, min(1.0, (point - head).dot(segment) / denominator))
+    return (point - (head + t * segment)).length
 
 
-def rig_mesh(mesh, armature):
+def nearest_anatomical_bone(point, armature):
+    candidates = list(CENTRE_BONES)
+    if point.y >= -0.006:
+        candidates.extend(name for name in DEFORM_BONES if name.startswith("Left"))
+    if point.y <= 0.006:
+        candidates.extend(name for name in DEFORM_BONES if name.startswith("Right"))
+    return min(
+        candidates,
+        key=lambda name: point_segment_distance(
+            point,
+            armature.data.bones[name].head_local,
+            armature.data.bones[name].tail_local,
+        ),
+    )
+
+
+def normalize_weights(weights):
+    kept = sorted(
+        ((name, value) for name, value in weights.items() if value > 0.000001),
+        key=lambda item: item[1],
+        reverse=True,
+    )[:4]
+    total = sum(value for _, value in kept)
+    if total <= 1e-12:
+        return {}
+    return {name: value / total for name, value in kept}
+
+
+def sanitize_heat_weights(mesh, armature):
+    index_to_name = {group.index: group.name for group in mesh.vertex_groups}
+    sanitized = []
+    automatic_unweighted = 0
+    cross_side_removed = 0
+    arm_leg_mixes_removed = 0
+    for vertex in mesh.data.vertices:
+        weights = {
+            index_to_name[item.group]: float(item.weight)
+            for item in vertex.groups
+            if index_to_name.get(item.group) in DEFORM_BONES and item.weight > 0.000001
+        }
+        if not weights:
+            automatic_unweighted += 1
+
+        if vertex.co.y > 0.006:
+            forbidden = [name for name in weights if name.startswith("Right")]
+        elif vertex.co.y < -0.006:
+            forbidden = [name for name in weights if name.startswith("Left")]
+        else:
+            left_total = sum(
+                value for name, value in weights.items() if name.startswith("Left")
+            )
+            right_total = sum(
+                value for name, value in weights.items() if name.startswith("Right")
+            )
+            if left_total > 0.000001 and right_total > 0.000001:
+                if left_total > right_total * 1.05:
+                    forbidden = [name for name in weights if name.startswith("Right")]
+                elif right_total > left_total * 1.05:
+                    forbidden = [name for name in weights if name.startswith("Left")]
+                else:
+                    # A symmetric centre seam must be owned by the pelvis/spine chain, never split
+                    # between both legs: that split is the false third-limb failure this gate blocks.
+                    forbidden = [
+                        name
+                        for name in weights
+                        if name.startswith("Left") or name.startswith("Right")
+                    ]
+            else:
+                forbidden = []
+        for name in forbidden:
+            cross_side_removed += 1
+            weights.pop(name, None)
+
+        arm_total = sum(weights.get(name, 0.0) for name in ARM_BONES)
+        leg_total = sum(weights.get(name, 0.0) for name in LEG_BONES)
+        if arm_total > 0.000001 and leg_total > 0.000001:
+            arm_leg_mixes_removed += 1
+            remove = LEG_BONES if arm_total >= leg_total else ARM_BONES
+            for name in remove:
+                weights.pop(name, None)
+
+        weights = normalize_weights(weights)
+        if not weights:
+            weights = {nearest_anatomical_bone(vertex.co, armature): 1.0}
+        sanitized.append(weights)
+
     for group in list(mesh.vertex_groups):
         mesh.vertex_groups.remove(group)
     groups = {name: mesh.vertex_groups.new(name=name) for name in DEFORM_BONES}
     counts = {name: 0 for name in DEFORM_BONES}
     maximum_influences = 0
-    for vertex in mesh.data.vertices:
-        weights = classify_vertex(vertex.co)
-        total = sum(weights.values())
-        if not math.isclose(total, 1.0, rel_tol=0.0, abs_tol=1e-5):
-            raise RuntimeError(f"Vertex {vertex.index} weights sum to {total}")
+    for vertex, weights in zip(mesh.data.vertices, sanitized):
         maximum_influences = max(maximum_influences, len(weights))
         for name, weight in weights.items():
-            if weight <= 0.000001:
-                continue
-            groups[name].add([vertex.index], float(weight), "REPLACE")
+            groups[name].add([vertex.index], weight, "REPLACE")
             counts[name] += 1
-    mesh.parent = armature
-    modifier = mesh.modifiers.new("FatherV18CleanBiped", "ARMATURE")
-    modifier.object = armature
-    return counts, maximum_influences
+    return (
+        sanitized,
+        counts,
+        maximum_influences,
+        automatic_unweighted,
+        cross_side_removed,
+        arm_leg_mixes_removed,
+    )
+
+
+def rig_mesh_with_heat_map(mesh, armature):
+    for group in list(mesh.vertex_groups):
+        mesh.vertex_groups.remove(group)
+    bpy.ops.object.select_all(action="DESELECT")
+    mesh.select_set(True)
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    result = bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+    if "FINISHED" not in result:
+        raise RuntimeError("Blender ARMATURE_AUTO heat-map binding did not finish")
+    bpy.context.view_layer.update()
+    return sanitize_heat_weights(mesh, armature)
+
+
+def apply_t_pose_bind(mesh, source_armature, weights_by_vertex):
+    target_armature = build_armature(t_pose=True)
+    transforms = {
+        name: target_armature.data.bones[name].matrix_local
+        @ source_armature.data.bones[name].matrix_local.inverted()
+        for name in DEFORM_BONES
+    }
+    for vertex, weights in zip(mesh.data.vertices, weights_by_vertex):
+        source = vertex.co.copy()
+        transformed = Vector((0.0, 0.0, 0.0))
+        for name, weight in weights.items():
+            transformed += (transforms[name] @ source) * weight
+        vertex.co = transformed
+
+    for modifier in list(mesh.modifiers):
+        if modifier.type == "ARMATURE":
+            mesh.modifiers.remove(modifier)
+    mesh.parent = None
+    bpy.data.objects.remove(source_armature, do_unlink=True)
+    mesh.parent = target_armature
+    modifier = mesh.modifiers.new("FatherV18CleanBipedV2", "ARMATURE")
+    modifier.object = target_armature
+    bpy.context.view_layer.update()
+    return target_armature
 
 
 def main():
@@ -300,10 +380,18 @@ def main():
             f"{maximum_rest_vertex_delta}"
         )
 
-    mesh.name = "FatherV18CleanBiped"
-    mesh.data.name = "FatherV18CleanBiped_Mesh"
-    armature = build_armature()
-    counts, maximum_influences = rig_mesh(mesh, armature)
+    mesh.name = "FatherV18CleanBipedV2"
+    mesh.data.name = "FatherV18CleanBipedV2_Mesh"
+    source_armature = build_armature(t_pose=False)
+    (
+        weights_by_vertex,
+        counts,
+        maximum_influences,
+        automatic_unweighted_vertices,
+        cross_side_memberships_removed,
+        arm_leg_mixes_removed,
+    ) = rig_mesh_with_heat_map(mesh, source_armature)
+    armature = apply_t_pose_bind(mesh, source_armature, weights_by_vertex)
     bpy.context.view_layer.update()
 
     group_names = {group.index: group.name for group in mesh.vertex_groups}
@@ -355,14 +443,14 @@ def main():
     )
 
     receipt = {
-        "contract": "FC-FATHER-V18-STATIC-APPEARANCE-CLEAN-BIPED-RIG-V1",
+        "contract": "FC-FATHER-V18-STATIC-APPEARANCE-CLEAN-BIPED-RIG-V2",
         "sourceFbx": input_fbx.as_posix(),
         "sourceFbxSha256": sha256(input_fbx),
         "outputFbx": output_fbx.as_posix(),
         "outputFbxSha256": sha256(output_fbx),
         "sourceWorldVertexHash": before_world_hash,
         "postApplyWorldVertexHash": after_apply_world_hash,
-        "riggedWorldVertexHashAtRest": world_vertex_hash(mesh),
+        "riggedWorldVertexHashAtTPoseBind": world_vertex_hash(mesh),
         "maximumRestVertexDelta": maximum_rest_vertex_delta,
         "topologyUvHash": topology_hash,
         "sourceObjectMatrix": original_matrix,
@@ -374,10 +462,15 @@ def main():
         "weightedVertexCount": len(mesh.data.vertices) - unweighted_vertices,
         "crossSideVertexCount": cross_side_vertices,
         "armLegMixedVertexCount": arm_leg_vertices,
+        "automaticUnweightedVertexCountBeforeFallback": automatic_unweighted_vertices,
+        "crossSideMembershipsRemoved": cross_side_memberships_removed,
+        "armLegMixedVerticesSanitized": arm_leg_mixes_removed,
         "weightVertexCounts": counts,
-        "appearancePolicy": "Exact paid Father V18 static vertices/topology/UV/material slots retained; only a new biped armature, armature modifier, and deterministic skin weights were added",
-        "motionPolicy": "No generated motion clip is embedded; Unity QA drives a handcrafted two-contact SD biped cycle on this clean Humanoid rig",
-        "rejectedSourcePolicy": "CasualWalk613 moving FBX skeleton/weights are not reused",
+        "weightingPolicy": "Blender ARMATURE_AUTO bone-heat weights computed against the anatomical source-pose skeleton, capped at four influences, with opposite-side and arm-leg contamination removed",
+        "bindPosePolicy": "The heat-weighted source surface and arm chain were transformed together into a horizontal T-pose; the exported armature rest pose is that T-pose",
+        "appearancePolicy": "Exact paid Father V18 topology, UV, material slots, texture, and body proportions retained; only the arm vertices move to the required T-pose bind coordinates",
+        "motionPolicy": "No motion is embedded; Unity must validate this rig with the paid Casual_Walk_inplace action 613 at poseStrength 1.0",
+        "rejectedSourcePolicy": "The action-613 moving mesh, skeleton, and skin weights are not reused; only its separate Humanoid AnimationClip is allowed in Unity QA",
         "productionEligible": False,
     }
     receipt_path.write_text(

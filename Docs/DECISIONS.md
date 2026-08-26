@@ -1,6 +1,25 @@
 # DECISIONS
 
-## 2026-08-26 / Father V18은 정적 외형만 보존하고 clean biped로 다시 리깅한다
+## 2026-08-26 / Father V18 V61은 정적 외형 + clean T-pose skin + action 613을 사용한다
+
+결정: 사용자가 기각한 V39 절차 보행을 현행 후보에서 내리고, 유료 정적 Father V18 외형을 유지한
+`FatherV18CleanBipedRigV2`에 원본 `Casual_Walk_inplace` action 613 Humanoid clip을 `poseStrength=1.0`으로
+적용한다. action 613의 moving mesh/skeleton/skin은 재사용하지 않는다.
+
+스키닝은 Blender bone-heat 자동 가중치로 만들고 좌우 교차 및 arm+leg 오염을 제거한다. Unity sanitation은
+잘못된 rig 축의 lateral/twist와 상체 nod를 정리할 뿐, 시간 변화는 전부 action 613이 소유한다. 팔은 정적
+옆선에서 작은 반대 swing, 다리는 클립의 반대 위상과 굽힌 무릎 회복을 유지한다.
+
+방향은 화면상 이동 벡터와 0/90/180/270 후보를 직접 비교한 뒤 모델축을 확정했으며 최종 보정은
+`-16.9219°`다. stride는 숫자상 큰 보폭 범위가 아니라 저점 발 픽셀의 월드 drift를 여러 후보로 비교해
+`0.675`로 선택했다. 이전 작업지시서의 `stride/height 0.35~0.55`는 실제 화면에서 거위걸음을 유발하므로
+합격선에서 폐기한다. 자동 수치는 보조 진단이고 673-frame 전체 GIF 육안 검수와 사용자 판정이 우선한다.
+
+V61은 내부 확대 검수에서 third-leg/흐물거림/곱추/팔 벌림·정지/거인 축척/방향 오류/loop jump가 보이지
+않았다. 그러나 이는 사용자 승인과 다르므로 `productionEligible=false`를 유지한다. production/default/
+Downloads/배포본은 변경하지 않으며 Higgsfield 추가 비용도 쓰지 않는다.
+
+## [V61로 대체됨] 2026-08-26 / Father V18은 정적 외형만 보존하고 clean biped로 다시 리깅한다
 
 결정: 사용자가 승인한 방향의 paid static Father V18 vertices/topology/UV/material은 유지하되, 사용자 영상에서
 세 번째 다리와 흐물거림을 만든 moving FBX의 skeleton, skin weights, mesh와 clip은 폐기한다. 정적 메시 위에
