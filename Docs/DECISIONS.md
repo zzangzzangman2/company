@@ -1,6 +1,19 @@
 # DECISIONS
 
-## 2026-08-26 / Father V18 V67은 정적 외형 + clean V4 skin + Claude action 613을 사용한다
+## 2026-08-26 / Father V18 V69는 Claude 보행을 유지하고 SD 팔·손 리타깃만 제한한다
+
+결정: V67에서 복원한 action 613의 hip/knee/torso/head, 보행 위상, 이동과 방향을 유지한다. 사용자가
+실제 화면에서 지적한 손·팔만 고친다. V66 절차 보행으로 돌아가거나 새 걷기를 합성하지 않는다.
+
+V69는 action 613의 반대 팔 타이밍은 보존하되, 긴 인간형 팔에서 온 앞뒤 진폭을 `0.58`로 SD 길이에
+맞춘다. Down-Up을 양쪽 `-0.98`로 두고 팔꿈치를 rest 대비 `-0.34..-0.14`로 제한하며, 어깨와 손목은
+승인 정적 rest 회전을 복원한다. 30프레임 확대에서 손은 골반 아래에 머물고 소매 seam에 붙어 있으며,
+작은 반대 팔 스윙은 계속 보인다.
+
+실제 hidden 720p 맵 673 PNG/telemetry 1,344/two circuits를 다시 만들었다. 사용자 합격 전이므로
+`USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`다. 추가 Higgsfield 사용은 0 credits다.
+
+## [팔·손 지적으로 V69로 대체] 2026-08-26 / Father V18 V67은 정적 외형 + clean V4 skin + Claude action 613을 사용한다
 
 결정: 사용자가 명시한 대로 Claude 기준 영상의 `Casual_Walk_inplace` action 613을 현행 후보의 유일한
 시간 변화 source로 되돌린다. V66의 자체 0.88초 SD 보행은 사용자 지시와 다른 동작이므로 기각한다.

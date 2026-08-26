@@ -27,7 +27,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldStaticMapQa.unity";
         public const string FatherV18MotionQaScenePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedClaudeWalkMapQaV67.unity";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedClaudeWalkMapQaV69.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -40,10 +40,10 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx";
         public const string FatherV18StaticTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
-        // V67 keeps the paid static appearance and V4 stable shirt/collar skin, but restores the
+        // V69 keeps the paid static appearance and V4 stable shirt/collar skin, but restores the
         // exact Claude-reference Casual_Walk_inplace action 613 as the sole time-varying motion.
-        // No procedural gait may replace it. Only target-bind baselines and invalid cross-axis leg
-        // channels are corrected so the same clip does not tear the garment or form a third leg.
+        // No procedural gait may replace it. Target-bind baselines and invalid cross-axis leg
+        // channels are corrected, and only the authored arm arc is fitted to the short SD limbs.
         public const string FatherV18MotionModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx";
         public const float FatherV18CasualWalkFacingOffsetDegrees = -16.9219f;
@@ -61,7 +61,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldStaticMapBuildV18";
         public const string FatherV18MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedClaudeWalkMapBuildV67";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedClaudeWalkMapBuildV69";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -183,7 +183,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 fatherV18StaticOnly
                     ? "FamilyCompanyFatherV18HiggsfieldStaticMapQa.exe"
                     : fatherV18MotionOnly
-                        ? "FamilyCompanyFatherV18ClaudeWalkMapQa.exe"
+                        ? "FamilyCompanyFatherV18ClaudeWalkV69MapQa.exe"
                     : "FamilyCompanyStarterOffice3DCandidateQa.exe");
             var options = new BuildPlayerOptions
             {

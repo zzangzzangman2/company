@@ -14,21 +14,22 @@ The folder does not alter the production family sprite catalog, production scene
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
 
-## Father V18 clean-biped Claude walk V67 (current isolated review candidate)
+## Father V18 clean-biped Claude walk V69 (current isolated review candidate)
 
-V67 keeps the paid static Father V18 appearance, the exact static-FBX surface material, and the
+V69 keeps the paid static Father V18 appearance, the exact static-FBX surface material, and the
 stable-shirt `FatherV18CleanBipedRigV4`. It restores the Claude-reference
 `Casual_Walk_inplace` action 613 at `poseStrength=1.0`; no procedural or handcrafted gait runs in
-this candidate. Authored hip, knee, torso, head and opposite-arm deltas remain at full amplitude.
-Only source-neutral-to-V4-neutral alignment and invalid target lateral/twist leg channels are fixed.
+this candidate. Authored hip, knee, torso and head deltas remain at full amplitude. Opposite-arm
+timing remains authored, while front/back arm amplitude is fitted to the short SD arms at `0.58`.
+The approved static shoulder and wrist rests prevent shrug and palm-flip artifacts.
 
 Map tuning is facing `-16.9219°`, stride `0.675`, locked cycle `0.99380799s`, and corner turn
 `360°/s`. The hidden 720p Player completed two actual Office circuits with 1,344 telemetry samples
 and 673 PNGs at 30 fps. Review media is under
-`outputs/father-v18-clean-biped-claude-walk-v67-review`, including the 30-frame close-cycle GIF and
+`outputs/father-v18-clean-biped-claude-walk-v69-review`, including the 30-frame close-cycle GIF and
 the 22.4-second full-map GIF.
 
-V67 is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. The user must judge the actual
+V69 is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. The user must judge the actual
 GIF before promotion. Higgsfield usage remains 0 credits (balance 68), and production/default/
 Downloads/deployed executables are unchanged.
 

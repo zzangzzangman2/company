@@ -52,6 +52,8 @@ namespace FamilyCompany.Experimental.Family3D
         private Transform rightToes;
         private Transform leftUpperArm;
         private Transform rightUpperArm;
+        private Transform leftShoulder;
+        private Transform rightShoulder;
         private Transform leftLowerArm;
         private Transform rightLowerArm;
         private Transform leftHand;
@@ -224,6 +226,8 @@ namespace FamilyCompany.Experimental.Family3D
             rightToes = animator.GetBoneTransform(HumanBodyBones.RightToes);
             leftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             rightUpperArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            leftShoulder = animator.GetBoneTransform(HumanBodyBones.LeftShoulder);
+            rightShoulder = animator.GetBoneTransform(HumanBodyBones.RightShoulder);
             leftLowerArm = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
             rightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
             leftHand = animator.GetBoneTransform(HumanBodyBones.LeftHand);
@@ -697,23 +701,38 @@ namespace FamilyCompany.Experimental.Family3D
 
             // Retain the clip's arm front/back and elbow curves, changing only the T-pose-relative
             // down/up baseline so both arms hang beside the torso while visibly counter-swinging.
-            RetargetClipDeltaToTarget(leftArmDownUp, -0.95f, 1f);
-            RetargetClipDeltaToTarget(rightArmDownUp, -0.95f, 1f);
-            RetargetClipDeltaToRest(leftArmFrontBack, 1f);
-            RetargetClipDeltaToRest(rightArmFrontBack, 1f);
+            // The source avatar's Down-Up channels lift one V4 hand to shoulder height, while the
+            // Claude reference keeps both hands below the waist. Lock only this cross-avatar
+            // baseline; the full opposite Front-Back curves below still own the visible swing.
+            sampledHumanPose.muscles[leftArmDownUp] = -0.98f;
+            sampledHumanPose.muscles[rightArmDownUp] = -0.98f;
+            // Preserve action 613's opposite timing, but fit its long human-arm arc to the short
+            // SD arms. Full amplitude puts the rear hand near shoulder height and visually pulls
+            // it away from the sleeve; 0.58 keeps a readable counter-swing beside the hips.
+            RetargetClipDeltaToRest(leftArmFrontBack, 0.58f);
+            RetargetClipDeltaToRest(rightArmFrontBack, 0.58f);
             CopyRestMuscle(leftArmTwistInOut);
             CopyRestMuscle(rightArmTwistInOut);
             CopyRestMuscle(leftForearmTwistInOut);
             CopyRestMuscle(rightForearmTwistInOut);
             RetargetClipDeltaToTarget(
                 leftForearmStretch,
-                restHumanPose.muscles[leftForearmStretch] - 0.12f,
-                1f);
+                restHumanPose.muscles[leftForearmStretch] - 0.22f,
+                0.45f);
             RetargetClipDeltaToTarget(
                 rightForearmStretch,
-                restHumanPose.muscles[rightForearmStretch] - 0.12f,
-                1f);
+                restHumanPose.muscles[rightForearmStretch] - 0.22f,
+                0.45f);
+            LimitNaturalElbow(leftForearmStretch);
+            LimitNaturalElbow(rightForearmStretch);
             humanPoseHandler.SetHumanPose(ref sampledHumanPose);
+            // Keep the shoulder base and wrist seam identical to the approved static body. Upper
+            // arm and forearm rotations remain animated, so action 613 still supplies the opposite
+            // timing; only the shrug and palm-flip artifacts are removed.
+            RestoreBoneRest(leftShoulder);
+            RestoreBoneRest(rightShoulder);
+            RestoreBoneRest(leftHand);
+            RestoreBoneRest(rightHand);
             if (isMoving)
             {
                 if (!clipFootPlaneReady)
@@ -811,6 +830,14 @@ namespace FamilyCompany.Experimental.Family3D
                 target + (sampledHumanPose.muscles[index] - mean) * scale,
                 -1f,
                 1f);
+        }
+
+        private void LimitNaturalElbow(int index)
+        {
+            sampledHumanPose.muscles[index] = Mathf.Clamp(
+                sampledHumanPose.muscles[index],
+                restHumanPose.muscles[index] - 0.34f,
+                restHumanPose.muscles[index] - 0.14f);
         }
 
         private void LimitClipKneeExtension(int index)

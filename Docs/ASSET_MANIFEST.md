@@ -2,7 +2,7 @@
 
 최종 갱신: 2026-08-26
 
-## Father V18 clean-biped Claude walk V67 (current isolated review candidate)
+## Father V18 clean-biped Claude walk V69 (current isolated review candidate)
 
 - Appearance/rig authority: paid static Father V18 +
   `Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx`, SHA-256
@@ -10,17 +10,18 @@
 - Motion authority: Humanoid `Casual_Walk_inplace` from
   `Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx`,
   SHA-256 `F344B7E057B6732A1715D5E2CA49A825D866FC59BFB3BFE975C55443694C566E`.
-  It runs at `poseStrength=1.0` with full authored sagittal leg/knee, torso/head and opposite-arm
-  dynamics; no V66 procedural cycle is used.
+  It runs at `poseStrength=1.0` with full authored sagittal leg/knee and torso/head dynamics. The
+  authored opposite-arm timing remains, with front/back amplitude fitted to the SD arm length at
+  `0.58`; no V66 procedural cycle is used.
 - Surface: `Materials/FatherV18HiggsfieldStaticSurface.mat`, with the static 4096 albedo.
 - Scene/build/runtime:
-  `Scenes/Family3DFatherV18CleanBipedClaudeWalkMapQaV67.unity`,
-  `FatherV18CleanBipedClaudeWalkMapBuildV67`,
-  `FatherV18CleanBipedClaudeWalkRuntimeV67HiFpsR2`.
+  `Scenes/Family3DFatherV18CleanBipedClaudeWalkMapQaV69.unity`,
+  `FatherV18CleanBipedClaudeWalkMapBuildV69`,
+  `FatherV18CleanBipedClaudeWalkRuntimeV69HiFpsR1`.
 - Runtime: 673 PNG at 30 fps, 1,344 telemetry samples, two map circuits, cycle `0.99380799s`,
   facing `-16.9219°`, stride `0.675`, corner `360°/s`, pose strength `1.0`.
 - Review media:
-  `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-claude-walk-v67-review`.
+  `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-claude-walk-v69-review`.
 - Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`, Higgsfield use `0 credits`,
   balance `68`; production/default/Downloads/deployed executables unchanged.
 
