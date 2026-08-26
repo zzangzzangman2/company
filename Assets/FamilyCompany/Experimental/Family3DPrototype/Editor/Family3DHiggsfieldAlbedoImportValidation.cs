@@ -10,7 +10,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
     /// <summary>
     /// Guards the resolution the paid Higgsfield albedos actually reach the GPU at.
     ///
-    /// Both albedos are 4096x4096 source PNGs. Until 2026-08-26 they imported at Unity's default
+    /// Every paid Higgsfield albedo is a 4096x4096 source PNG. Until 2026-08-26 they imported at
+    /// Unity's default
     /// maxTextureSize of 2048 with TextureImporterCompression.Compressed, so the generated texture
     /// was halved and then lossily compressed before anyone saw it. That is measurable, and it is
     /// the direct cause of the "character is not sharp" report, so it gets a gate rather than a
@@ -24,7 +25,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
             "FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-albedo.png",
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
-            "FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png"
+            "FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png",
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
+            "FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-albedo.png"
         };
 
         public static void Run()

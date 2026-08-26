@@ -83,9 +83,15 @@ namespace FamilyCompany.Experimental.Family3D
         public float PhaseOffset => phaseOffset;
         public float StandingHeight => standingHeight;
         public float PoseStrength => poseStrength;
+        public float CycleSeconds => ResolveCycleSeconds();
         public bool DedicatedNaturalSdWalk => dedicatedNaturalSdWalk;
         public bool LeftFootPlanted => leftFootContactLocked;
         public bool RightFootPlanted => rightFootContactLocked;
+
+        private float ResolveCycleSeconds()
+        {
+            return dedicatedNaturalSdWalk ? FatherSdCycleSeconds : LockedCycleSeconds;
+        }
 
         public void Configure(
             string id,
@@ -258,7 +264,7 @@ namespace FamilyCompany.Experimental.Family3D
 
         private void SamplePose(double sharedMotionClock, bool isMoving)
         {
-            double cycleSeconds = dedicatedNaturalSdWalk ? FatherSdCycleSeconds : LockedCycleSeconds;
+            double cycleSeconds = ResolveCycleSeconds();
             double normalized = sharedMotionClock / cycleSeconds + phaseOffset;
             float phase = Mathf.Repeat((float)normalized, 1f);
             if (dedicatedNaturalSdWalk)
@@ -295,8 +301,14 @@ namespace FamilyCompany.Experimental.Family3D
             // and QA could neither prevent slip nor detect it. Both branches align phase 0 to the
             // left foot's forward contact — the SD path by construction, the imported path through
             // FindLeftForwardContactPhase — which is the alignment ApplyFootPlant expects.
+            // Contact-aligned, not clip-aligned. ApplyFootPlant treats leg phase 0 as the moment of
+            // contact, but clip phase 0 is wherever the exported clip happens to start.
+            // FindLeftForwardContactPhase measures where the left foot actually reaches its forward
+            // contact, so subtract it here. Before 2026-08-26 phaseOffset cancelled out of the
+            // caller's arithmetic entirely and the plant window ran at an arbitrary point in the
+            // stride, which is why the two feet latched for unequal numbers of frames.
             if (isMoving)
-                ApplyFootPlants(phase);
+                ApplyFootPlants(Mathf.Repeat(phase - phaseOffset, 1f));
         }
 
         private void InitializeNaturalSdPose()

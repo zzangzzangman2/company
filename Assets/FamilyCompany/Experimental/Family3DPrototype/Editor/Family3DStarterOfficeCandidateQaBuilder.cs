@@ -27,7 +27,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldStaticMapQa.unity";
         public const string FatherV18MotionQaScenePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldNativeRunMapQaV22.unity";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldCasualWalkMapQaV25.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -41,16 +41,17 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
         public const string FatherV18MotionIdleClipPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-idle.fbx";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-idle.fbx";
         // The video imports each generated animation GLB with its own mesh, skin, and bind pose.
-        // Use run-644's native body while moving instead of retargeting its non-identical skin onto
-        // the independently generated idle-0 body (V19's stretched-leg failure).
+        // Use the moving clip's native body instead of retargeting its non-identical skin onto the
+        // independently generated idle-0 body (V19's stretched-leg failure). The moving clip is
+        // Casual_Walk_inplace as of 2026-08-26; run-644 was a sprint and is kept only as history.
         public const string FatherV18MotionModelPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-run-644.fbx";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
         public const string FatherV18MotionRunClipPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-run-644.fbx";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
         public const string FatherV18MotionTexturePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-albedo.png";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-albedo.png";
         public const string MotherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/MotherV1/mother-blender-humanoid-v1.fbx";
         public const string DefaultBuildRoot =
@@ -58,7 +59,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldStaticMapBuildV18";
         public const string FatherV18MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldNativeRunMapBuildV22";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldCasualWalkMapBuildV25";
 
         /// <summary>
         /// The QA scene must reference this material as an asset. Unity strips any shader that no
@@ -309,7 +310,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 AnimationClip idleClip = LoadHumanClip(FatherV18MotionIdleClipPath, "Idle");
                 AnimationClip runClip = LoadHumanClip(
                     FatherV18MotionRunClipPath,
-                    "Lean_Forward_Sprint_inplace");
+                    "Casual_Walk_inplace");
                 return new AssetBundle(
                     prefabs,
                     runClip,

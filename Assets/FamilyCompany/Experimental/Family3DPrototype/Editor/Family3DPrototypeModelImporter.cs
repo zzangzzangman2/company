@@ -37,6 +37,18 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             CandidateRoot +
             "FatherV18HiggsfieldMotionV19/father-v18-higgsfield-motion-v19-run-644.fbx";
 
+        // Action 613 Casual_Walk_inplace, generated 2026-08-26 from the same Tripo base as idle-0
+        // and run-644. It replaces the sprint as the moving clip: measured on the source GLBs, the
+        // sprint drops the hips 15 % and bobs them 3.7x more because it has a flight phase, and its
+        // stride implies 1.79 u/s against a 0.666 u/s office walk. These two import with the same
+        // Humanoid mapping and loop/root-lock settings as the V19 pair.
+        public const string FatherV18HiggsfieldCasualWalkModelPath =
+            CandidateRoot +
+            "FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-idle.fbx";
+        public const string FatherV18HiggsfieldCasualWalkClipPath =
+            CandidateRoot +
+            "FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
+
         private static readonly string[] IdentityHumanoidBoneNames =
         {
             "Hips",
@@ -78,7 +90,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         private static bool IsFatherV18HiggsfieldMotion(string path)
         {
             return string.Equals(path, FatherV18HiggsfieldMotionModelPath, StringComparison.Ordinal) ||
-                   string.Equals(path, FatherV18HiggsfieldRunClipPath, StringComparison.Ordinal);
+                   string.Equals(path, FatherV18HiggsfieldRunClipPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherV18HiggsfieldCasualWalkModelPath, StringComparison.Ordinal) ||
+                   string.Equals(path, FatherV18HiggsfieldCasualWalkClipPath, StringComparison.Ordinal);
         }
 
         public static bool IsRuntime2DV2Candidate(string path)
@@ -121,6 +135,21 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     ModelImporterClipAnimation[] clips = importer.defaultClipAnimations;
                     for (var index = 0; index < clips.Length; index++)
                     {
+                        // Casual_Walk_inplace exports 127 frames holding two complete gait cycles,
+                        // but Family3DWalkActor maps one phase wrap onto the whole clip and
+                        // ApplyFootPlant latches once per wrap, so a two-cycle clip would plant on
+                        // only one of the two. Measured on the source curve, the left-leg swing
+                        // crosses its mean upward at frames 15.67, 57.85 and 100.27; frames 16 to 58
+                        // are therefore one cycle, and the 0.006 s of phase the integer boundary
+                        // gives up is 0.4 % of a cycle.
+                        if (string.Equals(
+                                assetPath,
+                                FatherV18HiggsfieldCasualWalkClipPath,
+                                StringComparison.Ordinal))
+                        {
+                            clips[index].firstFrame = 16f;
+                            clips[index].lastFrame = 58f;
+                        }
                         clips[index].loopTime = true;
                         clips[index].loopPose = true;
                         clips[index].lockRootRotation = true;

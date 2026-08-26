@@ -45,6 +45,11 @@ def parse_args():
     parser.add_argument("--output-run-fbx", required=True)
     parser.add_argument("--output-texture", required=True)
     parser.add_argument("--receipt", required=True)
+    # The moving clip is no longer always the sprint. Action 644 Lean_Forward_Sprint_inplace was
+    # measured on 2026-08-26 to be unusable for office locomotion: its stride implies 1.79 u/s
+    # against a 0.666 u/s office walk, and a sprint carries a flight phase a walk never has. The
+    # default preserves the existing invocation; pass the fragment to prepare a different action.
+    parser.add_argument("--motion-action-fragment", default="Lean_Forward_Sprint_inplace")
     return parser.parse_args(sys.argv[separator + 1 :])
 
 
@@ -295,7 +300,7 @@ def main():
     idle["image"].save()
     export_fbx(output_idle_fbx, idle)
 
-    run = import_and_validate(run_glb, "Lean_Forward_Sprint_inplace")
+    run = import_and_validate(run_glb, args.motion_action_fragment)
     export_fbx(output_run_fbx, run)
 
     same_geometry = (
@@ -339,6 +344,7 @@ def main():
         "contract": "FC-FATHER-V18-HIGGSFIELD-IDLE-RUN-UNITY-PREP-V1",
         "sourceIdleGlb": idle_glb.name,
         "sourceIdleGlbSha256": sha256(idle_glb),
+        "motionActionFragment": args.motion_action_fragment,
         "sourceRunGlb": run_glb.name,
         "sourceRunGlbSha256": sha256(run_glb),
         "outputIdleFbx": output_idle_fbx.as_posix(),

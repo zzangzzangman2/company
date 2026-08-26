@@ -81,6 +81,7 @@ namespace FamilyCompany.Experimental.Family3D
         private int compositeCapturedFrames;
         private int fatherMovingSampleFrames;
         private bool fatherMapWalkQa;
+        private float fatherMotionStrideOfficeUnits;
         private bool fatherProofRouteActive;
         private bool fatherProofRouteCompleted;
         private int fatherProofRouteCircuit = -1;
@@ -261,6 +262,7 @@ namespace FamilyCompany.Experimental.Family3D
                     // route advances in exact fixed steps and the wall clock only bounds the run
                     // through the realtime auto-quit.
                     Time.captureDeltaTime = FatherCaptureDeltaSeconds;
+                    fatherMotionStrideOfficeUnits = ResolveFatherMotionStrideOfficeUnits();
                     StartCoroutine(RunFatherMapWalkProof());
                 }
                 WriteRuntimeReceipt("BOUND");
@@ -850,8 +852,17 @@ namespace FamilyCompany.Experimental.Family3D
             }
             else
             {
+                // The office gait phase advances with distance, not time: OfficeLocomotionGaitRules
+                // completes one cycle per DefaultStrideLength of travel, and DirectionalSpriteAnimator
+                // rejects any other stride, so the 2D cadence is locked project-wide. A 3D clip whose
+                // own stride differs therefore cannot be matched by retiming; it has to be driven by
+                // the same distance against its own stride. GaitDistance is monotonic, so unlike
+                // gaitPhase01 it carries no wrap for a non-integer stride ratio to break on.
+                double clipCycles = fatherHiggsfieldIdleRun && fatherMotionStrideOfficeUnits > 0f
+                    ? binding.Agent.GaitDistance / fatherMotionStrideOfficeUnits
+                    : gaitPhase01;
                 double motionClock =
-                    (gaitPhase01 - binding.WalkActor.PhaseOffset) *
+                    (clipCycles - binding.WalkActor.PhaseOffset) *
                     Family3DWalkActor.LockedCycleSeconds;
                 binding.WalkActor.Tick(motionClock, worldPosition, worldRotation, isMoving);
             }
@@ -1346,6 +1357,7 @@ namespace FamilyCompany.Experimental.Family3D
                         : string.Empty,
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
                     fatherCaptureSampleCount = fatherCaptureSamples.Count,
+                    fatherMotionStrideOfficeUnits = fatherMotionStrideOfficeUnits,
                     fatherCaptureDeltaSeconds = Time.captureDeltaTime,
                     fatherCaptureSimulationSeconds = (float)fatherCaptureSimulationSeconds,
                     fatherCaptureSamples = fatherCaptureSamples.ToArray(),
@@ -1435,6 +1447,42 @@ namespace FamilyCompany.Experimental.Family3D
             return 0f;
         }
 
+        /// <summary>
+        /// Office-unit distance the Father V18 moving clip's stride covers, the value that makes the
+        /// feet match the ground. It is not the office stride: OfficeLocomotionGaitRules fixes that
+        /// at DefaultStrideLength for every actor and DirectionalSpriteAnimator throws on any other
+        /// value, so a clip with a different stride is matched here instead of there.
+        ///
+        /// Solve it, do not guess it. Measured V24 numbers: the office covers 0.9026 QA units per
+        /// gait cycle at the 0.99380799 office stride, so the office-to-QA scale is 0.9083. Divide a
+        /// clip's measured QA stride by that scale. Casual_Walk's source foot sweep is 0.695x the
+        /// sprint's, and the sprint measured 1.0727 QA units, which puts this walk near 0.7455 QA
+        /// units and therefore near 0.8208 office units. Re-measure after every clip change.
+        /// </summary>
+        private static float ResolveFatherMotionStrideOfficeUnits()
+        {
+            const float defaultStrideOfficeUnits = 0.8208f;
+            string[] args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length - 1; index++)
+            {
+                if (!string.Equals(
+                        args[index],
+                        "-family3d-father-v18-motion-stride-office-units",
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!float.TryParse(
+                        args[index + 1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out float stride) ||
+                    stride < 0.2f || stride > 2f)
+                    throw new InvalidOperationException(
+                        "Father V18 motion stride must be in [0.2, 2] office units.");
+                return stride;
+            }
+            return defaultStrideOfficeUnits;
+        }
+
         private static float ResolveFatherMotionPoseStrength()
         {
             // Restored to 1.0 on 2026-08-26. The previous 0.45 came from a still-silhouette A/B
@@ -1519,6 +1567,7 @@ namespace FamilyCompany.Experimental.Family3D
             public string fatherProofRoutePolicy;
             public bool fatherProofRouteCompleted;
             public int fatherCaptureSampleCount;
+            public float fatherMotionStrideOfficeUnits;
             public float fatherCaptureDeltaSeconds;
             public float fatherCaptureSimulationSeconds;
             public FatherCaptureSample[] fatherCaptureSamples;
