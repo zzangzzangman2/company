@@ -82,6 +82,7 @@ namespace FamilyCompany.Experimental.Family3D
         private int fatherMovingSampleFrames;
         private bool fatherMapWalkQa;
         private float fatherMotionStrideOfficeUnits;
+        private float fatherMotionYawDegreesPerSecond;
         private bool fatherProofRouteActive;
         private bool fatherProofRouteCompleted;
         private int fatherProofRouteCircuit = -1;
@@ -192,6 +193,32 @@ namespace FamilyCompany.Experimental.Family3D
         /// Office directions are South, SW, W, NW, North, NE, East, SE.  Candidate model forward
         /// is +Z, therefore North (4) is yaw 0 and the exact mapping is (direction - 4) * 45.
         /// </summary>
+        /// <summary>
+        /// Turns the host toward the office facing at a bounded rate rather than snapping.
+        ///
+        /// The office resolves facing to eight octants, so a corner is a 90 degree step delivered in
+        /// one frame. At the office walking speed the Father covers about 0.17 units while turning
+        /// 90 degrees at this rate, which is roughly what walking a corner looks like; snapping
+        /// covers none. Only the first frame after binding adopts the target outright, so a spawn
+        /// does not spin; every later change, a 180 degree reversal included, is rate bounded.
+        /// </summary>
+        private Quaternion ResolveBlendedYaw(Binding binding)
+        {
+            Quaternion target = MapOfficeDirectionToUnityYaw(binding.Agent.CurrentDirection);
+            if (!binding.HasBlendedYaw)
+            {
+                binding.BlendedYaw = target;
+                binding.HasBlendedYaw = true;
+                return target;
+            }
+
+            float step = fatherMotionYawDegreesPerSecond > 0f
+                ? fatherMotionYawDegreesPerSecond * Time.deltaTime
+                : 360f;
+            binding.BlendedYaw = Quaternion.RotateTowards(binding.BlendedYaw, target, step);
+            return binding.BlendedYaw;
+        }
+
         public static Quaternion MapOfficeDirectionToUnityYaw(int direction)
         {
             int octant = (direction % 8 + 8) % 8;
@@ -263,6 +290,7 @@ namespace FamilyCompany.Experimental.Family3D
                     // through the realtime auto-quit.
                     Time.captureDeltaTime = FatherCaptureDeltaSeconds;
                     fatherMotionStrideOfficeUnits = ResolveFatherMotionStrideOfficeUnits();
+                    fatherMotionYawDegreesPerSecond = ResolveFatherMotionYawDegreesPerSecond();
                     StartCoroutine(RunFatherMapWalkProof());
                 }
                 WriteRuntimeReceipt("BOUND");
@@ -841,7 +869,7 @@ namespace FamilyCompany.Experimental.Family3D
             binding.SetCandidateVisible(true);
 
             Vector3 worldPosition = MapOfficeActorToQaGround(binding.Agent, sourceOfficeCamera);
-            Quaternion worldRotation = MapOfficeDirectionToUnityYaw(binding.Agent.CurrentDirection);
+            Quaternion worldRotation = ResolveBlendedYaw(binding);
             float gaitPhase01 = Mathf.Repeat(binding.Agent.GaitPhase01, 1f);
             bool isMoving =
                 binding.Agent.LastActualDisplacement.sqrMagnitude > MovementEpsilonSqr;
@@ -1010,6 +1038,13 @@ namespace FamilyCompany.Experimental.Family3D
                 // diverge, and the wall clock is the one that stretches under a slow PNG write.
                 realtimeSeconds = Time.realtimeSinceStartup,
                 simulationSeconds = (float)fatherCaptureSimulationSeconds,
+                // The applied yaw, not the office octant. Without it the receipt records only the
+                // discrete facing and the blend cannot be measured from the evidence.
+                rootWorldYawDegrees = binding.Host == null
+                    ? 0f
+                    : binding.Host.transform.rotation.eulerAngles.y,
+                targetYawDegrees =
+                    MapOfficeDirectionToUnityYaw(binding.Agent.CurrentDirection).eulerAngles.y,
                 routeCircuit = fatherProofRouteCircuit,
                 routeLeg = fatherProofRouteLeg,
                 officePosition = binding.Agent.Position,
@@ -1358,6 +1393,7 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
                     fatherCaptureSampleCount = fatherCaptureSamples.Count,
                     fatherMotionStrideOfficeUnits = fatherMotionStrideOfficeUnits,
+                    fatherMotionYawDegreesPerSecond = fatherMotionYawDegreesPerSecond,
                     fatherCaptureDeltaSeconds = Time.captureDeltaTime,
                     fatherCaptureSimulationSeconds = (float)fatherCaptureSimulationSeconds,
                     fatherCaptureSamples = fatherCaptureSamples.ToArray(),
@@ -1462,6 +1498,36 @@ namespace FamilyCompany.Experimental.Family3D
         /// calibration reads the model's bounds in its current pose, so it is stable within a clip
         /// and moves between clips, and stride scales with it.
         /// </summary>
+        /// <summary>
+        /// Turn rate in degrees per second. 360 puts a 90 degree corner at a quarter second, which
+        /// is about how long a walking person takes, and a 180 degree reversal at half a second.
+        /// Raising it toward a snap defeats the blend; lowering it makes the Father visibly walk
+        /// sideways out of corners.
+        /// </summary>
+        private static float ResolveFatherMotionYawDegreesPerSecond()
+        {
+            const float defaultDegreesPerSecond = 360f;
+            string[] args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length - 1; index++)
+            {
+                if (!string.Equals(
+                        args[index],
+                        "-family3d-father-v18-motion-yaw-degrees-per-second",
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!float.TryParse(
+                        args[index + 1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out float degrees) ||
+                    degrees < 45f || degrees > 3600f)
+                    throw new InvalidOperationException(
+                        "Father V18 motion yaw rate must be in [45, 3600] degrees per second.");
+                return degrees;
+            }
+            return defaultDegreesPerSecond;
+        }
+
         private static float ResolveFatherMotionStrideOfficeUnits()
         {
             const float defaultStrideOfficeUnits = 0.8526f;
@@ -1571,6 +1637,7 @@ namespace FamilyCompany.Experimental.Family3D
             public bool fatherProofRouteCompleted;
             public int fatherCaptureSampleCount;
             public float fatherMotionStrideOfficeUnits;
+            public float fatherMotionYawDegreesPerSecond;
             public float fatherCaptureDeltaSeconds;
             public float fatherCaptureSimulationSeconds;
             public FatherCaptureSample[] fatherCaptureSamples;
@@ -1587,6 +1654,8 @@ namespace FamilyCompany.Experimental.Family3D
             public int frameIndex;
             public float realtimeSeconds;
             public float simulationSeconds;
+            public float rootWorldYawDegrees;
+            public float targetYawDegrees;
             public int routeCircuit;
             public int routeLeg;
             public Vector2 officePosition;
@@ -1710,6 +1779,14 @@ namespace FamilyCompany.Experimental.Family3D
             public int LastObservedDirection { get; set; }
             public bool IsMoving { get; set; }
             public int MovingFrameCount { get; set; }
+
+            /// <summary>
+            /// Yaw actually applied to the 3D host, blended toward the office facing instead of
+            /// snapping to it. The office agent resolves facing to one of eight octants, so an
+            /// unblended host jumps 45 or 90 degrees in a single frame at every corner.
+            /// </summary>
+            public Quaternion BlendedYaw { get; set; } = Quaternion.identity;
+            public bool HasBlendedYaw { get; set; }
             public int ObservedDirectionMask { get; set; }
             public float MinimumObservedGaitPhase01 { get; set; }
             public float MaximumObservedGaitPhase01 { get; set; }
