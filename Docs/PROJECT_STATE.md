@@ -2,7 +2,26 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
-## 2026-08-26 / 현재 Father 최우선 후보: 정적 외형 + clean-biped V4 + 전용 SD 보행 V66
+## 2026-08-26 / 현재 Father 최우선 후보: 정적 외형 + clean-biped V4 + Claude action 613 V67
+
+- 사용자가 V66을 `Claude 걷기를 그대로 쓰지 않고 임의로 바꾼 보행`으로 기각했다. V66은
+  `USER_VISUAL_REJECTED_WRONG_MOTION_SOURCE`이며 재사용하지 않는다.
+- V67은 첨부 기준 MP4와 같은 `Casual_Walk_inplace` action 613을 `poseStrength=1.0`으로 복원한다.
+  절차적/handcrafted 보행은 실행하지 않는다. source mean을 V4 bind neutral로 옮기되 앞뒤 hip/knee,
+  torso/head, opposite-arm 시간 delta는 모두 full `1.0`이다. 잘못된 target lateral/twist 축만 정리한다.
+- 외형/skin은 V66에서 만든 `FatherV18CleanBipedRigV4`와 정적 FBX surface material을 그대로 쓴다.
+  셔츠·칼라 안정 component 38개, cross-side `0`, arm+leg mixed `0` 계약을 유지한다.
+- map contract는 action-613 pair의 facing `-16.9219°`, stride `0.675`, locked cycle
+  `0.99380799s`, corner `360°/s`다.
+- hidden 720p 실제 맵에서 telemetry `1,344`, 30 fps PNG `673`, 두 회로를 완료했다. 확대 one-cycle
+  30프레임과 전체 맵에서 Claude 기준의 큰 보폭·무릎·반대 팔 스윙을 확인했고 torn shirt, third leg,
+  separated shoe, backward torso, wrong facing은 보이지 않았다. 자동 판정은 사용자 승인을 대신하지 않는다.
+- 상세:
+  [FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_V67_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_V67_QA_2026-08-26.md).
+  상태는 `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`다.
+  Higgsfield 사용 0 credits, 잔액 68; production/default/Downloads/배포본은 변경하지 않았다.
+
+## [사용자 기각·V67로 대체] 2026-08-26 / 정적 외형 + clean-biped V4 + 전용 SD 보행 V66
 
 - 사용자가 기준으로 다시 지정한 유료 정적 Father V18의 topology/UV/material/texture와 체형을 그대로
   유지한다. 움직이는 동안에도 머리, 얼굴, 셔츠, 팔·손, 바지, 두 발이 정적 기준처럼 또렷해야 한다.
@@ -11,7 +30,7 @@
   `-1.4516°`였다. V61/V62의 Unlit material도 정적 FBX보다 어둡고 평평했다.
 - V63은 정적 material과 안정 torso panel을 적용했지만 다른 체형용 action 613 리타겟 실루엣이 남았다.
   V64는 T-pose arm rest를 잘못 복원해 팔이 수평으로 벌어진 진단본이다. 둘 다 탈락이다.
-- 현재 후보 V66은 `FatherV18CleanBipedRigV4`를 쓴다. V4는 28,895 vertices/49,192 polygons,
+- 기각된 V66도 `FatherV18CleanBipedRigV4`를 썼다. V4는 V67에서 계속 유지한다. 28,895 vertices/49,192 polygons,
   24 bones/22 deform bones, 최대 4 influences, cross-side `0`, arm+leg mixed `0`이며 셔츠·칼라·허리
   안정 panel 38개에서 limb membership 11,235개를 제거했다. FBX SHA-256은
   `107DE6C4D2F36C1048746275B4E4E108447094705684D75AECF62CA1220F50B0`다.
@@ -27,14 +46,15 @@
 - 보조 수치: lateral foot sign 교차 `0/1,344`, 최소 발 간격 `0.2465`, 양팔 상관 `-0.99993`, 손과
   반대 발 상관 `0.8215`, signed torso lean 사실상 `0°`. 자동 수치 PASS는 사용자 승인이 아니다.
 - 상세: [FATHER_V18_CLEAN_BIPED_NATURAL_WALK_V66_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_NATURAL_WALK_V66_QA_2026-08-26.md).
-  상태는 `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, **`productionEligible=false`**다.
+  V66 상태는 `USER_VISUAL_REJECTED_WRONG_MOTION_SOURCE`, `productionMutation=false`,
+  **`productionEligible=false`**다.
   추가 Higgsfield 사용량 `0 credits`, 잔액 `68`; production/default/Downloads/배포본은 변경하지 않았다.
 
-## [V66으로 대체·V61 사용자 기각] 2026-08-26 / 과거 목표: Codex 외형 + Claude 클립
+## [V67로 재개·V61 사용자 기각] 2026-08-26 / Codex 외형 + Claude 클립
 
 - 당시 목표는 "Codex의 clean biped 외형 + Claude의 `Casual_Walk_inplace`(613) 클립"이었다. 그러나
-  실제 V61 영상에서 옷 파열과 뒤로 젖힌 상체가 확인되어 이 조합은 사용자 기각됐다. 현행 V66은
-  외부 체형 클립 리타겟을 사용하지 않는다.
+  실제 V61 영상에서 옷 파열과 뒤로 젖힌 상체가 확인되어 그 리그/보정은 기각됐다. 현행 V67은 V4의
+  안정 torso skin과 full action-613 delta로 같은 목표를 다시 수행한다.
 - **리타겟 2종 모두 실패했다.** Unity Humanoid 직접 리타겟은 상체 기울기 `8.42도`, 근육값 차분
   리타겟은 `10.68도`로 더 나빠졌다. 후자가 실패한 것이 진단이다: 기준 포즈(T-pose) 문제라면 차분이
   고쳤어야 한다. 원인은 기준이 아니라 **스키닝 가중치**다. `classify_vertex()`가 정점을 높이 구간과

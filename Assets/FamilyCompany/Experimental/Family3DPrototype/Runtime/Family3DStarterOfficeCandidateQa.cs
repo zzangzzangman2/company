@@ -659,7 +659,7 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherStaticRootMotionOnly
                     ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
                     : FatherUsesCleanBipedCasualWalk
-                        ? "FATHER_V18_CLEAN_BIPED_CASUAL_WALK_MAP_PROOF_COMPLETE"
+                        ? "FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_MAP_PROOF_COMPLETE"
                     : fatherCleanBipedNaturalWalk
                         ? "FATHER_V18_CLEAN_BIPED_NATURAL_MAP_PROOF_COMPLETE"
                     : fatherHiggsfieldIdleRun
@@ -1573,14 +1573,14 @@ namespace FamilyCompany.Experimental.Family3D
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
                         "Camera.ViewportPointToRay -> Y=ground plane; raw (x,y)->(x,groundY,y) fallback",
                     directionMapping =
-                        "measured QA ground displacement -> LookRotation + clean-rig 90 degree " +
+                        "measured QA ground displacement -> LookRotation + per-rig measured " +
                         "authored-forward offset; 360 degrees/second corner blend",
                     scalePolicy =
                         fatherStaticRootMotionOnly
                             ? "every frame: live Father SpriteRenderer projected bounds height == " +
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
                             : FatherUsesCleanBipedCasualWalk
-                                ? "one locked uniform model scale calibrated from idle projected bounds; clean V4 T-pose/heat-map skin with stable whole shirt/collar panels; static-FBX surface material; Casual_Walk_inplace action 613 at poseStrength=1 with anatomical sanitation"
+                                ? "one locked uniform model scale calibrated from idle projected bounds; clean V4 T-pose/heat-map skin with stable whole shirt/collar panels; static-FBX surface material; Claude-reference Casual_Walk_inplace action 613 at poseStrength=1 and full authored sagittal/arm dynamics"
                             : fatherCleanBipedNaturalWalk
                                 ? "one locked uniform scale from the paid static Father V18 rest bounds; handcrafted two-contact SD biped cycle; no generated moving mesh"
                             : fatherHiggsfieldIdleRun
@@ -1931,7 +1931,7 @@ namespace FamilyCompany.Experimental.Family3D
                     ? fatherStaticRootMotionOnly
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
                         : FatherUsesCleanBipedCasualWalk
-                            ? "FATHER_V18_CLEAN_BIPED_CASUAL_WALK_MAP_PROOF_COMPLETE"
+                            ? "FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_MAP_PROOF_COMPLETE"
                         : fatherCleanBipedNaturalWalk
                             ? "FATHER_V18_CLEAN_BIPED_NATURAL_MAP_PROOF_COMPLETE"
                         : fatherHiggsfieldIdleRun

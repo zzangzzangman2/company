@@ -1,6 +1,19 @@
 # DECISIONS
 
-## 2026-08-26 / Father V18 V66은 정적 외형 + clean V4 skin + 자체 SD 2족 보행을 사용한다
+## 2026-08-26 / Father V18 V67은 정적 외형 + clean V4 skin + Claude action 613을 사용한다
+
+결정: 사용자가 명시한 대로 Claude 기준 영상의 `Casual_Walk_inplace` action 613을 현행 후보의 유일한
+시간 변화 source로 되돌린다. V66의 자체 0.88초 SD 보행은 사용자 지시와 다른 동작이므로 기각한다.
+
+V67은 `poseStrength=1.0`, locked cycle `0.99380799s`에서 action 613의 hip/knee/torso/head/arm
+앞뒤 delta를 축소 없이 `1.0`으로 사용한다. V4 bind와 맞지 않아 third-leg fan을 만드는 lateral/twist
+기준만 rest로 정리하고 source mean을 target neutral로 옮긴다. 이 보정은 새 보행을 합성하지 않는다.
+
+외형은 유료 정적 Father V18과 `FatherV18CleanBipedRigV4`의 안정 torso skin을 유지한다. 방향/속도는
+facing `-16.9219°`, stride `0.675`, corner `360°/s`다. 30 fps 673-frame 실제 맵 두 회로를 육안
+검수했지만 사용자 승인 전에는 `productionEligible=false`다. 추가 Higgsfield 사용은 0 credits다.
+
+## [사용자 기각·V67로 대체] 2026-08-26 / Father V18 V66은 정적 외형 + clean V4 skin + 자체 SD 2족 보행을 사용한다
 
 결정: 사용자가 다시 지정한 paid static Father V18 외형과 정적 FBX surface material을 그대로 유지하고,
 `FatherV18CleanBipedRigV4` 위에서 이 리그 자체의 0.88초 SD 보행을 구동한다. action 613 moving mesh,

@@ -2,7 +2,29 @@
 
 최종 갱신: 2026-08-26
 
-## Father V18 clean-biped natural walk V66 (current isolated review candidate)
+## Father V18 clean-biped Claude walk V67 (current isolated review candidate)
+
+- Appearance/rig authority: paid static Father V18 +
+  `Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx`, SHA-256
+  `107DE6C4D2F36C1048746275B4E4E108447094705684D75AECF62CA1220F50B0`.
+- Motion authority: Humanoid `Casual_Walk_inplace` from
+  `Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx`,
+  SHA-256 `F344B7E057B6732A1715D5E2CA49A825D866FC59BFB3BFE975C55443694C566E`.
+  It runs at `poseStrength=1.0` with full authored sagittal leg/knee, torso/head and opposite-arm
+  dynamics; no V66 procedural cycle is used.
+- Surface: `Materials/FatherV18HiggsfieldStaticSurface.mat`, with the static 4096 albedo.
+- Scene/build/runtime:
+  `Scenes/Family3DFatherV18CleanBipedClaudeWalkMapQaV67.unity`,
+  `FatherV18CleanBipedClaudeWalkMapBuildV67`,
+  `FatherV18CleanBipedClaudeWalkRuntimeV67HiFpsR2`.
+- Runtime: 673 PNG at 30 fps, 1,344 telemetry samples, two map circuits, cycle `0.99380799s`,
+  facing `-16.9219°`, stride `0.675`, corner `360°/s`, pose strength `1.0`.
+- Review media:
+  `2026-08-25/family-natural-walk-rebuild/outputs/father-v18-clean-biped-claude-walk-v67-review`.
+- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`, Higgsfield use `0 credits`,
+  balance `68`; production/default/Downloads/deployed executables unchanged.
+
+## Father V18 clean-biped natural walk V66 (user-rejected wrong-motion history)
 
 - Appearance authority: paid static FBX
   `Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx`, SHA-256
@@ -33,7 +55,7 @@
   production mutation false. Auxiliary pose audit found foot lateral sign crossings `0/1,344`,
   minimum left/right lateral separation `0.2465`, opposite-arm correlation `-0.99993`, and signed
   torso lean approximately `0°`. These numbers do not replace user review.
-- Status: `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible=false`. Extra Higgsfield use is
+- Status: `USER_VISUAL_REJECTED_WRONG_MOTION_SOURCE`, `productionEligible=false`. Extra Higgsfield use is
   `0 credits`, balance `68`; production/default/Downloads/deployed executables are unchanged.
 
 ## Father V18 clean-biped action-613 walk V61 (user-rejected history)

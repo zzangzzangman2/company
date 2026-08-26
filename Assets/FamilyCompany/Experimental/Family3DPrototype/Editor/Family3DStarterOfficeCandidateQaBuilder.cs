@@ -27,7 +27,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldStaticMapQa.unity";
         public const string FatherV18MotionQaScenePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedNaturalWalkMapQaV66.unity";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedClaudeWalkMapQaV67.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -40,12 +40,18 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static.fbx";
         public const string FatherV18StaticTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
-        // V66 pairs the paid static appearance with the clean V4 T-pose/heat-map rig. V4 keeps
-        // whole shirt/collar panels on the spine chain so arm swing cannot split the garment.
-        // Movement uses this body's own compact SD biped pose instead of retargeting action 613
-        // from a different body, which tore the shirt and bent the torso in V61-V63.
+        // V67 keeps the paid static appearance and V4 stable shirt/collar skin, but restores the
+        // exact Claude-reference Casual_Walk_inplace action 613 as the sole time-varying motion.
+        // No procedural gait may replace it. Only target-bind baselines and invalid cross-axis leg
+        // channels are corrected so the same clip does not tear the garment or form a third leg.
         public const string FatherV18MotionModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18CleanBipedRigV4/father-v18-clean-biped-rig-v4.fbx";
+        public const float FatherV18CasualWalkFacingOffsetDegrees = -16.9219f;
+        public const float FatherV18CasualWalkStrideOfficeUnits = 0.675f;
+        public const string FatherV18MotionIdleClipPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-idle.fbx";
+        public const string FatherV18MotionWalkClipPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
         public const string FatherV18MotionTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
         public const string MotherModelPath =
@@ -55,7 +61,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18StaticDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldStaticMapBuildV18";
         public const string FatherV18MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedNaturalWalkMapBuildV66";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedClaudeWalkMapBuildV67";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -144,14 +150,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             try
             {
                 Build(ResolveBuildRoot(false, true), false, true);
-                Debug.Log("FAMILY_3D_FATHER_V18_CLEAN_BIPED_NATURAL_WALK_MAP_QA_BUILD: PASS");
+                Debug.Log("FAMILY_3D_FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_MAP_QA_BUILD: PASS");
                 EditorApplication.Exit(0);
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
                 Debug.LogError(
-                    "FAMILY_3D_FATHER_V18_CLEAN_BIPED_NATURAL_WALK_MAP_QA_BUILD: FAIL | " +
+                    "FAMILY_3D_FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_MAP_QA_BUILD: FAIL | " +
                     exception.Message);
                 EditorApplication.Exit(1);
             }
@@ -177,7 +183,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 fatherV18StaticOnly
                     ? "FamilyCompanyFatherV18HiggsfieldStaticMapQa.exe"
                     : fatherV18MotionOnly
-                        ? "FamilyCompanyFatherV18NaturalWalkMapQa.exe"
+                        ? "FamilyCompanyFatherV18ClaudeWalkMapQa.exe"
                     : "FamilyCompanyStarterOffice3DCandidateQa.exe");
             var options = new BuildPlayerOptions
             {
@@ -300,10 +306,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     throw new InvalidOperationException(
                         "Father V18 motion texture did not load: " + FatherV18MotionTexturePath);
 
+                AnimationClip idleClip = LoadHumanClip(FatherV18MotionIdleClipPath, "Idle");
+                AnimationClip motionWalkClip = LoadHumanClip(
+                    FatherV18MotionWalkClipPath,
+                    "Casual_Walk_inplace");
                 return new AssetBundle(
                     prefabs,
-                    null,
-                    null,
+                    motionWalkClip,
+                    idleClip,
                     texture,
                     definitions,
                     false,
@@ -331,6 +341,28 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 false,
                 false,
                 QaScenePath);
+        }
+
+        private static AnimationClip LoadHumanClip(string assetPath, string nameFragment)
+        {
+            AssetDatabase.ImportAsset(
+                assetPath,
+                ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            AnimationClip[] clips = AssetDatabase.LoadAllAssetsAtPath(assetPath)
+                .OfType<AnimationClip>()
+                .Where(candidate =>
+                    !candidate.name.StartsWith("__preview__", StringComparison.Ordinal) &&
+                    candidate.isHumanMotion)
+                .ToArray();
+            AnimationClip clip = clips.FirstOrDefault(candidate =>
+                                     candidate.name.IndexOf(
+                                         nameFragment,
+                                         StringComparison.OrdinalIgnoreCase) >= 0) ??
+                                 clips.FirstOrDefault();
+            if (clip == null)
+                throw new InvalidOperationException(
+                    "Humanoid clip containing '" + nameFragment + "' did not load: " + assetPath);
+            return clip;
         }
 
         /// <summary>
@@ -412,12 +444,18 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     camera,
                     qaLayer);
             else if (bundle.FatherV18MotionOnly)
-                qa.ConfigureFatherCleanBipedNaturalWalk(
+                qa.ConfigureFatherHiggsfieldIdleRun(
                     bundle.Prefabs[0],
                     bundle.StaticAlbedo,
                     EnsureExactAlbedoMaterial(),
+                    bundle.IdleClip,
+                    bundle.WalkClip,
                     camera,
-                    qaLayer);
+                    qaLayer,
+                    FatherV18CasualWalkFacingOffsetDegrees,
+                    FatherV18CasualWalkStrideOfficeUnits,
+                    false,
+                    true);
             else
                 qa.Configure(
                     bundle.Prefabs[0],
@@ -537,11 +575,11 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 coordinateMapping =
                     "production Camera.WorldToViewportPoint(actor XY/Z) -> overlay ViewportPointToRay -> Y=0 plane; raw XZ fallback",
                 directionMapping =
-                    "measured QA ground displacement -> LookRotation + 90 degree measured model-forward offset; 360 degrees/second corner blend",
+                    "measured QA ground displacement -> LookRotation + clean-rig -16.9219 degree measured model-forward offset; 360 degrees/second corner blend",
                 motionMapping = bundle.FatherV18StaticOnly
                     ? "actual Father OfficeRuntimeAgent position + direction -> static V18 root translation/yaw; no limb rig"
                     : bundle.FatherV18MotionOnly
-                        ? "actual Father OfficeRuntimeAgent position/direction/GaitPhase01 -> clean static-appearance Humanoid rig; handcrafted 0.88 s two-contact SD biped cycle; no generated moving mesh or clip"
+                        ? "actual Father OfficeRuntimeAgent position/direction/GaitPhase01 -> clean static-appearance Humanoid rig; Claude-reference Casual_Walk_inplace action 613 at poseStrength 1; no procedural replacement gait"
                     : "Position + LastActualDisplacement + GaitPhase01 + CurrentDirection -> Family3DWalkActor",
                 scalePolicy = bundle.FatherV18StaticOnly
                     ? "every frame source Father sprite projected bounds height == V18 renderer projected bounds height; <=0.5% error; grounded"
@@ -566,26 +604,30 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : bundle.FatherV18MotionOnly
                         ? Sha256Asset(FatherV18MotionTexturePath)
                         : string.Empty,
-                idleClipAsset = string.Empty,
-                idleClipSha256 = string.Empty,
+                idleClipAsset = bundle.FatherV18MotionOnly
+                    ? FatherV18MotionIdleClipPath
+                    : string.Empty,
+                idleClipSha256 = bundle.FatherV18MotionOnly
+                    ? Sha256Asset(FatherV18MotionIdleClipPath)
+                    : string.Empty,
                 idleClipName = bundle.IdleClip == null ? string.Empty : bundle.IdleClip.name,
                 idleClipLength = bundle.IdleClip == null ? 0f : bundle.IdleClip.length,
                 walkClipAsset = bundle.FatherV18StaticOnly
                     ? string.Empty
                     : bundle.FatherV18MotionOnly
-                        ? string.Empty
+                        ? FatherV18MotionWalkClipPath
                         : WalkClipPath,
                 walkClipSha256 = bundle.FatherV18StaticOnly
                     ? string.Empty
                     : bundle.FatherV18MotionOnly
-                        ? string.Empty
+                        ? Sha256Asset(FatherV18MotionWalkClipPath)
                         : Sha256Asset(WalkClipPath),
                 walkClipName = bundle.WalkClip == null ? string.Empty : bundle.WalkClip.name,
                 walkClipLength = bundle.WalkClip == null ? 0f : bundle.WalkClip.length,
                 lockedCycleSeconds = bundle.FatherV18StaticOnly
                     ? 0f
                     : bundle.FatherV18MotionOnly
-                        ? Family3DWalkActor.FatherSdCycleSeconds
+                        ? Family3DWalkActor.LockedCycleSeconds
                         : Family3DWalkActor.LockedCycleSeconds,
                 candidates = assets,
                 buildResult = report.summary.result.ToString(),

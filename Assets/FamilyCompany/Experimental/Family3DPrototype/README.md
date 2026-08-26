@@ -14,7 +14,25 @@ The folder does not alter the production family sprite catalog, production scene
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
 
-## Father V18 clean-biped natural walk V66 (current isolated review candidate)
+## Father V18 clean-biped Claude walk V67 (current isolated review candidate)
+
+V67 keeps the paid static Father V18 appearance, the exact static-FBX surface material, and the
+stable-shirt `FatherV18CleanBipedRigV4`. It restores the Claude-reference
+`Casual_Walk_inplace` action 613 at `poseStrength=1.0`; no procedural or handcrafted gait runs in
+this candidate. Authored hip, knee, torso, head and opposite-arm deltas remain at full amplitude.
+Only source-neutral-to-V4-neutral alignment and invalid target lateral/twist leg channels are fixed.
+
+Map tuning is facing `-16.9219°`, stride `0.675`, locked cycle `0.99380799s`, and corner turn
+`360°/s`. The hidden 720p Player completed two actual Office circuits with 1,344 telemetry samples
+and 673 PNGs at 30 fps. Review media is under
+`outputs/father-v18-clean-biped-claude-walk-v67-review`, including the 30-frame close-cycle GIF and
+the 22.4-second full-map GIF.
+
+V67 is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. The user must judge the actual
+GIF before promotion. Higgsfield usage remains 0 credits (balance 68), and production/default/
+Downloads/deployed executables are unchanged.
+
+## Father V18 clean-biped natural walk V66 (user-rejected wrong-motion history)
 
 V66 keeps the paid static Father V18 topology, UV, texture, proportions and the static FBX surface
 material. Its moving rig is
@@ -38,7 +56,8 @@ full-map GIF/30 fps MP4, and paid-static-vs-moving exact 8-yaw comparison. The e
 not show torn clothing, a third leg, lateral crossing, detached shoes, backward torso, horizontal
 arms, giant scale, wrong facing, or a loop jump.
 
-This is `USER_VISUAL_REVIEW_REQUIRED`, `productionEligible: false`. No production/default/Downloads/
+The user rejected this because it replaced Claude's walk with an arbitrary procedural gait. Its
+status is `USER_VISUAL_REJECTED_WRONG_MOTION_SOURCE`, `productionEligible: false`. No production/default/Downloads/
 deployed executable changed, Unity/Blender/Player ran hidden/background only, and Higgsfield usage was
 0 credits (balance 68).
 

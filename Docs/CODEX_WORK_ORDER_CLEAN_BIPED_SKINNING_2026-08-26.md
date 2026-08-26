@@ -1,9 +1,8 @@
 # Codex 작업지시서 — clean biped 리그를 임포트 클립이 통하는 스키닝으로 재작성
 
-> **종료/대체됨:** 이 문서는 V61 이전의 작업 가설이다. 사용자가 실제 V61 GIF에서 옷 파열과 뒤로
-> 젖힌 상체를 확인해 action 613 리타겟 조합을 기각했다. 현행 V66은 action 613 AnimationClip을
-> 사용하지 않는다. 현재 정본은
-> [FATHER_V18_CLEAN_BIPED_NATURAL_WALK_V66_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_NATURAL_WALK_V66_QA_2026-08-26.md)다.
+> **V67에서 재개/완료:** V61은 옷 파열과 뒤젖힌 상체로 기각됐고, V66은 Claude 동작을 자체 보행으로
+> 바꿔 기각됐다. V67은 V4 안정 torso skin 위에 action 613 full dynamics를 다시 적용한다. 현재 정본은
+> [FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_V67_QA_2026-08-26.md](FATHER_V18_CLEAN_BIPED_CLAUDE_WALK_V67_QA_2026-08-26.md)다.
 
 작성: 2026-08-26 (Asia/Seoul) / 작성자: Claude
 대상: `Tools/Blender/build_father_v18_static_clean_biped_rig.py`

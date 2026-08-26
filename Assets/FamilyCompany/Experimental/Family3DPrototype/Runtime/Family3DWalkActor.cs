@@ -570,9 +570,9 @@ namespace FamilyCompany.Experimental.Family3D
         }
 
         /// <summary>
-        /// Keeps the paid clip's alternating leg, knee and opposite-arm timing at poseStrength=1,
-        /// while mapping its joint ranges and neutral posture to this shorter avatar. This is not
-        /// a replacement gait: action 613 remains the sole time-varying motion source.
+        /// Keeps the paid clip's complete front/back leg, knee, torso and opposite-arm curves at
+        /// poseStrength=1 while mapping only their neutral baselines to this avatar. This is not a
+        /// replacement or weakened gait: action 613 remains the sole time-varying motion source.
         /// </summary>
         private void InitializeClipAnatomicalSanitization()
         {
@@ -674,17 +674,14 @@ namespace FamilyCompany.Experimental.Family3D
                 CopyRestMuscle(leftFootTwistInOut);
                 CopyRestMuscle(rightFootTwistInOut);
 
-                // Action 613 was authored for a taller body. On the short SD legs its unmodified
-                // reach reads as a locked-knee goose step, so keep the authored alternation while
-                // reducing only the front/back excursion. Keep a small amount of knee flexion at
-                // every phase; amplifying both signs around the mean made the contact leg snap
-                // completely straight in V49-V52.
-                ScaleClipDelta(leftUpperLegFrontBack, 0.72f);
-                ScaleClipDelta(rightUpperLegFrontBack, 0.72f);
-                ScaleClipDelta(leftLowerLegStretch, 1.25f);
-                ScaleClipDelta(rightLowerLegStretch, 1.25f);
-                LimitClipKneeExtension(leftLowerLegStretch);
-                LimitClipKneeExtension(rightLowerLegStretch);
+                // V66 was rejected because it replaced Claude's action 613 with a handmade gait.
+                // Keep every authored sagittal hip and knee delta at full amplitude. Subtracting
+                // the source mean only maps the clip onto this rig's bind baseline; it does not
+                // synthesize, attenuate or reshape the walk cycle.
+                RetargetClipDeltaToRest(leftUpperLegFrontBack, 1f);
+                RetargetClipDeltaToRest(rightUpperLegFrontBack, 1f);
+                RetargetClipDeltaToRest(leftLowerLegStretch, 1f);
+                RetargetClipDeltaToRest(rightLowerLegStretch, 1f);
             }
 
             // The source clip curls its taller avatar through the chest and then compensates with
@@ -692,29 +689,29 @@ namespace FamilyCompany.Experimental.Family3D
             // hips-to-head vector is numerically vertical. Keep pelvis weight shift and body
             // rotation, but take the forward/back spine and gaze baselines from the approved rest
             // appearance.
-            CopyRestMuscle(spineFrontBack);
-            CopyRestMuscle(chestFrontBack);
-            CopyRestMuscle(upperChestFrontBack);
-            CopyRestMuscle(neckNodDownUp);
-            CopyRestMuscle(headNodDownUp);
+            RetargetClipDeltaToRest(spineFrontBack, 1f);
+            RetargetClipDeltaToRest(chestFrontBack, 1f);
+            RetargetClipDeltaToRest(upperChestFrontBack, 1f);
+            RetargetClipDeltaToRest(neckNodDownUp, 1f);
+            RetargetClipDeltaToRest(headNodDownUp, 1f);
 
             // Retain the clip's arm front/back and elbow curves, changing only the T-pose-relative
             // down/up baseline so both arms hang beside the torso while visibly counter-swinging.
-            sampledHumanPose.muscles[leftArmDownUp] = -0.95f;
-            sampledHumanPose.muscles[rightArmDownUp] = -0.95f;
-            RetargetClipDeltaToRest(leftArmFrontBack, 0.09f);
-            RetargetClipDeltaToRest(rightArmFrontBack, 0.09f);
+            RetargetClipDeltaToTarget(leftArmDownUp, -0.95f, 1f);
+            RetargetClipDeltaToTarget(rightArmDownUp, -0.95f, 1f);
+            RetargetClipDeltaToRest(leftArmFrontBack, 1f);
+            RetargetClipDeltaToRest(rightArmFrontBack, 1f);
             CopyRestMuscle(leftArmTwistInOut);
             CopyRestMuscle(rightArmTwistInOut);
             CopyRestMuscle(leftForearmTwistInOut);
             CopyRestMuscle(rightForearmTwistInOut);
-            sampledHumanPose.muscles[leftForearmStretch] = Mathf.Clamp(
+            RetargetClipDeltaToTarget(
+                leftForearmStretch,
                 restHumanPose.muscles[leftForearmStretch] - 0.12f,
-                -1f,
                 1f);
-            sampledHumanPose.muscles[rightForearmStretch] = Mathf.Clamp(
+            RetargetClipDeltaToTarget(
+                rightForearmStretch,
                 restHumanPose.muscles[rightForearmStretch] - 0.12f,
-                -1f,
                 1f);
             humanPoseHandler.SetHumanPose(ref sampledHumanPose);
             if (isMoving)
@@ -804,10 +801,14 @@ namespace FamilyCompany.Experimental.Family3D
 
         private void RetargetClipDeltaToRest(int index, float scale)
         {
+            RetargetClipDeltaToTarget(index, restHumanPose.muscles[index], scale);
+        }
+
+        private void RetargetClipDeltaToTarget(int index, float target, float scale)
+        {
             float mean = clipSanitizationReferenceMuscles[index];
             sampledHumanPose.muscles[index] = Mathf.Clamp(
-                restHumanPose.muscles[index] +
-                (sampledHumanPose.muscles[index] - mean) * scale,
+                target + (sampledHumanPose.muscles[index] - mean) * scale,
                 -1f,
                 1f);
         }
