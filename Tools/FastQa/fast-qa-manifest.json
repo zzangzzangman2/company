@@ -21,6 +21,7 @@
     "FamilyCompany.Editor.StaminaSimulationValidation.Run",
     "FamilyCompany.Editor.StaminaGameStateIntegrationValidation.Run",
     "FamilyCompany.Editor.OverheadStaminaBarValidation.Run",
-    "FamilyCompany.Editor.RenderClarityValidation.Run"
+    "FamilyCompany.Editor.RenderClarityValidation.Run",
+    "FamilyCompany.Experimental.Family3D.Editor.Family3DHiggsfieldAlbedoImportValidation.Run"
   ]
 }
