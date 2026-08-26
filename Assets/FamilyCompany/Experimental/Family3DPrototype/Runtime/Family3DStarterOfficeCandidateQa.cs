@@ -91,6 +91,7 @@ namespace FamilyCompany.Experimental.Family3D
         private float fatherMotionStrideOfficeUnits;
         private float fatherMotionYawDegreesPerSecond;
         private float fatherMotionFacingOffsetDegrees;
+        private float fatherMotionTurnSeconds;
         private bool fatherMotionYawSweep;
         private bool fatherProofRouteActive;
         private bool fatherProofRouteCompleted;
@@ -303,10 +304,32 @@ namespace FamilyCompany.Experimental.Family3D
                 return target;
             }
 
-            float step = fatherMotionYawDegreesPerSecond > 0f
-                ? fatherMotionYawDegreesPerSecond * Time.deltaTime
-                : 360f;
-            binding.BlendedYaw = Quaternion.RotateTowards(binding.BlendedYaw, target, step);
+            // Constant rate for the whole turn, fixed when the turn starts. The travel direction
+            // itself swings a corner in 2 frames, so every frame after that is the body catching
+            // up, and the office is already moving the other way for all of them.
+            //
+            // The rate has to be set from the angle the turn began with, not from the angle still
+            // remaining. Dividing the remaining angle by the turn time is an exponential approach:
+            // it slows as it closes and never actually arrives, which measured as 0.33 s for a 91
+            // degree corner against the 0.18 s the divisor implied. Latching the rate at the start
+            // makes the turn linear and it lands on time.
+            const float turnRestartDegrees = 5f;
+            float toTarget = Quaternion.Angle(binding.BlendedYaw, target);
+            if (!binding.HasActiveTurn ||
+                Quaternion.Angle(binding.ActiveTurnTarget, target) > turnRestartDegrees)
+            {
+                binding.ActiveTurnTarget = target;
+                binding.ActiveTurnRate = toTarget / Mathf.Max(fatherMotionTurnSeconds, 0.0001f);
+                binding.HasActiveTurn = true;
+            }
+
+            float rate = Mathf.Max(
+                fatherMotionYawDegreesPerSecond > 0f ? fatherMotionYawDegreesPerSecond : 360f,
+                binding.ActiveTurnRate);
+            binding.BlendedYaw = Quaternion.RotateTowards(
+                binding.BlendedYaw, target, rate * Time.deltaTime);
+            if (toTarget <= 0.01f)
+                binding.HasActiveTurn = false;
             return binding.BlendedYaw;
         }
 
@@ -385,6 +408,7 @@ namespace FamilyCompany.Experimental.Family3D
                         : ResolveFatherMotionStrideOfficeUnits();
                     fatherMotionYawDegreesPerSecond = ResolveFatherMotionYawDegreesPerSecond();
                     fatherMotionFacingOffsetDegrees = ResolveFatherMotionFacingOffsetDegrees();
+                    fatherMotionTurnSeconds = ResolveFatherMotionTurnSeconds();
                     fatherMotionYawSweep = HasCommandLineFlag("-family3d-father-v18-motion-yaw-sweep");
                     StartCoroutine(RunFatherMapWalkProof());
                 }
@@ -1536,6 +1560,7 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMotionStrideOfficeUnits = fatherMotionStrideOfficeUnits,
                     fatherMotionYawDegreesPerSecond = fatherMotionYawDegreesPerSecond,
                     fatherMotionFacingOffsetDegrees = fatherMotionFacingOffsetDegrees,
+                    fatherMotionTurnSeconds = fatherMotionTurnSeconds,
                     fatherCaptureDeltaSeconds = Time.captureDeltaTime,
                     fatherCaptureSimulationSeconds = (float)fatherCaptureSimulationSeconds,
                     fatherCaptureSamples = fatherCaptureSamples.ToArray(),
@@ -1683,6 +1708,36 @@ namespace FamilyCompany.Experimental.Family3D
         /// travel. Overridable so the four right-angle candidates can be compared in one sitting
         /// rather than argued about.
         /// </summary>
+        /// <summary>
+        /// Upper bound on how long any turn may take, in seconds. The office switches facing in one
+        /// frame, so every frame the 3D body spends catching up is a frame it walks sideways; this
+        /// caps that window regardless of turn size. Too small and the turn reads as a snap, which
+        /// is what the blend exists to avoid.
+        /// </summary>
+        private static float ResolveFatherMotionTurnSeconds()
+        {
+            const float defaultTurnSeconds = 0.18f;
+            string[] args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length - 1; index++)
+            {
+                if (!string.Equals(
+                        args[index],
+                        "-family3d-father-v18-motion-turn-seconds",
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!float.TryParse(
+                        args[index + 1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out float seconds) ||
+                    seconds < 0.02f || seconds > 1f)
+                    throw new InvalidOperationException(
+                        "Father V18 turn seconds must be in [0.02, 1].");
+                return seconds;
+            }
+            return defaultTurnSeconds;
+        }
+
         private static float ResolveFatherMotionFacingOffsetDegrees()
         {
             const float defaultOffsetDegrees = 90f;
@@ -1845,6 +1900,7 @@ namespace FamilyCompany.Experimental.Family3D
             public float fatherMotionStrideOfficeUnits;
             public float fatherMotionYawDegreesPerSecond;
             public float fatherMotionFacingOffsetDegrees;
+            public float fatherMotionTurnSeconds;
             public float fatherCaptureDeltaSeconds;
             public float fatherCaptureSimulationSeconds;
             public FatherCaptureSample[] fatherCaptureSamples;
@@ -2000,6 +2056,14 @@ namespace FamilyCompany.Experimental.Family3D
             /// </summary>
             public Quaternion BlendedYaw { get; set; } = Quaternion.identity;
             public bool HasBlendedYaw { get; set; }
+
+            /// <summary>
+            /// Rate latched when the current turn began, so the turn is linear rather than an
+            /// exponential approach that never lands. Reset once the blend reaches its target.
+            /// </summary>
+            public Quaternion ActiveTurnTarget { get; set; } = Quaternion.identity;
+            public float ActiveTurnRate { get; set; }
+            public bool HasActiveTurn { get; set; }
 
             /// <summary>
             /// Previous ground position, used to face the direction the actor actually moves in.
