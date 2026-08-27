@@ -1,5 +1,18 @@
 # DECISIONS
 
+## 2026-08-27 / Father V19는 reference 진행 방향을 따르고 raw rig 단계부터 정확히 두 다리여야 한다
+
+결정: 사용자 제공 `mfc6Kr0QXh5SWdHhJyWDGw.mp4`는 Father가 실제 이동 벡터를 바라보고 코너에서 그
+방향으로 회전하는 방식의 권위다. 영상 속 기존 기형 보행/보폭/skin pose는 donor가 아니다. 방향은
+ground position delta에서 계산하며 새 V19 rig는 0/90/180/270° 비교로 forward offset을 다시
+확정한다. 기존 rig의 `+90°`를 추측으로 복사하지 않는다.
+
+raw V19 GLB는 left/right leg chain을 정확히 하나씩만 가져야 한다. extra limb bone/mesh,
+cross-leg weight, arm-hand-to-leg weight, pelvis 아래 제3 appendage, full-cycle/24-frame의 third-leg
+silhouette을 모두 fail-closed `0`으로 요구한다. 상세 계약은
+[FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md](FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md)에
+고정한다. 사용자 actual-map GIF 승인 전 `productionEligible=false`다.
+
 ## 2026-08-27 / 새 Father walk는 raw GLB 시각 gate와 same-package direct playback을 먼저 통과한다
 
 결정: action 613을 cloud 원본부터 다시 감사한 결과 저장/FBX 변환 손상이 아니라 raw GLB 자체의

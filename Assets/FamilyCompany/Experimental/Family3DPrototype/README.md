@@ -14,6 +14,19 @@ The folder does not alter the production family sprite catalog, production scene
 executable, or Downloads build. The old 2D files remain only for history/migration safety until a
 separate, user-approved production migration.
 
+## Father V19 locked direction/two-leg contract (current)
+
+The user-provided `mfc6Kr0QXh5SWdHhJyWDGw.mp4` is authority only for following the actual screen
+travel direction and turning continuously at corners. Its malformed gait is not a motion donor.
+V19 must resolve facing from consecutive ground-position deltas; the new rig's forward offset must
+be selected by a 0/90/180/270 comparison instead of blindly inheriting the former rig's `+90°`.
+
+The raw package must contain exactly one left and one right deform-leg chain. Extra limb bones or
+meshes, cross-leg weights, arm/hand weights on legs, and every third-leg silhouette are hard zero.
+The raw full cycle and 24 enlarged source frames must pass before FBX or Unity conversion. The full
+contract is `Docs/FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md`. Status remains
+`productionEligible: false`.
+
 ## Father V18 clean-biped straight-arm walk V74 (current isolated review candidate)
 
 V74 restores V72's `FatherV18CleanBipedRigV4`, action-613 idle/walk pair, lower-body/pelvis/torso/

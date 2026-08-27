@@ -2,6 +2,20 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-27 / 사용자 잠금: reference 방향 유지 + 정확히 두 다리
+
+- 사용자 제공 `C:\Users\godho\Downloads\mfc6Kr0QXh5SWdHhJyWDGw.mp4` (`960x720`, 30 fps,
+  180 frames, SHA-256 `0EDCF8EADA4C436DB5E45225589757E68FC302EFC897906C1E00211ED58FA8F7`)를
+  전 프레임으로 펼쳐 확인했다. 이 MP4는 이동 경로/방향 reference이며 기형 보행 pose donor가 아니다.
+- 새 Father는 연속 ground position의 실제 delta를 바라보고 코너에서 다음 이동 벡터 쪽으로 연속
+  회전한다. 기존 body의 검증값은 `+90°`였지만 새 V19 rig는 0/90/180/270 비교로 다시 확정한다.
+- raw GLB에는 left/right leg deform chain이 정확히 하나씩만 있어야 한다. extra limb, cross-leg
+  weight, arm/hand-to-leg weight, pelvis 아래 제3 appendage와 전 프레임 third-leg silhouette은 모두
+  `0`이어야 한다.
+- 상세 fail-closed 정본:
+  [FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md](FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md).
+  `productionEligible=false`; production/default/Downloads/배포본은 변경하지 않았다.
+
 ## 2026-08-27 / Father action-613 저장 손상 여부 재감사 — 원본 걷기 불합격 확정
 
 - Higgsfield history에서 과거 완료 3D 작업 4건(static, idle, run 644, walk 613)을 다시 확인했다.

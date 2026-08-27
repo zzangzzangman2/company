@@ -28,6 +28,9 @@
 
 - External isolated source:
   `2026-08-25/family-natural-walk-rebuild/outputs/father-v19-higgsfield-rebuild`.
+- Direction-only read-only reference: `C:\Users\godho\Downloads\mfc6Kr0QXh5SWdHhJyWDGw.mp4`,
+  SHA-256 `0EDCF8EADA4C436DB5E45225589757E68FC302EFC897906C1E00211ED58FA8F7`, `960x720`,
+  30 fps, 180 frames. Its malformed gait is not a motion donor.
 - Authoritative four-view order: `father-v19-front.png`, `father-v19-left.png`,
   `father-v19-back.png`, `father-v19-right.png`.
 - SHA-256: front
@@ -45,6 +48,11 @@
   surface exposes no `generate_3d`.
 - Detailed handoff:
   [FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md](FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md).
+- Direction/two-leg contract:
+  [FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md](FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md).
+- Required raw structure: exactly one left and one right leg chain; extra limb/mesh, cross-leg or
+  arm-hand-to-leg weight, and full-cycle third-leg silhouette all `0`. Facing follows actual ground
+  delta and the new rig's forward offset is chosen by a 0/90/180/270 comparison.
 - Status: `CURRENT_SESSION_3D_TOOL_BLOCKED`, `productionEligible=false`; production/default/Downloads/
   deployed executables unchanged.
 
