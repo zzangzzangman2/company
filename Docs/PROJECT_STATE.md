@@ -2,6 +2,28 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-27 / Father action-613 저장 손상 여부 재감사 — 원본 걷기 불합격 확정
+
+- Higgsfield history에서 과거 완료 3D 작업 4건(static, idle, run 644, walk 613)을 다시 확인했다.
+  GPT/Higgsfield가 3D를 만들 수 없다는 이전 설명은 잘못이었다. 현재 세션의 `generate_3d` 미노출은
+  과거 생성 가능 여부와 별개다.
+- 네 cloud GLB를 다시 받아 기존 prepare receipt와 SHA-256을 비교했고 4건 모두 정확히 일치했다.
+  다운로드/저장 손상은 없다.
+- walk 613 raw GLB와 Unity용 FBX는 vertices/polygons/bone hierarchy가 같고, changed-weight vertices
+  `0`, max weight delta `0.0`, normalized bone pose max delta `4.70e-7`, deformed mesh max delta
+  `7.05e-7`다. 변환도 원본 자세를 바꾸지 않았다.
+- raw GLB와 FBX를 같은 전 위상으로 나란히 확대 검수한 결과, 긴 저위치 팔·불안한 손/팔 회복·좁고
+  겹치는 다리 실루엣이 원본부터 동일했다. action 613은 `SOURCE_WALK_REJECTED`다.
+- 동시에 idle과 walk는 `sameGeometry=false`, `sameSkinWeights=false`, `sameBindSkeleton=false`다.
+  과거 static/idle body에 다른 작업의 Humanoid clip을 섞은 V61~V72 경로가 옷·팔·손·상체를 더
+  악화시킨 것도 확인했다. V73 one-package는 혼합만 제거했으며 나쁜 raw walk를 그대로 물려받았다.
+- 앞으로는 raw GLB full cycle + 균등 위상 원본 24프레임을 Unity보다 먼저 육안 통과시킨다. 통과 후에만
+  같은 package를 30 fps 결정 변환하고 Generic/direct skeleton으로 재생한다. Humanoid/muscle retarget,
+  posture/limb override는 금지한다.
+- 상세 감사:
+  [FATHER_V18_RAW_GLB_VS_FBX_WALK_AUDIT_2026-08-27.md](FATHER_V18_RAW_GLB_VS_FBX_WALK_AUDIT_2026-08-27.md).
+  신규 3D 생성/차감 `0`, `productionEligible=false`; production/default/Downloads/배포본은 변경하지 않았다.
+
 ## 2026-08-27 / 현재 최고 우선순위: Father V19 Higgsfield whole-package rebuild
 
 - 사용자는 V74 이하의 외형/팔/손/걷기 수정 경로를 중단하고, 같은 Father를 여러 방향에서 유지하는 새
@@ -12,9 +34,10 @@
   생성에 각각 2 credits, 합계 4 credits를 사용해 잔액이 68에서 64가 됐다.
 - Meshy `multi_image_to_3d`에 texture + rigging + action 30 `Casual_Walk` + quad remesh 60k를
   한 GLB로 요청한다. Higgsfield 승인 UI의 실제 견적은 `38 credits`, 확인 잔액은 `64 credits`다.
-- 웹 제출은 job 생성 전 HTTP 403 `only_mcp_usage_on_trial_is_available`로 거절됐다. Codex와 ChatGPT
-  Higgsfield plugin v1.2.1에는 필요한 `generate_3d` 호출기가 노출되지 않았다. 따라서 3D job `0`,
-  3D 차감 `0`, GLB `0`이며 웹/MCP 자동 재시도는 하지 않는다.
+- 웹 제출은 job 생성 전 HTTP 403 `only_mcp_usage_on_trial_is_available`로 거절됐다. 현재 Codex와
+  ChatGPT 연결 표면에는 필요한 `generate_3d` 호출기가 노출되지 않았다. 이는 과거 완료된 3D 작업
+  4건과 모순되지 않는 세션/도구 노출 문제다. 오늘 V19 3D job `0`, 3D 차감 `0`, GLB `0`이며
+  웹/MCP 자동 재시도는 하지 않는다.
 - 차단 해제 뒤 정확히 한 작업만 제출하고, repository 밖에서 mesh/skin/embedded walk를 먼저 확대
   검수한다. 그 뒤에만 별도 V19 experimental Unity 후보와 실제 맵 GIF를 만든다.
 - 상세 정본:

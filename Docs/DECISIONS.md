@@ -1,5 +1,20 @@
 # DECISIONS
 
+## 2026-08-27 / 새 Father walk는 raw GLB 시각 gate와 same-package direct playback을 먼저 통과한다
+
+결정: action 613을 cloud 원본부터 다시 감사한 결과 저장/FBX 변환 손상이 아니라 raw GLB 자체의
+걷기 불합격으로 확정한다. cloud 재다운로드 SHA는 기존 receipt와 일치했고, raw GLB와 FBX 사이의
+changed-weight vertices는 `0`, normalized deformed mesh max delta는 `7.05e-7`이다. "원본 action은
+정상이고 Unity만 문제"라는 과거 판단을 폐기한다.
+
+또한 idle과 walk의 geometry, skin weights, bind skeleton이 서로 다르므로 별도 생성 작업 사이의
+Humanoid/muscle retarget과 pose override를 금지한다. V19는 one-package raw GLB full cycle과 균등 위상
+원본 24프레임을 먼저 육안 검수한다. raw가 통과한 경우에만 glTF import 전 30 fps를 고정해 변환하고,
+같은 package의 mesh/skeleton/skin/clip을 Unity Generic/direct skeleton으로 재생한다. 맵 쪽은 root
+translation/yaw만 소유한다. 상세 근거는
+[FATHER_V18_RAW_GLB_VS_FBX_WALK_AUDIT_2026-08-27.md](FATHER_V18_RAW_GLB_VS_FBX_WALK_AUDIT_2026-08-27.md)에
+고정한다. 사용자 실제 맵 GIF 승인 전 `productionEligible=false`다.
+
 ## 2026-08-27 / Father V19는 Higgsfield whole-package 한 작업으로 다시 만든다
 
 결정: 사용자의 최신 화면 판정에 따라 V74 이하에서 팔·손·하체를 부분 보정하는 경로를 중단한다. V19는
@@ -8,10 +23,11 @@ skin weights와 action 30 `Casual_Walk`을 한 GLB로 요청한다. 걷기를 �
 기존 Humanoid 팔 보정으로 대체하지 않는다.
 
 V19 reference V1/V2에는 각 2 credits, 합계 4 credits를 사용했다. 실제 3D 승인 견적은 38 credits,
-잔액은 64다. 웹은 job 생성 전
+잔액은 64다. Higgsfield history에는 과거 완료된 3D 작업 4건이 있으므로 서비스/계정이 3D를 만들지
+못한다는 이전 설명은 잘못이다. 다만 오늘 사용한 웹은 job 생성 전
 `only_mcp_usage_on_trial_is_available`로 거절됐고 연결된 Higgsfield plugin에는 `generate_3d`가
-노출되지 않았다. 3D 생성 0건·3D 차감 0이므로 차단 해제 전에는 재시도하거나 image/video 작업으로 대체하지
-않는다. 상세 입력과 재개 순서는
+노출되지 않았다. 오늘 V19 3D 생성 0건·3D 차감 0이므로 차단 해제 전에는 재시도하거나 image/video
+작업으로 대체하지 않는다. 상세 입력과 재개 순서는
 [FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md](FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md)에
 고정한다. 사용자 실제 맵 GIF 승인 전 `productionEligible=false`다.
 

@@ -145,6 +145,12 @@ def clear_scene():
 
 def import_and_validate(path, expected_action_fragment):
     clear_scene()
+    # glTF animation times are converted to Blender frame numbers during import. Set the target
+    # rate before import so the same source never becomes 101 frames on a 24-fps startup file and
+    # 127 frames on a 30-fps startup file. The former silently changes the clip duration when the
+    # scene is switched to 30 fps only after import.
+    bpy.context.scene.render.fps = 30
+    bpy.context.scene.render.fps_base = 1.0
     bpy.ops.import_scene.gltf(filepath=str(path))
     bpy.context.view_layer.update()
 
@@ -370,6 +376,8 @@ def main():
         "removedAuxiliaryObject": "Icosphere",
         "retargetPolicy": "Render only the idle-0 skinned body; consume run-644 as a Humanoid motion source so independently generated run skin/bind data never replaces or overlaps the visible body",
         "rootMotionPolicy": "OfficeRuntimeAgent owns translation/yaw; imported animation root curves are locked/baked in Unity",
+        "animationFps": 30,
+        "fpsSetBeforeGltfImport": True,
         "productionEligible": False,
     }
     receipt_path.write_text(
