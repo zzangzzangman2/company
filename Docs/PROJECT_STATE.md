@@ -2,6 +2,25 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-27 / 현재 최고 우선순위: Father V19 Higgsfield whole-package rebuild
+
+- 사용자는 V74 이하의 외형/팔/손/걷기 수정 경로를 중단하고, 같은 Father를 여러 방향에서 유지하는 새
+  캐릭터와 자연스러운 2족 `Casual_Walk`을 Higgsfield 한 패키지로 다시 만들라고 지시했다. 걷기가
+  최우선이며 기존 절차 보행이나 임의 팔 보정으로 대체하지 않는다.
+- V19 four-view V2 입력을 front → left → back → right로 확정했다. V1은 outline과 중복 profile 때문에
+  내부 폐기했다. V2는 3D 입력 후보이며 사용자 완성 외형 승인을 뜻하지 않는다. V1/V2 reference image
+  생성에 각각 2 credits, 합계 4 credits를 사용해 잔액이 68에서 64가 됐다.
+- Meshy `multi_image_to_3d`에 texture + rigging + action 30 `Casual_Walk` + quad remesh 60k를
+  한 GLB로 요청한다. Higgsfield 승인 UI의 실제 견적은 `38 credits`, 확인 잔액은 `64 credits`다.
+- 웹 제출은 job 생성 전 HTTP 403 `only_mcp_usage_on_trial_is_available`로 거절됐다. Codex와 ChatGPT
+  Higgsfield plugin v1.2.1에는 필요한 `generate_3d` 호출기가 노출되지 않았다. 따라서 3D job `0`,
+  3D 차감 `0`, GLB `0`이며 웹/MCP 자동 재시도는 하지 않는다.
+- 차단 해제 뒤 정확히 한 작업만 제출하고, repository 밖에서 mesh/skin/embedded walk를 먼저 확대
+  검수한다. 그 뒤에만 별도 V19 experimental Unity 후보와 실제 맵 GIF를 만든다.
+- 상세 정본:
+  [FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md](FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md).
+  `productionEligible=false`; production/default/Downloads/배포본은 변경하지 않았다.
+
 ## 2026-08-27 / 현재 Father 검토 후보: V72 하체 복원 + straight rigid arms V74
 
 - 사용자가 V73 실제 영상에서 `V72보다 다리 움직임까지 더 이상해졌다`고 기각했다. 팔만 수정해야

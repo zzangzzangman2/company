@@ -2,6 +2,29 @@
 
 최종 갱신: 2026-08-27
 
+## Father V19 Higgsfield whole-package input (current, generation blocked)
+
+- External isolated source:
+  `2026-08-25/family-natural-walk-rebuild/outputs/father-v19-higgsfield-rebuild`.
+- Authoritative four-view order: `father-v19-front.png`, `father-v19-left.png`,
+  `father-v19-back.png`, `father-v19-right.png`.
+- SHA-256: front
+  `539D2300A740F6E4EDE3928EEAB910C2806650E5C6BAC1E57A9B7DD2E20CFFD0`; left
+  `A56588C3115E83903F2D62B91630F2CE10F941D6EB2CE228DF62A299AC5F29AE`; back
+  `96F019203D6617A448755090750D1276A3D1E6BB1B9125335461375FBAD163E2`; right
+  `9A60BAF5853D49128E1B2EEC66327FD6C888A99F90E6A3E7AC374FE6A013A742`.
+- Full V2 source SHA-256:
+  `B672450FE53858EEDD384EC373F43A9DFD5AB899669A997C8269EAF61518CAD9`.
+- V19 reference generation use: V1 2 credits + V2 2 credits = 4 credits; balance 68 → 64.
+- Intended package: Meshy `multi_image_to_3d`, texture/PBR, rigging, action 30
+  `Casual_Walk`, quad remesh target 60k, A-pose, height 1.65 m.
+- Higgsfield quote/balance: 38/64 credits. Current 3D job count 0, 3D charge 0, GLB none because web
+  trial access requires MCP while plugin v1.2.1 exposes no `generate_3d`.
+- Detailed handoff:
+  [FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md](FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md).
+- Status: `PROVIDER_TOOL_BLOCKED`, `productionEligible=false`; production/default/Downloads/
+  deployed executables unchanged.
+
 ## Father V18 clean-biped straight-arm walk V74 (current isolated review candidate)
 
 - Appearance/rig/lower-body authority: paid static Father V18 +

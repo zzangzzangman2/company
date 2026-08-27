@@ -1,5 +1,20 @@
 # DECISIONS
 
+## 2026-08-27 / Father V19는 Higgsfield whole-package 한 작업으로 다시 만든다
+
+결정: 사용자의 최신 화면 판정에 따라 V74 이하에서 팔·손·하체를 부분 보정하는 경로를 중단한다. V19는
+확정된 front/left/back/right 입력 네 장에서 Meshy `multi_image_to_3d`의 textured mesh, humanoid rig,
+skin weights와 action 30 `Casual_Walk`을 한 GLB로 요청한다. 걷기를 최우선으로 두고 별도 절차 보행이나
+기존 Humanoid 팔 보정으로 대체하지 않는다.
+
+V19 reference V1/V2에는 각 2 credits, 합계 4 credits를 사용했다. 실제 3D 승인 견적은 38 credits,
+잔액은 64다. 웹은 job 생성 전
+`only_mcp_usage_on_trial_is_available`로 거절됐고 연결된 Higgsfield plugin에는 `generate_3d`가
+노출되지 않았다. 3D 생성 0건·3D 차감 0이므로 차단 해제 전에는 재시도하거나 image/video 작업으로 대체하지
+않는다. 상세 입력과 재개 순서는
+[FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md](FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md)에
+고정한다. 사용자 실제 맵 GIF 승인 전 `productionEligible=false`다.
+
 ## 2026-08-27 / Father V18 V74는 V72 하체를 복원하고 팔만 분리 수정한다
 
 결정: 사용자가 V73 실제 영상에서 V72보다 다리 움직임까지 더 이상해졌다고 기각했으므로, native
