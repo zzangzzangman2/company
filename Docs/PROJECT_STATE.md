@@ -16,6 +16,21 @@
   [FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md](FATHER_V19_DIRECTION_AND_TWO_LEG_CONTRACT_2026-08-27.md).
   `productionEligible=false`; production/default/Downloads/배포본은 변경하지 않았다.
 
+## 2026-08-27 / strict V19 Higgsfield 유료 제출 1회도 gateway 차단
+
+- 사용자 최종 승인 뒤 `Korean Father 3D` Supercomputer 대화에 strict V19 요청을 정확히 한 번
+  전송했다. 네 방향 URL 순서, one-package mesh/rig/skin/walk, exact-two-leg, action 30, quad 60k,
+  A-pose, PBR 조건을 모두 포함했다.
+- 승인 카드에서 Texture/Rigging/Animation이 모두 켜진 상태와 `Approve 38`을 확인하고 한 번만
+  승인했다. 작업은 약 51초 후 HTTP 403 `only_mcp_usage_on_trial_is_available`, `job_ids: []`로
+  끝났다. job ID와 GLB는 없고 자동 재시도도 하지 않았다.
+- 사후 balance는 `64`, plan `plus`, free trial `cancelled_by_user`, unlimited unavailable로 제출 전과
+  같다. 실제 3D 차감은 `0`이다.
+- 입력/파라미터 실패가 아니라 현재 account entitlement와 3D MCP tool exposure의 결합 차단이다.
+  새로운 권한 상태나 실제 `generate_3d` 호출기가 생기기 전 같은 웹 payload를 반복하지 않는다.
+- 브라우저 작업은 background로 수행했고 실패 화면은 같은 대화에 보존했다. `productionEligible=false`;
+  production/default/Downloads/배포본은 변경하지 않았다.
+
 ## 2026-08-27 / Father action-613 저장 손상 여부 재감사 — 원본 걷기 불합격 확정
 
 - Higgsfield history에서 과거 완료 3D 작업 4건(static, idle, run 644, walk 613)을 다시 확인했다.

@@ -46,6 +46,10 @@
 - Higgsfield quote/balance: 38/64 credits. History has four completed 3D jobs, but today's V19 3D job
   count is 0, 3D charge 0, GLB none because web trial access requires MCP while the current plugin
   surface exposes no `generate_3d`.
+- Strict paid attempt after final user approval: one Supercomputer request, one `Approve 38` click,
+  Texture/Rigging/Animation all enabled; result HTTP 403
+  `only_mcp_usage_on_trial_is_available`, `job_ids: []`. Post-attempt balance remains `64`, plan
+  `plus`; no retry, no job, no GLB, no charge.
 - Detailed handoff:
   [FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md](FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md).
 - Direction/two-leg contract:

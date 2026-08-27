@@ -1,5 +1,14 @@
 # DECISIONS
 
+## 2026-08-27 / strict V19 paid web submission은 1회 차단 후 반복하지 않는다
+
+결정: 사용자 최종 승인에 따라 exact four-view/one-package/two-leg/Casual_Walk payload를 Higgsfield
+Supercomputer에 한 번 전송하고 `Approve 38`을 한 번 승인했다. Texture, Rigging, Animation은 모두
+활성 상태였다. 결과는 job 생성 전 HTTP 403 `only_mcp_usage_on_trial_is_available`, `job_ids: []`이며
+사후 balance는 64로 동일하다. 입력이나 비용 부족이 아니라 현재 account entitlement/MCP exposure
+차단이므로 같은 웹 요청을 반복하지 않는다. `generate_3d`가 실제로 노출되거나 계정 권한 상태가 바뀐
+증거가 있을 때만 동일 payload를 한 번 재개한다. `productionEligible=false`다.
+
 ## 2026-08-27 / Father V19는 reference 진행 방향을 따르고 raw rig 단계부터 정확히 두 다리여야 한다
 
 결정: 사용자 제공 `mfc6Kr0QXh5SWdHhJyWDGw.mp4`는 Father가 실제 이동 벡터를 바라보고 코너에서 그
