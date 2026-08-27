@@ -48,3 +48,17 @@ entitlement/routing or expose generate_3d on the connected MCP surface.
 
 Do not repeat the paid web submission until the routing/access state changes. No production asset
 was created; `productionEligible=false`.
+
+## Fresh authorized retry — 2026-08-27
+
+- The user explicitly authorized one new retry after reconfirming the paid Plus account.
+- Immediately before approval, the UI again showed `Approve 38` with Texture, Rigging and
+  Animation enabled; the balance was `64`.
+- `Approve 38` was clicked exactly once. No automatic retry, duplicate, branch, image, video or
+  audio job was submitted.
+- The gateway again returned HTTP 403 with
+  `only_mcp_usage_on_trial_is_available` before job creation.
+- Result: `job_ids: []`, no GLB URL, zero credits charged, final balance `64` and plan `plus`.
+- This confirms that repeating the same validated payload does not bypass the server-side
+  entitlement/routing mismatch. A further paid submission must not be attempted until Higgsfield
+  changes or confirms the account's 3D access route.
