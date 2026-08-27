@@ -43,13 +43,15 @@
 - V19 reference generation use: V1 2 credits + V2 2 credits = 4 credits; balance 68 → 64.
 - Intended package: Meshy `multi_image_to_3d`, texture/PBR, rigging, action 30
   `Casual_Walk`, quad remesh target 60k, A-pose, height 1.65 m.
-- Higgsfield quote/balance: 38/64 credits. History has four completed 3D jobs, but today's V19 3D job
-  count is 0, 3D charge 0, GLB none because web trial access requires MCP while the current plugin
-  surface exposes no `generate_3d`.
+- Higgsfield quote/balance: 38/64 credits on a paid `plus` subscription. History has four completed
+  3D jobs, but today's V19 3D job count is 0, 3D charge 0, GLB none because the paid web route returns
+  the misleading MCP-only trial gate while the current plugin surface exposes no `generate_3d`.
 - Strict paid attempt after final user approval: one Supercomputer request, one `Approve 38` click,
   Texture/Rigging/Animation all enabled; result HTTP 403
   `only_mcp_usage_on_trial_is_available`, `job_ids: []`. Post-attempt balance remains `64`, plan
   `plus`; no retry, no job, no GLB, no charge.
+- Paid-account gate mismatch report:
+  [HIGGSFIELD_PAID_PLUS_3D_GATE_MISMATCH_2026-08-27.md](HIGGSFIELD_PAID_PLUS_3D_GATE_MISMATCH_2026-08-27.md).
 - Detailed handoff:
   [FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md](FATHER_V19_HIGGSFIELD_MCP_BLOCKED_HANDOFF_2026-08-27.md).
 - Direction/two-leg contract:

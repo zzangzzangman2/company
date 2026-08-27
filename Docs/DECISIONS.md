@@ -5,9 +5,12 @@
 결정: 사용자 최종 승인에 따라 exact four-view/one-package/two-leg/Casual_Walk payload를 Higgsfield
 Supercomputer에 한 번 전송하고 `Approve 38`을 한 번 승인했다. Texture, Rigging, Animation은 모두
 활성 상태였다. 결과는 job 생성 전 HTTP 403 `only_mcp_usage_on_trial_is_available`, `job_ids: []`이며
-사후 balance는 64로 동일하다. 입력이나 비용 부족이 아니라 현재 account entitlement/MCP exposure
-차단이므로 같은 웹 요청을 반복하지 않는다. `generate_3d`가 실제로 노출되거나 계정 권한 상태가 바뀐
-증거가 있을 때만 동일 payload를 한 번 재개한다. `productionEligible=false`다.
+사후 balance는 64로 동일하고 active plan은 결제된 `plus`다. `free_trial=cancelled_by_user`는 체험 이력
+필드일 뿐 현재 계정 유형이 아니다. 입력·비용 부족·무료체험 계정 문제가 아니라 paid Plus 웹 경로와
+MCP tool exposure의 불일치이므로 같은 웹 요청을 반복하지 않는다. `generate_3d`가 실제로 노출되거나
+paid Plus 웹 3D routing이 수정된 증거가 있을 때만 동일 payload를 한 번 재개한다.
+[HIGGSFIELD_PAID_PLUS_3D_GATE_MISMATCH_2026-08-27.md](HIGGSFIELD_PAID_PLUS_3D_GATE_MISMATCH_2026-08-27.md)에
+지원용 증거를 고정한다. `productionEligible=false`다.
 
 ## 2026-08-27 / Father V19는 reference 진행 방향을 따르고 raw rig 단계부터 정확히 두 다리여야 한다
 

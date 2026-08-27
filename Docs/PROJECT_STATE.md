@@ -24,10 +24,13 @@
 - 승인 카드에서 Texture/Rigging/Animation이 모두 켜진 상태와 `Approve 38`을 확인하고 한 번만
   승인했다. 작업은 약 51초 후 HTTP 403 `only_mcp_usage_on_trial_is_available`, `job_ids: []`로
   끝났다. job ID와 GLB는 없고 자동 재시도도 하지 않았다.
-- 사후 balance는 `64`, plan `plus`, free trial `cancelled_by_user`, unlimited unavailable로 제출 전과
-  같다. 실제 3D 차감은 `0`이다.
-- 입력/파라미터 실패가 아니라 현재 account entitlement와 3D MCP tool exposure의 결합 차단이다.
-  새로운 권한 상태나 실제 `generate_3d` 호출기가 생기기 전 같은 웹 payload를 반복하지 않는다.
+- 사후 balance는 `64`, 유료 plan `plus`로 제출 전과 같다. `free_trial=cancelled_by_user`는 별도 체험
+  이력이지 현재 subscription이 아니다. 실제 3D 차감은 `0`이다.
+- 무료체험 계정이나 입력/파라미터 실패가 아니다. paid Plus 웹 경로가 38-credit payload를 승인한 뒤
+  MCP-only trial gate에 걸리고, 현재 MCP에는 `generate_3d`가 없는 server routing/tool-exposure
+  불일치다. paid web routing이 수정되거나 실제 `generate_3d`가 생기기 전 같은 payload를 반복하지 않는다.
+- 지원용 정본:
+  [HIGGSFIELD_PAID_PLUS_3D_GATE_MISMATCH_2026-08-27.md](HIGGSFIELD_PAID_PLUS_3D_GATE_MISMATCH_2026-08-27.md).
 - 브라우저 작업은 background로 수행했고 실패 화면은 같은 대화에 보존했다. `productionEligible=false`;
   production/default/Downloads/배포본은 변경하지 않았다.
 
@@ -63,10 +66,10 @@
   생성에 각각 2 credits, 합계 4 credits를 사용해 잔액이 68에서 64가 됐다.
 - Meshy `multi_image_to_3d`에 texture + rigging + action 30 `Casual_Walk` + quad remesh 60k를
   한 GLB로 요청한다. Higgsfield 승인 UI의 실제 견적은 `38 credits`, 확인 잔액은 `64 credits`다.
-- 웹 제출은 job 생성 전 HTTP 403 `only_mcp_usage_on_trial_is_available`로 거절됐다. 현재 Codex와
-  ChatGPT 연결 표면에는 필요한 `generate_3d` 호출기가 노출되지 않았다. 이는 과거 완료된 3D 작업
-  4건과 모순되지 않는 세션/도구 노출 문제다. 오늘 V19 3D job `0`, 3D 차감 `0`, GLB `0`이며
-  웹/MCP 자동 재시도는 하지 않는다.
+- paid Plus 웹 제출은 job 생성 전 HTTP 403 `only_mcp_usage_on_trial_is_available`로 거절됐다. 현재
+  Codex와 ChatGPT 연결 표면에는 필요한 `generate_3d` 호출기가 노출되지 않았다. 이는 무료체험 상태가
+  아니라 paid-web/MCP routing mismatch이며 과거 완료된 3D 작업 4건과도 모순되지 않는다. 오늘 V19
+  3D job `0`, 3D 차감 `0`, GLB `0`이며 웹/MCP 자동 재시도는 하지 않는다.
 - 차단 해제 뒤 정확히 한 작업만 제출하고, repository 밖에서 mesh/skin/embedded walk를 먼저 확대
   검수한다. 그 뒤에만 별도 V19 experimental Unity 후보와 실제 맵 GIF를 만든다.
 - 상세 정본:
