@@ -1570,23 +1570,27 @@ locomotion을 끝낸 뒤에만 같은 Avatar의 neutral seated pose와 두 손/�
 V13은 furniture yaw만 grid처럼 보이게 맞추고 실제 semantic origin/footprint/socket을 읽지 않아 사용자
 재검수에서 폐기됐다. V17의 `-45°` seated readability yaw도 등받이를 몸 옆에 놓고 얼굴을 CRT에서
 비껴 보이게 해 사용자 재검수에서 폐기됐다. V20은 CRT 중심을 보게 했지만 화면의 초록 글씨 앞면이
-아닌 뒤/옆 semantic seat를 유지해 다시 폐기됐다. 최종 격리 build/runtime은
-`FatherV19MeshyOnePackage613MapBuildV18MonitorScreenFrontSeat` /
-`FatherV19MeshyOnePackage613MapRuntimeV23MonitorScreenFrontSeatClose`이다. 실제 phase
+아닌 뒤/옆 semantic seat를 유지해 다시 폐기됐다. V23은 화면 앞면 방향은 맞췄지만 2D work socket의
+depth를 물리 키보드에 그대로 사용해 키보드를 책상 반대쪽 끝에 놓았고, 의자·아빠를 책상 안으로
+끌어들여 사용자 재검수에서 폐기됐다. 최종 격리 build/runtime은
+`FatherV19MeshyOnePackage613MapBuildV19DeskFrontClearance` /
+`FatherV19MeshyOnePackage613MapRuntimeV24DeskFrontClearance`이다. 실제 phase
 `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`, sample 1,051,
 work 361, captures 132를 완료했다. 책상·CRT·키보드·전화기·의자는 QA layer의 runtime 3D 소품이며
 production 가구 catalog나 Transform을 바꾸지 않는다. 통짜 등받이, 셔츠와 같은 의자색, 5발 받침,
-몸 뒤 손과 옆으로 빠진 발은 폐기했다. V23은 카메라용 yaw를 `0°`로 고정하고, 초록 글씨 screen의
-실제 앞면 법선 위에 의자·아빠·키보드를 놓는다. screen-front→seat, actor→CRT, chair→CRT는 `0°`,
-actor→keyboard는 `0.0198°`다.
+몸 뒤 손과 옆으로 빠진 발은 폐기했다. V24는 카메라용 yaw를 `0°`로 고정하고, 초록 글씨 screen의
+실제 앞면 법선 위에 의자·아빠·키보드를 놓는다. screen-front→seat, actor→CRT, chair→CRT,
+actor→keyboard는 모두 `0°`다.
 
-V23은 실제 `desk_father`의 정수 origin `(2,8)`, `2×1` footprint, 네 footprint corner, desk seat/work
-socket을 읽는다. 점유 셀 `(2,8)`, `(3,8)`은 실제 grid에서 둘 다 non-walkable이다. 화면에 매핑된 두
+V24는 실제 `desk_father`의 정수 origin `(2,8)`, `2×1` footprint, 네 footprint corner, desk seat/work
+socket을 읽는다. 단, 2D work socket은 키보드 좌우 정렬에만 쓰고 물리 depth는 작업자 쪽 앞줄로
+고정한다. 점유 셀 `(2,8)`, `(3,8)`은 실제 grid에서 둘 다 non-walkable이다. 화면에 매핑된 두
 타일 축이 `70.52887°`이므로 보통 cube 회전이 아니라 비직교 grid basis의 평행육면체로 책상과 소품을
 만든다. legacy `chair_father` anchor와 desk operator seat의 `0.8318409` 간격은 기존 “멀리서 타자”의
 원인이며, 최종 의자와 아빠는 screen-front seat 하나에 결합되어 좌석 오차 `0`, 좌석→키보드 거리
-`0.4525218`다. semantic route seat에서 최종 착석점까지는 `0.5996623`을 부드럽게 blend한다. 등받이는
-골반 바로 뒤에 있고 endpoint IK도 실제 body-forward를 사용한다. 승인된
+`0.4525218`다. 키보드는 물리 desk front 안쪽 `0.1466582`, 좌석은 front 바깥 `0.3058636`이고 요구
+최소 clearance는 `0.2639711`이다. semantic route seat에서 최종 착석점까지는 `1.0107807`을 부드럽게
+blend한다. 등받이는 골반 바로 뒤에 있고 endpoint IK도 실제 body-forward를 사용한다. 승인된
 걷기·외형·책상 타일 배치는 바꾸지 않았다.
 
 상태는 `FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE`, `productionMutation=false`,

@@ -1,19 +1,36 @@
 # DECISIONS
 
+## 2026-08-28 / 키보드는 작업자 쪽 앞줄, 좌석과 몸은 물리 책상 앞면 밖에 둔다
+
+결정: V23은 화면 앞면 방향은 맞았지만 최종 합격이 아니다. 2D `DeskWorkSocketWorld`의 depth를 물리
+키보드 depth로 그대로 사용해 키보드가 책상 반대쪽 끝에 놓였고, 짧은 손 거리를 유지한 의자·아빠가
+책상 front plane 안으로 들어갔다. 사용자가 실제 GIF에서 겹침과 파묻힘을 지적해 V23을 폐기했다.
+
+V24는 semantic work socket을 키보드의 좌우 정렬에만 사용하고, 물리 keyboard depth는 완전한 키보드
+크기와 palm-rest inset을 포함한 operator-facing front row로 제한한다. 실제 `Crt_Screen` 법선의 같은
+중심선에 의자·아빠를 두되, 좌석의 physical desk-front clearance가 캐릭터 체적과 의자 cushion을 포함한
+최소값 미만이면 workstation 생성이 실패한다. 최종 keyboard inset은 `0.1466582`, seat/chair clearance는
+`0.3058636`, 강제 최소값은 `0.2639711`이다. seat→keyboard 거리는 `0.4525218`로 유지해 멀리서 손을
+뻗지 않는다. screen-front→seat, actor→CRT, chair→CRT, actor→keyboard는 모두 `0°`다.
+
+증거는 `FatherV19MeshyOnePackage613MapBuildV19DeskFrontClearance` /
+`FatherV19MeshyOnePackage613MapRuntimeV24DeskFrontClearance`이며, 승인된 action 613 걷기와 책상 타일
+origin/footprint/blocking은 변경하지 않는다. 사용자 승인 전 `productionEligible=false`다.
+
 ## 2026-08-28 / 좌석은 CRT 중심이 아니라 초록 글씨 화면의 실제 앞면에 둔다
 
 결정: V20의 “seat→CRT centre `0°`” 판정은 폐기한다. 점 하나를 바라보는 각도만 맞으면 의자가 화면
-뒤/옆에 있어도 PASS할 수 있었고, 사용자가 실제 GIF에서 같은 배치 오류를 즉시 지적했다. 최종 V23은
+뒤/옆에 있어도 PASS할 수 있었고, 사용자가 실제 GIF에서 같은 배치 오류를 즉시 지적했다. V23은
 `Crt_Screen` mesh의 폭축에 수직인 실제 화면 법선을 계산하고, 초록 글씨가 보이는 앞면 쪽 동일 중심선에
 의자·아빠·키보드를 놓는다. mapped grid가 `70.52887°`로 비직교이므로 `-gridForward`를 화면 법선으로
 간주하지 않고 skew를 대수적으로 보정한다.
 
-합격 수치는 screen-front→seat `0°`, actor→CRT `0°`, chair→CRT `0°`, actor→keyboard `0.0198°`,
+당시 방향 수치는 screen-front→seat `0°`, actor→CRT `0°`, chair→CRT `0°`, actor→keyboard `0.0198°`,
 chair↔actor `0`, seat→keyboard `0.4525218`이다. 기존 semantic seat는 route 접근점으로만 남고 최종
 착석점까지 `0.5996623`을 sit blend에서 이동한다. 책상 origin/footprint/blocking과 승인된 걷기는
-변경하지 않는다. 증거는 `FatherV19MeshyOnePackage613MapBuildV18MonitorScreenFrontSeat` /
-`FatherV19MeshyOnePackage613MapRuntimeV23MonitorScreenFrontSeatClose`이며 사용자 승인 전
-`productionEligible=false`다.
+변경하지 않는다. 이 결정은 화면 앞/뒤만 바로잡았고 키보드와 책상 앞면 clearance를 판정하지 못했으므로
+최상단 V24 결정으로 대체됐다. 폐기 증거는 `FatherV19MeshyOnePackage613MapBuildV18MonitorScreenFrontSeat` /
+`FatherV19MeshyOnePackage613MapRuntimeV23MonitorScreenFrontSeatClose`이다.
 
 ## 2026-08-28 / 의자와 아빠는 카메라가 아니라 실제 CRT를 각각 바라본다
 
@@ -21,7 +38,8 @@ chair↔actor `0`, seat→keyboard `0.4525218`이다. 기존 semantic seat는 ro
 함께 돌렸지만 화면에서는 등받이가 몸 옆에 있고 얼굴이 모니터 정면을 보지 않았다. V20은 presentation
 yaw를 `0°`로 고정하고 seat→physical CRT 수평 벡터를 기준으로 의자 +Z와 캐릭터의 measured
 body-forward를 별도로 계산한다. 따라서 candidate model-forward offset이 달라져도 의자 등받이가
-같이 틀어지지 않는다. 다만 이 V20 결정은 화면 앞/뒤를 판정하지 못해 위 V23 결정으로 대체됐다.
+같이 틀어지지 않는다. 다만 이 V20 결정은 화면 앞/뒤와 책상 clearance를 판정하지 못해 최상단 V24
+결정으로 대체됐다.
 
 등받이는 seat pivot을 바꾸지 않고 골반 뒤로 당긴다. 착석 손·발 endpoint IK도 transform +Z가 아니라
 같은 physical body-forward/right를 사용한다. 책상 origin `(2,8)`, `2×1` footprint, blocked cells,
@@ -39,7 +57,7 @@ desk seat/work socket, 승인된 action 613 걷기와 외형은 변경하지 않
 
 실제 좌석이 카메라를 등지는 가림은 임의 카메라나 가짜 배경으로 숨기지 않는다. 좌석 anchor를 유지한 채
 의자·아빠만 회전하는 `-45/0/+45°` actual-map 후보를 비교해 당시 `-45°`를 채택했지만, 이후 사용자
-실제 화면 재검수에서 의자/모니터 방향이 틀린 것으로 기각됐다. 현재 결정은 최상단 V23 항목이 대체한다.
+실제 화면 재검수에서 의자/모니터 방향이 틀린 것으로 기각됐다. 현재 결정은 최상단 V24 항목이 대체한다.
 V13처럼 책상·CRT·키보드 root의 yaw만 맞추는 방식은
 semantic origin/footprint를 보장하지 못하므로 폐기한다. V17은 실제 desk origin `(2,8)`, `2×1`
 footprint의 네 corner, blocked cells와 desk seat/work socket을 읽는다. mapped tile axis가

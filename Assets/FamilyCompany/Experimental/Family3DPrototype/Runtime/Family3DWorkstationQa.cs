@@ -52,6 +52,9 @@ namespace FamilyCompany.Experimental.Family3D
         public float DeskFootprintDepthWorld => deskFootprintDepthWorld;
         public float GridAxisOrthogonalityErrorDegrees { get; private set; }
         public float SeatToKeyboardGroundDistance { get; private set; }
+        public float KeyboardInsetFromDeskFrontWorld { get; private set; }
+        public float SeatToDeskFrontClearanceWorld { get; private set; }
+        public float MinimumSeatToDeskFrontClearanceWorld { get; private set; }
         public float SeatToMonitorFacingErrorDegrees { get; private set; }
         public float ChairToMonitorFacingErrorDegrees { get; private set; }
         public float MonitorScreenToSeatFacingErrorDegrees { get; private set; }
@@ -278,18 +281,20 @@ namespace FamilyCompany.Experimental.Family3D
 
             // CRT, keyboard, mouse, phone, papers and a mug make this read as a working desk in
             // the same small isometric map view, not as an anonymous brown block. Keyboard X/Z is
-            // the real authored operator-work socket, clamped only far enough inside the top to
-            // keep the physical keyboard from overhanging the semantic footprint.
+            // the real authored operator-work socket laterally. The 2D work socket's depth cannot
+            // be used as physical furniture depth: in this oblique projection it resolves to the
+            // far edge of the top. V23 kept that depth and consequently pulled the chair and the
+            // Father's torso through the desk to reach the keys. A real keyboard belongs on the
+            // operator-facing front row, with its complete depth and a small palm-rest inset inside
+            // the semantic footprint.
             float keyboardWidth = Mathf.Min(0.35f * h, deskWidth * 0.43f);
             float keyboardDepth = Mathf.Min(0.125f * h, deskDepth * 0.33f);
             float authoredKeyboardRight = Mathf.Clamp(
                 keyboardGrid.x,
                 deskRight - deskWidth * 0.5f + keyboardWidth * 0.5f,
                 deskRight + deskWidth * 0.5f - keyboardWidth * 0.5f);
-            float keyboardForward = Mathf.Clamp(
-                keyboardGrid.y,
-                frontForward + keyboardDepth * 0.5f + 0.008f * h,
-                backForward - keyboardDepth * 0.5f - 0.008f * h);
+            float keyboardForward =
+                frontForward + keyboardDepth * 0.5f + 0.020f * h;
             float monitorForward = Mathf.Clamp(
                 keyboardForward + deskDepth * 0.28f,
                 deskForward,
@@ -382,6 +387,24 @@ namespace FamilyCompany.Experimental.Family3D
             // desk reach while remaining on the text side of the CRT.
             resolvedSeatGroundLocal = keyboardGroundForSeatLocal +
                                       screenOutwardLocal * (0.24f * h);
+            Vector3 deskFrontGroundLocal = GridLocal(deskRight, 0f, frontForward);
+            Vector3 keyboardGroundMeasuredLocal = keyboardGroundForSeatLocal;
+            KeyboardInsetFromDeskFrontWorld = -Vector3.Dot(
+                keyboardGroundMeasuredLocal - deskFrontGroundLocal,
+                screenOutwardLocal);
+            SeatToDeskFrontClearanceWorld = Vector3.Dot(
+                resolvedSeatGroundLocal - deskFrontGroundLocal,
+                screenOutwardLocal);
+            // Includes the chair cushion's 0.09h forward reach plus torso volume and a visible
+            // gap. This prevents a numerically aligned seat from ever being accepted while the
+            // character or chair is still embedded in the desk.
+            MinimumSeatToDeskFrontClearanceWorld = 0.14f * h;
+            if (KeyboardInsetFromDeskFrontWorld <= 0f)
+                throw new InvalidOperationException(
+                    "Keyboard must remain inside the operator-facing desk edge.");
+            if (SeatToDeskFrontClearanceWorld < MinimumSeatToDeskFrontClearanceWorld)
+                throw new InvalidOperationException(
+                    "Chair and seated actor must remain completely outside the desk front edge.");
             chairPivot.localPosition = resolvedSeatGroundLocal;
             ChairGroundWorld = chairPivot.position;
             MonitorScreenOutwardWorld = transform.TransformDirection(

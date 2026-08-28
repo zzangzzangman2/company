@@ -2127,9 +2127,11 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherDeskPlacementPolicy =
                         "shop/layout integer origin + semantic footprint owns 3D top center/size; " +
                         "semantic BlocksMovement cells own navigation; calibrated desk seat/work " +
-                        "socket seeds the route; physical CRT screen outward normal owns the final " +
-                        "chair/actor side and centreline; chair +Z and measured actor-body forward " +
-                        "face the screen with zero readability yaw offset",
+                        "socket seeds the route and lateral keyboard alignment; physical keyboard " +
+                        "depth is constrained to the operator-facing front row; physical CRT " +
+                        "screen outward normal owns the final chair/actor side and centreline; " +
+                        "chair and seated body must clear the physical desk-front plane; chair +Z " +
+                        "and measured actor-body forward face the screen with zero readability yaw offset",
                     fatherDeskFootprintOrigin = fatherDeskFootprintOrigin,
                     fatherDeskFootprintSize = fatherDeskFootprintSize,
                     fatherDeskBlockedCells = fatherDeskBlockedCells,
@@ -2156,6 +2158,16 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherDeskSeatToKeyboardGroundDistance = fatherDeskWorkstation == null
                         ? 0f
                         : fatherDeskWorkstation.SeatToKeyboardGroundDistance,
+                    fatherDeskKeyboardInsetFromDeskFrontWorld = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.KeyboardInsetFromDeskFrontWorld,
+                    fatherDeskSeatToDeskFrontClearanceWorld = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.SeatToDeskFrontClearanceWorld,
+                    fatherDeskMinimumSeatToDeskFrontClearanceWorld =
+                        fatherDeskWorkstation == null
+                            ? 0f
+                            : fatherDeskWorkstation.MinimumSeatToDeskFrontClearanceWorld,
                     fatherCaptureSampleCount = fatherCaptureSamples.Count,
                     fatherMotionStrideOfficeUnits = fatherMotionStrideOfficeUnits,
                     fatherMotionYawDegreesPerSecond = fatherMotionYawDegreesPerSecond,
@@ -2573,6 +2585,9 @@ namespace FamilyCompany.Experimental.Family3D
             public float fatherDeskFootprintDepthWorld;
             public float fatherDeskGridAxisOrthogonalityErrorDegrees;
             public float fatherDeskSeatToKeyboardGroundDistance;
+            public float fatherDeskKeyboardInsetFromDeskFrontWorld;
+            public float fatherDeskSeatToDeskFrontClearanceWorld;
+            public float fatherDeskMinimumSeatToDeskFrontClearanceWorld;
             public int fatherCaptureSampleCount;
             public float fatherMotionStrideOfficeUnits;
             public float fatherMotionYawDegreesPerSecond;

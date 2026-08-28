@@ -1333,9 +1333,13 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   - mapped tile axes are `70.52887°`; desk/CRT/keyboard use oblique grid-basis meshes
   - V17 `-45°` is user-rejected; V20 centre-targeting is also rejected because it kept the chair
     behind/beside the green text face
-  - V23 uses the actual `Crt_Screen` face normal: screen-front→seat, chair→CRT and actor→CRT are `0°`;
-    actor→keyboard `0.0198°`
+  - V23 screen-side correction is user-rejected because the 2D work-socket depth put the physical
+    keyboard at the far edge and pulled the chair/body through the desk
+  - V24 uses the actual `Crt_Screen` face normal and an operator-front keyboard row:
+    screen-front→seat, chair→CRT, actor→CRT and actor→keyboard are `0°`
   - legacy chair anchor offset `0.8318409`; resolved chair↔actor error `0`; seat→keyboard `0.4525218`
+  - keyboard is `0.1466582` inside the physical desk front; seat/chair is `0.3058636` outside it,
+    above the mandatory `0.2639711` body/chair clearance
   - blocked cells `2:8`, `3:8` are both non-walkable
   - QA layer 30 only; no collider, catalog, save, production/default mutation
 - seated implementation:
@@ -1348,13 +1352,13 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `seat_father` / `desk_father` / `chair_father`, phases
   `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`
 - final build/runtime:
-  `FatherV19MeshyOnePackage613MapBuildV18MonitorScreenFrontSeat` /
-  `FatherV19MeshyOnePackage613MapRuntimeV23MonitorScreenFrontSeatClose`
+  `FatherV19MeshyOnePackage613MapBuildV19DeskFrontClearance` /
+  `FatherV19MeshyOnePackage613MapRuntimeV24DeskFrontClearance`
 - proof: 1,051 sample frames, 361 work observations, 132 captures at 7.5 fps, visual-content PASS.
 - review media:
-  - `father-v19-monitor-screen-front-seat-actual-map-final.gif`
-    `6928B6A68AC6A207468A37EE28048E1E563E78C7CC7386BED5CF84B94FF3D1C2`
-  - `father-v19-monitor-screen-front-seat-closeup-final.gif`
-    `49E845FC725CA69ADCC44E920690CCBFCF80354DCA994E623ABB4FA0D0F926DD`
+  - `father-v19-desk-front-clearance-actual-map-final.gif`
+    `16417C94EBFD390639F7C9014038FA8B3C4A12106CE5785551FCA8C7EED9BFD9`
+  - `father-v19-desk-front-clearance-closeup-final.gif`
+    `06985AAEB59FFC083FC501B4DAC9D0BCBAA019810601E7193D4685445CC0E55C`
 - status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
   `productionEligible=false`, additional Higgsfield use `0 credits`.
