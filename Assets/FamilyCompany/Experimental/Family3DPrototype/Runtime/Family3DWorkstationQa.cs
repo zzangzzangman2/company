@@ -52,6 +52,9 @@ namespace FamilyCompany.Experimental.Family3D
         public float DeskFootprintDepthWorld => deskFootprintDepthWorld;
         public float GridAxisOrthogonalityErrorDegrees { get; private set; }
         public float SeatToKeyboardGroundDistance { get; private set; }
+        public float MaximumSeatToKeyboardGroundDistanceWorld { get; private set; }
+        public float KeyboardToMonitorScreenGroundDistanceWorld { get; private set; }
+        public float MinimumKeyboardToMonitorScreenGroundDistanceWorld { get; private set; }
         public float KeyboardInsetFromDeskFrontWorld { get; private set; }
         public float SeatToDeskFrontClearanceWorld { get; private set; }
         public float MinimumSeatToDeskFrontClearanceWorld { get; private set; }
@@ -296,7 +299,7 @@ namespace FamilyCompany.Experimental.Family3D
             float keyboardForward =
                 frontForward + keyboardDepth * 0.5f + 0.020f * h;
             float monitorForward = Mathf.Clamp(
-                keyboardForward + deskDepth * 0.28f,
+                keyboardForward + deskDepth * 0.43f,
                 deskForward,
                 backForward - 0.11f * h);
             float monitorRight = authoredKeyboardRight;
@@ -383,10 +386,11 @@ namespace FamilyCompany.Experimental.Family3D
             keyboardGroundForSeatLocal.y = 0f;
             // Preserve the exact screen-front line but set reach from the real keyboard. The first
             // screen-normal proof used a screen-based distance and left 0.7706 world units to the
-            // keys, visibly stretching both arms. 0.24 body heights restores the approved compact
-            // desk reach while remaining on the text side of the CRT.
+            // keys, visibly stretching both arms. V24's 0.24h stopped desk penetration but remained
+            // visually too close: the hands read against the CRT instead of on the keys. 0.28h
+            // moves the chair back without returning to the rejected long-arm reach.
             resolvedSeatGroundLocal = keyboardGroundForSeatLocal +
-                                      screenOutwardLocal * (0.24f * h);
+                                      screenOutwardLocal * (0.28f * h);
             Vector3 deskFrontGroundLocal = GridLocal(deskRight, 0f, frontForward);
             Vector3 keyboardGroundMeasuredLocal = keyboardGroundForSeatLocal;
             KeyboardInsetFromDeskFrontWorld = -Vector3.Dot(
@@ -414,6 +418,23 @@ namespace FamilyCompany.Experimental.Family3D
             Vector3 keyboardGround = KeyboardWorld;
             seatGround.y = keyboardGround.y = 0f;
             SeatToKeyboardGroundDistance = Vector3.Distance(seatGround, keyboardGround);
+            MaximumSeatToKeyboardGroundDistanceWorld = 0.30f * h;
+            if (SeatToKeyboardGroundDistance > MaximumSeatToKeyboardGroundDistanceWorld)
+                throw new InvalidOperationException(
+                    "Chair must remain within the seated character's compact keyboard reach.");
+            Vector3 monitorGround = MonitorWorld;
+            monitorGround.y = 0f;
+            KeyboardToMonitorScreenGroundDistanceWorld = Vector3.Distance(
+                keyboardGround,
+                monitorGround);
+            // V24/V25 put the screen only about four centimetres behind the keyboard. Hands were
+            // correctly on the keys but projected against the lower bezel. Require a distinct
+            // keyboard-to-screen band so typing still reads correctly in the isometric camera.
+            MinimumKeyboardToMonitorScreenGroundDistanceWorld = 0.07f * h;
+            if (KeyboardToMonitorScreenGroundDistanceWorld <
+                MinimumKeyboardToMonitorScreenGroundDistanceWorld)
+                throw new InvalidOperationException(
+                    "CRT screen must remain visibly behind the physical keyboard.");
 
             Vector3 monitorDirectionWorld = MonitorWorld - SeatGroundWorld;
             monitorDirectionWorld.y = 0f;

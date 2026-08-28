@@ -453,7 +453,12 @@ namespace FamilyCompany.Experimental.Family3D
             Transform rightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
             Transform rightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
 
-            Vector3 handCentre = keyboardWorld + up * (0.038f * h) - forward * (0.010f * h);
+            // Keep both wrists over the operator-side key rows, not visually against the CRT lower
+            // bezel. V24 used 0.038h above the keyboard centre and only 0.010h toward the chair;
+            // on this short avatar that read as typing on the monitor. The keyboard itself is
+            // 0.03h thick, so 0.022h leaves the wrists just above the key caps while 0.035h remains
+            // safely inside the front half of its 0.125h depth.
+            Vector3 handCentre = keyboardWorld + up * (0.022f * h) - forward * (0.035f * h);
             Vector3 leftHandTarget = handCentre - right * (0.12f * h) + up * tap;
             Vector3 rightHandTarget = handCentre + right * (0.12f * h) - up * tap;
             Vector3 leftElbowPole = leftUpperArm.position - right * (0.34f * h) +

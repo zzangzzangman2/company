@@ -2158,6 +2158,18 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherDeskSeatToKeyboardGroundDistance = fatherDeskWorkstation == null
                         ? 0f
                         : fatherDeskWorkstation.SeatToKeyboardGroundDistance,
+                    fatherDeskMaximumSeatToKeyboardGroundDistance =
+                        fatherDeskWorkstation == null
+                            ? 0f
+                            : fatherDeskWorkstation.MaximumSeatToKeyboardGroundDistanceWorld,
+                    fatherDeskKeyboardToMonitorScreenGroundDistance =
+                        fatherDeskWorkstation == null
+                            ? 0f
+                            : fatherDeskWorkstation.KeyboardToMonitorScreenGroundDistanceWorld,
+                    fatherDeskMinimumKeyboardToMonitorScreenGroundDistance =
+                        fatherDeskWorkstation == null
+                            ? 0f
+                            : fatherDeskWorkstation.MinimumKeyboardToMonitorScreenGroundDistanceWorld,
                     fatherDeskKeyboardInsetFromDeskFrontWorld = fatherDeskWorkstation == null
                         ? 0f
                         : fatherDeskWorkstation.KeyboardInsetFromDeskFrontWorld,
@@ -2585,6 +2597,9 @@ namespace FamilyCompany.Experimental.Family3D
             public float fatherDeskFootprintDepthWorld;
             public float fatherDeskGridAxisOrthogonalityErrorDegrees;
             public float fatherDeskSeatToKeyboardGroundDistance;
+            public float fatherDeskMaximumSeatToKeyboardGroundDistance;
+            public float fatherDeskKeyboardToMonitorScreenGroundDistance;
+            public float fatherDeskMinimumKeyboardToMonitorScreenGroundDistance;
             public float fatherDeskKeyboardInsetFromDeskFrontWorld;
             public float fatherDeskSeatToDeskFrontClearanceWorld;
             public float fatherDeskMinimumSeatToDeskFrontClearanceWorld;

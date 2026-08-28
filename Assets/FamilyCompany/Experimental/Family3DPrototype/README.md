@@ -418,21 +418,27 @@ V17's shared `-45°` chair/Father readability yaw was user-rejected because the 
 beside the body. V20 removed that yaw but was also rejected: aiming at the CRT centre does not prove
 that the chair is on the green text face's front side. V23 corrected the side but was rejected because
 the projected 2D work-socket depth put the keyboard at the far edge and pulled the chair/body through
-the desk. V24 derives the real `Crt_Screen` face normal, uses the semantic work socket only for lateral
-alignment, constrains the keyboard to the operator-facing front row, and rejects any seat that does
-not clear the physical desk-front plane. Screen-front→seat, chair→CRT, actor→CRT and actor→keyboard
-errors are `0°`; seat→keyboard remains `0.4525218`. Keyboard front inset is `0.1466582`; the seat is
-`0.3058636` outside the desk front versus a required `0.2639711`. The chair back is directly behind
-the pelvis, and seated limb IK uses the same physical body-forward.
+the desk. V24 corrected penetration, but the user requested more chair setback and said the hands
+read as hitting the monitor. V25 moved the seat from `0.24h` to `0.28h` and lowered wrists onto the
+front key row; enlarged review then exposed only about four centimetres between keyboard and screen.
+V26 derives the real `Crt_Screen` face normal, uses the semantic work socket only for lateral alignment,
+constrains the keyboard to the operator-facing front row, moves the CRT to a distinct back row, and
+rejects any seat/body, reach, or keyboard/screen spacing violation. All four facing errors are `0°`.
+Seat→keyboard is `0.5279419 ≤ 0.5656523`; keyboard→screen is `0.1535015 ≥ 0.1319855`.
+Keyboard front inset is `0.1466583`; the seat is `0.3812838` outside the desk front versus required
+`0.2639711`. The chair back is directly behind the pelvis, and seated limb IK uses the same physical
+body-forward.
 
 The legacy chair anchor is `0.8318409` QA-world units away from the desk operator seat. The final
 chair and actor are both resolved to the screen-front seat (`0` mutual error), while the skew-adjusted
-keyboard stays on the same centreline (`0.4525218` ground distance). Cells `2:8` and `3:8` are both
+keyboard stays on the same centreline (`0.5279419` ground distance). Cells `2:8` and `3:8` are both
 confirmed non-walkable. Existing shop placement already owns integer origin, footprint and
 `BlocksMovement`; automatic purchased-desk seat binding remains a production promotion gate.
 
 Final evidence is
-`FatherV19MeshyOnePackage613MapBuildV19DeskFrontClearance` /
-`FatherV19MeshyOnePackage613MapRuntimeV24DeskFrontClearance`: 1,051 sample frames, 361 work
+`FatherV19MeshyOnePackage613MapBuildV21ChairBackClearTyping` /
+`FatherV19MeshyOnePackage613MapRuntimeV26ChairBackClearTyping`: 1,051 sample frames, 361 work
 observations, 132 captures, `productionMutation: false`, `productionEligible: false`. See
-`Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`.
+`Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`. The character-independent formula, failure
+matrix, hidden-run template and porting checklist are locked in
+`Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md`.

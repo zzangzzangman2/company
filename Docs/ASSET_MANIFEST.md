@@ -1335,11 +1335,14 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
     behind/beside the green text face
   - V23 screen-side correction is user-rejected because the 2D work-socket depth put the physical
     keyboard at the far edge and pulled the chair/body through the desk
-  - V24 uses the actual `Crt_Screen` face normal and an operator-front keyboard row:
+  - V24 clears desk penetration but is user-rejected for insufficient chair setback; V25 fixes the
+    chair/wrists but enlarged review rejects its roughly 4 cm keyboard-to-screen gap
+  - V26 uses the actual `Crt_Screen` face normal, an operator-front keyboard row and a separate CRT row:
     screen-front→seat, chair→CRT, actor→CRT and actor→keyboard are `0°`
-  - legacy chair anchor offset `0.8318409`; resolved chair↔actor error `0`; seat→keyboard `0.4525218`
-  - keyboard is `0.1466582` inside the physical desk front; seat/chair is `0.3058636` outside it,
-    above the mandatory `0.2639711` body/chair clearance
+  - legacy chair anchor offset `0.8318409`; resolved chair↔actor error `0`; seat→keyboard
+    `0.5279419 ≤ 0.5656523`
+  - keyboard is `0.1466583` inside the physical desk front; seat/chair is `0.3812838` outside it,
+    above mandatory `0.2639711`; keyboard→screen `0.1535015 ≥ 0.1319855`
   - blocked cells `2:8`, `3:8` are both non-walkable
   - QA layer 30 only; no collider, catalog, save, production/default mutation
 - seated implementation:
@@ -1352,13 +1355,15 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `seat_father` / `desk_father` / `chair_father`, phases
   `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`
 - final build/runtime:
-  `FatherV19MeshyOnePackage613MapBuildV19DeskFrontClearance` /
-  `FatherV19MeshyOnePackage613MapRuntimeV24DeskFrontClearance`
+  `FatherV19MeshyOnePackage613MapBuildV21ChairBackClearTyping` /
+  `FatherV19MeshyOnePackage613MapRuntimeV26ChairBackClearTyping`
 - proof: 1,051 sample frames, 361 work observations, 132 captures at 7.5 fps, visual-content PASS.
 - review media:
-  - `father-v19-desk-front-clearance-actual-map-final.gif`
-    `16417C94EBFD390639F7C9014038FA8B3C4A12106CE5785551FCA8C7EED9BFD9`
-  - `father-v19-desk-front-clearance-closeup-final.gif`
-    `06985AAEB59FFC083FC501B4DAC9D0BCBAA019810601E7193D4685445CC0E55C`
+  - `father-v19-chair-back-clear-keyboard-actual-map-final.gif`
+    `76FB3A43EC6C6139ED141B8692A3AE839D1EF450259953728BA617B22A0B0763`
+  - `father-v19-chair-back-clear-keyboard-closeup-final.gif`
+    `4821562F0E28162CC14895CFF04C9DA0F93AED2FAB49665D80FEB87623590F29`
+- reusable character-port contract:
+  `Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md`
 - status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
   `productionEligible=false`, additional Higgsfield use `0 credits`.
