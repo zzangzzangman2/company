@@ -9,12 +9,19 @@
 
 실제 좌석이 카메라를 등지는 가림은 임의 카메라나 가짜 배경으로 숨기지 않는다. 좌석 anchor를 유지한 채
 의자·아빠만 회전하는 `-45/0/+45°` actual-map 후보를 비교했고, 두 손과 두 바지 다리가 함께 읽히는
-`-45°`를 seated visual offset으로 채택했다. 책상·CRT·키보드 root는 실제 seat의 mapped grid forward에
-고정해 타일을 대각선으로 가로지르지 않으며 이후 추가 책상·테이블도 같은 격자 규칙을 쓴다.
+`-45°`를 seated visual offset으로 채택했다. V13처럼 책상·CRT·키보드 root의 yaw만 맞추는 방식은
+semantic origin/footprint를 보장하지 못하므로 폐기한다. V17은 실제 desk origin `(2,8)`, `2×1`
+footprint의 네 corner, blocked cells와 desk seat/work socket을 읽는다. mapped tile axis가
+`70.52887°`이므로 비직교 grid basis mesh로 네 corner를 맞춘다.
+
+legacy chair anchor와 desk operator seat의 `0.8318409` 간격은 의자에서 멀리 떨어져 타자하는 화면의
+직접 원인이다. 최종 chair와 actor는 desk operator seat에 함께 결합해 error `0`으로 만들고 keyboard는
+desk work socket에 둔다. 상점 배치의 integer origin/footprint/`BlocksMovement`는 기존 production
+계약을 재사용하지만 자동 seat/workstation binding은 사용자 승인 전 별도 승격하지 않는다.
 셔츠와 같은 청록 의자, 통짜 높은 등받이, 캐릭터 다리로 오인되는 5발 받침은
 폐기한다. proof는 actual `desk_father`/`chair_father` 2D renderer를 일시적으로만 숨기고 종료 시 복구한다.
 
-최종 V13은 1,051 sample, 361 work observations, 132 captures와 production/preview/build-settings SHA
+최종 V17은 1,051 sample, 361 work observations, 132 captures와 production/preview/build-settings SHA
 불변을 통과했다. 이는 사용자 승인 전 후보이며 `productionMutation=false`, `productionEligible=false`다.
 추가 Higgsfield 사용은 0 credits다.
 

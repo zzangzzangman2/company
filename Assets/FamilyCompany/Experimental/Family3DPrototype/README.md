@@ -409,12 +409,21 @@ through `QaBeginSeatedWorkAtSeat`, and observes
 `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`. Locomotion remains the
 unchanged one-package action 613. After locomotion, a separate neutral seated pose and post-root
 two-bone endpoint IK put both wrists on the actual 3D keyboard and both ankles on distinct floor
-targets. The workstation root (desk, CRT, keyboard and accessories) follows the mapped real-seat
-tile axis. Only the swivel-chair child pivot and Father use the `-45°` seated readability offset,
-selected from `-45/0/+45°` actual-map captures, around the unchanged seat anchor.
+targets. V13 aligned only furniture yaw and was rejected after the user noticed that its position,
+footprint and chair distance did not follow the tycoon grid contract. The final proof reads
+`desk_father` origin `(2,8)`, its `2x1` semantic footprint, all four footprint corners, both blocked
+cells and the authored desk seat/work sockets. The mapped tile axes are `70.52887°`, so the desk,
+CRT, keyboard and accessories use oblique grid-basis meshes rather than rotated orthogonal cubes.
+Only the swivel-chair child pivot and Father use the `-45°` seated readability offset.
+
+The legacy chair anchor is `0.8318409` QA-world units away from the desk operator seat. The final
+chair and actor are both resolved to the desk operator seat (`0` error), while the keyboard remains
+on the desk work socket (`0.4441449` ground distance from the seat). Cells `2:8` and `3:8` are both
+confirmed non-walkable. Existing shop placement already owns integer origin, footprint and
+`BlocksMovement`; automatic purchased-desk seat binding remains a production promotion gate.
 
 Final evidence is
-`FatherV19MeshyOnePackage613MapBuildV11GridAlignedDesk` /
-`FatherV19MeshyOnePackage613MapRuntimeV13GridAlignedDesk`: 1,051 sample frames, 361 work
+`FatherV19MeshyOnePackage613MapBuildV14SemanticWorkstationFinal` /
+`FatherV19MeshyOnePackage613MapRuntimeV17SemanticWorkstationFinal`: 1,051 sample frames, 361 work
 observations, 132 captures, `productionMutation: false`, `productionEligible: false`. See
 `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`.

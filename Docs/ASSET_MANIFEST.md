@@ -1329,8 +1329,11 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
 - runtime-only 3D workstation:
   `Assets/FamilyCompany/Experimental/Family3DPrototype/Runtime/Family3DWorkstationQa.cs`
   - walnut desk, CRT, keyboard/keys, mouse, telephone, paper, mug, warm-leather low-back chair
-  - desk/CRT/keyboard root follows the mapped real-seat tile axis; only `Chair_SwivelPivot` and Father
-    use the `-45°` seated readability offset around the unchanged seat anchor
+  - reads `desk_father` origin `(2,8)`, `2x1` footprint corners, blocked cells and desk seat/work sockets
+  - mapped tile axes are `70.52887°`; desk/CRT/keyboard use oblique grid-basis meshes, while only
+    `Chair_SwivelPivot` and Father use the `-45°` seated readability offset
+  - legacy chair anchor offset `0.8318409`; resolved chair↔actor seat error `0`; seat→keyboard `0.4441449`
+  - blocked cells `2:8`, `3:8` are both non-walkable
   - QA layer 30 only; no collider, catalog, save, production/default mutation
 - seated implementation:
   `Assets/FamilyCompany/Experimental/Family3DPrototype/Runtime/Family3DWalkActor.cs`
@@ -1342,13 +1345,13 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `seat_father` / `desk_father` / `chair_father`, phases
   `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`
 - final build/runtime:
-  `FatherV19MeshyOnePackage613MapBuildV11GridAlignedDesk` /
-  `FatherV19MeshyOnePackage613MapRuntimeV13GridAlignedDesk`
+  `FatherV19MeshyOnePackage613MapBuildV14SemanticWorkstationFinal` /
+  `FatherV19MeshyOnePackage613MapRuntimeV17SemanticWorkstationFinal`
 - proof: 1,051 sample frames, 361 work observations, 132 captures at 7.5 fps, visual-content PASS.
 - review media:
-  - `father-v19-grid-aligned-desk-work-actual-map-final.gif`
-    `E243FA92AC87E06CAD92A65EE96DADE76D9E3464F0292483156DF6B4E2757DBC`
-  - `father-v19-grid-aligned-seated-typing-closeup-final.gif`
-    `9262157C3CB4F3B277FE95E5F455F8E9F1EEBFE783D3D75378B2E16527FCC7D0`
+  - `father-v19-semantic-workstation-actual-map-final.gif`
+    `E8D23B850D32B7799E62B3F25E2DD668CE26F2352977675D597F222C77F8148E`
+  - `father-v19-semantic-workstation-closeup-final.gif`
+    `33E72C32D4CB9E9931102DBD885A17DD837C45212860A8067EC4D47A330B6DD1`
 - status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
   `productionEligible=false`, additional Higgsfield use `0 credits`.

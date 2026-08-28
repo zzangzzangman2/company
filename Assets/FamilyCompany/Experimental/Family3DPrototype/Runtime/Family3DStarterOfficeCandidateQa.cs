@@ -110,6 +110,12 @@ namespace FamilyCompany.Experimental.Family3D
         private readonly List<string> fatherDeskObservedPhases = new List<string>();
         private Family3DWorkstationQa fatherDeskWorkstation;
         private OfficeSeatSlot fatherDeskSeat;
+        private Vector2Int fatherDeskFootprintOrigin;
+        private Vector2Int fatherDeskFootprintSize;
+        private string[] fatherDeskBlockedCells = Array.Empty<string>();
+        private bool fatherDeskBlockedCellsNonWalkable;
+        private float fatherDeskLegacyChairAnchorOffsetWorld;
+        private float fatherDeskResolvedChairActorSocketErrorWorld;
         private readonly List<RendererState> hiddenSourceFurniture = new List<RendererState>();
         private float fatherMotionStrideOfficeUnits;
         private float fatherMotionYawDegreesPerSecond;
@@ -765,22 +771,82 @@ namespace FamilyCompany.Experimental.Family3D
             OfficeSeatSlot seat,
             Camera sourceOfficeCamera)
         {
-            Vector3 seatSource = starter.World.Workstations.SeatOperatorWorld(seat);
-            Vector3 approachSource = starter.World.Workstations.SeatApproachWorld(seat);
-            Vector3 seatGround = MapOfficeWorldToQaGround(seatSource, sourceOfficeCamera);
-            Vector3 approachGround = MapOfficeWorldToQaGround(approachSource, sourceOfficeCamera);
-            Vector3 forward = seatGround - approachGround;
-            forward.y = 0f;
-            if (forward.sqrMagnitude <= 0.000001f)
+            if (!starter.World.FurniturePresenter.TryGetFurniture(
+                    seat.WorkSurfaceFurnitureId,
+                    out PlacedOfficeFurniture desk) || desk == null)
                 throw new InvalidOperationException(
-                    "Father seat and approach map to the same QA ground point.");
+                    "Father desk semantic furniture is unavailable: " +
+                    seat.WorkSurfaceFurnitureId);
+
+            // Map the authoritative semantic footprint and calibrated interaction sockets, not
+            // the visible sprite bounds and not a character-height guess. Purchase placement,
+            // collision, save/load, furniture ghost and this 3D proof now all share the same
+            // integer origin and footprint.
+            Vector3 basisSource = starter.World.Presenter.CellCenterWorld(seat.Cell);
+            Vector3 basisQa = MapOfficeWorldToQaGround(basisSource, sourceOfficeCamera);
+            Vector3 gridRight = MapOfficeWorldToQaGround(
+                basisSource + starter.World.Presenter.CellBasisXWorld(),
+                sourceOfficeCamera) - basisQa;
+            Vector3 gridForward = MapOfficeWorldToQaGround(
+                basisSource + starter.World.Presenter.CellBasisYWorld(),
+                sourceOfficeCamera) - basisQa;
+            gridRight.y = gridForward.y = 0f;
+
+            Vector3[] sourceCorners = starter.World.Presenter.FootprintCornersWorld(desk);
+            if (sourceCorners == null || sourceCorners.Length != 4)
+                throw new InvalidOperationException(
+                    "Father desk semantic footprint must contain four corners.");
+            var qaCorners = new Vector3[4];
+            Vector3 deskFootprintCenter = Vector3.zero;
+            for (var index = 0; index < qaCorners.Length; index++)
+            {
+                qaCorners[index] = MapOfficeWorldToQaGround(
+                    sourceCorners[index],
+                    sourceOfficeCamera);
+                deskFootprintCenter += qaCorners[index];
+            }
+            deskFootprintCenter *= 0.25f;
+            float deskFootprintWidth = Vector3.Distance(qaCorners[0], qaCorners[1]);
+            float deskFootprintDepth = Vector3.Distance(qaCorners[0], qaCorners[3]);
+
+            Vector3 deskSeatSource = starter.World.Workstations.DeskSeatSocketWorld(seat);
+            Vector3 chairSeatSource = starter.World.Workstations.ChairSeatAnchorWorld(seat);
+            Vector3 workSource = starter.World.Workstations.DeskWorkSocketWorld(seat);
+            Vector3 seatGround = MapOfficeWorldToQaGround(
+                deskSeatSource,
+                sourceOfficeCamera);
+            Vector3 chairSeatGround = MapOfficeWorldToQaGround(
+                chairSeatSource,
+                sourceOfficeCamera);
+            Vector3 keyboardGround = MapOfficeWorldToQaGround(workSource, sourceOfficeCamera);
+            fatherDeskLegacyChairAnchorOffsetWorld = Vector3.Distance(
+                seatGround,
+                chairSeatGround);
+
+            fatherDeskFootprintOrigin = new Vector2Int(desk.Origin.X, desk.Origin.Y);
+            fatherDeskFootprintSize = new Vector2Int(desk.Width, desk.Height);
+            fatherDeskBlockedCells = new string[desk.Width * desk.Height];
+            fatherDeskBlockedCellsNonWalkable = desk.BlocksMovement;
+            var blockedIndex = 0;
+            for (var y = desk.Origin.Y; y < desk.Origin.Y + desk.Height; y++)
+            for (var x = desk.Origin.X; x < desk.Origin.X + desk.Width; x++)
+            {
+                var cell = new OfficeGridCoordinate(x, y);
+                fatherDeskBlockedCells[blockedIndex++] = x + ":" + y;
+                fatherDeskBlockedCellsNonWalkable &= !starter.World.Grid.IsWalkable(cell);
+            }
 
             fatherDeskSeat = seat;
             fatherDeskWorkstation = Family3DWorkstationQa.Create(
                 transform,
                 qaLayer,
                 seatGround,
-                forward.normalized,
+                gridRight,
+                gridForward,
+                deskFootprintCenter,
+                deskFootprintWidth,
+                deskFootprintDepth,
+                keyboardGround,
                 fatherBinding.WalkActor.StandingHeight,
                 ResolveCommandLineFloat(
                     "-family3d-father-desk-visual-yaw-offset",
@@ -788,6 +854,9 @@ namespace FamilyCompany.Experimental.Family3D
                     -60f,
                     60f,
                     "Father desk visual yaw offset"));
+            fatherDeskResolvedChairActorSocketErrorWorld = Vector3.Distance(
+                seatGround,
+                fatherDeskWorkstation.SeatGroundWorld);
 
             HideSourceFurniture(seat.ChairFurnitureId);
             HideSourceFurniture(seat.WorkSurfaceFurnitureId);
@@ -2038,6 +2107,36 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherDeskSeatedVisualYawOffsetDegrees = fatherDeskWorkstation == null
                         ? 0f
                         : fatherDeskWorkstation.SeatedVisualYawOffsetDegrees,
+                    fatherDeskPlacementPolicy =
+                        "shop/layout integer origin + semantic footprint owns 3D top center/size; " +
+                        "semantic BlocksMovement cells own navigation; calibrated desk seat/work " +
+                        "sockets own chair, actor and keyboard XZ",
+                    fatherDeskFootprintOrigin = fatherDeskFootprintOrigin,
+                    fatherDeskFootprintSize = fatherDeskFootprintSize,
+                    fatherDeskBlockedCells = fatherDeskBlockedCells,
+                    fatherDeskBlockedCellsNonWalkable = fatherDeskBlockedCellsNonWalkable,
+                    fatherDeskLegacyChairAnchorOffsetWorld =
+                        fatherDeskLegacyChairAnchorOffsetWorld,
+                    fatherDeskResolvedChairActorSocketErrorWorld =
+                        fatherDeskResolvedChairActorSocketErrorWorld,
+                    fatherDeskFootprintCenterWorld = fatherDeskWorkstation == null
+                        ? Vector3.zero
+                        : fatherDeskWorkstation.DeskFootprintCenterWorld,
+                    fatherDeskTopCenterWorld = fatherDeskWorkstation == null
+                        ? Vector3.zero
+                        : fatherDeskWorkstation.DeskTopCenterWorld,
+                    fatherDeskFootprintWidthWorld = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.DeskFootprintWidthWorld,
+                    fatherDeskFootprintDepthWorld = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.DeskFootprintDepthWorld,
+                    fatherDeskGridAxisOrthogonalityErrorDegrees = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.GridAxisOrthogonalityErrorDegrees,
+                    fatherDeskSeatToKeyboardGroundDistance = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.SeatToKeyboardGroundDistance,
                     fatherCaptureSampleCount = fatherCaptureSamples.Count,
                     fatherMotionStrideOfficeUnits = fatherMotionStrideOfficeUnits,
                     fatherMotionYawDegreesPerSecond = fatherMotionYawDegreesPerSecond,
@@ -2436,6 +2535,19 @@ namespace FamilyCompany.Experimental.Family3D
             public Vector3 fatherDeskKeyboardWorld;
             public float fatherDeskGridYawDegrees;
             public float fatherDeskSeatedVisualYawOffsetDegrees;
+            public string fatherDeskPlacementPolicy;
+            public Vector2Int fatherDeskFootprintOrigin;
+            public Vector2Int fatherDeskFootprintSize;
+            public string[] fatherDeskBlockedCells;
+            public bool fatherDeskBlockedCellsNonWalkable;
+            public float fatherDeskLegacyChairAnchorOffsetWorld;
+            public float fatherDeskResolvedChairActorSocketErrorWorld;
+            public Vector3 fatherDeskFootprintCenterWorld;
+            public Vector3 fatherDeskTopCenterWorld;
+            public float fatherDeskFootprintWidthWorld;
+            public float fatherDeskFootprintDepthWorld;
+            public float fatherDeskGridAxisOrthogonalityErrorDegrees;
+            public float fatherDeskSeatToKeyboardGroundDistance;
             public int fatherCaptureSampleCount;
             public float fatherMotionStrideOfficeUnits;
             public float fatherMotionYawDegreesPerSecond;
