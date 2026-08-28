@@ -1,6 +1,6 @@
 # ASSET MANIFEST
 
-최종 갱신: 2026-08-27
+최종 갱신: 2026-08-28
 
 ## Father V18 raw GLB walk integrity audit (source rejected)
 
@@ -24,16 +24,21 @@
 - Status: `SOURCE_WALK_REJECTED`, new Higgsfield use `0 credits`, `productionEligible=false`;
   production/default/Downloads/deployed executables unchanged.
 
-## Father V19 Higgsfield input (native MCP connected; company execution pending)
+## Father V19 Higgsfield static result (generated; user appearance approval pending)
 
 - 2026-08-28 실행 정본:
   [FATHER_V19_COMPANY_CODEX_HIGGSFIELD_EXECUTION_2026-08-28.md](FATHER_V19_COMPANY_CODEX_HIGGSFIELD_EXECUTION_2026-08-28.md).
 - 최신 허용 경로는 cleaned profile을 사용한 `Tripo H3.1 Multiview to 3D`, detailed geometry +
   detailed texture, 정확히 18-credit 1회다. 아래 과거 Meshy 38-credit whole-package 기록은 실행하지 않는다.
-- 집 PC에서 official Codex native MCP `higgsfield_native`의 OAuth와 재시작을 완료했고
-  `generate_3d` 노출을 확인했다. 회사 PC는 새 정본의 연결 절차를 별도로 수행해야 한다.
-- 인계 시점 balance `64`, 새 V19 3D job `0`, 새 V19 3D charge `0`,
-  `productionEligible=false`다.
+- 집 PC와 회사 PC에서 official Codex native MCP `higgsfield_native`의 OAuth를 완료했고,
+  회사 PC 재시작 후 `generate_3d` 노출과 호출을 확인했다.
+- 실행 직전 인계 상태는 balance `64`, 새 V19 3D job `0`, 새 V19 3D charge `0`이었다.
+- 2026-08-28 회사 PC native MCP 실행 완료: Tripo H3.1 detailed static GLB 1건,
+  job `f619a60d-6a81-4781-b6db-4ed5caa022ee`, 정확히 `18 credits`, balance `64 -> 46`.
+- receipt:
+  [FATHER_V19_TRIPO_H3_1_DETAILED_RECEIPT_2026-08-28.md](FATHER_V19_TRIPO_H3_1_DETAILED_RECEIPT_2026-08-28.md).
+- raw 8방향 및 손·다리 확대 내부 외형 gate는 통과했지만 사용자 승인은 아직 없다. rigging,
+  animation, Unity import는 시작하지 않았고 `productionEligible=false`다.
 
 - External isolated source:
   `2026-08-25/family-natural-walk-rebuild/outputs/father-v19-higgsfield-rebuild`.
