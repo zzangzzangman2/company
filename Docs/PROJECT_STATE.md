@@ -2,6 +2,24 @@
 
 이 문서는 과거 작업 일지가 아니라 **현재 실행 가능한 상태, 아직 통합되지 않은 상태, 정확한 다음 작업**만 기록하는 정본이다. 날짜별 구현 증거는 `History/Reports/`에 보존하며 이 문서보다 우선하지 않는다.
 
+## 2026-08-28 / Father V19 standalone rig 사용자 기각 — third leg와 인형 보행 원인 확정
+
+- 사용자 승인 Tripo H3.1 정적 외형은 유지한다. 별도 Meshy `3d_rigging` + action 613 결과는 사용자가
+  전신/하체 확대에서 세 번째 다리와 인형 같은 보행을 확인해 기각했다. Unity에는 가져오지 않았다.
+- 8-credit 작업은 정확히 1회만 완료됐고 balance는 `46 -> 38`; 자동 재시도는 없었다.
+- raw GLB 구조 검사에서 strong arm/leg mixed vertices `6,547`, lower-body left/right leg mixed
+  vertices `898`, hip-joint separation/body-width `0.01933`, animated edge stretch max `10.76x`가
+  확인됐다. 정적 Tripo surface는 `132` disconnected components와 arms-down pose라 standalone
+  autorigger가 limb/garment ownership을 잘못 분배했다.
+- standalone `3d_rigging`에는 prompt/remesh/topology/pose 제어가 없으므로 같은 요청 반복을 금지한다.
+  `Tools/Blender/validate_generated_biped_skin_glb.py`를 Unity 이전 강제 fail-closed gate로 추가했다.
+- animation-ready 대안은 처음부터 A-pose + quad remesh + rig + action 613을 같이 만드는 Meshy
+  `multi_image_to_3d` one-package뿐이다. 읽기 전용 비용은 정확히 `38 credits`, 현재 잔액도 `38`이며
+  아직 제출하지 않았다. 별도 사용자 승인 없이는 제출하지 않는다.
+- 상세 근거:
+  [FATHER_V19_TRIPO_STANDALONE_RIG_REJECTION_2026-08-28.md](FATHER_V19_TRIPO_STANDALONE_RIG_REJECTION_2026-08-28.md).
+  `productionEligible=false`; production/default/Downloads/배포본은 변경하지 않았다.
+
 ## 2026-08-27 / 사용자 잠금: reference 방향 유지 + 정확히 두 다리
 
 - 사용자 제공 `C:\Users\godho\Downloads\mfc6Kr0QXh5SWdHhJyWDGw.mp4` (`960x720`, 30 fps,

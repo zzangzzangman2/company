@@ -24,7 +24,7 @@
 - Status: `SOURCE_WALK_REJECTED`, new Higgsfield use `0 credits`, `productionEligible=false`;
   production/default/Downloads/deployed executables unchanged.
 
-## Father V19 Higgsfield static result (user appearance approved; rigging/walk pending)
+## Father V19 Higgsfield static result (appearance approved; standalone rig/walk rejected)
 
 - 2026-08-28 실행 정본:
   [FATHER_V19_COMPANY_CODEX_HIGGSFIELD_EXECUTION_2026-08-28.md](FATHER_V19_COMPANY_CODEX_HIGGSFIELD_EXECUTION_2026-08-28.md).
@@ -38,8 +38,16 @@
 - receipt:
   [FATHER_V19_TRIPO_H3_1_DETAILED_RECEIPT_2026-08-28.md](FATHER_V19_TRIPO_H3_1_DETAILED_RECEIPT_2026-08-28.md).
 - raw 8방향 및 손·다리 확대 내부 외형 gate 통과 후 사용자가 정적 외형을 승인했다.
-- 다음 native `3d_rigging` + `613 Casual_Walk_inplace` 1회 비용은 `8 credits`로 확인했지만 아직
-  제출하지 않았다. rigging/animation/Unity import는 시작하지 않았고 `productionEligible=false`다.
+- native Meshy `3d_rigging` + `613 Casual_Walk_inplace`를 정확히 1회 제출했다. job
+  `e7b8729a-7221-4065-aa83-40caca72b3c1`, `8 credits`, balance `46 -> 38`, raw GLB SHA-256
+  `3184BE26588292CF10F8F15D4CB55DFB3660549CC5F17C50E339F8804B867238`다.
+- 사용자가 third-leg silhouette과 doll gait를 기각했다. 구조 gate도 arm/leg mixed `6,547`,
+  lower-body cross-leg `898`, collapsed hip separation ratio `0.01933`으로 FAIL했다. Unity import와
+  자동 재시도는 하지 않았다.
+- 상세 rejection:
+  [FATHER_V19_TRIPO_STANDALONE_RIG_REJECTION_2026-08-28.md](FATHER_V19_TRIPO_STANDALONE_RIG_REJECTION_2026-08-28.md).
+- one-package A-pose/quad-remesh/rig/action-613 대안은 읽기 전용 `38 credits`로 확인했지만 제출하지
+  않았다. current balance `38`, `productionEligible=false`다.
 
 - External isolated source:
   `2026-08-25/family-natural-walk-rebuild/outputs/father-v19-higgsfield-rebuild`.

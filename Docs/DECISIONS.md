@@ -1,5 +1,21 @@
 # DECISIONS
 
+## 2026-08-28 / 승인 Tripo static을 standalone 3d_rigging에 다시 넣지 않는다
+
+결정: 사용자 승인 Tripo 정적 외형은 보존하지만, 그 GLB를 Meshy `3d_rigging`에 별도로 넣는 경로는
+폐기한다. 완료 raw GLB에서 strong arm/leg mixed vertices `6,547`, lower-body cross-leg vertices
+`898`, hip separation/body width `0.01933`과 max `10.76x` edge stretch가 확인됐고 사용자가 third-leg
+silhouette과 doll gait를 즉시 기각했다. 같은 8-credit payload는 prompt/remesh/pose 제어가 없어
+재시도해도 구조 원인을 제거할 수 없다.
+
+향후 유료 재생성이 필요하면 별도 승인 뒤 `multi_image_to_3d`에서 `should_remesh=true`, quad 60k,
+A-pose, rigging과 action 613을 한 package로 생성한다. 현재 정확한 preflight는 `38 credits`, balance도
+`38`이며 job은 제출하지 않았다. 모든 결과는
+`Tools/Blender/validate_generated_biped_skin_glb.py`와 raw full-cycle 육안 검수를 Unity 이전에 통과해야
+한다. 상세 근거는
+[FATHER_V19_TRIPO_STANDALONE_RIG_REJECTION_2026-08-28.md](FATHER_V19_TRIPO_STANDALONE_RIG_REJECTION_2026-08-28.md)에
+고정한다. 사용자 actual-map GIF 승인 전 `productionEligible=false`다.
+
 ## 2026-08-27 / strict V19 paid web submission은 1회 차단 후 반복하지 않는다
 
 결정: 사용자 최종 승인에 따라 exact four-view/one-package/two-leg/Casual_Walk payload를 Higgsfield

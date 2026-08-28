@@ -16,6 +16,14 @@ separate, user-approved production migration.
 
 ## Father V19 locked direction/two-leg contract (current)
 
+The user-approved Tripo V19 static appearance is retained, but the separately generated Meshy
+`3d_rigging` + action-613 package is rejected. Its raw GLB has 6,547 strongly arm/leg-mixed vertices,
+898 lower-body cross-leg vertices and hip-joint separation equal to only 0.01933 of mesh width. The
+user's third-leg and doll-gait report is therefore a confirmed skin/joint-placement failure, not a
+camera or Unity issue. Never import or retry that package. The fail-closed structural gate is
+`Tools/Blender/validate_generated_biped_skin_glb.py`; the receipt is
+`Docs/FATHER_V19_TRIPO_STANDALONE_RIG_REJECTION_2026-08-28.md`.
+
 The user-provided `mfc6Kr0QXh5SWdHhJyWDGw.mp4` is authority only for following the actual screen
 travel direction and turning continuously at corners. Its malformed gait is not a motion donor.
 V19 must resolve facing from consecutive ground-position deltas; the new rig's forward offset must
