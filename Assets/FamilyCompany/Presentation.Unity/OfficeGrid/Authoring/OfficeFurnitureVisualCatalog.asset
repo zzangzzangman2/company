@@ -16,46 +16,46 @@ MonoBehaviour:
   definitions:
   - kindId: desk_with_pc
     facing: 0
-    baseSprite: {fileID: 21300000, guid: 1e9adfc1e2006a24c8490005da9e3b2e, type: 3}
-    frontOverlaySprite: {fileID: 21300000, guid: a769835a1e55e36478c08c86b59b82f2, type: 3}
-    groundAnchorPx: {x: 316.62888, y: 61.113403}
-    sortAnchorPx: {x: 291.1134, y: 26.319588}
+    baseSprite: {fileID: 21300000, guid: b7d33fce80fbff743a3b2c90a1df553e, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320, y: 64}
+    sortAnchorPx: {x: 320, y: 32}
     groundFootprintPolygonPx:
-    - {x: 236.62888, y: -58.886597}
-    - {x: 556.6289, y: 101.1134}
-    - {x: 396.62888, y: 181.1134}
-    - {x: 76.628876, y: 21.113403}
+    - {x: 240, y: -56}
+    - {x: 560, y: 104}
+    - {x: 400, y: 184}
+    - {x: 80, y: 24}
     semanticFootprintWidth: 2
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
-    workSurfaceAnchorPx: {x: 354.99484, y: 236.70619}
-    operatorSeatSocketPx: {x: 430.45102, y: 169.33607}
+    workSurfaceAnchorPx: {x: 448.221, y: 205.229}
+    operatorSeatSocketPx: {x: 512.085, y: 128.044}
     uniformScale: 1
     hasSeatAnchor: 0
     hasWorkSurfaceAnchor: 1
     hasOperatorSeatSocket: 1
-    frontOverlayWhenOccupied: 1
+    frontOverlayWhenOccupied: 0
   - kindId: swivel_chair
     facing: 2
-    baseSprite: {fileID: 21300000, guid: 5d642bde97f1a844f9aefcc7c4c95a08, type: 3}
-    frontOverlaySprite: {fileID: 21300000, guid: 765e8e592ac1dbe46a89bf68ff564944, type: 3}
-    groundAnchorPx: {x: 319.19083, y: 45.333923}
-    sortAnchorPx: {x: 319.19083, y: 25.23675}
+    baseSprite: {fileID: 21300000, guid: 11e4db354b9224e41ae4ee97be6a40c2, type: 3}
+    frontOverlaySprite: {fileID: 0}
+    groundAnchorPx: {x: 320, y: 64}
+    sortAnchorPx: {x: 320, y: 32}
     groundFootprintPolygonPx:
-    - {x: 319.19083, y: -34.666077}
-    - {x: 479.19083, y: 45.333923}
-    - {x: 319.19083, y: 125.33392}
-    - {x: 159.19083, y: 45.333923}
+    - {x: 320, y: -16}
+    - {x: 480, y: 64}
+    - {x: 320, y: 144}
+    - {x: 160, y: 64}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
-    seatAnchorPx: {x: 313.00708, y: 153.54947}
+    seatAnchorPx: {x: 432.085, y: 248.044}
     workSurfaceAnchorPx: {x: 0, y: 0}
     operatorSeatSocketPx: {x: 0, y: 0}
     uniformScale: 1
     hasSeatAnchor: 1
     hasWorkSurfaceAnchor: 0
     hasOperatorSeatSocket: 0
-    frontOverlayWhenOccupied: 1
+    frontOverlayWhenOccupied: 0
   - kindId: reception_counter
     facing: 0
     baseSprite: {fileID: 21300000, guid: 087c2dc2ef3118e4497bcd967e9ff5e4, type: 3}

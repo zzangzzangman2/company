@@ -193,7 +193,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
         private static readonly ReadOnlyCollection<OfficeFurnitureDefinition> CanonicalDefinitions =
             Array.AsReadOnly(new[]
             {
-                D(OfficeGridLayouts.DeskWithPcKind, "CRT 업무 책상", OfficeFurnitureCategory.Work, 2, 1,
+                D(OfficeGridLayouts.DeskWithPcKind, "CRT 업무 책상·회전의자 세트", OfficeFurnitureCategory.Work, 2, 1,
                     1350000, 3500, 900, OfficeFurnitureCapability.WorkDesk, 1,
                     OfficeFurnitureAccessPolicy.AdjacentCardinal, true, "WorkDesk"),
                 D(OfficeGridLayouts.SwivelChairKind, "사무용 회전의자", OfficeFurnitureCategory.Seating, 1, 1,
@@ -243,6 +243,34 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public static IReadOnlyList<OfficeFurnitureDefinition> All => CanonicalDefinitions;
         public static IEnumerable<OfficeFurnitureDefinition> Purchasable =>
             CanonicalDefinitions.Where(item => item.IsPurchasable);
+        public static IEnumerable<OfficeFurnitureDefinition> ShopOffers =>
+            Purchasable.Where(item => !string.Equals(
+                item.DefinitionId,
+                OfficeGridLayouts.SwivelChairKind,
+                StringComparison.Ordinal));
+
+        public static bool IsWorkstationSetOffer(string definitionId) =>
+            string.Equals(definitionId, OfficeGridLayouts.DeskWithPcKind, StringComparison.Ordinal);
+
+        public static bool IsShopOffer(string definitionId) =>
+            ShopOffers.Any(item => string.Equals(item.DefinitionId, definitionId, StringComparison.Ordinal));
+
+        public static long GameplayShopPrice(OfficeFurnitureDefinition definition)
+        {
+            if (definition == null) throw new ArgumentNullException(nameof(definition));
+            long price = OfficeFurnitureEconomyConfig.GameplayPrice(definition.PurchasePriceWon);
+            if (!IsWorkstationSetOffer(definition.DefinitionId)) return price;
+            return checked(price + OfficeFurnitureEconomyConfig.GameplayPrice(
+                Require(OfficeGridLayouts.SwivelChairKind).PurchasePriceWon));
+        }
+
+        public static long ShopDailyMaintenanceWon(OfficeFurnitureDefinition definition)
+        {
+            if (definition == null) throw new ArgumentNullException(nameof(definition));
+            if (!IsWorkstationSetOffer(definition.DefinitionId)) return definition.DailyMaintenanceWon;
+            return checked(definition.DailyMaintenanceWon +
+                           Require(OfficeGridLayouts.SwivelChairKind).DailyMaintenanceWon);
+        }
 
         public static OfficeFurnitureDefinition Find(string definitionId)
         {

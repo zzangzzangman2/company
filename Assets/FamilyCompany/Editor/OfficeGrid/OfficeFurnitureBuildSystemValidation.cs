@@ -34,6 +34,7 @@ namespace FamilyCompany.Editor.OfficeGrid
             ValidateCanonicalGeometry(failures);
             ValidateLegacyGeometryRoundTrips(failures);
             ValidateBlockedSocketPlacement(failures);
+            ValidateWorkstationShopOffer(failures);
             ValidateEveryCatalogTransaction(failures);
             ValidateInsufficientFundsAndLegacyMigration(failures);
 
@@ -128,7 +129,9 @@ namespace FamilyCompany.Editor.OfficeGrid
             GameSaveDto dto = GameSaveMapper.ToDto(state);
             string json = JsonUtility.ToJson(dto);
             GameState restored = GameSaveMapper.FromDto(JsonUtility.FromJson<GameSaveDto>(json));
-            Require(failures, dto.schemaVersion == 10, "top-level schema v10");
+            Require(failures,
+                dto.schemaVersion == new GameSaveDto().schemaVersion,
+                "top-level schema matches current DTO");
             Require(failures, restored.Company.CashWon == state.Company.CashWon, "money round trip");
             Require(failures,
                 restored.OfficeGrid.ComputeLayoutHash() == state.OfficeGrid.ComputeLayoutHash(),
@@ -398,6 +401,210 @@ namespace FamilyCompany.Editor.OfficeGrid
                     state.OfficeFurnitureInventory.Find(instanceId) == null,
                     definition.DefinitionId + " exact sale refund");
             }
+        }
+
+        private static void ValidateWorkstationShopOffer(ICollection<string> failures)
+        {
+            Require(failures,
+                OfficeFurnitureCatalog.ShopOffers.Any(item =>
+                    item.DefinitionId == OfficeGridLayouts.DeskWithPcKind) &&
+                OfficeFurnitureCatalog.ShopOffers.All(item =>
+                    item.DefinitionId != OfficeGridLayouts.SwivelChairKind),
+                "shop exposes one desk+chair offer instead of a separate chair row");
+
+            var expectedDeskOffsets = new[]
+            {
+                new OfficeGridCoordinate(0, 1),
+                new OfficeGridCoordinate(1, -1),
+                new OfficeGridCoordinate(-1, -1),
+                new OfficeGridCoordinate(-1, 0)
+            };
+            var expectedApproachOffsets = new[]
+            {
+                new OfficeGridCoordinate(0, -1),
+                new OfficeGridCoordinate(-1, 0),
+                new OfficeGridCoordinate(0, 1),
+                new OfficeGridCoordinate(1, 0)
+            };
+            var expectedOperatorOffsets2 = new[]
+            {
+                new OfficeGridCoordinate(1, 1),
+                new OfficeGridCoordinate(1, -1),
+                new OfficeGridCoordinate(-1, -1),
+                new OfficeGridCoordinate(-1, 1)
+            };
+
+            foreach (OfficeFurnitureFacing facing in Enum.GetValues(typeof(OfficeFurnitureFacing)))
+            {
+                GameState directionState = PrototypeStateFactory.Create(20000120 + (int)facing);
+                OfficeGridCoordinate seatCell = FindValidWorkstationSeatCell(directionState.OfficeGrid, facing);
+                OfficeLayoutEditResult preview = OfficeLayoutEditRules.PlaceWorkstation(
+                    directionState.OfficeGrid,
+                    "qa_direction_desk",
+                    "qa_direction_chair",
+                    "qa_direction_seat",
+                    seatCell,
+                    facing);
+                Require(failures, preview.Success, facing + " workstation preview");
+                if (!preview.Success) continue;
+                PlacedOfficeFurniture desk = preview.Grid.Furniture.Single(item =>
+                    item.FurnitureId == "qa_direction_desk");
+                PlacedOfficeFurniture chair = preview.Grid.Furniture.Single(item =>
+                    item.FurnitureId == "qa_direction_chair");
+                OfficeSeatSlot seat = preview.Grid.SeatSlots.Single(item =>
+                    item.SeatId == "qa_direction_seat");
+                OfficeGridCoordinate deskOffset = expectedDeskOffsets[(int)facing];
+                OfficeGridCoordinate approachOffset = expectedApproachOffsets[(int)facing];
+                OfficeGridCoordinate operatorOffset = expectedOperatorOffsets2[(int)facing];
+                Require(failures,
+                    desk.Origin.Equals(new OfficeGridCoordinate(
+                        seatCell.X + deskOffset.X,
+                        seatCell.Y + deskOffset.Y)) &&
+                    chair.Origin.Equals(seatCell) && seat.Cell.Equals(seatCell),
+                    facing + " desk/chair stay one rigid set");
+                Require(failures,
+                    seat.ApproachCell.Equals(new OfficeGridCoordinate(
+                        seatCell.X + approachOffset.X,
+                        seatCell.Y + approachOffset.Y)),
+                    facing + " rotated chair approach cell");
+                Require(failures,
+                    seat.OperatorAnchor.X2 == seatCell.X * 2 + operatorOffset.X &&
+                    seat.OperatorAnchor.Y2 == seatCell.Y * 2 + operatorOffset.Y,
+                    facing + " rotated seated-character anchor");
+                Require(failures,
+                    chair.Facing == OfficeLayoutEditRules.QuarterTurnClockwise(
+                        OfficeLayoutEditRules.QuarterTurnClockwise(desk.Facing)) &&
+                    seat.Facing == chair.Facing,
+                    facing + " chair and seated actor face the desk");
+            }
+
+            GameState state = PrototypeStateFactory.Create(20000130);
+            OfficeGridCoordinate origin = FindValidWorkstationSeatCellForAllFacings(state.OfficeGrid);
+            long cashBefore = state.Company.CashWon;
+            int ledgerBefore = state.Company.Ledger.Count;
+            int inventoryBefore = state.OfficeFurnitureInventory.Instances.Count;
+            int furnitureBefore = state.OfficeGrid.Furniture.Count;
+            int seatsBefore = state.OfficeGrid.SeatSlots.Count;
+            const string deskId = "qa_shop_workstation";
+            const string commandId = "qa-shop-workstation-buy";
+            OfficeFurnitureCommandResult bought =
+                OfficeFurnitureTransactionService.PurchaseAndPlaceWorkstation(
+                    state,
+                    commandId,
+                    deskId,
+                    origin,
+                    OfficeFurnitureFacing.SouthEast);
+            long expectedPrice = OfficeFurnitureCatalog.GameplayShopPrice(
+                OfficeFurnitureCatalog.Require(OfficeGridLayouts.DeskWithPcKind));
+            string chairId = OfficeFurnitureTransactionService.WorkstationChairInstanceId(deskId);
+            OfficeSeatSlot purchasedSeat = state.OfficeGrid.SeatSlots.SingleOrDefault(item =>
+                item.WorkSurfaceFurnitureId == deskId && item.ChairFurnitureId == chairId);
+            Require(failures,
+                bought.Success && bought.ChargedWon == expectedPrice &&
+                state.Company.CashWon == cashBefore - expectedPrice &&
+                state.Company.Ledger.Count == ledgerBefore + 1,
+                "workstation set charges once at the exact desk+chair price");
+            Require(failures,
+                state.OfficeFurnitureInventory.Instances.Count == inventoryBefore + 2 &&
+                state.OfficeGrid.Furniture.Count == furnitureBefore + 2 &&
+                state.OfficeGrid.SeatSlots.Count == seatsBefore + 1 && purchasedSeat != null,
+                "workstation purchase atomically creates desk, chair and usable seat");
+            Require(failures,
+                purchasedSeat != null &&
+                purchasedSeat.SeatId == "seat_" + state.Family.Members.First().MemberId,
+                "first purchased workstation receives the first unassigned family seat ID");
+            Require(failures,
+                state.OfficeFurnitureInventory.Find(deskId)?.PurchaseTransactionId == commandId &&
+                state.OfficeFurnitureInventory.Find(chairId)?.PurchaseTransactionId == commandId,
+                "desk and chair share one idempotent purchase transaction");
+
+            string purchasedHash = state.OfficeGrid.ComputeLayoutHash();
+            for (int turn = 0; turn < 4; turn++)
+                Require(failures,
+                    OfficeFurnitureTransactionService.Rotate(state, deskId).Success,
+                    "purchased workstation 90-degree turn " + (turn + 1));
+            Require(failures,
+                state.OfficeGrid.ComputeLayoutHash() == purchasedHash,
+                "purchased workstation four-direction rotation round trip");
+
+            long cashAfter = state.Company.CashWon;
+            string hashAfter = state.OfficeGrid.ComputeLayoutHash();
+            OfficeFurnitureCommandResult duplicate =
+                OfficeFurnitureTransactionService.PurchaseAndPlaceWorkstation(
+                    state,
+                    commandId,
+                    deskId,
+                    origin,
+                    OfficeFurnitureFacing.SouthEast);
+            Require(failures,
+                duplicate.Success && duplicate.AlreadyApplied &&
+                state.Company.CashWon == cashAfter && state.OfficeGrid.ComputeLayoutHash() == hashAfter,
+                "workstation purchase idempotency prevents duplicate charge and placement");
+
+            long beforeOverlap = state.Company.CashWon;
+            int beforeOverlapInventory = state.OfficeFurnitureInventory.Instances.Count;
+            OfficeFurnitureCommandResult overlap =
+                OfficeFurnitureTransactionService.PurchaseAndPlaceWorkstation(
+                    state,
+                    "qa-shop-workstation-overlap",
+                    "qa_shop_workstation_overlap",
+                    origin,
+                    OfficeFurnitureFacing.SouthEast);
+            Require(failures,
+                !overlap.Success && overlap.PlacementFailure == OfficeLayoutEditFailure.OverlapsFurniture &&
+                state.Company.CashWon == beforeOverlap &&
+                state.OfficeFurnitureInventory.Instances.Count == beforeOverlapInventory,
+                "invalid overlapping workstation creates no charge or partial inventory");
+
+            GameSaveDto dto = GameSaveMapper.ToDto(state);
+            GameState restored = GameSaveMapper.FromDto(
+                JsonUtility.FromJson<GameSaveDto>(JsonUtility.ToJson(dto)));
+            Require(failures,
+                restored.OfficeGrid.ComputeLayoutHash() == state.OfficeGrid.ComputeLayoutHash() &&
+                restored.OfficeFurnitureInventory.Find(deskId) != null &&
+                restored.OfficeFurnitureInventory.Find(chairId) != null &&
+                restored.OfficeGrid.SeatSlots.Any(item => item.SeatId == purchasedSeat?.SeatId),
+                "workstation desk/chair/seat survives the save round trip");
+        }
+
+        private static OfficeGridCoordinate FindValidWorkstationSeatCell(
+            OfficeGridState grid,
+            OfficeFurnitureFacing facing)
+        {
+            for (int y = 1; y < grid.Height - 1; y++)
+            for (int x = 1; x < grid.Width - 1; x++)
+            {
+                var cell = new OfficeGridCoordinate(x, y);
+                if (OfficeLayoutEditRules.PlaceWorkstation(
+                        grid,
+                        "qa_preview_workstation_desk",
+                        "qa_preview_workstation_chair",
+                        "qa_preview_workstation_seat",
+                        cell,
+                        facing).Success)
+                    return cell;
+            }
+            throw new InvalidOperationException("No valid workstation placement exists for " + facing);
+        }
+
+        private static OfficeGridCoordinate FindValidWorkstationSeatCellForAllFacings(OfficeGridState grid)
+        {
+            for (int y = 1; y < grid.Height - 1; y++)
+            for (int x = 1; x < grid.Width - 1; x++)
+            {
+                var cell = new OfficeGridCoordinate(x, y);
+                bool valid = true;
+                foreach (OfficeFurnitureFacing facing in Enum.GetValues(typeof(OfficeFurnitureFacing)))
+                    valid &= OfficeLayoutEditRules.PlaceWorkstation(
+                        grid,
+                        "qa_all_direction_desk",
+                        "qa_all_direction_chair",
+                        "qa_all_direction_seat",
+                        cell,
+                        facing).Success;
+                if (valid) return cell;
+            }
+            throw new InvalidOperationException("No workstation cell is valid in all four directions.");
         }
 
         private static void ValidateInsufficientFundsAndLegacyMigration(ICollection<string> failures)

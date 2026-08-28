@@ -78,7 +78,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedStableArmWalkMapBuildV74";
         public const string FatherV19MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV22NeutralChairNoLegacyOverlay";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV26AtomicOriginalChair";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -771,7 +771,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? "one locked uniform scale calibrated from the one-package authored pose to the live Father sprite; no per-pose rescaling"
                     : "live production SpriteRenderer bounds projected viewport height",
                 source2DPolicy =
-                    "QA-only Renderer.forceRenderingOff; sorting layer/order and transform depth never assigned",
+                    "QA-only Renderer.forceRenderingOff replaces all four legacy workstation desk/chair pixels with V31 original-chair atomic visuals; semantic furniture, sorting data and transforms are never assigned or deleted",
                 supportedPhases = bundle.FatherV19MotionOnly
                     ? new[]
                     {

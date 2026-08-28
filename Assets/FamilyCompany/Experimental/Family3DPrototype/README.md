@@ -17,22 +17,30 @@ Father V19 is one indivisible Higgsfield/Meshy package: generated mesh, bind ske
 
 Do not use any retired Father rig, mixed donor clip or procedural gait as a base for this candidate.
 
-## Current V27 workstation proof
+## Current V31 original-chair atomic workstation proof
 
-- build: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV22NeutralChairNoLegacyOverlay`
-- runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV27NeutralChairNoLegacyOverlay`
-- result: `FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE`
+- build: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV26AtomicOriginalChair`
+- runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV31AtomicOriginalChair`
+- result: `FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE`
 - evidence: 1,051 samples, 361 work observations, 132 captures at 7.5 fps
 - status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`
 
-V27 uses the real production Father route, `seat_father`, `desk_father`, `chair_father`, the actual `(2,8)` / `2x1` semantic footprint and blocked cells. It adds QA-layer-only mapped-grid 3D furniture. The late occupied-chair foreground renderer is masked every frame, and the 3D chair uses neutral graphite/charcoal materials. Production furniture data and transforms are untouched.
+V31 preserves the user-selected V29 desk, CRT, keyboard, chair and seated composition exactly. All
+132 V31 Player frames are byte-for-byte identical to the corresponding V29 PNGs. The only visual
+structure change is one `V31_AtomicWorkstationSet_OriginalChair_<seat>` root per seat, owning the
+desk, CRT, keyboard and original chair together.
 
-Review files in the V27 runtime directory:
+Production collision/pathfinding is unchanged: desks are hard obstacles, unowned chairs are
+interaction obstacles, and selecting/moving/rotating either bound desk or chair promotes to the
+complete workstation binding. The actual entrance-to-seat Player run recorded zero static,
+interaction and agent-penetration violations. The V30 chair relocation and CRT swivel were rejected
+and are not part of V31. The V29 drawer-face correction remains active.
 
-- `father-v19-neutral-chair-no-legacy-overlay-closeup-final.gif`
-- `father-v19-neutral-chair-no-legacy-overlay-actual-map-final.gif`
+Review files in `Docs/Evidence/Family3DFatherV19V31/`:
 
-The same final GIFs are tracked for home pull in `Docs/Evidence/Family3DFatherV19V27/`.
+- `father-v19-v31-v29-visual-equality.png` (left V29, right V31; identical pixels)
+- `father-v19-v31-original-chair-atomic-set-close.gif`
+- `father-v19-v31-original-chair-atomic-set-full.gif`
 
 The full receipt and hashes are in `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`.
 

@@ -1,8 +1,6 @@
 using System;
 using System.IO;
-using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
-using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEditor;
 using UnityEngine;
@@ -10,54 +8,46 @@ using UnityEngine;
 namespace FamilyCompany.Editor.OfficeGridQa
 {
     /// <summary>
-    /// Guards the authored NorthWest chair foreground asset and the generated lower seat-rim mask
-    /// independently of wall/door validation. Occupied runtime presentation uses only the lower
-    /// mask in front of the actor; the rectangular authored subset remains available for empty state.
+    /// Guards the four user-approved V31 open-back chair renders. The retired green chair used a
+    /// hand-cut foreground mask; V31 uses one clean directional sprite and no legacy overlay.
     /// </summary>
     public static class OfficeChairForegroundValidation
     {
-        private const string ChairBasePath =
-            "Assets/Art/Office/Tiles/Furniture/Runtime/office_swivel_chair_v3.png";
-        private const string ChairFrontPath =
-            "Assets/Art/Office/Tiles/Furniture/Runtime/office_swivel_chair_front_v3.png";
-        private const string ChairFrontGuid = "765e8e592ac1dbe46a89bf68ff564944";
-        private const int ForegroundMinimumRuntimeX = 317;
-        private const int ForegroundMinimumRuntimeY = 98;
-        private const int ExpectedForegroundPixelCount = 9881;
+        private const string Folder =
+            "Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture";
 
-        [MenuItem("Family Company/Validate Office Chair Foreground Integrity")]
+        [MenuItem("Family Company/Validate V31 Chair Directional Integrity")]
         public static void Validate()
         {
             OfficeFurnitureVisualCatalog catalog = OfficeFurnitureAssetBuilder.LoadFurnitureVisualCatalog();
             OfficeFurnitureVisualDefinition chair = catalog.Resolve(
                 OfficeGridLayouts.SwivelChairKind,
                 OfficeFurnitureFacing.NorthWest);
-            Sprite expectedBase = RequiredSprite(ChairBasePath);
-            Sprite expectedFront = RequiredSprite(ChairFrontPath);
+            Sprite canonical = RequiredSprite(Folder + "/swivel_chair_nw.png");
+            Require(chair.BaseSprite == canonical, "Canonical V31 chair Sprite is not catalogued.");
+            Require(chair.FrontOverlaySprite == null,
+                "V31 chair must not retain the old green-chair foreground overlay.");
+            Require(!chair.FrontOverlayWhenOccupied,
+                "V31 chair must not enable a retired foreground overlay.");
+            Require(Vector2.Distance(chair.GroundAnchorPx, new Vector2(320f, 64f)) <= 0.001f,
+                "V31 chair ground anchor drifted.");
+            Require(Vector2.Distance(chair.SeatAnchorPx, new Vector2(432.085f, 248.044f)) <= 0.001f,
+                "V31 chair seat anchor drifted.");
 
-            Require(chair.BaseSprite == expectedBase, "Canonical chair base Sprite is not catalogued.");
-            Require(chair.FrontOverlaySprite == expectedFront,
-                "Canonical chair foreground Sprite is not catalogued.");
-            Require(chair.FrontOverlayWhenOccupied,
-                "Canonical chair foreground is not enabled for an occupied seat.");
-            Require(string.Equals(AssetDatabase.AssetPathToGUID(ChairFrontPath), ChairFrontGuid,
-                    StringComparison.OrdinalIgnoreCase),
-                "Canonical chair foreground GUID changed.");
-            Require(expectedFront.rect.size == expectedBase.rect.size,
-                "Chair foreground canvas differs from the chair base.");
-            Require(Mathf.Approximately(expectedFront.pixelsPerUnit, expectedBase.pixelsPerUnit),
-                "Chair foreground PPU differs from the chair base.");
-            Require(Vector2.Distance(expectedFront.pivot, expectedBase.pivot) <= 0.01f,
-                "Chair foreground pivot differs from the chair base.");
+            foreach (string suffix in new[] { "se", "sw", "nw", "ne" })
+            {
+                string path = Folder + "/swivel_chair_" + suffix + ".png";
+                Sprite sprite = RequiredSprite(path);
+                Require(sprite.rect.size == new Vector2(640f, 512f),
+                    "V31 chair canvas differs from 640x512: " + path);
+                Require(Mathf.Approximately(sprite.pixelsPerUnit, 180f),
+                    "V31 chair PPU differs from 180: " + path);
+                Require(HasVisibleAlpha(path), "V31 chair render is empty: " + path);
+            }
 
-            ValidateLimitedSubset(expectedBase);
             Debug.Log(
-                $"OFFICE_CHAIR_FOREGROUND_VALIDATION: PASS sourcePixels={ExpectedForegroundPixelCount} " +
-                $"lowerOccluderPixels=" +
-                $"{OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount} " +
-                $"cutoff=({ForegroundMinimumRuntimeX},{ForegroundMinimumRuntimeY}) " +
-                "pivotAlignment=exact catalog=linked occupiedMode=lower-rim-only " +
-                "upperBodyProtection=pose-pelvis-split");
+                "OFFICE_V31_CHAIR_DIRECTIONAL_VALIDATION: PASS sprites=4 canvas=640x512 " +
+                "ppu=180 openBack=true legacyForeground=false seatAnchor=directional");
         }
 
         public static void RunBatch()
@@ -74,124 +64,30 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        private static void ValidateLimitedSubset(Sprite expectedBase)
+        private static bool HasVisibleAlpha(string path)
         {
-            Texture2D chairBase = ReadTexture(ChairBasePath);
-            Texture2D chairFront = ReadTexture(ChairFrontPath);
+            if (!File.Exists(path)) throw new FileNotFoundException("V31 chair Sprite is missing.", path);
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
             try
             {
-                Require(chairBase.width == OfficeFurnitureAssetBuilder.CanvasWidth &&
-                        chairBase.height == OfficeFurnitureAssetBuilder.CanvasHeight,
-                    "Canonical chair base canvas is invalid.");
-                Require(chairFront.width == chairBase.width && chairFront.height == chairBase.height,
-                    "Chair foreground canvas differs from the chair base texture.");
-
-                Color32[] basePixels = chairBase.GetPixels32();
-                Color32[] frontPixels = chairFront.GetPixels32();
-                var visibleForegroundPixels = 0;
-                for (var y = 0; y < chairBase.height; y++)
-                for (var x = 0; x < chairBase.width; x++)
-                {
-                    int index = y * chairBase.width + x;
-                    Color32 basePixel = basePixels[index];
-                    Color32 frontPixel = frontPixels[index];
-                    bool expectedForeground = basePixel.a > 0 &&
-                                               x >= ForegroundMinimumRuntimeX &&
-                                               y >= ForegroundMinimumRuntimeY;
-                    bool actualForeground = frontPixel.a > 0;
-                    if (actualForeground != expectedForeground)
-                    {
-                        throw new InvalidOperationException(
-                            $"Chair foreground mask mismatch at runtime pixel ({x},{y}).");
-                    }
-
-                    if (!actualForeground) continue;
-                    visibleForegroundPixels++;
-                    if (frontPixel.r != basePixel.r || frontPixel.g != basePixel.g ||
-                        frontPixel.b != basePixel.b || frontPixel.a != basePixel.a)
-                    {
-                        throw new InvalidOperationException(
-                            $"Chair foreground is not an exact base subset at runtime pixel ({x},{y}).");
-                    }
-                }
-
-                Require(visibleForegroundPixels == ExpectedForegroundPixelCount,
-                    $"Chair foreground pixel count {visibleForegroundPixels} != {ExpectedForegroundPixelCount}.");
-                var lowerOccluderPixels = 0;
-                for (var y = 0; y < chairBase.height; y++)
-                for (var x = 0; x < chairBase.width; x++)
-                {
-                    int index = y * chairBase.width + x;
-                    if (basePixels[index].a > 0 &&
-                        OfficeSeatedUpperBodyProtectionRules.IncludesChairLowerSourcePixel(x, y))
-                        lowerOccluderPixels++;
-                }
-                Require(
-                    lowerOccluderPixels ==
-                    OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount,
-                    $"Chair lower occluder pixel count {lowerOccluderPixels} != " +
-                    $"{OfficeSeatedUpperBodyProtectionRules.ExpectedChairLowerOpaquePixelCount}.");
-                ValidateLowerOccluderAlignment(expectedBase);
+                if (!texture.LoadImage(File.ReadAllBytes(path), false))
+                    throw new InvalidDataException("Could not decode V31 chair texture: " + path);
+                Color32[] pixels = texture.GetPixels32();
+                for (var index = 0; index < pixels.Length; index++)
+                    if (pixels[index].a > 0) return true;
+                return false;
             }
             finally
             {
-                UnityEngine.Object.DestroyImmediate(chairBase);
-                UnityEngine.Object.DestroyImmediate(chairFront);
-            }
-        }
-
-        private static void ValidateLowerOccluderAlignment(Sprite baseSprite)
-        {
-            Rect crop = OfficeSeatedUpperBodyProtectionRules.ChairLowerTextureRect(baseSprite);
-            Vector2 normalizedPivot =
-                OfficeSeatedUpperBodyProtectionRules.ChairLowerNormalizedPivot(baseSprite);
-            Vector3 localPosition =
-                OfficeSeatedUpperBodyProtectionRules.ChairLowerLocalPosition(baseSprite);
-            var croppedPivotPx = new Vector2(
-                normalizedPivot.x * crop.width,
-                normalizedPivot.y * crop.height);
-            Vector2[] samples =
-            {
-                new Vector2(
-                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceX,
-                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceY),
-                new Vector2(
-                    baseSprite.rect.width - 1f,
-                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMaximumSourceY),
-                new Vector2(
-                    baseSprite.pivot.x,
-                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceY)
-            };
-            foreach (Vector2 sourcePixel in samples)
-            {
-                Vector2 canonicalLocal =
-                    (sourcePixel - baseSprite.pivot) / baseSprite.pixelsPerUnit;
-                Vector2 croppedPixel = sourcePixel - new Vector2(
-                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceX,
-                    OfficeSeatedUpperBodyProtectionRules.ChairLowerMinimumSourceY);
-                Vector2 croppedLocal =
-                    (croppedPixel - croppedPivotPx) / baseSprite.pixelsPerUnit +
-                    new Vector2(localPosition.x, localPosition.y);
-                Require(
-                    Vector2.Distance(canonicalLocal, croppedLocal) <= 0.000001f,
-                    $"Chair lower occluder pivot drifted at source pixel {sourcePixel}.");
+                UnityEngine.Object.DestroyImmediate(texture);
             }
         }
 
         private static Sprite RequiredSprite(string path)
         {
             Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
-            if (sprite == null) throw new FileNotFoundException("Chair Sprite is missing.", path);
+            if (sprite == null) throw new FileNotFoundException("V31 chair Sprite is missing.", path);
             return sprite;
-        }
-
-        private static Texture2D ReadTexture(string path)
-        {
-            if (!File.Exists(path)) throw new FileNotFoundException("Chair texture is missing.", path);
-            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
-            if (texture.LoadImage(File.ReadAllBytes(path), false)) return texture;
-            UnityEngine.Object.DestroyImmediate(texture);
-            throw new InvalidDataException("Could not decode chair texture: " + path);
         }
 
         private static void Require(bool condition, string message)

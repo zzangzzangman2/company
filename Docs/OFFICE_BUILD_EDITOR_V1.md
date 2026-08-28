@@ -2,12 +2,11 @@
 
 ## Current integration status
 
-- **`b397af9`의 pending 구매 좌클릭 회귀는 `a9c6885e`에서 수정되었다.** `HandlePointer()`의 pending 분기는
-  preview 셀을 갱신한 뒤 같은 frame에서 `Input.GetMouseButtonDown(0)` → `ConfirmPreview()`까지 진행하며
-  `OFFICE_BUILD_POINTER_COMMIT` 로그와 `DiagnosticPointerCommitCount`를 남긴다. 실제 Windows native pointer
-  1회 클릭에서 pointer commit 1회·state mutation 1회, 자금 `5,000,000→4,986,250`, ledger `1→2`,
-  inventory `0→1`, furniture `52→53`, editable `0→1`이 확인되었다. 구현은
-  `Presentation.Unity/OfficeRuntime/OfficeLayoutEditModeController.cs:230`에 있다.
+- Pending 구매 좌클릭은 preview 셀을 갱신한 같은 frame에서
+  `Input.GetMouseButtonDown(0)` → `ConfirmPreview()`까지 진행하며 `OFFICE_BUILD_POINTER_COMMIT` 로그와
+  `DiagnosticPointerCommitCount`를 남긴다. 2026-08-29 actual Windows native pointer의 CRT 워크스테이션
+  1회 클릭에서 pointer commit/state mutation `1/1`, 자금 `5,000,000→4,622,500`, ledger `1→2`,
+  inventory `0→2`, furniture `52→54`, editable `0→2`, seat `seat_player`가 확인됐다.
 - Build editor와 MainNavigation adapter는 현재 main 계보에 통합되어 있다.
 - **스킨 (2026-08-19)**: `OfficeLayoutEditModeSkin`은 `MainNavigationV2` 프레임에서 샘플링한 팔레트를 쓴다.
   크림 `#FCF0D8` 종이, 골드 `#E49C3C` 테두리와 안쪽 밝은 선, 딥틸 `#245454` 글자, 코럴 `#F07854` 위험
@@ -16,7 +15,7 @@
 - **QA 캡처 (2026-08-19)**: 이 화면은 IMGUI라 `CaptureOffscreen`의 카메라 렌더에 잡히지 않는다. 반드시
   `MainNavigationHudPlayerCapture`의 `build-editor-imgui-*.png`(전체 프레임 캡처)로 확인한다. 기존
   `build-editor-from-company-*.png`는 빈 사무실만 담고 있으므로 렌더 근거로 쓰지 않는다.
-- 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v10이며 v1~v9를 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
+- 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v11이며 v1~v10을 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
 - 진입점은 `사무실 → 회사 → 사무실 관리`다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
 - 실제 새 게임은 바닥·외곽만 있는 빈 13×13 사무실로 시작하고 카테고리별 가구를 여기서 구매·배치한다. furnished `StarterOfficeV1`은 기존 저장/QA fixture다.
 - 배치 geometry는 `OfficeRuntimeOccupancy`가 read-only query로 직접 소비한다. 알려진 가구는 canonical 4방향 profile, 이전 저장의 미등록 콘텐츠는 부분 legacy profile 없이 전체 셀 차단 fallback을 사용한다. 최종 seating/stamina 결합과 portable build 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
@@ -48,8 +47,8 @@ as a definition ID.
 
 | stable definition ID | Korean name | category | base footprint | capability / capacity | access | desired facing | nav | sprite policy | 2000 base KRW | gameplay KRW | resale | maintenance/day base |
 |---|---|---:|---:|---|---|---|---|---|---:|---:|---:|---:|
-| `desk_with_pc` | CRT 업무 책상 | Work | 2x1 | WorkDesk / 1 | cardinal | SE | block | canonical + exact Resources direction hook; safe provisional guard | 1,350,000 | 337,500 | 35% | 900 |
-| `swivel_chair` | 사무용 회전의자 | Seating | 1x1 | Seat / 1 | seat cell | NW | pass | canonical + exact Resources direction hook; safe provisional guard | 160,000 | 40,000 | 55% | 100 |
+| `desk_with_pc` | CRT 업무 책상·회전의자 세트 | Work | 2x2 set pivot (desk 2x1 + chair 1x1) | WorkDesk + bound Seat / 1 | rotated approach + seat cell | SE desk / NW chair | hard desk + owner-only chair | V31 dark-walnut exact 4-direction Resources; no legacy/mirror fallback; one atomic shop offer | 1,510,000 combined | 377,500 combined | component basis | 1,000 combined |
+| `swivel_chair` | 사무용 회전의자 (set component) | Seating | 1x1 | Seat / 1 | seat cell | NW | owner-only interaction | V31 graphite open-back exact 4-direction Resources; old green chair deleted; hidden as a separate shop offer | 160,000 component | 40,000 component | 55% | 100 |
 | `reception_counter` | 접수 카운터 | Work | 2x1 | WorkDesk / 1 | cardinal | SE | block | canonical authored/mirror | 360,000 | 90,000 | 50% | 250 |
 | `meeting_table` | 4인 회의 탁자 | Work | 2x1 | WorkDesk / 4 | cardinal | SE | block | canonical authored/mirror | 420,000 | 105,000 | 50% | 250 |
 | `document_bookcase` | 문서 책장 | Storage | 1x1 | Filing / 1 | cardinal | SE | block | canonical authored/mirror | 180,000 | 45,000 | 55% | 120 |
@@ -98,6 +97,22 @@ cancel, insufficient funds, and repeated command IDs change cash by zero.
 
 ## Placement and transaction invariants
 
+### Mandatory production tile-placement rule
+
+Every current and future placeable furniture asset must use the authoritative office tile grid as
+its only placement geometry. The semantic `origin`, rotated integer `footprint`, placement anchor,
+claimed cells, collision polygon, seat/approach sockets, shop ghost and confirmed runtime object must
+describe the same tiles. Visual nudges, scene-transform offsets and sprite bounds must never create a
+second placement truth.
+
+Directional art must be authored as a rigid physical quarter-turn. Rectangular furniture keeps
+orthogonal 90-degree mesh axes; a true-isometric projection maps those axes to the production tile
+vectors `(160,80)` and `(-160,80)`. Applying a skewed tile basis directly to mesh vertices, shearing a
+side view, substituting a mirror for a missing direction, or placing a visible ground contact outside
+the rotated footprint is prohibited. A new asset is not production-ready until all four directions
+pass exact resource selection, overlap/bounds/navigation rules and rendered ground-footprint corner
+error `<= 0.01px` in an actual Player build.
+
 - Buildable cells are restored interior walkable-floor cells only. Visible non-walkable perimeter
   floor and structural wall cells never become buildable.
 - Entire rotated footprint must fit; player furniture cannot overlap another player furniture.
@@ -126,6 +141,15 @@ capability, current cash, post-confirm cash, green/red footprint and sprite ghos
 failure reason, R rotation, confirm, ESC/right-click cancel, storage, sale confirmation, and a
 resolution-scaled right panel. It pauses `Time.timeScale` and the main bootstrap while open and
 restores both exactly on close.
+
+For the CRT workstation offer, the pointer cell is the chair/seat pivot. The ghost contains both
+the V31 dark-walnut desk and graphite open-back chair Sprite. `R` applies one rigid quarter-turn in
+the semantic diamond-tile basis to the desk footprint, CRT front/back/side, chair, approach cell,
+chair/actor facing and half-cell operator anchor. Confirm publishes
+two inventory instances plus one `OfficeSeatSlot` and one ledger entry only after the full set
+passes bounds, exact occupied-cell overlap, floor, entrance, reachability, access and seat-egress
+checks. The first four purchases bind to the first missing family seat ID, so actual work routing
+uses the rotated chair immediately after the actor-preserving runtime rebuild.
 
 Company-hub / main-UI integration (no sixth bottom tab):
 
@@ -250,6 +274,9 @@ Passed with Unity 6000.3.21f1:
   pivot; Point/no mip/uncompressed importer; front/rear classification; magenta fringe zero;
 - `FAMILY_COMPANY_OFFICE_GRID_T1_VALIDATION: PASS`;
 - `OFFICE_FURNITURE_TILE_SNAP_VALIDATION: PASS`;
+- `FAMILY_COMPANY_OFFICE_V31_WORKSTATION_VISUAL: PASS`: actual Windows Player renders four exact
+  directional desk/chair sets with no legacy flip, orthogonal 90-degree furniture mesh axes,
+  exact `(160,80)` / `(-160,80)` projected tile basis and maximum tile-corner residual `0.0001px`;
 - `OFFICE_ISOMETRIC_DEPTH_VALIDATION: PASS`;
 - `OFFICE_LAYOUT_EDIT_RULES_VALIDATION: PASS`;
 - runtime interaction offer/lifecycle and occupancy-presence validations: PASS;

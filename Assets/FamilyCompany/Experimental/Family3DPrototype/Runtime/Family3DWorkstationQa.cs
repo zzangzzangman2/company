@@ -28,6 +28,7 @@ namespace FamilyCompany.Experimental.Family3D
         public Vector3 SemanticSeatGroundWorld => transform.position;
         public Vector3 SeatGroundWorld => transform.TransformPoint(resolvedSeatGroundLocal);
         public Vector3 ChairGroundWorld { get; private set; }
+        public string WorkstationSetId { get; private set; } = string.Empty;
         public Vector3 ForwardWorld => transform.forward;
         public Quaternion GridRotationWorld => transform.rotation;
         public Quaternion SeatedRotationWorld =>
@@ -66,6 +67,7 @@ namespace FamilyCompany.Experimental.Family3D
         public static Family3DWorkstationQa Create(
             Transform parent,
             int layer,
+            string workstationId,
             Vector3 seatGroundWorld,
             Vector3 gridRightWorld,
             Vector3 forwardWorld,
@@ -91,7 +93,13 @@ namespace FamilyCompany.Experimental.Family3D
                     nameof(deskFootprintWidthWorld),
                     "Workstation semantic footprint must have positive width and depth.");
 
-            var root = new GameObject("FatherV19_Full3D_CrtWorkstation_QaOnly");
+            string safeId = string.IsNullOrWhiteSpace(workstationId)
+                ? "unassigned"
+                : workstationId.Trim();
+            // One root owns the complete desk/chair set. Placement, relocation and rotation can
+            // therefore never leave the chair behind or break its authored sitting alignment.
+            var root = new GameObject(
+                "V31_AtomicWorkstationSet_OriginalChair_" + safeId + "_QaOnly");
             root.transform.SetParent(parent, false);
             // Furniture roots are a map-grid contract. Keep the desk, CRT and keyboard on the
             // exact canonical seat axis so later desks/tables share one placement rule. Camera
@@ -102,6 +110,7 @@ namespace FamilyCompany.Experimental.Family3D
             SetLayerRecursively(root, layer);
 
             var result = root.AddComponent<Family3DWorkstationQa>();
+            result.WorkstationSetId = safeId;
             result.seatedVisualYawOffsetDegrees = visualYawOffsetDegrees;
             result.actorModelForwardYawOffsetDegrees = modelForwardYawOffsetDegrees;
             result.deskFootprintCenterLocal = root.transform.InverseTransformPoint(
@@ -132,7 +141,15 @@ namespace FamilyCompany.Experimental.Family3D
                 result.ChairToMonitorFacingErrorDegrees > 0.1f ||
                 result.MonitorScreenToSeatFacingErrorDegrees > 0.1f)
                 throw new InvalidOperationException(
-                    "Screen, keyboard, chair and actor must share one physical centreline.");
+                    "Screen, keyboard, chair and actor centreline failed: " +
+                    "seatToKeyboard=" +
+                    result.SeatToKeyboardFacingErrorDegrees.ToString("F4") +
+                    " seatToMonitor=" +
+                    result.SeatToMonitorFacingErrorDegrees.ToString("F4") +
+                    " chairToMonitor=" +
+                    result.ChairToMonitorFacingErrorDegrees.ToString("F4") +
+                    " screenToSeat=" +
+                    result.MonitorScreenToSeatFacingErrorDegrees.ToString("F4") + ".");
             return result;
         }
 
@@ -270,21 +287,28 @@ namespace FamilyCompany.Experimental.Family3D
             if (Mathf.Abs(serviceSide) < 0.5f) serviceSide = 1f;
             float drawerRight = deskRight + serviceSide * deskWidth * 0.34f;
             float drawerForward = deskForward + deskDepth * 0.03f;
+            float drawerWidth = Mathf.Min(0.20f * h, deskWidth * 0.24f);
+            float drawerDepth = Mathf.Min(0.25f * h, deskDepth * 0.68f);
+            // Drawer details belong to the cabinet's own front plane. Using the whole desk's
+            // frontForward left all three rails and handles floating in the knee opening, where
+            // the isometric view made them read as jagged spikes beside the left leg.
+            float drawerFaceForward = drawerForward - drawerDepth * 0.5f;
             AddGridBox("Desk_Drawers", GridLocal(drawerRight, 0.255f * h, drawerForward),
-                Mathf.Min(0.20f * h, deskWidth * 0.24f),
+                drawerWidth,
                 0.32f * h,
-                Mathf.Min(0.25f * h, deskDepth * 0.68f),
+                drawerDepth,
                 deskWood,
                 layer);
             for (var drawer = 0; drawer < 3; drawer++)
             {
                 float y = (0.17f + drawer * 0.09f) * h;
                 AddGridBox("Desk_DrawerLine_" + drawer,
-                    GridLocal(drawerRight, y, frontForward - 0.010f * h),
-                    0.165f * h, 0.010f * h, 0.010f * h, deskEdge, layer);
+                    GridLocal(drawerRight, y, drawerFaceForward - 0.005f * h),
+                    drawerWidth * 0.82f, 0.010f * h, 0.010f * h, deskEdge, layer);
                 AddGridBox("Desk_DrawerHandle_" + drawer,
-                    GridLocal(drawerRight, y + 0.028f * h, frontForward - 0.018f * h),
-                    0.07f * h, 0.015f * h, 0.018f * h, chairTrim, layer);
+                    GridLocal(drawerRight, y + 0.028f * h,
+                        drawerFaceForward - 0.012f * h),
+                    drawerWidth * 0.35f, 0.015f * h, 0.018f * h, chairTrim, layer);
             }
 
             // CRT, keyboard, mouse, phone, papers and a mug make this read as a working desk in
@@ -378,10 +402,9 @@ namespace FamilyCompany.Experimental.Family3D
                     0.535f * h, deskForward - deskDepth * 0.08f),
                 0.045f * h, 0.08f * h, mugTeal, layer);
 
-            // The screen face is the -gridForward side: bezel/text are authored at decreasing
-            // forward coordinates. Its real mesh normal is perpendicular to gridRight, not simply
-            // -gridForward, because the mapped tile axes are oblique. Place the chair on that exact
-            // front normal, close enough for this short avatar to reach the aligned keyboard.
+            // Restore the exact user-selected V29 chair/actor/CRT composition. The screen face is
+            // the -gridForward side, and its real mesh normal is perpendicular to gridRight in
+            // this oblique mapped basis.
             Vector3 screenOutwardLocal = Vector3.Cross(
                 Vector3.up,
                 gridRightLocalUnit).normalized;
@@ -389,13 +412,11 @@ namespace FamilyCompany.Experimental.Family3D
                 screenOutwardLocal = -screenOutwardLocal;
             Vector3 keyboardGroundForSeatLocal = transform.InverseTransformPoint(KeyboardWorld);
             keyboardGroundForSeatLocal.y = 0f;
-            // Preserve the exact screen-front line but set reach from the real keyboard. The first
-            // screen-normal proof used a screen-based distance and left 0.7706 world units to the
-            // keys, visibly stretching both arms. V24's 0.24h stopped desk penetration but remained
-            // visually too close: the hands read against the CRT instead of on the keys. 0.28h
-            // moves the chair back without returning to the rejected long-arm reach.
+            // This is the exact V29 screen-front reach point shown in the user's reference. Keep
+            // chair and actor here together; the V31 change is grouping only, not a redesign.
             resolvedSeatGroundLocal = keyboardGroundForSeatLocal +
                                       screenOutwardLocal * (0.28f * h);
+
             Vector3 deskFrontGroundLocal = GridLocal(deskRight, 0f, frontForward);
             Vector3 keyboardGroundMeasuredLocal = keyboardGroundForSeatLocal;
             KeyboardInsetFromDeskFrontWorld = -Vector3.Dot(

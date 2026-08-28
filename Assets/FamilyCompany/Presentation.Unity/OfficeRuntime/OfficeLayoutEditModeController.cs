@@ -18,6 +18,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     public sealed class OfficeLayoutEditModeController : MonoBehaviour
     {
         public const string NavigationEntryId = "company.hub.build_editor";
+        private const string PurchasePreviewWorkSurfaceId = "__purchase_preview__";
+        private const string PurchasePreviewChairId = "__purchase_preview__:chair";
+        private const string PurchasePreviewSeatId = "__purchase_preview__:seat";
 
         private enum PendingSource { None, Purchase, Stored }
         private enum Confirmation { None, Store, Sell }
@@ -152,7 +155,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return false;
             }
             OfficeFurnitureDefinition definition = OfficeFurnitureCatalog.Find(definitionId);
-            if (definition == null || !definition.IsPurchasable)
+            if (definition == null || !OfficeFurnitureCatalog.IsShopOffer(definition.DefinitionId))
             {
                 failure = "구매 가능한 가구 정의가 아닙니다: " + (definitionId ?? string.Empty);
                 return false;
@@ -372,7 +375,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (_pendingSource == PendingSource.Purchase)
             {
                 OfficeFurnitureDefinition definition = OfficeFurnitureCatalog.Require(_pendingDefinitionId);
-                long price = OfficeFurnitureEconomyConfig.GameplayPrice(definition.PurchasePriceWon);
+                long price = OfficeFurnitureCatalog.GameplayShopPrice(definition);
                 if (State.Company.CashWon < price) _previewMessage = "자금 부족";
             }
             RefreshVisuals();
@@ -382,9 +385,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (_pendingSource != PendingSource.None)
             {
+                if (_pendingSource == PendingSource.Purchase &&
+                    OfficeFurnitureCatalog.IsWorkstationSetOffer(_pendingDefinitionId))
+                    return OfficeLayoutEditRules.PlaceWorkstation(
+                        Grid,
+                        PurchasePreviewWorkSurfaceId,
+                        PurchasePreviewChairId,
+                        PurchasePreviewSeatId,
+                        _previewOrigin,
+                        _previewRotation);
                 string id = _pendingSource == PendingSource.Stored
                     ? _pendingStoredInstanceId
-                    : "__purchase_preview__";
+                    : PurchasePreviewWorkSurfaceId;
                 return OfficeLayoutEditRules.PlaceFurniture(
                     Grid, id, _pendingDefinitionId, _previewOrigin, _previewRotation);
             }
@@ -432,13 +444,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (_pendingSource == PendingSource.Purchase)
             {
                 string instanceId = NextInstanceId(_pendingDefinitionId);
-                result = OfficeFurnitureTransactionService.PurchaseAndPlace(
-                    State,
-                    "office-furniture-buy:" + instanceId,
-                    instanceId,
-                    _pendingDefinitionId,
-                    _previewOrigin,
-                    _previewRotation);
+                result = OfficeFurnitureCatalog.IsWorkstationSetOffer(_pendingDefinitionId)
+                    ? OfficeFurnitureTransactionService.PurchaseAndPlaceWorkstation(
+                        State,
+                        "office-furniture-buy:" + instanceId,
+                        instanceId,
+                        _previewOrigin,
+                        _previewRotation)
+                    : OfficeFurnitureTransactionService.PurchaseAndPlace(
+                        State,
+                        "office-furniture-buy:" + instanceId,
+                        instanceId,
+                        _pendingDefinitionId,
+                        _previewOrigin,
+                        _previewRotation);
             }
             else if (_pendingSource == PendingSource.Stored)
             {
@@ -538,7 +557,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             string prefix = "furn-" + definitionId + "-" + State.Time.ElapsedMinutes + "-";
             string candidate;
             do candidate = prefix + (++_instanceSequence).ToString("D4");
-            while (Inventory.Find(candidate) != null);
+            while (Inventory.Find(candidate) != null ||
+                   Inventory.Find(OfficeFurnitureTransactionService.WorkstationChairInstanceId(candidate)) != null);
             return candidate;
         }
 
@@ -551,7 +571,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 ? new Color(0.28f, 0.92f, 0.45f, 0.48f)
                 : new Color(0.96f, 0.25f, 0.22f, 0.52f);
             string targetId = _pendingSource == PendingSource.Purchase
-                ? "__purchase_preview__"
+                ? PurchasePreviewWorkSurfaceId
                 : (_pendingSource == PendingSource.Stored ? _pendingStoredInstanceId : _selectedId);
             if (_previewEdit.Success)
             {
@@ -559,15 +579,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             else
             {
-                OfficeFurnitureDefinition definition = OfficeFurnitureCatalog.Find(TargetDefinitionId());
-                if (definition != null)
+                OfficeWorkstationPlacement workstation = TargetWorkstationPlacement();
+                if (workstation != null)
                 {
-                    OfficeGridCoordinate footprint = definition.FootprintFor(_previewRotation);
-                    for (int y = 0; y < footprint.Y; y++)
-                    for (int x = 0; x < footprint.X; x++)
-                    {
-                        var cell = new OfficeGridCoordinate(_previewOrigin.X + x, _previewOrigin.Y + y);
+                    foreach (OfficeGridCoordinate cell in
+                             OfficeLayoutEditRules.FootprintCells(workstation.WorkSurface)
+                                 .Concat(OfficeLayoutEditRules.FootprintCells(workstation.Chair))
+                                 .Concat(new[] { workstation.Seat.ApproachCell }))
                         if (Grid.Contains(cell)) DrawCell(cell, tint);
+                }
+                else
+                {
+                    OfficeFurnitureDefinition definition = OfficeFurnitureCatalog.Find(TargetDefinitionId());
+                    if (definition != null)
+                    {
+                        OfficeGridCoordinate footprint = definition.FootprintFor(_previewRotation);
+                        for (int y = 0; y < footprint.Y; y++)
+                        for (int x = 0; x < footprint.X; x++)
+                        {
+                            var cell = new OfficeGridCoordinate(_previewOrigin.X + x, _previewOrigin.Y + y);
+                            if (Grid.Contains(cell)) DrawCell(cell, tint);
+                        }
                     }
                 }
             }
@@ -577,6 +609,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private string TargetDefinitionId()
         {
             if (_pendingSource != PendingSource.None) return _pendingDefinitionId;
+            OfficeSeatSlot owner = Grid?.SeatSlots.FirstOrDefault(item =>
+                string.Equals(item.ChairFurnitureId, _selectedId, StringComparison.Ordinal) ||
+                string.Equals(item.WorkSurfaceFurnitureId, _selectedId, StringComparison.Ordinal));
+            if (owner?.HasWorkstationBinding == true) return OfficeGridLayouts.DeskWithPcKind;
             return Inventory?.Find(_selectedId)?.DefinitionId ?? string.Empty;
         }
 
@@ -599,6 +635,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void DrawGhost(bool valid)
         {
+            OfficeWorkstationPlacement workstation = TargetWorkstationPlacement();
+            if (workstation != null)
+            {
+                _ghost = new GameObject("OfficeBuildWorkstationGhost");
+                _ghost.transform.SetParent(transform, false);
+                DrawGhostPart(workstation.WorkSurface, valid, 30001);
+                DrawGhostPart(workstation.Chair, valid, 30002);
+                return;
+            }
             OfficeFurnitureVisualCatalog catalog = _runtime.World.FurniturePresenter.VisualCatalog;
             if (!OfficeBuildFurnitureVisualLibrary.TryResolve(
                     catalog, TargetDefinitionId(), _previewRotation,
@@ -615,6 +660,63 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             renderer.flipX = flipX;
             renderer.sortingLayerName = "Default";
             renderer.sortingOrder = 30001;
+            renderer.color = valid
+                ? new Color(0.45f, 1f, 0.58f, 0.62f)
+                : new Color(1f, 0.38f, 0.34f, 0.62f);
+        }
+
+        private OfficeWorkstationPlacement TargetWorkstationPlacement()
+        {
+            if (_pendingSource == PendingSource.Purchase &&
+                OfficeFurnitureCatalog.IsWorkstationSetOffer(_pendingDefinitionId))
+                return OfficeLayoutEditRules.CreateWorkstationPlacement(
+                    PurchasePreviewWorkSurfaceId,
+                    PurchasePreviewChairId,
+                    PurchasePreviewSeatId,
+                    _previewOrigin,
+                    _previewRotation);
+            if (_pendingSource != PendingSource.None || _selectedId.Length == 0) return null;
+
+            OfficeSeatSlot owner = Grid.SeatSlots.FirstOrDefault(item =>
+                string.Equals(item.ChairFurnitureId, _selectedId, StringComparison.Ordinal) ||
+                string.Equals(item.WorkSurfaceFurnitureId, _selectedId, StringComparison.Ordinal));
+            OfficeFurnitureInstanceState selected = Inventory.Find(_selectedId);
+            if (owner == null || selected == null || !owner.HasWorkstationBinding) return null;
+            var seatCell = new OfficeGridCoordinate(
+                owner.Cell.X + _previewOrigin.X - selected.GridOrigin.X,
+                owner.Cell.Y + _previewOrigin.Y - selected.GridOrigin.Y);
+            OfficeFurnitureFacing deskFacing = string.Equals(
+                owner.WorkSurfaceFurnitureId,
+                _selectedId,
+                StringComparison.Ordinal)
+                ? _previewRotation
+                : OfficeLayoutEditRules.QuarterTurnClockwise(
+                    OfficeLayoutEditRules.QuarterTurnClockwise(_previewRotation));
+            return OfficeLayoutEditRules.CreateWorkstationPlacement(
+                owner.WorkSurfaceFurnitureId,
+                owner.ChairFurnitureId,
+                owner.SeatId,
+                seatCell,
+                deskFacing);
+        }
+
+        private void DrawGhostPart(PlacedOfficeFurniture part, bool valid, int sortingOrder)
+        {
+            OfficeFurnitureVisualCatalog catalog = _runtime.World.FurniturePresenter.VisualCatalog;
+            if (!OfficeBuildFurnitureVisualLibrary.TryResolve(
+                    catalog,
+                    part.KindId,
+                    part.Facing,
+                    out OfficeFurnitureVisualDefinition visual,
+                    out bool flipX)) return;
+            var child = new GameObject("OfficeBuildGhost_" + part.KindId);
+            child.transform.SetParent(_ghost.transform, false);
+            child.transform.position = _runtime.World.Presenter.SubcellAnchorWorld(part.PlacementAnchor);
+            SpriteRenderer renderer = child.AddComponent<SpriteRenderer>();
+            renderer.sprite = visual.BaseSprite;
+            renderer.flipX = flipX;
+            renderer.sortingLayerName = "Default";
+            renderer.sortingOrder = sortingOrder;
             renderer.color = valid
                 ? new Color(0.45f, 1f, 0.58f, 0.62f)
                 : new Color(1f, 0.38f, 0.34f, 0.62f);
@@ -723,7 +825,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float detailsHeight = _skin.Round(190);
             float catalogHeight = Mathf.Max(_skin.Round(180), panel.yMax - y - detailsHeight - pad);
             Rect scrollRect = new Rect(x, y, width, catalogHeight);
-            List<OfficeFurnitureDefinition> definitions = OfficeFurnitureCatalog.Purchasable
+            List<OfficeFurnitureDefinition> definitions = OfficeFurnitureCatalog.ShopOffers
                 .Where(item => !CategoryCycle[_categoryIndex].HasValue ||
                                item.Category == CategoryCycle[_categoryIndex].Value)
                 .ToList();
@@ -770,9 +872,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float textWidth = rect.xMax - x - _skin.Round(92);
             GUI.Label(new Rect(x, rect.y + _skin.Round(7), textWidth, _skin.Round(22)),
                 definition.KoreanDisplayName, _skin.TitleStyle);
-            long price = OfficeFurnitureEconomyConfig.GameplayPrice(definition.PurchasePriceWon);
+            long price = OfficeFurnitureCatalog.GameplayShopPrice(definition);
+            string footprint = OfficeFurnitureCatalog.IsWorkstationSetOffer(definition.DefinitionId)
+                ? "2×2 세트"
+                : definition.BaseWidth + "×" + definition.BaseHeight;
             GUI.Label(new Rect(x, rect.y + _skin.Round(31), textWidth, _skin.Round(20)),
-                $"{Won(price)} · {definition.BaseWidth}×{definition.BaseHeight} · {CapabilityText(definition)}",
+                $"{Won(price)} · {footprint} · {CapabilityText(definition)}",
                 _skin.HintStyle);
             int owned = Inventory.CountOwned(definition.DefinitionId);
             int placed = Inventory.CountPlaced(definition.DefinitionId);
@@ -808,10 +913,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             GUI.Label(new Rect(x, y, width, _skin.Round(24)), definition.KoreanDisplayName, _skin.TitleStyle);
             y += _skin.Round(26);
-            long price = OfficeFurnitureEconomyConfig.GameplayPrice(definition.PurchasePriceWon);
+            long price = OfficeFurnitureCatalog.GameplayShopPrice(definition);
             long after = _pendingSource == PendingSource.Purchase ? State.Company.CashWon - price : State.Company.CashWon;
+            string footprint = OfficeFurnitureCatalog.IsWorkstationSetOffer(definition.DefinitionId)
+                ? "2×2 책상+의자 세트"
+                : definition.BaseWidth + "×" + definition.BaseHeight;
             GUI.Label(new Rect(x, y, width, _skin.Round(20)),
-                $"{definition.BaseWidth}×{definition.BaseHeight} · {CapabilityText(definition)} · 유지비 {Won(definition.DailyMaintenanceWon)}/일",
+                $"{footprint} · {CapabilityText(definition)} · 유지비 {Won(OfficeFurnitureCatalog.ShopDailyMaintenanceWon(definition))}/일",
                 _skin.HintStyle);
             y += _skin.Round(22);
             GUI.Label(new Rect(x, y, width, _skin.Round(22)),

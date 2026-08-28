@@ -35,7 +35,9 @@ namespace FamilyCompany.Editor
             HighMotionCharacterArtBuilder.GetFrameNames("older_sister");
         private static readonly string[] OfficeModuleNames =
         {
-            "office_workstation", "office_swivel_chair", "office_reception_counter", "office_meeting_table",
+            // The first two atlas cells are retired. Leave them unnamed so a project rebuild can
+            // never recreate the deleted legacy workstation/chair module Sprites.
+            "", "", "office_reception_counter", "office_meeting_table",
             "office_document_bookcase", "office_fax_copier", "office_water_dispenser", "office_sofa",
             "office_coffee_table", "office_potted_plant", "office_partition", "office_filing_cabinet"
         };
@@ -728,6 +730,7 @@ namespace FamilyCompany.Editor
                 {
                     var frameIndex = row * columns + column;
                     var frameName = frameNames[frameIndex];
+                    if (string.IsNullOrWhiteSpace(frameName)) continue;
                     var left = Mathf.RoundToInt(column * texture.width / (float)columns);
                     var right = Mathf.RoundToInt((column + 1) * texture.width / (float)columns);
                     var top = Mathf.RoundToInt(row * texture.height / (float)rows);

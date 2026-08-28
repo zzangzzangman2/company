@@ -46,6 +46,28 @@ namespace FamilyCompany.Simulation.OfficeLayout
     }
 
     /// <summary>
+    /// The complete semantic result of placing one purchasable CRT workstation set.  The chair
+    /// cell is the stable placement pivot: turning the set never separates the desk, chair,
+    /// approach cell or the subcell operator anchor used by the seated character.
+    /// </summary>
+    public sealed class OfficeWorkstationPlacement
+    {
+        public OfficeWorkstationPlacement(
+            PlacedOfficeFurniture workSurface,
+            PlacedOfficeFurniture chair,
+            OfficeSeatSlot seat)
+        {
+            WorkSurface = workSurface ?? throw new ArgumentNullException(nameof(workSurface));
+            Chair = chair ?? throw new ArgumentNullException(nameof(chair));
+            Seat = seat ?? throw new ArgumentNullException(nameof(seat));
+        }
+
+        public PlacedOfficeFurniture WorkSurface { get; }
+        public PlacedOfficeFurniture Chair { get; }
+        public OfficeSeatSlot Seat { get; }
+    }
+
+    /// <summary>
     /// Every edit the layout editor can perform, as pure grid to grid transforms.
     ///
     /// The point of putting these here rather than in the editor UI is that one move has to change
@@ -94,6 +116,93 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 grid,
                 grid.Furniture.Concat(new[] { placed }).ToList(),
                 grid.SeatSlots.ToList());
+        }
+
+        /// <summary>
+        /// Atomically places the exact production CRT desk and swivel chair as one workstation.
+        /// <paramref name="seatCell"/> is the pointer/grid anchor.  <paramref name="deskFacing"/>
+        /// advances through the same four 90-degree facings as every other build-mode object.
+        /// </summary>
+        public static OfficeLayoutEditResult PlaceWorkstation(
+            OfficeGrid grid,
+            string workSurfaceFurnitureId,
+            string chairFurnitureId,
+            string seatId,
+            OfficeGridCoordinate seatCell,
+            OfficeFurnitureFacing deskFacing)
+        {
+            if (grid == null) throw new ArgumentNullException(nameof(grid));
+            if (Find(grid, workSurfaceFurnitureId) != null || Find(grid, chairFurnitureId) != null ||
+                grid.SeatSlots.Any(item => Same(item.SeatId, seatId)))
+                return OfficeLayoutEditResult.Fail(
+                    OfficeLayoutEditFailure.OverlapsFurniture,
+                    "같은 ID의 책상·의자 세트가 이미 배치되어 있습니다.");
+
+            OfficeWorkstationPlacement placement = CreateWorkstationPlacement(
+                workSurfaceFurnitureId,
+                chairFurnitureId,
+                seatId,
+                seatCell,
+                deskFacing);
+            return Rebuild(
+                grid,
+                grid.Furniture.Concat(new[] { placement.WorkSurface, placement.Chair }).ToList(),
+                grid.SeatSlots.Concat(new[] { placement.Seat }).ToList());
+        }
+
+        public static OfficeWorkstationPlacement CreateWorkstationPlacement(
+            string workSurfaceFurnitureId,
+            string chairFurnitureId,
+            string seatId,
+            OfficeGridCoordinate seatCell,
+            OfficeFurnitureFacing deskFacing)
+        {
+            OfficeFurnitureDefinition deskDefinition =
+                OfficeFurnitureCatalog.Require(OfficeGridLayouts.DeskWithPcKind);
+            OfficeFurnitureDefinition chairDefinition =
+                OfficeFurnitureCatalog.Require(OfficeGridLayouts.SwivelChairKind);
+            OfficeGridCoordinate deskFootprint = deskDefinition.FootprintFor(OfficeFurnitureFacing.SouthEast);
+            var desk = new PlacedOfficeFurniture(
+                workSurfaceFurnitureId,
+                deskDefinition.DefinitionId,
+                new OfficeGridCoordinate(seatCell.X, seatCell.Y + 1),
+                deskFootprint.X,
+                deskFootprint.Y,
+                OfficeFurnitureFacing.SouthEast,
+                deskDefinition.BlocksNavigation);
+            var chair = new PlacedOfficeFurniture(
+                chairFurnitureId,
+                chairDefinition.DefinitionId,
+                seatCell,
+                1,
+                1,
+                OfficeFurnitureFacing.NorthWest,
+                chairDefinition.BlocksNavigation);
+            OfficeGridCoordinate approach = new OfficeGridCoordinate(seatCell.X, seatCell.Y - 1);
+            var operatorAnchor = new OfficeGridSubcellAnchor(seatCell.X * 2 + 1, seatCell.Y * 2 + 1);
+            OfficeFurnitureFacing seatFacing = OfficeFurnitureFacing.NorthWest;
+
+            int turns = ((int)deskFacing - (int)OfficeFurnitureFacing.SouthEast + 4) & 3;
+            for (int turn = 0; turn < turns; turn++)
+            {
+                desk = RotateAroundCell(desk, seatCell);
+                chair = RotateAroundCell(chair, seatCell);
+                approach = RotateCellClockwise(approach, seatCell);
+                operatorAnchor = RotateAnchorClockwise(operatorAnchor, seatCell);
+                seatFacing = QuarterTurnClockwise(seatFacing);
+            }
+
+            return new OfficeWorkstationPlacement(
+                desk,
+                chair,
+                new OfficeSeatSlot(
+                    seatId,
+                    chair.FurnitureId,
+                    desk.FurnitureId,
+                    seatCell,
+                    approach,
+                    operatorAnchor,
+                    seatFacing));
         }
 
         public static OfficeLayoutEditResult MoveFurniture(

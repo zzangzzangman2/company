@@ -398,9 +398,9 @@ namespace FamilyCompany.Editor.OfficeGridQa
             if (!bootstrap.FurniturePresenter.TryGetDefinition(item.FurnitureId, out OfficeFurnitureVisualDefinition definition))
                 return false;
             if (item.KindId == OfficeGridLayouts.SwivelChairKind)
-                return definition.FrontOverlaySprite != null && definition.FrontOverlayWhenOccupied;
+                return definition.FrontOverlaySprite == null && !definition.FrontOverlayWhenOccupied;
             if (item.KindId == OfficeGridLayouts.DeskWithPcKind)
-                return definition.FrontOverlaySprite != null && definition.FrontOverlayWhenOccupied;
+                return definition.FrontOverlaySprite == null && !definition.FrontOverlayWhenOccupied;
             return definition.FrontOverlaySprite == null;
         }
 
@@ -416,22 +416,12 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "Chair renderer is missing for mask QA.");
             Require(chair.sortingOrder < mover.TargetRenderer.sortingOrder,
                 worker.MemberId + " chair base renders in front of the character.");
-            Require(bootstrap.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
-                    seat.ChairFurnitureId,
-                    out SpriteRenderer chairOverlay) && chairOverlay.enabled,
-                worker.MemberId + " chair front overlay is not active.");
-            Require(chairOverlay.sortingOrder > mover.TargetRenderer.sortingOrder,
-                worker.MemberId + " chair front overlay does not render above the character.");
-            Require(bootstrap.FurniturePresenter.FrontOverlayRenderers.TryGetValue(
-                    seat.WorkSurfaceFurnitureId,
-                    out SpriteRenderer deskOverlay) && deskOverlay.enabled,
-                worker.MemberId + " desk front overlay is not active.");
-            int faceOverlap = CountOpaqueOverlap(deskOverlay, mover.TargetRenderer, 0.62f, 1f);
-            int lowerBodyOverlap = CountOpaqueOverlap(deskOverlay, mover.TargetRenderer, 0f, 0.58f);
-            Require(faceOverlap == 0,
-                $"{worker.MemberId} desk overlay covers {faceOverlap} opaque head/face samples.");
-            Require(lowerBodyOverlap > 0,
-                worker.MemberId + " lower body is not naturally occluded by the desk front edge.");
+            Require(!bootstrap.FurniturePresenter.FrontOverlayRenderers.ContainsKey(
+                    seat.ChairFurnitureId),
+                worker.MemberId + " retained the retired green-chair foreground overlay.");
+            Require(!bootstrap.FurniturePresenter.FrontOverlayRenderers.ContainsKey(
+                    seat.WorkSurfaceFurnitureId),
+                worker.MemberId + " retained the retired gold-desk foreground overlay.");
         }
 
         private static int CountOpaqueOverlap(

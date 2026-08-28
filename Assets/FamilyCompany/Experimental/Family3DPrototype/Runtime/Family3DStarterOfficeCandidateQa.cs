@@ -110,6 +110,12 @@ namespace FamilyCompany.Experimental.Family3D
         private readonly List<string> fatherDeskObservedPhases = new List<string>();
         private Family3DWorkstationQa fatherDeskWorkstation;
         private OfficeSeatSlot fatherDeskSeat;
+        private readonly List<Family3DWorkstationQa> v27Workstations =
+            new List<Family3DWorkstationQa>();
+        private readonly List<OfficeSeatSlot> v27WorkstationSeats =
+            new List<OfficeSeatSlot>();
+        private int v27ExpectedWorkstationCount;
+        private int v27VisibleLegacyWorkstationRendererCount;
         private Vector2Int fatherDeskFootprintOrigin;
         private Vector2Int fatherDeskFootprintSize;
         private string[] fatherDeskBlockedCells = Array.Empty<string>();
@@ -689,7 +695,7 @@ namespace FamilyCompany.Experimental.Family3D
                 if (!seat.HasWorkstationBinding)
                     throw new InvalidOperationException(
                         "The real Father seat has no bound work surface.");
-                SetupFatherDeskWorkstation(fatherBinding, seat, Camera.main);
+                SetupV27Workstations(fatherBinding, seat, Camera.main);
             }
             catch (Exception exception)
             {
@@ -712,6 +718,10 @@ namespace FamilyCompany.Experimental.Family3D
             yield return null;
             yield return new WaitForEndOfFrame();
 
+            // Measure only this real entrance-to-seat run. A valid proof may have blocked move
+            // attempts while steering, but it may never commit a pose inside a desk, an unowned
+            // chair, or another actor.
+            starter.World.Occupancy.ResetMetrics();
             fatherDeskWorkProofActive = true;
             if (!father.QaBeginSeatedWorkAtSeat(seat.SeatId, "father-v19-full-3d-desk-work"))
             {
@@ -752,9 +762,33 @@ namespace FamilyCompany.Experimental.Family3D
                 yield return null;
             }
 
+            RefreshV27SourceFurnitureMask();
+            v27VisibleLegacyWorkstationRendererCount =
+                CountVisibleLegacyWorkstationRenderers();
+            if (v27Workstations.Count != v27ExpectedWorkstationCount ||
+                v27VisibleLegacyWorkstationRendererCount != 0 ||
+                starter.World.Occupancy.StaticViolationCount != 0 ||
+                starter.World.Occupancy.InteractionViolationCount != 0 ||
+                starter.World.Occupancy.AgentPenetrationCount != 0)
+            {
+                Fail(
+                    "Atomic workstation/avoidance proof failed: created=" +
+                    v27Workstations.Count + "/" + v27ExpectedWorkstationCount +
+                    " visibleLegacyRenderers=" +
+                    v27VisibleLegacyWorkstationRendererCount +
+                    " staticViolations=" +
+                    starter.World.Occupancy.StaticViolationCount +
+                    " interactionViolations=" +
+                    starter.World.Occupancy.InteractionViolationCount +
+                    " agentPenetrations=" +
+                    starter.World.Occupancy.AgentPenetrationCount + ".");
+                Application.Quit(2);
+                yield break;
+            }
+
             fatherDeskWorkProofActive = false;
             fatherDeskWorkProofCompleted = true;
-            WriteRuntimeReceipt("FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE");
+            WriteRuntimeReceipt("FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE");
             Debug.Log(
                 "FAMILY_3D_FATHER_DESK_WORK_QA: COMPLETE | phases=" +
                 string.Join(">", fatherDeskObservedPhases) +
@@ -766,16 +800,56 @@ namespace FamilyCompany.Experimental.Family3D
             Application.Quit(0);
         }
 
-        private void SetupFatherDeskWorkstation(
+        private void SetupV27Workstations(
+            Binding fatherBinding,
+            OfficeSeatSlot fatherSeat,
+            Camera sourceOfficeCamera)
+        {
+            v27Workstations.Clear();
+            v27WorkstationSeats.Clear();
+            v27ExpectedWorkstationCount = 0;
+            fatherDeskWorkstation = null;
+
+            for (var index = 0; index < starter.World.Grid.SeatSlots.Count; index++)
+            {
+                OfficeSeatSlot seat = starter.World.Grid.SeatSlots[index];
+                if (!seat.HasWorkstationBinding)
+                    continue;
+                v27ExpectedWorkstationCount++;
+                bool isFatherSeat = string.Equals(
+                    seat.SeatId,
+                    fatherSeat.SeatId,
+                    StringComparison.Ordinal);
+                Family3DWorkstationQa workstation = CreateV27Workstation(
+                    fatherBinding,
+                    seat,
+                    sourceOfficeCamera,
+                    isFatherSeat);
+                v27Workstations.Add(workstation);
+                v27WorkstationSeats.Add(seat);
+                HideSourceFurniture(seat.ChairFurnitureId);
+                HideSourceFurniture(seat.WorkSurfaceFurnitureId);
+            }
+
+            if (fatherDeskWorkstation == null)
+                throw new InvalidOperationException(
+                    "Father V27 workstation was not created from the live seat set.");
+            if (v27Workstations.Count != v27ExpectedWorkstationCount)
+                throw new InvalidOperationException(
+                    "Not every semantic workstation received a V27 visual replacement.");
+        }
+
+        private Family3DWorkstationQa CreateV27Workstation(
             Binding fatherBinding,
             OfficeSeatSlot seat,
-            Camera sourceOfficeCamera)
+            Camera sourceOfficeCamera,
+            bool captureFatherReceipt)
         {
             if (!starter.World.FurniturePresenter.TryGetFurniture(
                     seat.WorkSurfaceFurnitureId,
                     out PlacedOfficeFurniture desk) || desk == null)
                 throw new InvalidOperationException(
-                    "Father desk semantic furniture is unavailable: " +
+                    "Workstation semantic furniture is unavailable: " +
                     seat.WorkSurfaceFurnitureId);
 
             // Map the authoritative semantic footprint and calibrated interaction sockets, not
@@ -795,7 +869,7 @@ namespace FamilyCompany.Experimental.Family3D
             Vector3[] sourceCorners = starter.World.Presenter.FootprintCornersWorld(desk);
             if (sourceCorners == null || sourceCorners.Length != 4)
                 throw new InvalidOperationException(
-                    "Father desk semantic footprint must contain four corners.");
+                    "Workstation semantic footprint must contain four corners.");
             var qaCorners = new Vector3[4];
             Vector3 deskFootprintCenter = Vector3.zero;
             for (var index = 0; index < qaCorners.Length; index++)
@@ -819,27 +893,30 @@ namespace FamilyCompany.Experimental.Family3D
                 chairSeatSource,
                 sourceOfficeCamera);
             Vector3 keyboardGround = MapOfficeWorldToQaGround(workSource, sourceOfficeCamera);
-            fatherDeskLegacyChairAnchorOffsetWorld = Vector3.Distance(
-                seatGround,
-                chairSeatGround);
 
-            fatherDeskFootprintOrigin = new Vector2Int(desk.Origin.X, desk.Origin.Y);
-            fatherDeskFootprintSize = new Vector2Int(desk.Width, desk.Height);
-            fatherDeskBlockedCells = new string[desk.Width * desk.Height];
-            fatherDeskBlockedCellsNonWalkable = desk.BlocksMovement;
-            var blockedIndex = 0;
-            for (var y = desk.Origin.Y; y < desk.Origin.Y + desk.Height; y++)
-            for (var x = desk.Origin.X; x < desk.Origin.X + desk.Width; x++)
+            if (captureFatherReceipt)
             {
-                var cell = new OfficeGridCoordinate(x, y);
-                fatherDeskBlockedCells[blockedIndex++] = x + ":" + y;
-                fatherDeskBlockedCellsNonWalkable &= !starter.World.Grid.IsWalkable(cell);
+                fatherDeskLegacyChairAnchorOffsetWorld = Vector3.Distance(
+                    seatGround,
+                    chairSeatGround);
+                fatherDeskFootprintOrigin = new Vector2Int(desk.Origin.X, desk.Origin.Y);
+                fatherDeskFootprintSize = new Vector2Int(desk.Width, desk.Height);
+                fatherDeskBlockedCells = new string[desk.Width * desk.Height];
+                fatherDeskBlockedCellsNonWalkable = desk.BlocksMovement;
+                var blockedIndex = 0;
+                for (var y = desk.Origin.Y; y < desk.Origin.Y + desk.Height; y++)
+                for (var x = desk.Origin.X; x < desk.Origin.X + desk.Width; x++)
+                {
+                    var cell = new OfficeGridCoordinate(x, y);
+                    fatherDeskBlockedCells[blockedIndex++] = x + ":" + y;
+                    fatherDeskBlockedCellsNonWalkable &= !starter.World.Grid.IsWalkable(cell);
+                }
             }
 
-            fatherDeskSeat = seat;
-            fatherDeskWorkstation = Family3DWorkstationQa.Create(
+            Family3DWorkstationQa workstation = Family3DWorkstationQa.Create(
                 transform,
                 qaLayer,
+                seat.SeatId,
                 seatGround,
                 gridRight,
                 gridForward,
@@ -850,12 +927,83 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherBinding.WalkActor.StandingHeight,
                 fatherMotionFacingOffsetDegrees,
                 0f);
-            fatherDeskResolvedChairActorSocketErrorWorld = Vector3.Distance(
-                fatherDeskWorkstation.ChairGroundWorld,
-                fatherDeskWorkstation.SeatGroundWorld);
+            if (captureFatherReceipt)
+            {
+                fatherDeskSeat = seat;
+                fatherDeskWorkstation = workstation;
+                fatherDeskResolvedChairActorSocketErrorWorld = Vector3.Distance(
+                    workstation.ChairGroundWorld,
+                    workstation.SeatGroundWorld);
+            }
+            return workstation;
+        }
 
-            HideSourceFurniture(seat.ChairFurnitureId);
-            HideSourceFurniture(seat.WorkSurfaceFurnitureId);
+        private void RefreshV27SourceFurnitureMask()
+        {
+            for (var index = 0; index < v27WorkstationSeats.Count; index++)
+            {
+                OfficeSeatSlot seat = v27WorkstationSeats[index];
+                HideSourceFurniture(seat.ChairFurnitureId);
+                HideSourceFurniture(seat.WorkSurfaceFurnitureId);
+            }
+        }
+
+        private int CountVisibleLegacyWorkstationRenderers()
+        {
+            var counted = new HashSet<Renderer>();
+            var presenter = starter.World.FurniturePresenter;
+            for (var index = 0; index < v27WorkstationSeats.Count; index++)
+            {
+                OfficeSeatSlot seat = v27WorkstationSeats[index];
+                AddRendererIfPresent(
+                    presenter.TryGetRenderer(
+                        seat.WorkSurfaceFurnitureId,
+                        out SpriteRenderer deskBase) ? deskBase : null,
+                    counted);
+                AddRendererIfPresent(
+                    presenter.TryGetRenderer(
+                        seat.ChairFurnitureId,
+                        out SpriteRenderer chairBase) ? chairBase : null,
+                    counted);
+                AddRendererIfPresent(
+                    presenter.FrontOverlayRenderers.TryGetValue(
+                        seat.WorkSurfaceFurnitureId,
+                        out SpriteRenderer deskFront) ? deskFront : null,
+                    counted);
+                AddRendererIfPresent(
+                    presenter.FrontOverlayRenderers.TryGetValue(
+                        seat.ChairFurnitureId,
+                        out SpriteRenderer chairFront) ? chairFront : null,
+                    counted);
+                AddRendererIfPresent(
+                    presenter.OccupiedChairLowerBodyRenderers.TryGetValue(
+                        seat.ChairFurnitureId,
+                        out SpriteRenderer chairLower) ? chairLower : null,
+                    counted);
+            }
+
+            var visible = 0;
+            foreach (Renderer renderer in counted)
+                if (renderer != null && renderer.enabled &&
+                    !renderer.forceRenderingOff && renderer.gameObject.activeInHierarchy)
+                    visible++;
+            return visible;
+        }
+
+        private static void AddRendererIfPresent(
+            Renderer renderer,
+            ISet<Renderer> renderers)
+        {
+            if (renderer != null)
+                renderers.Add(renderer);
+        }
+
+        private string[] BuildV27ReplacedSeatIds()
+        {
+            var result = new string[v27WorkstationSeats.Count];
+            for (var index = 0; index < result.Length; index++)
+                result[index] = v27WorkstationSeats[index].SeatId;
+            return result;
         }
 
         private void HideSourceFurniture(string furnitureId)
@@ -1444,11 +1592,9 @@ namespace FamilyCompany.Experimental.Family3D
             // the seat is claimed. Hiding furniture once during setup therefore misses that late
             // renderer and leaves a green chair crop beside the 3D chair. Refresh the QA-only
             // renderer mask every frame; semantic furniture, occupancy and blocking stay intact.
-            if (fatherDeskSeat != null)
-            {
-                HideSourceFurniture(fatherDeskSeat.ChairFurnitureId);
-                HideSourceFurniture(fatherDeskSeat.WorkSurfaceFurnitureId);
-            }
+            RefreshV27SourceFurnitureMask();
+            v27VisibleLegacyWorkstationRendererCount =
+                CountVisibleLegacyWorkstationRenderers();
             if (binding.Agent.Phase == OfficeRuntimeAgentPhase.Outside)
             {
                 binding.SetSource2DHidden(false);
@@ -1941,12 +2087,19 @@ namespace FamilyCompany.Experimental.Family3D
             for (var index = 0; index < hiddenSourceFurniture.Count; index++)
                 hiddenSourceFurniture[index].RestoreForceRenderingOff();
             hiddenSourceFurniture.Clear();
-            if (fatherDeskWorkstation != null)
+            for (var workstationIndex = 0;
+                 workstationIndex < v27Workstations.Count;
+                 workstationIndex++)
             {
-                fatherDeskWorkstation.gameObject.SetActive(false);
-                DestroyQaObject(fatherDeskWorkstation.gameObject);
-                fatherDeskWorkstation = null;
+                Family3DWorkstationQa workstation = v27Workstations[workstationIndex];
+                if (workstation == null)
+                    continue;
+                workstation.gameObject.SetActive(false);
+                DestroyQaObject(workstation.gameObject);
             }
+            v27Workstations.Clear();
+            v27WorkstationSeats.Clear();
+            fatherDeskWorkstation = null;
             fatherDeskSeat = null;
             for (var index = 0; index < bindings.Count; index++)
             {
@@ -2093,6 +2246,32 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
                     fatherDeskWorkQa = fatherDeskWorkQa,
                     fatherDeskWorkProofCompleted = fatherDeskWorkProofCompleted,
+                    v27ExpectedWorkstationCount = v27ExpectedWorkstationCount,
+                    v27CreatedWorkstationCount = v27Workstations.Count,
+                    v27ReplacedSeatIds = BuildV27ReplacedSeatIds(),
+                    v27VisibleLegacyWorkstationRendererCount =
+                        v27VisibleLegacyWorkstationRendererCount,
+                    v31AtomicOriginalChairWorkstationSetCount = v27Workstations.Count,
+                    workstationSetPlacementPolicy =
+                        "user-selected V29 desk, CRT, keyboard, chair and seated composition is " +
+                        "unchanged; desk + chair share one atomic V31 visual root; production " +
+                        "hard/interaction occupancy and complete workstation move/rotate binding " +
+                        "remain unchanged",
+                    occupancyStaticViolationCount = starter == null || starter.World == null
+                        ? -1
+                        : starter.World.Occupancy.StaticViolationCount,
+                    occupancyInteractionViolationCount = starter == null || starter.World == null
+                        ? -1
+                        : starter.World.Occupancy.InteractionViolationCount,
+                    occupancyAgentPenetrationCount = starter == null || starter.World == null
+                        ? -1
+                        : starter.World.Occupancy.AgentPenetrationCount,
+                    occupancyBlockedStaticMoveCount = starter == null || starter.World == null
+                        ? -1
+                        : starter.World.Occupancy.BlockedStaticMoveCount,
+                    occupancyBlockedInteractionMoveCount = starter == null || starter.World == null
+                        ? -1
+                        : starter.World.Occupancy.BlockedInteractionMoveCount,
                     fatherDeskSeatId = fatherDeskSeat == null ? string.Empty : fatherDeskSeat.SeatId,
                     fatherDeskFurnitureId = fatherDeskSeat == null
                         ? string.Empty
@@ -2512,7 +2691,7 @@ namespace FamilyCompany.Experimental.Family3D
         {
             WriteRuntimeReceipt(
                 fatherDeskWorkProofCompleted
-                    ? "FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE"
+                    ? "FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE"
                     : fatherProofRouteCompleted
                     ? fatherStaticRootMotionOnly
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
@@ -2577,6 +2756,17 @@ namespace FamilyCompany.Experimental.Family3D
             public bool fatherProofRouteCompleted;
             public bool fatherDeskWorkQa;
             public bool fatherDeskWorkProofCompleted;
+            public int v27ExpectedWorkstationCount;
+            public int v27CreatedWorkstationCount;
+            public string[] v27ReplacedSeatIds;
+            public int v27VisibleLegacyWorkstationRendererCount;
+            public int v31AtomicOriginalChairWorkstationSetCount;
+            public string workstationSetPlacementPolicy;
+            public int occupancyStaticViolationCount;
+            public int occupancyInteractionViolationCount;
+            public int occupancyAgentPenetrationCount;
+            public int occupancyBlockedStaticMoveCount;
+            public int occupancyBlockedInteractionMoveCount;
             public string fatherDeskSeatId;
             public string fatherDeskFurnitureId;
             public string fatherDeskChairId;

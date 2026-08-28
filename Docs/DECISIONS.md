@@ -1,5 +1,27 @@
 # DECISIONS
 
+## 2026-08-28 / drawer details use the drawer cabinet front, not the desk front
+
+결정: V27 3D 책상의 `Desk_DrawerLine_*`와 `Desk_DrawerHandle_*` forward 좌표는
+`drawerForward - drawerDepth / 2`에서 계산한다. 전체 책상의 `frontForward`를 재사용하지 않는다.
+
+이유: 기존 좌표는 세 줄과 손잡이를 서랍장에서 떼어 무릎 공간에 띄웠고, 실제 아이소메트릭 맵에서는
+왼쪽 다리 옆의 톱니형 돌출물처럼 보였다. V29 전후 동일 위치 비교에서 이 돌출물이 사라졌고, 네 책상
+공통 코드·실제 경로·132 captures·legacy renderer 0을 유지했다. 사용자 승인 전
+`productionEligible=false`다.
+
+## 2026-08-28 / furnished map의 네 workstation은 V27 3D 시각물을 공유한다
+
+결정: `seat_player`, `seat_older_sister`, `seat_father`, `seat_mother`에 연결된 구형 갈색 책상·초록 의자
+SpriteRenderer는 격리 3D proof에서 모두 숨기고, 각 semantic origin/footprint/socket으로 같은 V27
+mapped-grid 책상과 neutral chair를 만든다. 의미 가구, blocking, 좌석 점유, 경로, 저장 데이터는 삭제하거나
+이동하지 않는다.
+
+이유: 기존 `office_workstation_v4.png`의 왼쪽 다리 금색 받침발이 작은 실제 맵에서 돌출물처럼 읽혔고,
+V27은 Father 자리만 교체해 나머지 세 자리에 서로 다른 세대의 책상·의자가 남았다. V28은 4/4 생성,
+visible legacy desk/chair renderer 0, 132 actual-map captures, `productionMutation=false`를 확인했다.
+사용자 actual GIF 승인 전 `productionEligible=false`다.
+
 ## 2026-08-28 / 가족 3D는 four-view one-package generation에서 시작한다
 
 결정: 다음 가족 캐릭터도 front/three-quarter/side/back 네 장을 정리한 뒤 Higgsfield/Meshy `multi_image_to_3d` 한 작업에서 mesh, bind skeleton, skin weights, PBR과 action `613 Casual_Walk_inplace`를 함께 생성한다. 같은 패키지를 Unity까지 보존하고 `poseStrength=1`로 직접 재생한다. 다른 리그/클립 혼합, 절차 보행, 전신 pose 약화, limb weight 일괄 삭제를 금지한다.
@@ -16,7 +38,7 @@
 
 ## 2026-08-28 / current-state 문서에는 현재 후보와 재사용 계약만 둔다
 
-결정: PROJECT_STATE, continuation guide, experimental README와 current asset/decision sections에는 V27 경로와 공통 재현 계약만 둔다. 폐기 버전별 장문을 새 current section으로 반복하지 않는다. 재발 방지 교훈은 재사용 계약의 compact failure table 한 곳에만 유지한다.
+결정: PROJECT_STATE, continuation guide, experimental README와 current asset/decision sections에는 V29 경로와 공통 재현 계약만 둔다. 폐기 버전별 장문을 새 current section으로 반복하지 않는다. 재발 방지 교훈은 재사용 계약의 compact failure table 한 곳에만 유지한다.
 ## 2026-08-21 / 6포즈는 key pose로만 유지하고 격리 V3는 24단계를 소비한다
 
 결정: KShopGo/Mixamo의 0/4/8/12/16/20 여섯 자세는 owner/contact 계약의 key pose로 보존한다.
@@ -1334,3 +1356,104 @@ arm↔leg 강한 혼합만 fail-closed한다.
 GaitDistance/stride로 맞추고, 한 회전 7.950477 units에 10 cycles인 `0.7950477`을 사용한다.
 정지 시트나 자동 PASS만으로 승인하지 않고, 확대/전체 실제 맵 GIF의 사용자 판정 전까지
 `productionEligible=false`를 유지한다.
+
+## 책상·의자는 한 세트로 묶되 승인된 의자 배치는 바꾸지 않는다 (2026-08-28)
+
+결정: 3D 시각물은 좌석마다 `V31_AtomicWorkstationSet_OriginalChair_<seat>` 루트 하나가 책상,
+CRT, 키보드, 사용자가 선택한 V29 의자를 모두 소유한다. 실제 layout에서는 묶인 책상이나
+의자 어느 쪽을 선택해도 기존
+`MoveWorkstation`/`RotateWorkstation`으로 승격하여 책상, 의자, seat cell, approach cell,
+operator anchor를 한 트랜잭션으로 이동·회전한다.
+
+결정: 한 세트라는 요청은 묶음 소유권만 뜻한다. 의자 외형·위치, 착석 캐릭터 위치와 자세,
+CRT 방향을 재설계하지 않는다. 책상은 canonical `StaticHard`, 의자는 좌석 소유 `Interaction`
+obstacle을 계속 사용한다. 해당 좌석을 claim한 캐릭터만 docking 중 의자 obstacle을 통과하고,
+다른 캐릭터는 책상과 의자를 모두 피한다.
+
+이유: V30에서 보이는 의자/캐릭터를 `ChairFloorAnchorWorld`로 옮기고 CRT를 회전한 변경은 사용자
+요청 범위를 넘었고 시각적으로 거절됐다. V31은 그 재배치를 제거했다. 실제 Player 132프레임은
+승인된 V29 대응 PNG와 132/132 SHA-256이 일치한다. 동시에 네 atomic set, legacy renderer 0,
+static/interaction/agent penetration `0/0/0`을 기록했고, 기존 atomic layout 검증
+accepted 18/refused 6은 유지된다.
+
+## 생산 상점은 CRT 책상과 승인된 기존 의자를 하나의 착석 가능한 세트로 판매한다 (2026-08-29)
+
+결정: `사무실 -> 회사 -> 사무실 관리` 카탈로그는 `desk_with_pc`를
+`CRT 업무 책상·회전의자 세트` 한 행으로 표시하고 `swivel_chair` 단독 구매 행은 숨긴다. 의자 정의와
+sprite/collision profile은 삭제하거나 교체하지 않는다. 세트 가격은 두 component gameplay basis의 합인
+377,500원이며 한 ledger transaction만 기록한다.
+
+결정: 구매 preview의 pointer cell은 chair/seat pivot이다. `PlaceWorkstation`은 책상 2칸, 원래 의자 1칸,
+seat cell, approach cell, half-cell operator anchor를 한 candidate grid에 넣고 기존 bounds/overlap/floor/
+entrance/BFS/access/egress 검사를 모두 통과할 때만 성공한다. `R`은 SE/SW/NW/NE 네 방향에서 이 값을 한
+rigid transform으로 회전한다. 실패하면 자금·ledger·inventory·grid를 전혀 바꾸지 않는다.
+
+결정: 첫 네 구매는 family order에서 아직 없는 `seat_<memberId>`를 사용한다. runtime rebuild가 이를 기존
+workstation assignment로 읽으므로 별도 임시 착석 시스템 없이 실제 업무 이동과 docking이 새 의자 위치,
+접근 칸, operator anchor를 사용한다. 책상은 StaticHard, 의자는 owner-only Interaction obstacle이므로 좌석
+소유자가 docking할 때만 의자를 통과하고 다른 가족은 둘 다 피해 간다.
+
+검증: `OfficeFurnitureBuildSystemValidation`은 네 방향 exact offset, 4회 회전 hash 왕복, 겹침 무결제,
+desk/chair/seat 원자 생성, idempotency와 save round-trip을 PASS했다. `OfficeLayoutEditRulesValidation`은
+accepted 18/refused 6 PASS다. actual Windows Player native pointer는 한 클릭에서 cash
+`5,000,000->4,622,500`, ledger `1->2`, inventory `0->2`, furniture `52->54`, editable `0->2`,
+`seat_player`, runtime hash 일치, desk/chair anchor error `0/0`으로 PASS했다.
+
+## 구형 책상·의자 Sprite를 제거하고 V31 세트를 production에 사용한다 (2026-08-29)
+
+결정: 직전의 "의자 sprite를 교체하지 않는다"는 결정 중 시각 에셋 부분은 사용자의 명시적 최신 지시로
+폐기한다. 논리 ID `desk_with_pc` / `swivel_chair`와 저장·충돌·좌석 계약은 유지하지만, 금색 책상과 초록
+의자 픽셀은 production, 상점 thumbnail, ghost, fallback 어디에서도 사용하지 않는다.
+
+결정: 승인된 V31 procedural 책상/CRT/키보드/오픈백 의자를 네 방향 640x512 RGBA, PPU 180 Sprite로
+bake한다. 각 방향의 ground, seat, operator-seat, work-surface anchor를 실제 V31 mesh projection에서
+측정하여 사용하고 mirror는 허용하지 않는다. 책상은 2x1 semantic footprint 안에 들어가며 의자/seat pivot,
+approach, collision은 기존 atomic 2x2 set 규칙대로 회전한다.
+
+결정: `office_workstation*` / `office_swivel_chair*` standalone 구형 source/runtime/foreground와 meta 34개를
+삭제한다. visual resolver는 V31 방향 파일이 하나라도 없으면 구형 catalog로 되돌아가지 않고 실패한다.
+구형 4x3 atlas의 첫 두 셀은 다른 열 개 모듈 때문에 atlas 자체에는 남지만 cutter가 빈 이름으로 건너뛰므로
+standalone Sprite를 다시 만들 수 없다.
+
+검증: editor-broad PASS, V31 chair directional integrity PASS, player-scripts PASS. 실제 Windows Player
+시각 proof는 네 세트/네 책상 방향/네 의자 방향/legacyFlip 0을 기록했다. 이 결정은 가구 외형만 승격하며
+Father V19 캐릭터의 `productionEligible=false`는 변경하지 않는다.
+
+## V31 네 방향 Sprite는 월드 Y축이 아니라 타일 기저에서 정확히 90도 회전한다 (2026-08-29)
+
+결정: 아래쪽 SE 세트를 정본으로 두고 방향별 bake는 등각 투영 전의 semantic tile basis를
+`R'=R,F'=F` → `R'=-F,F'=R` → `R'=-R,F'=-F` → `R'=F,F'=-R` 순서로 회전한다. CRT, 키보드,
+책상 2x1 몸체, operator/work socket, 의자와 seat centreline 모두 같은 기저를 사용한다. skewed ground
+plane에 Unity world-Y 90도 yaw를 적용하는 방식은 타일축과 어긋나므로 폐기한다.
+
+검증: 실제 Windows Player proof
+`Artifacts/FastQa/v31-workstation-tile-quarterturn-ready-20260829/`는 네 방향 exact resource,
+`legacyFlip=0`을 확인했다. 책상·의자 8개 rendered ground polygon과 authoritative semantic footprint의
+최대 모서리 오차는 `0.0001px`다. 이전
+`v31-workstation-four-directions-ready-20260829` 화면은 회전 오류 재현 자료일 뿐 현행 승격 근거가 아니다.
+
+## V31 타일 회전은 직각 mesh와 true-isometric 투영을 분리한다 (2026-08-29)
+
+결정: semantic 방향 전환은 계속 `R→-F,F→R`을 사용하지만 그 non-orthogonal 화면 기저를 3D vertex에
+직접 적용하지 않는다. 책상, 다리, CRT, 키보드는 서로 직교하는 world X/Z 축의 직사각형 mesh로 만들고,
+30도 true-isometric camera가 두 축을 production 타일의 `(160,80)` / `(-160,80)` 픽셀 벡터로 투영한다.
+따라서 네 방향은 같은 직각 형상을 rigid quarter-turn하며 좌우 상판이 평행사변형으로 휘지 않는다.
+
+검증: bake는 `meshAxes=orthogonal-90deg`와
+`projectedTileBasisPx=160,80|-160,80`을 계산해 둘 중 하나라도 틀리면 실패한다. 실제 Windows Player
+`Artifacts/FastQa/v31-workstation-orthogonal-isometric-verified-20260829/`도 같은 manifest, 네 exact
+direction resource, `legacyFlip=0`, tile corner 최대 오차 `0.0001px`를 확인한다. 직전
+`v31-workstation-tile-quarterturn-ready-20260829` 결과는 타일 좌표는 맞지만 mesh shear가 남은 반려본이다.
+
+## 앞으로의 모든 가구 배치는 semantic 타일을 유일한 정본으로 강제한다 (2026-08-29)
+
+결정: 신규·교체 가구는 rotated integer footprint, placement anchor, claimed/collision cells,
+seat/approach socket, 상점 ghost와 확정 runtime renderer가 동일한 타일을 가리켜야 한다. scene transform
+보정이나 sprite 외곽을 별도 배치 정본으로 둘 수 없다. 직사각형 mesh는 물리적으로 90도를 유지하고
+true-isometric projection으로 `(160,80)` / `(-160,80)` 타일축에 맞춘다. mesh shear, 임의 flip,
+footprint 밖 ground contact는 금지한다.
+
+검증/승격 조건: exact 4-direction resource, bounds/overlap/navigation/collision, preview-confirm parity와
+실제 Player rendered ground-footprint corner error `<= 0.01px`를 모두 통과해야 한다. 하나라도 실패한 가구는
+상점에 노출하거나 production-ready로 표시하지 않는다. 이 규칙의 정본 문서는
+`Docs/OFFICE_BUILD_EDITOR_V1.md`의 `Mandatory production tile-placement rule`이다.

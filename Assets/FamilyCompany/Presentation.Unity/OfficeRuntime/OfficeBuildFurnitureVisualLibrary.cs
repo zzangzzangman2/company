@@ -29,8 +29,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Sprite sprite = Resources.Load<Sprite>(ResourceRoot + ResourceName(kindId, facing));
             if (sprite != null)
             {
-                definition = DirectionalDefinition(catalog, kindId, facing, sprite);
+                definition = IsV31WorkstationPart(kindId)
+                    ? V31WorkstationDefinition(kindId, facing, sprite)
+                    : DirectionalDefinition(catalog, kindId, facing, sprite);
                 return true;
+            }
+            // The retired gold desk and green chair must never return as a catalog or nearest-art
+            // fallback. Missing any V31 directional resource is a hard presentation failure.
+            if (IsV31WorkstationPart(kindId))
+            {
+                definition = null;
+                return false;
             }
             if (catalog != null && catalog.TryResolveWithMirror(kindId, facing, out definition, out flipX))
                 return true;
@@ -104,6 +113,93 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 footprint.Y,
                 source?.OperatorSeatSocketPx ?? Vector2.zero,
                 source?.HasOperatorSeatSocket ?? false);
+        }
+
+        private static bool IsV31WorkstationPart(string kindId) =>
+            string.Equals(kindId, OfficeGridLayouts.DeskWithPcKind, StringComparison.Ordinal) ||
+            string.Equals(kindId, OfficeGridLayouts.SwivelChairKind, StringComparison.Ordinal);
+
+        private static OfficeFurnitureVisualDefinition V31WorkstationDefinition(
+            string kindId,
+            OfficeFurnitureFacing facing,
+            Sprite sprite)
+        {
+            bool desk = string.Equals(
+                kindId,
+                OfficeGridLayouts.DeskWithPcKind,
+                StringComparison.Ordinal);
+            OfficeGridCoordinate footprint = OfficeFurnitureCatalog.Require(kindId).FootprintFor(facing);
+            var ground = new Vector2(320f, 64f);
+            Vector2 seat = desk ? Vector2.zero : V31ChairSeatAnchor(facing);
+            Vector2 work = desk ? V31DeskWorkSurfaceAnchor(facing) : Vector2.zero;
+            Vector2 operatorSeat = desk ? V31DeskOperatorSeatAnchor(facing) : Vector2.zero;
+            return OfficeFurnitureVisualDefinition.Create(
+                kindId,
+                facing,
+                sprite,
+                null,
+                ground,
+                new Vector2(320f, 32f),
+                seat,
+                work,
+                1f,
+                !desk,
+                desk,
+                false,
+                WorkstationFootprint(ground, footprint.X, footprint.Y),
+                footprint.X,
+                footprint.Y,
+                operatorSeat,
+                desk);
+        }
+
+        private static Vector2 V31DeskOperatorSeatAnchor(OfficeFurnitureFacing facing)
+        {
+            switch (facing)
+            {
+                case OfficeFurnitureFacing.SouthEast: return new Vector2(512.085f, 128.044f);
+                case OfficeFurnitureFacing.SouthWest: return new Vector2(284.392f, 49.806f);
+                case OfficeFurnitureFacing.NorthWest: return new Vector2(127.916f, 163.652f);
+                default: return new Vector2(355.609f, 241.890f);
+            }
+        }
+
+        private static Vector2 V31DeskWorkSurfaceAnchor(OfficeFurnitureFacing facing)
+        {
+            switch (facing)
+            {
+                case OfficeFurnitureFacing.SouthEast: return new Vector2(448.221f, 205.229f);
+                case OfficeFurnitureFacing.SouthWest: return new Vector2(348.255f, 126.991f);
+                case OfficeFurnitureFacing.NorthWest: return new Vector2(191.779f, 176.974f);
+                default: return new Vector2(291.745f, 255.212f);
+            }
+        }
+
+        private static Vector2 V31ChairSeatAnchor(OfficeFurnitureFacing facing)
+        {
+            switch (facing)
+            {
+                case OfficeFurnitureFacing.SouthEast: return new Vector2(207.916f, 43.652f);
+                case OfficeFurnitureFacing.SouthWest: return new Vector2(115.608f, 201.890f);
+                case OfficeFurnitureFacing.NorthWest: return new Vector2(432.085f, 248.044f);
+                default: return new Vector2(524.392f, 89.806f);
+            }
+        }
+
+        private static Vector2[] WorkstationFootprint(
+            Vector2 anchor,
+            int width,
+            int height)
+        {
+            Vector2 extentX = new Vector2(160f, 80f) * width * 0.5f;
+            Vector2 extentY = new Vector2(-160f, 80f) * height * 0.5f;
+            return new[]
+            {
+                anchor - extentX - extentY,
+                anchor + extentX - extentY,
+                anchor + extentX + extentY,
+                anchor - extentX + extentY
+            };
         }
 
         private static Vector2[] Diamond(Vector2 anchor, float width, float height)

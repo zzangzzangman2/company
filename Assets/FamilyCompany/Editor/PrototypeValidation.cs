@@ -1222,7 +1222,9 @@ namespace FamilyCompany.Editor
             var playerFrames = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.PlayerFrameFolder });
             AssertEqual(48, playerFrames.Length, "player high-motion directional frame count");
             var officeModules = AssetDatabase.FindAssets("t:Sprite", new[] { PrototypeProjectBuilder.OfficeModuleFolder });
-            AssertEqual(12, officeModules.Length, "office pixel module count");
+            // The two legacy atlas-cut workstation/chair modules were deliberately retired in
+            // favor of the V31 directional set under Resources/OfficeBuildFurniture.
+            AssertEqual(10, officeModules.Length, "office pixel module count");
             var titleHero = AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeProjectBuilder.TitleHeroAssetPath);
             if (titleHero == null || titleHero.width < 1600 || titleHero.height < 900)
             {

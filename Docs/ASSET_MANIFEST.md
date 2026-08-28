@@ -14,18 +14,42 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
 - clip: `FatherV19_Casual_Walk_inplace`, source frames `1..43`, 1.4 s, same FBX Avatar/skin/clip.
 - status: walk/colour user approved as locked isolated input; production promotion is not implied.
 
-## Current Father V27 full-3D workstation proof
+## Current Father V31 original-chair atomic workstation proof
 
-- build: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV22NeutralChairNoLegacyOverlay`.
-- runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV27NeutralChairNoLegacyOverlay`.
+- build: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV26AtomicOriginalChair`.
+- runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV31AtomicOriginalChair`.
 - route: actual `seat_father` / `desk_father` / `chair_father`, `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`.
-- receipt: 1,051 samples, 361 work observations, 132 captures, `productionMutation=false`, `productionEligible=false`.
-- full GIF SHA-256: `536C4605B778C1320AE4EC8E71DC2C4E7AC33B84543E55D293A124AF9D66A804`.
-- close GIF SHA-256: `9F0BB210AA724B46A6B0C78E90D3ACFD6A473618D11DBF2B2C3C6DB01C52B18A`.
-- tracked home-review copies: `Docs/Evidence/Family3DFatherV19V27/father-v19-v27-full.gif` and `father-v19-v27-close.gif`.
-- V27 ownership: QA-only neutral 3D chair and continuous masking of the late-created legacy occupied-chair foreground renderer. Semantic furniture/route/blocking/save data are unchanged.
+- receipt: 1,051 samples, 361 work observations, 132 captures, four expected/created workstations,
+  visible legacy desk/chair renderers `0`, `productionMutation=false`, `productionEligible=false`.
+- full GIF SHA-256: `B759D359DEAB1D99CA46983A18580F1F873E24F4CDD9388A33E99DD9F62A7C60`.
+- close GIF SHA-256: `46F627F87CEFDC42865CDC9C9B8327DE02D382B19F5AB9CE4DAC5AD3C10E7D76`.
+- V29/V31 comparison PNG SHA-256: `8A8002BA2FC115EDB16576FBDCF2F62687C6531DD9504CE722BA43429A8F3766`.
+- tracked review copies: `Docs/Evidence/Family3DFatherV19V31/`.
+- V31 ownership: one QA-only atomic desk/CRT/keyboard/original-chair root per live seat. The
+  user-selected V29 chair, actor and CRT composition is unchanged; 132/132 corresponding frame
+  hashes match V29. Production desk/chair collision and seat-owner permissions remain semantic and
+  unchanged. Actual route violations: static `0`, interaction `0`, agent penetration `0`.
 - exact next-character recipe: `Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md`.
-- status: `USER_VISUAL_REVIEW_REQUIRED`; Higgsfield use for V27 is 0 credits.
+- isolated Father-character proof status: `USER_VISUAL_REVIEW_REQUIRED`; Higgsfield use for V31 is
+  0 credits. The workstation geometry itself is separately promoted below.
+
+## Production V31 workstation directional set (2026-08-29)
+
+- Source geometry: the exact accepted `Family3DWorkstationQa` V31 dark-walnut CRT desk and
+  graphite open-back chair; no new image/3D generation and no Higgsfield credit use.
+- Runtime folder: `Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture/`.
+- Deliverables: four `desk_with_pc_<direction>.png`, four
+  `swivel_chair_<direction>.png`, 640x512 RGBA, PPU 180, explicit per-direction seat/operator/work
+  anchors, and `v31_workstation_sprite_manifest.txt`.
+- Production proof:
+  `Artifacts/FastQa/v31-workstation-orthogonal-isometric-verified-20260829/v31-workstation-four-directions.png`;
+  four sets, four rigid quarter turns, orthogonal 90-degree mesh axes, exact projected tile basis
+  `(160,80)` / `(-160,80)`, four desk/chair directions, mirror/legacy flip 0, and maximum rendered
+  tile-footprint corner error `0.0001px`.
+- Retired: 34 standalone `office_workstation*` / `office_swivel_chair*` source, runtime,
+  foreground and `.meta` files. They are deleted and excluded from regeneration/fallback.
+- Scope boundary: this promotes the workstation visual only. Father V19 remains non-production
+  until its separate character gate is approved.
 ## Main Navigation HUD V2 (2026-08-14)
 
 - Runtime root: `Assets/Art/UI/Resources/MainNavigationV2/`

@@ -82,6 +82,11 @@ namespace FamilyCompany.Simulation.OfficeLayout
     /// </summary>
     public static class OfficeFurnitureTransactionService
     {
+        public const string WorkstationChairInstanceSuffix = ":chair";
+
+        public static string WorkstationChairInstanceId(string workSurfaceInstanceId) =>
+            RequiredId(workSurfaceInstanceId, nameof(workSurfaceInstanceId)) + WorkstationChairInstanceSuffix;
+
         public static OfficeFurnitureCommandResult PurchaseAndPlace(
             GameState state,
             string commandId,
@@ -142,6 +147,124 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 "사무 가구 구매: " + definition.KoreanDisplayName);
             state.ReplaceOfficeState(edit.Grid, inventory);
             return OfficeFurnitureCommandResult.Ok(state, instanceId, chargedWon: priceWon);
+        }
+
+        /// <summary>
+        /// Purchases and places the production CRT desk, V31 open-back chair and usable seat as
+        /// one ledger/layout/inventory transaction.  No money or partial inventory is published
+        /// unless the complete four-direction workstation passes every placement/topology rule.
+        /// </summary>
+        public static OfficeFurnitureCommandResult PurchaseAndPlaceWorkstation(
+            GameState state,
+            string commandId,
+            string workSurfaceInstanceId,
+            OfficeGridCoordinate seatCell,
+            OfficeFurnitureFacing deskFacing)
+        {
+            Required(state, nameof(state));
+            string canonicalCommandId = RequiredId(commandId, nameof(commandId));
+            string deskId = RequiredId(workSurfaceInstanceId, nameof(workSurfaceInstanceId));
+            string chairId = WorkstationChairInstanceId(deskId);
+            OfficeFurnitureDefinition deskDefinition =
+                OfficeFurnitureCatalog.Require(OfficeGridLayouts.DeskWithPcKind);
+            OfficeFurnitureDefinition chairDefinition =
+                OfficeFurnitureCatalog.Require(OfficeGridLayouts.SwivelChairKind);
+
+            if (state.Company.HasTransaction(canonicalCommandId))
+            {
+                OfficeFurnitureInstanceState appliedDesk = state.OfficeFurnitureInventory.Find(deskId);
+                OfficeFurnitureInstanceState appliedChair = state.OfficeFurnitureInventory.Find(chairId);
+                if (appliedDesk != null && appliedChair != null &&
+                    Same(appliedDesk.PurchaseTransactionId, canonicalCommandId) &&
+                    Same(appliedChair.PurchaseTransactionId, canonicalCommandId) &&
+                    Same(appliedDesk.DefinitionId, deskDefinition.DefinitionId) &&
+                    Same(appliedChair.DefinitionId, chairDefinition.DefinitionId))
+                    return OfficeFurnitureCommandResult.Ok(
+                        state,
+                        deskId,
+                        checked(appliedDesk.PurchaseBasisWon + appliedChair.PurchaseBasisWon),
+                        alreadyApplied: true);
+                return OfficeFurnitureCommandResult.Fail(
+                    state,
+                    OfficeFurnitureCommandFailure.IdempotencyConflict,
+                    "같은 거래 ID가 다른 구매에 이미 사용되었습니다.",
+                    deskId);
+            }
+            if (state.OfficeFurnitureInventory.Find(deskId) != null ||
+                state.OfficeFurnitureInventory.Find(chairId) != null)
+                return OfficeFurnitureCommandResult.Fail(
+                    state,
+                    OfficeFurnitureCommandFailure.DuplicateInstance,
+                    "같은 책상·의자 세트 인스턴스 ID가 이미 있습니다.",
+                    deskId);
+            if ((deskDefinition.MaximumOwned > 0 &&
+                 state.OfficeFurnitureInventory.CountOwned(deskDefinition.DefinitionId) >=
+                 deskDefinition.MaximumOwned) ||
+                (chairDefinition.MaximumOwned > 0 &&
+                 state.OfficeFurnitureInventory.CountOwned(chairDefinition.DefinitionId) >=
+                 chairDefinition.MaximumOwned))
+                return OfficeFurnitureCommandResult.Fail(
+                    state,
+                    OfficeFurnitureCommandFailure.MaximumOwned,
+                    "최대 보유 수량에 도달했습니다.",
+                    deskId);
+
+            long deskPriceWon = OfficeFurnitureEconomyConfig.GameplayPrice(deskDefinition.PurchasePriceWon);
+            long chairPriceWon = OfficeFurnitureEconomyConfig.GameplayPrice(chairDefinition.PurchasePriceWon);
+            long totalPriceWon = checked(deskPriceWon + chairPriceWon);
+            if (state.Company.CashWon < totalPriceWon)
+                return OfficeFurnitureCommandResult.Fail(
+                    state,
+                    OfficeFurnitureCommandFailure.InsufficientFunds,
+                    "회사 자금이 부족합니다.",
+                    deskId);
+
+            string seatId = NextWorkstationSeatId(state, deskId);
+            OfficeLayoutEditResult edit = OfficeLayoutEditRules.PlaceWorkstation(
+                state.OfficeGrid,
+                deskId,
+                chairId,
+                seatId,
+                seatCell,
+                deskFacing);
+            if (!edit.Success) return PlacementFail(state, edit, deskId);
+
+            OfficeWorkstationPlacement placement = OfficeLayoutEditRules.CreateWorkstationPlacement(
+                deskId,
+                chairId,
+                seatId,
+                seatCell,
+                deskFacing);
+            long acquiredMinute = state.Time.ElapsedMinutes;
+            var desk = new OfficeFurnitureInstanceState(
+                deskId,
+                deskDefinition.DefinitionId,
+                OfficeFurniturePlacementState.Placed,
+                placement.WorkSurface.Origin,
+                placement.WorkSurface.Facing,
+                OfficeFurniturePurchaseBasisState.Purchased,
+                deskPriceWon,
+                acquiredMinute,
+                canonicalCommandId);
+            var chair = new OfficeFurnitureInstanceState(
+                chairId,
+                chairDefinition.DefinitionId,
+                OfficeFurniturePlacementState.Placed,
+                placement.Chair.Origin,
+                placement.Chair.Facing,
+                OfficeFurniturePurchaseBasisState.Purchased,
+                chairPriceWon,
+                acquiredMinute,
+                canonicalCommandId);
+            var inventory = new OfficeFurnitureInventoryState(
+                state.OfficeFurnitureInventory.Instances.Concat(new[] { desk, chair }));
+            state.Company.PurchaseOfficeFurniture(
+                canonicalCommandId,
+                acquiredMinute,
+                totalPriceWon,
+                "사무 가구 구매: " + deskDefinition.KoreanDisplayName);
+            state.ReplaceOfficeState(edit.Grid, inventory);
+            return OfficeFurnitureCommandResult.Ok(state, deskId, chargedWon: totalPriceWon);
         }
 
         public static OfficeFurnitureCommandResult Move(
@@ -329,6 +452,16 @@ namespace FamilyCompany.Simulation.OfficeLayout
                 return instance.WithPlacement(
                     OfficeFurniturePlacementState.Placed, placed.Origin, placed.Facing);
             }));
+        }
+
+        private static string NextWorkstationSeatId(GameState state, string workSurfaceInstanceId)
+        {
+            foreach (var member in state.Family.Members)
+            {
+                string candidate = "seat_" + member.MemberId;
+                if (state.OfficeGrid.SeatSlots.All(item => !Same(item.SeatId, candidate))) return candidate;
+            }
+            return "seat_workstation_" + workSurfaceInstanceId;
         }
 
         private static OfficeFurnitureCommandResult PlacementFail(

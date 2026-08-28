@@ -21,6 +21,8 @@ namespace FamilyCompany.Editor.OfficeGridQa
             "Assets/FamilyCompany/Presentation.Unity/OfficeGrid/Authoring/OfficeFurnitureVisualCatalog.asset";
         public const string PoseCatalogPath =
             "Assets/FamilyCompany/Presentation.Unity/OfficeGrid/Authoring/OfficeCharacterSeatPoseCatalog.asset";
+        public const string V31WorkstationSpriteFolder =
+            "Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture";
         public const int CanvasWidth = 640;
         public const int CanvasHeight = 512;
         public const int VisibleMarginPixels = 24;
@@ -97,52 +99,6 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
         private static readonly FurnitureSpec[] Specs =
         {
-            new FurnitureSpec(
-                OfficeGridLayouts.DeskWithPcKind,
-                "office_workstation",
-                500,
-                360,
-                OfficeFurnitureFacing.SouthEast,
-                new Vector2(760f, 200f),
-                new Vector2(705f, 125f),
-                "v4",
-                // Actual CRT-keyboard contact, not the former lower desk-edge proxy.
-                sourceWorkSurfaceAnchorPx: new Vector2(842.7f, 578.5f),
-                // Shares the same presentation correction as the paired chair.
-                sourceOperatorSeatSocketPx: new Vector2(1005.35f, 433.28f),
-                semanticFootprintWidth: 2,
-                sourceForegroundPolygon: new[]
-                {
-                    new Vector2(320f, 100f), new Vector2(1225f, 100f),
-                    new Vector2(1225f, 520f), new Vector2(710f, 365f),
-                    new Vector2(320f, 550f)
-                },
-                // The right drawer edge crosses older_sister's approved upper-body pixels.
-                // Keep the lower desk occlusion, but never redraw this small region over a face.
-                sourceForegroundExclusionPolygon: new[]
-                {
-                    new Vector2(968f, 435f), new Vector2(1016f, 435f),
-                    new Vector2(1016f, 461f), new Vector2(968f, 461f)
-                }),
-            new FurnitureSpec(
-                OfficeGridLayouts.SwivelChairKind,
-                "office_swivel_chair",
-                175,
-                260,
-                OfficeFurnitureFacing.NorthWest,
-                new Vector2(620f, 300f),
-                new Vector2(620f, 235f),
-                "v3",
-                "office_swivel_chair_northwest",
-                new Vector2(600f, 650f),
-                // Preserve the limited foreground introduced with the canonical V3 chair.
-                // In the baked 640x512 Sprite this is exactly base alpha where x >= 317
-                // and y >= 98: the right/backrest edge and near armrest, not the cushion.
-                sourceForegroundPolygon: new[]
-                {
-                    new Vector2(610f, 468f), new Vector2(904f, 468f),
-                    new Vector2(904f, 934f), new Vector2(610f, 934f)
-                }),
             new FurnitureSpec(OfficeGridLayouts.ReceptionCounterKind, "office_reception_counter", 500, 340,
                 OfficeFurnitureFacing.SouthEast, new Vector2(834f, 180f), new Vector2(834f, 162f),
                 semanticFootprintWidth: 2),
@@ -179,7 +135,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "v1")
         };
 
-        public static IReadOnlyList<string> KindIds => Specs.Select(item => item.KindId).ToArray();
+        public static IReadOnlyList<string> KindIds => new[]
+            {
+                OfficeGridLayouts.DeskWithPcKind,
+                OfficeGridLayouts.SwivelChairKind
+            }
+            .Concat(Specs.Select(item => item.KindId))
+            .ToArray();
 
         [MenuItem("Family Company/Art/Build Office Furniture Tycoon Alignment V2")]
         public static void Build()
@@ -270,17 +232,13 @@ namespace FamilyCompany.Editor.OfficeGridQa
             }
         }
 
-        [MenuItem("Family Company/Rebuild Office Chair Foreground Only")]
+        [MenuItem("Family Company/Validate V31 Workstation Chair Art")]
         public static void RebuildChairForegroundOnly()
         {
-            FurnitureSpec chair = Specs.Single(spec =>
-                string.Equals(spec.KindId, OfficeGridLayouts.SwivelChairKind, StringComparison.Ordinal));
-            BuildOne(chair, writeBase: false, writeFront: true);
-            AssetDatabase.ImportAsset(chair.FrontPath, ImportAssetOptions.ForceSynchronousImport);
             OfficeChairForegroundValidation.Validate();
             Debug.Log(
-                "OFFICE_CHAIR_FOREGROUND_ONLY_BUILD: PASS sourcePixels=9881 " +
-                "otherFurnitureWrites=0 catalogWrites=0");
+                "V31_WORKSTATION_CHAIR_ART: PASS directionalSprites=4 " +
+                "legacyForegroundWrites=0 catalogWrites=0");
         }
 
         public static void RebuildChairForegroundOnlyBatch()
@@ -399,7 +357,12 @@ namespace FamilyCompany.Editor.OfficeGridQa
 
         public static void Validate()
         {
-            var seenKinds = new HashSet<string>(StringComparer.Ordinal);
+            var seenKinds = new HashSet<string>(StringComparer.Ordinal)
+            {
+                OfficeGridLayouts.DeskWithPcKind,
+                OfficeGridLayouts.SwivelChairKind
+            };
+            ValidateV31WorkstationSprites();
             foreach (FurnitureSpec spec in Specs)
             {
                 if (!seenKinds.Add(spec.KindId))
@@ -567,8 +530,12 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 AssetDatabase.CreateAsset(catalog, FurnitureCatalogPath);
             }
 
-            OfficeFurnitureVisualDefinition[] definitions = Specs.Select(spec =>
-                OfficeFurnitureVisualDefinition.Create(
+            OfficeFurnitureVisualDefinition[] definitions = new[]
+                {
+                    CreateV31WorkstationCatalogDefinition(true),
+                    CreateV31WorkstationCatalogDefinition(false)
+                }
+                .Concat(Specs.Select(spec => OfficeFurnitureVisualDefinition.Create(
                     spec.KindId,
                     spec.Facing,
                     RequiredSprite(spec.RuntimePath),
@@ -585,9 +552,64 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     spec.SemanticFootprintWidth,
                     spec.SemanticFootprintHeight,
                     spec.RuntimeOperatorSeatSocketPx,
-                    spec.SourceOperatorSeatSocketPx.HasValue)).ToArray();
+                    spec.SourceOperatorSeatSocketPx.HasValue)))
+                .ToArray();
             catalog.ReplaceDefinitions(definitions, OfficeFurnitureVisualCatalog.CurrentCalibrationVersion);
             EditorUtility.SetDirty(catalog);
+        }
+
+        private static OfficeFurnitureVisualDefinition CreateV31WorkstationCatalogDefinition(bool desk)
+        {
+            string kindId = desk
+                ? OfficeGridLayouts.DeskWithPcKind
+                : OfficeGridLayouts.SwivelChairKind;
+            OfficeFurnitureFacing facing = desk
+                ? OfficeFurnitureFacing.SouthEast
+                : OfficeFurnitureFacing.NorthWest;
+            string suffix = desk ? "desk_with_pc_se.png" : "swivel_chair_nw.png";
+            var ground = new Vector2(320f, 64f);
+            return OfficeFurnitureVisualDefinition.Create(
+                kindId,
+                facing,
+                RequiredSprite(V31WorkstationSpriteFolder + "/" + suffix),
+                null,
+                ground,
+                new Vector2(320f, 32f),
+                desk ? Vector2.zero : new Vector2(432.085f, 248.044f),
+                desk ? new Vector2(448.221f, 205.229f) : Vector2.zero,
+                1f,
+                !desk,
+                desk,
+                false,
+                desk
+                    ? new[]
+                    {
+                        new Vector2(240f, -56f), new Vector2(560f, 104f),
+                        new Vector2(400f, 184f), new Vector2(80f, 24f)
+                    }
+                    : new[]
+                    {
+                        new Vector2(320f, -16f), new Vector2(480f, 64f),
+                        new Vector2(320f, 144f), new Vector2(160f, 64f)
+                    },
+                desk ? 2 : 1,
+                1,
+                desk ? new Vector2(512.085f, 128.044f) : Vector2.zero,
+                desk);
+        }
+
+        private static void ValidateV31WorkstationSprites()
+        {
+            foreach (string stem in new[] { "desk_with_pc", "swivel_chair" })
+            foreach (string suffix in new[] { "se", "sw", "nw", "ne" })
+            {
+                string path = V31WorkstationSpriteFolder + "/" + stem + "_" + suffix + ".png";
+                Sprite sprite = RequiredSprite(path);
+                if (sprite.rect.width != CanvasWidth || sprite.rect.height != CanvasHeight)
+                    throw new InvalidOperationException("V31 workstation sprite canvas is invalid: " + path);
+                if (!Mathf.Approximately(sprite.pixelsPerUnit, PixelsPerUnit))
+                    throw new InvalidOperationException("V31 workstation sprite PPU is invalid: " + path);
+            }
         }
 
         private static void UpdatePerimeterWallCatalog(IReadOnlyList<FurnitureSpec> perimeterSpecs)

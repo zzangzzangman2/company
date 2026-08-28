@@ -140,7 +140,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
-            string definitionId = OfficeGridLayouts.PottedPlantKind;
+            string definitionId = OfficeGridLayouts.DeskWithPcKind;
             OfficeFurnitureDefinition definition = OfficeFurnitureCatalog.Require(definitionId);
             Camera camera = Camera.main;
             if (!TryFindVisibleValidCell(state.OfficeGrid, definition, camera, runtime, out OfficeGridCoordinate target))
@@ -213,7 +213,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             }
 
             var before = new StateSnapshot(state);
-            long expectedPrice = OfficeFurnitureEconomyConfig.GameplayPrice(definition.PurchasePriceWon);
+            long expectedPrice = OfficeFurnitureCatalog.GameplayShopPrice(definition);
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             mouse_event(NativeMouseLeftDown, 0, 0, 0, UIntPtr.Zero);
@@ -224,20 +224,50 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             yield return null;
             yield return new WaitForEndOfFrame();
 
+            float rebuildDeadline = Time.realtimeSinceStartup + 10f;
+            while (Time.realtimeSinceStartup < rebuildDeadline &&
+                   (!runtime.IsReady || controller.DiagnosticStateMutationCount != 1))
+                yield return null;
+
             var after = new StateSnapshot(state);
             string instanceId = controller.DiagnosticLastMutationInstanceId;
+            string chairInstanceId = OfficeFurnitureTransactionService.WorkstationChairInstanceId(instanceId);
             PlacedOfficeFurniture placed = state.OfficeGrid.Furniture.FirstOrDefault(item =>
                 string.Equals(item.FurnitureId, instanceId, StringComparison.Ordinal));
+            PlacedOfficeFurniture chair = state.OfficeGrid.Furniture.FirstOrDefault(item =>
+                string.Equals(item.FurnitureId, chairInstanceId, StringComparison.Ordinal));
             OfficeFurnitureInstanceState owned = state.OfficeFurnitureInventory.Find(instanceId);
+            OfficeFurnitureInstanceState ownedChair = state.OfficeFurnitureInventory.Find(chairInstanceId);
+            OfficeSeatSlot seat = state.OfficeGrid.SeatSlots.FirstOrDefault(item =>
+                string.Equals(item.WorkSurfaceFurnitureId, instanceId, StringComparison.Ordinal) &&
+                string.Equals(item.ChairFurnitureId, chairInstanceId, StringComparison.Ordinal));
             float anchorError = float.PositiveInfinity;
-            Vector3 expectedCenter = runtime.World.Presenter.CellCenterWorld(target);
+            float chairAnchorError = float.PositiveInfinity;
+            Vector3 expectedCenter = placed == null
+                ? new Vector3(float.NaN, float.NaN, float.NaN)
+                : runtime.World.Presenter.SubcellAnchorWorld(placed.PlacementAnchor);
             Vector3 renderedCenter = new Vector3(float.NaN, float.NaN, float.NaN);
+            Vector3 renderedChairCenter = new Vector3(float.NaN, float.NaN, float.NaN);
             if (placed != null && runtime.World.FurniturePresenter.TryGetSemanticRoot(
                     instanceId, out Transform semanticRoot) && semanticRoot != null)
             {
                 renderedCenter = semanticRoot.position;
                 anchorError = Vector3.Distance(expectedCenter, renderedCenter);
             }
+            if (chair != null && runtime.World.FurniturePresenter.TryGetSemanticRoot(
+                    chairInstanceId, out Transform chairRoot) && chairRoot != null)
+            {
+                Vector3 expectedChairCenter = runtime.World.Presenter.SubcellAnchorWorld(chair.PlacementAnchor);
+                renderedChairCenter = chairRoot.position;
+                chairAnchorError = Vector3.Distance(expectedChairCenter, renderedChairCenter);
+            }
+
+            OfficeWorkstationPlacement expectedPlacement = OfficeLayoutEditRules.CreateWorkstationPlacement(
+                instanceId,
+                chairInstanceId,
+                seat?.SeatId ?? "seat_player",
+                target,
+                definition.DesiredFacing);
 
             bool passed =
                 controller.DiagnosticPointerCommitCount == 1 &&
@@ -245,16 +275,24 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 controller.DiagnosticLastPointerCommitCell.Equals(target) &&
                 before.Cash - after.Cash == expectedPrice &&
                 after.Ledger == before.Ledger + 1 &&
-                after.Inventory == before.Inventory + 1 &&
-                after.Furniture == before.Furniture + 1 &&
-                after.EditableFurniture == before.EditableFurniture + 1 &&
+                after.Inventory == before.Inventory + 2 &&
+                after.Furniture == before.Furniture + 2 &&
+                after.EditableFurniture == before.EditableFurniture + 2 &&
                 !string.Equals(before.GridHash, after.GridHash, StringComparison.Ordinal) &&
                 string.Equals(runtime.World.Grid.ComputeLayoutHash(), after.GridHash, StringComparison.Ordinal) &&
-                placed != null && placed.Origin.Equals(target) &&
-                placed.PlacementAnchor.Equals(OfficeGridSubcellAnchor.FromCellCenter(target)) &&
+                placed != null && placed.Origin.Equals(expectedPlacement.WorkSurface.Origin) &&
+                placed.Facing == expectedPlacement.WorkSurface.Facing &&
+                chair != null && chair.Origin.Equals(target) &&
+                chair.Facing == expectedPlacement.Chair.Facing &&
+                seat != null && seat.SeatId == "seat_player" && seat.Cell.Equals(target) &&
+                seat.ApproachCell.Equals(expectedPlacement.Seat.ApproachCell) &&
+                seat.OperatorAnchor.Equals(expectedPlacement.Seat.OperatorAnchor) &&
+                seat.Facing == expectedPlacement.Seat.Facing &&
                 owned != null && owned.PlacementState == OfficeFurniturePlacementState.Placed &&
-                owned.GridOrigin.Equals(target) &&
-                anchorError <= 0.001f;
+                owned.GridOrigin.Equals(expectedPlacement.WorkSurface.Origin) &&
+                ownedChair != null && ownedChair.PlacementState == OfficeFurniturePlacementState.Placed &&
+                ownedChair.GridOrigin.Equals(target) &&
+                anchorError <= 0.001f && chairAnchorError <= 0.001f;
 
             if (!TryCaptureOverview(ArtifactPath("office-build-placed.png"), out string placedCaptureFailure))
             {
@@ -275,6 +313,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                               controller.DiagnosticLastPointerCommitCell.X + ":" +
                               controller.DiagnosticLastPointerCommitCell.Y);
             result.AppendLine("instance=" + instanceId);
+            result.AppendLine("chairInstance=" + chairInstanceId);
+            result.AppendLine("seat=" + (seat?.SeatId ?? "missing"));
+            result.AppendLine("seatCell=" + (seat == null ? "missing" : seat.Cell.X + ":" + seat.Cell.Y));
+            result.AppendLine("approachCell=" +
+                              (seat == null ? "missing" : seat.ApproachCell.X + ":" + seat.ApproachCell.Y));
+            result.AppendLine("operatorAnchor2=" +
+                              (seat == null ? "missing" : seat.OperatorAnchor.X2 + ":" + seat.OperatorAnchor.Y2));
             result.AppendLine("price=" + expectedPrice);
             result.AppendLine("cash=" + before.Cash + "->" + after.Cash);
             result.AppendLine("ledger=" + before.Ledger + "->" + after.Ledger);
@@ -286,9 +331,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("expectedCenter=" + expectedCenter.ToString("F6"));
             result.AppendLine("renderedCenter=" + renderedCenter.ToString("F6"));
             result.AppendLine("anchorError=" + anchorError.ToString("F8", CultureInfo.InvariantCulture));
+            result.AppendLine("renderedChairCenter=" + renderedChairCenter.ToString("F6"));
+            result.AppendLine("chairAnchorError=" + chairAnchorError.ToString("F8", CultureInfo.InvariantCulture));
             File.WriteAllText(ArtifactPath("office-build-native-pointer-result.txt"), result.ToString());
 
-            Finish(passed ? 0 : 100, passed ? "single native click atomically purchased and placed" :
+            Finish(passed ? 0 : 100, passed ? "single native click atomically purchased desk+chair+seat" :
                 "state or tile-center invariant failed", bootstrap, result.ToString());
         }
 
@@ -303,8 +350,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             for (var x = 1; x < grid.Width - 1; x++)
             {
                 var cell = new OfficeGridCoordinate(x, y);
-                OfficeLayoutEditResult edit = OfficeLayoutEditRules.PlaceFurniture(
-                    grid, "__native_pointer_qa__", definition.DefinitionId, cell, definition.DesiredFacing);
+                OfficeLayoutEditResult edit = OfficeFurnitureCatalog.IsWorkstationSetOffer(definition.DefinitionId)
+                    ? OfficeLayoutEditRules.PlaceWorkstation(
+                        grid,
+                        "__native_pointer_qa__",
+                        "__native_pointer_qa__:chair",
+                        "__native_pointer_qa__:seat",
+                        cell,
+                        definition.DesiredFacing)
+                    : OfficeLayoutEditRules.PlaceFurniture(
+                        grid,
+                        "__native_pointer_qa__",
+                        definition.DefinitionId,
+                        cell,
+                        definition.DesiredFacing);
                 if (!edit.Success) continue;
                 Vector3 screen = camera.WorldToScreenPoint(runtime.World.Presenter.CellCenterWorld(cell));
                 if (screen.z <= 0f || screen.x < 48f || screen.y < 48f ||

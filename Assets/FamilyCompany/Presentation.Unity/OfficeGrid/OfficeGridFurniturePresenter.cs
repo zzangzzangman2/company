@@ -417,9 +417,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
             FurnitureVisual chair = RequiredVisual(seat.ChairFurnitureId);
             if (chair.BaseRenderer.sortingOrder != characterSortingOrder - 1) return false;
             if (chair.FrontRenderer != null && chair.FrontRenderer.enabled) return false;
-            if (chair.OccupiedLowerBodyRenderer == null ||
-                !chair.OccupiedLowerBodyRenderer.enabled ||
-                chair.OccupiedLowerBodyRenderer.sortingOrder != characterSortingOrder + 2)
+            // V31's open-back chair intentionally has no legacy green-chair foreground or cropped
+            // lower-rim mask. In that case the complete chair base belongs behind the occupant.
+            if (chair.FrontRenderer != null &&
+                (chair.OccupiedLowerBodyRenderer == null ||
+                 !chair.OccupiedLowerBodyRenderer.enabled ||
+                 chair.OccupiedLowerBodyRenderer.sortingOrder != characterSortingOrder + 2))
                 return false;
             if (!seat.HasWorkstationBinding) return true;
             FurnitureVisual desk = RequiredVisual(seat.WorkSurfaceFurnitureId);
