@@ -415,19 +415,21 @@ footprint and chair distance did not follow the tycoon grid contract. The final 
 cells and the authored desk seat/work sockets. The mapped tile axes are `70.52887°`, so the desk,
 CRT, keyboard and accessories use oblique grid-basis meshes rather than rotated orthogonal cubes.
 V17's shared `-45°` chair/Father readability yaw was user-rejected because the backrest appeared
-beside the body and Father did not face the CRT. V20 applies no camera-facing yaw. The chair's +Z
-and the candidate's measured body-forward are solved independently against the physical CRT centre;
-both final facing errors are `0°`. The chair back is pulled directly behind the pelvis, and seated
-limb IK uses the same physical body-forward rather than assuming the actor transform's +Z.
+beside the body. V20 removed that yaw but was also rejected: aiming at the CRT centre does not prove
+that the chair is on the green text face's front side. V23 derives the real `Crt_Screen` face normal
+from the mapped mesh width axis, moves the final chair/actor seat onto that front normal, and applies
+the grid-skew correction to put the keyboard on the same centreline. Screen-front→seat, chair→CRT
+and actor→CRT errors are `0°`; actor→keyboard is `0.0198°`, distance `0.4525218`. The chair back is
+directly behind the pelvis, and seated limb IK uses the same physical body-forward.
 
 The legacy chair anchor is `0.8318409` QA-world units away from the desk operator seat. The final
-chair and actor are both resolved to the desk operator seat (`0` error), while the keyboard remains
-on the desk work socket (`0.4441449` ground distance from the seat). Cells `2:8` and `3:8` are both
+chair and actor are both resolved to the screen-front seat (`0` mutual error), while the skew-adjusted
+keyboard stays on the same centreline (`0.4525218` ground distance). Cells `2:8` and `3:8` are both
 confirmed non-walkable. Existing shop placement already owns integer origin, footprint and
 `BlocksMovement`; automatic purchased-desk seat binding remains a production promotion gate.
 
 Final evidence is
-`FatherV19MeshyOnePackage613MapBuildV17RigAxisChairFacing` /
-`FatherV19MeshyOnePackage613MapRuntimeV20RigAxisChairFacing`: 1,051 sample frames, 361 work
+`FatherV19MeshyOnePackage613MapBuildV18MonitorScreenFrontSeat` /
+`FatherV19MeshyOnePackage613MapRuntimeV23MonitorScreenFrontSeatClose`: 1,051 sample frames, 361 work
 observations, 132 captures, `productionMutation: false`, `productionEligible: false`. See
 `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`.

@@ -17,6 +17,7 @@ namespace FamilyCompany.Experimental.Family3D
         private float actorModelForwardYawOffsetDegrees;
         private Quaternion seatedActorLocalRotation = Quaternion.identity;
         private Quaternion chairFacingLocalRotation = Quaternion.identity;
+        private Vector3 resolvedSeatGroundLocal;
         private Vector3 deskFootprintCenterLocal;
         private Vector3 keyboardGroundLocal;
         private Vector3 gridRightLocalUnit;
@@ -24,7 +25,9 @@ namespace FamilyCompany.Experimental.Family3D
         private float deskFootprintWidthWorld;
         private float deskFootprintDepthWorld;
 
-        public Vector3 SeatGroundWorld => transform.position;
+        public Vector3 SemanticSeatGroundWorld => transform.position;
+        public Vector3 SeatGroundWorld => transform.TransformPoint(resolvedSeatGroundLocal);
+        public Vector3 ChairGroundWorld { get; private set; }
         public Vector3 ForwardWorld => transform.forward;
         public Quaternion GridRotationWorld => transform.rotation;
         public Quaternion SeatedRotationWorld =>
@@ -40,6 +43,7 @@ namespace FamilyCompany.Experimental.Family3D
         public float CushionWorldY { get; private set; }
         public Vector3 KeyboardWorld { get; private set; }
         public Vector3 MonitorWorld { get; private set; }
+        public Vector3 MonitorScreenOutwardWorld { get; private set; }
         public Vector3 WorkSurfaceWorld { get; private set; }
         public Vector3 DeskTopCenterWorld { get; private set; }
         public Vector3 DeskFootprintCenterWorld =>
@@ -50,6 +54,8 @@ namespace FamilyCompany.Experimental.Family3D
         public float SeatToKeyboardGroundDistance { get; private set; }
         public float SeatToMonitorFacingErrorDegrees { get; private set; }
         public float ChairToMonitorFacingErrorDegrees { get; private set; }
+        public float MonitorScreenToSeatFacingErrorDegrees { get; private set; }
+        public float SemanticSeatToScreenFacingSeatDistance { get; private set; }
 
         public static Family3DWorkstationQa Create(
             Transform parent,
@@ -110,6 +116,17 @@ namespace FamilyCompany.Experimental.Family3D
                 result.MonitorWorld);
             result.ChairToMonitorFacingErrorDegrees = result.MeasureChairFacingError(
                 result.MonitorWorld);
+            result.MonitorScreenToSeatFacingErrorDegrees =
+                result.MeasureMonitorScreenToSeatFacingError();
+            result.SemanticSeatToScreenFacingSeatDistance = Vector3.Distance(
+                result.SemanticSeatGroundWorld,
+                result.SeatGroundWorld);
+            if (result.SeatToKeyboardFacingErrorDegrees > 0.1f ||
+                result.SeatToMonitorFacingErrorDegrees > 0.1f ||
+                result.ChairToMonitorFacingErrorDegrees > 0.1f ||
+                result.MonitorScreenToSeatFacingErrorDegrees > 0.1f)
+                throw new InvalidOperationException(
+                    "Screen, keyboard, chair and actor must share one physical centreline.");
             return result;
         }
 
@@ -265,7 +282,7 @@ namespace FamilyCompany.Experimental.Family3D
             // keep the physical keyboard from overhanging the semantic footprint.
             float keyboardWidth = Mathf.Min(0.35f * h, deskWidth * 0.43f);
             float keyboardDepth = Mathf.Min(0.125f * h, deskDepth * 0.33f);
-            float keyboardRight = Mathf.Clamp(
+            float authoredKeyboardRight = Mathf.Clamp(
                 keyboardGrid.x,
                 deskRight - deskWidth * 0.5f + keyboardWidth * 0.5f,
                 deskRight + deskWidth * 0.5f - keyboardWidth * 0.5f);
@@ -277,9 +294,14 @@ namespace FamilyCompany.Experimental.Family3D
                 keyboardForward + deskDepth * 0.28f,
                 deskForward,
                 backForward - 0.11f * h);
-            // Monitor, keyboard, chair and actor share one operator centreline. Readability may
-            // not move the monitor sideways because that makes the chair look mispositioned.
-            float monitorRight = keyboardRight;
+            float monitorRight = authoredKeyboardRight;
+            float screenForward = monitorForward - 0.097f * h;
+            // In this oblique mapped grid, equal right coordinates do not form a line normal to
+            // the screen plane. Shift the physical keyboard by the exact skew compensation so
+            // screen, keyboard and chair occupy one real perpendicular centreline.
+            float gridSkew = Vector3.Dot(gridRightLocalUnit, gridForwardLocalUnit);
+            float keyboardRight =
+                monitorRight + gridSkew * (screenForward - keyboardForward);
 
             AddGridBox("Crt_Base", GridLocal(monitorRight, 0.505f * h, monitorForward),
                 0.22f * h, 0.06f * h, 0.17f * h, beige, layer);
@@ -290,7 +312,7 @@ namespace FamilyCompany.Experimental.Family3D
                 GridLocal(monitorRight, 0.635f * h, monitorForward - 0.086f * h),
                 0.285f * h, 0.195f * h, 0.016f * h, dark, layer);
             Transform monitor = AddGridBox("Crt_Screen",
-                GridLocal(monitorRight, 0.635f * h, monitorForward - 0.097f * h),
+                GridLocal(monitorRight, 0.635f * h, screenForward),
                 0.245f * h, 0.155f * h, 0.010f * h, screen, layer);
             MonitorWorld = monitor.position;
             for (var line = 0; line < 4; line++)
@@ -314,10 +336,6 @@ namespace FamilyCompany.Experimental.Family3D
             KeyboardWorld = keyboard.position;
             WorkSurfaceWorld = transform.TransformPoint(
                 GridLocal(keyboardRight, topY, keyboardForward));
-            Vector3 seatGround = SeatGroundWorld;
-            Vector3 keyboardGround = KeyboardWorld;
-            seatGround.y = keyboardGround.y = 0f;
-            SeatToKeyboardGroundDistance = Vector3.Distance(seatGround, keyboardGround);
             for (var row = 0; row < 4; row++)
             for (var column = 0; column < 9; column++)
                 AddGridBox("Key_" + row + "_" + column,
@@ -346,6 +364,33 @@ namespace FamilyCompany.Experimental.Family3D
             AddCylinder("Mug", GridLocal(accessoryRight + serviceSide * 0.09f * h,
                     0.535f * h, deskForward - deskDepth * 0.08f),
                 0.045f * h, 0.08f * h, chairTeal, layer);
+
+            // The screen face is the -gridForward side: bezel/text are authored at decreasing
+            // forward coordinates. Its real mesh normal is perpendicular to gridRight, not simply
+            // -gridForward, because the mapped tile axes are oblique. Place the chair on that exact
+            // front normal, close enough for this short avatar to reach the aligned keyboard.
+            Vector3 screenOutwardLocal = Vector3.Cross(
+                Vector3.up,
+                gridRightLocalUnit).normalized;
+            if (Vector3.Dot(screenOutwardLocal, -gridForwardLocalUnit) < 0f)
+                screenOutwardLocal = -screenOutwardLocal;
+            Vector3 keyboardGroundForSeatLocal = transform.InverseTransformPoint(KeyboardWorld);
+            keyboardGroundForSeatLocal.y = 0f;
+            // Preserve the exact screen-front line but set reach from the real keyboard. The first
+            // screen-normal proof used a screen-based distance and left 0.7706 world units to the
+            // keys, visibly stretching both arms. 0.24 body heights restores the approved compact
+            // desk reach while remaining on the text side of the CRT.
+            resolvedSeatGroundLocal = keyboardGroundForSeatLocal +
+                                      screenOutwardLocal * (0.24f * h);
+            chairPivot.localPosition = resolvedSeatGroundLocal;
+            ChairGroundWorld = chairPivot.position;
+            MonitorScreenOutwardWorld = transform.TransformDirection(
+                screenOutwardLocal).normalized;
+
+            Vector3 seatGround = SeatGroundWorld;
+            Vector3 keyboardGround = KeyboardWorld;
+            seatGround.y = keyboardGround.y = 0f;
+            SeatToKeyboardGroundDistance = Vector3.Distance(seatGround, keyboardGround);
 
             Vector3 monitorDirectionWorld = MonitorWorld - SeatGroundWorld;
             monitorDirectionWorld.y = 0f;
@@ -387,6 +432,18 @@ namespace FamilyCompany.Experimental.Family3D
             return targetDirection.sqrMagnitude <= 0.000001f
                 ? 180f
                 : Vector3.Angle(chairForward, targetDirection);
+        }
+
+        private float MeasureMonitorScreenToSeatFacingError()
+        {
+            Vector3 screenToSeat = SeatGroundWorld - MonitorWorld;
+            screenToSeat.y = 0f;
+            Vector3 screenOutward = MonitorScreenOutwardWorld;
+            screenOutward.y = 0f;
+            return screenToSeat.sqrMagnitude <= 0.000001f ||
+                   screenOutward.sqrMagnitude <= 0.000001f
+                ? 180f
+                : Vector3.Angle(screenOutward, screenToSeat);
         }
 
         private Vector2 LocalToGridCoordinates(Vector3 localPosition)

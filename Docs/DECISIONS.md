@@ -1,16 +1,31 @@
 # DECISIONS
 
+## 2026-08-28 / 좌석은 CRT 중심이 아니라 초록 글씨 화면의 실제 앞면에 둔다
+
+결정: V20의 “seat→CRT centre `0°`” 판정은 폐기한다. 점 하나를 바라보는 각도만 맞으면 의자가 화면
+뒤/옆에 있어도 PASS할 수 있었고, 사용자가 실제 GIF에서 같은 배치 오류를 즉시 지적했다. 최종 V23은
+`Crt_Screen` mesh의 폭축에 수직인 실제 화면 법선을 계산하고, 초록 글씨가 보이는 앞면 쪽 동일 중심선에
+의자·아빠·키보드를 놓는다. mapped grid가 `70.52887°`로 비직교이므로 `-gridForward`를 화면 법선으로
+간주하지 않고 skew를 대수적으로 보정한다.
+
+합격 수치는 screen-front→seat `0°`, actor→CRT `0°`, chair→CRT `0°`, actor→keyboard `0.0198°`,
+chair↔actor `0`, seat→keyboard `0.4525218`이다. 기존 semantic seat는 route 접근점으로만 남고 최종
+착석점까지 `0.5996623`을 sit blend에서 이동한다. 책상 origin/footprint/blocking과 승인된 걷기는
+변경하지 않는다. 증거는 `FatherV19MeshyOnePackage613MapBuildV18MonitorScreenFrontSeat` /
+`FatherV19MeshyOnePackage613MapRuntimeV23MonitorScreenFrontSeatClose`이며 사용자 승인 전
+`productionEligible=false`다.
+
 ## 2026-08-28 / 의자와 아빠는 카메라가 아니라 실제 CRT를 각각 바라본다
 
 결정: 사용자 재검수에서 V17의 `-45°` seated readability yaw는 폐기한다. 그 값은 의자와 아빠를
 함께 돌렸지만 화면에서는 등받이가 몸 옆에 있고 얼굴이 모니터 정면을 보지 않았다. V20은 presentation
 yaw를 `0°`로 고정하고 seat→physical CRT 수평 벡터를 기준으로 의자 +Z와 캐릭터의 measured
 body-forward를 별도로 계산한다. 따라서 candidate model-forward offset이 달라져도 의자 등받이가
-같이 틀어지지 않는다. 현재 V19 offset은 `0°`, actor→CRT와 chair→CRT error는 모두 `0°`다.
+같이 틀어지지 않는다. 다만 이 V20 결정은 화면 앞/뒤를 판정하지 못해 위 V23 결정으로 대체됐다.
 
 등받이는 seat pivot을 바꾸지 않고 골반 뒤로 당긴다. 착석 손·발 endpoint IK도 transform +Z가 아니라
 같은 physical body-forward/right를 사용한다. 책상 origin `(2,8)`, `2×1` footprint, blocked cells,
-desk seat/work socket, 승인된 action 613 걷기와 외형은 변경하지 않는다. 최종 증거는
+desk seat/work socket, 승인된 action 613 걷기와 외형은 변경하지 않는다. 폐기된 V20 증거는
 `FatherV19MeshyOnePackage613MapBuildV17RigAxisChairFacing` /
 `FatherV19MeshyOnePackage613MapRuntimeV20RigAxisChairFacing`이며, 사용자 승인 전
 `productionEligible=false`다.
@@ -24,15 +39,15 @@ desk seat/work socket, 승인된 action 613 걷기와 외형은 변경하지 않
 
 실제 좌석이 카메라를 등지는 가림은 임의 카메라나 가짜 배경으로 숨기지 않는다. 좌석 anchor를 유지한 채
 의자·아빠만 회전하는 `-45/0/+45°` actual-map 후보를 비교해 당시 `-45°`를 채택했지만, 이후 사용자
-실제 화면 재검수에서 의자/모니터 방향이 틀린 것으로 기각됐다. 현재 결정은 위 V20 항목이 대체한다.
+실제 화면 재검수에서 의자/모니터 방향이 틀린 것으로 기각됐다. 현재 결정은 최상단 V23 항목이 대체한다.
 V13처럼 책상·CRT·키보드 root의 yaw만 맞추는 방식은
 semantic origin/footprint를 보장하지 못하므로 폐기한다. V17은 실제 desk origin `(2,8)`, `2×1`
 footprint의 네 corner, blocked cells와 desk seat/work socket을 읽는다. mapped tile axis가
 `70.52887°`이므로 비직교 grid basis mesh로 네 corner를 맞춘다.
 
 legacy chair anchor와 desk operator seat의 `0.8318409` 간격은 의자에서 멀리 떨어져 타자하는 화면의
-직접 원인이다. 최종 chair와 actor는 desk operator seat에 함께 결합해 error `0`으로 만들고 keyboard는
-desk work socket에 둔다. 상점 배치의 integer origin/footprint/`BlocksMovement`는 기존 production
+직접 원인이다. 당시 V17은 chair와 actor를 desk operator seat에 함께 결합해 error `0`으로 만들었지만,
+그 seat가 CRT 글씨 앞면 쪽인지 검증하지 않아 이후 폐기됐다. 상점 배치의 integer origin/footprint/`BlocksMovement`는 기존 production
 계약을 재사용하지만 자동 seat/workstation binding은 사용자 승인 전 별도 승격하지 않는다.
 셔츠와 같은 청록 의자, 통짜 높은 등받이, 캐릭터 다리로 오인되는 5발 받침은
 폐기한다. proof는 actual `desk_father`/`chair_father` 2D renderer를 일시적으로만 숨기고 종료 시 복구한다.

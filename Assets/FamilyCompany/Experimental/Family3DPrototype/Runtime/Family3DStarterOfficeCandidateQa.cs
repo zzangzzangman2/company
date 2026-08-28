@@ -851,7 +851,7 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherMotionFacingOffsetDegrees,
                 0f);
             fatherDeskResolvedChairActorSocketErrorWorld = Vector3.Distance(
-                seatGround,
+                fatherDeskWorkstation.ChairGroundWorld,
                 fatherDeskWorkstation.SeatGroundWorld);
 
             HideSourceFurniture(seat.ChairFurnitureId);
@@ -2116,12 +2116,20 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherDeskActorModelForwardYawOffsetDegrees = fatherDeskWorkstation == null
                         ? 0f
                         : fatherDeskWorkstation.ActorModelForwardYawOffsetDegrees,
+                    fatherDeskMonitorScreenToSeatFacingErrorDegrees =
+                        fatherDeskWorkstation == null
+                            ? 0f
+                            : fatherDeskWorkstation.MonitorScreenToSeatFacingErrorDegrees,
+                    fatherDeskSemanticSeatToScreenFacingSeatDistance =
+                        fatherDeskWorkstation == null
+                            ? 0f
+                            : fatherDeskWorkstation.SemanticSeatToScreenFacingSeatDistance,
                     fatherDeskPlacementPolicy =
                         "shop/layout integer origin + semantic footprint owns 3D top center/size; " +
                         "semantic BlocksMovement cells own navigation; calibrated desk seat/work " +
-                        "sockets own chair, actor and keyboard XZ; seat-to-physical-monitor vector " +
-                        "owns chair +Z and measured actor-body forward separately, with zero " +
-                        "readability yaw offset",
+                        "socket seeds the route; physical CRT screen outward normal owns the final " +
+                        "chair/actor side and centreline; chair +Z and measured actor-body forward " +
+                        "face the screen with zero readability yaw offset",
                     fatherDeskFootprintOrigin = fatherDeskFootprintOrigin,
                     fatherDeskFootprintSize = fatherDeskFootprintSize,
                     fatherDeskBlockedCells = fatherDeskBlockedCells,
@@ -2550,6 +2558,8 @@ namespace FamilyCompany.Experimental.Family3D
             public float fatherDeskSeatToMonitorFacingErrorDegrees;
             public float fatherDeskChairToMonitorFacingErrorDegrees;
             public float fatherDeskActorModelForwardYawOffsetDegrees;
+            public float fatherDeskMonitorScreenToSeatFacingErrorDegrees;
+            public float fatherDeskSemanticSeatToScreenFacingSeatDistance;
             public string fatherDeskPlacementPolicy;
             public Vector2Int fatherDeskFootprintOrigin;
             public Vector2Int fatherDeskFootprintSize;

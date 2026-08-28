@@ -1331,9 +1331,11 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   - walnut desk, CRT, keyboard/keys, mouse, telephone, paper, mug, warm-leather low-back chair
   - reads `desk_father` origin `(2,8)`, `2x1` footprint corners, blocked cells and desk seat/work sockets
   - mapped tile axes are `70.52887°`; desk/CRT/keyboard use oblique grid-basis meshes
-  - V17 `-45°` seated readability offset is user-rejected; V20 uses zero presentation yaw and
-    independently aligns chair +Z and measured actor body-forward to the physical CRT (`0°` error each)
-  - legacy chair anchor offset `0.8318409`; resolved chair↔actor seat error `0`; seat→keyboard `0.4441449`
+  - V17 `-45°` is user-rejected; V20 centre-targeting is also rejected because it kept the chair
+    behind/beside the green text face
+  - V23 uses the actual `Crt_Screen` face normal: screen-front→seat, chair→CRT and actor→CRT are `0°`;
+    actor→keyboard `0.0198°`
+  - legacy chair anchor offset `0.8318409`; resolved chair↔actor error `0`; seat→keyboard `0.4525218`
   - blocked cells `2:8`, `3:8` are both non-walkable
   - QA layer 30 only; no collider, catalog, save, production/default mutation
 - seated implementation:
@@ -1346,13 +1348,13 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `seat_father` / `desk_father` / `chair_father`, phases
   `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`
 - final build/runtime:
-  `FatherV19MeshyOnePackage613MapBuildV17RigAxisChairFacing` /
-  `FatherV19MeshyOnePackage613MapRuntimeV20RigAxisChairFacing`
+  `FatherV19MeshyOnePackage613MapBuildV18MonitorScreenFrontSeat` /
+  `FatherV19MeshyOnePackage613MapRuntimeV23MonitorScreenFrontSeatClose`
 - proof: 1,051 sample frames, 361 work observations, 132 captures at 7.5 fps, visual-content PASS.
 - review media:
-  - `father-v19-rig-axis-chair-facing-actual-map-final.gif`
-    `B1BD59F8788240F68DF476391E57972819E8970A5F484ED9D8EDF6A2D50E38F9`
-  - `father-v19-rig-axis-chair-facing-closeup-final.gif`
-    `34A2755752A466618D751F3650B2A9B8DA2E142AB16E2A75D7B51DA6CD4DFA24`
+  - `father-v19-monitor-screen-front-seat-actual-map-final.gif`
+    `6928B6A68AC6A207468A37EE28048E1E563E78C7CC7386BED5CF84B94FF3D1C2`
+  - `father-v19-monitor-screen-front-seat-closeup-final.gif`
+    `49E845FC725CA69ADCC44E920690CCBFCF80354DCA994E623ABB4FA0D0F926DD`
 - status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
   `productionEligible=false`, additional Higgsfield use `0 credits`.
