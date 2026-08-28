@@ -1903,3 +1903,21 @@ asset의 license/transfer 문서가 없으므로 mesh/texture/UV/material/rig do
 attestation이다. 이 결정은 개인용 로컬 시각 proof만 허용하며, 사용자 화면 승인과 별도 provenance/shipping
 결정 전에는 production/default Unity import, 원본 payload commit, 공개 재배포, 판매를 허용하지 않는다.
 `test3.zst`/Sakurako는 bundled LICENSE와 사용자 지시에 따라 계속 완전 제외한다.
+
+## Father 생성 보행은 one-package 경계를 넘지 않는다 (2026-08-28)
+
+결정: Father V19부터 생성 메시, bind skeleton, skin weight, 보행 clip은 하나의 Higgsfield/Meshy 작업
+패키지로만 소비한다. 외형이 비슷하다는 이유로 별도 job의 메시/리그/clip을 교차 결합하지 않는다.
+무릎의 자연스러운 soft blend를 좌우 이름만 보고 일괄 삭제하지 않으며, 신발 영역 반대편 weight와
+arm↔leg 강한 혼합만 fail-closed한다.
+
+이유: 이전 세 번째 다리·옷 찢김·흐물거리는 팔/손은 cross-package bind/skin과 과도한 weight sanitation이
+만든 문제였다. 새 원본의 전체 limb sanitation 실험은 edge stretch max를 `3.17→29.29`로 악화시켰다.
+반면 변경하지 않은 one-package 원본은 foot-region cross `0`, arm↔leg strong `0`이고 실제 127프레임에서
+두 다리와 옷 연결이 유지된다.
+
+결정: source action의 주기는 실제 뼈 좌표 recurrence로 측정한다. Father V19 action 613은 127프레임
+전체가 아니라 42프레임/1.4초 한 주기이며, Unity는 `1..43`만 사용한다. 실제 맵 cadence/접지는
+GaitDistance/stride로 맞추고, 한 회전 7.950477 units에 10 cycles인 `0.7950477`을 사용한다.
+정지 시트나 자동 PASS만으로 승인하지 않고, 확대/전체 실제 맵 GIF의 사용자 판정 전까지
+`productionEligible=false`를 유지한다.

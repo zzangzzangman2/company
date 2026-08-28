@@ -28,6 +28,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18HiggsfieldStaticMapQa.unity";
         public const string FatherV18MotionQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedStableArmWalkMapQaV74.unity";
+        public const string FatherV19MotionQaScenePath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV19MeshyOnePackage613MapQa.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -54,6 +56,16 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldCasualWalk613/father-v18-higgsfield-casual-walk-613-walk.fbx";
         public const string FatherV18MotionTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
+        public const string FatherV19MotionModelPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-613.fbx";
+        public const string FatherV19MotionTexturePath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-albedo.png";
+        public const float FatherV19FacingOffsetDegrees = 0f;
+        // One forced-map circuit is 7.950477 office units. Ten authored cycles per circuit both
+        // matches the measured planted-foot velocity (least-squares optimum 0.812345) and makes
+        // the multi-direction proof close on the same pose without a GIF seam.
+        public const float FatherV19StrideOfficeUnits = 0.7950477f;
+        public const float FatherV19AuthoredCycleSeconds = 1.4f;
         public const string MotherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/MotherV1/mother-blender-humanoid-v1.fbx";
         public const string DefaultBuildRoot =
@@ -62,6 +74,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18HiggsfieldStaticMapBuildV18";
         public const string FatherV18MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedStableArmWalkMapBuildV74";
+        public const string FatherV19MotionDefaultBuildRoot =
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV2";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -163,10 +177,29 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             }
         }
 
+        public static void BuildFatherV19MotionFromCommandLine()
+        {
+            try
+            {
+                Build(ResolveBuildRoot(false, false, true), false, false, true);
+                Debug.Log("FAMILY_3D_FATHER_V19_MESHY_ONE_PACKAGE_613_MAP_QA_BUILD: PASS");
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                Debug.LogError(
+                    "FAMILY_3D_FATHER_V19_MESHY_ONE_PACKAGE_613_MAP_QA_BUILD: FAIL | " +
+                    exception.Message);
+                EditorApplication.Exit(1);
+            }
+        }
+
         private static void Build(
             string buildRoot,
             bool fatherV18StaticOnly,
-            bool fatherV18MotionOnly = false)
+            bool fatherV18MotionOnly = false,
+            bool fatherV19MotionOnly = false)
         {
             ThrowIfInteractiveSceneIsDirty();
             string productionSceneBefore = Sha256Asset(ProductionScenePath);
@@ -174,7 +207,10 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             string buildSettingsBefore = CaptureBuildSettings();
             string buildSettingsFileBefore = Sha256File(ProjectPath("ProjectSettings/EditorBuildSettings.asset"));
 
-            AssetBundle bundle = LoadAssets(fatherV18StaticOnly, fatherV18MotionOnly);
+            AssetBundle bundle = LoadAssets(
+                fatherV18StaticOnly,
+                fatherV18MotionOnly,
+                fatherV19MotionOnly);
             int qaLayer = CreateIsolatedQaScene(bundle);
 
             Directory.CreateDirectory(buildRoot);
@@ -184,6 +220,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     ? "FamilyCompanyFatherV18HiggsfieldStaticMapQa.exe"
                     : fatherV18MotionOnly
                         ? "FamilyCompanyFatherV18StableArmWalkV74MapQa.exe"
+                    : fatherV19MotionOnly
+                        ? "FamilyCompanyFatherV19MeshyOnePackage613MapQa.exe"
                     : "FamilyCompanyStarterOffice3DCandidateQa.exe");
             var options = new BuildPlayerOptions
             {
@@ -231,14 +269,20 @@ namespace FamilyCompany.Experimental.Family3D.Editor
 
         private static AssetBundle LoadAssets(
             bool fatherV18StaticOnly,
-            bool fatherV18MotionOnly = false)
+            bool fatherV18MotionOnly = false,
+            bool fatherV19MotionOnly = false)
         {
-            if (fatherV18StaticOnly && fatherV18MotionOnly)
-                throw new InvalidOperationException("Father V18 static and motion modes are mutually exclusive.");
+            int exclusiveModes = (fatherV18StaticOnly ? 1 : 0) +
+                                 (fatherV18MotionOnly ? 1 : 0) +
+                                 (fatherV19MotionOnly ? 1 : 0);
+            if (exclusiveModes > 1)
+                throw new InvalidOperationException("Father QA candidate modes are mutually exclusive.");
             CandidateDefinition[] definitions = fatherV18StaticOnly
                 ? new[] { new CandidateDefinition("father", FatherV18StaticModelPath) }
                 : fatherV18MotionOnly
                     ? new[] { new CandidateDefinition("father", FatherV18MotionModelPath) }
+                : fatherV19MotionOnly
+                    ? new[] { new CandidateDefinition("father", FatherV19MotionModelPath) }
                 : Candidates;
             var prefabs = new GameObject[definitions.Length];
             for (var index = 0; index < definitions.Length; index++)
@@ -293,6 +337,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     definitions,
                     true,
                     false,
+                    false,
                     FatherV18StaticQaScenePath);
             }
 
@@ -318,7 +363,32 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     definitions,
                     false,
                     true,
+                    false,
                     FatherV18MotionQaScenePath);
+            }
+
+            if (fatherV19MotionOnly)
+            {
+                AssetDatabase.ImportAsset(
+                    FatherV19MotionTexturePath,
+                    ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(FatherV19MotionTexturePath);
+                if (texture == null)
+                    throw new InvalidOperationException(
+                        "Father V19 one-package texture did not load: " + FatherV19MotionTexturePath);
+                AnimationClip motionWalkClip = LoadHumanClip(
+                    FatherV19MotionModelPath,
+                    "Casual_Walk_inplace");
+                return new AssetBundle(
+                    prefabs,
+                    motionWalkClip,
+                    null,
+                    texture,
+                    definitions,
+                    false,
+                    false,
+                    true,
+                    FatherV19MotionQaScenePath);
             }
 
             AssetDatabase.ImportAsset(
@@ -338,6 +408,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 null,
                 null,
                 definitions,
+                false,
                 false,
                 false,
                 QaScenePath);
@@ -457,6 +528,21 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     false,
                     true,
                     true);
+            else if (bundle.FatherV19MotionOnly)
+                qa.ConfigureFatherHiggsfieldIdleRun(
+                    bundle.Prefabs[0],
+                    bundle.StaticAlbedo,
+                    ResolveImportedSurfaceMaterial(bundle.Prefabs[0]),
+                    null,
+                    bundle.WalkClip,
+                    camera,
+                    qaLayer,
+                    FatherV19FacingOffsetDegrees,
+                    FatherV19StrideOfficeUnits,
+                    false,
+                    false,
+                    false,
+                    sourceAuthoredCycleSeconds: FatherV19AuthoredCycleSeconds);
             else
                 qa.Configure(
                     bundle.Prefabs[0],
@@ -472,6 +558,18 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 throw new InvalidOperationException(
                     "Could not save isolated QA scene: " + bundle.QaScenePath);
             return qaLayer;
+        }
+
+        private static Material ResolveImportedSurfaceMaterial(GameObject prefab)
+        {
+            Renderer renderer = prefab == null
+                ? null
+                : prefab.GetComponentInChildren<Renderer>(true);
+            Material material = renderer == null ? null : renderer.sharedMaterial;
+            if (material == null || material.shader == null)
+                throw new InvalidOperationException(
+                    "Imported Father V19 surface material is missing from the one-package FBX.");
+            return material;
         }
 
         private static Camera CreateOverlayCamera(Transform parent, int layer)
@@ -576,16 +674,22 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 coordinateMapping =
                     "production Camera.WorldToViewportPoint(actor XY/Z) -> overlay ViewportPointToRay -> Y=0 plane; raw XZ fallback",
                 directionMapping =
-                    "measured QA ground displacement -> LookRotation + restored V72 clean-rig -16.9219 degree measured model-forward offset; 360 degrees/second corner blend",
+                    bundle.FatherV19MotionOnly
+                        ? "measured QA ground displacement -> LookRotation + candidate-specific measured facing offset; 360 degrees/second corner blend"
+                        : "measured QA ground displacement -> LookRotation + restored V72 clean-rig -16.9219 degree measured model-forward offset; 360 degrees/second corner blend",
                 motionMapping = bundle.FatherV18StaticOnly
                     ? "actual Father OfficeRuntimeAgent position + direction -> static V18 root translation/yaw; no limb rig"
                     : bundle.FatherV18MotionOnly
                         ? "actual Father OfficeRuntimeAgent position/direction/GaitPhase01 -> V72 clean V4 lower-body/torso sanitation and action 613 at poseStrength 1; only final arms use stable V66 body-side swing"
+                    : bundle.FatherV19MotionOnly
+                        ? "actual Father position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613; no retarget, sanitation, IK rewrite, or procedural limb motion"
                     : "Position + LastActualDisplacement + GaitPhase01 + CurrentDirection -> Family3DWalkActor",
                 scalePolicy = bundle.FatherV18StaticOnly
                     ? "every frame source Father sprite projected bounds height == V18 renderer projected bounds height; <=0.5% error; grounded"
                     : bundle.FatherV18MotionOnly
                         ? "one locked uniform scale calibrated from the restored V72 clean V4 idle bounds to the live Father sprite; no per-pose rescaling"
+                    : bundle.FatherV19MotionOnly
+                        ? "one locked uniform scale calibrated from the one-package authored pose to the live Father sprite; no per-pose rescaling"
                     : "live production SpriteRenderer bounds projected viewport height",
                 source2DPolicy =
                     "QA-only Renderer.forceRenderingOff; sorting layer/order and transform depth never assigned",
@@ -594,16 +698,21 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     "seat approach/transitions/work/egress skip 3D and restore original 2D presentation",
                 fatherV18StaticOnly = bundle.FatherV18StaticOnly,
                 fatherV18MotionOnly = bundle.FatherV18MotionOnly,
+                fatherV19MotionOnly = bundle.FatherV19MotionOnly,
                 staticMapScaleTolerance = Family3DStarterOfficeCandidateQa.StaticMapScaleTolerance,
                 staticTextureAsset = bundle.FatherV18StaticOnly
                     ? FatherV18StaticTexturePath
                     : bundle.FatherV18MotionOnly
                         ? FatherV18MotionTexturePath
+                    : bundle.FatherV19MotionOnly
+                        ? FatherV19MotionTexturePath
                         : string.Empty,
                 staticTextureSha256 = bundle.FatherV18StaticOnly
                     ? Sha256Asset(FatherV18StaticTexturePath)
                     : bundle.FatherV18MotionOnly
                         ? Sha256Asset(FatherV18MotionTexturePath)
+                    : bundle.FatherV19MotionOnly
+                        ? Sha256Asset(FatherV19MotionTexturePath)
                         : string.Empty,
                 idleClipAsset = bundle.FatherV18MotionOnly
                     ? FatherV18MotionIdleClipPath
@@ -617,11 +726,15 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     ? string.Empty
                     : bundle.FatherV18MotionOnly
                         ? FatherV18MotionWalkClipPath
+                    : bundle.FatherV19MotionOnly
+                        ? FatherV19MotionModelPath
                         : WalkClipPath,
                 walkClipSha256 = bundle.FatherV18StaticOnly
                     ? string.Empty
                     : bundle.FatherV18MotionOnly
                         ? Sha256Asset(FatherV18MotionWalkClipPath)
+                    : bundle.FatherV19MotionOnly
+                        ? Sha256Asset(FatherV19MotionModelPath)
                         : Sha256Asset(WalkClipPath),
                 walkClipName = bundle.WalkClip == null ? string.Empty : bundle.WalkClip.name,
                 walkClipLength = bundle.WalkClip == null ? 0f : bundle.WalkClip.length,
@@ -629,10 +742,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     ? 0f
                     : bundle.FatherV18MotionOnly
                         ? Family3DWalkActor.LockedCycleSeconds
+                    : bundle.FatherV19MotionOnly
+                        ? FatherV19AuthoredCycleSeconds
                         : Family3DWalkActor.LockedCycleSeconds,
-                nativeModelClipPackage = false,
+                nativeModelClipPackage = bundle.FatherV19MotionOnly,
                 motionPostProcessing = bundle.FatherV18MotionOnly
                     ? "V72 legs/pelvis/torso/head unchanged; behind-body tuck disabled; straight rigid arms with fixed-axis opposite upper-arm swing 6 degrees; elbow/wrist/finger/outward/tuck correction zero"
+                    : bundle.FatherV19MotionOnly
+                        ? "none; native one-package skin and action sampled at poseStrength 1"
                     : string.Empty,
                 candidates = assets,
                 buildResult = report.summary.result.ToString(),
@@ -643,7 +760,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
 
         private static string ResolveBuildRoot(
             bool fatherV18StaticOnly,
-            bool fatherV18MotionOnly = false)
+            bool fatherV18MotionOnly = false,
+            bool fatherV19MotionOnly = false)
         {
             string projectRoot = ProjectPath(string.Empty);
             string root = Path.GetFullPath(Path.Combine(
@@ -652,11 +770,15 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     ? FatherV18StaticDefaultBuildRoot
                     : fatherV18MotionOnly
                         ? FatherV18MotionDefaultBuildRoot
+                    : fatherV19MotionOnly
+                        ? FatherV19MotionDefaultBuildRoot
                         : DefaultBuildRoot));
             string outputArgument = fatherV18StaticOnly
                 ? "-family3d-father-v18-static-qa-build-output"
                 : fatherV18MotionOnly
                     ? "-family3d-father-v18-motion-qa-build-output"
+                : fatherV19MotionOnly
+                    ? "-family3d-father-v19-motion-qa-build-output"
                     : "-family3d-starter-office-qa-build-output";
             string[] args = Environment.GetCommandLineArgs();
             for (var index = 0; index < args.Length - 1; index++)
@@ -762,6 +884,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             public string unsupportedSeatedPolicy;
             public bool fatherV18StaticOnly;
             public bool fatherV18MotionOnly;
+            public bool fatherV19MotionOnly;
             public float staticMapScaleTolerance;
             public string staticTextureAsset;
             public string staticTextureSha256;
@@ -801,6 +924,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 CandidateDefinition[] definitions,
                 bool fatherV18StaticOnly,
                 bool fatherV18MotionOnly,
+                bool fatherV19MotionOnly,
                 string qaScenePath)
             {
                 Prefabs = prefabs;
@@ -810,6 +934,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 Definitions = definitions;
                 FatherV18StaticOnly = fatherV18StaticOnly;
                 FatherV18MotionOnly = fatherV18MotionOnly;
+                FatherV19MotionOnly = fatherV19MotionOnly;
                 QaScenePath = qaScenePath;
             }
 
@@ -820,6 +945,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             public CandidateDefinition[] Definitions { get; }
             public bool FatherV18StaticOnly { get; }
             public bool FatherV18MotionOnly { get; }
+            public bool FatherV19MotionOnly { get; }
             public string QaScenePath { get; }
         }
 

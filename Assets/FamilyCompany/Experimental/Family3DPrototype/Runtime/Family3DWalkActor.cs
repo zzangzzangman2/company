@@ -23,6 +23,7 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private Color labelColor = Color.white;
         [SerializeField, Range(0f, 1f)] private float poseStrength = 1f;
         [SerializeField] private bool dedicatedNaturalSdWalk;
+        [SerializeField] private float authoredCycleSeconds;
 
         /// <summary>
         /// Legacy full-muscle delta-retarget diagnostic. V61 leaves this disabled because moving
@@ -142,6 +143,8 @@ namespace FamilyCompany.Experimental.Family3D
 
         private float ResolveCycleSeconds()
         {
+            if (authoredCycleSeconds > 0.0001f)
+                return authoredCycleSeconds;
             return dedicatedNaturalSdWalk ? FatherSdCycleSeconds : LockedCycleSeconds;
         }
 
@@ -157,7 +160,8 @@ namespace FamilyCompany.Experimental.Family3D
             AnimationClip stationaryIdleClip = null,
             bool useClipMuscleDeltaRetarget = false,
             bool useClipAnatomicalSanitization = false,
-            bool useClipStableBodySideArms = false)
+            bool useClipStableBodySideArms = false,
+            float sourceAuthoredCycleSeconds = 0f)
         {
             familyId = id;
             visualRoot = modelRoot;
@@ -171,6 +175,7 @@ namespace FamilyCompany.Experimental.Family3D
             clipMuscleDeltaRetarget = useClipMuscleDeltaRetarget;
             clipAnatomicalSanitization = useClipAnatomicalSanitization;
             clipStableBodySideArms = useClipStableBodySideArms;
+            authoredCycleSeconds = Mathf.Max(0f, sourceAuthoredCycleSeconds);
         }
 
         public void ConfigureNaturalSdStyle(

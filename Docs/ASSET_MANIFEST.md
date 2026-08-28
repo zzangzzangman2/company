@@ -1295,3 +1295,24 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `1.333 steps/tile`, step/height `41.2%`를 적용했다. target root advance와 foot-lock을 함께 다시 만들었고
   전역 상수는 바꾸지 않았다.
 - 퇴역 재현 해시는 `ArtSources/PlayerEastMixamoTraceV2/SHA256SUMS.txt`에 남고 2D 편집 README는 삭제했다.
+
+## 2026-08-28 Father V19 Meshy one-package 613 (experimental)
+
+- provenance: Higgsfield job `865f2115-153d-41b6-84eb-d38ca106d45d`, Meshy
+  `multi_image_to_3d`, four cleaned Father views, 38 credits, rigging+animation action 613.
+- source GLB SHA-256:
+  `210DC2E1160B3455CF599906721AE3698C789C6809AFBA6587C552742BB417F9`.
+- Unity FBX:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-613.fbx`
+  - 15,048,876 bytes
+  - SHA-256: `479F883A8A3520FDF7A1DE500DEBCDFB059241D9A436B83A7938C14C4893AEB5`
+- Unity albedo:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-albedo.png`
+  - 6,292,750 bytes
+  - SHA-256: `8C1418E17002256C2393942067852B8BE484A2095AC85976DCC1CC2B70D9962B`
+- structure: 209,147 vertices, 119,452 polygons, 24 bones, one skinned character mesh;
+  rig helper Icosphere removed during FBX export.
+- animation: `FatherV19_Casual_Walk_inplace`, importer frames `1..43`, 1.4 s, loop/root locked.
+- policy: same-package mesh/bind/weights/clip only; no cross-package retarget, sanitation, procedural gait,
+  or production promotion before user GIF approval.
+- status: `EXPERIMENTAL_VISUAL_CANDIDATE`, `productionEligible=false`.

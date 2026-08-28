@@ -67,6 +67,7 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private float fatherMotionStrideOfficeUnitsAsset;
         [SerializeField] private bool fatherClipMuscleDeltaRetargetAsset;
         [SerializeField] private bool fatherClipStableBodySideArmsAsset;
+        [SerializeField] private float fatherMotionCycleSecondsAsset;
         [SerializeField] private Texture2D fatherStaticAlbedo;
 
         // Serialized rather than resolved by Shader.Find at runtime. Unity strips any shader no
@@ -157,6 +158,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherCleanBipedNaturalWalk = false;
             fatherHiggsfieldIdleClip = null;
             fatherStaticAlbedo = null;
+            fatherMotionCycleSecondsAsset = 0f;
         }
 
         public void ConfigureFatherStaticRootMotionOnly(
@@ -183,6 +185,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherHiggsfieldIdleRun = false;
             fatherCleanBipedNaturalWalk = false;
             fatherHiggsfieldIdleClip = null;
+            fatherMotionCycleSecondsAsset = 0f;
         }
 
         public void ConfigureFatherHiggsfieldIdleRun(
@@ -199,7 +202,8 @@ namespace FamilyCompany.Experimental.Family3D
             bool clipAnatomicalSanitization = false,
             bool clipStableBodySideArms = false,
             float fallbackScale = 1f,
-            float qaGroundY = 0f)
+            float qaGroundY = 0f,
+            float sourceAuthoredCycleSeconds = 0f)
         {
             playerCandidate = null;
             olderSisterCandidate = null;
@@ -221,6 +225,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherClipMuscleDeltaRetargetAsset = clipMuscleDeltaRetarget;
             fatherClipAnatomicalSanitizationAsset = clipAnatomicalSanitization;
             fatherClipStableBodySideArmsAsset = clipStableBodySideArms;
+            fatherMotionCycleSecondsAsset = Mathf.Max(0f, sourceAuthoredCycleSeconds);
         }
 
         public void ConfigureFatherCleanBipedNaturalWalk(
@@ -238,6 +243,7 @@ namespace FamilyCompany.Experimental.Family3D
             motherCandidate = null;
             sharedHumanoidWalkClip = null;
             fatherHiggsfieldIdleClip = null;
+            fatherMotionCycleSecondsAsset = 0f;
             fatherStaticAlbedo = albedo;
             fatherExactAlbedoMaterial = exactAlbedoMaterial;
             qaOverlayCamera = overlayCamera;
@@ -908,7 +914,8 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherHiggsfieldIdleRun ? fatherHiggsfieldIdleClip : null,
                 fatherHiggsfieldIdleRun && ResolveClipMuscleDeltaRetarget(fatherClipMuscleDeltaRetargetAsset),
                 fatherHiggsfieldIdleRun && fatherClipAnatomicalSanitizationAsset,
-                fatherHiggsfieldIdleRun && fatherClipStableBodySideArmsAsset);
+                fatherHiggsfieldIdleRun && fatherClipStableBodySideArmsAsset,
+                fatherHiggsfieldIdleRun ? fatherMotionCycleSecondsAsset : 0f);
             if (fatherCleanBipedNaturalWalk)
             {
                 walkActor.ConfigureNaturalSdStyle(
@@ -1625,9 +1632,11 @@ namespace FamilyCompany.Experimental.Family3D
                         "sortingLayerID/name/order and source transform Z are observed only and never assigned",
                     sharedCycleSeconds = fatherStaticRootMotionOnly
                         ? 0f
-                        : fatherCleanBipedNaturalWalk
-                            ? Family3DWalkActor.FatherSdCycleSeconds
-                            : Family3DWalkActor.LockedCycleSeconds,
+                        : bindings.Count > 0 && bindings[0].WalkActor != null
+                            ? bindings[0].WalkActor.CycleSeconds
+                            : fatherCleanBipedNaturalWalk
+                                ? Family3DWalkActor.FatherSdCycleSeconds
+                                : Family3DWalkActor.LockedCycleSeconds,
                     staticMapScaleTolerance = StaticMapScaleTolerance,
                     movingSampleFrames = movingSampleFrames,
                     fatherMapWalkQa = fatherMapWalkQa,

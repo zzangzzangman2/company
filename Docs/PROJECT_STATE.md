@@ -1538,3 +1538,20 @@ git pull --ff-only origin main
 - 계약: [CONTRACTS_V0_3.md](CONTRACTS_V0_3.md), [CONTRACT_CLIENT_PROGRESSION_V1.md](CONTRACT_CLIENT_PROGRESSION_V1.md)
 - 주식: [SIMUL_MARKET_PORT.md](SIMUL_MARKET_PORT.md), [STOCK_MARKET_LANDSCAPE_V1.md](STOCK_MARKET_LANDSCAPE_V1.md)
 - 역사 구현 증거: `History/Reports/` — 현재 상태 정본 아님
+
+## 2026-08-28 Father V19 one-package walk 후보
+
+Higgsfield/Meshy의 메시·bind skeleton·skin weight·action 613을 한 작업에서 받은 Father V19 후보를
+Experimental에 반입했다. 127프레임은 42프레임 보행 3회였으므로 Unity importer는 `1..43` 한 주기만
+사용한다. 다른 리그로 retarget하거나 절차 보행/팔 보정/웨이트 일괄 삭제를 적용하지 않는다.
+
+최종 격리 build는 `FatherV19MeshyOnePackage613MapBuildV2`, 실제 맵 runtime은
+`FatherV19MeshyOnePackage613MapRuntimeV3DefaultFinal`이다. 실제 Father agent 4방향 2회전 1,344프레임과
+169 captures를 완료했다. stride `0.7950477`에서 접지 발 median world speed는 left/right
+`0.0933/0.0678`, torso lean mean `2.31°`, 손 반대 스윙 상관 `-0.939`다. 같은 맵 위치의 회전 간
+root position/yaw 오차는 `0/0°`, phase delta `0.0000108`이다. production scene, preview,
+EditorBuildSettings SHA는 before/after 동일하다.
+
+상태는 `VISUAL_CANDIDATE_READY_USER_APPROVAL_REQUIRED`, `productionEligible=false`다. 상세 출처,
+실패 원인, 구조 검사, GIF 경로는
+[FATHER_V19_MESHY_ONE_PACKAGE_WALK_QA_2026-08-28.md](FATHER_V19_MESHY_ONE_PACKAGE_WALK_QA_2026-08-28.md)를 따른다.

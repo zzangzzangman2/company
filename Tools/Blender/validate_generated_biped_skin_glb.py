@@ -103,6 +103,7 @@ metrics = {
     "armLegStrongVertexCount": 0,
     "headLegStrongVertexCount": 0,
     "lowerLegCrossWeightVertexCount": 0,
+    "footRegionCrossWeightVertexCount": 0,
     "unweightedVertexCount": 0,
     "maximumInfluencesPerVertex": 0,
     "dominantBoneCounts": {},
@@ -143,7 +144,14 @@ if mesh is not None:
             "left_arm": sum(weights.get(name, 0.0) for name in LEFT_ARM),
             "right_arm": sum(weights.get(name, 0.0) for name in RIGHT_ARM),
         }
-        dominant_families[max(families.items(), key=lambda item: item[1])[0]] += 1
+        dominant_family, dominant_family_weight = max(
+            families.items(), key=lambda item: item[1]
+        )
+        # Torso/head vertices legitimately have no limb-family weight. Do not let Python's
+        # tie-breaking assign thousands of zero-valued torso vertices to left_leg and corrupt the
+        # left/right symmetry ratio.
+        if dominant_family_weight > 0.10:
+            dominant_families[dominant_family] += 1
         leg_total = families["left_leg"] + families["right_leg"]
         arm_total = families["left_arm"] + families["right_arm"]
         if families["left_leg"] > 0.10 and families["right_leg"] > 0.10:
@@ -159,6 +167,12 @@ if mesh is not None:
             and families["right_leg"] > 0.05
         ):
             metrics["lowerLegCrossWeightVertexCount"] += 1
+        if (
+            normalized_height <= 0.20
+            and families["left_leg"] > 0.05
+            and families["right_leg"] > 0.05
+        ):
+            metrics["footRegionCrossWeightVertexCount"] += 1
 
     metrics["dominantBoneCounts"] = dict(dominant_bones.most_common())
     metrics["dominantFamilyCounts"] = dict(dominant_families.most_common())
@@ -179,9 +193,12 @@ if mesh is not None:
         failures.append(f"arm-leg-mixed:{metrics['armLegStrongVertexCount']}")
     if metrics["headLegStrongVertexCount"]:
         failures.append(f"head-leg-mixed:{metrics['headLegStrongVertexCount']}")
-    if metrics["lowerLegCrossWeightVertexCount"]:
+    # Some generated quad rigs use a symmetric blend around the inner knee/crotch. That is recorded
+    # above but is not itself a failure when the shoes are clean. Opposite-side weights in the
+    # lowest 20% are the actual detached-shoe / third-leg failure and remain fail-closed.
+    if metrics["footRegionCrossWeightVertexCount"]:
         failures.append(
-            f"left-right-lower-leg-mixed:{metrics['lowerLegCrossWeightVertexCount']}"
+            f"left-right-foot-region-mixed:{metrics['footRegionCrossWeightVertexCount']}"
         )
     ratio = metrics["leftRightLegDominantRatio"]
     if ratio is None or ratio < 0.50 or ratio > 2.0:

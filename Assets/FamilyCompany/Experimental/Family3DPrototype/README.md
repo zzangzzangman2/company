@@ -373,3 +373,20 @@ SHA-256 is `88734B5F16598B2027FC7F54139F27E17C6912755E2907F09EB97CBC72497094`. V
 under `FatherApprovedV14MapWalkRuntimeV13`: moving 2,502, direction mask 255, gait
 0.000826..0.999978, 24 composites, and zero collision/penetration/replan violations. Human visual
 review is still required.
+
+### Father V19 Meshy one-package action-613 proof
+
+`Candidates/FatherV19MeshyOnePackage613/` keeps the generated mesh, bind skeleton, skin weights and
+`Casual_Walk_inplace` action from one Higgsfield/Meshy job. The Unity importer selects frames 1..43,
+because direct bone-coordinate comparison shows the 127-frame take contains three repetitions of one
+42-frame/1.4-second cycle. The runtime enables no clip retarget, anatomical sanitation, rigid-arm
+override or procedural gait for this candidate.
+
+Build with
+`Family3DStarterOfficeCandidateQaBuilder.BuildFatherV19MotionFromCommandLine`. The final isolated
+build/runtime are `FatherV19MeshyOnePackage613MapBuildV2` and
+`FatherV19MeshyOnePackage613MapRuntimeV3DefaultFinal`. Default facing is 0 degrees and stride is
+0.7950477 office units, exactly ten cycles per 7.950477-unit proof circuit. The runtime completes two
+actual Father-agent circuits, 1,344 telemetry frames and 169 captures. Production/preview/build-settings
+hashes are unchanged and `productionEligible` remains false until the user approves both actual-map
+GIFs. See `Docs/FATHER_V19_MESHY_ONE_PACKAGE_WALK_QA_2026-08-28.md` for the hashes and measurements.
