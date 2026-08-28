@@ -168,16 +168,21 @@ namespace FamilyCompany.Experimental.Family3D
                 new Color(0.08f, 0.72f, 0.55f, 1f),
                 0f,
                 0.25f);
-            Material chairTeal = CreateMaterial(
-                "Chair_WarmLeather",
-                new Color(0.42f, 0.16f, 0.07f, 1f),
+            Material chairUpholstery = CreateMaterial(
+                "Chair_NeutralGraphite",
+                new Color(0.18f, 0.18f, 0.18f, 1f),
                 0f,
-                0.32f);
+                0.28f);
             Material chairTrim = CreateMaterial(
-                "Chair_DarkTrim",
-                new Color(0.035f, 0.075f, 0.075f, 1f),
-                0.12f,
-                0.34f);
+                "Chair_CharcoalTrim",
+                new Color(0.050f, 0.050f, 0.050f, 1f),
+                0.08f,
+                0.30f);
+            Material mugTeal = CreateMaterial(
+                "Mug_DeepTeal",
+                new Color(0.035f, 0.23f, 0.19f, 1f),
+                0f,
+                0.30f);
             Material key = CreateMaterial(
                 "Keyboard_Keys",
                 new Color(0.16f, 0.16f, 0.14f, 1f),
@@ -208,14 +213,14 @@ namespace FamilyCompany.Experimental.Family3D
             // uprights and one lumbar rail preserve a readable chair silhouette without masking
             // the body that this QA exists to judge.
             AddBox("Chair_Cushion", new Vector3(0f, seatY, -0.025f * h),
-                new Vector3(0.30f, 0.050f, 0.23f) * h, chairTeal, layer,
+                new Vector3(0.30f, 0.050f, 0.23f) * h, chairUpholstery, layer,
                 new Vector3(5f, 0f, 0f), chairPivot);
             foreach (float x in new[] { -0.115f, 0.115f })
                 AddBox("Chair_BackUpright", new Vector3(x * h, 0.385f * h, -0.120f * h),
                     new Vector3(0.035f, 0.26f, 0.04f) * h, chairTrim, layer,
                     new Vector3(-7f, 0f, 0f), chairPivot);
             AddBox("Chair_LumbarRail", new Vector3(0f, 0.405f * h, -0.125f * h),
-                new Vector3(0.30f, 0.085f, 0.045f) * h, chairTeal, layer,
+                new Vector3(0.30f, 0.085f, 0.045f) * h, chairUpholstery, layer,
                 new Vector3(-7f, 0f, 0f), chairPivot);
             AddCylinder("Chair_Stem", new Vector3(0f, 0.132f * h, 0f),
                 0.03f * h, 0.225f * h, chairTrim, layer, chairPivot);
@@ -371,7 +376,7 @@ namespace FamilyCompany.Experimental.Family3D
                 0.17f * h, 0.010f * h, 0.14f * h, paper, layer);
             AddCylinder("Mug", GridLocal(accessoryRight + serviceSide * 0.09f * h,
                     0.535f * h, deskForward - deskDepth * 0.08f),
-                0.045f * h, 0.08f * h, chairTeal, layer);
+                0.045f * h, 0.08f * h, mugTeal, layer);
 
             // The screen face is the -gridForward side: bezel/text are authored at decreasing
             // forward coordinates. Its real mesh normal is perpendicular to gridRight, not simply

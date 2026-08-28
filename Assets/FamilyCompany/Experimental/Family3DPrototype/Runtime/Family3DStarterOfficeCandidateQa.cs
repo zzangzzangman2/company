@@ -61,7 +61,7 @@ namespace FamilyCompany.Experimental.Family3D
         // Facing offset and stride belong to the body-and-clip pair, not to the project. Putting
         // Each clean-rig/action revision is measured again, so both are configured per candidate
         // and the command line only overrides them for controlled comparisons.
-        // See Docs/FATHER_V18_FACING_OFFSET_METHOD.md.
+        // See Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md.
         [SerializeField] private float fatherMotionFacingOffsetDegreesAsset = 90f;
         [SerializeField] private bool fatherClipAnatomicalSanitizationAsset;
         [SerializeField] private float fatherMotionStrideOfficeUnitsAsset;
@@ -1440,6 +1440,15 @@ namespace FamilyCompany.Experimental.Family3D
 
         private void UpdateFatherDeskWorkBinding(Binding binding, Camera sourceOfficeCamera)
         {
+            // The occupied-chair presenter creates its lower-body foreground renderer only after
+            // the seat is claimed. Hiding furniture once during setup therefore misses that late
+            // renderer and leaves a green chair crop beside the 3D chair. Refresh the QA-only
+            // renderer mask every frame; semantic furniture, occupancy and blocking stay intact.
+            if (fatherDeskSeat != null)
+            {
+                HideSourceFurniture(fatherDeskSeat.ChairFurnitureId);
+                HideSourceFurniture(fatherDeskSeat.WorkSurfaceFurnitureId);
+            }
             if (binding.Agent.Phase == OfficeRuntimeAgentPhase.Outside)
             {
                 binding.SetSource2DHidden(false);

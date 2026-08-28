@@ -1707,7 +1707,8 @@ namespace FamilyCompany.Experimental.Family3D
             /// Host-local direction from ankle to toes, averaged over both feet and flattened to
             /// the ground plane. This is the rig's anatomical forward, and unlike the foot swing
             /// axis it is not symmetric, so it carries a sign. It is what
-            /// Docs/FATHER_V18_FACING_OFFSET_METHOD.md solves the facing offset from.
+            /// Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md uses when
+            /// measuring each one-package character's facing offset.
             /// </summary>
             public Vector3 toeForwardLocal;
 
