@@ -395,3 +395,24 @@ The V4 surface proof keeps the same texture and UVs but removes the provider GLB
 emission and 2.0 specular presentation, excludes the real map Sun from the isolated QA layer, and
 imports the 2048 albedo uncompressed. This restores teal/charcoal/hair/skin separation without a
 colour LUT or texture repaint; the walk mesh, skin and action are unchanged.
+
+### Father V19 full-3D desk-work proof
+
+The user approved the V19 actual-map walk and restored colour before requesting the real desk-work
+gate. `Family3DWorkstationQa` now provides a QA-layer-only walnut CRT desk and a contrasting open
+low-back chair at the real `seat_father` anchor. The production `desk_father` and `chair_father`
+sprites are hidden only while this proof owns them and are restored on release.
+
+Run the V19 player with `-family3d-father-v19-desk-work-qa`. The proof installs the canonical
+furnished StarterOfficeV1 through the existing in-memory QA rebuild path, sends the real Father agent
+through `QaBeginSeatedWorkAtSeat`, and observes
+`Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`. Locomotion remains the
+unchanged one-package action 613. After locomotion, a separate neutral seated pose and post-root
+two-bone endpoint IK put both wrists on the actual 3D keyboard and both ankles on distinct floor
+targets. The default workstation yaw is `-45°`, selected from `-45/0/+45°` actual-map captures.
+
+Final evidence is
+`FatherV19MeshyOnePackage613MapBuildV10Full3DDeskWorkFinal` /
+`FatherV19MeshyOnePackage613MapRuntimeV12Full3DDeskWorkFinal`: 1,051 sample frames, 361 work
+observations, 132 captures, `productionMutation: false`, `productionEligible: false`. See
+`Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`.

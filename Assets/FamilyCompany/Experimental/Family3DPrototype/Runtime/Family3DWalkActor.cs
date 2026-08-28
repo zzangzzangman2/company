@@ -72,6 +72,10 @@ namespace FamilyCompany.Experimental.Family3D
         private HumanPoseHandler humanPoseHandler;
         private HumanPose restHumanPose;
         private HumanPose sampledHumanPose;
+        private HumanPoseHandler deskWorkPoseHandler;
+        private HumanPose deskRestHumanPose;
+        private HumanPose deskWorkHumanPose;
+        private bool deskWorkPoseReady;
         private int leftUpperLegFrontBack = -1;
         private int rightUpperLegFrontBack = -1;
         private int leftLowerLegStretch = -1;
@@ -99,6 +103,10 @@ namespace FamilyCompany.Experimental.Family3D
         private int upperChestFrontBack = -1;
         private int neckNodDownUp = -1;
         private int headNodDownUp = -1;
+        private int leftFootUpDown = -1;
+        private int rightFootUpDown = -1;
+        private int leftHandDownUp = -1;
+        private int rightHandDownUp = -1;
         private float[] clipSanitizationReferenceMuscles;
         private Vector3 clipSagittalForwardLocal = Vector3.forward;
         private float leftFootPlaneLateral;
@@ -226,6 +234,16 @@ namespace FamilyCompany.Experimental.Family3D
             animator.updateMode = AnimatorUpdateMode.Normal;
             animator.Rebind();
             CaptureRestPose();
+            // Capture the neutral Humanoid pose before the manual walk graph samples its first
+            // frame. Desk work must blend from the true bind/rest body, not whichever leg happened
+            // to be forward when the actor reached the chair.
+            deskWorkPoseHandler = new HumanPoseHandler(animator.avatar, animator.transform);
+            deskRestHumanPose = new HumanPose();
+            deskWorkPoseHandler.GetHumanPose(ref deskRestHumanPose);
+            if (deskRestHumanPose.muscles == null ||
+                deskRestHumanPose.muscles.Length != HumanTrait.MuscleCount)
+                throw new InvalidOperationException(
+                    familyId + " could not capture a complete neutral Humanoid pose.");
 
             leftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
             rightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
@@ -316,6 +334,282 @@ namespace FamilyCompany.Experimental.Family3D
             lastRootWorldPosition = worldPosition;
             lastRootWorldRotation = rootRotation;
             hasLastRootPose = true;
+        }
+
+        /// <summary>
+        /// Samples an upright, compact desk pose on this exact Avatar. It never replaces or
+        /// retargets the approved walking clip: the office adapter calls this only after the real
+        /// seating state machine leaves locomotion. Both legs remain one clean pair under the
+        /// chair and both hands move by a few degrees over the keyboard.
+        /// </summary>
+        public void TickSeatedDeskWork(
+            double workClockSeconds,
+            Vector3 worldPosition,
+            Quaternion rootRotation,
+            float seatedBlend01,
+            bool typing)
+        {
+            Initialize();
+            EnsureDeskWorkPose();
+            transform.SetPositionAndRotation(worldPosition, rootRotation);
+
+            float blend = Mathf.Clamp01(seatedBlend01);
+            Array.Copy(
+                deskRestHumanPose.muscles,
+                deskWorkHumanPose.muscles,
+                deskRestHumanPose.muscles.Length);
+            deskWorkHumanPose.bodyPosition = deskRestHumanPose.bodyPosition;
+            deskWorkHumanPose.bodyRotation = deskRestHumanPose.bodyRotation;
+
+            // Start from an upright standing pose with the arms naturally down, then blend to
+            // ninety-degree hips/knees. This avoids exposing the source A-pose during SitDown.
+            SetDeskMuscle(leftArmDownUp, -0.88f, 1f);
+            SetDeskMuscle(rightArmDownUp, -0.88f, 1f);
+            SetDeskMuscle(leftUpperLegFrontBack, 0.68f, blend);
+            SetDeskMuscle(rightUpperLegFrontBack, 0.68f, blend);
+            SetDeskMuscle(leftLowerLegStretch, -0.72f, blend);
+            SetDeskMuscle(rightLowerLegStretch, -0.72f, blend);
+            SetDeskMuscle(leftFootUpDown, 0.14f, blend);
+            SetDeskMuscle(rightFootUpDown, 0.14f, blend);
+
+            // The shoulders stay down and symmetric. Forearm flex is the main keyboard reach;
+            // small alternating values below create typing without rubber wrists or flapping arms.
+            SetDeskMuscle(leftArmDownUp, -0.54f, blend);
+            SetDeskMuscle(rightArmDownUp, -0.54f, blend);
+            SetDeskMuscle(leftArmFrontBack, 0.56f, blend);
+            SetDeskMuscle(rightArmFrontBack, 0.56f, blend);
+            SetDeskMuscle(leftForearmStretch, -0.73f, blend);
+            SetDeskMuscle(rightForearmStretch, -0.73f, blend);
+            SetDeskMuscle(leftHandDownUp, 0.08f, blend);
+            SetDeskMuscle(rightHandDownUp, 0.08f, blend);
+            SetDeskMuscle(spineFrontBack, 0.035f, blend);
+            SetDeskMuscle(chestFrontBack, 0.025f, blend);
+            SetDeskMuscle(upperChestFrontBack, 0.015f, blend);
+            SetDeskMuscle(neckNodDownUp, -0.025f, blend);
+            SetDeskMuscle(headNodDownUp, -0.015f, blend);
+
+            if (typing && blend > 0.999f)
+            {
+                float phase = Mathf.Repeat((float)(workClockSeconds / 0.8), 1f);
+                float tap = Mathf.Sin(phase * Mathf.PI * 2f) * 0.018f;
+                AddDeskMuscle(leftForearmStretch, tap);
+                AddDeskMuscle(rightForearmStretch, -tap);
+                AddDeskMuscle(leftHandDownUp, -tap * 0.75f);
+                AddDeskMuscle(rightHandDownUp, tap * 0.75f);
+                // Breathing is deliberately below one degree of visible torso motion.
+                AddDeskMuscle(chestFrontBack, Mathf.Sin(phase * Mathf.PI) * 0.004f);
+            }
+
+            deskWorkPoseHandler.SetHumanPose(ref deskWorkHumanPose);
+            visualRoot.localPosition = visualLocalPosition;
+            visualRoot.localRotation = visualLocalRotation;
+            lastSampledPhase01 = typing
+                ? Mathf.Repeat((float)(workClockSeconds / 0.8), 1f)
+                : blend;
+            ResetFootPlants();
+            lastRootWorldPosition = worldPosition;
+            lastRootWorldRotation = rootRotation;
+            hasLastRootPose = true;
+        }
+
+        /// <summary>
+        /// Pins the four seated endpoints after the Humanoid pose and final chair-height root
+        /// correction have both been applied. Muscle signs and neutral arm angles differ between
+        /// imported Avatars; endpoint IK makes the contract unambiguous: two wrists sit above the
+        /// real keyboard and two ankles remain a clean, symmetric pair on the floor under it.
+        /// </summary>
+        public void AlignSeatedDeskLimbs(
+            Vector3 keyboardWorld,
+            float floorWorldY,
+            float seatedBlend01,
+            double workClockSeconds,
+            bool typing)
+        {
+            Initialize();
+            float weight = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(seatedBlend01));
+            if (weight <= 0.0001f)
+                return;
+
+            float h = Mathf.Max(standingHeight, 0.25f);
+            Vector3 right = transform.right;
+            Vector3 forward = transform.forward;
+            Vector3 up = Vector3.up;
+            float tap = typing && weight > 0.999f
+                ? Mathf.Sin(Mathf.Repeat((float)(workClockSeconds / 0.8), 1f) * Mathf.PI * 2f) *
+                  (0.010f * h)
+                : 0f;
+
+            Transform leftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            Transform leftLowerArm = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+            Transform leftHand = animator.GetBoneTransform(HumanBodyBones.LeftHand);
+            Transform rightUpperArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            Transform rightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
+            Transform rightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+
+            Vector3 handCentre = keyboardWorld + up * (0.038f * h) - forward * (0.010f * h);
+            Vector3 leftHandTarget = handCentre - right * (0.12f * h) + up * tap;
+            Vector3 rightHandTarget = handCentre + right * (0.12f * h) - up * tap;
+            Vector3 leftElbowPole = leftUpperArm.position - right * (0.34f * h) +
+                                    forward * (0.16f * h) - up * (0.16f * h);
+            Vector3 rightElbowPole = rightUpperArm.position + right * (0.34f * h) +
+                                     forward * (0.16f * h) - up * (0.16f * h);
+            ApplyTwoBoneIk(
+                leftUpperArm, leftLowerArm, leftHand,
+                leftHandTarget, leftElbowPole, weight);
+            ApplyTwoBoneIk(
+                rightUpperArm, rightLowerArm, rightHand,
+                rightHandTarget, rightElbowPole, weight);
+
+            Transform leftUpperLeg = animator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+            Transform leftLowerLeg = animator.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
+            Transform leftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            Transform rightUpperLeg = animator.GetBoneTransform(HumanBodyBones.RightUpperLeg);
+            Transform rightLowerLeg = animator.GetBoneTransform(HumanBodyBones.RightLowerLeg);
+            Transform rightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+
+            Vector3 footCentre = transform.position + forward * (0.29f * h);
+            footCentre.y = floorWorldY + 0.055f * h;
+            Vector3 leftFootTarget = footCentre - right * (0.13f * h);
+            Vector3 rightFootTarget = footCentre + right * (0.13f * h);
+            Vector3 leftKneePole = leftUpperLeg.position - right * (0.13f * h) +
+                                   forward * (0.32f * h) - up * (0.12f * h);
+            Vector3 rightKneePole = rightUpperLeg.position + right * (0.13f * h) +
+                                    forward * (0.32f * h) - up * (0.12f * h);
+            ApplyTwoBoneIk(
+                leftUpperLeg, leftLowerLeg, leftFoot,
+                leftFootTarget, leftKneePole, weight);
+            ApplyTwoBoneIk(
+                rightUpperLeg, rightLowerLeg, rightFoot,
+                rightFootTarget, rightKneePole, weight);
+        }
+
+        private static void ApplyTwoBoneIk(
+            Transform upper,
+            Transform lower,
+            Transform end,
+            Vector3 target,
+            Vector3 pole,
+            float weight)
+        {
+            if (upper == null || lower == null || end == null)
+                throw new InvalidOperationException("A required Humanoid limb bone is missing.");
+
+            Vector3 rootPosition = upper.position;
+            Vector3 middlePosition = lower.position;
+            Vector3 endPosition = end.position;
+            float upperLength = Vector3.Distance(rootPosition, middlePosition);
+            float lowerLength = Vector3.Distance(middlePosition, endPosition);
+            if (upperLength <= 0.000001f || lowerLength <= 0.000001f)
+                return;
+
+            Vector3 targetDelta = target - rootPosition;
+            float rawDistance = targetDelta.magnitude;
+            if (rawDistance <= 0.000001f)
+                return;
+            Vector3 targetDirection = targetDelta / rawDistance;
+            float minimumReach = Mathf.Abs(upperLength - lowerLength) + 0.00001f;
+            float maximumReach = upperLength + lowerLength - 0.00001f;
+            float targetDistance = Mathf.Clamp(rawDistance, minimumReach, maximumReach);
+            Vector3 reachableTarget = rootPosition + targetDirection * targetDistance;
+
+            Vector3 poleOffset = pole - rootPosition;
+            Vector3 bendDirection = poleOffset -
+                                    targetDirection * Vector3.Dot(poleOffset, targetDirection);
+            if (bendDirection.sqrMagnitude <= 0.000001f)
+            {
+                Vector3 currentOffset = middlePosition - rootPosition;
+                bendDirection = currentOffset -
+                                targetDirection * Vector3.Dot(currentOffset, targetDirection);
+            }
+            if (bendDirection.sqrMagnitude <= 0.000001f)
+                bendDirection = Vector3.Cross(targetDirection, Vector3.up);
+            if (bendDirection.sqrMagnitude <= 0.000001f)
+                bendDirection = Vector3.Cross(targetDirection, Vector3.right);
+            bendDirection.Normalize();
+
+            float along =
+                (upperLength * upperLength + targetDistance * targetDistance -
+                 lowerLength * lowerLength) /
+                (2f * targetDistance);
+            float bendHeight = Mathf.Sqrt(Mathf.Max(
+                0f,
+                upperLength * upperLength - along * along));
+            Vector3 desiredMiddle = rootPosition +
+                                    targetDirection * along +
+                                    bendDirection * bendHeight;
+
+            Quaternion upperDelta = Quaternion.FromToRotation(
+                middlePosition - rootPosition,
+                desiredMiddle - rootPosition);
+            upper.rotation = Quaternion.Slerp(
+                upper.rotation,
+                upperDelta * upper.rotation,
+                weight);
+
+            middlePosition = lower.position;
+            endPosition = end.position;
+            Quaternion lowerDelta = Quaternion.FromToRotation(
+                endPosition - middlePosition,
+                reachableTarget - middlePosition);
+            lower.rotation = Quaternion.Slerp(
+                lower.rotation,
+                lowerDelta * lower.rotation,
+                weight);
+        }
+
+        private void EnsureDeskWorkPose()
+        {
+            if (deskWorkPoseReady)
+                return;
+            if (deskWorkPoseHandler == null)
+                deskWorkPoseHandler = new HumanPoseHandler(animator.avatar, animator.transform);
+            if (deskRestHumanPose.muscles == null ||
+                deskRestHumanPose.muscles.Length != HumanTrait.MuscleCount)
+                throw new InvalidOperationException(
+                    familyId + " could not capture a complete desk-work Humanoid pose.");
+            deskWorkHumanPose = new HumanPose
+            {
+                bodyPosition = deskRestHumanPose.bodyPosition,
+                bodyRotation = deskRestHumanPose.bodyRotation,
+                muscles = (float[])deskRestHumanPose.muscles.Clone()
+            };
+
+            leftUpperLegFrontBack = FindMuscle("Left Upper Leg Front-Back");
+            rightUpperLegFrontBack = FindMuscle("Right Upper Leg Front-Back");
+            leftLowerLegStretch = FindMuscle("Left Lower Leg Stretch");
+            rightLowerLegStretch = FindMuscle("Right Lower Leg Stretch");
+            leftFootUpDown = FindMuscle("Left Foot Up-Down");
+            rightFootUpDown = FindMuscle("Right Foot Up-Down");
+            leftArmDownUp = FindMuscle("Left Arm Down-Up");
+            rightArmDownUp = FindMuscle("Right Arm Down-Up");
+            leftArmFrontBack = FindMuscle("Left Arm Front-Back");
+            rightArmFrontBack = FindMuscle("Right Arm Front-Back");
+            leftForearmStretch = FindMuscle("Left Forearm Stretch");
+            rightForearmStretch = FindMuscle("Right Forearm Stretch");
+            leftHandDownUp = FindMuscle("Left Hand Down-Up");
+            rightHandDownUp = FindMuscle("Right Hand Down-Up");
+            spineFrontBack = FindMuscle("Spine Front-Back");
+            chestFrontBack = FindMuscle("Chest Front-Back");
+            upperChestFrontBack = FindMuscle("UpperChest Front-Back");
+            neckNodDownUp = FindMuscle("Neck Nod Down-Up");
+            headNodDownUp = FindMuscle("Head Nod Down-Up");
+            deskWorkPoseReady = true;
+        }
+
+        private void SetDeskMuscle(int index, float target, float blend)
+        {
+            deskWorkHumanPose.muscles[index] = Mathf.Lerp(
+                deskWorkHumanPose.muscles[index],
+                Mathf.Clamp(target, -1f, 1f),
+                Mathf.Clamp01(blend));
+        }
+
+        private void AddDeskMuscle(int index, float delta)
+        {
+            deskWorkHumanPose.muscles[index] = Mathf.Clamp(
+                deskWorkHumanPose.muscles[index] + delta,
+                -1f,
+                1f);
         }
 
         public void RebaseVisualRootAfterScale()
@@ -1373,10 +1667,16 @@ namespace FamilyCompany.Experimental.Family3D
                 humanPoseHandler.Dispose();
                 humanPoseHandler = null;
             }
+            if (deskWorkPoseHandler != null)
+            {
+                deskWorkPoseHandler.Dispose();
+                deskWorkPoseHandler = null;
+            }
             ResetFootPlants();
             hasLastRootPose = false;
             moveBlend01 = 0f;
             idleClock = 0d;
+            deskWorkPoseReady = false;
             initialized = false;
         }
 

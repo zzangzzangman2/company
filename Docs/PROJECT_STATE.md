@@ -1560,3 +1560,22 @@ candidate light와 uncompressed albedo import를 사용한다. actor highlight c
 상태는 `VISUAL_CANDIDATE_READY_USER_APPROVAL_REQUIRED`, `productionEligible=false`다. 상세 출처,
 실패 원인, 구조 검사, GIF 경로는
 [FATHER_V19_MESHY_ONE_PACKAGE_WALK_QA_2026-08-28.md](FATHER_V19_MESHY_ONE_PACKAGE_WALK_QA_2026-08-28.md)를 따른다.
+
+## 2026-08-28 Father V19 실제 3D 책상 착석·업무 후보
+
+사용자는 V19 실제 맵 걷기와 복구된 색을 `좋아잘된당`으로 승인하고 실제 책상에 앉아 일하는 단계까지
+요청했다. 새 proof는 승인된 one-package action 613 보행을 그대로 두고, 실제 `seat_father` 경로가
+locomotion을 끝낸 뒤에만 같은 Avatar의 neutral seated pose와 두 손/두 발 endpoint IK를 적용한다.
+
+최종 격리 build/runtime은 `FatherV19MeshyOnePackage613MapBuildV10Full3DDeskWorkFinal` /
+`FatherV19MeshyOnePackage613MapRuntimeV12Full3DDeskWorkFinal`이다. 실제 phase
+`Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`, sample 1,051,
+work 361, captures 132를 완료했다. 책상·CRT·키보드·전화기·의자는 QA layer의 runtime 3D 소품이며
+production 가구 catalog나 Transform을 바꾸지 않는다. 통짜 등받이, 셔츠와 같은 의자색, 5발 받침,
+몸 뒤 손과 옆으로 빠진 발은 폐기했고 `-45/0/+45°` 실제 맵 비교에서 두 손·두 다리가 가장 잘 읽힌
+`-45°`를 기본값으로 고정했다.
+
+상태는 `FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE`, `productionMutation=false`,
+`productionEligible=false`다. 전체 이동→착석→업무 GIF와 두 손 타건 확대 GIF에 대한 사용자 판정이
+다음 gate다. 상세는
+[FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md](FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md)를 따른다.

@@ -99,6 +99,18 @@ namespace FamilyCompany.Experimental.Family3D
         private int compositeCapturedFrames;
         private int fatherMovingSampleFrames;
         private bool fatherMapWalkQa;
+        private bool fatherDeskWorkQa;
+        private bool fatherDeskWorkProofActive;
+        private bool fatherDeskWorkProofCompleted;
+        private int fatherDeskWorkSampleFrames;
+        private int fatherDeskWorkFrames;
+        private double fatherDeskWorkClockSeconds;
+        private float fatherDeskSeatedBlend01;
+        private string fatherDeskLastPhase = string.Empty;
+        private readonly List<string> fatherDeskObservedPhases = new List<string>();
+        private Family3DWorkstationQa fatherDeskWorkstation;
+        private OfficeSeatSlot fatherDeskSeat;
+        private readonly List<RendererState> hiddenSourceFurniture = new List<RendererState>();
         private float fatherMotionStrideOfficeUnits;
         private float fatherMotionYawDegreesPerSecond;
         private float fatherMotionFacingOffsetDegrees;
@@ -388,7 +400,8 @@ namespace FamilyCompany.Experimental.Family3D
             try
             {
                 autoQuitSeconds = ResolveAutoQuitSeconds();
-                fatherMapWalkQa =
+                fatherDeskWorkQa = HasCommandLineFlag("-family3d-father-v19-desk-work-qa");
+                fatherMapWalkQa = fatherDeskWorkQa ||
                     HasCommandLineFlag("-family3d-father-map-walk-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-static-map-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-motion-map-qa");
@@ -472,7 +485,10 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMotionFacingOffsetDegrees = ResolveFatherMotionFacingOffsetDegrees();
                     fatherMotionTurnSeconds = ResolveFatherMotionTurnSeconds();
                     fatherMotionYawSweep = HasCommandLineFlag("-family3d-father-v18-motion-yaw-sweep");
-                    StartCoroutine(RunFatherMapWalkProof());
+                    StartCoroutine(
+                        fatherDeskWorkQa
+                            ? RunFatherDeskWorkProof()
+                            : RunFatherMapWalkProof());
                 }
                 WriteRuntimeReceipt("BOUND");
             }
@@ -562,7 +578,27 @@ namespace FamilyCompany.Experimental.Family3D
             {
                 Binding father = bindings.Find(candidate =>
                     string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
-                if (fatherProofRouteActive && father != null && father.IsMoving)
+                if (fatherDeskWorkProofActive && father != null)
+                {
+                    fatherDeskWorkSampleFrames++;
+                    if (father.IsMoving)
+                        fatherMovingSampleFrames++;
+                    fatherCaptureSimulationSeconds += Time.captureDeltaTime > 0f
+                        ? Time.captureDeltaTime
+                        : Time.unscaledDeltaTime;
+                    if (HasExplicitRuntimeOutput())
+                    {
+                        if (fatherCaptureSamples.Count < MaximumFatherTelemetrySamples)
+                            RecordFatherCaptureSample(father, fatherDeskWorkSampleFrames);
+                        if (compositeCapturedFrames < maximumFatherCompositeFrames &&
+                            (fatherDeskWorkSampleFrames == 1 ||
+                             fatherDeskWorkSampleFrames % fatherCompositeFrameStride == 0))
+                            CaptureCompositeQaFrame(
+                                sourceOfficeCamera,
+                                "father-v19-full-3d-desk-work-actual-map");
+                    }
+                }
+                else if (fatherProofRouteActive && father != null && father.IsMoving)
                 {
                     fatherMovingSampleFrames++;
                     fatherCaptureSimulationSeconds += Time.captureDeltaTime > 0f
@@ -594,6 +630,194 @@ namespace FamilyCompany.Experimental.Family3D
                     }
                 }
             }
+        }
+
+        private IEnumerator RunFatherDeskWorkProof()
+        {
+            yield return null;
+            if (starter == null || starter.World == null)
+            {
+                Fail("Father desk-work proof could not resolve the Starter Office runtime world.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            // A normal new game intentionally starts as an empty shell. This QA request is the
+            // next furnished-office gate, so install the canonical StarterOfficeV1 layout through
+            // the existing QA-only rebuild entry point. No scene, default asset or save is written.
+            OfficeGrid furnished = OfficeGridLayouts.CreateStarterOfficeV1();
+            string furnishedHash = furnished.ComputeLayoutHash();
+            if (!string.Equals(starter.LayoutHash, furnishedHash, StringComparison.Ordinal))
+            {
+                starter.ApplyLayoutForQa(furnished);
+                float rebuildDeadline = Time.realtimeSinceStartup + 30f;
+                while (Time.realtimeSinceStartup < rebuildDeadline &&
+                       (!starter.IsReady ||
+                        !string.Equals(starter.LayoutHash, furnishedHash, StringComparison.Ordinal) ||
+                        !IsBound))
+                    yield return null;
+                if (!starter.IsReady ||
+                    !string.Equals(starter.LayoutHash, furnishedHash, StringComparison.Ordinal))
+                {
+                    Fail("Canonical furnished Starter Office did not rebuild for desk-work QA.");
+                    Application.Quit(2);
+                    yield break;
+                }
+                yield return new WaitForEndOfFrame();
+            }
+
+            Binding fatherBinding = bindings.Find(candidate =>
+                string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
+            if (fatherBinding == null)
+            {
+                Fail("Father desk-work proof could not resolve the rebuilt Father binding.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            OfficeRuntimeAgent father = fatherBinding.Agent;
+            OfficeSeatSlot seat;
+            try
+            {
+                seat = starter.World.Workstations.RequiredSeat("seat_father");
+                if (!seat.HasWorkstationBinding)
+                    throw new InvalidOperationException(
+                        "The real Father seat has no bound work surface.");
+                SetupFatherDeskWorkstation(fatherBinding, seat, Camera.main);
+            }
+            catch (Exception exception)
+            {
+                Fail("Father desk-work setup failed: " + exception.Message);
+                Debug.LogException(exception, this);
+                Application.Quit(2);
+                yield break;
+            }
+
+            var protectedCells = new[]
+            {
+                OfficeRuntimeWorkstationService.StarterEntranceCell,
+                seat.ApproachCell,
+                seat.Cell
+            };
+            ParkOtherActorsForFatherLoop(father, protectedCells);
+            father.QaTeleportToCell(OfficeRuntimeWorkstationService.StarterEntranceCell);
+            father.QaSetDirectMovementInput(Vector2.zero);
+            Time.timeScale = 1f;
+            yield return null;
+            yield return new WaitForEndOfFrame();
+
+            fatherDeskWorkProofActive = true;
+            if (!father.QaBeginSeatedWorkAtSeat(seat.SeatId, "father-v19-full-3d-desk-work"))
+            {
+                Fail("The real Father agent rejected its assigned seated-work destination.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            Debug.Log(
+                "FAMILY_3D_FATHER_DESK_WORK_QA: starting real route/seat claim; seat=" +
+                seat.SeatId + " desk=" + seat.WorkSurfaceFurnitureId +
+                " chair=" + seat.ChairFurnitureId +
+                " productionEligible=false.",
+                this);
+
+            float deadline = Time.realtimeSinceStartup + 120f;
+            while (father.Phase != OfficeRuntimeAgentPhase.Working &&
+                   Time.realtimeSinceStartup < deadline)
+                yield return null;
+            if (father.Phase != OfficeRuntimeAgentPhase.Working)
+            {
+                Fail("Father did not reach Working; last phase=" + father.Phase + ".");
+                Application.Quit(2);
+                yield break;
+            }
+
+            // Six deterministic seconds show several complete 0.8-second typing loops while the
+            // real seat remains claimed. Count simulation frames rather than encoder wall time.
+            const int requiredWorkFrames = 360;
+            for (var frame = 0; frame < requiredWorkFrames; frame++)
+            {
+                if (father.Phase != OfficeRuntimeAgentPhase.Working)
+                {
+                    Fail("Father left Working before the desk-work proof completed.");
+                    Application.Quit(2);
+                    yield break;
+                }
+                yield return null;
+            }
+
+            fatherDeskWorkProofActive = false;
+            fatherDeskWorkProofCompleted = true;
+            WriteRuntimeReceipt("FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE");
+            Debug.Log(
+                "FAMILY_3D_FATHER_DESK_WORK_QA: COMPLETE | phases=" +
+                string.Join(">", fatherDeskObservedPhases) +
+                " workFrames=" + fatherDeskWorkFrames +
+                " captures=" + compositeCapturedFrames +
+                " productionEligible=false",
+                this);
+            yield return new WaitForEndOfFrame();
+            Application.Quit(0);
+        }
+
+        private void SetupFatherDeskWorkstation(
+            Binding fatherBinding,
+            OfficeSeatSlot seat,
+            Camera sourceOfficeCamera)
+        {
+            Vector3 seatSource = starter.World.Workstations.SeatOperatorWorld(seat);
+            Vector3 approachSource = starter.World.Workstations.SeatApproachWorld(seat);
+            Vector3 seatGround = MapOfficeWorldToQaGround(seatSource, sourceOfficeCamera);
+            Vector3 approachGround = MapOfficeWorldToQaGround(approachSource, sourceOfficeCamera);
+            Vector3 forward = seatGround - approachGround;
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.000001f)
+                throw new InvalidOperationException(
+                    "Father seat and approach map to the same QA ground point.");
+
+            fatherDeskSeat = seat;
+            fatherDeskWorkstation = Family3DWorkstationQa.Create(
+                transform,
+                qaLayer,
+                seatGround,
+                forward.normalized,
+                fatherBinding.WalkActor.StandingHeight,
+                ResolveCommandLineFloat(
+                    "-family3d-father-desk-visual-yaw-offset",
+                    -45f,
+                    -60f,
+                    60f,
+                    "Father desk visual yaw offset"));
+
+            HideSourceFurniture(seat.ChairFurnitureId);
+            HideSourceFurniture(seat.WorkSurfaceFurnitureId);
+        }
+
+        private void HideSourceFurniture(string furnitureId)
+        {
+            var presenter = starter.World.FurniturePresenter;
+            if (presenter.TryGetRenderer(furnitureId, out SpriteRenderer baseRenderer))
+                HideSourceFurnitureRenderer(baseRenderer);
+            if (presenter.FrontOverlayRenderers.TryGetValue(
+                    furnitureId,
+                    out SpriteRenderer frontRenderer))
+                HideSourceFurnitureRenderer(frontRenderer);
+            if (presenter.OccupiedChairLowerBodyRenderers.TryGetValue(
+                    furnitureId,
+                    out SpriteRenderer lowerBodyRenderer))
+                HideSourceFurnitureRenderer(lowerBodyRenderer);
+        }
+
+        private void HideSourceFurnitureRenderer(Renderer renderer)
+        {
+            if (renderer == null)
+                return;
+            for (var index = 0; index < hiddenSourceFurniture.Count; index++)
+                if (hiddenSourceFurniture[index].Renderer == renderer)
+                    return;
+            var state = new RendererState(renderer);
+            state.SetQaHidden(true);
+            hiddenSourceFurniture.Add(state);
         }
 
         private IEnumerator RunFatherMapWalkProof()
@@ -1081,6 +1305,13 @@ namespace FamilyCompany.Experimental.Family3D
                 binding.IsMoving = false;
                 return;
             }
+            if (fatherDeskWorkQa &&
+                fatherDeskWorkstation != null &&
+                string.Equals(binding.FamilyId, "father", StringComparison.Ordinal))
+            {
+                UpdateFatherDeskWorkBinding(binding, sourceOfficeCamera);
+                return;
+            }
             bool supported = IsStandingOrWalkingPhase(binding.Agent.Phase);
             if (!supported)
             {
@@ -1139,6 +1370,118 @@ namespace FamilyCompany.Experimental.Family3D
                 binding.MaximumObservedGaitPhase01 = Mathf.Max(
                     binding.MaximumObservedGaitPhase01,
                     gaitPhase01);
+            }
+        }
+
+        private void UpdateFatherDeskWorkBinding(Binding binding, Camera sourceOfficeCamera)
+        {
+            if (binding.Agent.Phase == OfficeRuntimeAgentPhase.Outside)
+            {
+                binding.SetSource2DHidden(false);
+                binding.SetCandidateVisible(false);
+                binding.IsMoving = false;
+                return;
+            }
+            binding.WasSupportedLastFrame = true;
+            binding.SetSource2DHidden(true);
+            binding.SetCandidateVisible(true);
+
+            OfficeRuntimeAgentPhase phase = binding.Agent.Phase;
+            string phaseName = phase.ToString();
+            if (!string.Equals(fatherDeskLastPhase, phaseName, StringComparison.Ordinal))
+            {
+                fatherDeskLastPhase = phaseName;
+                if (!fatherDeskObservedPhases.Contains(phaseName))
+                    fatherDeskObservedPhases.Add(phaseName);
+            }
+
+            Vector3 actorGround = MapOfficeActorToQaGround(binding.Agent, sourceOfficeCamera);
+            bool isMoving =
+                binding.Agent.LastActualDisplacement.sqrMagnitude > MovementEpsilonSqr;
+            bool isSeatFacingPhase =
+                phase == OfficeRuntimeAgentPhase.AligningSeat ||
+                phase == OfficeRuntimeAgentPhase.RotatingToSeat ||
+                phase == OfficeRuntimeAgentPhase.SittingDown ||
+                phase == OfficeRuntimeAgentPhase.Working ||
+                phase == OfficeRuntimeAgentPhase.FinishingWork ||
+                phase == OfficeRuntimeAgentPhase.StandingUp;
+            Quaternion rotation = isSeatFacingPhase
+                ? fatherDeskWorkstation.transform.rotation
+                : ResolveBlendedYaw(binding, actorGround);
+
+            bool wantsSeatedPose =
+                phase == OfficeRuntimeAgentPhase.SittingDown ||
+                phase == OfficeRuntimeAgentPhase.Working ||
+                phase == OfficeRuntimeAgentPhase.FinishingWork;
+            float blendRate = Time.captureDeltaTime > 0f
+                ? Time.captureDeltaTime / 0.42f
+                : Time.unscaledDeltaTime / 0.42f;
+            fatherDeskSeatedBlend01 = Mathf.MoveTowards(
+                fatherDeskSeatedBlend01,
+                wantsSeatedPose ? 1f : 0f,
+                blendRate);
+
+            if (phase == OfficeRuntimeAgentPhase.Working)
+            {
+                fatherDeskWorkFrames++;
+                fatherDeskWorkClockSeconds += Time.captureDeltaTime > 0f
+                    ? Time.captureDeltaTime
+                    : Time.unscaledDeltaTime;
+            }
+
+            if (fatherDeskSeatedBlend01 > 0.0001f || isSeatFacingPhase)
+            {
+                Vector3 seatGround = fatherDeskWorkstation.SeatGroundWorld;
+                float positionBlend = Mathf.SmoothStep(0f, 1f, fatherDeskSeatedBlend01);
+                Vector3 rootPosition = Vector3.Lerp(actorGround, seatGround, positionBlend);
+                rootPosition.y = groundY;
+                binding.WalkActor.TickSeatedDeskWork(
+                    fatherDeskWorkClockSeconds,
+                    rootPosition,
+                    rotation,
+                    fatherDeskSeatedBlend01,
+                    phase == OfficeRuntimeAgentPhase.Working);
+                Family3DWalkActor.PoseSnapshot seatedPose =
+                    binding.WalkActor.ReadPoseSnapshot();
+                float seatedRootY =
+                    fatherDeskWorkstation.CushionWorldY - seatedPose.hipsLocal.y;
+                rootPosition.y = Mathf.Lerp(groundY, seatedRootY, positionBlend);
+                binding.Host.transform.position = rootPosition;
+                binding.WalkActor.AlignSeatedDeskLimbs(
+                    fatherDeskWorkstation.KeyboardWorld,
+                    groundY,
+                    fatherDeskSeatedBlend01,
+                    fatherDeskWorkClockSeconds,
+                    phase == OfficeRuntimeAgentPhase.Working);
+            }
+            else
+            {
+                float gaitPhase01 = Mathf.Repeat(binding.Agent.GaitPhase01, 1f);
+                double clipCycles = fatherMotionStrideOfficeUnits > 0f
+                    ? binding.Agent.GaitDistance / fatherMotionStrideOfficeUnits
+                    : gaitPhase01;
+                double motionClock =
+                    (clipCycles - binding.WalkActor.PhaseOffset) *
+                    binding.WalkActor.CycleSeconds;
+                binding.WalkActor.Tick(motionClock, actorGround, rotation, isMoving);
+            }
+
+            float observedGait = Mathf.Repeat(binding.Agent.GaitPhase01, 1f);
+            binding.LastObservedDisplacement = binding.Agent.LastActualDisplacement;
+            binding.LastObservedGaitPhase01 = observedGait;
+            binding.LastObservedDirection = binding.Agent.CurrentDirection;
+            binding.IsMoving = isMoving;
+            if (isMoving)
+            {
+                binding.MovingFrameCount++;
+                int direction = (binding.LastObservedDirection % 8 + 8) % 8;
+                binding.ObservedDirectionMask |= 1 << direction;
+                binding.MinimumObservedGaitPhase01 = Mathf.Min(
+                    binding.MinimumObservedGaitPhase01,
+                    observedGait);
+                binding.MaximumObservedGaitPhase01 = Mathf.Max(
+                    binding.MaximumObservedGaitPhase01,
+                    observedGait);
             }
         }
 
@@ -1339,12 +1682,17 @@ namespace FamilyCompany.Experimental.Family3D
             Camera sourceOfficeCamera)
         {
             Vector2 position = actor.Position;
+            return MapOfficeWorldToQaGround(
+                new Vector3(position.x, position.y, actor.transform.position.z),
+                sourceOfficeCamera);
+        }
+
+        private Vector3 MapOfficeWorldToQaGround(
+            Vector3 sourceWorld,
+            Camera sourceOfficeCamera)
+        {
             if (sourceOfficeCamera != null && qaOverlayCamera != null)
             {
-                Vector3 sourceWorld = new Vector3(
-                    position.x,
-                    position.y,
-                    actor.transform.position.z);
                 Vector3 viewport = sourceOfficeCamera.WorldToViewportPoint(sourceWorld);
                 if (viewport.z > 0f)
                 {
@@ -1357,7 +1705,7 @@ namespace FamilyCompany.Experimental.Family3D
             }
 
             return MapOfficeXYToUnityXZ(
-                position,
+                new Vector2(sourceWorld.x, sourceWorld.y),
                 fallbackOfficeWorldToQaScale,
                 groundY);
         }
@@ -1515,6 +1863,16 @@ namespace FamilyCompany.Experimental.Family3D
 
         private void ReleaseBindings()
         {
+            for (var index = 0; index < hiddenSourceFurniture.Count; index++)
+                hiddenSourceFurniture[index].RestoreForceRenderingOff();
+            hiddenSourceFurniture.Clear();
+            if (fatherDeskWorkstation != null)
+            {
+                fatherDeskWorkstation.gameObject.SetActive(false);
+                DestroyQaObject(fatherDeskWorkstation.gameObject);
+                fatherDeskWorkstation = null;
+            }
+            fatherDeskSeat = null;
             for (var index = 0; index < bindings.Count; index++)
             {
                 Binding binding = bindings[index];
@@ -1625,9 +1983,18 @@ namespace FamilyCompany.Experimental.Family3D
                             : fatherHiggsfieldIdleRun
                                 ? "one locked uniform model scale calibrated from idle-0 projected bounds to the live Father sprite; no per-pose rescaling"
                             : "live SpriteRenderer bounds viewport height / QA projected viewport height per metre",
-                    supportedPhases = new[] { "Idle(standing)", "Navigating(walking)" },
+                    supportedPhases = fatherDeskWorkQa
+                        ? new[]
+                        {
+                            "Idle", "Navigating", "ApproachingSeat", "AligningSeat",
+                            "RotatingToSeat", "SittingDown", "Working", "FinishingWork",
+                            "StandingUp", "LeavingSeat"
+                        }
+                        : new[] { "Idle(standing)", "Navigating(walking)" },
                     unsupportedPhasePolicy =
-                        "Approaching/alignment/seating/work/egress/outside skip 3D and restore original 2D forceRenderingOff",
+                        fatherDeskWorkQa
+                            ? "Outside only restores 2D; the real Father seat lifecycle stays full 3D"
+                            : "Approaching/alignment/seating/work/egress/outside skip 3D and restore original 2D forceRenderingOff",
                     sortingDepthPolicy =
                         "sortingLayerID/name/order and source transform Z are observed only and never assigned",
                     sharedCycleSeconds = fatherStaticRootMotionOnly
@@ -1642,10 +2009,29 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMapWalkQa = fatherMapWalkQa,
                     fatherMapWalkSourceFamilyId = fatherMapWalkQa ? "father" : string.Empty,
                     fatherMovingSampleFrames = fatherMovingSampleFrames,
-                    fatherProofRoutePolicy = fatherMapWalkQa
-                        ? "actual Father OfficeRuntimeAgent; one clear 3x3 perimeter; two continuous circuits"
+                    fatherProofRoutePolicy = fatherDeskWorkQa
+                        ? "actual Father OfficeRuntimeAgent; Starter entrance to real seat_father; " +
+                          "real route, claim, approach, rotation, SitDown and Working"
+                        : fatherMapWalkQa
+                            ? "actual Father OfficeRuntimeAgent; one clear 3x3 perimeter; two continuous circuits"
                         : string.Empty,
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
+                    fatherDeskWorkQa = fatherDeskWorkQa,
+                    fatherDeskWorkProofCompleted = fatherDeskWorkProofCompleted,
+                    fatherDeskSeatId = fatherDeskSeat == null ? string.Empty : fatherDeskSeat.SeatId,
+                    fatherDeskFurnitureId = fatherDeskSeat == null
+                        ? string.Empty
+                        : fatherDeskSeat.WorkSurfaceFurnitureId,
+                    fatherDeskChairId = fatherDeskSeat == null
+                        ? string.Empty
+                        : fatherDeskSeat.ChairFurnitureId,
+                    fatherDeskObservedPhases = fatherDeskObservedPhases.ToArray(),
+                    fatherDeskWorkSampleFrames = fatherDeskWorkSampleFrames,
+                    fatherDeskWorkFrames = fatherDeskWorkFrames,
+                    fatherDeskSeatedBlend01 = fatherDeskSeatedBlend01,
+                    fatherDeskKeyboardWorld = fatherDeskWorkstation == null
+                        ? Vector3.zero
+                        : fatherDeskWorkstation.KeyboardWorld,
                     fatherCaptureSampleCount = fatherCaptureSamples.Count,
                     fatherMotionStrideOfficeUnits = fatherMotionStrideOfficeUnits,
                     fatherMotionYawDegreesPerSecond = fatherMotionYawDegreesPerSecond,
@@ -1968,7 +2354,9 @@ namespace FamilyCompany.Experimental.Family3D
         private void OnApplicationQuit()
         {
             WriteRuntimeReceipt(
-                fatherProofRouteCompleted
+                fatherDeskWorkProofCompleted
+                    ? "FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE"
+                    : fatherProofRouteCompleted
                     ? fatherStaticRootMotionOnly
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
                         : FatherUsesNative613Package
@@ -2030,6 +2418,16 @@ namespace FamilyCompany.Experimental.Family3D
             public int fatherMovingSampleFrames;
             public string fatherProofRoutePolicy;
             public bool fatherProofRouteCompleted;
+            public bool fatherDeskWorkQa;
+            public bool fatherDeskWorkProofCompleted;
+            public string fatherDeskSeatId;
+            public string fatherDeskFurnitureId;
+            public string fatherDeskChairId;
+            public string[] fatherDeskObservedPhases;
+            public int fatherDeskWorkSampleFrames;
+            public int fatherDeskWorkFrames;
+            public float fatherDeskSeatedBlend01;
+            public Vector3 fatherDeskKeyboardWorld;
             public int fatherCaptureSampleCount;
             public float fatherMotionStrideOfficeUnits;
             public float fatherMotionYawDegreesPerSecond;

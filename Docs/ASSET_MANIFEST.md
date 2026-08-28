@@ -1323,3 +1323,30 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
 - final proof: `FatherV19MeshyOnePackage613MapBuildV3ColorDetail` /
   `FatherV19MeshyOnePackage613MapRuntimeV4ColorDetail`; four directions, 169 captures.
 - status: `EXPERIMENTAL_VISUAL_CANDIDATE`, `productionEligible=false`.
+
+## 2026-08-28 Father V19 full-3D desk-work proof (experimental)
+
+- runtime-only 3D workstation:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Runtime/Family3DWorkstationQa.cs`
+  - walnut desk, CRT, keyboard/keys, mouse, telephone, paper, mug, warm-leather low-back chair
+  - QA layer 30 only; no collider, catalog, save, production/default mutation
+- seated implementation:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Runtime/Family3DWalkActor.cs`
+  - separate neutral pose captured before the walking graph's first sample
+  - 0.42 s sit blend, upright torso, symmetric hip/knee pair
+  - post-root two-bone IK to the real keyboard and two floor ankle targets
+  - 0.8 s alternating subtle typing; approved action 613 walking unchanged
+- actual runtime route:
+  `seat_father` / `desk_father` / `chair_father`, phases
+  `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`
+- final build/runtime:
+  `FatherV19MeshyOnePackage613MapBuildV10Full3DDeskWorkFinal` /
+  `FatherV19MeshyOnePackage613MapRuntimeV12Full3DDeskWorkFinal`
+- proof: 1,051 sample frames, 361 work observations, 132 captures at 7.5 fps, visual-content PASS.
+- review media:
+  - `father-v19-full-3d-desk-work-actual-map-final.gif`
+    `E083BC221FDB03A98B2346C796AE4830646A9005979C1510964A3166B9DD7A4D`
+  - `father-v19-seated-typing-closeup-final.gif`
+    `81ED44A4A1A1B419764B0FF6DFB939EC4E2B4DF37F4D0D08F4326B403B8A2682`
+- status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
+  `productionEligible=false`, additional Higgsfield use `0 credits`.

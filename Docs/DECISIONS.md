@@ -1,5 +1,21 @@
 # DECISIONS
 
+## 2026-08-28 / Father V19 책상 업무는 승인 보행을 유지하고 실제 좌석 phase 뒤 별도 endpoint IK로 연다
+
+결정: 사용자가 승인한 V19 one-package action 613 보행, mesh, skin, albedo, material은 변경하지 않는다.
+실제 `seat_father` route/state가 locomotion을 끝낸 뒤에만 같은 Avatar neutral pose에서 착석 자세를 만들고,
+최종 root 높이 적용 후 좌우 손목을 실제 키보드 위의 서로 다른 점에, 좌우 발목을 바닥 위 서로 다른 점에
+두 관절 IK로 고정한다. imported muscle 축 부호만 믿어 몸 뒤 손과 옆으로 빠진 발을 다시 만들지 않는다.
+
+실제 좌석이 카메라를 등지는 가림은 임의 카메라나 가짜 배경으로 숨기지 않는다. 좌석 anchor를 유지한 채
+책상·의자·아빠를 같이 회전하는 `-45/0/+45°` actual-map 후보를 비교했고, 두 손과 두 바지 다리가 함께
+읽히는 `-45°`를 채택했다. 셔츠와 같은 청록 의자, 통짜 높은 등받이, 캐릭터 다리로 오인되는 5발 받침은
+폐기한다. proof는 actual `desk_father`/`chair_father` 2D renderer를 일시적으로만 숨기고 종료 시 복구한다.
+
+최종 V12는 1,051 sample, 361 work observations, 132 captures와 production/preview/build-settings SHA
+불변을 통과했다. 이는 사용자 승인 전 후보이며 `productionMutation=false`, `productionEligible=false`다.
+추가 Higgsfield 사용은 0 credits다.
+
 ## 2026-08-28 / Father V19 색 복구는 텍스처 재도색이 아니라 발광·과반사·이중 조명 제거로 한다
 
 결정: V19 one-package의 걷기·mesh·UV·albedo·skin·action 613은 유지한다. 최초 실제 맵에서 색이

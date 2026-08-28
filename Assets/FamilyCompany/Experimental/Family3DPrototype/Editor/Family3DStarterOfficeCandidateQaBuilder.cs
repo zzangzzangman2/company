@@ -78,7 +78,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedStableArmWalkMapBuildV74";
         public const string FatherV19MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV3ColorDetail";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV10Full3DDeskWorkFinal";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -761,7 +761,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : bundle.FatherV18MotionOnly
                         ? "actual Father OfficeRuntimeAgent position/direction/GaitPhase01 -> V72 clean V4 lower-body/torso sanitation and action 613 at poseStrength 1; only final arms use stable V66 body-side swing"
                     : bundle.FatherV19MotionOnly
-                        ? "actual Father position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613; no retarget, sanitation, IK rewrite, or procedural limb motion"
+                        ? "locomotion: actual Father position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613; isolated desk-work flag: production seat route/state + separate neutral seated pose and endpoint IK only after locomotion ends"
                     : "Position + LastActualDisplacement + GaitPhase01 + CurrentDirection -> Family3DWalkActor",
                 scalePolicy = bundle.FatherV18StaticOnly
                     ? "every frame source Father sprite projected bounds height == V18 renderer projected bounds height; <=0.5% error; grounded"
@@ -772,9 +772,18 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : "live production SpriteRenderer bounds projected viewport height",
                 source2DPolicy =
                     "QA-only Renderer.forceRenderingOff; sorting layer/order and transform depth never assigned",
-                supportedPhases = new[] { "Idle(standing)", "Navigating(walking)" },
-                unsupportedSeatedPolicy =
-                    "seat approach/transitions/work/egress skip 3D and restore original 2D presentation",
+                supportedPhases = bundle.FatherV19MotionOnly
+                    ? new[]
+                    {
+                        "Idle(standing)",
+                        "Navigating/ApproachingSeat(action-613 walking)",
+                        "AligningSeat/RotatingToSeat(real production state)",
+                        "SittingDown/Working(QA-only V19 seated pose + endpoint IK)"
+                    }
+                    : new[] { "Idle(standing)", "Navigating(walking)" },
+                unsupportedSeatedPolicy = bundle.FatherV19MotionOnly
+                    ? "default focused walk proof still restores 2D outside standing/walking; -family3d-father-v19-desk-work-qa explicitly enables the isolated full-3D seat_father proof only"
+                    : "seat approach/transitions/work/egress skip 3D and restore original 2D presentation",
                 fatherV18StaticOnly = bundle.FatherV18StaticOnly,
                 fatherV18MotionOnly = bundle.FatherV18MotionOnly,
                 fatherV19MotionOnly = bundle.FatherV19MotionOnly,
@@ -828,7 +837,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 motionPostProcessing = bundle.FatherV18MotionOnly
                     ? "V72 legs/pelvis/torso/head unchanged; behind-body tuck disabled; straight rigid arms with fixed-axis opposite upper-arm swing 6 degrees; elbow/wrist/finger/outward/tuck correction zero"
                     : bundle.FatherV19MotionOnly
-                        ? "none; native one-package skin and action sampled at poseStrength 1"
+                        ? "walking: none; native one-package skin and action sampled at poseStrength 1. desk-work QA only: post-locomotion neutral seated Humanoid pose plus two-hand/two-foot endpoint IK"
                     : string.Empty,
                 candidates = assets,
                 buildResult = report.summary.result.ToString(),
