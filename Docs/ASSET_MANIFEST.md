@@ -24,7 +24,7 @@
 - Status: `SOURCE_WALK_REJECTED`, new Higgsfield use `0 credits`, `productionEligible=false`;
   production/default/Downloads/deployed executables unchanged.
 
-## Father V19 Higgsfield static result (generated; user appearance approval pending)
+## Father V19 Higgsfield static result (user appearance approved; rigging/walk pending)
 
 - 2026-08-28 실행 정본:
   [FATHER_V19_COMPANY_CODEX_HIGGSFIELD_EXECUTION_2026-08-28.md](FATHER_V19_COMPANY_CODEX_HIGGSFIELD_EXECUTION_2026-08-28.md).
@@ -37,8 +37,9 @@
   job `f619a60d-6a81-4781-b6db-4ed5caa022ee`, 정확히 `18 credits`, balance `64 -> 46`.
 - receipt:
   [FATHER_V19_TRIPO_H3_1_DETAILED_RECEIPT_2026-08-28.md](FATHER_V19_TRIPO_H3_1_DETAILED_RECEIPT_2026-08-28.md).
-- raw 8방향 및 손·다리 확대 내부 외형 gate는 통과했지만 사용자 승인은 아직 없다. rigging,
-  animation, Unity import는 시작하지 않았고 `productionEligible=false`다.
+- raw 8방향 및 손·다리 확대 내부 외형 gate 통과 후 사용자가 정적 외형을 승인했다.
+- 다음 native `3d_rigging` + `613 Casual_Walk_inplace` 1회 비용은 `8 credits`로 확인했지만 아직
+  제출하지 않았다. rigging/animation/Unity import는 시작하지 않았고 `productionEligible=false`다.
 
 - External isolated source:
   `2026-08-25/family-natural-walk-rebuild/outputs/father-v19-higgsfield-rebuild`.
