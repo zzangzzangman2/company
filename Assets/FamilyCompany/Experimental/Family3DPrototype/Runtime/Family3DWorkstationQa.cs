@@ -14,6 +14,9 @@ namespace FamilyCompany.Experimental.Family3D
         private readonly List<Material> ownedMaterials = new List<Material>();
         private readonly List<Mesh> ownedMeshes = new List<Mesh>();
         private float seatedVisualYawOffsetDegrees;
+        private float actorModelForwardYawOffsetDegrees;
+        private Quaternion seatedActorLocalRotation = Quaternion.identity;
+        private Quaternion chairFacingLocalRotation = Quaternion.identity;
         private Vector3 deskFootprintCenterLocal;
         private Vector3 keyboardGroundLocal;
         private Vector3 gridRightLocalUnit;
@@ -25,10 +28,18 @@ namespace FamilyCompany.Experimental.Family3D
         public Vector3 ForwardWorld => transform.forward;
         public Quaternion GridRotationWorld => transform.rotation;
         public Quaternion SeatedRotationWorld =>
-            transform.rotation * Quaternion.Euler(0f, seatedVisualYawOffsetDegrees, 0f);
+            transform.rotation * seatedActorLocalRotation;
+        public Quaternion ChairRotationWorld =>
+            transform.rotation * chairFacingLocalRotation;
+        public Vector3 SeatedBodyForwardWorld =>
+            SeatedRotationWorld *
+            (Quaternion.Euler(0f, -actorModelForwardYawOffsetDegrees, 0f) * Vector3.forward);
         public float SeatedVisualYawOffsetDegrees => seatedVisualYawOffsetDegrees;
+        public float ActorModelForwardYawOffsetDegrees => actorModelForwardYawOffsetDegrees;
+        public float SeatToKeyboardFacingErrorDegrees { get; private set; }
         public float CushionWorldY { get; private set; }
         public Vector3 KeyboardWorld { get; private set; }
+        public Vector3 MonitorWorld { get; private set; }
         public Vector3 WorkSurfaceWorld { get; private set; }
         public Vector3 DeskTopCenterWorld { get; private set; }
         public Vector3 DeskFootprintCenterWorld =>
@@ -37,6 +48,8 @@ namespace FamilyCompany.Experimental.Family3D
         public float DeskFootprintDepthWorld => deskFootprintDepthWorld;
         public float GridAxisOrthogonalityErrorDegrees { get; private set; }
         public float SeatToKeyboardGroundDistance { get; private set; }
+        public float SeatToMonitorFacingErrorDegrees { get; private set; }
+        public float ChairToMonitorFacingErrorDegrees { get; private set; }
 
         public static Family3DWorkstationQa Create(
             Transform parent,
@@ -49,6 +62,7 @@ namespace FamilyCompany.Experimental.Family3D
             float deskFootprintDepthWorld,
             Vector3 keyboardGroundWorld,
             float characterHeight,
+            float modelForwardYawOffsetDegrees,
             float visualYawOffsetDegrees)
         {
             if (parent == null) throw new ArgumentNullException(nameof(parent));
@@ -68,8 +82,8 @@ namespace FamilyCompany.Experimental.Family3D
             var root = new GameObject("FatherV19_Full3D_CrtWorkstation_QaOnly");
             root.transform.SetParent(parent, false);
             // Furniture roots are a map-grid contract. Keep the desk, CRT and keyboard on the
-            // exact canonical seat axis so later desks/tables share one placement rule. Only the
-            // swivel chair and seated actor use the readability offset around the seat anchor.
+            // exact canonical seat axis so later desks/tables share one placement rule. Camera
+            // readability is never allowed to change a workstation's physical facing.
             root.transform.SetPositionAndRotation(
                 seatGroundWorld,
                 Quaternion.LookRotation(forwardWorld.normalized, Vector3.up));
@@ -77,6 +91,7 @@ namespace FamilyCompany.Experimental.Family3D
 
             var result = root.AddComponent<Family3DWorkstationQa>();
             result.seatedVisualYawOffsetDegrees = visualYawOffsetDegrees;
+            result.actorModelForwardYawOffsetDegrees = modelForwardYawOffsetDegrees;
             result.deskFootprintCenterLocal = root.transform.InverseTransformPoint(
                 deskFootprintCenterWorld);
             result.keyboardGroundLocal = root.transform.InverseTransformPoint(keyboardGroundWorld);
@@ -89,6 +104,12 @@ namespace FamilyCompany.Experimental.Family3D
             result.GridAxisOrthogonalityErrorDegrees = Mathf.Abs(
                 90f - Vector3.Angle(gridRightWorld, forwardWorld));
             result.Build(layer, Mathf.Max(characterHeight, 0.25f));
+            result.SeatToKeyboardFacingErrorDegrees = result.MeasureSeatedFacingError(
+                result.KeyboardWorld);
+            result.SeatToMonitorFacingErrorDegrees = result.MeasureSeatedFacingError(
+                result.MonitorWorld);
+            result.ChairToMonitorFacingErrorDegrees = result.MeasureChairFacingError(
+                result.MonitorWorld);
             return result;
         }
 
@@ -150,10 +171,11 @@ namespace FamilyCompany.Experimental.Family3D
 
             var chairPivotObject = new GameObject("Chair_SwivelPivot");
             chairPivotObject.transform.SetParent(transform, false);
-            chairPivotObject.transform.localRotation = Quaternion.Euler(
-                0f,
-                seatedVisualYawOffsetDegrees,
-                0f);
+            // The chair uses furniture +Z while each imported body has a separately measured model
+            // forward. Solve the two rotations independently even when this candidate's measured
+            // offset happens to be zero. A visual presentation offset must never rotate the chair
+            // back away from the seat-to-monitor centreline, as the rejected V17 proof did.
+            chairPivotObject.transform.localRotation = chairFacingLocalRotation;
             chairPivotObject.layer = layer;
             Transform chairPivot = chairPivotObject.transform;
 
@@ -162,19 +184,19 @@ namespace FamilyCompany.Experimental.Family3D
             // the torso, elbows and both legs even though the pose itself was valid. Two slim
             // uprights and one lumbar rail preserve a readable chair silhouette without masking
             // the body that this QA exists to judge.
-            AddBox("Chair_Cushion", new Vector3(0f, seatY, -0.050f * h),
+            AddBox("Chair_Cushion", new Vector3(0f, seatY, -0.025f * h),
                 new Vector3(0.30f, 0.050f, 0.23f) * h, chairTeal, layer,
                 new Vector3(5f, 0f, 0f), chairPivot);
-            foreach (float x in new[] { -0.135f, 0.135f })
-                AddBox("Chair_BackUpright", new Vector3(x * h, 0.385f * h, -0.185f * h),
+            foreach (float x in new[] { -0.115f, 0.115f })
+                AddBox("Chair_BackUpright", new Vector3(x * h, 0.385f * h, -0.120f * h),
                     new Vector3(0.035f, 0.26f, 0.04f) * h, chairTrim, layer,
                     new Vector3(-7f, 0f, 0f), chairPivot);
-            AddBox("Chair_LumbarRail", new Vector3(0f, 0.405f * h, -0.19f * h),
+            AddBox("Chair_LumbarRail", new Vector3(0f, 0.405f * h, -0.125f * h),
                 new Vector3(0.30f, 0.085f, 0.045f) * h, chairTeal, layer,
                 new Vector3(-7f, 0f, 0f), chairPivot);
-            AddCylinder("Chair_Stem", new Vector3(0f, 0.132f * h, -0.015f * h),
+            AddCylinder("Chair_Stem", new Vector3(0f, 0.132f * h, 0f),
                 0.03f * h, 0.225f * h, chairTrim, layer, chairPivot);
-            AddCylinder("Chair_RoundFoot", new Vector3(0f, 0.025f * h, -0.015f * h),
+            AddCylinder("Chair_RoundFoot", new Vector3(0f, 0.025f * h, 0f),
                 0.14f * h, 0.025f * h, chairTrim, layer, chairPivot);
 
             // Horizontal placement comes only from the semantic two-tile desk footprint. The
@@ -255,13 +277,9 @@ namespace FamilyCompany.Experimental.Family3D
                 keyboardForward + deskDepth * 0.28f,
                 deskForward,
                 backForward - 0.11f * h);
-            // Keep the monitor on the same semantic top, but slightly off the operator's face
-            // line. The exact work socket still owns the keyboard and both hands; this lateral
-            // shift makes the seated head, elbows and typing motion readable at map scale.
-            float monitorRight = Mathf.Clamp(
-                keyboardRight - 0.12f * h,
-                deskRight - deskWidth * 0.5f + 0.17f * h,
-                deskRight + deskWidth * 0.5f - 0.17f * h);
+            // Monitor, keyboard, chair and actor share one operator centreline. Readability may
+            // not move the monitor sideways because that makes the chair look mispositioned.
+            float monitorRight = keyboardRight;
 
             AddGridBox("Crt_Base", GridLocal(monitorRight, 0.505f * h, monitorForward),
                 0.22f * h, 0.06f * h, 0.17f * h, beige, layer);
@@ -271,9 +289,10 @@ namespace FamilyCompany.Experimental.Family3D
             AddGridBox("Crt_Bezel",
                 GridLocal(monitorRight, 0.635f * h, monitorForward - 0.086f * h),
                 0.285f * h, 0.195f * h, 0.016f * h, dark, layer);
-            AddGridBox("Crt_Screen",
+            Transform monitor = AddGridBox("Crt_Screen",
                 GridLocal(monitorRight, 0.635f * h, monitorForward - 0.097f * h),
                 0.245f * h, 0.155f * h, 0.010f * h, screen, layer);
+            MonitorWorld = monitor.position;
             for (var line = 0; line < 4; line++)
                 AddGridBox("Crt_TextLine_" + line,
                     GridLocal(monitorRight + (-0.04f + (line % 2) * 0.025f) * h,
@@ -327,6 +346,47 @@ namespace FamilyCompany.Experimental.Family3D
             AddCylinder("Mug", GridLocal(accessoryRight + serviceSide * 0.09f * h,
                     0.535f * h, deskForward - deskDepth * 0.08f),
                 0.045f * h, 0.08f * h, chairTeal, layer);
+
+            Vector3 monitorDirectionWorld = MonitorWorld - SeatGroundWorld;
+            monitorDirectionWorld.y = 0f;
+            if (monitorDirectionWorld.sqrMagnitude <= 0.000001f)
+                throw new InvalidOperationException(
+                    "CRT monitor must be separated from its operator seat.");
+            Quaternion exactMonitorFacingWorld = Quaternion.LookRotation(
+                monitorDirectionWorld.normalized,
+                Vector3.up);
+            chairFacingLocalRotation = Quaternion.Inverse(transform.rotation) *
+                                       exactMonitorFacingWorld;
+            seatedActorLocalRotation = Quaternion.Inverse(transform.rotation) *
+                                       exactMonitorFacingWorld *
+                                       Quaternion.Euler(
+                                           0f,
+                                           actorModelForwardYawOffsetDegrees +
+                                           seatedVisualYawOffsetDegrees,
+                                           0f);
+            chairPivot.localRotation = chairFacingLocalRotation;
+        }
+
+        private float MeasureSeatedFacingError(Vector3 targetWorld)
+        {
+            Vector3 targetDirection = targetWorld - SeatGroundWorld;
+            targetDirection.y = 0f;
+            Vector3 seatedForward = SeatedBodyForwardWorld;
+            seatedForward.y = 0f;
+            return targetDirection.sqrMagnitude <= 0.000001f
+                ? 180f
+                : Vector3.Angle(seatedForward, targetDirection);
+        }
+
+        private float MeasureChairFacingError(Vector3 targetWorld)
+        {
+            Vector3 targetDirection = targetWorld - SeatGroundWorld;
+            targetDirection.y = 0f;
+            Vector3 chairForward = ChairRotationWorld * Vector3.forward;
+            chairForward.y = 0f;
+            return targetDirection.sqrMagnitude <= 0.000001f
+                ? 180f
+                : Vector3.Angle(chairForward, targetDirection);
         }
 
         private Vector2 LocalToGridCoordinates(Vector3 localPosition)

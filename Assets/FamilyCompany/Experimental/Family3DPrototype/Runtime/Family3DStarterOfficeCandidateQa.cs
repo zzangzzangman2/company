@@ -848,12 +848,8 @@ namespace FamilyCompany.Experimental.Family3D
                 deskFootprintDepth,
                 keyboardGround,
                 fatherBinding.WalkActor.StandingHeight,
-                ResolveCommandLineFloat(
-                    "-family3d-father-desk-visual-yaw-offset",
-                    -45f,
-                    -60f,
-                    60f,
-                    "Father desk visual yaw offset"));
+                fatherMotionFacingOffsetDegrees,
+                0f);
             fatherDeskResolvedChairActorSocketErrorWorld = Vector3.Distance(
                 seatGround,
                 fatherDeskWorkstation.SeatGroundWorld);
@@ -1518,6 +1514,7 @@ namespace FamilyCompany.Experimental.Family3D
                 binding.Host.transform.position = rootPosition;
                 binding.WalkActor.AlignSeatedDeskLimbs(
                     fatherDeskWorkstation.KeyboardWorld,
+                    fatherDeskWorkstation.SeatedBodyForwardWorld,
                     groundY,
                     fatherDeskSeatedBlend01,
                     fatherDeskWorkClockSeconds,
@@ -2107,10 +2104,24 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherDeskSeatedVisualYawOffsetDegrees = fatherDeskWorkstation == null
                         ? 0f
                         : fatherDeskWorkstation.SeatedVisualYawOffsetDegrees,
+                    fatherDeskSeatToKeyboardFacingErrorDegrees = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.SeatToKeyboardFacingErrorDegrees,
+                    fatherDeskSeatToMonitorFacingErrorDegrees = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.SeatToMonitorFacingErrorDegrees,
+                    fatherDeskChairToMonitorFacingErrorDegrees = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.ChairToMonitorFacingErrorDegrees,
+                    fatherDeskActorModelForwardYawOffsetDegrees = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.ActorModelForwardYawOffsetDegrees,
                     fatherDeskPlacementPolicy =
                         "shop/layout integer origin + semantic footprint owns 3D top center/size; " +
                         "semantic BlocksMovement cells own navigation; calibrated desk seat/work " +
-                        "sockets own chair, actor and keyboard XZ",
+                        "sockets own chair, actor and keyboard XZ; seat-to-physical-monitor vector " +
+                        "owns chair +Z and measured actor-body forward separately, with zero " +
+                        "readability yaw offset",
                     fatherDeskFootprintOrigin = fatherDeskFootprintOrigin,
                     fatherDeskFootprintSize = fatherDeskFootprintSize,
                     fatherDeskBlockedCells = fatherDeskBlockedCells,
@@ -2535,6 +2546,10 @@ namespace FamilyCompany.Experimental.Family3D
             public Vector3 fatherDeskKeyboardWorld;
             public float fatherDeskGridYawDegrees;
             public float fatherDeskSeatedVisualYawOffsetDegrees;
+            public float fatherDeskSeatToKeyboardFacingErrorDegrees;
+            public float fatherDeskSeatToMonitorFacingErrorDegrees;
+            public float fatherDeskChairToMonitorFacingErrorDegrees;
+            public float fatherDeskActorModelForwardYawOffsetDegrees;
             public string fatherDeskPlacementPolicy;
             public Vector2Int fatherDeskFootprintOrigin;
             public Vector2Int fatherDeskFootprintSize;

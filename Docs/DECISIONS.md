@@ -1,5 +1,20 @@
 # DECISIONS
 
+## 2026-08-28 / 의자와 아빠는 카메라가 아니라 실제 CRT를 각각 바라본다
+
+결정: 사용자 재검수에서 V17의 `-45°` seated readability yaw는 폐기한다. 그 값은 의자와 아빠를
+함께 돌렸지만 화면에서는 등받이가 몸 옆에 있고 얼굴이 모니터 정면을 보지 않았다. V20은 presentation
+yaw를 `0°`로 고정하고 seat→physical CRT 수평 벡터를 기준으로 의자 +Z와 캐릭터의 measured
+body-forward를 별도로 계산한다. 따라서 candidate model-forward offset이 달라져도 의자 등받이가
+같이 틀어지지 않는다. 현재 V19 offset은 `0°`, actor→CRT와 chair→CRT error는 모두 `0°`다.
+
+등받이는 seat pivot을 바꾸지 않고 골반 뒤로 당긴다. 착석 손·발 endpoint IK도 transform +Z가 아니라
+같은 physical body-forward/right를 사용한다. 책상 origin `(2,8)`, `2×1` footprint, blocked cells,
+desk seat/work socket, 승인된 action 613 걷기와 외형은 변경하지 않는다. 최종 증거는
+`FatherV19MeshyOnePackage613MapBuildV17RigAxisChairFacing` /
+`FatherV19MeshyOnePackage613MapRuntimeV20RigAxisChairFacing`이며, 사용자 승인 전
+`productionEligible=false`다.
+
 ## 2026-08-28 / Father V19 책상 업무는 승인 보행을 유지하고 실제 좌석 phase 뒤 별도 endpoint IK로 연다
 
 결정: 사용자가 승인한 V19 one-package action 613 보행, mesh, skin, albedo, material은 변경하지 않는다.
@@ -8,8 +23,9 @@
 두 관절 IK로 고정한다. imported muscle 축 부호만 믿어 몸 뒤 손과 옆으로 빠진 발을 다시 만들지 않는다.
 
 실제 좌석이 카메라를 등지는 가림은 임의 카메라나 가짜 배경으로 숨기지 않는다. 좌석 anchor를 유지한 채
-의자·아빠만 회전하는 `-45/0/+45°` actual-map 후보를 비교했고, 두 손과 두 바지 다리가 함께 읽히는
-`-45°`를 seated visual offset으로 채택했다. V13처럼 책상·CRT·키보드 root의 yaw만 맞추는 방식은
+의자·아빠만 회전하는 `-45/0/+45°` actual-map 후보를 비교해 당시 `-45°`를 채택했지만, 이후 사용자
+실제 화면 재검수에서 의자/모니터 방향이 틀린 것으로 기각됐다. 현재 결정은 위 V20 항목이 대체한다.
+V13처럼 책상·CRT·키보드 root의 yaw만 맞추는 방식은
 semantic origin/footprint를 보장하지 못하므로 폐기한다. V17은 실제 desk origin `(2,8)`, `2×1`
 footprint의 네 corner, blocked cells와 desk seat/work socket을 읽는다. mapped tile axis가
 `70.52887°`이므로 비직교 grid basis mesh로 네 corner를 맞춘다.
@@ -21,8 +37,9 @@ desk work socket에 둔다. 상점 배치의 integer origin/footprint/`BlocksMov
 셔츠와 같은 청록 의자, 통짜 높은 등받이, 캐릭터 다리로 오인되는 5발 받침은
 폐기한다. proof는 actual `desk_father`/`chair_father` 2D renderer를 일시적으로만 숨기고 종료 시 복구한다.
 
-최종 V17은 1,051 sample, 361 work observations, 132 captures와 production/preview/build-settings SHA
-불변을 통과했다. 이는 사용자 승인 전 후보이며 `productionMutation=false`, `productionEligible=false`다.
+V17은 1,051 sample, 361 work observations, 132 captures와 production/preview/build-settings SHA
+불변을 통과했지만 사용자 시각 검수에서 기각됐다. 자동 수치 PASS는 방향 합격을 뜻하지 않는다.
+V20 또한 사용자 승인 전 후보이며 `productionMutation=false`, `productionEligible=false`다.
 추가 Higgsfield 사용은 0 credits다.
 
 ## 2026-08-28 / Father V19 색 복구는 텍스처 재도색이 아니라 발광·과반사·이중 조명 제거로 한다

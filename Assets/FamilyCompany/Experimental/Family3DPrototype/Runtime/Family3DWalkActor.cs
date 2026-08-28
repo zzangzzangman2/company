@@ -420,6 +420,7 @@ namespace FamilyCompany.Experimental.Family3D
         /// </summary>
         public void AlignSeatedDeskLimbs(
             Vector3 keyboardWorld,
+            Vector3 bodyForwardWorld,
             float floorWorldY,
             float seatedBlend01,
             double workClockSeconds,
@@ -431,8 +432,14 @@ namespace FamilyCompany.Experimental.Family3D
                 return;
 
             float h = Mathf.Max(standingHeight, 0.25f);
-            Vector3 right = transform.right;
-            Vector3 forward = transform.forward;
+            Vector3 forward = bodyForwardWorld;
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.000001f)
+                throw new ArgumentException(
+                    "Seated body forward must be non-zero.",
+                    nameof(bodyForwardWorld));
+            forward.Normalize();
+            Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
             Vector3 up = Vector3.up;
             float tap = typing && weight > 0.999f
                 ? Mathf.Sin(Mathf.Repeat((float)(workClockSeconds / 0.8), 1f) * Mathf.PI * 2f) *

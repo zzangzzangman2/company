@@ -1330,8 +1330,9 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `Assets/FamilyCompany/Experimental/Family3DPrototype/Runtime/Family3DWorkstationQa.cs`
   - walnut desk, CRT, keyboard/keys, mouse, telephone, paper, mug, warm-leather low-back chair
   - reads `desk_father` origin `(2,8)`, `2x1` footprint corners, blocked cells and desk seat/work sockets
-  - mapped tile axes are `70.52887°`; desk/CRT/keyboard use oblique grid-basis meshes, while only
-    `Chair_SwivelPivot` and Father use the `-45°` seated readability offset
+  - mapped tile axes are `70.52887°`; desk/CRT/keyboard use oblique grid-basis meshes
+  - V17 `-45°` seated readability offset is user-rejected; V20 uses zero presentation yaw and
+    independently aligns chair +Z and measured actor body-forward to the physical CRT (`0°` error each)
   - legacy chair anchor offset `0.8318409`; resolved chair↔actor seat error `0`; seat→keyboard `0.4441449`
   - blocked cells `2:8`, `3:8` are both non-walkable
   - QA layer 30 only; no collider, catalog, save, production/default mutation
@@ -1345,13 +1346,13 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `seat_father` / `desk_father` / `chair_father`, phases
   `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`
 - final build/runtime:
-  `FatherV19MeshyOnePackage613MapBuildV14SemanticWorkstationFinal` /
-  `FatherV19MeshyOnePackage613MapRuntimeV17SemanticWorkstationFinal`
+  `FatherV19MeshyOnePackage613MapBuildV17RigAxisChairFacing` /
+  `FatherV19MeshyOnePackage613MapRuntimeV20RigAxisChairFacing`
 - proof: 1,051 sample frames, 361 work observations, 132 captures at 7.5 fps, visual-content PASS.
 - review media:
-  - `father-v19-semantic-workstation-actual-map-final.gif`
-    `E8D23B850D32B7799E62B3F25E2DD668CE26F2352977675D597F222C77F8148E`
-  - `father-v19-semantic-workstation-closeup-final.gif`
-    `33E72C32D4CB9E9931102DBD885A17DD837C45212860A8067EC4D47A330B6DD1`
+  - `father-v19-rig-axis-chair-facing-actual-map-final.gif`
+    `B1BD59F8788240F68DF476391E57972819E8970A5F484ED9D8EDF6A2D50E38F9`
+  - `father-v19-rig-axis-chair-facing-closeup-final.gif`
+    `34A2755752A466618D751F3650B2A9B8DA2E142AB16E2A75D7B51DA6CD4DFA24`
 - status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
   `productionEligible=false`, additional Higgsfield use `0 credits`.

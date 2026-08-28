@@ -78,7 +78,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedStableArmWalkMapBuildV74";
         public const string FatherV19MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV14SemanticWorkstationFinal";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV17RigAxisChairFacing";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62

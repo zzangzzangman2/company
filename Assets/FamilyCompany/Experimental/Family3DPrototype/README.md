@@ -414,7 +414,11 @@ footprint and chair distance did not follow the tycoon grid contract. The final 
 `desk_father` origin `(2,8)`, its `2x1` semantic footprint, all four footprint corners, both blocked
 cells and the authored desk seat/work sockets. The mapped tile axes are `70.52887°`, so the desk,
 CRT, keyboard and accessories use oblique grid-basis meshes rather than rotated orthogonal cubes.
-Only the swivel-chair child pivot and Father use the `-45°` seated readability offset.
+V17's shared `-45°` chair/Father readability yaw was user-rejected because the backrest appeared
+beside the body and Father did not face the CRT. V20 applies no camera-facing yaw. The chair's +Z
+and the candidate's measured body-forward are solved independently against the physical CRT centre;
+both final facing errors are `0°`. The chair back is pulled directly behind the pelvis, and seated
+limb IK uses the same physical body-forward rather than assuming the actor transform's +Z.
 
 The legacy chair anchor is `0.8318409` QA-world units away from the desk operator seat. The final
 chair and actor are both resolved to the desk operator seat (`0` error), while the keyboard remains
@@ -423,7 +427,7 @@ confirmed non-walkable. Existing shop placement already owns integer origin, foo
 `BlocksMovement`; automatic purchased-desk seat binding remains a production promotion gate.
 
 Final evidence is
-`FatherV19MeshyOnePackage613MapBuildV14SemanticWorkstationFinal` /
-`FatherV19MeshyOnePackage613MapRuntimeV17SemanticWorkstationFinal`: 1,051 sample frames, 361 work
+`FatherV19MeshyOnePackage613MapBuildV17RigAxisChairFacing` /
+`FatherV19MeshyOnePackage613MapRuntimeV20RigAxisChairFacing`: 1,051 sample frames, 361 work
 observations, 132 captures, `productionMutation: false`, `productionEligible: false`. See
 `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`.

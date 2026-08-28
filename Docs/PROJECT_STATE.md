@@ -1568,21 +1568,23 @@ candidate light와 uncompressed albedo import를 사용한다. actor highlight c
 locomotion을 끝낸 뒤에만 같은 Avatar의 neutral seated pose와 두 손/두 발 endpoint IK를 적용한다.
 
 V13은 furniture yaw만 grid처럼 보이게 맞추고 실제 semantic origin/footprint/socket을 읽지 않아 사용자
-재검수에서 폐기됐다. 최종 격리 build/runtime은
-`FatherV19MeshyOnePackage613MapBuildV14SemanticWorkstationFinal` /
-`FatherV19MeshyOnePackage613MapRuntimeV17SemanticWorkstationFinal`이다. 실제 phase
+재검수에서 폐기됐다. V17의 `-45°` seated readability yaw도 등받이를 몸 옆에 놓고 얼굴을 CRT에서
+비껴 보이게 해 사용자 재검수에서 폐기됐다. 최종 격리 build/runtime은
+`FatherV19MeshyOnePackage613MapBuildV17RigAxisChairFacing` /
+`FatherV19MeshyOnePackage613MapRuntimeV20RigAxisChairFacing`이다. 실제 phase
 `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`, sample 1,051,
 work 361, captures 132를 완료했다. 책상·CRT·키보드·전화기·의자는 QA layer의 runtime 3D 소품이며
 production 가구 catalog나 Transform을 바꾸지 않는다. 통짜 등받이, 셔츠와 같은 의자색, 5발 받침,
-몸 뒤 손과 옆으로 빠진 발은 폐기했고 `-45/0/+45°` 실제 맵 비교에서 두 손·두 다리가 가장 잘 읽힌
-`-45°`는 의자·아빠 전용 seated visual offset으로 고정했다.
+몸 뒤 손과 옆으로 빠진 발은 폐기했다. V20은 카메라용 yaw를 `0°`로 고정하고, 실제 CRT 중심 방향에
+의자 +Z와 캐릭터 body-forward를 별도로 맞춘다. 둘의 CRT facing error는 모두 `0°`다.
 
-V17은 실제 `desk_father`의 정수 origin `(2,8)`, `2×1` footprint, 네 footprint corner, desk seat/work
+V20은 실제 `desk_father`의 정수 origin `(2,8)`, `2×1` footprint, 네 footprint corner, desk seat/work
 socket을 읽는다. 점유 셀 `(2,8)`, `(3,8)`은 실제 grid에서 둘 다 non-walkable이다. 화면에 매핑된 두
 타일 축이 `70.52887°`이므로 보통 cube 회전이 아니라 비직교 grid basis의 평행육면체로 책상과 소품을
 만든다. legacy `chair_father` anchor와 desk operator seat의 `0.8318409` 간격은 기존 “멀리서 타자”의
 원인이며, 최종 의자와 아빠는 desk operator seat 하나에 결합되어 좌석 오차 `0`, 좌석→키보드 거리
-`0.4441449`다. 승인된 걷기·외형·착석 자세는 바꾸지 않았다.
+`0.4441449`다. 등받이는 골반 바로 뒤로 당겼고 endpoint IK도 실제 body-forward를 사용한다. 승인된
+걷기·외형·책상 타일 배치는 바꾸지 않았다.
 
 상태는 `FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE`, `productionMutation=false`,
 `productionEligible=false`다. 전체 이동→착석→업무 GIF와 두 손 타건 확대 GIF에 대한 사용자 판정이
