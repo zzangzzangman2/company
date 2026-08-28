@@ -384,9 +384,14 @@ override or procedural gait for this candidate.
 
 Build with
 `Family3DStarterOfficeCandidateQaBuilder.BuildFatherV19MotionFromCommandLine`. The final isolated
-build/runtime are `FatherV19MeshyOnePackage613MapBuildV2` and
-`FatherV19MeshyOnePackage613MapRuntimeV3DefaultFinal`. Default facing is 0 degrees and stride is
+build/runtime are `FatherV19MeshyOnePackage613MapBuildV3ColorDetail` and
+`FatherV19MeshyOnePackage613MapRuntimeV4ColorDetail`. Default facing is 0 degrees and stride is
 0.7950477 office units, exactly ten cycles per 7.950477-unit proof circuit. The runtime completes two
 actual Father-agent circuits, 1,344 telemetry frames and 169 captures. Production/preview/build-settings
 hashes are unchanged and `productionEligible` remains false until the user approves both actual-map
 GIFs. See `Docs/FATHER_V19_MESHY_ONE_PACKAGE_WALK_QA_2026-08-28.md` for the hashes and measurements.
+
+The V4 surface proof keeps the same texture and UVs but removes the provider GLB's duplicate full
+emission and 2.0 specular presentation, excludes the real map Sun from the isolated QA layer, and
+imports the 2048 albedo uncompressed. This restores teal/charcoal/hair/skin separation without a
+colour LUT or texture repaint; the walk mesh, skin and action are unchanged.

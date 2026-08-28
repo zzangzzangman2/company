@@ -1,5 +1,18 @@
 # DECISIONS
 
+## 2026-08-28 / Father V19 색 복구는 텍스처 재도색이 아니라 발광·과반사·이중 조명 제거로 한다
+
+결정: V19 one-package의 걷기·mesh·UV·albedo·skin·action 613은 유지한다. 최초 실제 맵에서 색이
+옅었던 것은 GLB가 동일 albedo를 base color와 full-strength emission에 동시에 연결하고 specular colour
+factor `2.0`을 요청한 상태에서 실제 Sun과 QA directional light를 함께 받은 presentation 결함이다.
+V4는 scene-referenced surface material에서 emission을 끄고 metallic `0`, smoothness `0.22`를 사용하며,
+기존 scene light가 QA layer를 비추지 않게 해 candidate light 하나만 적용한다. 2048 source albedo는
+sRGB/uncompressed로 원본 해상도를 유지한다. 색상 LUT, saturation 곱, 텍스처 재도색은 금지한다.
+
+실제 맵 169 captures에서 highlight clamp는 `27.522% -> 0.675%`, 평균 HSV saturation은
+`26.91 -> 38.00`으로 바뀌었고 보행 telemetry는 V3와 동일하다. 최종 사용자 승인 전에는 계속
+`productionEligible=false`다.
+
 ## 2026-08-28 / 승인 Tripo static을 standalone 3d_rigging에 다시 넣지 않는다
 
 결정: 사용자 승인 Tripo 정적 외형은 보존하지만, 그 GLB를 Meshy `3d_rigging`에 별도로 넣는 경로는

@@ -1310,9 +1310,16 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-albedo.png`
   - 6,292,750 bytes
   - SHA-256: `8C1418E17002256C2393942067852B8BE484A2095AC85976DCC1CC2B70D9962B`
+  - import: 2048×2048 source size retained, sRGB, uncompressed, quality 100.
+- Unity surface material:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/FatherV19MeshyOnePackageSurface.mat`
+  - SHA-256: `2C842D018FDDF53918988458FC093898AA2F4FFFD0EE58BC38AD19A97101372C`
+  - same albedo/UV; emission off, metallic `0`, smoothness `0.22`; no texture recolour.
 - structure: 209,147 vertices, 119,452 polygons, 24 bones, one skinned character mesh;
   rig helper Icosphere removed during FBX export.
 - animation: `FatherV19_Casual_Walk_inplace`, importer frames `1..43`, 1.4 s, loop/root locked.
 - policy: same-package mesh/bind/weights/clip only; no cross-package retarget, sanitation, procedural gait,
   or production promotion before user GIF approval.
+- final proof: `FatherV19MeshyOnePackage613MapBuildV3ColorDetail` /
+  `FatherV19MeshyOnePackage613MapRuntimeV4ColorDetail`; four directions, 169 captures.
 - status: `EXPERIMENTAL_VISUAL_CANDIDATE`, `productionEligible=false`.

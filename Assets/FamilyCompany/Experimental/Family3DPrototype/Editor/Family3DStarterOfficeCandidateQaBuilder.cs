@@ -60,6 +60,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-613.fbx";
         public const string FatherV19MotionTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-albedo.png";
+        public const string FatherV19SurfaceMaterialPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/" +
+            "FatherV19MeshyOnePackageSurface.mat";
         public const float FatherV19FacingOffsetDegrees = 0f;
         // One forced-map circuit is 7.950477 office units. Ten authored cycles per circuit both
         // matches the measured planted-foot velocity (least-squares optimum 0.812345) and makes
@@ -75,7 +78,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedStableArmWalkMapBuildV74";
         public const string FatherV19MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV2";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV3ColorDetail";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -487,6 +490,69 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             return created;
         }
 
+        /// <summary>
+        /// Keeps the one-package UV/albedo while removing provider presentation settings that are
+        /// invalid on the office map. The source GLB wires the same albedo into full-strength
+        /// emission, requests a 2.0 specular colour, and is then hit by map lighting. Unity clips
+        /// those summed highlights to white, washing out hair, skin, shirt and trouser detail.
+        /// </summary>
+        private static Material EnsureFatherV19SurfaceMaterial(GameObject prefab)
+        {
+            Material source = ResolveImportedSurfaceMaterial(prefab);
+            Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                FatherV19MotionTexturePath);
+            if (albedo == null)
+                throw new InvalidOperationException(
+                    "Father V19 one-package albedo could not be loaded from " +
+                    FatherV19MotionTexturePath);
+
+            string directory = Path.GetDirectoryName(ProjectPath(FatherV19SurfaceMaterialPath));
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(FatherV19SurfaceMaterialPath);
+            if (material == null)
+            {
+                material = new Material(source);
+                AssetDatabase.CreateAsset(material, FatherV19SurfaceMaterialPath);
+            }
+            else
+            {
+                EditorUtility.CopySerialized(source, material);
+            }
+
+            material.name = "FatherV19MeshyOnePackageSurface";
+            material.mainTexture = albedo;
+            material.color = Color.white;
+            if (material.HasProperty("_Metallic"))
+                material.SetFloat("_Metallic", 0f);
+            if (material.HasProperty("_Glossiness"))
+                material.SetFloat("_Glossiness", 0.22f);
+            if (material.HasProperty("_Smoothness"))
+                material.SetFloat("_Smoothness", 0.22f);
+            if (material.HasProperty("_SpecColor"))
+                material.SetColor("_SpecColor", new Color(0.20f, 0.20f, 0.20f, 1f));
+            if (material.HasProperty("_EmissionColor"))
+                material.SetColor("_EmissionColor", Color.black);
+            if (material.HasProperty("_EmissionMap"))
+                material.SetTexture("_EmissionMap", null);
+            material.DisableKeyword("_EMISSION");
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+
+            EditorUtility.SetDirty(material);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(
+                FatherV19SurfaceMaterialPath,
+                ImportAssetOptions.ForceSynchronousImport);
+            Material created = AssetDatabase.LoadAssetAtPath<Material>(
+                FatherV19SurfaceMaterialPath);
+            if (created == null)
+                throw new InvalidOperationException(
+                    "Could not create Father V19 surface material " +
+                    FatherV19SurfaceMaterialPath + ".");
+            return created;
+        }
+
         private static int CreateIsolatedQaScene(AssetBundle bundle)
         {
             EnsureAssetFolder("Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes");
@@ -506,7 +572,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             var root = new GameObject("~Family3DStarterOfficeCandidateQa_ExperimentalOnly");
             var qa = root.AddComponent<Family3DStarterOfficeCandidateQa>();
             Camera camera = CreateOverlayCamera(root.transform, qaLayer);
-            CreateCandidateLight(root.transform, qaLayer);
+            if (bundle.FatherV19MotionOnly)
+                ExcludeLayerFromExistingLights(scene, qaLayer);
+            CreateCandidateLight(
+                root.transform,
+                qaLayer,
+                bundle.FatherV19MotionOnly ? 1.0f : 1.2f);
             if (bundle.FatherV18StaticOnly)
                 qa.ConfigureFatherStaticRootMotionOnly(
                     bundle.Prefabs[0],
@@ -532,7 +603,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 qa.ConfigureFatherHiggsfieldIdleRun(
                     bundle.Prefabs[0],
                     bundle.StaticAlbedo,
-                    ResolveImportedSurfaceMaterial(bundle.Prefabs[0]),
+                    EnsureFatherV19SurfaceMaterial(bundle.Prefabs[0]),
                     null,
                     bundle.WalkClip,
                     camera,
@@ -591,17 +662,25 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             return camera;
         }
 
-        private static void CreateCandidateLight(Transform parent, int layer)
+        private static void CreateCandidateLight(Transform parent, int layer, float intensity)
         {
             var host = new GameObject("Family3DStarterOfficeQaCandidateLight");
             host.transform.SetParent(parent, false);
             host.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
             var light = host.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.2f;
+            light.intensity = intensity;
             light.color = new Color(1f, 0.94f, 0.86f);
             light.shadows = LightShadows.Soft;
             light.cullingMask = 1 << layer;
+        }
+
+        private static void ExcludeLayerFromExistingLights(Scene scene, int layer)
+        {
+            int excludedMask = ~(1 << layer);
+            foreach (GameObject sceneRoot in scene.GetRootGameObjects())
+            foreach (Light light in sceneRoot.GetComponentsInChildren<Light>(true))
+                light.cullingMask &= excludedMask;
         }
 
         private static int FindUnusedSceneLayer(Scene scene)

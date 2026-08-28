@@ -1545,12 +1545,17 @@ Higgsfield/Meshy의 메시·bind skeleton·skin weight·action 613을 한 작업
 Experimental에 반입했다. 127프레임은 42프레임 보행 3회였으므로 Unity importer는 `1..43` 한 주기만
 사용한다. 다른 리그로 retarget하거나 절차 보행/팔 보정/웨이트 일괄 삭제를 적용하지 않는다.
 
-최종 격리 build는 `FatherV19MeshyOnePackage613MapBuildV2`, 실제 맵 runtime은
-`FatherV19MeshyOnePackage613MapRuntimeV3DefaultFinal`이다. 실제 Father agent 4방향 2회전 1,344프레임과
+최종 격리 build는 `FatherV19MeshyOnePackage613MapBuildV3ColorDetail`, 실제 맵 runtime은
+`FatherV19MeshyOnePackage613MapRuntimeV4ColorDetail`이다. 실제 Father agent 4방향 2회전 1,344프레임과
 169 captures를 완료했다. stride `0.7950477`에서 접지 발 median world speed는 left/right
 `0.0933/0.0678`, torso lean mean `2.31°`, 손 반대 스윙 상관 `-0.939`다. 같은 맵 위치의 회전 간
 root position/yaw 오차는 `0/0°`, phase delta `0.0000108`이다. production scene, preview,
 EditorBuildSettings SHA는 before/after 동일하다.
+
+V3에서 색이 옅었던 원인은 원본 GLB의 albedo emission 중복, specular factor `2.0`, 실제 Sun+QA light
+중복이었다. V4는 원본 texture/UV/mesh를 유지하고 emission off, metallic `0`, smoothness `0.22`, 단일
+candidate light와 uncompressed albedo import를 사용한다. actor highlight clamp는 `27.522% -> 0.675%`,
+평균 채도는 `26.91 -> 38.00`으로 복구됐다.
 
 상태는 `VISUAL_CANDIDATE_READY_USER_APPROVAL_REQUIRED`, `productionEligible=false`다. 상세 출처,
 실패 원인, 구조 검사, GIF 경로는
