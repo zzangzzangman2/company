@@ -1406,7 +1406,7 @@ namespace FamilyCompany.Experimental.Family3D
                 phase == OfficeRuntimeAgentPhase.FinishingWork ||
                 phase == OfficeRuntimeAgentPhase.StandingUp;
             Quaternion rotation = isSeatFacingPhase
-                ? fatherDeskWorkstation.transform.rotation
+                ? fatherDeskWorkstation.SeatedRotationWorld
                 : ResolveBlendedYaw(binding, actorGround);
 
             bool wantsSeatedPose =
@@ -2032,6 +2032,12 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherDeskKeyboardWorld = fatherDeskWorkstation == null
                         ? Vector3.zero
                         : fatherDeskWorkstation.KeyboardWorld,
+                    fatherDeskGridYawDegrees = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.GridRotationWorld.eulerAngles.y,
+                    fatherDeskSeatedVisualYawOffsetDegrees = fatherDeskWorkstation == null
+                        ? 0f
+                        : fatherDeskWorkstation.SeatedVisualYawOffsetDegrees,
                     fatherCaptureSampleCount = fatherCaptureSamples.Count,
                     fatherMotionStrideOfficeUnits = fatherMotionStrideOfficeUnits,
                     fatherMotionYawDegreesPerSecond = fatherMotionYawDegreesPerSecond,
@@ -2428,6 +2434,8 @@ namespace FamilyCompany.Experimental.Family3D
             public int fatherDeskWorkFrames;
             public float fatherDeskSeatedBlend01;
             public Vector3 fatherDeskKeyboardWorld;
+            public float fatherDeskGridYawDegrees;
+            public float fatherDeskSeatedVisualYawOffsetDegrees;
             public int fatherCaptureSampleCount;
             public float fatherMotionStrideOfficeUnits;
             public float fatherMotionYawDegreesPerSecond;

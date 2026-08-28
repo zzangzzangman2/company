@@ -1567,13 +1567,15 @@ candidate light와 uncompressed albedo import를 사용한다. actor highlight c
 요청했다. 새 proof는 승인된 one-package action 613 보행을 그대로 두고, 실제 `seat_father` 경로가
 locomotion을 끝낸 뒤에만 같은 Avatar의 neutral seated pose와 두 손/두 발 endpoint IK를 적용한다.
 
-최종 격리 build/runtime은 `FatherV19MeshyOnePackage613MapBuildV10Full3DDeskWorkFinal` /
-`FatherV19MeshyOnePackage613MapRuntimeV12Full3DDeskWorkFinal`이다. 실제 phase
+최종 격리 build/runtime은 `FatherV19MeshyOnePackage613MapBuildV11GridAlignedDesk` /
+`FatherV19MeshyOnePackage613MapRuntimeV13GridAlignedDesk`이다. 실제 phase
 `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`, sample 1,051,
 work 361, captures 132를 완료했다. 책상·CRT·키보드·전화기·의자는 QA layer의 runtime 3D 소품이며
 production 가구 catalog나 Transform을 바꾸지 않는다. 통짜 등받이, 셔츠와 같은 의자색, 5발 받침,
 몸 뒤 손과 옆으로 빠진 발은 폐기했고 `-45/0/+45°` 실제 맵 비교에서 두 손·두 다리가 가장 잘 읽힌
-`-45°`를 기본값으로 고정했다.
+`-45°`는 의자·아빠 전용 seated visual offset으로 고정했다. 책상·CRT·키보드 전체 workstation root는
+실제 seat의 mapped grid forward에 고정되어 타일 축과 나란하고, 이후 다른 책상·테이블도 같은 격자 배치
+규칙을 사용할 수 있다. 좌석 anchor와 승인된 걷기·외형·착석 자세는 바꾸지 않았다.
 
 상태는 `FATHER_V19_FULL_3D_DESK_WORK_PROOF_COMPLETE`, `productionMutation=false`,
 `productionEligible=false`다. 전체 이동→착석→업무 GIF와 두 손 타건 확대 GIF에 대한 사용자 판정이

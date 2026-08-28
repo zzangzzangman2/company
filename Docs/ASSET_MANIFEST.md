@@ -1329,6 +1329,8 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
 - runtime-only 3D workstation:
   `Assets/FamilyCompany/Experimental/Family3DPrototype/Runtime/Family3DWorkstationQa.cs`
   - walnut desk, CRT, keyboard/keys, mouse, telephone, paper, mug, warm-leather low-back chair
+  - desk/CRT/keyboard root follows the mapped real-seat tile axis; only `Chair_SwivelPivot` and Father
+    use the `-45°` seated readability offset around the unchanged seat anchor
   - QA layer 30 only; no collider, catalog, save, production/default mutation
 - seated implementation:
   `Assets/FamilyCompany/Experimental/Family3DPrototype/Runtime/Family3DWalkActor.cs`
@@ -1340,13 +1342,13 @@ Historical/provenance only. 아래 ArtSources/도구는 2026-08-19에 삭제했�
   `seat_father` / `desk_father` / `chair_father`, phases
   `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`
 - final build/runtime:
-  `FatherV19MeshyOnePackage613MapBuildV10Full3DDeskWorkFinal` /
-  `FatherV19MeshyOnePackage613MapRuntimeV12Full3DDeskWorkFinal`
+  `FatherV19MeshyOnePackage613MapBuildV11GridAlignedDesk` /
+  `FatherV19MeshyOnePackage613MapRuntimeV13GridAlignedDesk`
 - proof: 1,051 sample frames, 361 work observations, 132 captures at 7.5 fps, visual-content PASS.
 - review media:
-  - `father-v19-full-3d-desk-work-actual-map-final.gif`
-    `E083BC221FDB03A98B2346C796AE4830646A9005979C1510964A3166B9DD7A4D`
-  - `father-v19-seated-typing-closeup-final.gif`
-    `81ED44A4A1A1B419764B0FF6DFB939EC4E2B4DF37F4D0D08F4326B403B8A2682`
+  - `father-v19-grid-aligned-desk-work-actual-map-final.gif`
+    `E243FA92AC87E06CAD92A65EE96DADE76D9E3464F0292483156DF6B4E2757DBC`
+  - `father-v19-grid-aligned-seated-typing-closeup-final.gif`
+    `9262157C3CB4F3B277FE95E5F455F8E9F1EEBFE783D3D75378B2E16527FCC7D0`
 - status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
   `productionEligible=false`, additional Higgsfield use `0 credits`.

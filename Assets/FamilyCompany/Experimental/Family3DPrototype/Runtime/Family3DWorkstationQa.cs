@@ -12,9 +12,14 @@ namespace FamilyCompany.Experimental.Family3D
     public sealed class Family3DWorkstationQa : MonoBehaviour
     {
         private readonly List<Material> ownedMaterials = new List<Material>();
+        private float seatedVisualYawOffsetDegrees;
 
         public Vector3 SeatGroundWorld => transform.position;
         public Vector3 ForwardWorld => transform.forward;
+        public Quaternion GridRotationWorld => transform.rotation;
+        public Quaternion SeatedRotationWorld =>
+            transform.rotation * Quaternion.Euler(0f, seatedVisualYawOffsetDegrees, 0f);
+        public float SeatedVisualYawOffsetDegrees => seatedVisualYawOffsetDegrees;
         public float CushionWorldY { get; private set; }
         public Vector3 KeyboardWorld { get; private set; }
         public Vector3 WorkSurfaceWorld { get; private set; }
@@ -34,17 +39,16 @@ namespace FamilyCompany.Experimental.Family3D
 
             var root = new GameObject("FatherV19_Full3D_CrtWorkstation_QaOnly");
             root.transform.SetParent(parent, false);
-            // The canonical father seat points straight away from the isometric camera. A small
-            // swivel-chair turn keeps the exact seat anchor while exposing both hands and feet in
-            // a readable three-quarter view. Desk and chair rotate together, so he still faces the
-            // real work surface rather than typing sideways.
+            // Furniture roots are a map-grid contract. Keep the desk, CRT and keyboard on the
+            // exact canonical seat axis so later desks/tables share one placement rule. Only the
+            // swivel chair and seated actor use the readability offset around the seat anchor.
             root.transform.SetPositionAndRotation(
                 seatGroundWorld,
-                Quaternion.LookRotation(forwardWorld.normalized, Vector3.up) *
-                Quaternion.Euler(0f, visualYawOffsetDegrees, 0f));
+                Quaternion.LookRotation(forwardWorld.normalized, Vector3.up));
             SetLayerRecursively(root, layer);
 
             var result = root.AddComponent<Family3DWorkstationQa>();
+            result.seatedVisualYawOffsetDegrees = visualYawOffsetDegrees;
             result.Build(layer, Mathf.Max(characterHeight, 0.25f));
             return result;
         }
@@ -105,24 +109,34 @@ namespace FamilyCompany.Experimental.Family3D
             float seatY = 0.265f * h;
             CushionWorldY = transform.position.y + seatY + 0.028f * h;
 
+            var chairPivotObject = new GameObject("Chair_SwivelPivot");
+            chairPivotObject.transform.SetParent(transform, false);
+            chairPivotObject.transform.localRotation = Quaternion.Euler(
+                0f,
+                seatedVisualYawOffsetDegrees,
+                0f);
+            chairPivotObject.layer = layer;
+            Transform chairPivot = chairPivotObject.transform;
+
             // Keep the chair visually real but deliberately open-backed. The canonical father
             // seat faces away from the isometric camera, so a conventional solid high back hid
             // the torso, elbows and both legs even though the pose itself was valid. Two slim
             // uprights and one lumbar rail preserve a readable chair silhouette without masking
             // the body that this QA exists to judge.
             AddBox("Chair_Cushion", new Vector3(0f, seatY, -0.050f * h),
-                new Vector3(0.30f, 0.050f, 0.23f) * h, chairTeal, layer, new Vector3(5f, 0f, 0f));
+                new Vector3(0.30f, 0.050f, 0.23f) * h, chairTeal, layer,
+                new Vector3(5f, 0f, 0f), chairPivot);
             foreach (float x in new[] { -0.135f, 0.135f })
                 AddBox("Chair_BackUpright", new Vector3(x * h, 0.385f * h, -0.185f * h),
                     new Vector3(0.035f, 0.26f, 0.04f) * h, chairTrim, layer,
-                    new Vector3(-7f, 0f, 0f));
+                    new Vector3(-7f, 0f, 0f), chairPivot);
             AddBox("Chair_LumbarRail", new Vector3(0f, 0.405f * h, -0.19f * h),
                 new Vector3(0.30f, 0.085f, 0.045f) * h, chairTeal, layer,
-                new Vector3(-7f, 0f, 0f));
+                new Vector3(-7f, 0f, 0f), chairPivot);
             AddCylinder("Chair_Stem", new Vector3(0f, 0.132f * h, -0.015f * h),
-                0.03f * h, 0.225f * h, chairTrim, layer);
+                0.03f * h, 0.225f * h, chairTrim, layer, chairPivot);
             AddCylinder("Chair_RoundFoot", new Vector3(0f, 0.025f * h, -0.015f * h),
-                0.14f * h, 0.025f * h, chairTrim, layer);
+                0.14f * h, 0.025f * h, chairTrim, layer, chairPivot);
 
             // Desk dimensions are keyed to the approved V19 body height, so the same actual map
             // camera scale cannot make the furniture gigantic or toy-sized.
@@ -217,11 +231,12 @@ namespace FamilyCompany.Experimental.Family3D
             Vector3 localScale,
             Material material,
             int layer,
-            Vector3? localEuler = null)
+            Vector3? localEuler = null,
+            Transform localParent = null)
         {
             GameObject value = GameObject.CreatePrimitive(PrimitiveType.Cube);
             value.name = objectName;
-            value.transform.SetParent(transform, false);
+            value.transform.SetParent(localParent == null ? transform : localParent, false);
             value.transform.localPosition = localPosition;
             value.transform.localRotation = Quaternion.Euler(localEuler ?? Vector3.zero);
             value.transform.localScale = localScale;
@@ -239,11 +254,12 @@ namespace FamilyCompany.Experimental.Family3D
             float radius,
             float height,
             Material material,
-            int layer)
+            int layer,
+            Transform localParent = null)
         {
             GameObject value = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             value.name = objectName;
-            value.transform.SetParent(transform, false);
+            value.transform.SetParent(localParent == null ? transform : localParent, false);
             value.transform.localPosition = localPosition;
             value.transform.localRotation = Quaternion.identity;
             // Unity's cylinder primitive is two units high and one unit in radius.

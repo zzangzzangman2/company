@@ -409,10 +409,12 @@ through `QaBeginSeatedWorkAtSeat`, and observes
 `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`. Locomotion remains the
 unchanged one-package action 613. After locomotion, a separate neutral seated pose and post-root
 two-bone endpoint IK put both wrists on the actual 3D keyboard and both ankles on distinct floor
-targets. The default workstation yaw is `-45°`, selected from `-45/0/+45°` actual-map captures.
+targets. The workstation root (desk, CRT, keyboard and accessories) follows the mapped real-seat
+tile axis. Only the swivel-chair child pivot and Father use the `-45°` seated readability offset,
+selected from `-45/0/+45°` actual-map captures, around the unchanged seat anchor.
 
 Final evidence is
-`FatherV19MeshyOnePackage613MapBuildV10Full3DDeskWorkFinal` /
-`FatherV19MeshyOnePackage613MapRuntimeV12Full3DDeskWorkFinal`: 1,051 sample frames, 361 work
+`FatherV19MeshyOnePackage613MapBuildV11GridAlignedDesk` /
+`FatherV19MeshyOnePackage613MapRuntimeV13GridAlignedDesk`: 1,051 sample frames, 361 work
 observations, 132 captures, `productionMutation: false`, `productionEligible: false`. See
 `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`.
