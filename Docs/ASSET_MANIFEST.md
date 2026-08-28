@@ -24,7 +24,16 @@
 - Status: `SOURCE_WALK_REJECTED`, new Higgsfield use `0 credits`, `productionEligible=false`;
   production/default/Downloads/deployed executables unchanged.
 
-## Father V19 Higgsfield whole-package input (current, generation blocked)
+## Father V19 Higgsfield input (native MCP connected; company execution pending)
+
+- 2026-08-28 실행 정본:
+  [FATHER_V19_COMPANY_CODEX_HIGGSFIELD_EXECUTION_2026-08-28.md](FATHER_V19_COMPANY_CODEX_HIGGSFIELD_EXECUTION_2026-08-28.md).
+- 최신 허용 경로는 cleaned profile을 사용한 `Tripo H3.1 Multiview to 3D`, detailed geometry +
+  detailed texture, 정확히 18-credit 1회다. 아래 과거 Meshy 38-credit whole-package 기록은 실행하지 않는다.
+- 집 PC에서 official Codex native MCP `higgsfield_native`의 OAuth와 재시작을 완료했고
+  `generate_3d` 노출을 확인했다. 회사 PC는 새 정본의 연결 절차를 별도로 수행해야 한다.
+- 인계 시점 balance `64`, 새 V19 3D job `0`, 새 V19 3D charge `0`,
+  `productionEligible=false`다.
 
 - External isolated source:
   `2026-08-25/family-natural-walk-rebuild/outputs/father-v19-higgsfield-rebuild`.
