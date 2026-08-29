@@ -64,6 +64,137 @@ namespace FamilyCompany.Experimental.Family3D
         public float MonitorScreenToSeatFacingErrorDegrees { get; private set; }
         public float SemanticSeatToScreenFacingSeatDistance { get; private set; }
 
+        /// <summary>
+        /// Counts vertices of the actually deformed character skin that are strictly inside each
+        /// solid chair primitive. A small normalized inset treats surface contact as contact rather
+        /// than penetration. This catches pelvis/thigh intersections that joint-point gates miss.
+        /// </summary>
+        public ChairSkinPenetration MeasureChairSkinPenetration(
+            IReadOnlyList<Vector3> worldSkinVertices,
+            IReadOnlyList<Family3DWalkActor.SeatedSkinRegion> skinRegions)
+        {
+            if (worldSkinVertices == null)
+                throw new ArgumentNullException(nameof(worldSkinVertices));
+            if (skinRegions == null || skinRegions.Count != worldSkinVertices.Count)
+                throw new ArgumentException(
+                    "Skin regions must match the world skin vertex count.",
+                    nameof(skinRegions));
+            Transform chair = transform.Find("Chair_SwivelPivot");
+            if (chair == null)
+                throw new InvalidOperationException("Chair swivel root is missing.");
+
+            Transform cushion = RequireChairPart(chair, "Chair_Cushion");
+            Transform lumbar = RequireChairPart(chair, "Chair_LumbarRail");
+            Transform stem = RequireChairPart(chair, "Chair_Stem");
+            Transform roundFoot = RequireChairPart(chair, "Chair_RoundFoot");
+            Transform[] uprights = chair.GetComponentsInChildren<Transform>(true);
+            var result = new ChairSkinPenetration
+            {
+                sampledSkinVertexCount = worldSkinVertices.Count,
+                cushionMinimumLocalY = float.PositiveInfinity,
+                cushionMaximumLocalY = float.NegativeInfinity
+            };
+            for (var vertexIndex = 0; vertexIndex < worldSkinVertices.Count; vertexIndex++)
+            {
+                Vector3 vertex = worldSkinVertices[vertexIndex];
+                if (IsStrictlyInsideUnitBox(cushion, vertex))
+                {
+                    result.cushionVertexCount++;
+                    switch (skinRegions[vertexIndex])
+                    {
+                        case Family3DWalkActor.SeatedSkinRegion.PelvisOrTorso:
+                            result.cushionPelvisOrTorsoVertexCount++;
+                            break;
+                        case Family3DWalkActor.SeatedSkinRegion.UpperLeg:
+                            result.cushionUpperLegVertexCount++;
+                            break;
+                        case Family3DWalkActor.SeatedSkinRegion.LowerLeg:
+                            result.cushionLowerLegVertexCount++;
+                            break;
+                        case Family3DWalkActor.SeatedSkinRegion.Foot:
+                            result.cushionFootVertexCount++;
+                            break;
+                        default:
+                            result.cushionOtherVertexCount++;
+                            break;
+                    }
+                    float cushionLocalY = cushion.InverseTransformPoint(vertex).y;
+                    result.cushionMinimumLocalY =
+                        Mathf.Min(result.cushionMinimumLocalY, cushionLocalY);
+                    result.cushionMaximumLocalY =
+                        Mathf.Max(result.cushionMaximumLocalY, cushionLocalY);
+                }
+                if (IsStrictlyInsideUnitBox(lumbar, vertex))
+                    result.lumbarVertexCount++;
+                if (IsStrictlyInsideUnitCylinder(stem, vertex))
+                    result.stemVertexCount++;
+                if (IsStrictlyInsideUnitCylinder(roundFoot, vertex))
+                    result.roundFootVertexCount++;
+                for (var partIndex = 0; partIndex < uprights.Length; partIndex++)
+                {
+                    Transform part = uprights[partIndex];
+                    if (!part.name.StartsWith("Chair_BackUpright", StringComparison.Ordinal) ||
+                        !IsStrictlyInsideUnitBox(part, vertex))
+                        continue;
+                    result.backUprightVertexCount++;
+                    break;
+                }
+            }
+            result.totalPenetratingVertexCount =
+                result.cushionVertexCount +
+                result.backUprightVertexCount +
+                result.lumbarVertexCount +
+                result.stemVertexCount +
+                result.roundFootVertexCount;
+            if (result.cushionVertexCount == 0)
+                result.cushionMinimumLocalY = result.cushionMaximumLocalY = 0f;
+            return result;
+        }
+
+        private static Transform RequireChairPart(Transform chair, string partName)
+        {
+            Transform result = chair.Find(partName);
+            if (result == null)
+                throw new InvalidOperationException(partName + " is missing from the chair.");
+            return result;
+        }
+
+        private static bool IsStrictlyInsideUnitBox(Transform part, Vector3 worldPoint)
+        {
+            Vector3 local = part.InverseTransformPoint(worldPoint);
+            const float insetExtent = 0.485f;
+            return Mathf.Abs(local.x) < insetExtent &&
+                   Mathf.Abs(local.y) < insetExtent &&
+                   Mathf.Abs(local.z) < insetExtent;
+        }
+
+        private static bool IsStrictlyInsideUnitCylinder(Transform part, Vector3 worldPoint)
+        {
+            Vector3 local = part.InverseTransformPoint(worldPoint);
+            const float insetRadius = 0.97f;
+            return Mathf.Abs(local.y) < insetRadius &&
+                   local.x * local.x + local.z * local.z < insetRadius * insetRadius;
+        }
+
+        [Serializable]
+        public struct ChairSkinPenetration
+        {
+            public int sampledSkinVertexCount;
+            public int totalPenetratingVertexCount;
+            public int cushionVertexCount;
+            public int backUprightVertexCount;
+            public int lumbarVertexCount;
+            public int stemVertexCount;
+            public int roundFootVertexCount;
+            public float cushionMinimumLocalY;
+            public float cushionMaximumLocalY;
+            public int cushionPelvisOrTorsoVertexCount;
+            public int cushionUpperLegVertexCount;
+            public int cushionLowerLegVertexCount;
+            public int cushionFootVertexCount;
+            public int cushionOtherVertexCount;
+        }
+
         public static Family3DWorkstationQa Create(
             Transform parent,
             int layer,
@@ -211,6 +342,8 @@ namespace FamilyCompany.Experimental.Family3D
                 0f,
                 0.08f);
 
+            // Preserve the user-approved V31 chair exactly. Character-specific seating clearance
+            // belongs to the actor pose and must never shorten this stem, base, cushion or back.
             float seatY = 0.265f * h;
             CushionWorldY = transform.position.y + seatY + 0.028f * h;
 

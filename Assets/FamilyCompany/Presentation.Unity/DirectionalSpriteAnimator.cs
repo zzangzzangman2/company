@@ -110,6 +110,7 @@ namespace FamilyCompany.Presentation.Unity
         private bool _tileGaitStateInitialized;
         private bool _officeSeatingFacingLocked;
         private int _lockedOfficeSeatingDirection = -1;
+        private bool _externalDirectionalSeatingPresentation;
         private int _officeSeatingFacingViolationCount;
         private int _maximumOfficeSeatingFacingDelta;
         private int _officeWorkSpriteDirectionViolationCount;
@@ -536,7 +537,8 @@ namespace FamilyCompany.Presentation.Unity
         public bool PrepareOfficeSeatingFacing(int direction)
         {
             if (!HasOfficeSeatingFrames || direction < 0 || direction >= DirectionCount) return false;
-            if (seatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork && direction != 3)
+            if (seatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork &&
+                !_externalDirectionalSeatingPresentation && direction != 3)
                 return false;
             if (_officeSeatingFacingLocked)
             {
@@ -557,7 +559,8 @@ namespace FamilyCompany.Presentation.Unity
         public bool TryLockOfficeSeatingFacingAfterPlantedRotation(int direction)
         {
             if (!HasOfficeSeatingFrames || direction < 0 || direction >= DirectionCount) return false;
-            if (seatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork && direction != 3)
+            if (seatingPresentationMode == OfficeSeatingPresentationMode.SafeStaticWork &&
+                !_externalDirectionalSeatingPresentation && direction != 3)
                 return false;
             if (_officeSeatingFacingLocked)
             {
@@ -567,6 +570,17 @@ namespace FamilyCompany.Presentation.Unity
             }
             if (_lastDirection != direction || !IsOfficeSeatingEntryPlanted) return false;
             return EstablishOfficeSeatingFacingLock(direction);
+        }
+
+        /// <summary>
+        /// Lets an external full-body presenter (currently the isolated 3D Father adapter) own
+        /// seated visuals for every direction while this component continues to own the semantic
+        /// planted turn and atomic seat transition. SafeStaticWork still remains northwest-only
+        /// for ordinary 2D actors; enabling this capability does not synthesize or mirror sprites.
+        /// </summary>
+        public void SetExternalDirectionalSeatingPresentation(bool enabled)
+        {
+            _externalDirectionalSeatingPresentation = enabled;
         }
 
         private bool EstablishOfficeSeatingFacingLock(int direction)

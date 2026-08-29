@@ -128,6 +128,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private int _typingContactSampleCount;
         private bool _qaControl;
         private bool _qaDirectMovementControl;
+        private bool _externalDirectionalSeatingPresentation;
         private Vector2 _lastActualDisplacement;
         private float _visibleMotionDebtSeconds;
         private float _visibleFrameMovementBudgetWorld;
@@ -1070,6 +1071,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!_qaControl) return;
             _qaDirectMovementControl = true;
             _playerInput = Vector2.ClampMagnitude(input, 1f);
+        }
+
+        /// <summary>
+        /// Declares that another full-body presenter owns directional seated pixels while the
+        /// production agent retains route, facing, chair claim and atomic docking authority.
+        /// Ordinary 2D actors never enable this and keep the SafeStaticWork northwest-only gate.
+        /// </summary>
+        public void SetExternalDirectionalSeatingPresentation(bool enabled)
+        {
+            _externalDirectionalSeatingPresentation = enabled;
+            _animator?.SetExternalDirectionalSeatingPresentation(enabled);
         }
 
         /// <summary>
@@ -2537,8 +2549,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     StopMotion();
                     if (_animator.CurrentDirection != _seatDirection)
                     {
-                        _animator.AccumulateStandingFacingRequest(_seatDirection, deltaTime);
-                        return;
+                        // A 3D/full-body presenter applies its own visible yaw from the resolved
+                        // workstation socket. Keep the simulation-facing octant in lockstep without
+                        // waiting on the hidden 2D planted-turn frames; ordinary 2D actors retain
+                        // the authored accumulated pivot below.
+                        if (_externalDirectionalSeatingPresentation)
+                            _animator.RestoreStandingFacing(_seatDirection);
+                        else
+                        {
+                            _animator.AccumulateStandingFacingRequest(_seatDirection, deltaTime);
+                            return;
+                        }
                     }
                     if (!_animator.IsOfficeSeatingEntryPlanted ||
                         !_seatAlignmentComplete) return;
@@ -2633,9 +2654,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeCharacterSeatPoseProfile workProfile = null;
             try
             {
-                workProfile = _poseCatalog.ResolveApproved(
-                    _agentId,
-                    _seatDirection,
+                workProfile = ResolveSeatPresentationProfile(
                     OfficeSeatingAnimationClip.Work,
                     0);
                 posePrepared = workProfile != null;
@@ -4522,11 +4541,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Sprite appliedSprite)
         {
             if (_seat == null || appliedSprite == null) return;
-            OfficeCharacterSeatPoseProfile profile = _poseCatalog.ResolveApproved(
-                _agentId,
-                _seatDirection,
-                clip,
-                frame);
+            OfficeCharacterSeatPoseProfile profile = ResolveSeatPresentationProfile(clip, frame);
             _seatedUpperBodyCutoffPx = profile.PelvisAnchorPx.y;
             RecordObservedSeatingFrame(clip, frame);
             if (_attendanceWorkHandoffActive &&
@@ -4811,11 +4826,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 case OfficeSeatingAnimationClip.StandUp:
                     if (!_standTransitionInitialized)
                     {
-                        OfficeCharacterSeatPoseProfile finalProfile = _poseCatalog.ResolveApproved(
-                            _agentId,
-                            _seatDirection,
-                            OfficeSeatingAnimationClip.StandUp,
-                            OfficeSeatingAnimationFrames.StandUpFrameCount - 1);
+                        OfficeCharacterSeatPoseProfile finalProfile =
+                            ResolveSeatPresentationProfile(
+                                OfficeSeatingAnimationClip.StandUp,
+                                OfficeSeatingAnimationFrames.StandUpFrameCount - 1);
                         ResetVisualPose();
                         _standTransitionTargetPelvisWorld =
                             OfficeSeatedOccupantContract.OccupantSeatContactWorld(
@@ -5075,9 +5089,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private void TrackWorkstationMetrics()
         {
             if (_seat == null || Camera.main == null) return;
-            OfficeCharacterSeatPoseProfile profile = _poseCatalog.ResolveApproved(
-                _agentId,
-                _seatDirection,
+            OfficeCharacterSeatPoseProfile profile = ResolveSeatPresentationProfile(
                 OfficeSeatingAnimationClip.Work,
                 _alignedFrame < 0 ? 0 : _alignedFrame);
             Vector3 chairScreen = Camera.main.WorldToScreenPoint(
@@ -5103,6 +5115,32 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _maxTypingHandWorkErrorPx = Mathf.Max(
                     _maxTypingHandWorkErrorPx,
                     _handWorkErrorPx);
+            }
+        }
+
+        private OfficeCharacterSeatPoseProfile ResolveSeatPresentationProfile(
+            OfficeSeatingAnimationClip clip,
+            int frame)
+        {
+            try
+            {
+                return _poseCatalog.ResolveApproved(
+                    _agentId,
+                    _seatDirection,
+                    clip,
+                    frame);
+            }
+            catch (Exception) when (_externalDirectionalSeatingPresentation)
+            {
+                // The external presenter owns all visible body contacts and uses the actual
+                // workstation sockets. The legacy SafeStaticWork profile is still needed by the
+                // atomic docking transaction as a non-rendered pelvis baseline, so reuse its one
+                // approved northwest profile rather than fabricating rotated 2D calibration.
+                return _poseCatalog.ResolveApproved(
+                    _agentId,
+                    RequiredR5eSeatPreloadDirection,
+                    clip,
+                    frame);
             }
         }
 

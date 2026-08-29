@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -479,14 +480,23 @@ namespace FamilyCompany.Experimental.Family3D
             Transform rightLowerLeg = animator.GetBoneTransform(HumanBodyBones.RightLowerLeg);
             Transform rightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
 
-            Vector3 footCentre = transform.position + forward * (0.29f * h);
-            footCentre.y = floorWorldY + 0.055f * h;
-            Vector3 leftFootTarget = footCentre - right * (0.13f * h);
-            Vector3 rightFootTarget = footCentre + right * (0.13f * h);
-            Vector3 leftKneePole = leftUpperLeg.position - right * (0.13f * h) +
-                                   forward * (0.32f * h) - up * (0.12f * h);
-            Vector3 rightKneePole = rightUpperLeg.position + right * (0.13f * h) +
-                                    forward * (0.32f * h) - up * (0.12f * h);
+            // Ordinary office-chair posture: the knees stay forward and the shins fold back, but
+            // the shoes must also clear the swivel stem and its 0.14h round base. A 0.02h ankle
+            // offset produced a good numerical bend while visibly burying both feet in the chair.
+            // 0.09h relative to the visible pelvis places the shoes beyond the chair front/base
+            // once the pelvis occupies the cushion's forward 0.07h, without reaching toward the
+            // keyboard as the rejected 0.18h/0.29h targets did.
+            Vector3 footCentre = transform.position + forward * (0.09f * h);
+            // The accepted chair is intentionally not resized per character. This Father's short
+            // stylised legs therefore use a chair-relative ankle height; forcing them to the floor
+            // either straightens them or drags the thigh skin through the original cushion.
+            footCentre.y = floorWorldY + 0.158f * h;
+            Vector3 leftFootTarget = footCentre - right * (0.12f * h);
+            Vector3 rightFootTarget = footCentre + right * (0.12f * h);
+            Vector3 leftKneePole = leftUpperLeg.position - right * (0.12f * h) +
+                                   forward * (0.23f * h) + up * (0.01f * h);
+            Vector3 rightKneePole = rightUpperLeg.position + right * (0.12f * h) +
+                                    forward * (0.23f * h) + up * (0.01f * h);
             ApplyTwoBoneIk(
                 leftUpperLeg, leftLowerLeg, leftFoot,
                 leftFootTarget, leftKneePole, weight);
@@ -689,6 +699,10 @@ namespace FamilyCompany.Experimental.Family3D
                 rightFootLocal = rightLocal,
                 leftFootWorld = leftFoot.position,
                 rightFootWorld = rightFoot.position,
+                leftHipWorld = leftUpperLeg.position,
+                rightHipWorld = rightUpperLeg.position,
+                leftKneeWorld = leftLowerLeg.position,
+                rightKneeWorld = rightLowerLeg.position,
                 leftHandLocal = leftHand == null
                     ? Vector3.zero
                     : transform.InverseTransformPoint(leftHand.position),
@@ -709,6 +723,81 @@ namespace FamilyCompany.Experimental.Family3D
                 visualRootPositionError = Vector3.Distance(visualRoot.localPosition, visualLocalPosition),
                 visualRootRotationErrorDegrees = Quaternion.Angle(visualRoot.localRotation, visualLocalRotation)
             };
+        }
+
+        /// <summary>
+        /// Bakes the currently deformed character skin and returns its real world-space vertices.
+        /// Bone endpoints alone cannot prove that a pelvis, thigh or shoe is outside furniture.
+        /// This is intentionally QA-only and is called once per settled workstation direction.
+        /// </summary>
+        public int CollectCurrentWorldSkinVertices(
+            List<Vector3> destination,
+            List<SeatedSkinRegion> destinationRegions)
+        {
+            if (destination == null)
+                throw new ArgumentNullException(nameof(destination));
+            if (destinationRegions == null)
+                throw new ArgumentNullException(nameof(destinationRegions));
+            Initialize();
+            destination.Clear();
+            destinationRegions.Clear();
+            SkinnedMeshRenderer[] skins =
+                visualRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            foreach (SkinnedMeshRenderer skin in skins)
+            {
+                if (!skin.enabled || !skin.gameObject.activeInHierarchy || skin.sharedMesh == null)
+                    continue;
+                var baked = new Mesh { name = familyId + "_SeatedPenetrationBake" };
+                skin.BakeMesh(baked);
+                Vector3[] vertices = baked.vertices;
+                BoneWeight[] weights = skin.sharedMesh.boneWeights;
+                Transform[] skinBones = skin.bones;
+                for (var index = 0; index < vertices.Length; index++)
+                {
+                    destination.Add(skin.transform.TransformPoint(vertices[index]));
+                    Transform dominantBone =
+                        index < weights.Length && weights[index].boneIndex0 >= 0 &&
+                        weights[index].boneIndex0 < skinBones.Length
+                            ? skinBones[weights[index].boneIndex0]
+                            : null;
+                    destinationRegions.Add(ClassifySeatedSkinRegion(dominantBone));
+                }
+                Destroy(baked);
+            }
+            return destination.Count;
+        }
+
+        private SeatedSkinRegion ClassifySeatedSkinRegion(Transform dominantBone)
+        {
+            if (dominantBone == null)
+                return SeatedSkinRegion.Other;
+            if (IsBoneOrDescendant(dominantBone, leftFoot) ||
+                IsBoneOrDescendant(dominantBone, rightFoot))
+                return SeatedSkinRegion.Foot;
+            if (IsBoneOrDescendant(dominantBone, leftLowerLeg) ||
+                IsBoneOrDescendant(dominantBone, rightLowerLeg))
+                return SeatedSkinRegion.LowerLeg;
+            if (IsBoneOrDescendant(dominantBone, leftUpperLeg) ||
+                IsBoneOrDescendant(dominantBone, rightUpperLeg))
+                return SeatedSkinRegion.UpperLeg;
+            if (dominantBone == hips || IsBoneOrDescendant(dominantBone, spine))
+                return SeatedSkinRegion.PelvisOrTorso;
+            return SeatedSkinRegion.Other;
+        }
+
+        private static bool IsBoneOrDescendant(Transform candidate, Transform root)
+        {
+            return candidate != null && root != null &&
+                   (candidate == root || candidate.IsChildOf(root));
+        }
+
+        public enum SeatedSkinRegion
+        {
+            Other,
+            PelvisOrTorso,
+            UpperLeg,
+            LowerLeg,
+            Foot
         }
 
         private void SamplePose(double sharedMotionClock, bool isMoving)
@@ -1699,6 +1788,10 @@ namespace FamilyCompany.Experimental.Family3D
             public Vector3 rightFootLocal;
             public Vector3 leftFootWorld;
             public Vector3 rightFootWorld;
+            public Vector3 leftHipWorld;
+            public Vector3 rightHipWorld;
+            public Vector3 leftKneeWorld;
+            public Vector3 rightKneeWorld;
             public Vector3 leftHandLocal;
             public Vector3 rightHandLocal;
             public Vector3 hipsLocal;

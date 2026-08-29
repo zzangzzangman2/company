@@ -100,6 +100,7 @@ namespace FamilyCompany.Experimental.Family3D
         private int fatherMovingSampleFrames;
         private bool fatherMapWalkQa;
         private bool fatherDeskWorkQa;
+        private bool fatherFourDirectionDeskPoseQa;
         private bool fatherDeskWorkProofActive;
         private bool fatherDeskWorkProofCompleted;
         private int fatherDeskWorkSampleFrames;
@@ -122,6 +123,11 @@ namespace FamilyCompany.Experimental.Family3D
         private bool fatherDeskBlockedCellsNonWalkable;
         private float fatherDeskLegacyChairAnchorOffsetWorld;
         private float fatherDeskResolvedChairActorSocketErrorWorld;
+        private readonly List<FatherDeskDirectionReceipt> fatherDeskDirectionReceipts =
+            new List<FatherDeskDirectionReceipt>(4);
+        private bool fatherDeskFourDirectionProofCompleted;
+        private string fatherDeskCapturePrefix =
+            "father-v19-full-3d-desk-work-actual-map";
         private readonly List<RendererState> hiddenSourceFurniture = new List<RendererState>();
         private float fatherMotionStrideOfficeUnits;
         private float fatherMotionYawDegreesPerSecond;
@@ -412,7 +418,10 @@ namespace FamilyCompany.Experimental.Family3D
             try
             {
                 autoQuitSeconds = ResolveAutoQuitSeconds();
-                fatherDeskWorkQa = HasCommandLineFlag("-family3d-father-v19-desk-work-qa");
+                fatherFourDirectionDeskPoseQa = HasCommandLineFlag(
+                    "-family3d-father-v19-four-direction-desk-pose-qa");
+                fatherDeskWorkQa = fatherFourDirectionDeskPoseQa ||
+                    HasCommandLineFlag("-family3d-father-v19-desk-work-qa");
                 fatherMapWalkQa = fatherDeskWorkQa ||
                     HasCommandLineFlag("-family3d-father-map-walk-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-static-map-qa") ||
@@ -498,7 +507,9 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMotionTurnSeconds = ResolveFatherMotionTurnSeconds();
                     fatherMotionYawSweep = HasCommandLineFlag("-family3d-father-v18-motion-yaw-sweep");
                     StartCoroutine(
-                        fatherDeskWorkQa
+                        fatherFourDirectionDeskPoseQa
+                            ? RunFatherFourDirectionDeskPoseProof()
+                            : fatherDeskWorkQa
                             ? RunFatherDeskWorkProof()
                             : RunFatherMapWalkProof());
                 }
@@ -602,12 +613,13 @@ namespace FamilyCompany.Experimental.Family3D
                     {
                         if (fatherCaptureSamples.Count < MaximumFatherTelemetrySamples)
                             RecordFatherCaptureSample(father, fatherDeskWorkSampleFrames);
-                        if (compositeCapturedFrames < maximumFatherCompositeFrames &&
+                        if (!fatherFourDirectionDeskPoseQa &&
+                            compositeCapturedFrames < maximumFatherCompositeFrames &&
                             (fatherDeskWorkSampleFrames == 1 ||
                              fatherDeskWorkSampleFrames % fatherCompositeFrameStride == 0))
                             CaptureCompositeQaFrame(
                                 sourceOfficeCamera,
-                                "father-v19-full-3d-desk-work-actual-map");
+                                fatherDeskCapturePrefix);
                     }
                 }
                 else if (fatherProofRouteActive && father != null && father.IsMoving)
@@ -800,6 +812,429 @@ namespace FamilyCompany.Experimental.Family3D
             Application.Quit(0);
         }
 
+        /// <summary>
+        /// Proves the seated Father against the exact four rotations produced by the production
+        /// workstation placement rule. The furnished starter fixture happens to author all four
+        /// desks in one direction, so replaying its four seats cannot prove a bought desk that the
+        /// player subsequently turns. Each pass therefore starts from the real empty-office shell,
+        /// places one atomic desk/chair/seat set through PlaceWorkstation, and lets the real Father
+        /// claim and enter that seat before the Humanoid desk pose and endpoint IK are judged.
+        /// </summary>
+        private IEnumerator RunFatherFourDirectionDeskPoseProof()
+        {
+            yield return null;
+            if (starter == null || starter.World == null)
+            {
+                Fail("Four-direction Father desk-pose proof could not resolve the runtime world.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            fatherDeskDirectionReceipts.Clear();
+            fatherDeskFourDirectionProofCompleted = false;
+            var facings = new[]
+            {
+                OfficeFurnitureFacing.SouthEast,
+                OfficeFurnitureFacing.SouthWest,
+                OfficeFurnitureFacing.NorthWest,
+                OfficeFurnitureFacing.NorthEast
+            };
+            var seatCell = new OfficeGridCoordinate(6, 6);
+
+            for (var directionIndex = 0; directionIndex < facings.Length; directionIndex++)
+            {
+                OfficeFurnitureFacing deskFacing = facings[directionIndex];
+                OfficeLayoutEditResult placed = OfficeLayoutEditRules.PlaceWorkstation(
+                    OfficeGridLayouts.CreateNewGameEmptyOfficeV1(),
+                    "desk_father",
+                    "chair_father",
+                    "seat_father",
+                    seatCell,
+                    deskFacing);
+                if (!placed.Success || placed.Grid == null)
+                {
+                    Fail(
+                        "Production workstation placement rejected Father direction " +
+                        deskFacing + ": " + placed.Failure + " " + placed.Message);
+                    Application.Quit(2);
+                    yield break;
+                }
+
+                fatherDeskWorkProofActive = false;
+                string expectedHash = placed.Grid.ComputeLayoutHash();
+                starter.ApplyLayoutForQa(placed.Grid);
+                float rebuildDeadline = Time.realtimeSinceStartup + 30f;
+                while (Time.realtimeSinceStartup < rebuildDeadline &&
+                       (!starter.IsReady ||
+                        !string.Equals(starter.LayoutHash, expectedHash, StringComparison.Ordinal) ||
+                        !IsBound))
+                    yield return null;
+                if (!starter.IsReady || !IsBound ||
+                    !string.Equals(starter.LayoutHash, expectedHash, StringComparison.Ordinal))
+                {
+                    Fail("Father direction " + deskFacing + " did not rebuild to the requested layout.");
+                    Application.Quit(2);
+                    yield break;
+                }
+                yield return new WaitForEndOfFrame();
+
+                Binding fatherBinding = bindings.Find(candidate =>
+                    string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
+                if (fatherBinding == null)
+                {
+                    Fail("Father binding is missing after the " + deskFacing + " layout rebuild.");
+                    Application.Quit(2);
+                    yield break;
+                }
+
+                OfficeRuntimeAgent father = fatherBinding.Agent;
+                OfficeSeatSlot seat;
+                try
+                {
+                    seat = starter.World.Workstations.RequiredSeat("seat_father");
+                    SetupV27Workstations(fatherBinding, seat, Camera.main);
+                    ParkOtherActorsForFatherLoop(
+                        father,
+                        new[] { seat.ApproachCell, seat.Cell });
+                }
+                catch (Exception exception)
+                {
+                    Fail("Father " + deskFacing + " workstation setup failed: " + exception.Message);
+                    Debug.LogException(exception, this);
+                    Application.Quit(2);
+                    yield break;
+                }
+
+                fatherDeskSeatedBlend01 = 0f;
+                fatherDeskWorkClockSeconds = 0d;
+                fatherDeskCapturePrefix =
+                    "father-v19-four-direction-" + deskFacing.ToString().ToLowerInvariant();
+                fatherProofRouteCircuit = directionIndex;
+                fatherProofRouteLeg = -1;
+                // Use the same proven three-cell cardinal arrival fixture as the exhaustive R5e
+                // seat-docking matrix. Starting on the approach cell skips its navigation handoff;
+                // starting at the office entrance can approach this isolated centre fixture on a
+                // diagonal and stop at the final path threshold. The cardinal arrival still runs
+                // the complete path, approach, turn and atomic seat claim for every quarter-turn.
+                father.QaTeleportToCell(
+                    FindFatherDeskArrivalCell(
+                        starter.World.Grid,
+                        seat,
+                        directionIndex * 2));
+                father.SetExternalDirectionalSeatingPresentation(true);
+                // Loading/management UI is allowed to leave office time paused. The accepted
+                // desk-work proof explicitly resumes simulation before routing; keep the same
+                // contract here or the agent correctly remains at its arrival cell forever.
+                Time.timeScale = 1f;
+                starter.World.Occupancy.ResetMetrics();
+                if (!father.QaBeginSeatedWorkAtSeat(
+                        seat.SeatId,
+                        "father-v19-four-direction-" + deskFacing))
+                {
+                    Fail("Father rejected the real " + deskFacing + " seat destination.");
+                    Application.Quit(2);
+                    yield break;
+                }
+
+                float seatDeadline = Time.realtimeSinceStartup + 30f;
+                while (father.Phase != OfficeRuntimeAgentPhase.Working &&
+                       Time.realtimeSinceStartup < seatDeadline)
+                    yield return null;
+                if (father.Phase != OfficeRuntimeAgentPhase.Working)
+                {
+                    Fail("Father did not reach Working for " + deskFacing +
+                         "; last phase=" + father.Phase +
+                         " position=" + father.Position +
+                         " desiredVelocity=" + father.DesiredVelocity +
+                         " movementBlocker=" + father.LastMovementBlocker +
+                         " reservationBlocker=" + father.LastReservationBlocker + ".");
+                    Application.Quit(2);
+                    yield break;
+                }
+
+                fatherDeskWorkProofActive = true;
+                const int settleAndTypingFrames = 72;
+                for (var frame = 0; frame < settleAndTypingFrames; frame++)
+                {
+                    if (father.Phase != OfficeRuntimeAgentPhase.Working)
+                    {
+                        Fail("Father left Working during the " + deskFacing + " pose proof.");
+                        Application.Quit(2);
+                        yield break;
+                    }
+                    yield return null;
+                    if (HasExplicitRuntimeOutput() &&
+                        (frame == 31 || frame == 51 || frame == 71))
+                        CaptureCompositeQaFrame(
+                            Camera.main,
+                            fatherDeskCapturePrefix,
+                            fatherBinding);
+                }
+                fatherDeskWorkProofActive = false;
+
+                try
+                {
+                    ValidateAndRecordFatherDeskDirection(
+                        directionIndex,
+                        deskFacing,
+                        seat,
+                        fatherBinding);
+                }
+                catch (Exception exception)
+                {
+                    Fail("Father " + deskFacing + " seated-pose gate failed: " + exception.Message);
+                    Debug.LogException(exception, this);
+                    Application.Quit(2);
+                    yield break;
+                }
+            }
+
+            if (fatherDeskDirectionReceipts.Count != 4)
+            {
+                Fail("Father four-direction proof produced " +
+                     fatherDeskDirectionReceipts.Count + "/4 direction receipts.");
+                Application.Quit(2);
+                yield break;
+            }
+            for (var left = 0; left < fatherDeskDirectionReceipts.Count; left++)
+            for (var right = left + 1; right < fatherDeskDirectionReceipts.Count; right++)
+            {
+                float yawSeparation = Mathf.Abs(Mathf.DeltaAngle(
+                    fatherDeskDirectionReceipts[left].seatedRootWorldYawDegrees,
+                    fatherDeskDirectionReceipts[right].seatedRootWorldYawDegrees));
+                if (yawSeparation >= 45f)
+                    continue;
+                Fail(
+                    "Father desk rotations collapsed to the same 3D body yaw: " +
+                    fatherDeskDirectionReceipts[left].deskFacing + " vs " +
+                    fatherDeskDirectionReceipts[right].deskFacing + " separation=" +
+                    yawSeparation.ToString("F4") + " degrees.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            fatherDeskWorkProofCompleted = true;
+            fatherDeskFourDirectionProofCompleted = true;
+            WriteRuntimeReceipt("FATHER_V19_FOUR_DIRECTION_DESK_POSE_PROOF_COMPLETE");
+            Debug.Log(
+                "FAMILY_3D_FATHER_FOUR_DIRECTION_DESK_POSE_QA: PASS | " +
+                "semanticQuarterTurns=4/4 actualSeatClaims=4/4 bodyToDesk=4/4 " +
+                "handsToKeyboard=4/4 feetUnderChair=4/4 captures=" +
+                compositeCapturedFrames + " productionEligible=false",
+                this);
+            yield return new WaitForEndOfFrame();
+            Application.Quit(0);
+        }
+
+        private static OfficeGridCoordinate FindFatherDeskArrivalCell(
+            OfficeGrid grid,
+            OfficeSeatSlot seat,
+            int direction)
+        {
+            if (grid == null) throw new ArgumentNullException(nameof(grid));
+            if (seat == null) throw new ArgumentNullException(nameof(seat));
+            int[] dx = { 0, -1, -1, -1, 0, 1, 1, 1 };
+            int[] dy = { -1, -1, 0, 1, 1, 1, 0, -1 };
+            int index = ((direction % 8) + 8) % 8;
+            for (var distance = 3; distance >= 1; distance--)
+            {
+                var candidate = new OfficeGridCoordinate(
+                    seat.ApproachCell.X + dx[index] * distance,
+                    seat.ApproachCell.Y + dy[index] * distance);
+                if (grid.Contains(candidate) && grid.IsWalkable(candidate))
+                    return candidate;
+            }
+            return seat.ApproachCell;
+        }
+
+        private void ValidateAndRecordFatherDeskDirection(
+            int directionIndex,
+            OfficeFurnitureFacing deskFacing,
+            OfficeSeatSlot seat,
+            Binding fatherBinding)
+        {
+            if (fatherDeskWorkstation == null || fatherBinding == null ||
+                fatherBinding.WalkActor == null)
+                throw new InvalidOperationException("The resolved workstation or Father rig is missing.");
+
+            Family3DWorkstationQa workstation = fatherDeskWorkstation;
+            Family3DWalkActor.PoseSnapshot pose = fatherBinding.WalkActor.ReadPoseSnapshot();
+            float height = Mathf.Max(pose.standingHeight, 0.25f);
+            Vector3 forward = workstation.SeatedBodyForwardWorld;
+            forward.y = 0f;
+            forward.Normalize();
+            Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+            Vector3 leftHandWorld = fatherBinding.Host.transform.TransformPoint(pose.leftHandLocal);
+            Vector3 rightHandWorld = fatherBinding.Host.transform.TransformPoint(pose.rightHandLocal);
+            Vector3 handMidpoint = (leftHandWorld + rightHandWorld) * 0.5f;
+            Vector3 expectedHandMidpoint = workstation.KeyboardWorld +
+                                           Vector3.up * (0.022f * height) -
+                                           forward * (0.035f * height);
+            float handMidpointError = Vector3.Distance(handMidpoint, expectedHandMidpoint);
+            float handOrder = Vector3.Dot(rightHandWorld - leftHandWorld, right);
+
+            Vector3 footMidpoint = (pose.leftFootWorld + pose.rightFootWorld) * 0.5f;
+            Vector3 expectedFootMidpoint = fatherBinding.Host.transform.position +
+                                           forward * (0.09f * height);
+            expectedFootMidpoint.y = groundY + 0.158f * height;
+            float footMidpointError = Vector3.Distance(footMidpoint, expectedFootMidpoint);
+            float footOrder = Vector3.Dot(pose.rightFootWorld - pose.leftFootWorld, right);
+            float leftKneeBendDegrees = Vector3.Angle(
+                pose.leftHipWorld - pose.leftKneeWorld,
+                pose.leftFootWorld - pose.leftKneeWorld);
+            float rightKneeBendDegrees = Vector3.Angle(
+                pose.rightHipWorld - pose.rightKneeWorld,
+                pose.rightFootWorld - pose.rightKneeWorld);
+            Vector3 leftFootFromChair = pose.leftFootWorld - workstation.ChairGroundWorld;
+            Vector3 rightFootFromChair = pose.rightFootWorld - workstation.ChairGroundWorld;
+            leftFootFromChair.y = 0f;
+            rightFootFromChair.y = 0f;
+            float leftFootChairRadialClearance = leftFootFromChair.magnitude;
+            float rightFootChairRadialClearance = rightFootFromChair.magnitude;
+            float leftFootChairForwardClearance = Vector3.Dot(leftFootFromChair, forward);
+            float rightFootChairForwardClearance = Vector3.Dot(rightFootFromChair, forward);
+            Vector3 leftKneeFromChair = pose.leftKneeWorld - workstation.ChairGroundWorld;
+            Vector3 rightKneeFromChair = pose.rightKneeWorld - workstation.ChairGroundWorld;
+            leftKneeFromChair.y = 0f;
+            rightKneeFromChair.y = 0f;
+            float leftKneeChairForwardClearance = Vector3.Dot(leftKneeFromChair, forward);
+            float rightKneeChairForwardClearance = Vector3.Dot(rightKneeFromChair, forward);
+            var skinVertices = new List<Vector3>(8192);
+            var skinRegions =
+                new List<Family3DWalkActor.SeatedSkinRegion>(8192);
+            int sampledSkinVertexCount =
+                fatherBinding.WalkActor.CollectCurrentWorldSkinVertices(
+                    skinVertices,
+                    skinRegions);
+            Family3DWorkstationQa.ChairSkinPenetration chairSkinPenetration =
+                workstation.MeasureChairSkinPenetration(skinVertices, skinRegions);
+            Vector3 expectedSeatedVisualRoot = workstation.SeatGroundWorld +
+                                               forward * (0.07f * height);
+            Vector3 rootDelta = fatherBinding.Host.transform.position - expectedSeatedVisualRoot;
+            rootDelta.y = 0f;
+            float seatRootGroundError = rootDelta.magnitude;
+            float rootFacingError = Quaternion.Angle(
+                fatherBinding.Host.transform.rotation,
+                workstation.SeatedRotationWorld);
+
+            const float facingToleranceDegrees = 0.1f;
+            float maximumEndpointError = 0.18f * height;
+            float minimumLimbSeparation = 0.05f * height;
+            float minimumFootChairRadialClearance = 0.19f * height;
+            float minimumFootChairForwardClearance = 0.14f * height;
+            float minimumKneeChairForwardClearance = 0.12f * height;
+            if ((int)deskFacing != directionIndex ||
+                workstation.SeatToKeyboardFacingErrorDegrees > facingToleranceDegrees ||
+                workstation.SeatToMonitorFacingErrorDegrees > facingToleranceDegrees ||
+                workstation.ChairToMonitorFacingErrorDegrees > facingToleranceDegrees ||
+                workstation.MonitorScreenToSeatFacingErrorDegrees > facingToleranceDegrees ||
+                rootFacingError > facingToleranceDegrees ||
+                seatRootGroundError > 0.001f ||
+                handMidpointError > maximumEndpointError ||
+                footMidpointError > maximumEndpointError ||
+                handOrder < minimumLimbSeparation ||
+                footOrder < minimumLimbSeparation ||
+                leftKneeBendDegrees < 80f || leftKneeBendDegrees > 140f ||
+                rightKneeBendDegrees < 80f || rightKneeBendDegrees > 140f ||
+                leftFootChairRadialClearance < minimumFootChairRadialClearance ||
+                rightFootChairRadialClearance < minimumFootChairRadialClearance ||
+                leftFootChairForwardClearance < minimumFootChairForwardClearance ||
+                rightFootChairForwardClearance < minimumFootChairForwardClearance ||
+                leftKneeChairForwardClearance < minimumKneeChairForwardClearance ||
+                rightKneeChairForwardClearance < minimumKneeChairForwardClearance ||
+                sampledSkinVertexCount <= 0 ||
+                chairSkinPenetration.totalPenetratingVertexCount != 0 ||
+                starter.World.Occupancy.StaticViolationCount != 0 ||
+                starter.World.Occupancy.InteractionViolationCount != 0 ||
+                starter.World.Occupancy.AgentPenetrationCount != 0)
+                throw new InvalidOperationException(
+                    "directionIndex=" + directionIndex +
+                    " deskFacing=" + deskFacing +
+                    " seatFacing=" + seat.Facing +
+                    " rootFacingError=" + rootFacingError.ToString("F4") +
+                    " seatRootGroundError=" + seatRootGroundError.ToString("F5") +
+                    " handMidpointError=" + handMidpointError.ToString("F5") +
+                    " footMidpointError=" + footMidpointError.ToString("F5") +
+                    " handOrder=" + handOrder.ToString("F5") +
+                    " footOrder=" + footOrder.ToString("F5") +
+                    " kneeBend=" + leftKneeBendDegrees.ToString("F2") + "/" +
+                    rightKneeBendDegrees.ToString("F2") +
+                    " footChairRadial=" + leftFootChairRadialClearance.ToString("F5") + "/" +
+                    rightFootChairRadialClearance.ToString("F5") +
+                    " footChairForward=" + leftFootChairForwardClearance.ToString("F5") + "/" +
+                    rightFootChairForwardClearance.ToString("F5") +
+                    " kneeChairForward=" + leftKneeChairForwardClearance.ToString("F5") + "/" +
+                    rightKneeChairForwardClearance.ToString("F5") +
+                    " chairSkinPenetration=" +
+                    chairSkinPenetration.totalPenetratingVertexCount + "[" +
+                    chairSkinPenetration.cushionVertexCount + "/" +
+                    chairSkinPenetration.backUprightVertexCount + "/" +
+                    chairSkinPenetration.lumbarVertexCount + "/" +
+                    chairSkinPenetration.stemVertexCount + "/" +
+                    chairSkinPenetration.roundFootVertexCount + "]" +
+                    " cushionLocalY=" +
+                    chairSkinPenetration.cushionMinimumLocalY.ToString("F4") + "/" +
+                    chairSkinPenetration.cushionMaximumLocalY.ToString("F4") +
+                    " cushionRegions=" +
+                    chairSkinPenetration.cushionPelvisOrTorsoVertexCount + "/" +
+                    chairSkinPenetration.cushionUpperLegVertexCount + "/" +
+                    chairSkinPenetration.cushionLowerLegVertexCount + "/" +
+                    chairSkinPenetration.cushionFootVertexCount + "/" +
+                    chairSkinPenetration.cushionOtherVertexCount +
+                    " occupancy=" + starter.World.Occupancy.StaticViolationCount + "/" +
+                    starter.World.Occupancy.InteractionViolationCount + "/" +
+                    starter.World.Occupancy.AgentPenetrationCount + ".");
+
+            fatherDeskDirectionReceipts.Add(new FatherDeskDirectionReceipt
+            {
+                directionIndex = directionIndex,
+                deskFacing = deskFacing.ToString(),
+                seatFacing = seat.Facing.ToString(),
+                approachCell = seat.ApproachCell.ToString(),
+                semanticQuarterTurns = directionIndex,
+                seatedRootWorldYawDegrees =
+                    fatherBinding.Host.transform.rotation.eulerAngles.y,
+                rootFacingErrorDegrees = rootFacingError,
+                seatToKeyboardFacingErrorDegrees =
+                    workstation.SeatToKeyboardFacingErrorDegrees,
+                seatToMonitorFacingErrorDegrees =
+                    workstation.SeatToMonitorFacingErrorDegrees,
+                chairToMonitorFacingErrorDegrees =
+                    workstation.ChairToMonitorFacingErrorDegrees,
+                monitorScreenToSeatFacingErrorDegrees =
+                    workstation.MonitorScreenToSeatFacingErrorDegrees,
+                seatRootGroundError = seatRootGroundError,
+                handMidpointError = handMidpointError,
+                handLateralOrder = handOrder,
+                footMidpointError = footMidpointError,
+                footLateralOrder = footOrder,
+                leftKneeBendDegrees = leftKneeBendDegrees,
+                rightKneeBendDegrees = rightKneeBendDegrees,
+                leftFootChairRadialClearance = leftFootChairRadialClearance,
+                rightFootChairRadialClearance = rightFootChairRadialClearance,
+                leftFootChairForwardClearance = leftFootChairForwardClearance,
+                rightFootChairForwardClearance = rightFootChairForwardClearance,
+                leftKneeChairForwardClearance = leftKneeChairForwardClearance,
+                rightKneeChairForwardClearance = rightKneeChairForwardClearance,
+                sampledSkinVertexCount = sampledSkinVertexCount,
+                chairSkinPenetratingVertexCount =
+                    chairSkinPenetration.totalPenetratingVertexCount,
+                chairCushionPenetratingVertexCount = chairSkinPenetration.cushionVertexCount,
+                chairBackPenetratingVertexCount =
+                    chairSkinPenetration.backUprightVertexCount,
+                chairLumbarPenetratingVertexCount = chairSkinPenetration.lumbarVertexCount,
+                chairStemPenetratingVertexCount = chairSkinPenetration.stemVertexCount,
+                chairFootPenetratingVertexCount = chairSkinPenetration.roundFootVertexCount,
+                chairCushionPenetrationMinimumLocalY =
+                    chairSkinPenetration.cushionMinimumLocalY,
+                chairCushionPenetrationMaximumLocalY =
+                    chairSkinPenetration.cushionMaximumLocalY,
+                staticViolationCount = starter.World.Occupancy.StaticViolationCount,
+                interactionViolationCount = starter.World.Occupancy.InteractionViolationCount,
+                agentPenetrationCount = starter.World.Occupancy.AgentPenetrationCount
+            });
+        }
+
         private void SetupV27Workstations(
             Binding fatherBinding,
             OfficeSeatSlot fatherSeat,
@@ -883,6 +1318,27 @@ namespace FamilyCompany.Experimental.Family3D
             float deskFootprintWidth = Vector3.Distance(qaCorners[0], qaCorners[1]);
             float deskFootprintDepth = Vector3.Distance(qaCorners[0], qaCorners[3]);
 
+            // The semantic footprint corners remain expressed in the map's global X/Y bases.
+            // A rotated workstation cannot therefore pass those same unrotated bases into the 3D
+            // builder: doing so moves the footprint around the seat while every CRT and seated
+            // Father still faces the original direction. Rotate the complete local frame with the
+            // same (dx,dy)->(dy,-dx) rule as OfficeLayoutEditRules.RotateCellClockwise and swap the
+            // measured extents on odd turns. Desk, monitor, keyboard, chair and actor then remain
+            // one rigid quarter-turned set on the authoritative tiles.
+            Vector3 workstationRight = gridRight;
+            Vector3 workstationForward = gridForward;
+            int workstationTurns =
+                ((int)desk.Facing - (int)OfficeFurnitureFacing.SouthEast + 4) & 3;
+            for (var turn = 0; turn < workstationTurns; turn++)
+            {
+                Vector3 previousRight = workstationRight;
+                workstationRight = -workstationForward;
+                workstationForward = previousRight;
+                float previousWidth = deskFootprintWidth;
+                deskFootprintWidth = deskFootprintDepth;
+                deskFootprintDepth = previousWidth;
+            }
+
             Vector3 deskSeatSource = starter.World.Workstations.DeskSeatSocketWorld(seat);
             Vector3 chairSeatSource = starter.World.Workstations.ChairSeatAnchorWorld(seat);
             Vector3 workSource = starter.World.Workstations.DeskWorkSocketWorld(seat);
@@ -918,8 +1374,8 @@ namespace FamilyCompany.Experimental.Family3D
                 qaLayer,
                 seat.SeatId,
                 seatGround,
-                gridRight,
-                gridForward,
+                workstationRight,
+                workstationForward,
                 deskFootprintCenter,
                 deskFootprintWidth,
                 deskFootprintDepth,
@@ -1664,8 +2120,16 @@ namespace FamilyCompany.Experimental.Family3D
                 Family3DWalkActor.PoseSnapshot seatedPose =
                     binding.WalkActor.ReadPoseSnapshot();
                 float seatedRootY =
-                    fatherDeskWorkstation.CushionWorldY - seatedPose.hipsLocal.y;
+                    fatherDeskWorkstation.CushionWorldY +
+                    0.113f * seatedPose.standingHeight -
+                    seatedPose.hipsLocal.y;
                 rootPosition.y = Mathf.Lerp(groundY, seatedRootY, positionBlend);
+                // Keep the semantic agent/seat claim at the chair pivot, but place the visible
+                // pelvis on the front half of the cushion. The vertical 0.113h is the measured
+                // hips-joint-to-skin contact thickness; without it the cushion cuts through the
+                // lower torso. The semantic occupancy anchor remains unchanged.
+                rootPosition += fatherDeskWorkstation.SeatedBodyForwardWorld *
+                                (0.07f * seatedPose.standingHeight * positionBlend);
                 binding.Host.transform.position = rootPosition;
                 binding.WalkActor.AlignSeatedDeskLimbs(
                     fatherDeskWorkstation.KeyboardWorld,
@@ -2104,6 +2568,8 @@ namespace FamilyCompany.Experimental.Family3D
             for (var index = 0; index < bindings.Count; index++)
             {
                 Binding binding = bindings[index];
+                if (binding.Agent != null)
+                    binding.Agent.SetExternalDirectionalSeatingPresentation(false);
                 binding.RestoreSourceRenderers();
                 // Destroy is deferred in a player. Hide the outgoing host immediately so a
                 // same-frame runtime/layout rebind cannot render both old and new candidates.
@@ -2237,7 +2703,11 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMapWalkQa = fatherMapWalkQa,
                     fatherMapWalkSourceFamilyId = fatherMapWalkQa ? "father" : string.Empty,
                     fatherMovingSampleFrames = fatherMovingSampleFrames,
-                    fatherProofRoutePolicy = fatherDeskWorkQa
+                    fatherProofRoutePolicy = fatherFourDirectionDeskPoseQa
+                        ? "actual Father OfficeRuntimeAgent; production PlaceWorkstation from the " +
+                          "empty office shell at SouthEast/SouthWest/NorthWest/NorthEast; four " +
+                          "real claims, seat transitions, Working poses and keyboard/foot IK gates"
+                        : fatherDeskWorkQa
                         ? "actual Father OfficeRuntimeAgent; Starter entrance to real seat_father; " +
                           "real route, claim, approach, rotation, SitDown and Working"
                         : fatherMapWalkQa
@@ -2246,6 +2716,11 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
                     fatherDeskWorkQa = fatherDeskWorkQa,
                     fatherDeskWorkProofCompleted = fatherDeskWorkProofCompleted,
+                    fatherFourDirectionDeskPoseQa = fatherFourDirectionDeskPoseQa,
+                    fatherDeskFourDirectionProofCompleted =
+                        fatherDeskFourDirectionProofCompleted,
+                    fatherDeskDirectionCount = fatherDeskDirectionReceipts.Count,
+                    fatherDeskDirections = fatherDeskDirectionReceipts.ToArray(),
                     v27ExpectedWorkstationCount = v27ExpectedWorkstationCount,
                     v27CreatedWorkstationCount = v27Workstations.Count,
                     v27ReplacedSeatIds = BuildV27ReplacedSeatIds(),
@@ -2690,7 +3165,9 @@ namespace FamilyCompany.Experimental.Family3D
         private void OnApplicationQuit()
         {
             WriteRuntimeReceipt(
-                fatherDeskWorkProofCompleted
+                fatherDeskFourDirectionProofCompleted
+                    ? "FATHER_V19_FOUR_DIRECTION_DESK_POSE_PROOF_COMPLETE"
+                    : fatherDeskWorkProofCompleted
                     ? "FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE"
                     : fatherProofRouteCompleted
                     ? fatherStaticRootMotionOnly
@@ -2756,6 +3233,10 @@ namespace FamilyCompany.Experimental.Family3D
             public bool fatherProofRouteCompleted;
             public bool fatherDeskWorkQa;
             public bool fatherDeskWorkProofCompleted;
+            public bool fatherFourDirectionDeskPoseQa;
+            public bool fatherDeskFourDirectionProofCompleted;
+            public int fatherDeskDirectionCount;
+            public FatherDeskDirectionReceipt[] fatherDeskDirections;
             public int v27ExpectedWorkstationCount;
             public int v27CreatedWorkstationCount;
             public string[] v27ReplacedSeatIds;
@@ -2817,6 +3298,47 @@ namespace FamilyCompany.Experimental.Family3D
             public int maximumCompositeLumaRange;
             public bool compositeVisualContentPass;
             public RuntimeCandidateReceipt[] candidates;
+        }
+
+        [Serializable]
+        private sealed class FatherDeskDirectionReceipt
+        {
+            public int directionIndex;
+            public string deskFacing;
+            public string seatFacing;
+            public string approachCell;
+            public int semanticQuarterTurns;
+            public float seatedRootWorldYawDegrees;
+            public float rootFacingErrorDegrees;
+            public float seatToKeyboardFacingErrorDegrees;
+            public float seatToMonitorFacingErrorDegrees;
+            public float chairToMonitorFacingErrorDegrees;
+            public float monitorScreenToSeatFacingErrorDegrees;
+            public float seatRootGroundError;
+            public float handMidpointError;
+            public float handLateralOrder;
+            public float footMidpointError;
+            public float footLateralOrder;
+            public float leftKneeBendDegrees;
+            public float rightKneeBendDegrees;
+            public float leftFootChairRadialClearance;
+            public float rightFootChairRadialClearance;
+            public float leftFootChairForwardClearance;
+            public float rightFootChairForwardClearance;
+            public float leftKneeChairForwardClearance;
+            public float rightKneeChairForwardClearance;
+            public int sampledSkinVertexCount;
+            public int chairSkinPenetratingVertexCount;
+            public int chairCushionPenetratingVertexCount;
+            public int chairBackPenetratingVertexCount;
+            public int chairLumbarPenetratingVertexCount;
+            public int chairStemPenetratingVertexCount;
+            public int chairFootPenetratingVertexCount;
+            public float chairCushionPenetrationMinimumLocalY;
+            public float chairCushionPenetrationMaximumLocalY;
+            public int staticViolationCount;
+            public int interactionViolationCount;
+            public int agentPenetrationCount;
         }
 
         [Serializable]
