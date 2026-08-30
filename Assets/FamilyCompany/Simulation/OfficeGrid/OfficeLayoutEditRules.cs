@@ -165,7 +165,10 @@ namespace FamilyCompany.Simulation.OfficeLayout
             var desk = new PlacedOfficeFurniture(
                 workSurfaceFurnitureId,
                 deskDefinition.DefinitionId,
-                new OfficeGridCoordinate(seatCell.X, seatCell.Y + 1),
+                // The pointer/seat cell is the physical chair cell. The two-cell desk occupies
+                // the row behind it with the chair under the desk's right-hand side. The previous
+                // x origin put the chair collision diamond one tile left of the rendered V31 chair.
+                new OfficeGridCoordinate(seatCell.X - 1, seatCell.Y + 1),
                 deskFootprint.X,
                 deskFootprint.Y,
                 OfficeFurnitureFacing.SouthEast,

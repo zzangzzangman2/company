@@ -1,6 +1,26 @@
 # PROJECT STATE
 
-Last updated: 2026-08-29. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+Last updated: 2026-08-30. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+
+## Father V19 single-workstation interactive playtest
+
+- The isolated command-line mode `-family3d-father-v19-single-workstation-playtest` now starts from
+  the real empty 13x13 office, places exactly one production `PlaceWorkstation` Father set, hides
+  the other three actors only at the QA presentation layer, walks the real Father agent around one
+  clear 3x3 grid loop, then runs the real `seat_father` route through approach/rotation/Working.
+- An interactive run stays open with Father typing until the player window is closed. Supplying an
+  explicit runtime-output folder records the deterministic evidence and exits after 360 Working
+  frames.
+- Build:
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19SingleWorkstationPlaytestBuild`.
+- Runtime evidence:
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19SingleWorkstationPlaytestRuntime`.
+- Actual Windows D3D11 result: `READY`, workstation `1/1`, visible legacy workstation renderers
+  `0`, route completed, Working frames `361`, captures `203`, static/interaction/agent penetration
+  `0/0/0`, phases
+  `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`.
+- This remains an isolated review build with `productionMutation=false` and
+  `productionEligible=false`; it does not modify the production/default/Downloads executable.
 
 ## Production office shop: atomic V31 CRT desk + open-back-chair set
 
@@ -19,8 +39,13 @@ Last updated: 2026-08-29. This file contains current handoff state only. Superse
 - One confirmation atomically creates two owned instances (V31 desk + V31 chair), one bound
   `OfficeSeatSlot`, and one ledger transaction. The gameplay price is KRW 377,500. Invalid
   placement creates no charge and no partial inventory.
-- The preview draws both sprites and all claimed cells. Green means the complete rotated set,
-  chair approach and office topology pass; red means out of bounds, existing-object overlap,
+- The preview draws both sprites with the same ground-anchor and uniform-scale correction as the
+  confirmed runtime object. Green/red diamonds describe physical occupancy only: exactly two desk
+  cells plus the visibly rendered chair cell. In base SE orientation, the pointer/chair/seat cell
+  is `(x,y)`, the desk cells are `(x-1,y+1)` and `(x,y+1)`, and the old empty `(x-1,y)` cell is not
+  claimed or painted. The empty chair approach cell is still mandatory for placement and
+  path validation, but is not painted as furniture. Green means the complete rotated set, hidden
+  approach reservation and office topology pass; red means out of bounds, existing-object overlap,
   non-floor placement, entrance/path disconnection, blocked workstation access or blocked chair
   egress.
 - `R` turns the set through SE -> SW -> NW -> NE. The desk footprint, chair, chair-facing,
@@ -35,11 +60,20 @@ Last updated: 2026-08-29. This file contains current handoff state only. Superse
 - Transaction evidence is local under
   `Artifacts/FastQa/workstation-native-pointer-20260829/` (`office-build-green-preview.png`,
   `office-build-placed.png`, `office-build-native-pointer-result.txt`).
+- Current preview-ground proof is local under
+  `Artifacts/OfficeBuildPreviewChairCellQa/20260829-101700/`. Actual Windows D3D11 reports
+  physical markers `3`, `previewCellsMatchVisibleFurniture=True`, chair cell `2:2`, desk origin
+  `1:3`, desk ground-anchor error `0.00000000` and chair ground-anchor error `0.00000000`;
+  `office-build-green-preview.png` visibly places the third green diamond below the chair instead
+  of the old empty cell.
 - Current visual Player proof is local under
-  `Artifacts/FastQa/v31-workstation-orthogonal-isometric-verified-20260829/`. It renders four purchased
+  `Artifacts/OfficeV31ChairCellFourDirectionQa/20260829-101900/`. It renders four purchased
   sets, all four desk directions and all four opposite chair directions with `legacyFlip=0`; the map
   screenshot is `v31-workstation-four-directions.png`. Runtime projection of all eight desk/chair
-  ground polygons matches the authoritative tile footprint with maximum corner error `0.0001px`.
+  ground polygons matches the authoritative tile footprint with maximum corner error `0.0003px`.
+- Validation: `FAST_QA_WINDOWS.cmd -Profile asset-capture` PASS in 41.12 s,
+  `-Profile player-scripts` PASS in 28.998 s, and `OfficeFurnitureBuildSystemValidation` PASS with
+  `geometry=13x4`, four-direction placement/rotation, purchase, collision and save checks.
 - All 34 standalone legacy workstation/chair source, runtime, foreground and `.meta` files were
   deleted. `OfficeBuildFurnitureVisualLibrary` hard-fails instead of returning old catalog art,
   and the old atlas cutter skips its first two retired cells so a project rebuild cannot recreate

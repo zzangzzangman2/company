@@ -29,7 +29,7 @@ MonoBehaviour:
     semanticFootprintHeight: 1
     seatAnchorPx: {x: 0, y: 0}
     workSurfaceAnchorPx: {x: 448.221, y: 205.229}
-    operatorSeatSocketPx: {x: 512.085, y: 128.044}
+    operatorSeatSocketPx: {x: 560, y: 105.848}
     uniformScale: 1
     hasSeatAnchor: 0
     hasWorkSurfaceAnchor: 1
@@ -48,7 +48,7 @@ MonoBehaviour:
     - {x: 160, y: 64}
     semanticFootprintWidth: 1
     semanticFootprintHeight: 1
-    seatAnchorPx: {x: 432.085, y: 248.044}
+    seatAnchorPx: {x: 320, y: 145.848}
     workSurfaceAnchorPx: {x: 0, y: 0}
     operatorSeatSocketPx: {x: 0, y: 0}
     uniformScale: 1

@@ -31,7 +31,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 "V31 chair must not enable a retired foreground overlay.");
             Require(Vector2.Distance(chair.GroundAnchorPx, new Vector2(320f, 64f)) <= 0.001f,
                 "V31 chair ground anchor drifted.");
-            Require(Vector2.Distance(chair.SeatAnchorPx, new Vector2(432.085f, 248.044f)) <= 0.001f,
+            Require(Vector2.Distance(chair.SeatAnchorPx, new Vector2(320f, 145.848f)) <= 0.001f,
                 "V31 chair seat anchor drifted.");
 
             foreach (string suffix in new[] { "se", "sw", "nw", "ne" })

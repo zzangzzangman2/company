@@ -42,10 +42,17 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
   `swivel_chair_<direction>.png`, 640x512 RGBA, PPU 180, explicit per-direction seat/operator/work
   anchors, and `v31_workstation_sprite_manifest.txt`.
 - Production proof:
-  `Artifacts/FastQa/v31-workstation-orthogonal-isometric-verified-20260829/v31-workstation-four-directions.png`;
+  `Artifacts/OfficeV31ChairCellFourDirectionQa/20260829-101900/v31-workstation-four-directions.png`;
   four sets, four rigid quarter turns, orthogonal 90-degree mesh axes, exact projected tile basis
   `(160,80)` / `(-160,80)`, four desk/chair directions, mirror/legacy flip 0, and maximum rendered
-  tile-footprint corner error `0.0001px`.
+  tile-footprint corner error `0.0003px`.
+- The directional chair canvases are rebaked around each chair's actual swivel-foot contact, so
+  all four use ground `(320,64)` and seat `(320,145.848)`. This makes the standalone one-cell chair
+  Sprite, collision cell, green preview and seated-character socket share the same semantic tile.
+  Chair PNG SHA-256: NE `4EA809F918B97F3CD16012286DBE6BAD468EDB6C92DE8B3AE1D0BAF8458D6494`,
+  NW `802F78969DEB61D96DAC963E5F4F984DDC986EE19E49CA289C6C1C495208E365`,
+  SE `AB350ECA42E853EB74C29FE499D0CFC5CCEC8C1C2184CEC1211EE7F444D7A19E`,
+  SW `DE843B921F67F5107D9020295195065EF8C313353924268C72645D98DBBE9B75`.
 - Retired: 34 standalone `office_workstation*` / `office_swivel_chair*` source, runtime,
   foreground and `.meta` files. They are deleted and excluded from regeneration/fallback.
 - Scope boundary: this promotes the workstation visual only. Father V19 remains non-production

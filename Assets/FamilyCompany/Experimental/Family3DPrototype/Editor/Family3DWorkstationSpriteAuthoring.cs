@@ -117,7 +117,11 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         break;
                 }
                 Vector3 seatCellAnchor = Vector3.zero;
-                Vector3 deskAnchor = gridRight * 0.5f + gridForward;
+                // The seat cell is the visible chair cell. A 2x1 desk sits behind it with the
+                // chair under the desk's right-hand side, so the desk footprint centre is half a
+                // cell left plus one cell behind the chair. This is the same integer placement
+                // used by OfficeLayoutEditRules.CreateWorkstationPlacement.
+                Vector3 deskAnchor = -gridRight * 0.5f + gridForward;
 
                 // Grid coefficients measured from the accepted V31 runtime receipt. Recompose
                 // them in the orthogonal directional basis so CRT, keyboard, chair and operator
@@ -222,18 +226,25 @@ namespace FamilyCompany.Experimental.Family3D.Editor
 
                 SetDirectChildrenActive(workstation.transform, false);
                 chair.gameObject.SetActive(true);
-                PositionCamera(camera, seatCellAnchor);
+                // The source QA keeps its approved continuous V31 chair composition, but the
+                // production Sprite is a standalone one-cell prop. Centre the bake on its actual
+                // swivel-foot contact so (320,64) is a real ground point, not the old empty pivot.
+                PositionCamera(camera, workstation.ChairGroundWorld);
                 string chairPath = OutputDirectory + "/swivel_chair_" + ChairSuffixes[turns] + ".png";
                 RenderPng(camera, renderTexture, capture, chairPath);
                 ConfigureSpriteImporter(chairPath);
 
-                Vector3 cushion = workstation.SeatGroundWorld;
-                cushion.y = workstation.CushionWorldY;
-                Vector2 chairSeat = WorldToPixel(camera, cushion);
+                Vector3 chairCushion = workstation.ChairGroundWorld;
+                chairCushion.y = workstation.CushionWorldY;
+                Vector2 chairSeat = WorldToPixel(camera, chairCushion);
                 // Work-surface data is measured in the desk-anchored camera, so restore it before
-                // recording the metadata used by the runtime directional resolver.
+                // recording the metadata used by the runtime directional resolver. The operator
+                // socket is the snapped semantic chair cell, not the source QA's continuous chair
+                // offset, so chair collision, green preview and seated actor all share one tile.
+                Vector3 semanticChairCushion = seatCellAnchor;
+                semanticChairCushion.y = workstation.CushionWorldY;
                 PositionCamera(camera, deskAnchor);
-                Vector2 deskSeatFromDesk = WorldToPixel(camera, cushion);
+                Vector2 deskSeatFromDesk = WorldToPixel(camera, semanticChairCushion);
                 Vector2 workSurface = WorldToPixel(camera, workstation.WorkSurfaceWorld);
                 manifest.AppendLine(string.Format(
                     CultureInfo.InvariantCulture,

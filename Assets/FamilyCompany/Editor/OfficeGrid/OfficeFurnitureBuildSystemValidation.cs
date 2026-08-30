@@ -414,10 +414,10 @@ namespace FamilyCompany.Editor.OfficeGrid
 
             var expectedDeskOffsets = new[]
             {
-                new OfficeGridCoordinate(0, 1),
-                new OfficeGridCoordinate(1, -1),
-                new OfficeGridCoordinate(-1, -1),
-                new OfficeGridCoordinate(-1, 0)
+                new OfficeGridCoordinate(-1, 1),
+                new OfficeGridCoordinate(1, 0),
+                new OfficeGridCoordinate(0, -1),
+                new OfficeGridCoordinate(-1, -1)
             };
             var expectedApproachOffsets = new[]
             {

@@ -157,10 +157,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             switch (facing)
             {
-                case OfficeFurnitureFacing.SouthEast: return new Vector2(512.085f, 128.044f);
-                case OfficeFurnitureFacing.SouthWest: return new Vector2(284.392f, 49.806f);
-                case OfficeFurnitureFacing.NorthWest: return new Vector2(127.916f, 163.652f);
-                default: return new Vector2(355.609f, 241.890f);
+                case OfficeFurnitureFacing.SouthEast: return new Vector2(560f, 105.848f);
+                case OfficeFurnitureFacing.SouthWest: return new Vector2(240f, 25.848f);
+                case OfficeFurnitureFacing.NorthWest: return new Vector2(80f, 185.848f);
+                default: return new Vector2(400f, 265.848f);
             }
         }
 
@@ -177,13 +177,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private static Vector2 V31ChairSeatAnchor(OfficeFurnitureFacing facing)
         {
-            switch (facing)
-            {
-                case OfficeFurnitureFacing.SouthEast: return new Vector2(207.916f, 43.652f);
-                case OfficeFurnitureFacing.SouthWest: return new Vector2(115.608f, 201.890f);
-                case OfficeFurnitureFacing.NorthWest: return new Vector2(432.085f, 248.044f);
-                default: return new Vector2(524.392f, 89.806f);
-            }
+            // Each directional chair is baked around its own swivel-foot contact. Rotation no
+            // longer changes the seat location inside the 640x512 canvas.
+            return new Vector2(320f, 145.848f);
         }
 
         private static Vector2[] WorkstationFootprint(

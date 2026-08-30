@@ -101,6 +101,7 @@ namespace FamilyCompany.Experimental.Family3D
         private bool fatherMapWalkQa;
         private bool fatherDeskWorkQa;
         private bool fatherFourDirectionDeskPoseQa;
+        private bool fatherSingleWorkstationPlaytest;
         private bool fatherDeskWorkProofActive;
         private bool fatherDeskWorkProofCompleted;
         private int fatherDeskWorkSampleFrames;
@@ -420,7 +421,10 @@ namespace FamilyCompany.Experimental.Family3D
                 autoQuitSeconds = ResolveAutoQuitSeconds();
                 fatherFourDirectionDeskPoseQa = HasCommandLineFlag(
                     "-family3d-father-v19-four-direction-desk-pose-qa");
-                fatherDeskWorkQa = fatherFourDirectionDeskPoseQa ||
+                fatherSingleWorkstationPlaytest = HasCommandLineFlag(
+                    "-family3d-father-v19-single-workstation-playtest");
+                fatherDeskWorkQa = fatherSingleWorkstationPlaytest ||
+                    fatherFourDirectionDeskPoseQa ||
                     HasCommandLineFlag("-family3d-father-v19-desk-work-qa");
                 fatherMapWalkQa = fatherDeskWorkQa ||
                     HasCommandLineFlag("-family3d-father-map-walk-qa") ||
@@ -507,7 +511,9 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMotionTurnSeconds = ResolveFatherMotionTurnSeconds();
                     fatherMotionYawSweep = HasCommandLineFlag("-family3d-father-v18-motion-yaw-sweep");
                     StartCoroutine(
-                        fatherFourDirectionDeskPoseQa
+                        fatherSingleWorkstationPlaytest
+                            ? RunFatherSingleWorkstationPlaytest()
+                            : fatherFourDirectionDeskPoseQa
                             ? RunFatherFourDirectionDeskPoseProof()
                             : fatherDeskWorkQa
                             ? RunFatherDeskWorkProof()
@@ -810,6 +816,219 @@ namespace FamilyCompany.Experimental.Family3D
                 this);
             yield return new WaitForEndOfFrame();
             Application.Quit(0);
+        }
+
+        /// <summary>
+        /// User-facing isolated playtest: one real production workstation set, the real Father
+        /// agent and no visible family stand-ins. The Father first walks a complete clear loop on
+        /// the actual office grid, then pathfinds to the owned chair and remains typing until the
+        /// player window is closed. With an explicit runtime-output folder it records the same
+        /// deterministic evidence and exits after six seconds of Working instead.
+        /// </summary>
+        private IEnumerator RunFatherSingleWorkstationPlaytest()
+        {
+            yield return null;
+            if (starter == null || starter.World == null)
+            {
+                Fail("Single-workstation Father playtest could not resolve the runtime world.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            var seatCell = new OfficeGridCoordinate(6, 6);
+            OfficeLayoutEditResult placed = OfficeLayoutEditRules.PlaceWorkstation(
+                OfficeGridLayouts.CreateNewGameEmptyOfficeV1(),
+                "desk_father",
+                "chair_father",
+                "seat_father",
+                seatCell,
+                OfficeFurnitureFacing.SouthEast);
+            if (!placed.Success || placed.Grid == null)
+            {
+                Fail(
+                    "Production workstation placement rejected the single Father set: " +
+                    placed.Failure + " " + placed.Message);
+                Application.Quit(2);
+                yield break;
+            }
+
+            string expectedHash = placed.Grid.ComputeLayoutHash();
+            starter.ApplyLayoutForQa(placed.Grid);
+            float rebuildDeadline = Time.realtimeSinceStartup + 30f;
+            while (Time.realtimeSinceStartup < rebuildDeadline &&
+                   (!starter.IsReady ||
+                    !string.Equals(starter.LayoutHash, expectedHash, StringComparison.Ordinal) ||
+                    !IsBound))
+                yield return null;
+            if (!starter.IsReady || !IsBound ||
+                !string.Equals(starter.LayoutHash, expectedHash, StringComparison.Ordinal))
+            {
+                Fail("Single-workstation Father layout did not rebuild to the requested grid.");
+                Application.Quit(2);
+                yield break;
+            }
+            yield return new WaitForEndOfFrame();
+
+            Binding fatherBinding = bindings.Find(candidate =>
+                string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
+            if (fatherBinding == null)
+            {
+                Fail("Single-workstation playtest lost the rebuilt Father binding.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            OfficeRuntimeAgent father = fatherBinding.Agent;
+            OfficeSeatSlot seat;
+            OfficeGridCoordinate[] loop;
+            try
+            {
+                seat = starter.World.Workstations.RequiredSeat("seat_father");
+                SetupV27Workstations(fatherBinding, seat, Camera.main);
+                if (v27Workstations.Count != 1 || v27ExpectedWorkstationCount != 1)
+                    throw new InvalidOperationException(
+                        "Single-workstation playtest created " + v27Workstations.Count +
+                        "/" + v27ExpectedWorkstationCount + " workstation visuals.");
+                if (!TryFindClearFatherLoop(father.AgentRadius, out loop))
+                    throw new InvalidOperationException(
+                        "No clear 3x3 Father walking loop exists around the placed set.");
+                ParkOtherActorsForFatherLoop(father, loop);
+            }
+            catch (Exception exception)
+            {
+                Fail("Single-workstation Father setup failed: " + exception.Message);
+                Debug.LogException(exception, this);
+                Application.Quit(2);
+                yield break;
+            }
+
+            // The user asked to see only Father and one desk set. The other three production
+            // agents stay alive and retain collision/state ownership, but their QA-only source
+            // renderers are hidden and restored when this adapter exits.
+            foreach (OfficeRuntimeAgent actor in starter.Actors)
+            {
+                if (actor == null || actor == father)
+                    continue;
+                HideSourceFurnitureRenderer(actor.PresentationRenderer);
+            }
+
+            fatherDeskCapturePrefix = "father-v19-single-workstation-playtest";
+            father.QaTeleportToCell(loop[0]);
+            father.QaSetDirectMovementInput(Vector2.zero);
+            father.SetExternalDirectionalSeatingPresentation(true);
+            Time.timeScale = 1f;
+            yield return null;
+            yield return new WaitForEndOfFrame();
+
+            starter.World.Occupancy.ResetMetrics();
+            fatherDeskWorkProofActive = true;
+            fatherProofRouteActive = true;
+            Debug.Log(
+                "FAMILY_3D_FATHER_SINGLE_WORKSTATION_PLAYTEST: walking one actual-grid loop " +
+                "before the real seat_father route; workstationCount=1 productionEligible=false.",
+                this);
+
+            fatherProofRouteCircuit = 0;
+            for (var leg = 0; leg < loop.Length - 1; leg++)
+            {
+                fatherProofRouteLeg = leg;
+                OfficeGridCoordinate target = loop[leg + 1];
+                if (!father.QaMoveToCell(
+                        target,
+                        "father-v19-single-workstation-walk-leg-" + leg))
+                {
+                    Fail("Single-workstation Father walk was rejected at leg " + leg + ".");
+                    Application.Quit(2);
+                    yield break;
+                }
+
+                float moveDeadline = Time.realtimeSinceStartup + 12f;
+                while (!father.QaReachedCell(target) &&
+                       Time.realtimeSinceStartup < moveDeadline)
+                    yield return null;
+                if (!father.QaReachedCell(target))
+                {
+                    Fail("Single-workstation Father walk timed out at leg " + leg + ".");
+                    Application.Quit(2);
+                    yield break;
+                }
+            }
+            fatherProofRouteActive = false;
+            fatherProofRouteCompleted = true;
+            fatherProofRouteLeg = -1;
+
+            if (!father.QaBeginSeatedWorkAtSeat(
+                    seat.SeatId,
+                    "father-v19-single-workstation-playtest"))
+            {
+                Fail("Father rejected seat_father after the single-workstation walk.");
+                Application.Quit(2);
+                yield break;
+            }
+
+            float seatDeadline = Time.realtimeSinceStartup + 45f;
+            while (father.Phase != OfficeRuntimeAgentPhase.Working &&
+                   Time.realtimeSinceStartup < seatDeadline)
+                yield return null;
+            if (father.Phase != OfficeRuntimeAgentPhase.Working)
+            {
+                Fail(
+                    "Father did not reach Working in the single-workstation playtest; last phase=" +
+                    father.Phase + ".");
+                Application.Quit(2);
+                yield break;
+            }
+
+            const int requiredWorkFrames = 360;
+            for (var frame = 0; frame < requiredWorkFrames; frame++)
+            {
+                if (father.Phase != OfficeRuntimeAgentPhase.Working)
+                {
+                    Fail("Father left Working before the single-workstation typing sample ended.");
+                    Application.Quit(2);
+                    yield break;
+                }
+                yield return null;
+            }
+
+            RefreshV27SourceFurnitureMask();
+            v27VisibleLegacyWorkstationRendererCount =
+                CountVisibleLegacyWorkstationRenderers();
+            if (v27VisibleLegacyWorkstationRendererCount != 0 ||
+                starter.World.Occupancy.StaticViolationCount != 0 ||
+                starter.World.Occupancy.InteractionViolationCount != 0 ||
+                starter.World.Occupancy.AgentPenetrationCount != 0)
+            {
+                Fail(
+                    "Single-workstation visibility/collision gate failed: visibleLegacy=" +
+                    v27VisibleLegacyWorkstationRendererCount + " occupancy=" +
+                    starter.World.Occupancy.StaticViolationCount + "/" +
+                    starter.World.Occupancy.InteractionViolationCount + "/" +
+                    starter.World.Occupancy.AgentPenetrationCount + ".");
+                Application.Quit(2);
+                yield break;
+            }
+
+            fatherDeskWorkProofCompleted = true;
+            WriteRuntimeReceipt("FATHER_V19_SINGLE_WORKSTATION_PLAYTEST_READY");
+            Debug.Log(
+                "FAMILY_3D_FATHER_SINGLE_WORKSTATION_PLAYTEST: READY | walkedLoop=1 " +
+                "workingFrames=" + fatherDeskWorkFrames + " workstationCount=1 " +
+                "productionEligible=false",
+                this);
+
+            if (HasExplicitRuntimeOutput())
+            {
+                fatherDeskWorkProofActive = false;
+                yield return new WaitForEndOfFrame();
+                Application.Quit(0);
+                yield break;
+            }
+
+            // Interactive playtest stays open on the typing pose so the user can inspect it at
+            // normal game scale. Closing the player performs the normal QA renderer restoration.
+            while (father.Phase == OfficeRuntimeAgentPhase.Working)
+                yield return null;
         }
 
         /// <summary>
@@ -2703,7 +2922,11 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMapWalkQa = fatherMapWalkQa,
                     fatherMapWalkSourceFamilyId = fatherMapWalkQa ? "father" : string.Empty,
                     fatherMovingSampleFrames = fatherMovingSampleFrames,
-                    fatherProofRoutePolicy = fatherFourDirectionDeskPoseQa
+                    fatherProofRoutePolicy = fatherSingleWorkstationPlaytest
+                        ? "actual Father OfficeRuntimeAgent; one clear 3x3 loop on an empty " +
+                          "office containing exactly one production PlaceWorkstation set, then " +
+                          "real claim, approach, rotation, SitDown and persistent Working"
+                        : fatherFourDirectionDeskPoseQa
                         ? "actual Father OfficeRuntimeAgent; production PlaceWorkstation from the " +
                           "empty office shell at SouthEast/SouthWest/NorthWest/NorthEast; four " +
                           "real claims, seat transitions, Working poses and keyboard/foot IK gates"
@@ -2716,6 +2939,7 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
                     fatherDeskWorkQa = fatherDeskWorkQa,
                     fatherDeskWorkProofCompleted = fatherDeskWorkProofCompleted,
+                    fatherSingleWorkstationPlaytest = fatherSingleWorkstationPlaytest,
                     fatherFourDirectionDeskPoseQa = fatherFourDirectionDeskPoseQa,
                     fatherDeskFourDirectionProofCompleted =
                         fatherDeskFourDirectionProofCompleted,
@@ -3165,7 +3389,9 @@ namespace FamilyCompany.Experimental.Family3D
         private void OnApplicationQuit()
         {
             WriteRuntimeReceipt(
-                fatherDeskFourDirectionProofCompleted
+                fatherSingleWorkstationPlaytest && fatherDeskWorkProofCompleted
+                    ? "FATHER_V19_SINGLE_WORKSTATION_PLAYTEST_READY"
+                    : fatherDeskFourDirectionProofCompleted
                     ? "FATHER_V19_FOUR_DIRECTION_DESK_POSE_PROOF_COMPLETE"
                     : fatherDeskWorkProofCompleted
                     ? "FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE"
@@ -3233,6 +3459,7 @@ namespace FamilyCompany.Experimental.Family3D
             public bool fatherProofRouteCompleted;
             public bool fatherDeskWorkQa;
             public bool fatherDeskWorkProofCompleted;
+            public bool fatherSingleWorkstationPlaytest;
             public bool fatherFourDirectionDeskPoseQa;
             public bool fatherDeskFourDirectionProofCompleted;
             public int fatherDeskDirectionCount;

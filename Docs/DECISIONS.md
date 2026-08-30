@@ -1457,3 +1457,20 @@ footprint 밖 ground contact는 금지한다.
 실제 Player rendered ground-footprint corner error `<= 0.01px`를 모두 통과해야 한다. 하나라도 실패한 가구는
 상점에 노출하거나 production-ready로 표시하지 않는다. 이 규칙의 정본 문서는
 `Docs/OFFICE_BUILD_EDITOR_V1.md`의 `Mandatory production tile-placement rule`이다.
+
+## V31 의자 녹색 칸은 보이는 의자 바퀴 아래의 실제 좌석 칸이다 (2026-08-29)
+
+결정: 상점 워크스테이션의 pointer는 계속 chair/seat pivot `(x,y)`로 유지한다. 기본 SE에서 책상은
+`(x-1,y+1)`과 `(x,y+1)`, 의자는 `(x,y)`를 점유하며 과거에 녹색으로 칠해졌던 빈칸 `(x-1,y)`는
+점유·충돌·preview 어디에서도 사용하지 않는다. 나머지 세 방향은 의자 칸을 중심으로 이 세 칸과 seat,
+approach, operator anchor를 정확히 quarter-turn한다.
+
+이유: 이전 bake는 카메라를 빈 semantic pivot에 두면서 실제 의자는 V31 연속 좌표에 남겨, metadata상
+ground error가 0이어도 녹색 의자 diamond가 화면상 왼쪽 빈칸에 놓였다. 방향별 의자 Sprite를 실제
+swivel-foot contact 중심으로 다시 bake하고 seat anchor를 함께 재측정해야 visual, preview, collision과
+착석 위치가 같은 셀을 가리킨다.
+
+검증: actual Windows D3D11 preview는 marker 3, `previewCellsMatchVisibleFurniture=True`, chair `2:2`,
+desk origin `1:3`, desk/chair ground error `0/0`을 기록했다. 네 방향 Player proof는 exact desk/chair
+resource, `legacyFlip=0`, 최대 tile corner error `0.0003px`로 PASS했다. 가구 시스템 batch도
+`geometry=13x4`로 구매·겹침·경로·4회 회전 왕복·저장을 PASS했다.

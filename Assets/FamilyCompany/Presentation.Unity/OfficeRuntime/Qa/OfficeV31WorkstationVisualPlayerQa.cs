@@ -201,13 +201,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             }
 
             string screenshot = Path.Combine(directory, "v31-workstation-four-directions.png");
-            ScreenCapture.CaptureScreenshot(screenshot, 1);
-            deadline = Time.realtimeSinceStartup + 10f;
-            while (!File.Exists(screenshot) && Time.realtimeSinceStartup < deadline)
-                yield return null;
-            if (!File.Exists(screenshot))
+            if (!TryCaptureOverview(screenshot, out string captureFailure))
             {
-                Finish(directory, false, "screenshot was not written");
+                Finish(directory, false, "four-direction capture failed: " + captureFailure);
                 yield break;
             }
 
@@ -218,6 +214,76 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 "tileBasis=160x80 seats=" +
                 state.OfficeGrid.SeatSlots.Count + " furniture=" + state.OfficeGrid.Furniture.Count +
                 " maxTileCornerError=" + maximumTileCornerErrorPx.ToString("F4") + "px");
+        }
+
+        private static bool TryCaptureOverview(string path, out string failure)
+        {
+            failure = string.Empty;
+            Camera source = Camera.main;
+            if (source == null)
+            {
+                failure = "Camera.main missing";
+                return false;
+            }
+
+            const int width = 1280;
+            const int height = 720;
+            RenderTexture previous = RenderTexture.active;
+            var target = new RenderTexture(
+                width,
+                height,
+                24,
+                RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.sRGB);
+            var pixels = new Texture2D(width, height, TextureFormat.RGB24, false);
+            GameObject captureHost = null;
+            try
+            {
+                captureHost = new GameObject("OfficeV31WorkstationVisualCapture")
+                    { hideFlags = HideFlags.HideAndDontSave };
+                Camera camera = captureHost.AddComponent<Camera>();
+                camera.CopyFrom(source);
+                camera.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
+                camera.aspect = width / (float)height;
+                camera.enabled = false;
+                camera.targetTexture = target;
+                camera.Render();
+                RenderTexture.active = target;
+                pixels.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
+                pixels.Apply(false, false);
+
+                Color32[] colors = pixels.GetPixels32();
+                bool containsRenderedColor = false;
+                for (var index = 0; index < colors.Length; index += 64)
+                {
+                    Color32 color = colors[index];
+                    if (color.r > 12 || color.g > 12 || color.b > 12)
+                    {
+                        containsRenderedColor = true;
+                        break;
+                    }
+                }
+                if (!containsRenderedColor)
+                {
+                    failure = "capture is entirely black";
+                    return false;
+                }
+
+                File.WriteAllBytes(path, pixels.EncodeToPNG());
+                return File.Exists(path) && new FileInfo(path).Length > 1024L;
+            }
+            catch (Exception exception)
+            {
+                failure = exception.GetType().Name + ":" + exception.Message;
+                return false;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                if (captureHost != null) Object.Destroy(captureHost);
+                Object.Destroy(target);
+                Object.Destroy(pixels);
+            }
         }
 
         private static void Finish(string directory, bool pass, string detail)

@@ -575,7 +575,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                 null,
                 ground,
                 new Vector2(320f, 32f),
-                desk ? Vector2.zero : new Vector2(432.085f, 248.044f),
+                desk ? Vector2.zero : new Vector2(320f, 145.848f),
                 desk ? new Vector2(448.221f, 205.229f) : Vector2.zero,
                 1f,
                 !desk,
@@ -594,7 +594,7 @@ namespace FamilyCompany.Editor.OfficeGridQa
                     },
                 desk ? 2 : 1,
                 1,
-                desk ? new Vector2(512.085f, 128.044f) : Vector2.zero,
+                desk ? new Vector2(560f, 105.848f) : Vector2.zero,
                 desk);
         }
 

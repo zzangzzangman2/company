@@ -142,6 +142,14 @@ failure reason, R rotation, confirm, ESC/right-click cancel, storage, sale confi
 resolution-scaled right panel. It pauses `Time.timeScale` and the main bootstrap while open and
 restores both exactly on close.
 
+Green/red footprint diamonds represent only cells physically occupied by the rendered furniture.
+For the workstation this is exactly two desk cells plus one chair cell. The empty approach/egress
+cell remains part of the immutable placement and navigation gate but must not be painted as if it
+were part of the desk. Preview Sprites must apply the exact same authored `GroundAnchorPx`, flip and
+`UniformScale` transform as confirmed runtime furniture. The Windows D3D11 preview gate requires
+three markers and `<= 0.001` world-unit ground-anchor error for both desk and chair; the current
+measured result is `3 / 0.00000000 / 0.00000000`.
+
 For the CRT workstation offer, the pointer cell is the chair/seat pivot. The ghost contains both
 the V31 dark-walnut desk and graphite open-back chair Sprite. `R` applies one rigid quarter-turn in
 the semantic diamond-tile basis to the desk footprint, CRT front/back/side, chair, approach cell,
@@ -150,6 +158,13 @@ two inventory instances plus one `OfficeSeatSlot` and one ledger entry only afte
 passes bounds, exact occupied-cell overlap, floor, entrance, reachability, access and seat-egress
 checks. The first four purchases bind to the first missing family seat ID, so actual work routing
 uses the rotated chair immediately after the actor-preserving runtime rebuild.
+
+The base `SouthEast` tile contract is explicit: pointer/chair/seat is `(x,y)`, the two desk cells
+are `(x-1,y+1)` and `(x,y+1)`, and `(x-1,y)` is empty. The green preview must therefore sit under
+the visibly rendered chair on the pointer's side, never in the old empty cell one tile to its left.
+Every other direction is the exact integer-grid quarter-turn of this three-cell set around the
+chair cell; collision, pathfinding, seat routing, Sprite ground anchors and confirmed placement all
+consume that same result.
 
 Company-hub / main-UI integration (no sixth bottom tab):
 

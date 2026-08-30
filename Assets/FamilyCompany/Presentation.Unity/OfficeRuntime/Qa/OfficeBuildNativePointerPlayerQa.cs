@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using FamilyCompany.Presentation.Unity.OfficeGridView;
+using FamilyCompany.Presentation.Unity.OfficeGridView.Authoring;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
@@ -22,6 +24,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
     public sealed class OfficeBuildNativePointerPlayerQa : MonoBehaviour
     {
         public const string CommandLineFlag = "-familyCompanyOfficeBuildNativePointerQa";
+        public const string PreviewAlignmentCommandLineFlag = "-familyCompanyOfficeBuildPreviewAlignmentQa";
         public const string ArtifactDirectoryArgument = "-familyCompanyOfficeBuildNativePointerArtifacts";
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
@@ -45,6 +48,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private static extern bool SetForegroundWindow(IntPtr windowHandle);
 
         [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
         private static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extraInfo);
 #endif
 
@@ -57,7 +63,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoInstall()
         {
-            if (_instance != null || !HasCommandLineFlag(CommandLineFlag)) return;
+            if (_instance != null ||
+                (!HasCommandLineFlag(CommandLineFlag) &&
+                 !HasCommandLineFlag(PreviewAlignmentCommandLineFlag))) return;
             var host = new GameObject("~OfficeBuildNativePointerPlayerQa");
             DontDestroyOnLoad(host);
             _instance = host.AddComponent<OfficeBuildNativePointerPlayerQa>();
@@ -154,39 +162,52 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
-#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-            IntPtr window = IntPtr.Zero;
-            for (var frame = 0; frame < 120 && window == IntPtr.Zero; frame++)
+            bool previewAlignmentOnly = HasCommandLineFlag(PreviewAlignmentCommandLineFlag);
+            if (previewAlignmentOnly &&
+                !controller.LockPreviewOriginForPlayerQa(target, out string previewLockFailure))
             {
-                Process process = Process.GetCurrentProcess();
-                process.Refresh();
-                window = process.MainWindowHandle;
-                if (window == IntPtr.Zero) yield return null;
-            }
-            Vector3 projected = camera.WorldToScreenPoint(runtime.World.Presenter.CellCenterWorld(target));
-            var nativePoint = new NativePoint
-            {
-                X = Mathf.RoundToInt(projected.x),
-                Y = Screen.height - Mathf.RoundToInt(projected.y)
-            };
-            bool foreground = window != IntPtr.Zero && SetForegroundWindow(window);
-            bool clientConverted = window != IntPtr.Zero && ClientToScreen(window, ref nativePoint);
-            bool cursorMoved = clientConverted && SetCursorPos(nativePoint.X, nativePoint.Y);
-            if (!foreground || !clientConverted || !cursorMoved)
-            {
-                Finish(
-                    97,
-                    "native pointer positioning failed:window=" + window +
-                    ";foreground=" + foreground +
-                    ";client=" + clientConverted +
-                    ";cursor=" + cursorMoved,
-                    bootstrap);
+                Finish(96, "purchase preview lock failed:" + previewLockFailure, bootstrap);
                 yield break;
             }
+
+            if (!previewAlignmentOnly)
+            {
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+                IntPtr window = IntPtr.Zero;
+                for (var frame = 0; frame < 120 && window == IntPtr.Zero; frame++)
+                {
+                    Process process = Process.GetCurrentProcess();
+                    process.Refresh();
+                    window = process.MainWindowHandle;
+                    if (window == IntPtr.Zero) yield return null;
+                }
+                Vector3 projected = camera.WorldToScreenPoint(runtime.World.Presenter.CellCenterWorld(target));
+                var nativePoint = new NativePoint
+                {
+                    X = Mathf.RoundToInt(projected.x),
+                    Y = Screen.height - Mathf.RoundToInt(projected.y)
+                };
+                bool foregroundRequest = window != IntPtr.Zero && SetForegroundWindow(window);
+                bool foreground = window != IntPtr.Zero && GetForegroundWindow() == window;
+                bool clientConverted = window != IntPtr.Zero && ClientToScreen(window, ref nativePoint);
+                bool cursorMoved = clientConverted && SetCursorPos(nativePoint.X, nativePoint.Y);
+                if (!foreground || !clientConverted || !cursorMoved)
+                {
+                    Finish(
+                        97,
+                        "native pointer positioning failed:window=" + window +
+                        ";foregroundRequest=" + foregroundRequest +
+                        ";foreground=" + foreground +
+                        ";client=" + clientConverted +
+                        ";cursor=" + cursorMoved,
+                        bootstrap);
+                    yield break;
+                }
 #else
-            Finish(97, "native pointer gate requires a Windows player", bootstrap);
-            yield break;
+                Finish(97, "native pointer gate requires a Windows player", bootstrap);
+                yield break;
 #endif
+            }
 
             float previewDeadline = Time.realtimeSinceStartup + 5f;
             while (Time.realtimeSinceStartup < previewDeadline &&
@@ -205,10 +226,96 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
+            OfficeWorkstationPlacement previewPlacement = OfficeLayoutEditRules.CreateWorkstationPlacement(
+                "__preview_ground_qa__",
+                "__preview_ground_qa__:chair",
+                "__preview_ground_qa__:seat",
+                target,
+                definition.DesiredFacing);
+            Transform[] previewTransforms = controller.GetComponentsInChildren<Transform>(true);
+            Transform deskGhost = previewTransforms.FirstOrDefault(item =>
+                string.Equals(item.name, "OfficeBuildGhost_" + OfficeGridLayouts.DeskWithPcKind,
+                    StringComparison.Ordinal));
+            Transform chairGhost = previewTransforms.FirstOrDefault(item =>
+                string.Equals(item.name, "OfficeBuildGhost_" + OfficeGridLayouts.SwivelChairKind,
+                    StringComparison.Ordinal));
+            SpriteRenderer deskGhostRenderer = deskGhost?.GetComponentInChildren<SpriteRenderer>(true);
+            SpriteRenderer chairGhostRenderer = chairGhost?.GetComponentInChildren<SpriteRenderer>(true);
+            OfficeFurnitureVisualCatalog previewCatalog = runtime.World.FurniturePresenter.VisualCatalog;
+            bool deskVisualResolved = OfficeBuildFurnitureVisualLibrary.TryResolve(
+                previewCatalog,
+                previewPlacement.WorkSurface.KindId,
+                previewPlacement.WorkSurface.Facing,
+                out OfficeFurnitureVisualDefinition deskGhostVisual,
+                out _);
+            bool chairVisualResolved = OfficeBuildFurnitureVisualLibrary.TryResolve(
+                previewCatalog,
+                previewPlacement.Chair.KindId,
+                previewPlacement.Chair.Facing,
+                out OfficeFurnitureVisualDefinition chairGhostVisual,
+                out _);
+            float deskPreviewGroundError = deskGhostRenderer == null || !deskVisualResolved
+                ? float.PositiveInfinity
+                : Vector3.Distance(
+                    runtime.World.Presenter.SubcellAnchorWorld(previewPlacement.WorkSurface.PlacementAnchor),
+                    OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                        deskGhostRenderer,
+                        deskGhostVisual.GroundAnchorPx));
+            float chairPreviewGroundError = chairGhostRenderer == null || !chairVisualResolved
+                ? float.PositiveInfinity
+                : Vector3.Distance(
+                    runtime.World.Presenter.SubcellAnchorWorld(previewPlacement.Chair.PlacementAnchor),
+                    OfficeGridAlignmentMetrics.SpriteAnchorWorld(
+                        chairGhostRenderer,
+                        chairGhostVisual.GroundAnchorPx));
+            int previewFootprintMarkers = controller.PreviewFootprintMarkerCountForPlayerQa;
+            OfficeGridCoordinate expectedDeskLeft = new OfficeGridCoordinate(target.X - 1, target.Y + 1);
+            OfficeGridCoordinate expectedDeskRight = new OfficeGridCoordinate(target.X, target.Y + 1);
+            OfficeGridCoordinate previousWrongChairCell = new OfficeGridCoordinate(target.X - 1, target.Y);
+            bool previewCellsMatchVisibleFurniture =
+                controller.PreviewFootprintCellsForPlayerQa.Contains(target) &&
+                controller.PreviewFootprintCellsForPlayerQa.Contains(expectedDeskLeft) &&
+                controller.PreviewFootprintCellsForPlayerQa.Contains(expectedDeskRight) &&
+                !controller.PreviewFootprintCellsForPlayerQa.Contains(previousWrongChairCell) &&
+                previewPlacement.Chair.Origin.Equals(target) &&
+                previewPlacement.Seat.Cell.Equals(target) &&
+                previewPlacement.WorkSurface.Origin.Equals(expectedDeskLeft);
+            if (previewFootprintMarkers != 3 ||
+                !previewCellsMatchVisibleFurniture ||
+                deskPreviewGroundError > 0.001f ||
+                chairPreviewGroundError > 0.001f)
+            {
+                Finish(
+                    102,
+                    "preview footprint/ground alignment failed:markers=" + previewFootprintMarkers +
+                    ";cellsMatchVisibleFurniture=" + previewCellsMatchVisibleFurniture +
+                    ";deskGroundError=" + deskPreviewGroundError.ToString("F8", CultureInfo.InvariantCulture) +
+                    ";chairGroundError=" + chairPreviewGroundError.ToString("F8", CultureInfo.InvariantCulture),
+                    bootstrap);
+                yield break;
+            }
+
             yield return new WaitForEndOfFrame();
             if (!TryCaptureOverview(ArtifactPath("office-build-green-preview.png"), out string previewCaptureFailure))
             {
                 Finish(99, "green preview capture failed:" + previewCaptureFailure, bootstrap);
+                yield break;
+            }
+
+            if (previewAlignmentOnly)
+            {
+                Finish(
+                    0,
+                    "preview footprint uses the two desk cells plus the visible chair cell and both V31 ground anchors match",
+                    bootstrap,
+                    "previewFootprintMarkers=" + previewFootprintMarkers + Environment.NewLine +
+                    "previewCellsMatchVisibleFurniture=" + previewCellsMatchVisibleFurniture + Environment.NewLine +
+                    "chairCell=" + target.X + ":" + target.Y + Environment.NewLine +
+                    "deskOrigin=" + expectedDeskLeft.X + ":" + expectedDeskLeft.Y + Environment.NewLine +
+                    "deskPreviewGroundError=" +
+                    deskPreviewGroundError.ToString("F8", CultureInfo.InvariantCulture) + Environment.NewLine +
+                    "chairPreviewGroundError=" +
+                    chairPreviewGroundError.ToString("F8", CultureInfo.InvariantCulture) + Environment.NewLine);
                 yield break;
             }
 
@@ -333,6 +440,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("anchorError=" + anchorError.ToString("F8", CultureInfo.InvariantCulture));
             result.AppendLine("renderedChairCenter=" + renderedChairCenter.ToString("F6"));
             result.AppendLine("chairAnchorError=" + chairAnchorError.ToString("F8", CultureInfo.InvariantCulture));
+            result.AppendLine("previewFootprintMarkers=" + previewFootprintMarkers);
+            result.AppendLine("deskPreviewGroundError=" +
+                              deskPreviewGroundError.ToString("F8", CultureInfo.InvariantCulture));
+            result.AppendLine("chairPreviewGroundError=" +
+                              chairPreviewGroundError.ToString("F8", CultureInfo.InvariantCulture));
             File.WriteAllText(ArtifactPath("office-build-native-pointer-result.txt"), result.ToString());
 
             Finish(passed ? 0 : 100, passed ? "single native click atomically purchased desk+chair+seat" :

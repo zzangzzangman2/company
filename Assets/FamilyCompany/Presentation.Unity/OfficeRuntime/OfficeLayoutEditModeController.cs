@@ -48,6 +48,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private readonly OfficeLayoutEditModeSkin _skin = new OfficeLayoutEditModeSkin();
         private readonly List<GameObject> _overlay = new List<GameObject>();
+        private readonly List<OfficeGridCoordinate> _overlayCells = new List<OfficeGridCoordinate>();
         private StarterOfficeRuntimeBootstrap _runtime;
         private Camera _camera;
         private PrototypeBootstrap _mainBootstrap;
@@ -74,6 +75,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private string _toast = string.Empty;
         private float _toastUntil;
         private int _instanceSequence;
+        private bool _previewPointerLockedForPlayerQa;
 
         private static readonly OfficeFurnitureCategory?[] CategoryCycle =
         {
@@ -102,6 +104,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public string DiagnosticLastMutationInstanceId { get; private set; } = string.Empty;
         public bool PreviewValidForPlayerQa => PreviewValid;
         public OfficeGridCoordinate PreviewOriginForPlayerQa => _previewOrigin;
+        public int PreviewFootprintMarkerCountForPlayerQa => _overlay.Count;
+        public IReadOnlyList<OfficeGridCoordinate> PreviewFootprintCellsForPlayerQa => _overlayCells;
 
         public void Configure(StarterOfficeRuntimeBootstrap runtime, Camera camera)
         {
@@ -161,6 +165,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return false;
             }
             BeginPurchase(definition);
+            failure = string.Empty;
+            return true;
+        }
+
+        public bool LockPreviewOriginForPlayerQa(OfficeGridCoordinate origin, out string failure)
+        {
+            if (!IsOpen || Grid == null || _pendingSource == PendingSource.None || !Grid.Contains(origin))
+            {
+                failure = "고정할 수 있는 배치 미리보기가 없습니다.";
+                return false;
+            }
+            _previewOrigin = origin;
+            _previewPointerLockedForPlayerQa = true;
+            InvalidatePreview();
             failure = string.Empty;
             return true;
         }
@@ -232,6 +250,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void HandlePointer()
         {
+            if (_previewPointerLockedForPlayerQa) return;
             if (_camera == null || IsPointerOverUi(Input.mousePosition)) return;
             Vector3 world = _camera.ScreenToWorldPoint(Input.mousePosition);
             world.z = 0f;
@@ -349,6 +368,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _pendingStoredInstanceId = string.Empty;
             _selectedId = string.Empty;
             _dragging = false;
+            _previewPointerLockedForPlayerQa = false;
             _previewEdit = null;
             _previewMessage = string.Empty;
             InvalidatePreview();
@@ -575,7 +595,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 : (_pendingSource == PendingSource.Stored ? _pendingStoredInstanceId : _selectedId);
             if (_previewEdit.Success)
             {
-                foreach (OfficeGridCoordinate cell in GroupCells(_previewEdit.Grid, targetId)) DrawCell(cell, tint);
+                foreach (OfficeGridCoordinate cell in GroupFootprintCells(_previewEdit.Grid, targetId))
+                    DrawCell(cell, tint);
             }
             else
             {
@@ -584,8 +605,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 {
                     foreach (OfficeGridCoordinate cell in
                              OfficeLayoutEditRules.FootprintCells(workstation.WorkSurface)
-                                 .Concat(OfficeLayoutEditRules.FootprintCells(workstation.Chair))
-                                 .Concat(new[] { workstation.Seat.ApproachCell }))
+                                 .Concat(OfficeLayoutEditRules.FootprintCells(workstation.Chair)))
                         if (Grid.Contains(cell)) DrawCell(cell, tint);
                 }
                 else
@@ -616,7 +636,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return Inventory?.Find(_selectedId)?.DefinitionId ?? string.Empty;
         }
 
-        private IEnumerable<OfficeGridCoordinate> GroupCells(OfficeGrid grid, string furnitureId)
+        private IEnumerable<OfficeGridCoordinate> GroupFootprintCells(OfficeGrid grid, string furnitureId)
         {
             PlacedOfficeFurniture item = grid.Furniture.FirstOrDefault(value =>
                 string.Equals(value.FurnitureId, furnitureId, StringComparison.Ordinal));
@@ -625,7 +645,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 string.Equals(seat.ChairFurnitureId, furnitureId, StringComparison.Ordinal) ||
                 string.Equals(seat.WorkSurfaceFurnitureId, furnitureId, StringComparison.Ordinal));
             if (owner == null) return OfficeLayoutEditRules.FootprintCells(item);
-            var result = new List<OfficeGridCoordinate> { owner.ApproachCell };
+            // The approach cell is a navigation reservation, not physical furniture. Keeping it
+            // out of the green footprint makes the marker describe exactly what the player sees:
+            // two occupied desk cells plus the one occupied chair cell. Placement validation still
+            // requires the approach cell to remain free.
+            var result = new List<OfficeGridCoordinate>();
             foreach (PlacedOfficeFurniture part in grid.Furniture)
                 if (string.Equals(part.FurnitureId, owner.ChairFurnitureId, StringComparison.Ordinal) ||
                     string.Equals(part.FurnitureId, owner.WorkSurfaceFurnitureId, StringComparison.Ordinal))
@@ -652,17 +676,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeGridCoordinate footprint = definition.FootprintFor(_previewRotation);
             OfficeGridSubcellAnchor anchor = PlacedOfficeFurniture.DefaultPlacementAnchor(
                 _previewOrigin, footprint.X, footprint.Y);
+            if (!Grid.Contains(anchor)) return;
             _ghost = new GameObject("OfficeBuildGhost");
             _ghost.transform.SetParent(transform, false);
             _ghost.transform.position = _runtime.World.Presenter.SubcellAnchorWorld(anchor);
-            SpriteRenderer renderer = _ghost.AddComponent<SpriteRenderer>();
-            renderer.sprite = visual.BaseSprite;
-            renderer.flipX = flipX;
-            renderer.sortingLayerName = "Default";
-            renderer.sortingOrder = 30001;
-            renderer.color = valid
-                ? new Color(0.45f, 1f, 0.58f, 0.62f)
-                : new Color(1f, 0.38f, 0.34f, 0.62f);
+            DrawGhostVisual(_ghost.transform, visual, flipX, valid, 30001);
         }
 
         private OfficeWorkstationPlacement TargetWorkstationPlacement()
@@ -709,12 +727,35 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     part.Facing,
                     out OfficeFurnitureVisualDefinition visual,
                     out bool flipX)) return;
+            if (!Grid.Contains(part.PlacementAnchor)) return;
             var child = new GameObject("OfficeBuildGhost_" + part.KindId);
             child.transform.SetParent(_ghost.transform, false);
             child.transform.position = _runtime.World.Presenter.SubcellAnchorWorld(part.PlacementAnchor);
-            SpriteRenderer renderer = child.AddComponent<SpriteRenderer>();
+            DrawGhostVisual(child.transform, visual, flipX, valid, sortingOrder);
+        }
+
+        private static void DrawGhostVisual(
+            Transform semanticRoot,
+            OfficeFurnitureVisualDefinition visual,
+            bool flipX,
+            bool valid,
+            int sortingOrder)
+        {
+            var visualRoot = new GameObject("VisualRoot");
+            visualRoot.transform.SetParent(semanticRoot, false);
+            visualRoot.transform.localPosition = Vector3.zero;
+            visualRoot.transform.localRotation = Quaternion.identity;
+            visualRoot.transform.localScale = Vector3.one * visual.UniformScale;
+
+            var baseVisual = new GameObject("BaseVisual");
+            baseVisual.transform.SetParent(visualRoot.transform, false);
+            baseVisual.transform.localRotation = Quaternion.identity;
+            baseVisual.transform.localScale = Vector3.one;
+            SpriteRenderer renderer = baseVisual.AddComponent<SpriteRenderer>();
             renderer.sprite = visual.BaseSprite;
             renderer.flipX = flipX;
+            baseVisual.transform.localPosition =
+                OfficeGridFurniturePresenter.GroundAnchorLocalOffset(renderer, visual.GroundAnchorPx);
             renderer.sortingLayerName = "Default";
             renderer.sortingOrder = sortingOrder;
             renderer.color = valid
@@ -733,12 +774,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             renderer.color = color;
             renderer.sortingOrder = 30000;
             _overlay.Add(marker);
+            _overlayCells.Add(cell);
         }
 
         private void ClearVisuals()
         {
             foreach (GameObject marker in _overlay) if (marker != null) Destroy(marker);
             _overlay.Clear();
+            _overlayCells.Clear();
             if (_ghost != null) Destroy(_ghost);
             _ghost = null;
         }

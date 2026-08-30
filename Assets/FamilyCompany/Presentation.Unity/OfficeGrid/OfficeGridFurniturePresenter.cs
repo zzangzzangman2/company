@@ -202,7 +202,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeGridView
         /// inverse of <see cref="OfficeGridAlignmentMetrics.SpriteAnchorWorld"/>, so the two stay in
         /// the same pixel-space convention and remain flip-aware.
         /// </summary>
-        private static Vector3 GroundAnchorLocalOffset(SpriteRenderer renderer, Vector2 groundAnchorPx)
+        public static Vector3 GroundAnchorLocalOffset(SpriteRenderer renderer, Vector2 groundAnchorPx)
         {
             if (renderer == null) throw new ArgumentNullException(nameof(renderer));
             Sprite sprite = renderer.sprite;
