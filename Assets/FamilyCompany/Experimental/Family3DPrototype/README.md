@@ -2,6 +2,29 @@
 
 This folder contains isolated 3D character candidates and actual Starter Office QA. It is not a production asset source.
 
+## Current Player V6 walk input
+
+The no-hat Player V6 candidate is one indivisible Higgsfield/Meshy package: mesh, bind skeleton,
+skin weights, albedo and action 613. Unity uses its own Avatar and clip at `poseStrength=1` without
+Father/mixed retargeting, procedural gait, pose damping or limb correction.
+
+- candidate: `Candidates/PlayerV6MeshyOnePackage613/`
+- FBX: `player-v6-meshy-one-package-613.fbx`
+- albedo: `player-v6-meshy-one-package-albedo.png`
+- surface: `Materials/PlayerV6MeshyOnePackageSurface.mat`
+- walk: `PlayerV6_Casual_Walk_inplace`, frames `1..43`, `1.4 s`
+- map stride: `0.7950477`; measured forward offset: `0 degrees`
+- QA scene: `Scenes/Family3DPlayerV6MeshyOnePackage613MapQa.unity`
+- build/runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV2`
+  and `.../PlayerV6MeshyOnePackage613MapRuntimeV2`
+- review: `Docs/Evidence/Family3DPlayerV6/player-v6-map-walk-v2-loop-tracked.gif`
+- status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
+  `productionEligible=false`
+
+Do not add workstation/sitting/typing until the user approves the complete actual-map walk GIF.
+Exact generation inputs, hashes and visual findings are in
+`Docs/PLAYER_V6_MESHY_ONE_PACKAGE_WALK_QA_2026-08-31.md`.
+
 ## Current Father input
 
 Father V19 is one indivisible Higgsfield/Meshy package: generated mesh, bind skeleton, skin weights and action 613. Unity uses the Avatar and clip from the same FBX at `poseStrength=1` without retarget sanitation, procedural gait or rigid-arm override.

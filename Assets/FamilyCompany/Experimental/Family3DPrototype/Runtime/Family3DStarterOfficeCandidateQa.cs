@@ -57,6 +57,7 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool fatherStaticRootMotionOnly;
         [SerializeField] private bool fatherHiggsfieldIdleRun;
         [SerializeField] private bool fatherCleanBipedNaturalWalk;
+        [SerializeField] private bool playerNative613Package;
 
         // Facing offset and stride belong to the body-and-clip pair, not to the project. Putting
         // Each clean-rig/action revision is measured again, so both are configured per candidate
@@ -99,6 +100,7 @@ namespace FamilyCompany.Experimental.Family3D
         private int compositeCapturedFrames;
         private int fatherMovingSampleFrames;
         private bool fatherMapWalkQa;
+        private string mapWalkFamilyId = "father";
         private bool fatherDeskWorkQa;
         private bool fatherFourDirectionDeskPoseQa;
         private bool fatherSingleWorkstationPlaytest;
@@ -158,11 +160,13 @@ namespace FamilyCompany.Experimental.Family3D
         private bool FatherUsesStableBodySideArmWalk =>
             FatherUsesCleanBipedCasualWalk && fatherClipStableBodySideArmsAsset;
 
-        private bool FatherUsesNative613Package =>
+        private bool UsesNative613Package =>
             fatherHiggsfieldIdleRun &&
             fatherHiggsfieldIdleClip == null &&
             !fatherClipMuscleDeltaRetargetAsset &&
             !fatherClipAnatomicalSanitizationAsset;
+
+        private string Native613FamilyId => playerNative613Package ? "player" : "father";
 
         public void Configure(
             GameObject player,
@@ -187,6 +191,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherStaticRootMotionOnly = false;
             fatherHiggsfieldIdleRun = false;
             fatherCleanBipedNaturalWalk = false;
+            playerNative613Package = false;
             fatherHiggsfieldIdleClip = null;
             fatherStaticAlbedo = null;
             fatherMotionCycleSecondsAsset = 0f;
@@ -215,6 +220,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherStaticRootMotionOnly = true;
             fatherHiggsfieldIdleRun = false;
             fatherCleanBipedNaturalWalk = false;
+            playerNative613Package = false;
             fatherHiggsfieldIdleClip = null;
             fatherMotionCycleSecondsAsset = 0f;
         }
@@ -251,6 +257,7 @@ namespace FamilyCompany.Experimental.Family3D
             fatherStaticRootMotionOnly = false;
             fatherHiggsfieldIdleRun = true;
             fatherCleanBipedNaturalWalk = false;
+            playerNative613Package = false;
             fatherMotionFacingOffsetDegreesAsset = facingOffsetDegrees;
             fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
             fatherClipMuscleDeltaRetargetAsset = clipMuscleDeltaRetarget;
@@ -284,6 +291,44 @@ namespace FamilyCompany.Experimental.Family3D
             fatherStaticRootMotionOnly = false;
             fatherHiggsfieldIdleRun = false;
             fatherCleanBipedNaturalWalk = true;
+            playerNative613Package = false;
+        }
+
+        public void ConfigurePlayerNative613Package(
+            GameObject player,
+            Texture2D albedo,
+            Material exactAlbedoMaterial,
+            AnimationClip walkClip,
+            Camera overlayCamera,
+            int isolatedLayer,
+            float facingOffsetDegrees,
+            float strideOfficeUnits,
+            float sourceAuthoredCycleSeconds,
+            float fallbackScale = 1f,
+            float qaGroundY = 0f)
+        {
+            playerCandidate = player;
+            olderSisterCandidate = null;
+            fatherCandidate = null;
+            motherCandidate = null;
+            sharedHumanoidWalkClip = walkClip;
+            fatherHiggsfieldIdleClip = null;
+            fatherStaticAlbedo = albedo;
+            fatherExactAlbedoMaterial = exactAlbedoMaterial;
+            qaOverlayCamera = overlayCamera;
+            qaLayer = Mathf.Clamp(isolatedLayer, 0, 31);
+            fallbackOfficeWorldToQaScale = Mathf.Max(0.0001f, fallbackScale);
+            groundY = qaGroundY;
+            fatherStaticRootMotionOnly = false;
+            fatherHiggsfieldIdleRun = true;
+            fatherCleanBipedNaturalWalk = false;
+            playerNative613Package = true;
+            fatherMotionFacingOffsetDegreesAsset = facingOffsetDegrees;
+            fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
+            fatherClipMuscleDeltaRetargetAsset = false;
+            fatherClipAnatomicalSanitizationAsset = false;
+            fatherClipStableBodySideArmsAsset = false;
+            fatherMotionCycleSecondsAsset = Mathf.Max(0f, sourceAuthoredCycleSeconds);
         }
 
         /// <summary>
@@ -426,7 +471,10 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherDeskWorkQa = fatherSingleWorkstationPlaytest ||
                     fatherFourDirectionDeskPoseQa ||
                     HasCommandLineFlag("-family3d-father-v19-desk-work-qa");
+                bool playerMapWalkQa = HasCommandLineFlag("-family3d-player-v6-map-walk-qa");
+                mapWalkFamilyId = playerMapWalkQa ? "player" : "father";
                 fatherMapWalkQa = fatherDeskWorkQa ||
+                    playerMapWalkQa ||
                     HasCommandLineFlag("-family3d-father-map-walk-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-static-map-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-motion-map-qa");
@@ -606,7 +654,7 @@ namespace FamilyCompany.Experimental.Family3D
             if (fatherMapWalkQa)
             {
                 Binding father = bindings.Find(candidate =>
-                    string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
+                    string.Equals(candidate.FamilyId, mapWalkFamilyId, StringComparison.Ordinal));
                 if (fatherDeskWorkProofActive && father != null)
                 {
                     fatherDeskWorkSampleFrames++;
@@ -646,8 +694,10 @@ namespace FamilyCompany.Experimental.Family3D
                                 sourceOfficeCamera,
                                 fatherStaticRootMotionOnly
                                     ? "father-v18-higgsfield-static-map-walk"
-                                    : FatherUsesNative613Package
-                                        ? "father-v18-native-613-map-walk"
+                                    : UsesNative613Package
+                                        ? playerNative613Package
+                                            ? "player-v6-native-613-map-walk"
+                                            : "father-v18-native-613-map-walk"
                                     : FatherUsesStableBodySideArmWalk
                                         ? "father-v18-clean-biped-stable-arm-walk-map"
                                     : FatherUsesCleanBipedCasualWalk
@@ -1711,33 +1761,36 @@ namespace FamilyCompany.Experimental.Family3D
         private IEnumerator RunFatherMapWalkProof()
         {
             yield return null;
-            Binding fatherBinding = bindings.Find(candidate =>
-                string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
-            if (fatherBinding == null || starter == null || starter.World == null)
+            Binding walkBinding = bindings.Find(candidate =>
+                string.Equals(candidate.FamilyId, mapWalkFamilyId, StringComparison.Ordinal));
+            if (walkBinding == null || starter == null || starter.World == null)
             {
-                Fail("Father natural-walk proof could not resolve the live Father binding/runtime world.");
+                Fail(
+                    mapWalkFamilyId +
+                    " natural-walk proof could not resolve the live binding/runtime world.");
                 Application.Quit(2);
                 yield break;
             }
 
-            OfficeRuntimeAgent father = fatherBinding.Agent;
-            if (!TryFindClearFatherLoop(father.AgentRadius, out OfficeGridCoordinate[] loop))
+            OfficeRuntimeAgent walkAgent = walkBinding.Agent;
+            if (!TryFindClearFatherLoop(walkAgent.AgentRadius, out OfficeGridCoordinate[] loop))
             {
-                Fail("Father natural-walk proof could not find a clear 3x3 perimeter loop.");
+                Fail(mapWalkFamilyId + " natural-walk proof could not find a clear 3x3 perimeter loop.");
                 Application.Quit(2);
                 yield break;
             }
 
-            ParkOtherActorsForFatherLoop(father, loop);
-            father.QaTeleportToCell(loop[0]);
-            father.QaSetDirectMovementInput(Vector2.zero);
+            ParkOtherActorsForFatherLoop(walkAgent, loop);
+            walkAgent.QaTeleportToCell(loop[0]);
+            walkAgent.QaSetDirectMovementInput(Vector2.zero);
             Time.timeScale = 1f;
             yield return null;
             yield return new WaitForEndOfFrame();
 
             fatherProofRouteActive = true;
             Debug.Log(
-                "FAMILY_3D_FATHER_MAP_MOVE_QA: starting two continuous circuits on one " +
+                "FAMILY_3D_MAP_MOVE_QA: family=" + mapWalkFamilyId +
+                " starting two continuous circuits on one " +
                 "actual Starter Office map; staticRootMotionOnly=" +
                 fatherStaticRootMotionOnly + " higgsfieldIdleRun=" +
                 fatherHiggsfieldIdleRun + " cleanBipedNaturalWalk=" +
@@ -1753,12 +1806,14 @@ namespace FamilyCompany.Experimental.Family3D
                 {
                     fatherProofRouteLeg = leg;
                     OfficeGridCoordinate target = loop[leg + 1];
-                    if (!father.QaMoveToCell(
+                    if (!walkAgent.QaMoveToCell(
                             target,
                             (fatherStaticRootMotionOnly
                                 ? "father-v18-higgsfield-static-map-walk"
-                                : FatherUsesNative613Package
-                                    ? "father-v18-native-613-map-walk"
+                                : UsesNative613Package
+                                    ? playerNative613Package
+                                        ? "player-v6-native-613-map-walk"
+                                        : "father-v18-native-613-map-walk"
                                 : FatherUsesStableBodySideArmWalk
                                     ? "father-v18-clean-biped-stable-arm-walk-map"
                                 : FatherUsesCleanBipedCasualWalk
@@ -1770,19 +1825,19 @@ namespace FamilyCompany.Experimental.Family3D
                                 : "father-stylized-sd-map-walk-v17") +
                             "-c" + circuit + "-leg" + leg))
                     {
-                        Fail("Father natural-walk proof route was rejected at circuit " +
+                        Fail(mapWalkFamilyId + " natural-walk proof route was rejected at circuit " +
                              circuit + ", leg " + leg + ".");
                         Application.Quit(2);
                         yield break;
                     }
 
                     float deadline = Time.realtimeSinceStartup + 12f;
-                    while (!father.QaReachedCell(target) &&
+                    while (!walkAgent.QaReachedCell(target) &&
                            Time.realtimeSinceStartup < deadline)
                         yield return null;
-                    if (!father.QaReachedCell(target))
+                    if (!walkAgent.QaReachedCell(target))
                     {
-                        Fail("Father natural-walk proof timed out at circuit " +
+                        Fail(mapWalkFamilyId + " natural-walk proof timed out at circuit " +
                              circuit + ", leg " + leg + ".");
                         Application.Quit(2);
                         yield break;
@@ -1795,9 +1850,11 @@ namespace FamilyCompany.Experimental.Family3D
             fatherProofRouteCircuit = 2;
             fatherProofRouteLeg = -1;
             WriteRuntimeReceipt(
-                fatherStaticRootMotionOnly
+                playerNative613Package
+                    ? "PLAYER_V6_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+                    : fatherStaticRootMotionOnly
                     ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
-                    : FatherUsesNative613Package
+                    : UsesNative613Package
                         ? "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
                     : FatherUsesStableBodySideArmWalk
                         ? "FATHER_V18_CLEAN_BIPED_STABLE_ARM_WALK_MAP_PROOF_COMPLETE"
@@ -1809,7 +1866,8 @@ namespace FamilyCompany.Experimental.Family3D
                         ? "FATHER_V18_HIGGSFIELD_IDLE_RUN_MAP_PROOF_COMPLETE"
                     : "FATHER_NATURAL_MAP_WALK_PROOF_COMPLETE");
             Debug.Log(
-                "FAMILY_3D_FATHER_MAP_MOVE_QA: COMPLETE | circuits=2 captures=" +
+                "FAMILY_3D_MAP_MOVE_QA: COMPLETE | family=" + mapWalkFamilyId +
+                " circuits=2 captures=" +
                 compositeCapturedFrames + " productionEligible=false",
                 this);
             yield return new WaitForEndOfFrame();
@@ -1986,7 +2044,10 @@ namespace FamilyCompany.Experimental.Family3D
             skinned[0].updateWhenOffscreen = true;
 
             if ((fatherHiggsfieldIdleRun || fatherCleanBipedNaturalWalk) &&
-                string.Equals(definition.FamilyId, "father", StringComparison.Ordinal))
+                string.Equals(
+                    definition.FamilyId,
+                    Native613FamilyId,
+                    StringComparison.Ordinal))
                 ApplyFatherV18HiggsfieldMaterial(skinned);
 
             Bounds candidateBounds = EncapsulateBounds(skinned);
@@ -2027,7 +2088,11 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherHiggsfieldIdleRun && ResolveClipMuscleDeltaRetarget(fatherClipMuscleDeltaRetargetAsset),
                 fatherHiggsfieldIdleRun && fatherClipAnatomicalSanitizationAsset,
                 fatherHiggsfieldIdleRun && fatherClipStableBodySideArmsAsset,
-                fatherHiggsfieldIdleRun ? fatherMotionCycleSecondsAsset : 0f);
+                fatherHiggsfieldIdleRun ? fatherMotionCycleSecondsAsset : 0f,
+                UsesNative613Package && string.Equals(
+                    definition.FamilyId,
+                    Native613FamilyId,
+                    StringComparison.Ordinal));
             if (fatherCleanBipedNaturalWalk)
             {
                 walkActor.ConfigureNaturalSdStyle(
@@ -2186,7 +2251,7 @@ namespace FamilyCompany.Experimental.Family3D
         {
             binding.EnsureSeatedProtectionSnapshot();
             if (fatherMapWalkQa &&
-                !string.Equals(binding.FamilyId, "father", StringComparison.Ordinal))
+                !string.Equals(binding.FamilyId, mapWalkFamilyId, StringComparison.Ordinal))
             {
                 binding.SetSource2DHidden(false);
                 binding.SetCandidateVisible(false);
@@ -2701,7 +2766,7 @@ namespace FamilyCompany.Experimental.Family3D
             if (!fatherStaticRootMotionOnly && !fatherCleanBipedNaturalWalk &&
                 (sharedHumanoidWalkClip == null || !sharedHumanoidWalkClip.isHumanMotion))
                 throw new InvalidOperationException("Shared Humanoid walk clip is missing or not Humanoid.");
-            if (fatherHiggsfieldIdleRun && !FatherUsesNative613Package &&
+            if (fatherHiggsfieldIdleRun && !UsesNative613Package &&
                 (fatherHiggsfieldIdleClip == null || !fatherHiggsfieldIdleClip.isHumanMotion))
                 throw new InvalidOperationException("Father V18 Higgsfield idle clip is missing or not Humanoid.");
             CandidateDefinition[] definitions = CandidateDefinitions();
@@ -2715,6 +2780,13 @@ namespace FamilyCompany.Experimental.Family3D
 
         private CandidateDefinition[] CandidateDefinitions()
         {
+            if (playerNative613Package)
+            {
+                return new[]
+                {
+                    new CandidateDefinition("player", playerCandidate)
+                };
+            }
             if (fatherStaticRootMotionOnly || fatherHiggsfieldIdleRun ||
                 fatherCleanBipedNaturalWalk)
             {
@@ -2874,7 +2946,7 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherCleanBipedNaturalWalk = fatherCleanBipedNaturalWalk,
                     fatherCleanBipedCasualWalk = FatherUsesCleanBipedCasualWalk,
                     fatherStableBodySideArmWalk = FatherUsesStableBodySideArmWalk,
-                    fatherNative613Package = FatherUsesNative613Package,
+                    fatherNative613Package = UsesNative613Package,
                     coordinateMapping =
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
                         "Camera.ViewportPointToRay -> Y=ground plane; raw (x,y)->(x,groundY,y) fallback",
@@ -2885,7 +2957,7 @@ namespace FamilyCompany.Experimental.Family3D
                         fatherStaticRootMotionOnly
                             ? "every frame: live Father SpriteRenderer projected bounds height == " +
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
-                            : FatherUsesNative613Package
+                            : UsesNative613Package
                                 ? "one locked uniform scale from the native action-613 rendered bounds; visible mesh/Avatar/skin/clip share one FBX; static-FBX surface material; no idle cross-retarget, anatomical sanitation, rigid-arm override, or procedural gait"
                             : FatherUsesStableBodySideArmWalk
                                 ? "V72 clean V4 lower-body/torso/action-613 contract unchanged; static-FBX surface; only the final rigid-arm tuck is replaced by straight rigid arms with a fixed-axis 6-degree opposite upper-arm swing; no elbow/wrist/finger/outward/tuck correction"
@@ -2920,7 +2992,9 @@ namespace FamilyCompany.Experimental.Family3D
                     staticMapScaleTolerance = StaticMapScaleTolerance,
                     movingSampleFrames = movingSampleFrames,
                     fatherMapWalkQa = fatherMapWalkQa,
-                    fatherMapWalkSourceFamilyId = fatherMapWalkQa ? "father" : string.Empty,
+                    fatherMapWalkSourceFamilyId = fatherMapWalkQa
+                        ? mapWalkFamilyId
+                        : string.Empty,
                     fatherMovingSampleFrames = fatherMovingSampleFrames,
                     fatherProofRoutePolicy = fatherSingleWorkstationPlaytest
                         ? "actual Father OfficeRuntimeAgent; one clear 3x3 loop on an empty " +
@@ -2934,7 +3008,8 @@ namespace FamilyCompany.Experimental.Family3D
                         ? "actual Father OfficeRuntimeAgent; Starter entrance to real seat_father; " +
                           "real route, claim, approach, rotation, SitDown and Working"
                         : fatherMapWalkQa
-                            ? "actual Father OfficeRuntimeAgent; one clear 3x3 perimeter; two continuous circuits"
+                            ? "actual " + mapWalkFamilyId +
+                              " OfficeRuntimeAgent; one clear 3x3 perimeter; two continuous circuits"
                         : string.Empty,
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
                     fatherDeskWorkQa = fatherDeskWorkQa,
@@ -3396,9 +3471,11 @@ namespace FamilyCompany.Experimental.Family3D
                     : fatherDeskWorkProofCompleted
                     ? "FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE"
                     : fatherProofRouteCompleted
-                    ? fatherStaticRootMotionOnly
+                    ? playerNative613Package
+                        ? "PLAYER_V6_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+                        : fatherStaticRootMotionOnly
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
-                        : FatherUsesNative613Package
+                        : UsesNative613Package
                             ? "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
                         : FatherUsesStableBodySideArmWalk
                             ? "FATHER_V18_CLEAN_BIPED_STABLE_ARM_WALK_MAP_PROOF_COMPLETE"

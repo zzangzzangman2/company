@@ -1,6 +1,31 @@
 # PROJECT STATE
 
-Last updated: 2026-08-30. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+Last updated: 2026-08-31. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+
+## Player V6 no-hat one-package actual-map walk candidate
+
+- The current protagonist candidate was generated from the locked no-hat Player V6 four-view
+  identity as one Higgsfield/Meshy package containing mesh, bind skeleton, weights, PBR and action
+  `613 Casual_Walk_inplace`. Job `8609013b-996c-439a-97a0-0f3dc8a50cae` cost 38 credits; balance
+  after completion was 72.
+- Unity uses `Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-613.fbx`, its own
+  Avatar and `PlayerV6_Casual_Walk_inplace` directly at `poseStrength=1`. No Father/mixed clip,
+  procedural gait, limb rewrite or pose weakening is enabled.
+- Raw 127-frame/two-view inspection and actual-map 169-frame inspection show exactly two legs and
+  shoes, two arms and hands, alternating contacts, small opposite arm swing, upright body, correct
+  travel-facing and no tear/third-leg/residue. Numeric support: 42-frame/1.4 s repetition, foot
+  correlation `-0.854584` raw / `-0.834884` map, hand correlation `-0.935886` raw / `-0.932847`
+  map, runtime torso lean `1.490..3.390 degrees`.
+- Current build/runtime:
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV2` and
+  `.../PlayerV6MeshyOnePackage613MapRuntimeV2`; 169 captures, 1,344 samples, two circuits and
+  static/interaction/agent violations `0/0/0`.
+- Review the real continuous-loop GIFs in `Docs/Evidence/Family3DPlayerV6/`, especially
+  `player-v6-map-walk-v2-loop-tracked.gif`. The exact job, hashes, stride sweep and full visual
+  checklist are in `Docs/PLAYER_V6_MESHY_ONE_PACKAGE_WALK_QA_2026-08-31.md`.
+- Current gate is `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
+  `productionEligible=false`. Do not begin the Player desk/sitting/typing phase until the user
+  approves this actual animation.
 
 ## Father V19 single-workstation interactive playtest
 

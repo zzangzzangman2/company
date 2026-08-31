@@ -1,0 +1,71 @@
+{
+  "contract": "FC-PLAYER-V6-MESHY-ONE-PACKAGE-UNITY-PREP-V1",
+  "sourceGlb": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\Family3DPlayerV6MeshyOnePackage613Raw\\player-v6-meshy-one-package-613.glb",
+  "sourceGlbSha256": "9A8498E205C4FF8293E40140DB546B823031DBE7B28E84418DF6783366C3B17B",
+  "outputFbx": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Assets\\FamilyCompany\\Experimental\\Family3DPrototype\\Candidates\\PlayerV6MeshyOnePackage613\\player-v6-meshy-one-package-613.fbx",
+  "outputFbxSha256": "AB18C23B054999BE74B8DD6D5E0A2360F692BE5A6EBC5D1FC3524F4B2368EE4D",
+  "outputTexture": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Assets\\FamilyCompany\\Experimental\\Family3DPrototype\\Candidates\\PlayerV6MeshyOnePackage613\\player-v6-meshy-one-package-albedo.png",
+  "outputTextureSha256": "2D7A58E830E7C537E2F8029B6971A3603214FD57C07CBD5290FC8AAE3D3CBD7A",
+  "meshVertexCount": 205338,
+  "meshPolygonCount": 119013,
+  "boneCount": 24,
+  "boneNames": [
+    "Head",
+    "Hips",
+    "LeftArm",
+    "LeftFoot",
+    "LeftForeArm",
+    "LeftHand",
+    "LeftLeg",
+    "LeftShoulder",
+    "LeftToeBase",
+    "LeftUpLeg",
+    "RightArm",
+    "RightFoot",
+    "RightForeArm",
+    "RightHand",
+    "RightLeg",
+    "RightShoulder",
+    "RightToeBase",
+    "RightUpLeg",
+    "Spine",
+    "Spine01",
+    "Spine02",
+    "head_end",
+    "headfront",
+    "neck"
+  ],
+  "action": "PlayerV6_Casual_Walk_inplace",
+  "actionFrameStart": 1.0,
+  "actionFrameEnd": 126.99999237060547,
+  "animationFps": 30,
+  "authoredCycleFirstFrame": 1,
+  "authoredCycleLastFrame": 43,
+  "authoredCycleSeconds": 1.4,
+  "removedAuxiliaryObjects": [
+    "Icosphere"
+  ],
+  "normalizationSourceBoundsMin": [
+    -0.2585150897502899,
+    -0.41828277707099915,
+    0.07083846628665924
+  ],
+  "normalizationSourceBoundsMax": [
+    0.25226184725761414,
+    0.20485995709896088,
+    1.6964974403381348
+  ],
+  "normalizedBoundsMin": [
+    -0.255388468503952,
+    -0.3115713596343994,
+    0.0
+  ],
+  "normalizedBoundsMax": [
+    0.255388468503952,
+    0.3115713596343994,
+    1.6256589889526367
+  ],
+  "skinPolicy": "unchanged provider mesh, bind skeleton, vertex weights, and authored action",
+  "rootMotionPolicy": "Unity office agent owns translation and yaw; visual root curves reset after sampling",
+  "productionEligible": false
+}

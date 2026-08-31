@@ -56,6 +56,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV19MeshyOnePackage613Path =
             CandidateRoot +
             "FatherV19MeshyOnePackage613/father-v19-meshy-one-package-613.fbx";
+        public const string PlayerV6MeshyOnePackage613Path =
+            CandidateRoot +
+            "PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-613.fbx";
 
         private static readonly string[] IdentityHumanoidBoneNames =
         {
@@ -94,6 +97,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                    string.Equals(path, FatherV18CleanBipedRigV2Path, StringComparison.Ordinal) ||
                    string.Equals(path, FatherV18CleanBipedRigV4Path, StringComparison.Ordinal) ||
                    string.Equals(path, FatherV19MeshyOnePackage613Path, StringComparison.Ordinal) ||
+                   string.Equals(path, PlayerV6MeshyOnePackage613Path, StringComparison.Ordinal) ||
                    IsFatherV18HiggsfieldMotion(path) ||
                    IsRuntime2DV2Candidate(path);
         }
@@ -104,7 +108,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                    string.Equals(path, FatherV18HiggsfieldRunClipPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherV18HiggsfieldCasualWalkModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherV18HiggsfieldCasualWalkClipPath, StringComparison.Ordinal) ||
-                   string.Equals(path, FatherV19MeshyOnePackage613Path, StringComparison.Ordinal);
+                   string.Equals(path, FatherV19MeshyOnePackage613Path, StringComparison.Ordinal) ||
+                   string.Equals(path, PlayerV6MeshyOnePackage613Path, StringComparison.Ordinal);
         }
 
         public static bool IsRuntime2DV2Candidate(string path)
@@ -156,7 +161,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         assetPath,
                         FatherV19MeshyOnePackage613Path,
                         StringComparison.Ordinal);
-                    if ((fatherV18CasualWalk || fatherV19OnePackage) &&
+                    bool playerV6OnePackage = string.Equals(
+                        assetPath,
+                        PlayerV6MeshyOnePackage613Path,
+                        StringComparison.Ordinal);
+                    bool generatedOnePackage = fatherV19OnePackage || playerV6OnePackage;
+                    if ((fatherV18CasualWalk || generatedOnePackage) &&
                         clips.Length == 0)
                     {
                         // Unity 6 can expose the FBX take as an implicit clip while returning an
@@ -167,14 +177,18 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         {
                             new ModelImporterClipAnimation
                             {
-                                name = fatherV19OnePackage
-                                    ? "FatherV19_Casual_Walk_inplace"
-                                    : "Casual_Walk_inplace",
-                                takeName = fatherV19OnePackage
-                                    ? "FatherV19_Casual_Walk_inplace"
-                                    : "Scene",
-                                firstFrame = fatherV19OnePackage ? 1f : 16f,
-                                lastFrame = fatherV19OnePackage ? 43f : 58f
+                                name = playerV6OnePackage
+                                    ? "PlayerV6_Casual_Walk_inplace"
+                                    : fatherV19OnePackage
+                                        ? "FatherV19_Casual_Walk_inplace"
+                                        : "Casual_Walk_inplace",
+                                takeName = playerV6OnePackage
+                                    ? "PlayerV6_Casual_Walk_inplace"
+                                    : fatherV19OnePackage
+                                        ? "FatherV19_Casual_Walk_inplace"
+                                        : "Scene",
+                                firstFrame = generatedOnePackage ? 1f : 16f,
+                                lastFrame = generatedOnePackage ? 43f : 58f
                             }
                         };
                     }
@@ -192,9 +206,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                             clips[index].firstFrame = 16f;
                             clips[index].lastFrame = 58f;
                         }
-                        else if (fatherV19OnePackage)
+                        else if (generatedOnePackage)
                         {
-                            // The new one-package action contains three repeated authored cycles.
+                            // Each one-package action contains three repeated authored cycles.
                             // Direct bone sampling measured the minimum full-pose recurrence at an
                             // exact 42 frames (1.4 s at 30 fps). Keep one untouched cycle; sampling
                             // all 127 frames would triple the cadence and hide contact problems.
@@ -214,6 +228,21 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         importer.clipAnimations = clips;
                 }
             }
+        }
+
+        private void OnPreprocessTexture()
+        {
+            if (!assetPath.StartsWith(CandidateRoot, StringComparison.Ordinal) ||
+                !assetPath.EndsWith("-albedo.png", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var importer = (TextureImporter)assetImporter;
+            importer.textureType = TextureImporterType.Default;
+            importer.sRGBTexture = true;
+            importer.maxTextureSize = 4096;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.compressionQuality = 100;
+            importer.mipmapEnabled = true;
         }
 
         private static HumanDescription CreateExplicitFatherV18HiggsfieldHumanDescription(

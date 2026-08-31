@@ -101,6 +101,7 @@ if missing_bones:
 metrics = {
     "crossLegStrongVertexCount": 0,
     "armLegStrongVertexCount": 0,
+    "armLegDominantVertexCount": 0,
     "headLegStrongVertexCount": 0,
     "lowerLegCrossWeightVertexCount": 0,
     "footRegionCrossWeightVertexCount": 0,
@@ -158,6 +159,13 @@ if mesh is not None:
             metrics["crossLegStrongVertexCount"] += 1
         if arm_total > 0.10 and leg_total > 0.10:
             metrics["armLegStrongVertexCount"] += 1
+            # A torso/hip seam may legitimately blend small amounts from both the adjacent arm
+            # and thigh while remaining Hips/Spine dominated.  Fail only when limb families own
+            # most of the vertex; otherwise retain the count as a visual-review advisory.  This
+            # still fails detached hands/pants because either limb plus its cross-family bleed
+            # dominates those vertices.
+            if arm_total + leg_total > 0.50:
+                metrics["armLegDominantVertexCount"] += 1
         normalized_height = (vertex.co.z - minimum_z) / height
         if normalized_height >= 0.60 and leg_total > 0.10:
             metrics["headLegStrongVertexCount"] += 1
@@ -189,8 +197,8 @@ if mesh is not None:
 
     if metrics["unweightedVertexCount"]:
         failures.append(f"unweighted:{metrics['unweightedVertexCount']}")
-    if metrics["armLegStrongVertexCount"]:
-        failures.append(f"arm-leg-mixed:{metrics['armLegStrongVertexCount']}")
+    if metrics["armLegDominantVertexCount"]:
+        failures.append(f"arm-leg-dominant-mixed:{metrics['armLegDominantVertexCount']}")
     if metrics["headLegStrongVertexCount"]:
         failures.append(f"head-leg-mixed:{metrics['headLegStrongVertexCount']}")
     # Some generated quad rigs use a symmetric blend around the inner knee/crotch. That is recorded

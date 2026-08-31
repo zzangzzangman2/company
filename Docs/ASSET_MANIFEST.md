@@ -2,6 +2,30 @@
 
 This manifest lists current experimental 3D inputs first, followed by canonical production assets. Retired Father iterations were removed from the current manifest; they are not reusable sources.
 
+## Current Player V6 no-hat one-package character
+
+- identity reference:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/player-v6-3d-identity-turnaround-v1.png`,
+  SHA-256 `66099D1DED361219AA98F046533C766355ECDB90316582B8C217A95E3E71D95D`.
+- source: Higgsfield/Meshy job `8609013b-996c-439a-97a0-0f3dc8a50cae`,
+  `multi_image_to_3d`, four views, rigging/animation/PBR/remesh on, quad 60,000, A-pose 1.65 m,
+  action 613; charged 38 credits, balance 72.
+- source GLB SHA-256: `9A8498E205C4FF8293E40140DB546B823031DBE7B28E84418DF6783366C3B17B`.
+- FBX:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-613.fbx`,
+  SHA-256 `AB18C23B054999BE74B8DD6D5E0A2360F692BE5A6EBC5D1FC3524F4B2368EE4D`.
+- albedo:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-albedo.png`,
+  SHA-256 `2D7A58E830E7C537E2F8029B6971A3603214FD57C07CBD5290FC8AAE3D3CBD7A`.
+- surface: `Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/PlayerV6MeshyOnePackageSurface.mat`.
+- clip: `PlayerV6_Casual_Walk_inplace`, source frames `1..43`, `1.4 s`, same FBX
+  Avatar/skin/weights; map stride `0.7950477`, forward offset `0 degrees`.
+- evidence: `Docs/Evidence/Family3DPlayerV6/`; full-loop GIF SHA-256
+  `B415A28B3E0716CACB61CBAC6BC911EDF8597779F0C4BD844E5AA2DE11E5B583`, tracked-loop GIF
+  SHA-256 `0D37B468C7AB25881E4082DA9F162C9C54B5624A1712DC35A3D62711A6F5CC4C`.
+- status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
+  `productionEligible=false`. Desk/sitting/typing is not yet authorized.
+
 ## Current Father V19 one-package character
 
 - source: Higgsfield/Meshy job `865f2115-153d-41b6-84eb-d38ca106d45d`, `multi_image_to_3d`, four cleaned views, rigging/animation/PBR/remesh on, quad 60,000, A-pose 1.65 m, action 613; charged 38 credits.

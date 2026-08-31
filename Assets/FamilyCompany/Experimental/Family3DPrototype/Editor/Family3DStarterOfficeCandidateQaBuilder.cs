@@ -30,6 +30,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV18CleanBipedStableArmWalkMapQaV74.unity";
         public const string FatherV19MotionQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DFatherV19MeshyOnePackage613MapQa.unity";
+        public const string PlayerV6MotionQaScenePath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DPlayerV6MeshyOnePackage613MapQa.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -69,6 +71,16 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         // the multi-direction proof close on the same pose without a GIF seam.
         public const float FatherV19StrideOfficeUnits = 0.7950477f;
         public const float FatherV19AuthoredCycleSeconds = 1.4f;
+        public const string PlayerV6MotionModelPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-613.fbx";
+        public const string PlayerV6MotionTexturePath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-albedo.png";
+        public const string PlayerV6SurfaceMaterialPath =
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/" +
+            "PlayerV6MeshyOnePackageSurface.mat";
+        public const float PlayerV6FacingOffsetDegrees = 0f;
+        public const float PlayerV6StrideOfficeUnits = 0.7950477f;
+        public const float PlayerV6AuthoredCycleSeconds = 1.4f;
         public const string MotherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/MotherV1/mother-blender-humanoid-v1.fbx";
         public const string DefaultBuildRoot =
@@ -79,6 +91,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV18CleanBipedStableArmWalkMapBuildV74";
         public const string FatherV19MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV26AtomicOriginalChair";
+        public const string PlayerV6MotionDefaultBuildRoot =
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV1";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -198,11 +212,30 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             }
         }
 
+        public static void BuildPlayerV6MotionFromCommandLine()
+        {
+            try
+            {
+                Build(ResolveBuildRoot(false, false, false, true), false, false, false, true);
+                Debug.Log("FAMILY_3D_PLAYER_V6_MESHY_ONE_PACKAGE_613_MAP_QA_BUILD: PASS");
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                Debug.LogError(
+                    "FAMILY_3D_PLAYER_V6_MESHY_ONE_PACKAGE_613_MAP_QA_BUILD: FAIL | " +
+                    exception.Message);
+                EditorApplication.Exit(1);
+            }
+        }
+
         private static void Build(
             string buildRoot,
             bool fatherV18StaticOnly,
             bool fatherV18MotionOnly = false,
-            bool fatherV19MotionOnly = false)
+            bool fatherV19MotionOnly = false,
+            bool playerV6MotionOnly = false)
         {
             ThrowIfInteractiveSceneIsDirty();
             string productionSceneBefore = Sha256Asset(ProductionScenePath);
@@ -213,7 +246,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             AssetBundle bundle = LoadAssets(
                 fatherV18StaticOnly,
                 fatherV18MotionOnly,
-                fatherV19MotionOnly);
+                fatherV19MotionOnly,
+                playerV6MotionOnly);
             int qaLayer = CreateIsolatedQaScene(bundle);
 
             Directory.CreateDirectory(buildRoot);
@@ -225,6 +259,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? "FamilyCompanyFatherV18StableArmWalkV74MapQa.exe"
                     : fatherV19MotionOnly
                         ? "FamilyCompanyFatherV19MeshyOnePackage613MapQa.exe"
+                    : playerV6MotionOnly
+                        ? "FamilyCompanyPlayerV6MeshyOnePackage613MapQa.exe"
                     : "FamilyCompanyStarterOffice3DCandidateQa.exe");
             var options = new BuildPlayerOptions
             {
@@ -273,11 +309,13 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         private static AssetBundle LoadAssets(
             bool fatherV18StaticOnly,
             bool fatherV18MotionOnly = false,
-            bool fatherV19MotionOnly = false)
+            bool fatherV19MotionOnly = false,
+            bool playerV6MotionOnly = false)
         {
             int exclusiveModes = (fatherV18StaticOnly ? 1 : 0) +
                                  (fatherV18MotionOnly ? 1 : 0) +
-                                 (fatherV19MotionOnly ? 1 : 0);
+                                 (fatherV19MotionOnly ? 1 : 0) +
+                                 (playerV6MotionOnly ? 1 : 0);
             if (exclusiveModes > 1)
                 throw new InvalidOperationException("Father QA candidate modes are mutually exclusive.");
             CandidateDefinition[] definitions = fatherV18StaticOnly
@@ -286,6 +324,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     ? new[] { new CandidateDefinition("father", FatherV18MotionModelPath) }
                 : fatherV19MotionOnly
                     ? new[] { new CandidateDefinition("father", FatherV19MotionModelPath) }
+                : playerV6MotionOnly
+                    ? new[] { new CandidateDefinition("player", PlayerV6MotionModelPath) }
                 : Candidates;
             var prefabs = new GameObject[definitions.Length];
             for (var index = 0; index < definitions.Length; index++)
@@ -341,6 +381,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     true,
                     false,
                     false,
+                    false,
                     FatherV18StaticQaScenePath);
             }
 
@@ -367,6 +408,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     false,
                     true,
                     false,
+                    false,
                     FatherV18MotionQaScenePath);
             }
 
@@ -391,7 +433,35 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     false,
                     false,
                     true,
+                    false,
                     FatherV19MotionQaScenePath);
+            }
+
+            if (playerV6MotionOnly)
+            {
+                AssetDatabase.ImportAsset(
+                    PlayerV6MotionTexturePath,
+                    ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                    PlayerV6MotionTexturePath);
+                if (texture == null)
+                    throw new InvalidOperationException(
+                        "Player V6 one-package texture did not load: " +
+                        PlayerV6MotionTexturePath);
+                AnimationClip motionWalkClip = LoadHumanClip(
+                    PlayerV6MotionModelPath,
+                    "Casual_Walk_inplace");
+                return new AssetBundle(
+                    prefabs,
+                    motionWalkClip,
+                    null,
+                    texture,
+                    definitions,
+                    false,
+                    false,
+                    false,
+                    true,
+                    PlayerV6MotionQaScenePath);
             }
 
             AssetDatabase.ImportAsset(
@@ -411,6 +481,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 null,
                 null,
                 definitions,
+                false,
                 false,
                 false,
                 false,
@@ -553,6 +624,63 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             return created;
         }
 
+        private static Material EnsurePlayerV6SurfaceMaterial(GameObject prefab)
+        {
+            Material source = ResolveImportedSurfaceMaterial(prefab);
+            Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                PlayerV6MotionTexturePath);
+            if (albedo == null)
+                throw new InvalidOperationException(
+                    "Player V6 one-package albedo could not be loaded from " +
+                    PlayerV6MotionTexturePath);
+
+            string directory = Path.GetDirectoryName(ProjectPath(PlayerV6SurfaceMaterialPath));
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(PlayerV6SurfaceMaterialPath);
+            if (material == null)
+            {
+                material = new Material(source);
+                AssetDatabase.CreateAsset(material, PlayerV6SurfaceMaterialPath);
+            }
+            else
+            {
+                EditorUtility.CopySerialized(source, material);
+            }
+
+            material.name = "PlayerV6MeshyOnePackageSurface";
+            material.mainTexture = albedo;
+            material.color = Color.white;
+            if (material.HasProperty("_Metallic"))
+                material.SetFloat("_Metallic", 0f);
+            if (material.HasProperty("_Glossiness"))
+                material.SetFloat("_Glossiness", 0.22f);
+            if (material.HasProperty("_Smoothness"))
+                material.SetFloat("_Smoothness", 0.22f);
+            if (material.HasProperty("_SpecColor"))
+                material.SetColor("_SpecColor", new Color(0.20f, 0.20f, 0.20f, 1f));
+            if (material.HasProperty("_EmissionColor"))
+                material.SetColor("_EmissionColor", Color.black);
+            if (material.HasProperty("_EmissionMap"))
+                material.SetTexture("_EmissionMap", null);
+            material.DisableKeyword("_EMISSION");
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+
+            EditorUtility.SetDirty(material);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(
+                PlayerV6SurfaceMaterialPath,
+                ImportAssetOptions.ForceSynchronousImport);
+            Material created = AssetDatabase.LoadAssetAtPath<Material>(
+                PlayerV6SurfaceMaterialPath);
+            if (created == null)
+                throw new InvalidOperationException(
+                    "Could not create Player V6 surface material " +
+                    PlayerV6SurfaceMaterialPath + ".");
+            return created;
+        }
+
         private static int CreateIsolatedQaScene(AssetBundle bundle)
         {
             EnsureAssetFolder("Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes");
@@ -572,12 +700,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             var root = new GameObject("~Family3DStarterOfficeCandidateQa_ExperimentalOnly");
             var qa = root.AddComponent<Family3DStarterOfficeCandidateQa>();
             Camera camera = CreateOverlayCamera(root.transform, qaLayer);
-            if (bundle.FatherV19MotionOnly)
+            if (bundle.FatherV19MotionOnly || bundle.PlayerV6MotionOnly)
                 ExcludeLayerFromExistingLights(scene, qaLayer);
             CreateCandidateLight(
                 root.transform,
                 qaLayer,
-                bundle.FatherV19MotionOnly ? 1.0f : 1.2f);
+                bundle.FatherV19MotionOnly || bundle.PlayerV6MotionOnly ? 1.0f : 1.2f);
             if (bundle.FatherV18StaticOnly)
                 qa.ConfigureFatherStaticRootMotionOnly(
                     bundle.Prefabs[0],
@@ -614,6 +742,17 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     false,
                     false,
                     sourceAuthoredCycleSeconds: FatherV19AuthoredCycleSeconds);
+            else if (bundle.PlayerV6MotionOnly)
+                qa.ConfigurePlayerNative613Package(
+                    bundle.Prefabs[0],
+                    bundle.StaticAlbedo,
+                    EnsurePlayerV6SurfaceMaterial(bundle.Prefabs[0]),
+                    bundle.WalkClip,
+                    camera,
+                    qaLayer,
+                    PlayerV6FacingOffsetDegrees,
+                    PlayerV6StrideOfficeUnits,
+                    PlayerV6AuthoredCycleSeconds);
             else
                 qa.Configure(
                     bundle.Prefabs[0],
@@ -639,7 +778,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             Material material = renderer == null ? null : renderer.sharedMaterial;
             if (material == null || material.shader == null)
                 throw new InvalidOperationException(
-                    "Imported Father V19 surface material is missing from the one-package FBX.");
+                    "Imported surface material is missing from the one-package FBX.");
             return material;
         }
 
@@ -753,7 +892,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 coordinateMapping =
                     "production Camera.WorldToViewportPoint(actor XY/Z) -> overlay ViewportPointToRay -> Y=0 plane; raw XZ fallback",
                 directionMapping =
-                    bundle.FatherV19MotionOnly
+                    bundle.FatherV19MotionOnly || bundle.PlayerV6MotionOnly
                         ? "measured QA ground displacement -> LookRotation + candidate-specific measured facing offset; 360 degrees/second corner blend"
                         : "measured QA ground displacement -> LookRotation + restored V72 clean-rig -16.9219 degree measured model-forward offset; 360 degrees/second corner blend",
                 motionMapping = bundle.FatherV18StaticOnly
@@ -762,6 +901,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? "actual Father OfficeRuntimeAgent position/direction/GaitPhase01 -> V72 clean V4 lower-body/torso sanitation and action 613 at poseStrength 1; only final arms use stable V66 body-side swing"
                     : bundle.FatherV19MotionOnly
                         ? "locomotion: actual Father position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613; isolated desk-work flag: production seat route/state + separate neutral seated pose and endpoint IK only after locomotion ends"
+                    : bundle.PlayerV6MotionOnly
+                        ? "actual player position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613"
                     : "Position + LastActualDisplacement + GaitPhase01 + CurrentDirection -> Family3DWalkActor",
                 scalePolicy = bundle.FatherV18StaticOnly
                     ? "every frame source Father sprite projected bounds height == V18 renderer projected bounds height; <=0.5% error; grounded"
@@ -769,6 +910,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? "one locked uniform scale calibrated from the restored V72 clean V4 idle bounds to the live Father sprite; no per-pose rescaling"
                     : bundle.FatherV19MotionOnly
                         ? "one locked uniform scale calibrated from the one-package authored pose to the live Father sprite; no per-pose rescaling"
+                    : bundle.PlayerV6MotionOnly
+                        ? "one locked uniform scale calibrated from the one-package authored pose to the live player sprite; no per-pose rescaling"
                     : "live production SpriteRenderer bounds projected viewport height",
                 source2DPolicy =
                     "QA-only Renderer.forceRenderingOff replaces all four legacy workstation desk/chair pixels with V31 original-chair atomic visuals; semantic furniture, sorting data and transforms are never assigned or deleted",
@@ -787,6 +930,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 fatherV18StaticOnly = bundle.FatherV18StaticOnly,
                 fatherV18MotionOnly = bundle.FatherV18MotionOnly,
                 fatherV19MotionOnly = bundle.FatherV19MotionOnly,
+                playerV6MotionOnly = bundle.PlayerV6MotionOnly,
                 staticMapScaleTolerance = Family3DStarterOfficeCandidateQa.StaticMapScaleTolerance,
                 staticTextureAsset = bundle.FatherV18StaticOnly
                     ? FatherV18StaticTexturePath
@@ -794,6 +938,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? FatherV18MotionTexturePath
                     : bundle.FatherV19MotionOnly
                         ? FatherV19MotionTexturePath
+                    : bundle.PlayerV6MotionOnly
+                        ? PlayerV6MotionTexturePath
                         : string.Empty,
                 staticTextureSha256 = bundle.FatherV18StaticOnly
                     ? Sha256Asset(FatherV18StaticTexturePath)
@@ -801,6 +947,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? Sha256Asset(FatherV18MotionTexturePath)
                     : bundle.FatherV19MotionOnly
                         ? Sha256Asset(FatherV19MotionTexturePath)
+                    : bundle.PlayerV6MotionOnly
+                        ? Sha256Asset(PlayerV6MotionTexturePath)
                         : string.Empty,
                 idleClipAsset = bundle.FatherV18MotionOnly
                     ? FatherV18MotionIdleClipPath
@@ -816,6 +964,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? FatherV18MotionWalkClipPath
                     : bundle.FatherV19MotionOnly
                         ? FatherV19MotionModelPath
+                    : bundle.PlayerV6MotionOnly
+                        ? PlayerV6MotionModelPath
                         : WalkClipPath,
                 walkClipSha256 = bundle.FatherV18StaticOnly
                     ? string.Empty
@@ -823,6 +973,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? Sha256Asset(FatherV18MotionWalkClipPath)
                     : bundle.FatherV19MotionOnly
                         ? Sha256Asset(FatherV19MotionModelPath)
+                    : bundle.PlayerV6MotionOnly
+                        ? Sha256Asset(PlayerV6MotionModelPath)
                         : Sha256Asset(WalkClipPath),
                 walkClipName = bundle.WalkClip == null ? string.Empty : bundle.WalkClip.name,
                 walkClipLength = bundle.WalkClip == null ? 0f : bundle.WalkClip.length,
@@ -832,11 +984,13 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? Family3DWalkActor.LockedCycleSeconds
                     : bundle.FatherV19MotionOnly
                         ? FatherV19AuthoredCycleSeconds
+                    : bundle.PlayerV6MotionOnly
+                        ? PlayerV6AuthoredCycleSeconds
                         : Family3DWalkActor.LockedCycleSeconds,
-                nativeModelClipPackage = bundle.FatherV19MotionOnly,
+                nativeModelClipPackage = bundle.FatherV19MotionOnly || bundle.PlayerV6MotionOnly,
                 motionPostProcessing = bundle.FatherV18MotionOnly
                     ? "V72 legs/pelvis/torso/head unchanged; behind-body tuck disabled; straight rigid arms with fixed-axis opposite upper-arm swing 6 degrees; elbow/wrist/finger/outward/tuck correction zero"
-                    : bundle.FatherV19MotionOnly
+                    : bundle.FatherV19MotionOnly || bundle.PlayerV6MotionOnly
                         ? "walking: none; native one-package skin and action sampled at poseStrength 1. desk-work QA only: post-locomotion neutral seated Humanoid pose plus two-hand/two-foot endpoint IK"
                     : string.Empty,
                 candidates = assets,
@@ -849,7 +1003,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         private static string ResolveBuildRoot(
             bool fatherV18StaticOnly,
             bool fatherV18MotionOnly = false,
-            bool fatherV19MotionOnly = false)
+            bool fatherV19MotionOnly = false,
+            bool playerV6MotionOnly = false)
         {
             string projectRoot = ProjectPath(string.Empty);
             string root = Path.GetFullPath(Path.Combine(
@@ -860,6 +1015,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                         ? FatherV18MotionDefaultBuildRoot
                     : fatherV19MotionOnly
                         ? FatherV19MotionDefaultBuildRoot
+                    : playerV6MotionOnly
+                        ? PlayerV6MotionDefaultBuildRoot
                         : DefaultBuildRoot));
             string outputArgument = fatherV18StaticOnly
                 ? "-family3d-father-v18-static-qa-build-output"
@@ -867,6 +1024,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     ? "-family3d-father-v18-motion-qa-build-output"
                 : fatherV19MotionOnly
                     ? "-family3d-father-v19-motion-qa-build-output"
+                : playerV6MotionOnly
+                    ? "-family3d-player-v6-motion-qa-build-output"
                     : "-family3d-starter-office-qa-build-output";
             string[] args = Environment.GetCommandLineArgs();
             for (var index = 0; index < args.Length - 1; index++)
@@ -973,6 +1132,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             public bool fatherV18StaticOnly;
             public bool fatherV18MotionOnly;
             public bool fatherV19MotionOnly;
+            public bool playerV6MotionOnly;
             public float staticMapScaleTolerance;
             public string staticTextureAsset;
             public string staticTextureSha256;
@@ -1013,6 +1173,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 bool fatherV18StaticOnly,
                 bool fatherV18MotionOnly,
                 bool fatherV19MotionOnly,
+                bool playerV6MotionOnly,
                 string qaScenePath)
             {
                 Prefabs = prefabs;
@@ -1023,6 +1184,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 FatherV18StaticOnly = fatherV18StaticOnly;
                 FatherV18MotionOnly = fatherV18MotionOnly;
                 FatherV19MotionOnly = fatherV19MotionOnly;
+                PlayerV6MotionOnly = playerV6MotionOnly;
                 QaScenePath = qaScenePath;
             }
 
@@ -1034,6 +1196,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             public bool FatherV18StaticOnly { get; }
             public bool FatherV18MotionOnly { get; }
             public bool FatherV19MotionOnly { get; }
+            public bool PlayerV6MotionOnly { get; }
             public string QaScenePath { get; }
         }
 

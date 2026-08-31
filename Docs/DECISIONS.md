@@ -1,5 +1,23 @@
 # DECISIONS
 
+## 2026-08-31 / Player V6도 same-package 613과 전체 실제 맵 GIF로 판정한다
+
+결정: 모자 없는 Player V6는 Higgsfield/Meshy 작업
+`8609013b-996c-439a-97a0-0f3dc8a50cae`가 함께 만든 메시·bind skeleton·skin weights·albedo·
+action 613을 한 패키지로 유지한다. Unity에서는 같은 FBX Avatar와
+`PlayerV6_Casual_Walk_inplace`를 `poseStrength=1`로 재생한다. Father 리그/클립, 절차 보행,
+limb rewrite, rigid-arm correction과 pose 약화는 쓰지 않는다.
+
+결정: 실제 맵 stride는 같은 build에서 `0.72/0.76/0.7950477/0.84/0.88`을 측정한 뒤 양발
+planted-speed median/RMS가 가장 균형적인 `0.7950477`을 유지한다. 발 접지 플래그는 측정한
+42-frame action-613 위상을 telemetry로만 기록하며 뼈에는 손대지 않는다.
+
+근거: raw 127 frames x 2 views와 actual-map 169 frames 전체에서 두 다리/신발·두 팔/손,
+반대 팔 스윙, 접지와 체중 이동, 네 코너 진행방향, 상체와 루프 경계를 확대 확인했다. 검수 GIF는
+실제 연속 두 번째 바퀴 frames `84..167`이며 다음 실측 frame 168과 이어진다. 자동
+`PASS_STRUCTURAL_ONLY`는 참고일 뿐 사용자 실제 GIF 승인을 대신하지 않는다. 승인 전 desk/sitting을
+추가하지 않고 `productionEligible=false`로 둔다.
+
 ## 2026-08-31 / Father V10 이전 실험은 구현 입력에서 제거한다
 
 결정: 추적 중이던 `FatherV1`/`FatherV2` 후보, 전용 Blender authoring script, 전용 Unity

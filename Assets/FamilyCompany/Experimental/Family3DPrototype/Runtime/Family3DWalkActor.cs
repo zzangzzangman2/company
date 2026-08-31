@@ -35,6 +35,7 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool clipMuscleDeltaRetarget;
         [SerializeField] private bool clipAnatomicalSanitization;
         [SerializeField] private bool clipStableBodySideArms;
+        [SerializeField] private bool authored613FootContactTelemetry;
         [SerializeField, Range(0f, 10f)] private float naturalSdTorsoUprightDegrees = 5f;
         [SerializeField, Range(0f, 12f)] private float naturalSdArmOutwardDegrees = 2f;
         [SerializeField, Range(0f, 18f)] private float naturalSdArmSwingDegrees = 6f;
@@ -170,7 +171,8 @@ namespace FamilyCompany.Experimental.Family3D
             bool useClipMuscleDeltaRetarget = false,
             bool useClipAnatomicalSanitization = false,
             bool useClipStableBodySideArms = false,
-            float sourceAuthoredCycleSeconds = 0f)
+            float sourceAuthoredCycleSeconds = 0f,
+            bool useAuthored613FootContactTelemetry = false)
         {
             familyId = id;
             visualRoot = modelRoot;
@@ -185,6 +187,7 @@ namespace FamilyCompany.Experimental.Family3D
             clipAnatomicalSanitization = useClipAnatomicalSanitization;
             clipStableBodySideArms = useClipStableBodySideArms;
             authoredCycleSeconds = Mathf.Max(0f, sourceAuthoredCycleSeconds);
+            authored613FootContactTelemetry = useAuthored613FootContactTelemetry;
         }
 
         public void ConfigureNaturalSdStyle(
@@ -847,6 +850,8 @@ namespace FamilyCompany.Experimental.Family3D
             // acceptance metric; no world-space solver is allowed to pull the mesh.
             if (dedicatedNaturalSdWalk && isMoving)
                 UpdateNaturalSdFootContacts(Mathf.Repeat(phase - phaseOffset, 1f));
+            else if (authored613FootContactTelemetry && isMoving)
+                UpdateAuthored613FootContacts(Mathf.Repeat(phase - phaseOffset, 1f));
             else
                 ResetFootPlants();
         }
@@ -1472,6 +1477,26 @@ namespace FamilyCompany.Experimental.Family3D
             // Forward heel contact begins just before phase wrap; the foot then owns the ground
             // through the long backward stance sweep and releases when the knee recovery starts.
             return legPhase >= 0.95f || legPhase < 0.56f;
+        }
+
+        private void UpdateAuthored613FootContacts(float phase)
+        {
+            // The one-package action-613 clip was measured over all 42 source frames. Its left
+            // ankle owns the floor from frames 2..18 and the right ankle owns it half a cycle
+            // later (23..39). Recording that authored stance window keeps contact telemetry
+            // independent of each generated character's ankle rest height; the previous absolute
+            // height test reported zero contacts for Player V6 even though the rendered feet were
+            // visibly planted. This is telemetry only and never moves or locks a bone.
+            leftFootContactLocked = IsAuthored613ContactPhase(phase);
+            rightFootContactLocked = IsAuthored613ContactPhase(Mathf.Repeat(phase + 0.5f, 1f));
+            leftFootPlanted = leftFootContactLocked;
+            rightFootPlanted = rightFootContactLocked;
+        }
+
+        private static bool IsAuthored613ContactPhase(float legPhase)
+        {
+            legPhase = Mathf.Repeat(legPhase, 1f);
+            return legPhase >= 2f / 42f && legPhase <= 18f / 42f;
         }
 
         private void ResetFootPlants()
