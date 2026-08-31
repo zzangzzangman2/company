@@ -1423,8 +1423,9 @@ approach, collision은 기존 atomic 2x2 set 규칙대로 회전한다.
 
 결정: `office_workstation*` / `office_swivel_chair*` standalone 구형 source/runtime/foreground와 meta 34개를
 삭제한다. visual resolver는 V31 방향 파일이 하나라도 없으면 구형 catalog로 되돌아가지 않고 실패한다.
-구형 4x3 atlas의 첫 두 셀은 다른 열 개 모듈 때문에 atlas 자체에는 남지만 cutter가 빈 이름으로 건너뛰므로
-standalone Sprite를 다시 만들 수 없다.
+2026-08-31 후속 결정으로 구형 4x3 atlas, chroma source, 남은 열 개 cut module과 atlas cutter/검증 코드도
+전부 삭제한다. 비-workstation 현행 소품은 `Tiles/Furniture`의 독립 source/runtime만 사용하고,
+책상·의자는 V31 네 방향 Resources만 사용하므로 standalone 구형 Sprite를 다시 만들 수 없다.
 
 검증: editor-broad PASS, V31 chair directional integrity PASS, player-scripts PASS. 실제 Windows Player
 시각 proof는 네 세트/네 책상 방향/네 의자 방향/legacyFlip 0을 기록했다. 이 결정은 가구 외형만 승격하며

@@ -75,9 +75,10 @@ Last updated: 2026-08-30. This file contains current handoff state only. Superse
   `-Profile player-scripts` PASS in 28.998 s, and `OfficeFurnitureBuildSystemValidation` PASS with
   `geometry=13x4`, four-direction placement/rotation, purchase, collision and save checks.
 - All 34 standalone legacy workstation/chair source, runtime, foreground and `.meta` files were
-  deleted. `OfficeBuildFurnitureVisualLibrary` hard-fails instead of returning old catalog art,
-  and the old atlas cutter skips its first two retired cells so a project rebuild cannot recreate
-  the deleted module Sprites.
+  deleted. The remaining legacy 4x3 office atlas, its ten cut modules and the entire atlas cutter/
+  validation path were also deleted on 2026-08-31. `OfficeBuildFurnitureVisualLibrary` hard-fails
+  instead of returning old desk/chair catalog art, so a project rebuild cannot recreate any retired
+  office module Sprite.
 
 Production placement rule for every later furniture asset: the rotated semantic tile footprint is
 the only authority for placement, collision, preview, sockets and runtime rendering. Physical mesh

@@ -87,13 +87,13 @@
 
 ## 타일 사무실 가구 T4
 
-- `Assets/Art/Office/Tiles/Furniture/Source/`의 12종은 OpenAI 내장 ImageGen으로 각각 독립 생성한 단일 소품 원본이다. 구형 `office_module_atlas_4x3_v1.png`에서 잘라낸 조각은 런타임 정본으로 사용하지 않는다.
-- 대상은 책상+CRT·회전의자·접수대·회의 탁자·문서 책장·팩스/복사기·정수기·소파·커피 테이블·화분·파티션·서류 캐비닛이다.
+- `Assets/Art/Office/Tiles/Furniture/Source/`에는 비-workstation 소품 10종의 독립 생성 원본만 유지한다. 구형 4x3 아틀라스와 잘라낸 모듈은 삭제되었고 빌더 입력도 아니다.
+- 현재 책상+CRT·회전의자는 승인된 V31 3D 형상을 네 방향으로 bake한 `Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture/desk_with_pc_{se,sw,nw,ne}.png`와 `swivel_chair_{se,sw,nw,ne}.png`만 사용한다.
 - 생성 규칙은 한 이미지에 한 물체, 2:1 등각 카메라, 좌상단 조명, 2000년대 한국 소형 사무실, 크림·우드·민트·복숭아 팔레트, 외곽 12~18% 안전 여백, 글자·로고·사람·바닥·이웃 소품 없음이다.
 - 생성 원본의 `#ff00ff` 배경은 공식 크로마 제거 도구로 투명화한다. 런타임은 `Runtime/`의 640×512 RGBA 하드 알파, 180 PPU, Point, mipmap 없음, 무압축 Sprite를 사용한다. 원본 visible bounds에는 X/Y가 같은 최근접 이웃 배율만 적용하며, 종류별 실제 ground anchor를 Sprite pivot으로 사용한다.
-- 회전의자 정본은 `office_swivel_chair_v3.png`다. 네 좌석이 향하는 `NorthWest` 기준으로 좌석의 열린 앞쪽은 CRT가 있는 좌상단, 등받이는 인물 뒤쪽인 우하단에 있어야 한다. 승인 좌판 중심은 runtime canvas `(313.007, 153.549)`이며 desk operator seat socket과 2px 이내로 합성한다. 좌판과 등받이 대부분은 캐릭터 뒤 base에 두고, `office_swivel_chair_front_v3.png`는 등받이의 제한된 전면 가장자리와 근접 팔걸이만 인물 위에 그린다. 고정 Y cutoff, 좌판·몸통을 덮는 넓은 전경, 의자 숨김은 금지한다.
-- CRT 업무책상 정본은 `office_workstation_v4.png`다. 바닥까지 내려오는 넓은 막음판을 쓰지 않고, 분리된 네 다리와 서랍장 아래의 바닥 틈이 보여야 한다. 실제 바닥선에는 작은 발만 닿아야 하며 책상이 바닥에 박혀 보이는 실루엣은 실패다.
-- 착석 중에는 `office_workstation_front_v4.png`가 하체 앞의 책상 모서리·앞판만 담당한다. 모니터·얼굴·머리를 덮거나 책상 전체를 항상 앞/뒤로 두면 실패다.
+- 회전의자 정본은 V31 graphite open-back chair 네 방향 세트다. 각 방향은 실제 swivel-foot contact를 ground `(320,64)`, seat `(320,145.848)`에 고정하며 mirror나 단일 방향 fallback을 금지한다.
+- CRT 업무책상 정본은 V31 dark-walnut desk 네 방향 세트다. 책상·CRT·키보드·의자는 같은 타일 기저로 90도씩 회전하고, 각 방향의 operator/work socket은 bake 측정값을 사용한다.
+- V31 책상·의자는 별도 foreground 조각이나 구형 착석 마스크를 사용하지 않는다. 캐릭터와의 깊이 정렬은 semantic seat와 현재 direction sprite의 sort/ground anchor로만 결정한다.
 - runtime canvas의 footprint는 ground 한 점 추정이 아니라 승인된 네 점 폴리곤이다. 1×1·2×1 모두 320×160 등각 타일 투영 네 모서리와 각 점 2px 이내여야 하며, 비균등 확대나 종류별 런타임 위치 보정으로 맞추지 않는다.
 - 가족의 착석 anchor는 256×256 프레임에서 실제 pelvis와 실제 손을 클릭해 member/direction/clip/frame별로 저장한다. 수치 통과를 위해 신체 밖의 가상 hand/pelvis 좌표를 쓰지 않는다. 승인 항목은 source Sprite SHA-256을 함께 저장하며, v5는 네 가족의 `NorthWest` SitDown 4 + Work 6 + StandUp 4, 총 56장을 승인한다.
 
@@ -135,14 +135,6 @@
 - 각 `Portraits/`의 `simul` 정본 원화 9종은 변경하지 않는다.
 - 각 `Pixel/HighMotion/<id>_pixel_walk8dir6_{a,b}_v1.png`는 원화의 얼굴, 머리, 복장, 대표 소지품을 유지한 런타임 번역이다.
 - 공통 셀 순서와 Point·180 PPU·하드 알파 규칙은 다른 가족 도트와 같다.
-
-## 사무실 도트 모듈 레거시 입력
-
-- 아틀라스: `Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png`
-- 개별 Sprite: `Assets/Art/Office/Pixel/Modules/`
-- 12종: CRT 업무책상, 회전의자, 접수대, 4인 회의탁자, 서류장, 팩스·복사기, 정수기, 2인 소파, 커피탁자, 화분, 유리 파티션, 4단 캐비닛
-- 상태: LEGACY TOOLCHAIN INPUT, NOT RUNTIME CANON. 현재 runtime 가구 정본은 `Assets/Art/Office/Tiles/Furniture/Runtime/`과 `OfficeFurnitureVisualCatalog` v3이다.
-- atlas와 `Modules/`는 Editor builder/검증 코드가 참조하므로 참조 제거와 도구 교체 전에는 삭제하지 않는다.
 
 ## Starter Office 이동 방향·배치 표현 규칙
 

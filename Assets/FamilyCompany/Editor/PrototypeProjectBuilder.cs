@@ -26,22 +26,11 @@ namespace FamilyCompany.Editor
         public const string TitleHeroAssetPath = "Assets/Art/UI/Resources/Title/family_company_title_hero_v1.png";
         public const string KoreaHistoryRegistryAssetPath = "Assets/FamilyCompany/Content/History/company_registry_korea_2000_2026.json";
         public const string SisterFrameFolder = "Assets/Art/Characters/OlderSister/Pixel/HighMotion/Frames";
-        public const string OfficeModuleAtlasPath = "Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png";
-        public const string OfficeModuleFolder = "Assets/Art/Office/Pixel/Modules";
         private const string MaterialFolder = "Assets/FamilyCompany/Generated/Materials";
         private static readonly string[] PlayerFrameNames =
             HighMotionCharacterArtBuilder.GetFrameNames("player");
         private static readonly string[] SisterFrameNames =
             HighMotionCharacterArtBuilder.GetFrameNames("older_sister");
-        private static readonly string[] OfficeModuleNames =
-        {
-            // The first two atlas cells are retired. Leave them unnamed so a project rebuild can
-            // never recreate the deleted legacy workstation/chair module Sprites.
-            "", "", "office_reception_counter", "office_meeting_table",
-            "office_document_bookcase", "office_fax_copier", "office_water_dispenser", "office_sofa",
-            "office_coffee_table", "office_potted_plant", "office_partition", "office_filing_cabinet"
-        };
-
         private static Material _wood;
         private static Material _lightWood;
         private static Material _cream;
@@ -60,7 +49,6 @@ namespace FamilyCompany.Editor
             EnsureFolder(MaterialFolder);
             HighMotionCharacterArtBuilder.Validate();
             OfficePresentationAssetIntegration.EnsureFrameSets();
-            ConfigureOfficeModuleAtlas();
             CreateMaterials();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -675,98 +663,6 @@ namespace FamilyCompany.Editor
             }
 
             return result;
-        }
-
-        private static void ConfigureOfficeModuleAtlas()
-        {
-            ConfigurePixelAtlas(OfficeModuleAtlasPath, OfficeModuleFolder, OfficeModuleNames, 4, 3, 180f);
-        }
-
-        private static void ConfigurePixelAtlas(
-            string sourcePath,
-            string outputFolder,
-            string[] frameNames,
-            int columns,
-            int rows,
-            float pixelsPerUnit)
-        {
-            if (frameNames.Length != columns * rows)
-            {
-                throw new ArgumentException("Frame name count must match the atlas grid.", nameof(frameNames));
-            }
-
-            EnsureFolder(outputFolder);
-            AssetDatabase.ImportAsset(sourcePath, ImportAssetOptions.ForceSynchronousImport);
-            var importer = AssetImporter.GetAtPath(sourcePath) as TextureImporter;
-            if (importer == null)
-            {
-                throw new FileNotFoundException("Pixel atlas not found.", sourcePath);
-            }
-
-            importer.textureType = TextureImporterType.Default;
-            importer.isReadable = true;
-            importer.alphaIsTransparency = true;
-            importer.mipmapEnabled = false;
-            importer.filterMode = FilterMode.Point;
-            importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.maxTextureSize = 2048;
-            importer.SaveAndReimport();
-
-            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(sourcePath);
-            if (texture == null)
-            {
-                throw new InvalidDataException($"Pixel atlas could not be loaded: {sourcePath}");
-            }
-
-            if (texture.width < columns || texture.height < rows)
-            {
-                throw new InvalidDataException(
-                    $"Pixel atlas is too small for a {columns}x{rows} grid: {texture.width}x{texture.height}");
-            }
-
-            for (var row = 0; row < rows; row++)
-            {
-                for (var column = 0; column < columns; column++)
-                {
-                    var frameIndex = row * columns + column;
-                    var frameName = frameNames[frameIndex];
-                    if (string.IsNullOrWhiteSpace(frameName)) continue;
-                    var left = Mathf.RoundToInt(column * texture.width / (float)columns);
-                    var right = Mathf.RoundToInt((column + 1) * texture.width / (float)columns);
-                    var top = Mathf.RoundToInt(row * texture.height / (float)rows);
-                    var bottom = Mathf.RoundToInt((row + 1) * texture.height / (float)rows);
-                    var cellWidth = right - left;
-                    var cellHeight = bottom - top;
-                    var pixels = texture.GetPixels(
-                        left,
-                        texture.height - bottom,
-                        cellWidth,
-                        cellHeight);
-                    var frameTexture = new Texture2D(cellWidth, cellHeight, TextureFormat.RGBA32, false);
-                    frameTexture.name = frameName;
-                    frameTexture.SetPixels(pixels);
-                    frameTexture.Apply(false, false);
-                    var framePath = $"{outputFolder}/{frameName}.png";
-                    File.WriteAllBytes(Path.GetFullPath(framePath), frameTexture.EncodeToPNG());
-                    Object.DestroyImmediate(frameTexture);
-                    AssetDatabase.ImportAsset(framePath, ImportAssetOptions.ForceSynchronousImport);
-                    var frameImporter = AssetImporter.GetAtPath(framePath) as TextureImporter;
-                    if (frameImporter == null) throw new InvalidDataException($"Frame import failed: {framePath}");
-                    frameImporter.textureType = TextureImporterType.Sprite;
-                    frameImporter.spriteImportMode = SpriteImportMode.Single;
-                    frameImporter.spritePixelsPerUnit = pixelsPerUnit;
-                    frameImporter.alphaIsTransparency = true;
-                    frameImporter.mipmapEnabled = false;
-                    frameImporter.filterMode = FilterMode.Point;
-                    frameImporter.textureCompression = TextureImporterCompression.Uncompressed;
-                    frameImporter.maxTextureSize = 1024;
-                    frameImporter.SaveAndReimport();
-                }
-            }
-
-            importer = AssetImporter.GetAtPath(sourcePath) as TextureImporter;
-            importer.isReadable = false;
-            importer.SaveAndReimport();
         }
 
         private static void CreateStatusLabel(string displayName, OfficeWorkerAgent agent, Transform parent, float height)

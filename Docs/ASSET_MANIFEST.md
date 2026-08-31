@@ -194,32 +194,6 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
 - SHA-256: 8BCFC0D6B32A03324697346390F839654EEF262A5EB126F887E09760F80DB901
 - 제작: 사용자가 제공한 두 사무실 화면은 공간 구성 참고로만 사용하고, OpenAI 내장 이미지 생성 도구로 독자적인 2000년대 초반 가족회사 사무실을 생성했다.
 
-## 사무실 도트 모듈
-
-### 정본 아틀라스
-
-- 경로: Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png
-- 상태: CANONICAL PROP ATLAS V1
-- 용도: 3D 충돌 모듈 위에 교체·배치할 2000년 한국풍 등각 사무실 소품
-- 규격: 2048x1024 RGBA, 4열x3행, 알파 0/255, 네 모서리 투명
-- 내용: CRT 업무책상, 민트 회전의자, 접수대, 4인 회의탁자, 서류장, 팩스·복사기, 정수기, 복숭아색 소파, 커피탁자, 화분, 유리 파티션, 4단 캐비닛
-- SHA-256: F03B7D7CFA6CB0BC51D7DCB4ADB2BFD5B455BC5FAD75D399FA1FF27EB6D62CB8
-- 제작: OpenAI 내장 imagegen. SIMUL v3 앵커는 렌더링 문법, 사무실 도트 타깃은 등각 시점·팔레트, 가족회사 타이틀은 2000년 소품 참조로 분리 사용
-- 투명화: 마젠타 크로마를 픽셀용 하드 키로 제거
-
-### 생성 원본
-
-- 경로: Assets/Art/Office/Pixel/Source/office_module_atlas_4x3_chroma_v1.png
-- 상태: SOURCE
-- SHA-256: 6EB68B29C967DA52C321DA942AF96FF4DB53B4912FFBCEE95C7CFD5A9153722B
-
-### 개별 Unity Sprite
-
-- 경로: Assets/Art/Office/Pixel/Modules/
-- 상태: GENERATED CANONICAL MODULES
-- 개수: 12
-- 제작: 빌더가 4x3 아틀라스를 셀별 PNG로 분리한다. 원본 높이 1024가 3으로 나누어지지 않으므로 행 경계를 비율 반올림해 모든 픽셀을 손실 없이 분배한다.
-
 ## 메인 타이틀
 
 - 경로: Assets/Art/UI/Resources/Title/family_company_title_hero_v1.png
@@ -487,12 +461,12 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
   - `Floor/office_floor_wood_b_v1.png` — `16051F325C6A4D9AE0D75A3C68C8E4C9C91C5EF7E908F9152C623D93C5ABDECE`
   - `Floor/office_floor_wood_c_v1.png` — `4CB57791B61E5B32EAC1234B6FE340C57B1B220D729353D4E0340A3E1A63CFF5`
 
-## 2026-08-11 Office Tile Migration T4 가구 12종
+## 2026-08-11 Office Tile Migration T4 비-workstation 가구 10종
 
 - 생성 모드: OpenAI 내장 ImageGen. 사용자 보유 생성 에셋 권리 선언이 적용된다.
-- 스타일 참조: `Assets/Art/StyleTargets/office_isometric_pixel_target_v1.png`, `Assets/Art/Office/Pixel/office_module_atlas_4x3_v1.png`, 새 workstation 시안을 화풍·카메라 참고로만 사용했다. 구형 아틀라스의 잘린 개별 조각은 사용하지 않았다.
+- 스타일 참조: `Assets/Art/StyleTargets/office_isometric_pixel_target_v1.png`. 삭제된 구형 4x3 아틀라스와 잘라낸 모듈은 참조·입력·fallback으로 사용하지 않는다.
 - 공통 프롬프트 요약: “Family Company SIMUL-v3의 선명한 등각 픽셀 아트로 2000년대 한국 소형 사무실 소품 하나만 생성. 같은 2:1 카메라·좌상단 조명·크림/우드/민트/복숭아 팔레트, 평면 `#ff00ff` 배경, 12~18% 여백, 잘림·이웃 물체·바닥·그림자·사람·문자·로고 없음.” 각 생성에서는 소품명과 시대 세부 형태만 바꿨다.
-- 원본 루트: `Assets/Art/Office/Tiles/Furniture/Source/`. 각 소품은 ImageGen 회수본 `_chroma_v2.png`와 공식 `remove_chroma_key.py --auto-key border --soft-matte --despill --edge-contract 1` 결과 `_alpha_v2.png`를 함께 보존한다.
+- 원본 루트: `Assets/Art/Office/Tiles/Furniture/Source/`. 현재 비-workstation 소품은 ImageGen 회수본 `_chroma_v2.png`와 공식 `remove_chroma_key.py --auto-key border --soft-matte --despill --edge-contract 1` 결과 `_alpha_v2.png`를 함께 보존한다. 책상·의자는 이 파이프라인에서 제거되었고 문서 상단의 V31 방향 세트만 사용한다.
 - 투명 원본 SHA-256:
   - `office_coffee_table_alpha_v2.png` — `4B315502627C5AE40EDADB08E54629261A7A876E3612FF3133EDEABA8C19B2B0`
   - `office_document_bookcase_alpha_v2.png` — `50AA802510D4F2C002753AFFECDFF3574C8F5DF11B78FD83E06B264B3CDEC9F7`
@@ -503,9 +477,7 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
   - `office_potted_plant_alpha_v2.png` — `51C950AE1135DAA75A612EA9C511A4CCD91BF725496DCB9E9D15539810128229`
   - `office_reception_counter_alpha_v2.png` — `A3E1171343CFE44B2A9C9886907A84905EA47EFCEBE00E839E80F09395456328`
   - `office_sofa_alpha_v2.png` — `4952CAAC215BA225B642D435B6FD5599A3F8FCD59BA64F6BD569C0070C650473`
-  - `office_swivel_chair_alpha_v2.png` — `C233124DD83CAB7020DC305E2F185738A9B57841CC8278BD6128A18028276A18`
   - `office_water_dispenser_alpha_v2.png` — `1B0502317D3D9216ED725024F8F29B4D5D46F7FAAC9EF6F157D662B0323C0C29`
-  - `office_workstation_alpha_v2.png` — `DE00FC8168130F596341D9DB240F0B399CEEDE7F7234177919E0B660278C4D66`
 - 런타임 루트: `Assets/Art/Office/Tiles/Furniture/Runtime/`. `OfficeFurnitureAssetBuilder`가 visible bounds에 `min(maxWidth/sourceWidth, maxHeight/sourceHeight)` 단일 배율을 적용해 640×512 하드 알파·180 PPU·Point·mipmap 없음·무압축으로 재현한다. 종류별 실제 ground anchor가 pivot이며 반복 빌드 SHA가 같아야 한다. 착석 가림은 고정 Y 절단이 아니라 원본 좌표의 명시적 폴리곤 마스크 front Sprite다.
 - 런타임 SHA-256:
   - `office_coffee_table_v2.png` — `B5948088A9E5BDABDD45F1AF1E745C8BC8CB2CDFF5EF00BC298DAD5561F2582C`
@@ -517,11 +489,7 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
   - `office_potted_plant_v2.png` — `DEB01641AB43CF50962C9664C8B04F88779935359B821D13371E077679624581`
   - `office_reception_counter_v2.png` — `668E5BB0F19E91D111E08B6624FBC0882718262B09FF161DE39F57E8EF477031`
   - `office_sofa_v2.png` — `09AD2A48A78A92E69C51461C0BCBEC4C49CDBE1DEEBB23B81E217EBC58DD0E9B`
-  - `office_swivel_chair_v3.png` — `78E36D15B9940A808DD24C5D31D16A3F3D10037E6597391609D3350EA8A57BA4`
   - `office_water_dispenser_v2.png` — `283B6D26B1E0EE254FCFE3D8CBB7AB32A233924D3DB36BD5FEC3F0FDCAE705B1`
-  - `office_workstation_v4.png` — `AAD471C666F84AED60008A5EADD9E6F8E86857A6E0C67B1ABF95070F9B2C1626`
-  - `office_swivel_chair_front_v3.png` — `22D60EF8FD3A7A33CF8B3226B8B3ACF46AAA15A519ACE6E8B20BDFCF3D939E73`
-  - `office_workstation_front_v4.png` — `762B63AF9A583EDF1F9243D7F182BFDA7155C362E5A25067F07F405708006B36`
 
 ### T4 건축·편집 자판기 4방향
 
@@ -533,39 +501,13 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
 - runtime SHA-256: SE `8AE66D1F6269B8559E7E2C84D451760FA5319F8E4C9D09265F6A8D32EBE54462`, SW `BD487C055EB4F62F506D9094B8FDD4CE2670CE7AD01B3C6773899F9AD06F7A6E`, NW `8D0E486A264B3A724C3104C81F6B5F95630744B9109F2880401973D28ADA8C36`, NE `24A806A0C301FD30EF2D8E985A6FA3483BD279C0A658C0431AACA8B42DDBCA9A`.
 - `OfficeBuildVendingArtBuilder` 정본 규격: 640×512 RGBA hard alpha, 180 PPU, Point, mipmap 없음, 무압축, ground pivot `(320,28)`, 24px 이상 safety margin. 반복 빌드 SHA, 방향별 고유성, front/rear 분류, Resources exact selection, visible magenta fringe 0을 Unity 6000.3.21f1에서 검증했다.
 
-### T4 사용자 캡처 교정 자산
-
-- 생성 모드: OpenAI 내장 ImageGen. 기존 SIMUL-v3 팔레트와 2000년대 민트·우드 CRT 사무실 문법을 유지한 정밀 단일 소품 편집이다.
-- 의자 프롬프트 핵심: 착석 인물이 좌상단 CRT를 보는 `NorthWest` 방향, 열린 좌석 앞은 좌상단, 등받이는 인물 뒤 우하단, 사람·책상·바닥·그림자·문자 없음, 균일 `#ff00ff` 배경.
-- 책상 프롬프트 핵심: CRT·키보드·마우스·전화기·카메라·팔레트는 유지하고 바닥까지 닿는 넓은 옆판/앞판은 모두 제거, 서로 분리된 네 다리와 작은 발, 서랍장 아래 넓은 바닥 틈, 균일 `#ff00ff` 배경.
-- 공식 후처리: `remove_chroma_key.py --auto-key border --soft-matte --transparent-threshold 18 --opaque-threshold 210 --despill --edge-contract 1`.
-- 최종 원본 및 SHA-256:
-  - `office_swivel_chair_northwest_chroma_v3.png` — `83CD917A61A943F6D1EAFFE2C35643DDE2CA4AF824AD3CE4820894477F7A950F`
-  - `office_swivel_chair_northwest_alpha_v3.png` — `869B32F4A522099A2B52A4F0A9391C667565BB5E0E4D5F228C535FAA4C96FCC3`
-  - `office_workstation_chroma_v4.png` — `84EFD59E4BCAD817064F8901E00153E8747FEB1F75F943DBBFD557576FA8BD46`
-  - `office_workstation_alpha_v4.png` — `D913C6160C9AD32FA30618F796A7BB40C4A3EABC1AE02E337F8BFBC40D1ADD43`
-- 최종 런타임 및 SHA-256:
-  - `office_swivel_chair_v3.png`과 `office_workstation_v4.png`는 위 균일 스케일 SHA가 정본이다.
-  - `office_swivel_chair_front_v3.png`과 `office_workstation_front_v4.png`는 base와 canvas·PPU·pivot이 같은 명시적 전경 마스크다.
-  - 고정 Y cutoff로 만들었던 `office_swivel_chair_backrest_v3.png`는 폐기·제거했다.
-- Visual authoring 정본: `OfficeFurnitureVisualCatalog.asset`(12종 ground/sort, chair seat, workstation work-surface)과 `OfficeCharacterSeatPoseCatalog.asset`(가족 4명 `NorthWest` pelvis/interaction)이다.
-- 최종 Office Tycoon QA SHA-256:
-  - `after-office-tile-tycoon-overview-1920x1080.png` — `7F2BEABA46E3F17772BE7320006001F1F98A62D4671831A5FDC089BC3B9056B8`
-  - `after-office-tile-tycoon-seated-1920x1080.png` — `CBBDEF833119A8A0F16363020E539C2EDACAA013056B30FA8665AF1F5CF9079C`
-  - `after-office-tile-tycoon-anchors-1920x1080.png` — `0417AC0C10C7F89112C1498108EF5762FF5DA4D0F8AFFC7A91C63790433362D4`
-  - `after-office-tile-tycoon-occlusion-1920x1080.png` — `9BD71AE9E7B71A794F76FA034AC1382595D17BFF88AC71FB04E9650BF6B7D750`
-  - `office-tile-tycoon-alignment-report.txt` — `3C08FB502057D89CAE59FF0B6AA8C68C49641C396E44F9C73272DA4F8797C069`
-- 규격: 320×160 2:1 RGBA, 알파 0/255, 남은 마젠타 프린지 0, Sprite Single, 180 PPU, Point, mipmap 없음, 무압축. 같은 이름의 `.asset` 3개가 실제 Unity `Tile` 정본이다.
-- 프롬프트 핵심: 밝고 캐주얼한 2000년대 한국 소형 사무실의 허니 오크 장판, 정확히 3개 동일 외곽 등각 다이아몬드, 미세한 판재 변형, 어둡거나 금색 위주의 고급 팔레트 금지, 텍스트·로고·워터마크 없음.
-
 ## 2026-08-11 Office Tycoon Alignment V2 calibration
 
 - 정본 에셋: `Assets/FamilyCompany/Presentation.Unity/OfficeGrid/Authoring/OfficeFurnitureVisualCatalog.asset`, `OfficeCharacterSeatPoseCatalog.asset`.
-- 버전: 가구 catalog는 `calibrationVersion: 2`, 캐릭터 pose catalog는 `calibrationVersion: 5`다. 캐릭터 catalog에는 사람 승인된 `NorthWest` SitDown 4 + Work 6 + StandUp 4를 네 가족별로 저장해 총 56개이며, 모든 항목이 source Sprite SHA-256을 가진다.
-- 가구 데이터: 각 정의는 독립 네 점 ground footprint, 의미 footprint 폭/높이, ground/sort를 가진다. desk는 operator seat `(390.445, 49.329)`와 work socket, chair는 seat `(313.007, 153.549)`를 가진다.
-- mask 판정: `office_workstation_front_v4.png`는 책상 앞 모서리·다리·서랍의 제한 전경으로 사용한다. `office_swivel_chair_front_v3.png`는 승인 catalog가 참조하며, 착석 중 등받이와 근접 팔걸이를 인물 위에 그리는 의자 전면 레이어다.
+- 버전: 가구 catalog는 `calibrationVersion: 3`, 캐릭터 pose catalog는 `calibrationVersion: 5`다. 캐릭터 catalog에는 사람 승인된 `NorthWest` SitDown 4 + Work 6 + StandUp 4를 네 가족별로 저장해 총 56개이며, 모든 항목이 source Sprite SHA-256을 가진다.
+- 가구 데이터: 각 정의는 독립 네 점 ground footprint, 의미 footprint 폭/높이, ground/sort를 가진다. 책상·의자 항목은 V31 방향 리소스의 ground/seat/operator/work anchor를 사용하며 foreground 또는 구형 catalog fallback이 없다.
 - 편집기: `OfficeTycoonAlignmentCalibrationWindow.cs`가 100/200/400% 픽셀 보기, 네 점·socket, clip/frame onion skin, workstation 합성을 제공한다. 합성 승인 전에는 값을 저장할 수 없다.
-- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 runtime PNG를 결정론적으로 재생성하며, 착석 v5 승격은 기존 v4 정적 4개 또는 완전한 v5 56개에서만 허용한다. 구형 v3의 scale/rotation 후보는 자동 이관하지 않는다. 승인 프로필은 빌드 때 원본 SHA를 다시 계산하고 scale `1`, rotation `0`을 강제한다.
+- 빌드 불변식: `OfficeFurnitureAssetBuilder`는 현재 비-workstation runtime PNG를 결정론적으로 재생성한다. V31 책상·의자는 별도 4방향 리소스로 고정되며 구형 아틀라스나 단일 방향 소품으로 재생성하지 않는다. 착석 승인 프로필은 빌드 때 원본 SHA를 다시 계산하고 scale `1`, rotation `0`을 강제한다.
 - QA 산출물 루트: `Artifacts/OfficeTycoonAlignmentV2/`. 정본 검증기는 `OfficeTycoonAlignmentV2Qa.StartBatch`이며 Preview 45초와 Starter 60초를 분리 실행한다.
 - 승인 SHA: player `D02E4A5E...59519D`, older_sister `1C7F25EC...FD92C3`, father `60B90628...A4C7E`, mother `1F8D8A29...E54FF7`.
 - 승인 상태: authored Sprite 기준 네 명 모두 rotation `0°`, pose scale `1.000`, hand↔work `0.538px`, pelvis↔seat `0px`, chair↔desk `0px`로 PASS했다. 실제 Windows RenderTexture 기준 hand↔work는 `0.239px`이며 desk front의 얼굴 overlap은 네 명 모두 0, 하체 overlap은 모두 양수다. 실제 합성은 `Artifacts/SeatedSpriteRootCauseV3/starter-office-four-seat-work.png`와 가족별 `*-work-closeup.png`, 수치 보고서는 `seated-sprite-root-cause-v3-report.txt`다.
@@ -573,7 +515,7 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
 ## Starter Office Runtime V1 semantic assets
 
 - `Assets/FamilyCompany/Content/Resources/OfficeLayouts/StarterOfficeV1.asset`
-  - 상태: FURNISHED LEGACY/QA SEMANTIC FIXTURE V1
+  - 상태: SAVE-COMPATIBILITY/QA SEMANTIC FIXTURE V1
   - 내용: 13×13 floor/walkability, 17 furniture records, placement subcell anchors, 네 workstation/seat/approach binding
   - 용도: 기존 저장 호환과 출근·좌석 회귀 QA. 실제 새 게임은 코드의 `CreateNewGameEmptyOfficeV1()` 바닥·외곽 shell을 사용한다.
 - `Assets/FamilyCompany/Content/Resources/HighMotion/HighMotionDirectionManifest.asset`
