@@ -1,5 +1,16 @@
 # DECISIONS
 
+## 2026-08-31 / Father V10 이전 실험은 구현 입력에서 제거한다
+
+결정: 추적 중이던 `FatherV1`/`FatherV2` 후보, 전용 Blender authoring script, 전용 Unity
+identity/runtime-2D lab와 generated Father material을 삭제한다. 로컬 `Artifacts`의 Father V1~V9
+build/runtime/diagnostic 출력도 폐기한다. 현재 입력은 Father V19 one-package FBX/albedo/action 613과
+V31 actual-map evidence뿐이다.
+
+범위 예외: production/default/Downloads/배포 실행본, Father V14 승인 외형 자료, 현재 V19/V31,
+다른 가족 자산과 기존 미추적 `FatherV18CleanBipedRigV3`는 삭제하지 않는다. 게임/save/schema의 v1~v9는
+Father 실험 버전이 아니므로 이 결정의 대상이 아니다.
+
 ## 2026-08-28 / drawer details use the drawer cabinet front, not the desk front
 
 결정: V27 3D 책상의 `Desk_DrawerLine_*`와 `Desk_DrawerHandle_*` forward 좌표는

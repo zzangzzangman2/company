@@ -11,16 +11,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string CandidateRoot = PrototypeRoot + "Candidates/";
         public const string PlayerCandidateModelPath =
             CandidateRoot + "PlayerV3/player-v6-blender-humanoid-v3.fbx";
-        public const string FatherCandidateModelPath =
-            CandidateRoot + "FatherV1/father-blender-humanoid-v1.fbx";
         public const string MotherCandidateModelPath =
             CandidateRoot + "MotherV1/mother-blender-humanoid-v1.fbx";
         public const string OlderSisterCandidateModelPath =
             CandidateRoot + "OlderSisterV1/older-sister-blender-humanoid-v1.fbx";
         public const string PlayerRuntime2DV2CandidateModelPath =
             CandidateRoot + "PlayerV4/player-runtime2d-humanoid-v4.fbx";
-        public const string FatherRuntime2DV2CandidateModelPath =
-            CandidateRoot + "FatherV2/father-blender-humanoid-v2.fbx";
         public const string MotherRuntime2DV2CandidateModelPath =
             CandidateRoot + "MotherV2/mother-blender-humanoid-v2.fbx";
         public const string OlderSisterRuntime2DV2CandidateModelPath =
@@ -90,7 +86,6 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public static bool IsIdentityCandidate(string path)
         {
             return string.Equals(path, PlayerCandidateModelPath, StringComparison.Ordinal) ||
-                   string.Equals(path, FatherCandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, MotherCandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, OlderSisterCandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, FatherApprovedV14CandidateModelPath, StringComparison.Ordinal) ||
@@ -115,7 +110,6 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public static bool IsRuntime2DV2Candidate(string path)
         {
             return string.Equals(path, PlayerRuntime2DV2CandidateModelPath, StringComparison.Ordinal) ||
-                   string.Equals(path, FatherRuntime2DV2CandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, MotherRuntime2DV2CandidateModelPath, StringComparison.Ordinal) ||
                    string.Equals(path, OlderSisterRuntime2DV2CandidateModelPath, StringComparison.Ordinal);
         }

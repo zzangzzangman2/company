@@ -90,6 +90,10 @@ tile-placement rule”.
 ## Current handoff: Father V19 walk + V31 original-chair atomic workstation
 
 - The user approved the Father V19 one-package actual-map walk and restored colour with `좋아잘된당`.
+- Father V1/V2 candidates and their dedicated legacy authoring/Unity labs were removed on
+  2026-08-31. Local Father build/runtime/diagnostic outputs whose iteration was V1..V9 were moved
+  out of the workspace to avoid accidental reuse. Do not restore them as implementation inputs;
+  the current source is Father V19 and the current visual proof is V31.
 - Locked locomotion input: the same Higgsfield/Meshy mesh, bind skeleton, skin weights and action 613 from one package.
 - Current workstation proof: `FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE`.
 - V31 creates four `V31_AtomicWorkstationSet_OriginalChair_<seat>` roots. Each root owns one complete
