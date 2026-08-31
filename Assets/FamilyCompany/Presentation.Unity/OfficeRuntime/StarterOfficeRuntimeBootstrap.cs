@@ -113,7 +113,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     public sealed class StarterOfficeRuntimeBootstrap : MonoBehaviour
     {
         private const float PlayerV8ProductionCollisionRadius = 0.28f;
-        private const float FatherV19ProductionCollisionRadius = 0.46f;
+        private const float FatherV19ProductionCollisionRadius = 0.33f;
         private static readonly string[] FamilyMemberIds =
             { "player", "older_sister", "father", "mother" };
         // Candidates are content only until the player hires them. Creating all eight candidates

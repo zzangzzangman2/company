@@ -9,10 +9,14 @@
 없다.
 
 결정: 정적 가구 경로·의자 도킹 반경 `0.22`와 사람끼리의 3D 실루엣 반경을 분리한다. 동적 반경은
-Player `0.28`, Father `0.46`이며 `OfficeRuntimeOccupancy`의 peer 충돌·예약·침범 측정에만 사용한다.
+Player `0.28`, Father `0.33`이며 `OfficeRuntimeOccupancy`의 peer 충돌·예약·침범 측정에만 사용한다.
 가구 통과 판정과 seat docking은 기존 검증된 `0.22`를 유지한다.
 
-검증: Unity `6000.3.21f1` D3D11에서 정면 동시 접근 시 두 사람 모두 이동했고 agent block `50`,
+보정: Father의 크기는 구형 2D sprite bounds를 production에서 다시 환산하지 않는다. 사용자 승인
+V31 receipt의 exact scale `1.012728333`, target height `1.885507822`를 고정한다. 잘못된 동적 환산값
+`1.437899/2.677095`는 Player보다 약 44% 크게 보이게 한 오류이므로 폐기한다.
+
+검증: Unity `6000.3.21f1` D3D11에서 정면 동시 접근 시 두 사람 모두 이동했고 agent block `47`,
 penetration `0`, 별도 투명 렌더 실루엣의 공통 픽셀 `0`을 확인했다. 이어 세 개의 실제 구매 V31
 세트에서 `seat_player/seat_father`, `Working/Working`, static/interaction/agent `0/0/0`, 구형 visible
 renderer `0`을 확인했다. 정본 증거는 `Evidence/PlayerFather3DProduction/`이다.

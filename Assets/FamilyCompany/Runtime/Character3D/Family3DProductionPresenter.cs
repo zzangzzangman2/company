@@ -24,6 +24,8 @@ namespace FamilyCompany.Runtime.Character3D
         public const int ProductionLayer = 30;
         public const float PlayerApprovedModelScale = 1.024378657f;
         public const float PlayerApprovedTargetHeight = 1.857258558f;
+        public const float FatherApprovedModelScale = 1.012728333f;
+        public const float FatherApprovedTargetHeight = 1.885507822f;
         public const float ApprovedStrideOfficeUnits = 0.7950477f;
         public const float ApprovedCycleSeconds = 1.4f;
         public const float ApprovedFacingOffsetDegrees = 0f;
@@ -190,8 +192,8 @@ namespace FamilyCompany.Runtime.Character3D
                 FatherAlbedoResourcePath,
                 FatherMaterialResourcePath,
                 FatherWalkClipName,
-                0f,
-                ResolveApprovedHeightFromRetiredSprite(runtimeFather));
+                FatherApprovedModelScale,
+                FatherApprovedTargetHeight);
             characters.Add(player);
             characters.Add(father);
             characterById.Add(player.AgentId, player);
@@ -270,10 +272,10 @@ namespace FamilyCompany.Runtime.Character3D
             };
             skinned[0].sharedMaterial = runtimeMaterial;
 
-            float rawHeight = Mathf.Max(EncapsulateBounds(skinned).size.y, 0.0001f);
-            float appliedScale = lockedModelScale > 0f
-                ? lockedModelScale
-                : approvedTargetHeight / rawHeight;
+            if (lockedModelScale <= 0f || approvedTargetHeight <= 0f)
+                throw new InvalidOperationException(
+                    productionName + " requires a receipt-locked model scale and map height.");
+            float appliedScale = lockedModelScale;
             model.transform.localScale *= appliedScale;
             Bounds scaledBounds = EncapsulateBounds(skinned);
             model.transform.position += Vector3.up * (0f - scaledBounds.min.y);
@@ -297,17 +299,6 @@ namespace FamilyCompany.Runtime.Character3D
             host.SetActive(true);
             walkActor.Initialize();
             walkActor.RebaseVisualRootAfterScale();
-            if (lockedModelScale <= 0f &&
-                Mathf.Abs(walkActor.StandingHeight - approvedTargetHeight) > 0.001f)
-            {
-                float mapHeightCorrection = approvedTargetHeight /
-                                            Mathf.Max(walkActor.StandingHeight, 0.0001f);
-                model.transform.localScale *= mapHeightCorrection;
-                appliedScale *= mapHeightCorrection;
-                Bounds correctedBounds = EncapsulateBounds(skinned);
-                model.transform.position += Vector3.up * (ground.y - correctedBounds.min.y);
-                walkActor.RebaseVisualRootAfterScale();
-            }
             if (Mathf.Abs(walkActor.StandingHeight - approvedTargetHeight) > 0.02f)
                 throw new InvalidOperationException(
                     productionName + " map height drifted: actual=" +
@@ -636,33 +627,6 @@ namespace FamilyCompany.Runtime.Character3D
             Vector2 position = actor.Position;
             return MapOfficeWorldToProductionGround(
                 new Vector3(position.x, position.y, actor.transform.position.z));
-        }
-
-        private float ResolveApprovedHeightFromRetiredSprite(OfficeRuntimeAgent actor)
-        {
-            SpriteRenderer renderer = actor == null ? null : actor.PresentationRenderer;
-            if (renderer == null || renderer.sprite == null || sourceOfficeCamera == null ||
-                overlayCamera == null)
-                throw new InvalidOperationException(
-                    "Father V19 production scale requires the canonical hidden map-size bounds.");
-            Bounds bounds = renderer.bounds;
-            Vector3 sourceBottom = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
-            Vector3 sourceTop = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
-            Vector3 bottomViewport = sourceOfficeCamera.WorldToViewportPoint(sourceBottom);
-            Vector3 topViewport = sourceOfficeCamera.WorldToViewportPoint(sourceTop);
-            if (bottomViewport.z <= 0f || topViewport.z <= 0f)
-                throw new InvalidOperationException(
-                    "Father V19 canonical map-size bounds are behind the production camera.");
-            float spriteViewportHeight = Mathf.Abs(topViewport.y - bottomViewport.y);
-            Vector3 productionGround = MapOfficeActorToProductionGround(actor);
-            float groundViewportY = overlayCamera.WorldToViewportPoint(productionGround).y;
-            float metreViewportY = overlayCamera.WorldToViewportPoint(
-                productionGround + Vector3.up).y;
-            float viewportHeightPerMetre = Mathf.Abs(metreViewportY - groundViewportY);
-            if (spriteViewportHeight <= 0.000001f || viewportHeightPerMetre <= 0.000001f)
-                throw new InvalidOperationException(
-                    "Father V19 canonical production map-size calibration is unmeasurable.");
-            return spriteViewportHeight / viewportHeightPerMetre;
         }
 
         private Vector3 MapOfficeWorldToProductionGround(Vector3 sourceWorld)

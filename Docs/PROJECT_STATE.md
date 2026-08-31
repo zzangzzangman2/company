@@ -8,8 +8,9 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   as the only visible production bodies for those two runtime actors. Assets live under
   `Assets/FamilyCompany/Content/Resources/Production3D/{PlayerV8,FatherV19}/`; the authoritative
   adapter is `Assets/FamilyCompany/Runtime/Character3D/Family3DProductionPresenter.cs`.
-- Production locks are scale `1.024378657`, standing height `1.857258558`, map stride `0.7950477`,
-  authored walk cycle `1.4 s`, full pose strength and `0.18 s` whole-body turns. The FBX's own
+- Production locks are Player scale/height `1.024378657/1.857258558`, Father scale/height
+  `1.012728333/1.885507822`, map stride `0.7950477`, authored walk cycle `1.4 s`, full pose strength
+  and `0.18 s` whole-body turns. Father never derives size from a retired sprite. Each FBX's own
   Humanoid Avatar, skin and `PlayerV6_Casual_Walk_inplace` clip stay together.
 - The old selectable Player sprite presentations, contact-frame Resources, PSB/FBX authoring labs,
   bakers, importers and their dedicated QAs were deleted. The simulation still supplies its
@@ -29,8 +30,8 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   Player/workstation renderers `0/0`. Tracked screenshot and receipt:
   [Evidence/PlayerV8Production/README.md](Evidence/PlayerV8Production/README.md).
 - Player and Father each move through the real `OfficeRuntimeAgent` path and sit at their own
-  purchased V31 seat. Peer avoidance uses visible-body radii `0.28/0.46`, while proven static
-  furniture/docking clearance remains `0.22`. A head-on D3D11 run recorded blocked agent moves `50`,
+  purchased V31 seat. Peer avoidance uses visible-body radii `0.28/0.33`, while proven static
+  furniture/docking clearance remains `0.22`. A head-on D3D11 run recorded blocked agent moves `47`,
   penetrations `0`, rendered silhouette overlap pixels `0`, then `Working/Working` at
   `seat_player/seat_father` with static/interaction/agent violations `0/0/0`. Evidence:
   [Evidence/PlayerFather3DProduction/README.md](Evidence/PlayerFather3DProduction/README.md).

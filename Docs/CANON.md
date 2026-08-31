@@ -16,9 +16,10 @@
 > 한 몸만 표시한다. 프로덕션 FBX·albedo·material은
 > `Assets/FamilyCompany/Content/Resources/Production3D/{PlayerV8,FatherV19}/`, 런타임 소유자는
 > `Family3DProductionPresenter`다. Player scale `1.024378657`, height
-> `1.857258558`, stride `0.7950477`, cycle `1.4 s`를 바꾸지 않는다. 구형 Player 2D 표시
+> `1.857258558`; Father scale `1.012728333`, height `1.885507822`; 공통 stride `0.7950477`,
+> cycle `1.4 s`를 바꾸지 않는다. 구형 Player 2D 표시
 > 모드와 폴백은 삭제됐고 Player/Father의 숨은 시뮬레이션용 renderer도 `forceRenderingOff`라
-> 화면에 나올 수 없다. 사람끼리 동적 반경은 Player `0.28`, Father `0.46`, 가구 경로·도킹
+> 화면에 나올 수 없다. 사람끼리 동적 반경은 Player `0.28`, Father `0.33`, 가구 경로·도킹
 > 반경은 `0.22`다. 설치된 책상·의자는 타일/상점/충돌/save 의미 상태를 그대로 쓰되 승인 V31
 > `Family3DWorkstation` 한 세트로 표시한다. Mother와 Older Sister는 승인된 3D 교체가 아직 없어
 > 이 Player 전환 범위에서 건드리지 않는다.
