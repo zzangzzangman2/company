@@ -9,9 +9,10 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   `Assets/FamilyCompany/Content/Resources/Production3D/{PlayerV8,FatherV19}/`; the authoritative
   adapter is `Assets/FamilyCompany/Runtime/Character3D/Family3DProductionPresenter.cs`.
 - Production locks are Player scale/mesh height `1.024378657/1.857258558`, Father
-  screen-standardized scale/mesh height `0.950318127/1.769311871`, map stride `0.7950477`, authored
-  walk cycle `1.4 s`, full pose strength and `0.18 s` whole-body turns. Father never derives size
-  from a retired sprite; D3D11 moving silhouettes must match within 1px and 8% area. Each FBX's own
+  screen-standardized scale/mesh height `0.950318127/1.769311871` plus horizontal proportion scale
+  `0.92`, map stride `0.7950477`, authored walk cycle `1.4 s`, full pose strength and `0.18 s`
+  whole-body turns. Father never derives size from a retired sprite; 1280x720 D3D11 moving head
+  and torso widths must each match Player within 1px. Each FBX's own
   Humanoid Avatar, skin and `PlayerV6_Casual_Walk_inplace` clip stay together.
 - The old selectable Player sprite presentations, contact-frame Resources, PSB/FBX authoring labs,
   bakers, importers and their dedicated QAs were deleted. The simulation still supplies its
@@ -31,8 +32,8 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   Player/workstation renderers `0/0`. Tracked screenshot and receipt:
   [Evidence/PlayerV8Production/README.md](Evidence/PlayerV8Production/README.md).
 - Player and Father each move through the real `OfficeRuntimeAgent` path and sit at their own
-  purchased V31 seat. Peer avoidance uses visible-body radii `0.28/0.32`, while proven static
-  furniture/docking clearance remains `0.22`. A head-on D3D11 run recorded blocked agent moves `52`,
+  purchased V31 seat. Peer avoidance uses visible-body radii `0.28/0.30`, while proven static
+  furniture/docking clearance remains `0.22`. A head-on D3D11 run recorded blocked agent moves `45`,
   penetrations `0`, rendered silhouette overlap pixels `0`, then `Working/Working` at
   `seat_player/seat_father` with static/interaction/agent violations `0/0/0`. Evidence:
   [Evidence/PlayerFather3DProduction/README.md](Evidence/PlayerFather3DProduction/README.md).

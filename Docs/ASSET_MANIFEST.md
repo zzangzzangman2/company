@@ -71,8 +71,8 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
 - clip: `FatherV19_Casual_Walk_inplace`, source frames `1..43`, 1.4 s, same FBX Avatar/skin/clip.
 - production map scale is screen-standardized against Player V8 in the shipping D3D11 camera,
   never recalculated from a retired sprite: runtime scale `0.950318127`, standing mesh height
-  `1.769311871`, stride `0.7950477`. The head-to-foot moving silhouette matches Player within one
-  pixel and rendered area within eight percent.
+  `1.769311871`, horizontal proportion scale `0.92`, stride `0.7950477`. At 1280x720 the moving
+  head widths are Player/Father `22/22px`, torso widths `30/29px`, and heights `74/72px`.
 - status: `USER_VISUAL_APPROVED_PRODUCTION`. Combined D3D11 evidence is
   `Docs/Evidence/PlayerFather3DProduction/`: overlap pixels `0`, `Working/Working`, occupancy
   `0/0/0`, retired visible renderers `0`.

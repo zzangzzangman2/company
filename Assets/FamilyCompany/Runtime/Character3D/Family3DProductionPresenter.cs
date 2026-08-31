@@ -26,6 +26,7 @@ namespace FamilyCompany.Runtime.Character3D
         public const float PlayerApprovedTargetHeight = 1.857258558f;
         public const float FatherStandardizedModelScale = 0.950318127f;
         public const float FatherStandardizedTargetHeight = 1.769311871f;
+        public const float FatherStandardizedHorizontalScale = 0.92f;
         public const float ApprovedStrideOfficeUnits = 0.7950477f;
         public const float ApprovedCycleSeconds = 1.4f;
         public const float ApprovedFacingOffsetDegrees = 0f;
@@ -184,7 +185,8 @@ namespace FamilyCompany.Runtime.Character3D
                 PlayerMaterialResourcePath,
                 PlayerWalkClipName,
                 PlayerApprovedModelScale,
-                PlayerApprovedTargetHeight);
+                PlayerApprovedTargetHeight,
+                1f);
             CharacterBinding father = CreateCharacterBinding(
                 runtimeFather,
                 "FatherV19",
@@ -193,7 +195,8 @@ namespace FamilyCompany.Runtime.Character3D
                 FatherMaterialResourcePath,
                 FatherWalkClipName,
                 FatherStandardizedModelScale,
-                FatherStandardizedTargetHeight);
+                FatherStandardizedTargetHeight,
+                FatherStandardizedHorizontalScale);
             characters.Add(player);
             characters.Add(father);
             characterById.Add(player.AgentId, player);
@@ -208,6 +211,7 @@ namespace FamilyCompany.Runtime.Character3D
                 " actors=player,father playerScale=" + player.AppliedScale.ToString("F9") +
                 " playerHeight=" + player.WalkActor.StandingHeight.ToString("F6") +
                 " fatherScale=" + father.AppliedScale.ToString("F9") +
+                " fatherHorizontalScale=" + FatherStandardizedHorizontalScale.ToString("F2") +
                 " fatherHeight=" + father.WalkActor.StandingHeight.ToString("F6") +
                 " stride=" + ApprovedStrideOfficeUnits.ToString("F7") +
                 " workstations=" + workstations.Count +
@@ -223,7 +227,8 @@ namespace FamilyCompany.Runtime.Character3D
             string materialResourcePath,
             string walkClipName,
             float lockedModelScale,
-            float approvedTargetHeight)
+            float approvedTargetHeight,
+            float horizontalScale)
         {
             GameObject modelPrefab = Resources.Load<GameObject>(modelResourcePath);
             Texture2D albedo = Resources.Load<Texture2D>(albedoResourcePath);
@@ -272,11 +277,16 @@ namespace FamilyCompany.Runtime.Character3D
             };
             skinned[0].sharedMaterial = runtimeMaterial;
 
-            if (lockedModelScale <= 0f || approvedTargetHeight <= 0f)
+            if (lockedModelScale <= 0f || approvedTargetHeight <= 0f || horizontalScale <= 0f)
                 throw new InvalidOperationException(
-                    productionName + " requires a receipt-locked model scale and map height.");
+                    productionName + " requires locked vertical, horizontal and map-height scales.");
             float appliedScale = lockedModelScale;
-            model.transform.localScale *= appliedScale;
+            model.transform.localScale = Vector3.Scale(
+                model.transform.localScale,
+                new Vector3(
+                    appliedScale * horizontalScale,
+                    appliedScale,
+                    appliedScale * horizontalScale));
             Bounds scaledBounds = EncapsulateBounds(skinned);
             model.transform.position += Vector3.up * (0f - scaledBounds.min.y);
 
