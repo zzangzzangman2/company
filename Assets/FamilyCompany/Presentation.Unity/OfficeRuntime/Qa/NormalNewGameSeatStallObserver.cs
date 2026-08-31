@@ -611,7 +611,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             for (int right = left + 1; right < present.Length; right++)
             {
                 if (Vector2.Distance(present[left].Position, present[right].Position) + 0.0001f >=
-                    present[left].AgentRadius + present[right].AgentRadius) continue;
+                    present[left].DynamicAgentRadius + present[right].DynamicAgentRadius) continue;
                 _observations[present[left].AgentId].ActorOverlapFrames++;
                 _observations[present[right].AgentId].ActorOverlapFrames++;
             }

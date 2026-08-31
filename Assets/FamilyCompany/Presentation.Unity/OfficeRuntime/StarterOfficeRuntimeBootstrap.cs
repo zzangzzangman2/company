@@ -112,6 +112,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     [DisallowMultipleComponent]
     public sealed class StarterOfficeRuntimeBootstrap : MonoBehaviour
     {
+        private const float PlayerV8ProductionCollisionRadius = 0.28f;
+        private const float FatherV19ProductionCollisionRadius = 0.46f;
         private static readonly string[] FamilyMemberIds =
             { "player", "older_sister", "father", "mother" };
         // Candidates are content only until the player hires them. Creating all eight candidates
@@ -291,7 +293,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     : index < PreferredSpawns.Length
                         ? PreferredSpawns[index]
                         : new OfficeGridCoordinate(1 + (index - PreferredSpawns.Length) % 6, 1);
-                OfficeGridCoordinate spawn = FindSpawn(preferred, usedSpawns);
+                OfficeGridCoordinate spawn = FindSpawn(
+                    preferred,
+                    usedSpawns,
+                    CollisionRadiusForMember(memberId));
                 usedSpawns.Add(spawn);
                 OfficeRuntimeAgent actor = CreateActor(memberId, memberId == "player", spawn);
                 _world.RegisterActor(actor);
@@ -532,9 +537,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             bool familyMember = Array.IndexOf(FamilyMemberIds, memberId) >= 0;
             bool controlledPlayer = playerControlled &&
                                     string.Equals(memberId, "player", StringComparison.Ordinal);
-            // Player V8 owns every visible protagonist pixel. The former 2D renderer remains only
-            // as hidden locomotion/seating state data until those simulation clocks are separated
-            // from sprites; it is fail-closed from frame zero and no command-line mode can revive it.
+            bool production3DCharacter =
+                string.Equals(memberId, "player", StringComparison.Ordinal) ||
+                string.Equals(memberId, "father", StringComparison.Ordinal);
+            // Player V8 and Father V19 own every visible pixel for their production actors. The
+            // former 2D renderers remain only as hidden locomotion/seating state data until those
+            // simulation clocks are separated from sprites; no missing-asset fallback can revive them.
             Sprite[] walkFrames = ResolveWalkFrames(memberId);
             animator.Configure(renderer, walkFrames);
             if (familyMember)
@@ -553,11 +561,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
             var actor = root.AddComponent<OfficeRuntimeAgent>();
-            if (controlledPlayer)
+            if (production3DCharacter)
             {
                 renderer.forceRenderingOff = true;
                 Debug.Log(
-                    "PLAYER_VISUAL_PRESENTATION | mode=Production3DV8 | " +
+                    "FAMILY_3D_VISUAL_PRESENTATION | member=" + memberId +
+                    " mode=" + (controlledPlayer ? "Production3DPlayerV8" : "Production3DFatherV19") +
+                    " | " +
                     "legacy2DVisible=false fallback=false");
             }
             actor.Configure(
@@ -569,7 +579,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 visual.transform,
                 animator,
                 _assetSource.CharacterSeatPoseCatalog,
-                spawn);
+                spawn,
+                OfficeRuntimeAgent.DefaultRadius,
+                CollisionRadiusForMember(memberId));
             if (playerControlled)
             {
                 var controller = root.AddComponent<OfficeRuntimePlayerController>();
@@ -626,7 +638,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private OfficeGridCoordinate FindSpawn(
             OfficeGridCoordinate preferred,
-            ISet<OfficeGridCoordinate> used)
+            ISet<OfficeGridCoordinate> used,
+            float actorRadius)
         {
             // A layout snapshot can come from a larger editor/QA grid. Seed the search at the
             // nearest cell inside the new layout; starting outside makes every in-bounds neighbor
@@ -646,7 +659,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 OfficeGridCoordinate current = queue.Dequeue();
                 if (!used.Contains(current) && _world.Grid.Contains(current) &&
-                    _world.Occupancy.IsCellPassable(current, string.Empty, string.Empty, false))
+                    _world.Occupancy.IsCellPassable(current, string.Empty, string.Empty, false) &&
+                    _world.Occupancy.CanTraverseStatic(
+                        (Vector2)_world.Presenter.CellCenterWorld(current),
+                        (Vector2)_world.Presenter.CellCenterWorld(current),
+                        actorRadius,
+                        string.Empty))
                     return current;
                 foreach (OfficeGridCoordinate offset in offsets)
                 {
@@ -655,6 +673,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
             throw new InvalidOperationException("Starter Office has no valid actor spawn cell.");
+        }
+
+        private static float CollisionRadiusForMember(string memberId)
+        {
+            if (string.Equals(memberId, "player", StringComparison.Ordinal))
+                return PlayerV8ProductionCollisionRadius;
+            if (string.Equals(memberId, "father", StringComparison.Ordinal))
+                return FatherV19ProductionCollisionRadius;
+            return OfficeRuntimeAgent.DefaultRadius;
         }
 
         private void DisableLegacyRuntime()

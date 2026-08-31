@@ -2,12 +2,12 @@
 
 Last updated: 2026-08-31. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## Production cutover: Player V8 + V31 workstation
+## Production cutover: Player V8 + Father V19 + V31 workstation
 
-- The user's 2026-08-31 instruction explicitly promotes the approved **Player V8** package as the
-  only visible production protagonist. Runtime assets now live under
-  `Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/`; the authoritative adapter is
-  `Assets/FamilyCompany/Runtime/Character3D/PlayerV8ProductionPresenter.cs`.
+- The user's 2026-08-31 instructions promote the approved **Player V8** and **Father V19** packages
+  as the only visible production bodies for those two runtime actors. Assets live under
+  `Assets/FamilyCompany/Content/Resources/Production3D/{PlayerV8,FatherV19}/`; the authoritative
+  adapter is `Assets/FamilyCompany/Runtime/Character3D/Family3DProductionPresenter.cs`.
 - Production locks are scale `1.024378657`, standing height `1.857258558`, map stride `0.7950477`,
   authored walk cycle `1.4 s`, full pose strength and `0.18 s` whole-body turns. The FBX's own
   Humanoid Avatar, skin and `PlayerV6_Casual_Walk_inplace` clip stay together.
@@ -21,14 +21,20 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   graphite open-back chair; the corresponding baked desk/chair SpriteRenderers are hidden. Shop
   thumbnails and placement ghosts continue to use the exact directional V31 sprites so their green
   footprint remains identical to the confirmed object.
-- Normal new-game D3D11 and the four-direction purchased-workstation route were revalidated in Unity
+- Normal new-game D3D11, Player/Father interaction, and the four-direction purchased-workstation
+  route were revalidated in Unity
   `6000.3.21f1`: Player V8 bound at the locked height/stride, `playerPhase=Working`, four workstation
   roots, four desk/chair directions, mesh axes `90 degrees`, maximum tile-corner error `0.0003px`,
   bent knees `107.45 degrees / 113.16 degrees`, seated chair offset `0.13001`, and visible retired
   Player/workstation renderers `0/0`. Tracked screenshot and receipt:
   [Evidence/PlayerV8Production/README.md](Evidence/PlayerV8Production/README.md).
-- Father V19 remains approved isolated input but is not promoted by this Player-only cutover.
-  Mother and Older Sister still await approved one-package 3D replacements; their current production
+- Player and Father each move through the real `OfficeRuntimeAgent` path and sit at their own
+  purchased V31 seat. Peer avoidance uses visible-body radii `0.28/0.46`, while proven static
+  furniture/docking clearance remains `0.22`. A head-on D3D11 run recorded blocked agent moves `50`,
+  penetrations `0`, rendered silhouette overlap pixels `0`, then `Working/Working` at
+  `seat_player/seat_father` with static/interaction/agent violations `0/0/0`. Evidence:
+  [Evidence/PlayerFather3DProduction/README.md](Evidence/PlayerFather3DProduction/README.md).
+- Mother and Older Sister still await approved one-package 3D replacements; their current production
   representations remain untouched.
 
 ## Family character completion boundary
@@ -38,9 +44,9 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   one-package successors and must not be described as finished.
 - The compact approval matrix, exact V8 receipts and permanent failure-prevention list are in
   [FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md](FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md).
-- Player V8 is production/default by the explicit cutover above. Its older isolated receipts remain
-  immutable historical facts (`productionEligible=false` at capture time). Father V19 remains
-  isolated; no deployed executable or Downloads copy was changed.
+- Player V8 and Father V19 are production/default by the explicit cutover above. Their older isolated
+  receipts remain immutable historical facts (`productionEligible=false` at capture time). No
+  deployed executable or Downloads copy was changed.
 
 ## Player V6 package / V8 approved appearance and production runtime
 

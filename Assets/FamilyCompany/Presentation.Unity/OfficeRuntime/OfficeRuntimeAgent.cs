@@ -276,6 +276,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public OfficeGridCoordinate? ActiveDestinationCell =>
             _destination.HasValue && !_arrived ? _destination.Value.Cell : null;
         public float AgentRadius { get; private set; } = DefaultRadius;
+        public float DynamicAgentRadius { get; private set; } = DefaultRadius;
         public OfficeRuntimeAgentPhase Phase { get; private set; }
         public OfficeRuntimeInteractionPhase InteractionPhase => _interactionPhase;
         public string ActiveInteractionId => _activeInteractionId;
@@ -551,7 +552,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             DirectionalSpriteAnimator animator,
             OfficeCharacterSeatPoseCatalog poseCatalog,
             OfficeGridCoordinate spawnCell,
-            float radius = DefaultRadius)
+            float radius = DefaultRadius,
+            float dynamicAgentRadius = -1f)
         {
             _bootstrap = bootstrap ?? throw new ArgumentNullException(nameof(bootstrap));
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -570,6 +572,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _animator.OfficeFrameApplied += HandleOfficeFrameApplied;
             _poseCatalog = poseCatalog ?? throw new ArgumentNullException(nameof(poseCatalog));
             AgentRadius = Mathf.Max(0.12f, radius);
+            DynamicAgentRadius = dynamicAgentRadius > 0f
+                ? Mathf.Max(0.12f, dynamicAgentRadius)
+                : AgentRadius;
             transform.position = _world.Presenter.CellCenterWorld(spawnCell);
             transform.localScale = Vector3.one;
             _visualRoot.localPosition = Vector3.zero;

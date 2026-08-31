@@ -240,7 +240,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             for (var frame = 0; frame < 3; frame++)
                 yield return null;
 
-            GameObject productionHost = GameObject.Find("~PlayerV8ProductionPresenter");
+            GameObject productionHost = GameObject.Find("~Family3DProductionPresenter");
             GameObject productionActor = GameObject.Find("PlayerV8ProductionHost");
             GameObject productionWorkstation = GameObject.Find(
                 "V31_AtomicWorkstationSet_OriginalChair_" + targetSeat.SeatId);
@@ -423,7 +423,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                              FindObjectsSortMode.None))
                     if (candidate != null && string.Equals(
                             candidate.gameObject.name,
-                            "PlayerV8ProductionOverlayCamera",
+                            "Family3DProductionOverlayCamera",
                             StringComparison.Ordinal))
                     {
                         overlay = candidate;

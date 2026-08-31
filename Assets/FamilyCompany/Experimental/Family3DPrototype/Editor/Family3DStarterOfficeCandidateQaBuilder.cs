@@ -60,12 +60,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV18MotionTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV18HiggsfieldStatic/father-v18-higgsfield-static-albedo.png";
         public const string FatherV19MotionModelPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-613.fbx";
+            "Assets/FamilyCompany/Content/Resources/Production3D/FatherV19/father-v19-production.fbx";
         public const string FatherV19MotionTexturePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-albedo.png";
+            "Assets/FamilyCompany/Content/Resources/Production3D/FatherV19/father-v19-albedo.png";
         public const string FatherV19SurfaceMaterialPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/" +
-            "FatherV19MeshyOnePackageSurface.mat";
+            "Assets/FamilyCompany/Content/Resources/Production3D/FatherV19/" +
+            "FatherV19ProductionSurface.mat";
         public const float FatherV19FacingOffsetDegrees = 0f;
         // One forced-map circuit is 7.950477 office units. Ten authored cycles per circuit both
         // matches the measured planted-foot velocity (least-squares optimum 0.812345) and makes
@@ -606,7 +606,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 EditorUtility.CopySerialized(source, material);
             }
 
-            material.name = "FatherV19MeshyOnePackageSurface";
+            material.name = "FatherV19ProductionSurface";
             material.mainTexture = albedo;
             material.color = Color.white;
             if (material.HasProperty("_Metallic"))

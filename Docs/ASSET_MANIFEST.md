@@ -1,7 +1,7 @@
 # ASSET MANIFEST
 
-This manifest lists the production Player V8 package first, followed by current experimental family
-inputs and canonical production assets. Retired iterations are not reusable sources.
+This manifest lists the production Player V8 and Father V19 packages first, followed by current
+family inputs and canonical production assets. Retired iterations are not reusable sources.
 
 Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-approved. Older Sister
 and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md`.
@@ -45,7 +45,7 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
   `player-v6-v8-runtime-receipt.json` SHA-256
   `C859D247429EB04DC39B33330B977D13A7A6877E780588F480782DD8A5DD4501`.
 - production runtime:
-  `Assets/FamilyCompany/Runtime/Character3D/PlayerV8ProductionPresenter.cs`,
+  `Assets/FamilyCompany/Runtime/Character3D/Family3DProductionPresenter.cs`,
   `Family3DWalkActor.cs` and `Family3DWorkstation.cs`; locked scale `1.024378657`, height
   `1.857258558`, stride `0.7950477`, cycle `1.4 s`, visible old Player/workstation renderers `0/0`.
 - production D3D11 evidence: `Docs/Evidence/PlayerV8Production/`; seated knees
@@ -54,17 +54,26 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
 - status: `USER_VISUAL_APPROVED_PRODUCTION`. The earlier tracked receipt JSON remains unchanged and
   records the isolated capture state before this explicit promotion.
 
-## Current Father V19 one-package character
+## Production Father V19 one-package character
 
 - source: Higgsfield/Meshy job `865f2115-153d-41b6-84eb-d38ca106d45d`, `multi_image_to_3d`, four cleaned views, rigging/animation/PBR/remesh on, quad 60,000, A-pose 1.65 m, action 613; charged 38 credits.
 - source GLB SHA-256: `210DC2E1160B3455CF599906721AE3698C789C6809AFBA6587C552742BB417F9`.
-- FBX: `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-613.fbx`.
+- FBX: `Assets/FamilyCompany/Content/Resources/Production3D/FatherV19/father-v19-production.fbx`.
   - SHA-256: `479F883A8A3520FDF7A1DE500DEBCDFB059241D9A436B83A7938C14C4893AEB5`.
-- albedo: `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/FatherV19MeshyOnePackage613/father-v19-meshy-one-package-albedo.png`.
+- albedo: `Assets/FamilyCompany/Content/Resources/Production3D/FatherV19/father-v19-albedo.png`.
   - SHA-256: `8C1418E17002256C2393942067852B8BE484A2095AC85976DCC1CC2B70D9962B`.
-- surface: `Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/FatherV19MeshyOnePackageSurface.mat`; emission off, metallic 0, smoothness 0.22, source texture/UV preserved.
+- surface: `Assets/FamilyCompany/Content/Resources/Production3D/FatherV19/FatherV19ProductionSurface.mat`;
+  SHA-256 `7D4C9001F3BCA561F7B3BDAAF636A22CA9950DD5EEEE662ADF52E461CBB73B36`, emission off,
+  metallic 0, smoothness 0.22, source texture/UV preserved.
+- source receipt:
+  `Assets/FamilyCompany/Content/Resources/Production3D/FatherV19/father-v19-source-receipt.json`,
+  SHA-256 `F02DD0E2FC8704490D7878C9B0151B7931C6A2374A6E31DEF14C9D55C00AD4D9`.
 - clip: `FatherV19_Casual_Walk_inplace`, source frames `1..43`, 1.4 s, same FBX Avatar/skin/clip.
-- status: walk/colour user approved as locked isolated input; production promotion is not implied.
+- production map scale is calibrated to the hidden canonical Father sprite viewport height; current
+  runtime scale `1.437899`, standing height `2.677095`, stride `0.7950477`.
+- status: `USER_VISUAL_APPROVED_PRODUCTION`. Combined D3D11 evidence is
+  `Docs/Evidence/PlayerFather3DProduction/`: overlap pixels `0`, `Working/Working`, occupancy
+  `0/0/0`, retired visible renderers `0`.
 
 ## Current Father V31 original-chair atomic workstation proof
 

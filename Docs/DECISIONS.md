@@ -1,10 +1,27 @@
 # DECISIONS
 
+## 2026-08-31 / Player V8과 Father V19를 같은 production runtime에서 함께 사용한다
+
+결정: 승인된 Father V19 one-package FBX/albedo/material을
+`Content/Resources/Production3D/FatherV19`로 승격하고 `Family3DProductionPresenter`가 실제
+`OfficeRuntimeAgent player/father` 둘의 변위·방향·착석을 각자의 Humanoid에 투영한다. 두 사람과
+각자 바인딩된 V31 세트의 구형 SpriteRenderer는 처음부터 끝까지 `forceRenderingOff`이며 fallback은
+없다.
+
+결정: 정적 가구 경로·의자 도킹 반경 `0.22`와 사람끼리의 3D 실루엣 반경을 분리한다. 동적 반경은
+Player `0.28`, Father `0.46`이며 `OfficeRuntimeOccupancy`의 peer 충돌·예약·침범 측정에만 사용한다.
+가구 통과 판정과 seat docking은 기존 검증된 `0.22`를 유지한다.
+
+검증: Unity `6000.3.21f1` D3D11에서 정면 동시 접근 시 두 사람 모두 이동했고 agent block `50`,
+penetration `0`, 별도 투명 렌더 실루엣의 공통 픽셀 `0`을 확인했다. 이어 세 개의 실제 구매 V31
+세트에서 `seat_player/seat_father`, `Working/Working`, static/interaction/agent `0/0/0`, 구형 visible
+renderer `0`을 확인했다. 정본 증거는 `Evidence/PlayerFather3DProduction/`이다.
+
 ## 2026-08-31 / 승인 Player V8과 V31 workstation을 production 기본 표시로 승격한다
 
 결정: 사용자의 명시적 교체·구형 삭제 지시에 따라 Player V8 one-package FBX, albedo,
 전용 material/shader를 `Content/Resources/Production3D/PlayerV8`로 옮기고
-`PlayerV8ProductionPresenter`가 유일한 주인공 표시를 소유한다. scale `1.024378657`, height
+`Family3DProductionPresenter`가 유일한 주인공 표시를 소유한다. scale `1.024378657`, height
 `1.857258558`, stride `0.7950477`, cycle `1.4 s`, 전신 회전 `0.18 s`, same-package Humanoid
 Avatar/skin/clip을 고정한다. 에셋 누락·Avatar 오류 시 2D로 돌아가지 않고 fail-closed한다.
 
@@ -23,7 +40,7 @@ Player/workstation renderer `0/0`을 확인했다. 빠른 hidden Player의 중�
 Working 진입 뒤 실제 `0.65 s`를 기다려 production `0.42 s` sit blend 완료를 보장했고, 양쪽
 무릎 `107.45/113.16 degrees`, chair offset `0.13001`을 별도로 통과했다. 이전 isolated receipt의
 `productionEligible=false`는 당시 사실로 보존하지만 Player에 한해 이 후속 사용자 승격 결정이
-우선한다. Father는 별도 승격되지 않았고 Mother/Older Sister는 이번 변경 대상이 아니다.
+우선한다. Father는 위 후속 결정에서 별도로 승격됐고 Mother/Older Sister는 이번 변경 대상이 아니다.
 
 ## 2026-08-31 / Player V6 색과 머리 명암은 Player 전용 재질에서만 고정한다
 

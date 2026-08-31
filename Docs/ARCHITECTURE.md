@@ -24,7 +24,7 @@ cross the data-build boundary and fall back.
 - FamilyCompany.Save: 저장 DTO와 저장소 인터페이스
 - FamilyCompany.Infrastructure.Unity: JsonUtility 기반 Korea History V1 로더와 persistentDataPath 저장 어댑터
 - FamilyCompany.Presentation.Unity: 입력, 카메라, 화면 표시, 씬 오브젝트 연결
-- FamilyCompany.Runtime.Character3D: 승인 Player V8과 배치된 V31 workstation의 production
+- FamilyCompany.Runtime.Character3D: 승인 Player V8/Father V19와 배치된 V31 workstation의 production
   3D 표시 adapter. 의미 tile, 구매, collision, path, save, seat 상태는 만들거나 저장하지 않고
   `Presentation.Unity.OfficeRuntime`의 정본 상태만 투영한다.
 - FamilyCompany.Editor: 프로토타입 씬 생성과 헤드리스 검증
@@ -78,10 +78,10 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 ## 실제 회사 이동
 
 - `StarterOfficeRuntimeBootstrap`이 플레이어와 가족 4인의 `OfficeRuntimeAgent`를 단일 소유한다. legacy `PrototypePlayerController`, `OfficeWorkerAgent`, 3D `CharacterController` 경로는 Starter Runtime이 준비되면 비활성이다.
-- `PlayerV8ProductionPresenter`는 `OfficeRuntimeAgent player`의 실제 변위·방향·seat phase를 승인
-  one-package Humanoid에 투영한다. 전용 overlay camera/layer는 같은 화면 tile anchor를 보존하며,
-  기존 Player sprite와 bound desk/chair sprite는 항상 숨긴다. 에셋/Avatar가 잘못되면 구형 시각물로
-  폴백하지 않는다.
+- `Family3DProductionPresenter`는 `OfficeRuntimeAgent player/father`의 실제 변위·방향·seat phase를
+  각자의 승인 one-package Humanoid에 투영한다. 전용 overlay camera/layer는 같은 화면 tile anchor를
+  보존하며, 기존 Player/Father sprite와 bound desk/chair sprite는 항상 숨긴다. 에셋/Avatar가
+  잘못되면 구형 시각물로 폴백하지 않는다.
 - `Family3DWorkstation`은 각 `OfficeSeatSlot`의 authoritative footprint/socket으로 V31 책상·CRT·
   키보드·의자를 한 root에 만든다. 상점 preview, 배치 가능 판정, 4방향 회전, 비용, 충돌, 좌석 소유와
   저장 ID는 계속 `OfficeLayout`/`OfficeRuntimeWorld`가 소유한다.

@@ -132,7 +132,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             if (!_configured) throw new InvalidOperationException("Starter Office world is not configured.");
             _registry.Register(actor);
-            _occupancy.RegisterActor(actor.AgentId, actor.Position, actor.AgentRadius);
+            _occupancy.RegisterActor(
+                actor.AgentId,
+                actor.Position,
+                actor.DynamicAgentRadius,
+                actor.AgentRadius);
             actor.BindR5eTrace(
                 _traceCoordinator,
                 _traceCoordinator.RegisterActor(actor));

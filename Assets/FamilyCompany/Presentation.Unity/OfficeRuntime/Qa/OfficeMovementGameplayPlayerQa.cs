@@ -374,7 +374,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 OfficeRuntimeAgent second = actors[right];
                 if (first.IsPresentationAway || second.IsPresentationAway) continue;
                 float margin = Vector2.Distance(first.Position, second.Position) -
-                               (first.AgentRadius + second.AgentRadius);
+                               (first.DynamicAgentRadius + second.DynamicAgentRadius);
                 if (margin >= -ActorOverlapTolerance) continue;
                 _actorOverlapFrames++;
                 Violation("ACTOR_OVERLAP", wallSeconds, now,

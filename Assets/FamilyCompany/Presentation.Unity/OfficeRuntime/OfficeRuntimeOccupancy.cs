@@ -90,6 +90,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public Vector2 Position;
             public Vector2 DesiredVelocity;
             public float Radius;
+            public float StaticRadius;
             public float StuckSeconds;
             public OfficeGridCoordinate CurrentCell;
             public bool IsPresent = true;
@@ -354,14 +355,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Revision++;
         }
 
-        public void RegisterActor(string agentId, Vector2 position, float radius)
+        public void RegisterActor(
+            string agentId,
+            Vector2 position,
+            float radius,
+            float staticRadius = -1f)
         {
             var canonical = RequiredId(agentId);
             if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
                 throw new ArgumentOutOfRangeException(nameof(radius));
+            float resolvedStaticRadius = staticRadius > 0f ? staticRadius : radius;
+            if (float.IsNaN(resolvedStaticRadius) || float.IsInfinity(resolvedStaticRadius))
+                throw new ArgumentOutOfRangeException(nameof(staticRadius));
             if (_actors.ContainsKey(canonical))
                 throw new InvalidOperationException("Duplicate runtime occupancy actor: " + canonical);
-            if (!PointClearsStatic(position, radius, string.Empty, out OfficeRuntimeOccupancyLayer blockedLayer))
+            if (!PointClearsStatic(
+                    position,
+                    resolvedStaticRadius,
+                    string.Empty,
+                    out OfficeRuntimeOccupancyLayer blockedLayer))
                 throw new InvalidOperationException(
                     $"Runtime actor '{canonical}' spawn intersects {blockedLayer} occupancy.");
             _actors.Add(canonical, new ActorState
@@ -369,6 +381,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 AgentId = canonical,
                 Position = position,
                 Radius = radius,
+                StaticRadius = resolvedStaticRadius,
                 CurrentCell = _presenter.NearestCell(new Vector3(position.x, position.y, 0f))
             });
         }
@@ -431,7 +444,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (!insideClaimedIngress &&
                 !PointClearsStatic(
                     position,
-                    state.Radius,
+                    state.StaticRadius,
                     permittedSeatId,
                     out OfficeRuntimeOccupancyLayer blockedLayer))
             {
@@ -471,7 +484,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (ActorState peer in _actors.Values)
             {
                 if (ReferenceEquals(peer, actor) || !peer.IsPresent) continue;
-                float required = radius + peer.Radius + 0.06f;
+                float required = actor.Radius + peer.Radius + 0.06f;
                 if (DistanceToSegment(peer.Position, exterior, interior) < required) return false;
                 OfficeGridCoordinate interiorCell = _presenter.NearestCell(
                     new Vector3(interior.x, interior.y, 0f));
@@ -513,7 +526,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (ReferenceEquals(peer, actor) || !peer.IsPresent) continue;
                     if (peer.Reservations.Contains(pointCell) && !peer.CurrentCell.Equals(pointCell))
                         return false;
-                    if (Vector2.Distance(point, peer.Position) < radius + peer.Radius - AgentContactTolerance)
+                    if (Vector2.Distance(point, peer.Position) <
+                        actor.Radius + peer.Radius - AgentContactTolerance)
                         return false;
                 }
             }
@@ -776,7 +790,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (peer.Reservations.Contains(targetCell) && !peer.CurrentCell.Equals(targetCell))
                     return false;
                 if (Vector2.Distance(targetWorld, peer.Position) <
-                    radius + peer.Radius - AgentContactTolerance) return false;
+                    actor.Radius + peer.Radius - AgentContactTolerance) return false;
             }
 
             int corridor0 = 0;
@@ -930,7 +944,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (ActorState peer in _actors.Values)
             {
                 if (ReferenceEquals(peer, self) || !peer.IsPresent) continue;
-                if (Vector2.Distance(point, peer.Position) < radius + peer.Radius - AgentContactTolerance)
+                if (Vector2.Distance(point, peer.Position) <
+                    self.Radius + peer.Radius - AgentContactTolerance)
                 {
                     dynamicOverlap = true;
                     break;
@@ -995,6 +1010,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float radius,
             string permittedSeatId)
         {
+            ActorState self = RequiredActor(agentId);
             var delta = end - start;
             var samples = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.045f));
             for (var sample = 1; sample <= samples; sample++)
@@ -1016,7 +1032,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         BlockedAgentMoveCount++;
                         return false;
                     }
-                    float margin = Vector2.Distance(point, peer.Position) - (radius + peer.Radius);
+                    float margin = Vector2.Distance(point, peer.Position) -
+                                   (self.Radius + peer.Radius);
                     if (margin >= -AgentContactTolerance) continue;
                     BlockedAgentMoveCount++;
                     return false;
@@ -1032,6 +1049,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float radius,
             string permittedSeatId)
         {
+            ActorState self = RequiredActor(agentId);
             var delta = end - start;
             var samples = Mathf.Max(1, Mathf.CeilToInt(delta.magnitude / 0.045f));
             for (var sample = 1; sample <= samples; sample++)
@@ -1045,7 +1063,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (!peer.IsPresent || string.Equals(peer.AgentId, agentId, StringComparison.Ordinal)) continue;
                     if (peer.Reservations.Contains(pointCell) && !peer.CurrentCell.Equals(pointCell))
                         return $"peer={peer.AgentId}:reserved={pointCell}";
-                    float margin = Vector2.Distance(point, peer.Position) - (radius + peer.Radius);
+                    float margin = Vector2.Distance(point, peer.Position) -
+                                   (self.Radius + peer.Radius);
                     if (margin < -AgentContactTolerance)
                         return $"peer={peer.AgentId}:overlap={margin:F3}:cell={peer.CurrentCell}";
                 }
@@ -1123,7 +1142,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (ActorState peer in _actors.Values)
             {
                 if (ReferenceEquals(peer, self) || !peer.IsPresent) continue;
-                float required = radius + peer.Radius + extraClearance;
+                float required = self.Radius + peer.Radius + extraClearance;
                 if (DistanceToSegment(peer.Position, start, end) < required) return false;
             }
             return true;

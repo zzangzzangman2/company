@@ -21,28 +21,33 @@ namespace FamilyCompany.Experimental.Family3D.Editor
     /// </summary>
     public static class Family3DHiggsfieldAlbedoImportValidation
     {
-        private const string CandidateRoot =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates";
+        private static readonly string[] CharacterRoots =
+        {
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates",
+            "Assets/FamilyCompany/Content/Resources/Production3D"
+        };
 
         /// <summary>
         /// Discovered, not listed. A hardcoded list only guards the albedos someone remembered to
         /// add to it: the clean biped rig's 4096 albedo landed on 2026-08-26 importing at 2048 with
         /// lossy compression, exactly the defect this gate exists to stop, and slipped through
-        /// because it was not on the list. Anything named *-albedo.png under Candidates is covered
-        /// from the moment it appears.
+        /// because it was not on the list. Anything named *-albedo.png under the experimental or
+        /// production character roots is covered from the moment it appears or is promoted.
         /// </summary>
         private static string[] DiscoverAlbedoPaths()
         {
-            if (!Directory.Exists(CandidateRoot))
-                return Array.Empty<string>();
-            string[] found = Directory
-                .GetFiles(CandidateRoot, "*-albedo.png", SearchOption.AllDirectories)
+            string[] found = CharacterRoots
+                .Where(Directory.Exists)
+                .SelectMany(root => Directory.GetFiles(
+                    root,
+                    "*-albedo.png",
+                    SearchOption.AllDirectories))
                 .Select(path => path.Replace(Path.DirectorySeparatorChar, '/'))
                 .OrderBy(path => path, StringComparer.Ordinal)
                 .ToArray();
             if (found.Length == 0)
                 throw new InvalidOperationException(
-                    "No *-albedo.png found under " + CandidateRoot +
+                    "No *-albedo.png found under the experimental/production character roots" +
                     "; the gate would pass by checking nothing.");
             return found;
         }

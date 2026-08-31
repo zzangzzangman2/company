@@ -1,11 +1,12 @@
 # Family 3D Experimental Prototype
 
-This folder contains isolated 3D character candidates and actual Starter Office QA. It is not a production asset source.
+This folder contains isolated 3D character QA and historical proof scenes. It is not a production
+asset source.
 
-Player V8 is no longer sourced from this folder. The approved production package is
-`Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/`, and the production runtime is
-`Assets/FamilyCompany/Runtime/Character3D/`. The old Player candidate files were moved with their
-Unity GUIDs; the descriptions below are historical proof instructions only.
+Player V8 and Father V19 are no longer sourced from this folder. Their approved production packages
+are under `Assets/FamilyCompany/Content/Resources/Production3D/`, and the production runtime is
+`Assets/FamilyCompany/Runtime/Character3D/Family3DProductionPresenter.cs`. Candidate files were
+moved with their Unity GUIDs; the descriptions below are historical proof instructions only.
 
 Completion boundary: Father V19/V31 and Player V6/V8 are the only user-approved completed family
 characters. Older Sister and Mother remain unapproved/not complete. See
@@ -45,14 +46,14 @@ proof details are consolidated in `Docs/PLAYER_V6_FULL_3D_DESK_WORK_QA_2026-08-3
 
 Father V19 is one indivisible Higgsfield/Meshy package: generated mesh, bind skeleton, skin weights and action 613. Unity uses the Avatar and clip from the same FBX at `poseStrength=1` without retarget sanitation, procedural gait or rigid-arm override.
 
-- candidate: `Candidates/FatherV19MeshyOnePackage613/`
-- FBX: `father-v19-meshy-one-package-613.fbx`
-- albedo: `father-v19-meshy-one-package-albedo.png`
-- surface: `Materials/FatherV19MeshyOnePackageSurface.mat`
+- production package: `../../Content/Resources/Production3D/FatherV19/`
+- FBX: `father-v19-production.fbx`
+- albedo: `father-v19-albedo.png`
+- surface: `FatherV19ProductionSurface.mat`
 - walk: `FatherV19_Casual_Walk_inplace`, frames `1..43`, `1.4 s`
 - map stride: `0.7950477`
 - measured forward offset: `0 degrees`
-- walk/colour status: user approved for the next isolated phase
+- walk/colour/runtime status: `USER_VISUAL_APPROVED_PRODUCTION`
 
 Do not use any retired Father rig, mixed donor clip or procedural gait as a base for this candidate.
 
