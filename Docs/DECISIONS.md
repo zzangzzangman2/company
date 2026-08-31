@@ -1,5 +1,19 @@
 # DECISIONS
 
+## 2026-08-31 / Player V6 색과 머리 명암은 Player 전용 재질에서만 고정한다
+
+결정: Player V6의 원본 알베도는 흰 tint로 그대로 사용하고,
+`PlayerV6BalancedAlbedo.shader`가 중성 fill `0.70`과 완만한 normal form `0.18`만 계산한다.
+발광, 반사, specular highlight는 사용하지 않는다. 보행 clip, Avatar, skin, stride, 방향, 착석
+보정에는 손대지 않는다.
+
+이유: 거절된 V6 표현은 전체 한 장짜리 알베도에 `0.74` 회색을 곱하고, 위 `0.61`에서 아래
+`0.047`까지 방향성이 큰 production sky probe를 다시 적용했다. 그 결과 후드와 빨강/노랑/남색이
+회색으로 죽고, 갈색 머리 다발의 밝은 결만 남아 은색 틈·발광처럼 보였다. 씬 ambient를 평탄화한
+V7은 Player는 고쳤지만 승인된 책상/의자까지 어둡게 하므로 거절했다. V8은 Player material에서만
+표현을 계산해 136프레임 전 방향에서 갈색 머리와 의상색을 유지하고 가구 조명은 그대로 둔다.
+`productionMutation=false`, `productionEligible=false`를 유지한다.
+
 ## 2026-08-31 / Player V6도 same-package 613과 전체 실제 맵 GIF로 판정한다
 
 결정: 모자 없는 Player V6는 Higgsfield/Meshy 작업
@@ -18,16 +32,16 @@ planted-speed median/RMS가 가장 균형적인 `0.7950477`을 유지한다. 발
 `PASS_STRUCTURAL_ONLY`는 참고일 뿐 사용자 실제 GIF 승인을 대신하지 않는다. 승인 전 desk/sitting을
 추가하지 않고 `productionEligible=false`로 둔다.
 
-## 2026-08-31 / Father V10 이전 실험은 구현 입력에서 제거한다
+## 2026-08-31 / Family3D 구형 구현과 산출물은 현재 두 패키지만 남기고 제거한다
 
-결정: 추적 중이던 `FatherV1`/`FatherV2` 후보, 전용 Blender authoring script, 전용 Unity
-identity/runtime-2D lab와 generated Father material을 삭제한다. 로컬 `Artifacts`의 Father V1~V9
-build/runtime/diagnostic 출력도 폐기한다. 현재 입력은 Father V19 one-package FBX/albedo/action 613과
-V31 actual-map evidence뿐이다.
+결정: Git의 Family3D 구현 입력은 Father V19 one-package와 Player V6 one-package, 두 현재 QA 장면,
+V31/V8 검수 증거만 남긴다. 탈락 Father V14/V18, Player V3/V4, 미승인 Mother/Sister 실험 후보,
+구형 Runtime2D 생성물, 구형 장면과 V27~V30/V2 증거는 제거한다. 두 현재 장면에서 삭제 후보 Unity GUID
+참조가 0임을 먼저 확인했다.
 
-범위 예외: production/default/Downloads/배포 실행본, Father V14 승인 외형 자료, 현재 V19/V31,
-다른 가족 자산과 기존 미추적 `FatherV18CleanBipedRigV3`는 삭제하지 않는다. 게임/save/schema의 v1~v9는
-Father 실험 버전이 아니므로 이 결정의 대상이 아니다.
+로컬 `Artifacts/Family3DStarterOfficeCandidateQaV1` 233개 중 현재 승인 확인용 4개만 남기고
+229개, 112.89GiB를 정리했다. Git 이력은 강제 재작성하지 않는다. production/default/Downloads/
+배포 실행본은 계속 예외이며, 게임/save/schema 버전은 Family3D 실험 버전이 아니므로 대상이 아니다.
 
 ## 2026-08-28 / drawer details use the drawer cabinet front, not the desk front
 
@@ -1504,3 +1518,19 @@ swivel-foot contact 중심으로 다시 bake하고 seat anchor를 함께 재측�
 desk origin `1:3`, desk/chair ground error `0/0`을 기록했다. 네 방향 Player proof는 exact desk/chair
 resource, `legacyFlip=0`, 최대 tile corner error `0.0003px`로 PASS했다. 가구 시스템 batch도
 `geometry=13x4`로 구매·겹침·경로·4회 회전 왕복·저장을 PASS했다.
+
+## 주인공은 전용 좌석 플래그로 아버지의 검증된 3D 착석 계약을 재사용한다 (2026-08-31)
+
+결정: 주인공 걷기 클립을 수정하지 않는다. `-family3d-player-v6-desk-work-qa`를 추가해 실제
+`player` binding과 `seat_player`를 선택하고, locomotion이 끝난 뒤에만 아버지에서 승인된
+StandingHeight 상대 중립 착석, 쿠션/골반 보정, 키보드 손목 목표와 무릎/발 endpoint IK를 주인공
+Avatar에 적용한다. Father ID나 `seat_father`를 주인공에게 묵시적으로 재사용하지 않는다.
+
+이유: 기존 주인공 빌드는 걷기 플래그만 있어 좌석 phase에서 3D를 숨기고 2D 표현으로 돌아갔다.
+그래서 아버지와 달리 다리가 뻗은 것처럼 보였으며, 메시·리그·걷기 생성 문제가 아니었다.
+
+검증: 숨김 D3D11 실제 맵 136프레임을 전부 확대 검수했다. 실제 phase는
+`Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`, 무릎은
+`106.3443°/110.4238°`, 149,395개 현재 skin vertex의 cushion/back/lumbar/stem/base 관통은 모두
+0, 네 workstation 생성 `4/4`, legacy renderer 0, static/interaction/agent violation `0/0/0`이다.
+`productionMutation=false`, `productionEligible=false`를 유지하고 사용자 GIF 승인을 기다린다.

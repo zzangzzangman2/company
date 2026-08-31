@@ -2,7 +2,17 @@
 
 Last updated: 2026-08-31. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## Player V6 no-hat one-package actual-map walk candidate
+## Family character completion boundary
+
+- Complete and user-approved: **Father V19/V31** and **Player/protagonist V6/V8** only.
+- Not complete: **Older Sister** and **Mother**. Existing legacy candidates are not approved
+  one-package successors and must not be described as finished.
+- The compact approval matrix, exact V8 receipts and permanent failure-prevention list are in
+  [FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md](FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md).
+- The isolated runtime receipts remain `productionEligible=false`; this work did not promote or
+  modify production/default/Downloads/deployed executables.
+
+## Player V6 no-hat one-package walk + seated-work candidate
 
 - The current protagonist candidate was generated from the locked no-hat Player V6 four-view
   identity as one Higgsfield/Meshy package containing mesh, bind skeleton, weights, PBR and action
@@ -16,36 +26,28 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   travel-facing and no tear/third-leg/residue. Numeric support: 42-frame/1.4 s repetition, foot
   correlation `-0.854584` raw / `-0.834884` map, hand correlation `-0.935886` raw / `-0.932847`
   map, runtime torso lean `1.490..3.390 degrees`.
-- Current build/runtime:
-  `Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV2` and
-  `.../PlayerV6MeshyOnePackage613MapRuntimeV2`; 169 captures, 1,344 samples, two circuits and
-  static/interaction/agent violations `0/0/0`.
-- Review the real continuous-loop GIFs in `Docs/Evidence/Family3DPlayerV6/`, especially
-  `player-v6-map-walk-v2-loop-tracked.gif`. The exact job, hashes, stride sweep and full visual
-  checklist are in `Docs/PLAYER_V6_MESHY_ONE_PACKAGE_WALK_QA_2026-08-31.md`.
-- Current gate is `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
-  `productionEligible=false`. Do not begin the Player desk/sitting/typing phase until the user
-  approves this actual animation.
-
-## Father V19 single-workstation interactive playtest
-
-- The isolated command-line mode `-family3d-father-v19-single-workstation-playtest` now starts from
-  the real empty 13x13 office, places exactly one production `PlaceWorkstation` Father set, hides
-  the other three actors only at the QA presentation layer, walks the real Father agent around one
-  clear 3x3 grid loop, then runs the real `seat_father` route through approach/rotation/Working.
-- An interactive run stays open with Father typing until the player window is closed. Supplying an
-  explicit runtime-output folder records the deterministic evidence and exits after 360 Working
-  frames.
-- Build:
-  `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19SingleWorkstationPlaytestBuild`.
-- Runtime evidence:
-  `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19SingleWorkstationPlaytestRuntime`.
-- Actual Windows D3D11 result: `READY`, workstation `1/1`, visible legacy workstation renderers
-  `0`, route completed, Working frames `361`, captures `203`, static/interaction/agent penetration
-  `0/0/0`, phases
-  `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`.
-- This remains an isolated review build with `productionMutation=false` and
-  `productionEligible=false`; it does not modify the production/default/Downloads executable.
+- The user accepted the walking direction/appearance sufficiently to proceed to the real desk.
+  The walk remains unchanged. The rejected grey presentation multiplied the complete one-material
+  albedo by `0.74` and let the production sky probe vary from `0.61` overhead to `0.047` below; at
+  map scale this killed the red/yellow/navy clothing and left silver-looking gaps between hair
+  locks. Current V8 preserves the source albedo at white tint and uses the Player-only
+  `PlayerV6BalancedAlbedo` shader with neutral fill `0.70` plus soft normal form `0.18`. It has no
+  emission, reflection or specular path and does not recolour approved workstation visuals.
+- Current seated/appearance build/runtime:
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV8PlayerOnlyBalancedColor`
+  and `.../PlayerV6MeshyOnePackage613MapRuntimeV8PlayerOnlyBalancedColor`. The explicit
+  `-family3d-player-v6-desk-work-qa` path runs the real `seat_player` route and reuses the approved
+  Father StandingHeight-relative cushion, pelvis, wrist, knee and ankle correction on the Player's
+  own Avatar.
+- The final seated proof has 136 ordered captures, 813 samples, 361 Working observations, knee
+  angles `106.3443° / 110.4238°`, 149,395 baked skin vertices with chair-part penetration `0`, four
+  expected/created workstation visuals, legacy renderers `0`, and static/interaction/agent
+  violations `0/0/0`.
+- Review the current V8 candidate in
+  [PLAYER_V6_FULL_3D_DESK_WORK_QA_2026-08-31.md](PLAYER_V6_FULL_3D_DESK_WORK_QA_2026-08-31.md),
+  especially `player-v6-v6-v8-color-hair-comparison.png`, the full-map GIF and tracked-close GIF.
+  Current gate remains
+  `USER_VISUAL_APPROVED_ISOLATED`, `productionMutation=false`, `productionEligible=false`.
 
 ## Production office shop: atomic V31 CRT desk + open-back-chair set
 
@@ -140,7 +142,7 @@ tile-placement rule”.
 Final isolated evidence:
 
 - Build: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV26AtomicOriginalChair`
-- Runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV31AtomicOriginalChair`
+- Runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV31AtomicOriginalChair-CompanyPullFull`
 - Tracked full GIF: [father-v19-v31-original-chair-atomic-set-full.gif](Evidence/Family3DFatherV19V31/father-v19-v31-original-chair-atomic-set-full.gif)
 - Tracked close GIF: [father-v19-v31-original-chair-atomic-set-close.gif](Evidence/Family3DFatherV19V31/father-v19-v31-original-chair-atomic-set-close.gif)
 - Tracked equality comparison: [father-v19-v31-v29-visual-equality.png](Evidence/Family3DFatherV19V31/father-v19-v31-v29-visual-equality.png) (left V29, right V31; identical pixels)
@@ -212,7 +214,9 @@ Read in this order:
 3. [FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md](FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md);
 4. [FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md](FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md).
 
-Do not stage or delete the pre-existing untracked `FatherV18CleanBipedRigV3` folder/meta. Do not touch production/default/Downloads/deployed executables. On a company PC, Unity and Blender must run hidden/background only.
+The superseded Family3D candidates and QA outputs were cleaned on 2026-08-31 after current-scene
+GUID verification. Do not touch production/default/Downloads/deployed executables. On a company
+PC, Unity and Blender must run hidden/background only.
 
 ## Project runtime baseline
 

@@ -81,6 +81,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const float PlayerV6FacingOffsetDegrees = 0f;
         public const float PlayerV6StrideOfficeUnits = 0.7950477f;
         public const float PlayerV6AuthoredCycleSeconds = 1.4f;
+        public const float PlayerV6QaLightIntensity = 0.38f;
+        public const float PlayerV6MaterialAmbientFactor = 0.70f;
+        public const float PlayerV6MaterialKeyFactor = 0.18f;
         public const string MotherModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/MotherV1/mother-blender-humanoid-v1.fbx";
         public const string DefaultBuildRoot =
@@ -92,7 +95,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string FatherV19MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV26AtomicOriginalChair";
         public const string PlayerV6MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV1";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV8PlayerOnlyBalancedColor";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -114,24 +117,34 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         [MenuItem("Family Company/Experimental/Build Starter Office 3D Candidate QA")]
         public static void BuildMenu()
         {
-            Build(ResolveBuildRoot(false), false);
+            Build(
+                ResolveBuildRoot(false, false, false, true),
+                false,
+                false,
+                false,
+                true);
         }
 
         [MenuItem("Family Company/Experimental/Create Starter Office 3D Candidate QA Scene Only")]
         public static void CreateSceneOnlyMenu()
         {
             ThrowIfInteractiveSceneIsDirty();
-            AssetBundle bundle = LoadAssets(false);
+            AssetBundle bundle = LoadAssets(false, false, false, true);
             CreateIsolatedQaScene(bundle);
-            Debug.Log("FAMILY_3D_STARTER_OFFICE_QA_SCENE: PASS | " + QaScenePath);
+            Debug.Log("FAMILY_3D_PLAYER_V6_QA_SCENE: PASS | " + PlayerV6MotionQaScenePath);
         }
 
         public static void BuildFromCommandLine()
         {
             try
             {
-                Build(ResolveBuildRoot(false), false);
-                Debug.Log("FAMILY_3D_STARTER_OFFICE_QA_BUILD: PASS");
+                Build(
+                    ResolveBuildRoot(false, false, false, true),
+                    false,
+                    false,
+                    false,
+                    true);
+                Debug.Log("FAMILY_3D_PLAYER_V6_MESHY_ONE_PACKAGE_613_MAP_QA_BUILD: PASS");
                 EditorApplication.Exit(0);
             }
             catch (Exception exception)
@@ -146,9 +159,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         {
             try
             {
-                AssetBundle bundle = LoadAssets(false);
+                AssetBundle bundle = LoadAssets(false, false, false, true);
                 CreateIsolatedQaScene(bundle);
-                Debug.Log("FAMILY_3D_STARTER_OFFICE_QA_SCENE: PASS | " + QaScenePath);
+                Debug.Log("FAMILY_3D_PLAYER_V6_QA_SCENE: PASS | " + PlayerV6MotionQaScenePath);
                 EditorApplication.Exit(0);
             }
             catch (Exception exception)
@@ -626,7 +639,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
 
         private static Material EnsurePlayerV6SurfaceMaterial(GameObject prefab)
         {
-            Material source = ResolveImportedSurfaceMaterial(prefab);
+            ResolveImportedSurfaceMaterial(prefab);
             Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
                 PlayerV6MotionTexturePath);
             if (albedo == null)
@@ -638,28 +651,46 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
 
+            Shader balancedShader = Shader.Find(
+                "FamilyCompany/Experimental/PlayerV6BalancedAlbedo");
+            if (balancedShader == null)
+                throw new InvalidOperationException(
+                    "Player V6 balanced albedo shader did not load.");
             var material = AssetDatabase.LoadAssetAtPath<Material>(PlayerV6SurfaceMaterialPath);
             if (material == null)
             {
-                material = new Material(source);
+                material = new Material(balancedShader);
                 AssetDatabase.CreateAsset(material, PlayerV6SurfaceMaterialPath);
             }
             else
             {
-                EditorUtility.CopySerialized(source, material);
+                // Reset the serialized property table as well as the active shader. Merely
+                // switching shaders leaves the provider's ignored emission/specular values in
+                // the YAML, which is harmless at runtime but misleading during later audits.
+                var clean = new Material(balancedShader);
+                EditorUtility.CopySerialized(clean, material);
+                UnityEngine.Object.DestroyImmediate(clean);
             }
 
             material.name = "PlayerV6MeshyOnePackageSurface";
             material.mainTexture = albedo;
+            // Preserve the provider albedo exactly. Presentation fill/form are material-local so
+            // correcting the Player cannot recolour the already-approved workstation visuals.
             material.color = Color.white;
+            material.SetFloat("_AmbientFactor", PlayerV6MaterialAmbientFactor);
+            material.SetFloat("_KeyFactor", PlayerV6MaterialKeyFactor);
             if (material.HasProperty("_Metallic"))
                 material.SetFloat("_Metallic", 0f);
             if (material.HasProperty("_Glossiness"))
-                material.SetFloat("_Glossiness", 0.22f);
+                material.SetFloat("_Glossiness", 0.08f);
             if (material.HasProperty("_Smoothness"))
-                material.SetFloat("_Smoothness", 0.22f);
+                material.SetFloat("_Smoothness", 0.08f);
             if (material.HasProperty("_SpecColor"))
-                material.SetColor("_SpecColor", new Color(0.20f, 0.20f, 0.20f, 1f));
+                material.SetColor("_SpecColor", new Color(0.04f, 0.04f, 0.04f, 1f));
+            if (material.HasProperty("_SpecularHighlights"))
+                material.SetFloat("_SpecularHighlights", 0f);
+            if (material.HasProperty("_GlossyReflections"))
+                material.SetFloat("_GlossyReflections", 0f);
             if (material.HasProperty("_EmissionColor"))
                 material.SetColor("_EmissionColor", Color.black);
             if (material.HasProperty("_EmissionMap"))
@@ -705,7 +736,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             CreateCandidateLight(
                 root.transform,
                 qaLayer,
-                bundle.FatherV19MotionOnly || bundle.PlayerV6MotionOnly ? 1.0f : 1.2f);
+                bundle.PlayerV6MotionOnly
+                    ? PlayerV6QaLightIntensity
+                    : bundle.FatherV19MotionOnly
+                        ? 1.0f
+                        : 1.2f,
+                new Color(1f, 0.94f, 0.86f));
             if (bundle.FatherV18StaticOnly)
                 qa.ConfigureFatherStaticRootMotionOnly(
                     bundle.Prefabs[0],
@@ -801,7 +837,11 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             return camera;
         }
 
-        private static void CreateCandidateLight(Transform parent, int layer, float intensity)
+        private static void CreateCandidateLight(
+            Transform parent,
+            int layer,
+            float intensity,
+            Color color)
         {
             var host = new GameObject("Family3DStarterOfficeQaCandidateLight");
             host.transform.SetParent(parent, false);
@@ -809,7 +849,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             var light = host.AddComponent<Light>();
             light.type = LightType.Directional;
             light.intensity = intensity;
-            light.color = new Color(1f, 0.94f, 0.86f);
+            light.color = color;
             light.shadows = LightShadows.Soft;
             light.cullingMask = 1 << layer;
         }
@@ -902,7 +942,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : bundle.FatherV19MotionOnly
                         ? "locomotion: actual Father position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613; isolated desk-work flag: production seat route/state + separate neutral seated pose and endpoint IK only after locomotion ends"
                     : bundle.PlayerV6MotionOnly
-                        ? "actual player position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613"
+                        ? "locomotion: actual player position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613; isolated desk-work flag: production seat_player route/state + separate neutral seated pose and endpoint IK only after locomotion ends"
                     : "Position + LastActualDisplacement + GaitPhase01 + CurrentDirection -> Family3DWalkActor",
                 scalePolicy = bundle.FatherV18StaticOnly
                     ? "every frame source Father sprite projected bounds height == V18 renderer projected bounds height; <=0.5% error; grounded"
@@ -915,7 +955,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : "live production SpriteRenderer bounds projected viewport height",
                 source2DPolicy =
                     "QA-only Renderer.forceRenderingOff replaces all four legacy workstation desk/chair pixels with V31 original-chair atomic visuals; semantic furniture, sorting data and transforms are never assigned or deleted",
-                supportedPhases = bundle.FatherV19MotionOnly
+                supportedPhases = bundle.FatherV19MotionOnly || bundle.PlayerV6MotionOnly
                     ? new[]
                     {
                         "Idle(standing)",
@@ -926,6 +966,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : new[] { "Idle(standing)", "Navigating(walking)" },
                 unsupportedSeatedPolicy = bundle.FatherV19MotionOnly
                     ? "default focused walk proof still restores 2D outside standing/walking; -family3d-father-v19-desk-work-qa explicitly enables the isolated full-3D seat_father proof only"
+                    : bundle.PlayerV6MotionOnly
+                    ? "default focused walk proof still restores 2D outside standing/walking; -family3d-player-v6-desk-work-qa explicitly enables the isolated full-3D seat_player proof only"
                     : "seat approach/transitions/work/egress skip 3D and restore original 2D presentation",
                 fatherV18StaticOnly = bundle.FatherV18StaticOnly,
                 fatherV18MotionOnly = bundle.FatherV18MotionOnly,

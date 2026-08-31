@@ -2,7 +2,11 @@
 
 This folder contains isolated 3D character candidates and actual Starter Office QA. It is not a production asset source.
 
-## Current Player V6 walk input
+Completion boundary: Father V19/V31 and Player V6/V8 are the only user-approved completed family
+characters. Older Sister and Mother remain unapproved/not complete. See
+`Docs/FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md` before generating either one.
+
+## Current Player V6 walk + seated-work input
 
 The no-hat Player V6 candidate is one indivisible Higgsfield/Meshy package: mesh, bind skeleton,
 skin weights, albedo and action 613. Unity uses its own Avatar and clip at `poseStrength=1` without
@@ -11,19 +15,26 @@ Father/mixed retargeting, procedural gait, pose damping or limb correction.
 - candidate: `Candidates/PlayerV6MeshyOnePackage613/`
 - FBX: `player-v6-meshy-one-package-613.fbx`
 - albedo: `player-v6-meshy-one-package-albedo.png`
-- surface: `Materials/PlayerV6MeshyOnePackageSurface.mat`
+- surface: `Materials/PlayerV6MeshyOnePackageSurface.mat` with Player-only
+  `Shaders/PlayerV6BalancedAlbedo.shader` (`0.70` neutral fill + `0.18` soft form, exact albedo,
+  no emission/specular/reflection)
 - walk: `PlayerV6_Casual_Walk_inplace`, frames `1..43`, `1.4 s`
 - map stride: `0.7950477`; measured forward offset: `0 degrees`
 - QA scene: `Scenes/Family3DPlayerV6MeshyOnePackage613MapQa.unity`
-- build/runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV2`
-  and `.../PlayerV6MeshyOnePackage613MapRuntimeV2`
-- review: `Docs/Evidence/Family3DPlayerV6/player-v6-map-walk-v2-loop-tracked.gif`
-- status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
+- current walk/seated/appearance build/runtime:
+  `Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV8PlayerOnlyBalancedColor`
+  and `.../PlayerV6MeshyOnePackage613MapRuntimeV8PlayerOnlyBalancedColor`
+- seated flag: `-family3d-player-v6-desk-work-qa`; real `seat_player`, Player binding and unchanged
+  action-613 locomotion followed by the shared neutral seated pose and endpoint IK
+- current review: `Docs/Evidence/Family3DPlayerV6/player-v6-v8-balanced-color-close.gif`,
+  `player-v6-v8-balanced-color-full.gif` and `player-v6-v6-v8-color-hair-comparison.png`; 136
+  ordered frames, stable brown hair and restored clothing colours, knees `106.3443° / 110.4238°`,
+  chair penetration `0`, route occupancy `0/0/0`
+- status: `USER_VISUAL_APPROVED_ISOLATED`, `productionMutation=false`,
   `productionEligible=false`
 
-Do not add workstation/sitting/typing until the user approves the complete actual-map walk GIF.
-Exact generation inputs, hashes and visual findings are in
-`Docs/PLAYER_V6_MESHY_ONE_PACKAGE_WALK_QA_2026-08-31.md`.
+Exact generation inputs and hashes are in `Docs/ASSET_MANIFEST.md`; walk, seated and appearance
+proof details are consolidated in `Docs/PLAYER_V6_FULL_3D_DESK_WORK_QA_2026-08-31.md`.
 
 ## Current Father input
 
@@ -43,10 +54,10 @@ Do not use any retired Father rig, mixed donor clip or procedural gait as a base
 ## Current V31 original-chair atomic workstation proof
 
 - build: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV26AtomicOriginalChair`
-- runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV31AtomicOriginalChair`
+- runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV31AtomicOriginalChair-CompanyPullFull`
 - result: `FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE`
 - evidence: 1,051 samples, 361 work observations, 132 captures at 7.5 fps
-- status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`, `productionEligible=false`
+- status: `USER_VISUAL_APPROVED_ISOLATED`, `productionMutation=false`, `productionEligible=false`
 
 V31 preserves the user-selected V29 desk, CRT, keyboard, chair and seated composition exactly. All
 132 V31 Player frames are byte-for-byte identical to the corresponding V29 PNGs. The only visual
@@ -82,6 +93,6 @@ Do not duplicate Father version history. Follow `Docs/FAMILY_3D_WORKSTATION_CHAR
 
 - Keep every candidate on the QA layer and under Experimental/Artifacts.
 - Do not touch production/default/Downloads/deployed executables.
-- Do not stage unrelated untracked candidate files.
+- Keep only the two current one-package candidates and their current QA scenes/evidence in Git.
 - Run Unity and Blender hidden/background on a company PC.
 - Do not mark a result production eligible before the user approves the complete actual animation.

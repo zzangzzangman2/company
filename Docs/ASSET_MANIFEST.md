@@ -2,6 +2,9 @@
 
 This manifest lists current experimental 3D inputs first, followed by canonical production assets. Retired Father iterations were removed from the current manifest; they are not reusable sources.
 
+Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-approved. Older Sister
+and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md`.
+
 ## Current Player V6 no-hat one-package character
 
 - identity reference:
@@ -17,14 +20,31 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
 - albedo:
   `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-albedo.png`,
   SHA-256 `2D7A58E830E7C537E2F8029B6971A3603214FD57C07CBD5290FC8AAE3D3CBD7A`.
-- surface: `Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/PlayerV6MeshyOnePackageSurface.mat`.
+- surface: `Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/PlayerV6MeshyOnePackageSurface.mat`;
+  Player-only shader:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Shaders/PlayerV6BalancedAlbedo.shader`,
+  exact white albedo tint, neutral fill `0.70`, soft normal form `0.18`, no emission/specular/
+  reflection and no scene-wide lighting mutation.
 - clip: `PlayerV6_Casual_Walk_inplace`, source frames `1..43`, `1.4 s`, same FBX
   Avatar/skin/weights; map stride `0.7950477`, forward offset `0 degrees`.
-- evidence: `Docs/Evidence/Family3DPlayerV6/`; full-loop GIF SHA-256
-  `B415A28B3E0716CACB61CBAC6BC911EDF8597779F0C4BD844E5AA2DE11E5B583`, tracked-loop GIF
-  SHA-256 `0D37B468C7AB25881E4082DA9F162C9C54B5624A1712DC35A3D62711A6F5CC4C`.
-- status: `USER_VISUAL_REVIEW_REQUIRED`, `productionMutation=false`,
-  `productionEligible=false`. Desk/sitting/typing is not yet authorized.
+- current walk/seated evidence: `Docs/Evidence/Family3DPlayerV6/`; the V8 full and close GIFs below
+  include the unchanged same-package walk, turns, approach, sitting and Working phases.
+- current seated/appearance proof: build `PlayerV6MeshyOnePackage613MapBuildV8PlayerOnlyBalancedColor`,
+  runtime `PlayerV6MeshyOnePackage613MapRuntimeV8PlayerOnlyBalancedColor`, explicit flag
+  `-family3d-player-v6-desk-work-qa`, real `seat_player` route, 136 captures, knees
+  `106.3443° / 110.4238°`, chair penetration `0`, occupancy `0/0/0`.
+- current evidence: `player-v6-v8-balanced-color-full.gif` SHA-256
+  `039688232742D317A064658642D0CD85B7184301603EF6CFC60297726D4B82E0`;
+  `player-v6-v8-balanced-color-close.gif` SHA-256
+  `4C39CD5DFFAF4B6C9FF6BEF7C6EBE31DFFE7EE101C5E75A1F63A4EB275E0EAC6`;
+  `player-v6-v6-v8-color-hair-comparison.png` SHA-256
+  `717782D3BE0161737A2DC1F53DBB3C7A4D924E91A3A787E1EC77075A7740290E`.
+- receipts: `player-v6-v8-build-receipt.json` SHA-256
+  `280F19E73FDF9577CD23082F177726B1AC16224C0764DA3630A9E67CD11E813C`;
+  `player-v6-v8-runtime-receipt.json` SHA-256
+  `C859D247429EB04DC39B33330B977D13A7A6877E780588F480782DD8A5DD4501`.
+- status: `USER_VISUAL_APPROVED_ISOLATED`, `productionMutation=false`,
+  `productionEligible=false`.
 
 ## Current Father V19 one-package character
 
@@ -41,7 +61,7 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
 ## Current Father V31 original-chair atomic workstation proof
 
 - build: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapBuildV26AtomicOriginalChair`.
-- runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV31AtomicOriginalChair`.
+- runtime: `Artifacts/Family3DStarterOfficeCandidateQaV1/FatherV19MeshyOnePackage613MapRuntimeV31AtomicOriginalChair-CompanyPullFull`.
 - route: actual `seat_father` / `desk_father` / `chair_father`, `Idle>Navigating>ApproachingSeat>AligningSeat>RotatingToSeat>Working`.
 - receipt: 1,051 samples, 361 work observations, 132 captures, four expected/created workstations,
   visible legacy desk/chair renderers `0`, `productionMutation=false`, `productionEligible=false`.
@@ -54,7 +74,7 @@ This manifest lists current experimental 3D inputs first, followed by canonical 
   hashes match V29. Production desk/chair collision and seat-owner permissions remain semantic and
   unchanged. Actual route violations: static `0`, interaction `0`, agent penetration `0`.
 - exact next-character recipe: `Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md`.
-- isolated Father-character proof status: `USER_VISUAL_REVIEW_REQUIRED`; Higgsfield use for V31 is
+- isolated Father-character proof status: `USER_VISUAL_APPROVED_ISOLATED`; Higgsfield use for V31 is
   0 credits. The workstation geometry itself is separately promoted below.
 
 ## Production V31 workstation directional set (2026-08-29)

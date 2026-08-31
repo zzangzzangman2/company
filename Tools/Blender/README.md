@@ -1,65 +1,39 @@
-# Blender family-character tooling
+# Blender tooling for current Family3D packages
 
-Read `Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md` before running or modifying these tools. The
-the remaining legacy deliverables are isolated identity candidates, not production replacements. Each
-was authored from only its committed turnaround: no existing 2D asset, Player V1/V2, Styloo mesh,
-or other mesh/texture/decal/motion donor or fallback was used.
+Updated 2026-08-31. This folder intentionally contains only generic inspection tools and the two
+current one-package conversion scripts. Rejected manual modelling, donor, retopology, surface-fix,
+Father V14/V18 and Player V1-V5 pipelines were removed so they cannot be mistaken for the approved
+workflow.
 
-## Current builders
+## Current package conversion
 
-- Player: `build_player_v6_blender_identity_v3.py` (`--quality final`)
-- Mother: `build_mother_blender_identity_v1.py` (`--final`)
-- Older Sister: `build_older_sister_blender_identity_v1.py` (`--quality final`)
+- Father V19: `prepare_father_v19_meshy_one_package_unity.py`
+- Player/protagonist V6: `prepare_player_v6_meshy_one_package_unity.py`
 
-Father V1/V2 authoring scripts and candidates were retired and removed. The current Father is the
-one-package V19 provider asset; hidden Blender conversion uses
-`prepare_father_v19_meshy_one_package_unity.py` and must preserve its mesh, skeleton, weights and
-action 613 together.
-
-The remaining legacy final outputs contain one complete skinned mesh object, one atlas material, one atlas,
-one 23-bone armature, a bottom-centre `Root`, and the required Unity Humanoid bones. The older
-Player V1/V2 scripts and `ArtSources/Family3DBlenderPlayerDiagnosticsV1V2/` remain rejected
-diagnostics and are not valid donors or Unity candidates.
-
-Known-good Blender: official portable Blender `5.2.0 LTS`. Invocation pattern:
-
-```powershell
-& '<BLENDER>\blender.exe' --background --python '<SCRIPT>' -- `
-  --output '<OUTPUT>' --reference '<TURNAROUND>' <FINAL_FLAG>
-```
-
-Use these exact script/output/reference/final-flag combinations:
-
-| Role | Script | Output | Turnaround | Final flag |
-| --- | --- | --- | --- | --- |
-| Player | `Tools/Blender/build_player_v6_blender_identity_v3.py` | `Artifacts/Family3DBlenderPlayerV3` | `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/player-v6-3d-identity-turnaround-v1.png` | `--quality final` |
-| Mother | `Tools/Blender/build_mother_blender_identity_v1.py` | `Artifacts/Family3DBlenderMotherV1` | `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/mother-3d-identity-turnaround-v1.png` | `--final` |
-| Older Sister | `Tools/Blender/build_older_sister_blender_identity_v1.py` | `Artifacts/Family3DBlenderOlderSisterV1` | `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/older-sister-3d-identity-turnaround-v1.png` | `--quality final` |
-
-## Fail-closed FBX round trip
-
-Run `validate_family_humanoid_fbx.py` for each generated FBX:
+Both scripts preserve the provider-created mesh, bind skeleton, skin weights, UV/albedo and action
+613 as one indivisible package. Run Blender only with `--background`; never mix a donor rig/clip,
+procedural gait, limb rewrite or pose weakening into either package.
 
 ```powershell
 & '<BLENDER>\blender.exe' --background --python `
-  'Tools\Blender\validate_family_humanoid_fbx.py' -- `
-  --fbx '<CANDIDATE.fbx>' --receipt '<ROUNDTRIP_RECEIPT.json>'
+  'Tools\Blender\prepare_player_v6_meshy_one_package_unity.py' -- `
+  <script-specific arguments>
 ```
 
-The legacy validator requires exactly one mesh, one armature, one atlas material, one active UV layer as
-the sole UV0, all 23 required bones, and valid skin weights. The remaining final revalidation receipts
-are `PASS`; their sole active UV0 names are `PlayerV3AtlasUV`, `UVMap`, and
-`OlderSisterV1AtlasUV`, respectively.
+The exact inputs, options, hashes and approved state are recorded in `Docs/ASSET_MANIFEST.md` and
+`Docs/FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md`.
 
-## Canonical candidate hashes
+## Tools retained for the next one-package character
 
-| Role | FBX SHA-256 | Atlas SHA-256 |
-| --- | --- | --- |
-| Player | `80CEEC5269D229D213DEBF17B90EB99FDB93B9DB60B8D3416AAB779D1A657EA9` | `46DD6CA613465C5E65338701AECB8FF029CB22C0059716CEEC5C9ED7ED6D7C8F` |
-| Mother | `59F0FB77C23FD9BD5457E2305E86DAFACD9BB3D62F4BE079ADA8D1CC65F85E01` | `4FA4D826132C72787CA740E917BB0B29A958C31D47E062D6B7B2C4705722D9A2` |
-| Older Sister | `51EE97D6278038EDA30E24D74E62C75FC4AA00086D0C119BF76F54A2FE0B15D4` | `BAC4245933C91D5CDFBEADB9280F670CC7D1F93DA29B52BF9514EAA37B5EF48A` |
+- `analyze_generated_biped_walk.py`: inspect the returned authored walk.
+- `audit_generated_biped_skin_overlap.py`: detect cross-limb/garment skin overlap.
+- `render_character_turntable_frames.py`: deterministic multi-view still render.
+- `render_generated_biped_animation.py`: enlarged animation render.
+- `validate_family_humanoid_fbx.py`: validate Unity Humanoid structure after conversion.
+- `validate_generated_biped_skin_glb.py`: validate the provider GLB before conversion.
 
-All remaining legacy outputs remain `productionEligible: false`. The QA-only StarterOffice run passes Player
-eight-direction movement; current Father V19 validation is owned by the dedicated reuse contract and V31
-actual-map evidence rather than this legacy identity pipeline.
-Human visual review and a separate user-approved production migration remain required.
+For Mother or Older Sister, start with a new four-view provider `multi_image_to_3d` job and make a
+character-specific copy of the current conversion contract. Do not resurrect the deleted Blender
+identity builders. Follow
+`Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md` and keep the result
+`productionEligible=false` until the user approves its full actual-map animation.

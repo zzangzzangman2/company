@@ -102,6 +102,7 @@ namespace FamilyCompany.Experimental.Family3D
         private bool fatherMapWalkQa;
         private string mapWalkFamilyId = "father";
         private bool fatherDeskWorkQa;
+        private bool playerDeskWorkQa;
         private bool fatherFourDirectionDeskPoseQa;
         private bool fatherSingleWorkstationPlaytest;
         private bool fatherDeskWorkProofActive;
@@ -468,11 +469,14 @@ namespace FamilyCompany.Experimental.Family3D
                     "-family3d-father-v19-four-direction-desk-pose-qa");
                 fatherSingleWorkstationPlaytest = HasCommandLineFlag(
                     "-family3d-father-v19-single-workstation-playtest");
+                playerDeskWorkQa = HasCommandLineFlag(
+                    "-family3d-player-v6-desk-work-qa");
                 fatherDeskWorkQa = fatherSingleWorkstationPlaytest ||
                     fatherFourDirectionDeskPoseQa ||
-                    HasCommandLineFlag("-family3d-father-v19-desk-work-qa");
+                    HasCommandLineFlag("-family3d-father-v19-desk-work-qa") ||
+                    playerDeskWorkQa;
                 bool playerMapWalkQa = HasCommandLineFlag("-family3d-player-v6-map-walk-qa");
-                mapWalkFamilyId = playerMapWalkQa ? "player" : "father";
+                mapWalkFamilyId = playerMapWalkQa || playerDeskWorkQa ? "player" : "father";
                 fatherMapWalkQa = fatherDeskWorkQa ||
                     playerMapWalkQa ||
                     HasCommandLineFlag("-family3d-father-map-walk-qa") ||
@@ -715,9 +719,17 @@ namespace FamilyCompany.Experimental.Family3D
         private IEnumerator RunFatherDeskWorkProof()
         {
             yield return null;
+            string targetLabel = string.Equals(
+                mapWalkFamilyId,
+                "player",
+                StringComparison.Ordinal) ? "Player" : "Father";
+            fatherDeskCapturePrefix = playerDeskWorkQa
+                ? "player-v6-full-3d-desk-work-actual-map"
+                : "father-v19-full-3d-desk-work-actual-map";
             if (starter == null || starter.World == null)
             {
-                Fail("Father desk-work proof could not resolve the Starter Office runtime world.");
+                Fail(targetLabel +
+                     " desk-work proof could not resolve the Starter Office runtime world.");
                 Application.Quit(2);
                 yield break;
             }
@@ -746,28 +758,30 @@ namespace FamilyCompany.Experimental.Family3D
                 yield return new WaitForEndOfFrame();
             }
 
-            Binding fatherBinding = bindings.Find(candidate =>
-                string.Equals(candidate.FamilyId, "father", StringComparison.Ordinal));
-            if (fatherBinding == null)
+            Binding deskBinding = bindings.Find(candidate =>
+                string.Equals(candidate.FamilyId, mapWalkFamilyId, StringComparison.Ordinal));
+            if (deskBinding == null)
             {
-                Fail("Father desk-work proof could not resolve the rebuilt Father binding.");
+                Fail(targetLabel +
+                     " desk-work proof could not resolve the rebuilt 3D binding.");
                 Application.Quit(2);
                 yield break;
             }
 
-            OfficeRuntimeAgent father = fatherBinding.Agent;
+            OfficeRuntimeAgent deskAgent = deskBinding.Agent;
             OfficeSeatSlot seat;
             try
             {
-                seat = starter.World.Workstations.RequiredSeat("seat_father");
+                seat = starter.World.Workstations.RequiredSeat(
+                    "seat_" + mapWalkFamilyId);
                 if (!seat.HasWorkstationBinding)
                     throw new InvalidOperationException(
-                        "The real Father seat has no bound work surface.");
-                SetupV27Workstations(fatherBinding, seat, Camera.main);
+                        "The real " + targetLabel + " seat has no bound work surface.");
+                SetupV27Workstations(deskBinding, seat, Camera.main);
             }
             catch (Exception exception)
             {
-                Fail("Father desk-work setup failed: " + exception.Message);
+                Fail(targetLabel + " desk-work setup failed: " + exception.Message);
                 Debug.LogException(exception, this);
                 Application.Quit(2);
                 yield break;
@@ -779,9 +793,9 @@ namespace FamilyCompany.Experimental.Family3D
                 seat.ApproachCell,
                 seat.Cell
             };
-            ParkOtherActorsForFatherLoop(father, protectedCells);
-            father.QaTeleportToCell(OfficeRuntimeWorkstationService.StarterEntranceCell);
-            father.QaSetDirectMovementInput(Vector2.zero);
+            ParkOtherActorsForFatherLoop(deskAgent, protectedCells);
+            deskAgent.QaTeleportToCell(OfficeRuntimeWorkstationService.StarterEntranceCell);
+            deskAgent.QaSetDirectMovementInput(Vector2.zero);
             Time.timeScale = 1f;
             yield return null;
             yield return new WaitForEndOfFrame();
@@ -791,27 +805,32 @@ namespace FamilyCompany.Experimental.Family3D
             // chair, or another actor.
             starter.World.Occupancy.ResetMetrics();
             fatherDeskWorkProofActive = true;
-            if (!father.QaBeginSeatedWorkAtSeat(seat.SeatId, "father-v19-full-3d-desk-work"))
+            if (!deskAgent.QaBeginSeatedWorkAtSeat(
+                    seat.SeatId,
+                    mapWalkFamilyId + "-full-3d-desk-work"))
             {
-                Fail("The real Father agent rejected its assigned seated-work destination.");
+                Fail("The real " + targetLabel +
+                     " agent rejected its assigned seated-work destination.");
                 Application.Quit(2);
                 yield break;
             }
 
             Debug.Log(
-                "FAMILY_3D_FATHER_DESK_WORK_QA: starting real route/seat claim; seat=" +
+                "FAMILY_3D_DESK_WORK_QA: family=" + mapWalkFamilyId +
+                " starting real route/seat claim; seat=" +
                 seat.SeatId + " desk=" + seat.WorkSurfaceFurnitureId +
                 " chair=" + seat.ChairFurnitureId +
                 " productionEligible=false.",
                 this);
 
             float deadline = Time.realtimeSinceStartup + 120f;
-            while (father.Phase != OfficeRuntimeAgentPhase.Working &&
+            while (deskAgent.Phase != OfficeRuntimeAgentPhase.Working &&
                    Time.realtimeSinceStartup < deadline)
                 yield return null;
-            if (father.Phase != OfficeRuntimeAgentPhase.Working)
+            if (deskAgent.Phase != OfficeRuntimeAgentPhase.Working)
             {
-                Fail("Father did not reach Working; last phase=" + father.Phase + ".");
+                Fail(targetLabel + " did not reach Working; last phase=" +
+                     deskAgent.Phase + ".");
                 Application.Quit(2);
                 yield break;
             }
@@ -821,13 +840,34 @@ namespace FamilyCompany.Experimental.Family3D
             const int requiredWorkFrames = 360;
             for (var frame = 0; frame < requiredWorkFrames; frame++)
             {
-                if (father.Phase != OfficeRuntimeAgentPhase.Working)
+                if (deskAgent.Phase != OfficeRuntimeAgentPhase.Working)
                 {
-                    Fail("Father left Working before the desk-work proof completed.");
+                    Fail(targetLabel +
+                         " left Working before the desk-work proof completed.");
                     Application.Quit(2);
                     yield break;
                 }
                 yield return null;
+            }
+
+            // The full route proof now uses the same endpoint and chair-clearance gate as the
+            // four-direction Father proof. This is especially important for newly generated
+            // characters: reaching Working is not enough if their knees stay straight or their
+            // feet/skin pass through the chair.
+            try
+            {
+                ValidateAndRecordFatherDeskDirection(
+                    (int)seat.Facing,
+                    seat.Facing,
+                    seat,
+                    deskBinding);
+            }
+            catch (Exception exception)
+            {
+                Fail(targetLabel + " seated-pose validation failed: " + exception.Message);
+                Debug.LogException(exception, this);
+                Application.Quit(2);
+                yield break;
             }
 
             RefreshV27SourceFurnitureMask();
@@ -856,9 +896,13 @@ namespace FamilyCompany.Experimental.Family3D
 
             fatherDeskWorkProofActive = false;
             fatherDeskWorkProofCompleted = true;
-            WriteRuntimeReceipt("FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE");
+            string completedStatus = playerDeskWorkQa
+                ? "PLAYER_V6_FULL_3D_DESK_WORK_PROOF_COMPLETE"
+                : "FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE";
+            WriteRuntimeReceipt(completedStatus);
             Debug.Log(
-                "FAMILY_3D_FATHER_DESK_WORK_QA: COMPLETE | phases=" +
+                "FAMILY_3D_DESK_WORK_QA: COMPLETE | family=" + mapWalkFamilyId +
+                " phases=" +
                 string.Join(">", fatherDeskObservedPhases) +
                 " workFrames=" + fatherDeskWorkFrames +
                 " captures=" + compositeCapturedFrames +
@@ -1505,8 +1549,8 @@ namespace FamilyCompany.Experimental.Family3D
         }
 
         private void SetupV27Workstations(
-            Binding fatherBinding,
-            OfficeSeatSlot fatherSeat,
+            Binding deskBinding,
+            OfficeSeatSlot targetSeat,
             Camera sourceOfficeCamera)
         {
             v27Workstations.Clear();
@@ -1520,15 +1564,15 @@ namespace FamilyCompany.Experimental.Family3D
                 if (!seat.HasWorkstationBinding)
                     continue;
                 v27ExpectedWorkstationCount++;
-                bool isFatherSeat = string.Equals(
+                bool isTargetSeat = string.Equals(
                     seat.SeatId,
-                    fatherSeat.SeatId,
+                    targetSeat.SeatId,
                     StringComparison.Ordinal);
                 Family3DWorkstationQa workstation = CreateV27Workstation(
-                    fatherBinding,
+                    deskBinding,
                     seat,
                     sourceOfficeCamera,
-                    isFatherSeat);
+                    isTargetSeat);
                 v27Workstations.Add(workstation);
                 v27WorkstationSeats.Add(seat);
                 HideSourceFurniture(seat.ChairFurnitureId);
@@ -1537,17 +1581,17 @@ namespace FamilyCompany.Experimental.Family3D
 
             if (fatherDeskWorkstation == null)
                 throw new InvalidOperationException(
-                    "Father V27 workstation was not created from the live seat set.");
+                    "The target V27 workstation was not created from the live seat set.");
             if (v27Workstations.Count != v27ExpectedWorkstationCount)
                 throw new InvalidOperationException(
                     "Not every semantic workstation received a V27 visual replacement.");
         }
 
         private Family3DWorkstationQa CreateV27Workstation(
-            Binding fatherBinding,
+            Binding deskBinding,
             OfficeSeatSlot seat,
             Camera sourceOfficeCamera,
-            bool captureFatherReceipt)
+            bool captureTargetReceipt)
         {
             if (!starter.World.FurniturePresenter.TryGetFurniture(
                     seat.WorkSurfaceFurnitureId,
@@ -1619,7 +1663,7 @@ namespace FamilyCompany.Experimental.Family3D
                 sourceOfficeCamera);
             Vector3 keyboardGround = MapOfficeWorldToQaGround(workSource, sourceOfficeCamera);
 
-            if (captureFatherReceipt)
+            if (captureTargetReceipt)
             {
                 fatherDeskLegacyChairAnchorOffsetWorld = Vector3.Distance(
                     seatGround,
@@ -1649,10 +1693,10 @@ namespace FamilyCompany.Experimental.Family3D
                 deskFootprintWidth,
                 deskFootprintDepth,
                 keyboardGround,
-                fatherBinding.WalkActor.StandingHeight,
+                deskBinding.WalkActor.StandingHeight,
                 fatherMotionFacingOffsetDegrees,
                 0f);
-            if (captureFatherReceipt)
+            if (captureTargetReceipt)
             {
                 fatherDeskSeat = seat;
                 fatherDeskWorkstation = workstation;
@@ -2260,7 +2304,7 @@ namespace FamilyCompany.Experimental.Family3D
             }
             if (fatherDeskWorkQa &&
                 fatherDeskWorkstation != null &&
-                string.Equals(binding.FamilyId, "father", StringComparison.Ordinal))
+                string.Equals(binding.FamilyId, mapWalkFamilyId, StringComparison.Ordinal))
             {
                 UpdateFatherDeskWorkBinding(binding, sourceOfficeCamera);
                 return;
@@ -2978,7 +3022,8 @@ namespace FamilyCompany.Experimental.Family3D
                         : new[] { "Idle(standing)", "Navigating(walking)" },
                     unsupportedPhasePolicy =
                         fatherDeskWorkQa
-                            ? "Outside only restores 2D; the real Father seat lifecycle stays full 3D"
+                            ? "Outside only restores 2D; the real " + mapWalkFamilyId +
+                              " seat lifecycle stays full 3D"
                             : "Approaching/alignment/seating/work/egress/outside skip 3D and restore original 2D forceRenderingOff",
                     sortingDepthPolicy =
                         "sortingLayerID/name/order and source transform Z are observed only and never assigned",
@@ -3005,7 +3050,9 @@ namespace FamilyCompany.Experimental.Family3D
                           "empty office shell at SouthEast/SouthWest/NorthWest/NorthEast; four " +
                           "real claims, seat transitions, Working poses and keyboard/foot IK gates"
                         : fatherDeskWorkQa
-                        ? "actual Father OfficeRuntimeAgent; Starter entrance to real seat_father; " +
+                        ? "actual " + mapWalkFamilyId +
+                          " OfficeRuntimeAgent; Starter entrance to real seat_" +
+                          mapWalkFamilyId + "; " +
                           "real route, claim, approach, rotation, SitDown and Working"
                         : fatherMapWalkQa
                             ? "actual " + mapWalkFamilyId +
@@ -3013,6 +3060,7 @@ namespace FamilyCompany.Experimental.Family3D
                         : string.Empty,
                     fatherProofRouteCompleted = fatherProofRouteCompleted,
                     fatherDeskWorkQa = fatherDeskWorkQa,
+                    playerDeskWorkQa = playerDeskWorkQa,
                     fatherDeskWorkProofCompleted = fatherDeskWorkProofCompleted,
                     fatherSingleWorkstationPlaytest = fatherSingleWorkstationPlaytest,
                     fatherFourDirectionDeskPoseQa = fatherFourDirectionDeskPoseQa,
@@ -3469,7 +3517,9 @@ namespace FamilyCompany.Experimental.Family3D
                     : fatherDeskFourDirectionProofCompleted
                     ? "FATHER_V19_FOUR_DIRECTION_DESK_POSE_PROOF_COMPLETE"
                     : fatherDeskWorkProofCompleted
-                    ? "FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE"
+                    ? playerDeskWorkQa
+                        ? "PLAYER_V6_FULL_3D_DESK_WORK_PROOF_COMPLETE"
+                        : "FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE"
                     : fatherProofRouteCompleted
                     ? playerNative613Package
                         ? "PLAYER_V6_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
@@ -3535,6 +3585,7 @@ namespace FamilyCompany.Experimental.Family3D
             public string fatherProofRoutePolicy;
             public bool fatherProofRouteCompleted;
             public bool fatherDeskWorkQa;
+            public bool playerDeskWorkQa;
             public bool fatherDeskWorkProofCompleted;
             public bool fatherSingleWorkstationPlaytest;
             public bool fatherFourDirectionDeskPoseQa;
