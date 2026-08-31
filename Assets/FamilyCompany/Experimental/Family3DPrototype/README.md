@@ -2,6 +2,11 @@
 
 This folder contains isolated 3D character candidates and actual Starter Office QA. It is not a production asset source.
 
+Player V8 is no longer sourced from this folder. The approved production package is
+`Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/`, and the production runtime is
+`Assets/FamilyCompany/Runtime/Character3D/`. The old Player candidate files were moved with their
+Unity GUIDs; the descriptions below are historical proof instructions only.
+
 Completion boundary: Father V19/V31 and Player V6/V8 are the only user-approved completed family
 characters. Older Sister and Mother remain unapproved/not complete. See
 `Docs/FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md` before generating either one.
@@ -12,11 +17,11 @@ The no-hat Player V6 candidate is one indivisible Higgsfield/Meshy package: mesh
 skin weights, albedo and action 613. Unity uses its own Avatar and clip at `poseStrength=1` without
 Father/mixed retargeting, procedural gait, pose damping or limb correction.
 
-- candidate: `Candidates/PlayerV6MeshyOnePackage613/`
-- FBX: `player-v6-meshy-one-package-613.fbx`
-- albedo: `player-v6-meshy-one-package-albedo.png`
-- surface: `Materials/PlayerV6MeshyOnePackageSurface.mat` with Player-only
-  `Shaders/PlayerV6BalancedAlbedo.shader` (`0.70` neutral fill + `0.18` soft form, exact albedo,
+- production package: `../../Content/Resources/Production3D/PlayerV8/`
+- FBX: `player-v8-production.fbx`
+- albedo: `player-v8-albedo.png`
+- surface: `PlayerV8ProductionSurface.mat` with Player-only
+  `PlayerV8BalancedAlbedo.shader` (`0.70` neutral fill + `0.18` soft form, exact albedo,
   no emission/specular/reflection)
 - walk: `PlayerV6_Casual_Walk_inplace`, frames `1..43`, `1.4 s`
 - map stride: `0.7950477`; measured forward offset: `0 degrees`
@@ -30,8 +35,8 @@ Father/mixed retargeting, procedural gait, pose damping or limb correction.
   `player-v6-v8-balanced-color-full.gif` and `player-v6-v6-v8-color-hair-comparison.png`; 136
   ordered frames, stable brown hair and restored clothing colours, knees `106.3443° / 110.4238°`,
   chair penetration `0`, route occupancy `0/0/0`
-- status: `USER_VISUAL_APPROVED_ISOLATED`, `productionMutation=false`,
-  `productionEligible=false`
+- status: historical isolated receipt unchanged; current Player runtime is
+  `USER_VISUAL_APPROVED_PRODUCTION`
 
 Exact generation inputs and hashes are in `Docs/ASSET_MANIFEST.md`; walk, seated and appearance
 proof details are consolidated in `Docs/PLAYER_V6_FULL_3D_DESK_WORK_QA_2026-08-31.md`.
@@ -82,8 +87,8 @@ The full receipt and hashes are in `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08
 
 - `Editor/Family3DStarterOfficeCandidateQaBuilder.cs`: isolated copied scene, build and before/after production hash guards.
 - `Runtime/Family3DStarterOfficeCandidateQa.cs`: actual runtime agent binding, route/phase capture, renderer masking and receipt.
-- `Runtime/Family3DWalkActor.cs`: same-package walk playback, seated neutral pose and endpoint IK.
-- `Runtime/Family3DWorkstationQa.cs`: semantic footprint mapping, 3D desk/CRT/keyboard/chair and physical gates.
+- `../../Runtime/Character3D/Family3DWalkActor.cs`: production same-package walk playback, seated neutral pose and endpoint IK.
+- `../../Runtime/Character3D/Family3DWorkstation.cs`: production semantic footprint mapping, 3D desk/CRT/keyboard/chair and physical gates.
 
 ## Next character
 

@@ -4,7 +4,7 @@ pixelsPerUnit=180
 groundAnchorPx=320,64
 meshAxes=orthogonal-90deg
 projectedTileBasisPx=160,80|-160,80
-source=Family3DWorkstationQa V31 orthogonal true-isometric atomic geometry
+source=Family3DWorkstation V31 orthogonal true-isometric atomic geometry
 desk_se: operatorSeat=560.000,105.848; workSurface=448.221,205.229
 chair_nw: seat=320.000,145.848; ground=320,64
 desk_sw: operatorSeat=240.000,25.848; workSurface=348.255,126.991

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using FamilyCompany.Experimental.Family3D;
+using FamilyCompany.Runtime.Character3D;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -68,7 +68,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             manifest.AppendLine("meshAxes=orthogonal-90deg");
             manifest.AppendLine("projectedTileBasisPx=160,80|-160,80");
             manifest.AppendLine(
-                "source=Family3DWorkstationQa V31 orthogonal true-isometric atomic geometry");
+                "source=Family3DWorkstation V31 orthogonal true-isometric atomic geometry");
 
             for (var turns = 0; turns < 4; turns++)
                 BakeDirection(turns, manifest);
@@ -132,7 +132,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                                         gridForward * keyboardGrid.y;
 
                 root = new GameObject("V31_WorkstationSpriteBake_" + turns);
-                Family3DWorkstationQa workstation = Family3DWorkstationQa.Create(
+                Family3DWorkstation workstation = Family3DWorkstation.Create(
                     root.transform,
                     layer,
                     "direction_" + turns,

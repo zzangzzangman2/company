@@ -2,6 +2,35 @@
 
 Last updated: 2026-08-31. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
+## Production cutover: Player V8 + V31 workstation
+
+- The user's 2026-08-31 instruction explicitly promotes the approved **Player V8** package as the
+  only visible production protagonist. Runtime assets now live under
+  `Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/`; the authoritative adapter is
+  `Assets/FamilyCompany/Runtime/Character3D/PlayerV8ProductionPresenter.cs`.
+- Production locks are scale `1.024378657`, standing height `1.857258558`, map stride `0.7950477`,
+  authored walk cycle `1.4 s`, full pose strength and `0.18 s` whole-body turns. The FBX's own
+  Humanoid Avatar, skin and `PlayerV6_Casual_Walk_inplace` clip stay together.
+- The old selectable Player sprite presentations, contact-frame Resources, PSB/FBX authoring labs,
+  bakers, importers and their dedicated QAs were deleted. The simulation still supplies its
+  invisible direction/seat clock through a fail-closed SpriteRenderer, but it can never render and
+  there is no command-line or missing-asset 2D fallback.
+- Purchased seat-bound workstation sets keep the production shop, semantic tile footprint,
+  collision, save IDs, seat assignment and four rigid quarter-turns. Their placed presentation is
+  now one `Family3DWorkstation` root containing the approved V31 dark-walnut desk, CRT, keyboard and
+  graphite open-back chair; the corresponding baked desk/chair SpriteRenderers are hidden. Shop
+  thumbnails and placement ghosts continue to use the exact directional V31 sprites so their green
+  footprint remains identical to the confirmed object.
+- Normal new-game D3D11 and the four-direction purchased-workstation route were revalidated in Unity
+  `6000.3.21f1`: Player V8 bound at the locked height/stride, `playerPhase=Working`, four workstation
+  roots, four desk/chair directions, mesh axes `90 degrees`, maximum tile-corner error `0.0003px`,
+  bent knees `107.45 degrees / 113.16 degrees`, seated chair offset `0.13001`, and visible retired
+  Player/workstation renderers `0/0`. Tracked screenshot and receipt:
+  [Evidence/PlayerV8Production/README.md](Evidence/PlayerV8Production/README.md).
+- Father V19 remains approved isolated input but is not promoted by this Player-only cutover.
+  Mother and Older Sister still await approved one-package 3D replacements; their current production
+  representations remain untouched.
+
 ## Family character completion boundary
 
 - Complete and user-approved: **Father V19/V31** and **Player/protagonist V6/V8** only.
@@ -9,16 +38,17 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   one-package successors and must not be described as finished.
 - The compact approval matrix, exact V8 receipts and permanent failure-prevention list are in
   [FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md](FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md).
-- The isolated runtime receipts remain `productionEligible=false`; this work did not promote or
-  modify production/default/Downloads/deployed executables.
+- Player V8 is production/default by the explicit cutover above. Its older isolated receipts remain
+  immutable historical facts (`productionEligible=false` at capture time). Father V19 remains
+  isolated; no deployed executable or Downloads copy was changed.
 
-## Player V6 no-hat one-package walk + seated-work candidate
+## Player V6 package / V8 approved appearance and production runtime
 
 - The current protagonist candidate was generated from the locked no-hat Player V6 four-view
   identity as one Higgsfield/Meshy package containing mesh, bind skeleton, weights, PBR and action
   `613 Casual_Walk_inplace`. Job `8609013b-996c-439a-97a0-0f3dc8a50cae` cost 38 credits; balance
   after completion was 72.
-- Unity uses `Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-613.fbx`, its own
+- Production Unity uses `Content/Resources/Production3D/PlayerV8/player-v8-production.fbx`, its own
   Avatar and `PlayerV6_Casual_Walk_inplace` directly at `poseStrength=1`. No Father/mixed clip,
   procedural gait, limb rewrite or pose weakening is enabled.
 - Raw 127-frame/two-view inspection and actual-map 169-frame inspection show exactly two legs and
@@ -31,7 +61,7 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   albedo by `0.74` and let the production sky probe vary from `0.61` overhead to `0.047` below; at
   map scale this killed the red/yellow/navy clothing and left silver-looking gaps between hair
   locks. Current V8 preserves the source albedo at white tint and uses the Player-only
-  `PlayerV6BalancedAlbedo` shader with neutral fill `0.70` plus soft normal form `0.18`. It has no
+  `PlayerV8BalancedAlbedo` shader with neutral fill `0.70` plus soft normal form `0.18`. It has no
   emission, reflection or specular path and does not recolour approved workstation visuals.
 - Current seated/appearance build/runtime:
   `Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV8PlayerOnlyBalancedColor`
@@ -46,8 +76,8 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
 - Review the current V8 candidate in
   [PLAYER_V6_FULL_3D_DESK_WORK_QA_2026-08-31.md](PLAYER_V6_FULL_3D_DESK_WORK_QA_2026-08-31.md),
   especially `player-v6-v6-v8-color-hair-comparison.png`, the full-map GIF and tracked-close GIF.
-  Current gate remains
-  `USER_VISUAL_APPROVED_ISOLATED`, `productionMutation=false`, `productionEligible=false`.
+  Those receipts describe the earlier isolated review faithfully. The later explicit production
+  cutover is `USER_VISUAL_APPROVED_PRODUCTION` and does not rewrite the historical receipt JSON.
 
 ## Production office shop: atomic V31 CRT desk + open-back-chair set
 

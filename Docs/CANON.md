@@ -12,6 +12,15 @@
 
 ## 가족
 
+> **2026-08-31 production 정본:** 주인공은 승인된 Player V8 3D 한 몸만 표시한다. 프로덕션
+> FBX·albedo·material·shader는 `Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/`,
+> 런타임 소유자는 `PlayerV8ProductionPresenter`다. scale `1.024378657`, height
+> `1.857258558`, stride `0.7950477`, cycle `1.4 s`를 바꾸지 않는다. 구형 Player 2D 표시
+> 모드와 폴백은 삭제됐으며 숨은 시뮬레이션용 renderer도 `forceRenderingOff`라 화면에 나올 수
+> 없다. 설치된 책상·의자는 타일/상점/충돌/save 의미 상태를 그대로 쓰되 승인 V31
+> `Family3DWorkstation` 한 세트로 표시한다. Mother와 Older Sister는 승인된 3D 교체가 아직 없어
+> 이 Player 전환 범위에서 건드리지 않는다.
+
 > **2026-08-24 최우선 정본:** 아래에 남은 2D 보행 수치와 R-series 기록은 migration/rollback 분석용
 > 퇴역 기록이다. 모든 신규 가족 캐릭터는
 > `FAMILY_3D_CHARACTER_CANON_2026-08-24.md`와
@@ -31,14 +40,14 @@
 - 런타임 의상 정본: 흰색 후드 윈드브레이커와 남색 트리밍, 남색·노랑·빨강 줄무늬 티셔츠, 짙은 남색 바지, 흰색·남색 운동화
 - 정본 범위: 플레이어를 월드에서 식별하는 조작 말의 외형이다. 별도 VN 초상화나 실존 사용자 얼굴을 의미하지 않는다.
 - 기반 디자인: 기존 `simul` 타이틀의 14살 플레이어 디자인
-- 신규 구현은 한 개의 완전한 3D skinned body와 유효한 Humanoid Avatar를 사용한다. 현재 production의
-  2D 주인공은 전체 3D migration 승인 전 보호되는 legacy runtime일 뿐 신규 입력이 아니다.
+- 현재 production 구현은 한 개의 완전한 Player V8 3D skinned body와 유효한 Humanoid Avatar를
+  사용한다. 구형 2D 주인공 표시/폴백/전용 제작 에셋은 production 전환 시 제거됐고 되살리지 않는다.
 - 사용자 최종 승인 보행 정본은 `FC-PLAYER-TRIAL18-V2-CROWN-SHAPE-REPAIR-V6-USER-APPROVED`다.
   `Artifacts/PlayerWalkTrial18V2CrownShapeRepairV6/Frames`의 8방향×6포즈 48장과
   `crown-shape-repair-receipt.json`을 읽기 전용 기준으로 잠근다. 이후 가족·직원 제작이 이 픽셀이나
   방향·위상·좌우 발 교대·팔 스윙·허리·청바지·신발·stride·cadence를 바꾸면 회귀다.
 - 기존 출하 `Legacy48`, Player2DV2 east v10, v11~v13 및 V5 이전 연구 후보는 주인공 정본으로 되돌리지 않는다.
-  V6 production 패키지 승격은 가족 4인 통합 검수와 별도로 기록하되, V6 주인공 자체의 사용자 승인은 완료됐다.
+  Player V8 production 승격은 가족 4인 통합 검수와 별도로 2026-08-31 완료됐다.
 - 2026-08-24에 삭제된 퇴역 2D guardrail을 따랐던 주인공 east 6프레임
   long-stride 격리 후보는 static/actual D3D11 Player gate를 통과했다. 새 화면 사람 판정과 Assets 승격 전에는
   다른 방향·가족이나 기본 런타임으로 확대하지 않는다.

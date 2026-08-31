@@ -200,6 +200,142 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
+            OfficeRuntimeAgent player = null;
+            foreach (OfficeRuntimeAgent actor in runtime.Actors)
+                if (actor != null && string.Equals(
+                        actor.AgentId,
+                        "player",
+                        StringComparison.Ordinal))
+                {
+                    player = actor;
+                    break;
+                }
+            if (player == null || state.OfficeGrid.SeatSlots.Count == 0)
+            {
+                Finish(directory, false, "production Player V8 or workstation seat missing");
+                yield break;
+            }
+            OfficeSeatSlot targetSeat = state.OfficeGrid.SeatSlots[0];
+            if (!player.QaBeginSeatedWorkAtSeat(targetSeat.SeatId, "player-v8-production"))
+            {
+                Finish(directory, false, "Player V8 seated-work route was rejected");
+                yield break;
+            }
+            deadline = Time.realtimeSinceStartup + 30f;
+            while (Time.realtimeSinceStartup < deadline &&
+                   player.Phase != OfficeRuntimeAgentPhase.Working)
+                yield return null;
+            if (player.Phase != OfficeRuntimeAgentPhase.Working)
+            {
+                Finish(
+                    directory,
+                    false,
+                    "Player V8 did not reach Working; phase=" + player.Phase);
+                yield break;
+            }
+            // The production sit blend is measured in real seconds, not rendered frame count.
+            // A hidden Player can produce 45 frames in far less than 0.42 s and would otherwise
+            // capture the actor still descending in front of the chair while already in Working.
+            yield return new WaitForSecondsRealtime(0.65f);
+            for (var frame = 0; frame < 3; frame++)
+                yield return null;
+
+            GameObject productionHost = GameObject.Find("~PlayerV8ProductionPresenter");
+            GameObject productionActor = GameObject.Find("PlayerV8ProductionHost");
+            GameObject productionWorkstation = GameObject.Find(
+                "V31_AtomicWorkstationSet_OriginalChair_" + targetSeat.SeatId);
+            var workstationCount = 0;
+            foreach (Transform candidate in Object.FindObjectsByType<Transform>(
+                         FindObjectsInactive.Exclude,
+                         FindObjectsSortMode.None))
+                if (candidate != null && candidate.name.StartsWith(
+                        "V31_AtomicWorkstationSet_OriginalChair_",
+                        StringComparison.Ordinal))
+                    workstationCount++;
+            Animator productionAnimator = productionActor == null
+                ? null
+                : productionActor.GetComponentInChildren<Animator>();
+            Transform chairPivot = productionWorkstation == null
+                ? null
+                : productionWorkstation.transform.Find("Chair_SwivelPivot");
+            Transform leftUpperLeg = productionAnimator == null
+                ? null
+                : productionAnimator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+            Transform leftLowerLeg = productionAnimator == null
+                ? null
+                : productionAnimator.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
+            Transform leftFoot = productionAnimator == null
+                ? null
+                : productionAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            Transform rightUpperLeg = productionAnimator == null
+                ? null
+                : productionAnimator.GetBoneTransform(HumanBodyBones.RightUpperLeg);
+            Transform rightLowerLeg = productionAnimator == null
+                ? null
+                : productionAnimator.GetBoneTransform(HumanBodyBones.RightLowerLeg);
+            Transform rightFoot = productionAnimator == null
+                ? null
+                : productionAnimator.GetBoneTransform(HumanBodyBones.RightFoot);
+            if (productionHost == null || productionActor == null ||
+                productionWorkstation == null || workstationCount != 4 ||
+                chairPivot == null || leftUpperLeg == null || leftLowerLeg == null ||
+                leftFoot == null || rightUpperLeg == null || rightLowerLeg == null ||
+                rightFoot == null)
+            {
+                Finish(
+                    directory,
+                    false,
+                    "production Player/workstation binding is incomplete; sets=" +
+                    workstationCount);
+                yield break;
+            }
+
+            float leftKneeBend = Vector3.Angle(
+                leftUpperLeg.position - leftLowerLeg.position,
+                leftFoot.position - leftLowerLeg.position);
+            float rightKneeBend = Vector3.Angle(
+                rightUpperLeg.position - rightLowerLeg.position,
+                rightFoot.position - rightLowerLeg.position);
+            const float approvedHeight = 1.857258558f;
+            Vector3 seatedOffset = productionActor.transform.position - chairPivot.position;
+            seatedOffset.y = 0f;
+            float expectedSeatedOffset = 0.07f * approvedHeight;
+            if (leftKneeBend < 80f || leftKneeBend > 140f ||
+                rightKneeBend < 80f || rightKneeBend > 140f ||
+                Mathf.Abs(seatedOffset.magnitude - expectedSeatedOffset) > 0.001f)
+            {
+                Finish(
+                    directory,
+                    false,
+                    "Player V8 seated-body gate failed: knee=" +
+                    leftKneeBend.ToString("F2") + "/" + rightKneeBend.ToString("F2") +
+                    " seatOffset=" + seatedOffset.magnitude.ToString("F5") +
+                    " expected=" + expectedSeatedOffset.ToString("F5"));
+                yield break;
+            }
+            int visibleRetiredRenderers =
+                IsVisible(player.PresentationRenderer) ? 1 : 0;
+            if (IsVisible(player.SeatedUpperBodyProtectionRenderer))
+                visibleRetiredRenderers++;
+            foreach (OfficeSeatSlot seat in state.OfficeGrid.SeatSlots)
+            {
+                visibleRetiredRenderers += CountVisibleFurnitureRenderers(
+                    runtime.World.FurniturePresenter,
+                    seat.WorkSurfaceFurnitureId);
+                visibleRetiredRenderers += CountVisibleFurnitureRenderers(
+                    runtime.World.FurniturePresenter,
+                    seat.ChairFurnitureId);
+            }
+            if (visibleRetiredRenderers != 0)
+            {
+                Finish(
+                    directory,
+                    false,
+                    "retired Player/workstation sprite renderer visible=" +
+                    visibleRetiredRenderers);
+                yield break;
+            }
+
             string screenshot = Path.Combine(directory, "v31-workstation-four-directions.png");
             if (!TryCaptureOverview(screenshot, out string captureFailure))
             {
@@ -213,7 +349,39 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 "sets=4 directionalDesk=4 directionalChair=4 legacyFlip=0 meshAxes=90deg " +
                 "tileBasis=160x80 seats=" +
                 state.OfficeGrid.SeatSlots.Count + " furniture=" + state.OfficeGrid.Furniture.Count +
-                " maxTileCornerError=" + maximumTileCornerErrorPx.ToString("F4") + "px");
+                " maxTileCornerError=" + maximumTileCornerErrorPx.ToString("F4") +
+                "px playerPhase=" + player.Phase +
+                " knee=" + leftKneeBend.ToString("F2") + "/" +
+                rightKneeBend.ToString("F2") +
+                " seatOffset=" + seatedOffset.magnitude.ToString("F5") +
+                " retiredVisible=0");
+        }
+
+        private static int CountVisibleFurnitureRenderers(
+            OfficeGridFurniturePresenter presenter,
+            string furnitureId)
+        {
+            var count = 0;
+            if (presenter.TryGetRenderer(furnitureId, out SpriteRenderer baseRenderer) &&
+                IsVisible(baseRenderer))
+                count++;
+            if (presenter.FrontOverlayRenderers.TryGetValue(
+                    furnitureId,
+                    out SpriteRenderer frontRenderer) &&
+                IsVisible(frontRenderer))
+                count++;
+            if (presenter.OccupiedChairLowerBodyRenderers.TryGetValue(
+                    furnitureId,
+                    out SpriteRenderer lowerRenderer) &&
+                IsVisible(lowerRenderer))
+                count++;
+            return count;
+        }
+
+        private static bool IsVisible(Renderer renderer)
+        {
+            return renderer != null && renderer.enabled && !renderer.forceRenderingOff &&
+                   renderer.gameObject.activeInHierarchy;
         }
 
         private static bool TryCaptureOverview(string path, out string failure)
@@ -237,6 +405,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 RenderTextureReadWrite.sRGB);
             var pixels = new Texture2D(width, height, TextureFormat.RGB24, false);
             GameObject captureHost = null;
+            Camera overlay = null;
+            RenderTexture previousOverlayTarget = null;
             try
             {
                 captureHost = new GameObject("OfficeV31WorkstationVisualCapture")
@@ -248,6 +418,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 camera.enabled = false;
                 camera.targetTexture = target;
                 camera.Render();
+                foreach (Camera candidate in Object.FindObjectsByType<Camera>(
+                             FindObjectsInactive.Include,
+                             FindObjectsSortMode.None))
+                    if (candidate != null && string.Equals(
+                            candidate.gameObject.name,
+                            "PlayerV8ProductionOverlayCamera",
+                            StringComparison.Ordinal))
+                    {
+                        overlay = candidate;
+                        break;
+                    }
+                if (overlay == null)
+                {
+                    failure = "Player V8 production overlay camera missing";
+                    return false;
+                }
+                previousOverlayTarget = overlay.targetTexture;
+                overlay.targetTexture = target;
+                overlay.Render();
                 RenderTexture.active = target;
                 pixels.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
                 pixels.Apply(false, false);
@@ -279,6 +468,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             }
             finally
             {
+                if (overlay != null)
+                    overlay.targetTexture = previousOverlayTarget;
                 RenderTexture.active = previous;
                 if (captureHost != null) Object.Destroy(captureHost);
                 Object.Destroy(target);

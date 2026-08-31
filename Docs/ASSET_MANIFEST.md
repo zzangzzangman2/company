@@ -1,11 +1,12 @@
 # ASSET MANIFEST
 
-This manifest lists current experimental 3D inputs first, followed by canonical production assets. Retired Father iterations were removed from the current manifest; they are not reusable sources.
+This manifest lists the production Player V8 package first, followed by current experimental family
+inputs and canonical production assets. Retired iterations are not reusable sources.
 
 Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-approved. Older Sister
 and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md`.
 
-## Current Player V6 no-hat one-package character
+## Production Player V8 no-hat one-package character
 
 - identity reference:
   `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/player-v6-3d-identity-turnaround-v1.png`,
@@ -15,14 +16,14 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
   action 613; charged 38 credits, balance 72.
 - source GLB SHA-256: `9A8498E205C4FF8293E40140DB546B823031DBE7B28E84418DF6783366C3B17B`.
 - FBX:
-  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-613.fbx`,
+  `Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/player-v8-production.fbx`,
   SHA-256 `AB18C23B054999BE74B8DD6D5E0A2360F692BE5A6EBC5D1FC3524F4B2368EE4D`.
 - albedo:
-  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-albedo.png`,
+  `Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/player-v8-albedo.png`,
   SHA-256 `2D7A58E830E7C537E2F8029B6971A3603214FD57C07CBD5290FC8AAE3D3CBD7A`.
-- surface: `Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/PlayerV6MeshyOnePackageSurface.mat`;
+- surface: `Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/PlayerV8ProductionSurface.mat`;
   Player-only shader:
-  `Assets/FamilyCompany/Experimental/Family3DPrototype/Shaders/PlayerV6BalancedAlbedo.shader`,
+  `Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/PlayerV8BalancedAlbedo.shader`,
   exact white albedo tint, neutral fill `0.70`, soft normal form `0.18`, no emission/specular/
   reflection and no scene-wide lighting mutation.
 - clip: `PlayerV6_Casual_Walk_inplace`, source frames `1..43`, `1.4 s`, same FBX
@@ -43,8 +44,15 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
   `280F19E73FDF9577CD23082F177726B1AC16224C0764DA3630A9E67CD11E813C`;
   `player-v6-v8-runtime-receipt.json` SHA-256
   `C859D247429EB04DC39B33330B977D13A7A6877E780588F480782DD8A5DD4501`.
-- status: `USER_VISUAL_APPROVED_ISOLATED`, `productionMutation=false`,
-  `productionEligible=false`.
+- production runtime:
+  `Assets/FamilyCompany/Runtime/Character3D/PlayerV8ProductionPresenter.cs`,
+  `Family3DWalkActor.cs` and `Family3DWorkstation.cs`; locked scale `1.024378657`, height
+  `1.857258558`, stride `0.7950477`, cycle `1.4 s`, visible old Player/workstation renderers `0/0`.
+- production D3D11 evidence: `Docs/Evidence/PlayerV8Production/`; seated knees
+  `107.45/113.16 degrees`, chair offset `0.13001`, screenshot SHA-256
+  `5B81CB6D2F07A699A184C74A9CA0E08BE47605ADD9DAA8110E21B271A20B8826`.
+- status: `USER_VISUAL_APPROVED_PRODUCTION`. The earlier tracked receipt JSON remains unchanged and
+  records the isolated capture state before this explicit promotion.
 
 ## Current Father V19 one-package character
 
@@ -69,7 +77,8 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
 - close GIF SHA-256: `46F627F87CEFDC42865CDC9C9B8327DE02D382B19F5AB9CE4DAC5AD3C10E7D76`.
 - V29/V31 comparison PNG SHA-256: `8A8002BA2FC115EDB16576FBDCF2F62687C6531DD9504CE722BA43429A8F3766`.
 - tracked review copies: `Docs/Evidence/Family3DFatherV19V31/`.
-- V31 ownership: one QA-only atomic desk/CRT/keyboard/original-chair root per live seat. The
+- V31 ownership: one production `Family3DWorkstation` desk/CRT/keyboard/original-chair root per live
+  seat. The
   user-selected V29 chair, actor and CRT composition is unchanged; 132/132 corresponding frame
   hashes match V29. Production desk/chair collision and seat-owner permissions remain semantic and
   unchanged. Actual route violations: static `0`, interaction `0`, agent penetration `0`.
@@ -79,7 +88,7 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
 
 ## Production V31 workstation directional set (2026-08-29)
 
-- Source geometry: the exact accepted `Family3DWorkstationQa` V31 dark-walnut CRT desk and
+- Source geometry: the exact accepted `Family3DWorkstation` V31 dark-walnut CRT desk and
   graphite open-back chair; no new image/3D generation and no Higgsfield credit use.
 - Runtime folder: `Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture/`.
 - Deliverables: four `desk_with_pc_<direction>.png`, four

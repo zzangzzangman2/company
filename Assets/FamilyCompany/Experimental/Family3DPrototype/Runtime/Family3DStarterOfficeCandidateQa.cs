@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
+using FamilyCompany.Runtime.Character3D;
 using FamilyCompany.Simulation.OfficeLayout;
 using UnityEngine;
 
@@ -113,10 +114,10 @@ namespace FamilyCompany.Experimental.Family3D
         private float fatherDeskSeatedBlend01;
         private string fatherDeskLastPhase = string.Empty;
         private readonly List<string> fatherDeskObservedPhases = new List<string>();
-        private Family3DWorkstationQa fatherDeskWorkstation;
+        private Family3DWorkstation fatherDeskWorkstation;
         private OfficeSeatSlot fatherDeskSeat;
-        private readonly List<Family3DWorkstationQa> v27Workstations =
-            new List<Family3DWorkstationQa>();
+        private readonly List<Family3DWorkstation> v27Workstations =
+            new List<Family3DWorkstation>();
         private readonly List<OfficeSeatSlot> v27WorkstationSeats =
             new List<OfficeSeatSlot>();
         private int v27ExpectedWorkstationCount;
@@ -1370,7 +1371,7 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherBinding.WalkActor == null)
                 throw new InvalidOperationException("The resolved workstation or Father rig is missing.");
 
-            Family3DWorkstationQa workstation = fatherDeskWorkstation;
+            Family3DWorkstation workstation = fatherDeskWorkstation;
             Family3DWalkActor.PoseSnapshot pose = fatherBinding.WalkActor.ReadPoseSnapshot();
             float height = Mathf.Max(pose.standingHeight, 0.25f);
             Vector3 forward = workstation.SeatedBodyForwardWorld;
@@ -1419,7 +1420,7 @@ namespace FamilyCompany.Experimental.Family3D
                 fatherBinding.WalkActor.CollectCurrentWorldSkinVertices(
                     skinVertices,
                     skinRegions);
-            Family3DWorkstationQa.ChairSkinPenetration chairSkinPenetration =
+            Family3DWorkstation.ChairSkinPenetration chairSkinPenetration =
                 workstation.MeasureChairSkinPenetration(skinVertices, skinRegions);
             Vector3 expectedSeatedVisualRoot = workstation.SeatGroundWorld +
                                                forward * (0.07f * height);
@@ -1568,7 +1569,7 @@ namespace FamilyCompany.Experimental.Family3D
                     seat.SeatId,
                     targetSeat.SeatId,
                     StringComparison.Ordinal);
-                Family3DWorkstationQa workstation = CreateV27Workstation(
+                Family3DWorkstation workstation = CreateV27Workstation(
                     deskBinding,
                     seat,
                     sourceOfficeCamera,
@@ -1587,7 +1588,7 @@ namespace FamilyCompany.Experimental.Family3D
                     "Not every semantic workstation received a V27 visual replacement.");
         }
 
-        private Family3DWorkstationQa CreateV27Workstation(
+        private Family3DWorkstation CreateV27Workstation(
             Binding deskBinding,
             OfficeSeatSlot seat,
             Camera sourceOfficeCamera,
@@ -1682,7 +1683,7 @@ namespace FamilyCompany.Experimental.Family3D
                 }
             }
 
-            Family3DWorkstationQa workstation = Family3DWorkstationQa.Create(
+            Family3DWorkstation workstation = Family3DWorkstation.Create(
                 transform,
                 qaLayer,
                 seat.SeatId,
@@ -2890,7 +2891,7 @@ namespace FamilyCompany.Experimental.Family3D
                  workstationIndex < v27Workstations.Count;
                  workstationIndex++)
             {
-                Family3DWorkstationQa workstation = v27Workstations[workstationIndex];
+                Family3DWorkstation workstation = v27Workstations[workstationIndex];
                 if (workstation == null)
                     continue;
                 workstation.gameObject.SetActive(false);

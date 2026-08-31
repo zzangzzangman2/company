@@ -55,13 +55,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private SpriteRenderer _seatedUpperBodyRenderer;
         private Transform _visualRoot;
         private DirectionalSpriteAnimator _animator;
-        private PlayerNaturalWalkPresenter _playerNaturalWalk;
-        private PlayerBakedWalkPresenterV2 _playerBakedWalk;
-        private PlayerWalkPresentationMode _playerWalkMode = PlayerWalkPresentationMode.Legacy48;
-        private const float PlayerNaturalTurnSeconds = 0.18f;
-        private int _playerNaturalTurnFromDirection = -1;
-        private int _playerNaturalTurnTargetDirection = -1;
-        private float _playerNaturalTurnElapsedSeconds;
         private OfficeCharacterSeatPoseCatalog _poseCatalog;
         private readonly List<OfficeGridCoordinate> _path = new List<OfficeGridCoordinate>();
         private readonly List<OfficeGridCoordinate> _upcomingPathCells =
@@ -348,22 +341,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             : _animator.StrideLength;
         public int CurrentWalkFrame => _animator == null ? 0 : _animator.CurrentWalkFrame;
         public int CurrentDirection => _animator == null ? 0 : _animator.CurrentDirection;
-        public PlayerWalkPresentationMode PlayerWalkMode => _playerWalkMode;
-        public int VisibleWalkPose => _playerBakedWalk == null
-            ? -1
-            : _playerBakedWalk.VisibleWalkPose;
-        public int VisibleWalkDirection => _playerBakedWalk == null
-            ? -1
-            : _playerBakedWalk.VisibleWalkDirection;
-        public string VisibleWalkSpriteName => _playerBakedWalk == null
-            ? string.Empty
-            : _playerBakedWalk.VisibleWalkSpriteName;
-        public PlayerWalkSupportLegV2 VisibleSupportLeg => _playerBakedWalk == null
-            ? PlayerWalkSupportLegV2.None
-            : _playerBakedWalk.VisibleSupportLeg;
-        public Vector2 VisibleSupportFootWorld => _playerBakedWalk == null
-            ? Vector2.zero
-            : _playerBakedWalk.VisibleSupportFootWorld;
         public int ConfiguredLocomotionTransitionFrameCount => _animator == null
             ? 0
             : _animator.ConfiguredLocomotionTransitionFrameCount;
@@ -614,21 +591,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _r5eForbiddenRigidbody2DCount = GetComponentsInChildren<Rigidbody2D>(true).Length;
             _r5eForbiddenNavMeshAgentCount =
                 GetComponentsInChildren<UnityEngine.AI.NavMeshAgent>(true).Length;
-        }
-
-        public void ConfigurePlayerNaturalWalk(PlayerNaturalWalkPresenter presenter)
-        {
-            _playerNaturalWalk = presenter;
-        }
-
-        public void ConfigurePlayerBakedWalk(PlayerBakedWalkPresenterV2 presenter)
-        {
-            _playerBakedWalk = presenter;
-        }
-
-        public void ConfigurePlayerWalkMode(PlayerWalkPresentationMode mode)
-        {
-            _playerWalkMode = mode;
         }
 
         internal void BindR5eTrace(
@@ -1732,30 +1694,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _animator.Tick(presentationDeltaTime);
             _animator.EndTilePresentationFrame();
             ApplyLocomotionFootPlantPresentation();
-            _playerNaturalWalk?.Present(
-                _animator.GaitPhase01,
-                _animator.CurrentDirection,
-                _animator.IsMoving,
-                _animator.IsOfficeSeatingPoseActive || IsOccupyingSeat || IsEnteringSeat,
-                _presentationAway,
-                _playerNaturalTurnTargetDirection >= 0,
-                PlayerNaturalTurnSeconds <= 0f
-                    ? 1f
-                    : _playerNaturalTurnElapsedSeconds / PlayerNaturalTurnSeconds,
-                _playerNaturalTurnFromDirection,
-                _playerNaturalTurnTargetDirection);
-            _playerBakedWalk?.Present(
-                _animator.GaitPhase01,
-                _animator.CurrentDirection,
-                _animator.IsMoving,
-                _animator.IsOfficeSeatingPoseActive || IsOccupyingSeat || IsEnteringSeat,
-                _presentationAway,
-                _playerNaturalTurnTargetDirection >= 0,
-                PlayerNaturalTurnSeconds <= 0f
-                    ? 1f
-                    : _playerNaturalTurnElapsedSeconds / PlayerNaturalTurnSeconds,
-                _playerNaturalTurnFromDirection,
-                _playerNaturalTurnTargetDirection);
             if (Phase == OfficeRuntimeAgentPhase.FinishingWork)
                 _finishingWorkPresentationObserved = true;
             RecordSeatingFacingInvariant();
@@ -4514,9 +4452,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _animator.CurrentDirection);
             if (_navigationSegmentDirection == requested) return;
             _navigationSegmentDirection = requested;
-            _playerNaturalTurnFromDirection = -1;
-            _playerNaturalTurnTargetDirection = -1;
-            _playerNaturalTurnElapsedSeconds = 0f;
         }
 
         private void StopMotion(bool keepStuck = false)

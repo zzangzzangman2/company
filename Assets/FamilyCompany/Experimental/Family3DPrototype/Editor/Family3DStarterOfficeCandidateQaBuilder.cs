@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using FamilyCompany.Experimental.Family3D;
+using FamilyCompany.Runtime.Character3D;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
@@ -72,12 +73,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const float FatherV19StrideOfficeUnits = 0.7950477f;
         public const float FatherV19AuthoredCycleSeconds = 1.4f;
         public const string PlayerV6MotionModelPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-613.fbx";
+            "Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/player-v8-production.fbx";
         public const string PlayerV6MotionTexturePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/PlayerV6MeshyOnePackage613/player-v6-meshy-one-package-albedo.png";
+            "Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/player-v8-albedo.png";
         public const string PlayerV6SurfaceMaterialPath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Materials/" +
-            "PlayerV6MeshyOnePackageSurface.mat";
+            "Assets/FamilyCompany/Content/Resources/Production3D/PlayerV8/" +
+            "PlayerV8ProductionSurface.mat";
         public const float PlayerV6FacingOffsetDegrees = 0f;
         public const float PlayerV6StrideOfficeUnits = 0.7950477f;
         public const float PlayerV6AuthoredCycleSeconds = 1.4f;
@@ -652,7 +653,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 Directory.CreateDirectory(directory);
 
             Shader balancedShader = Shader.Find(
-                "FamilyCompany/Experimental/PlayerV6BalancedAlbedo");
+                "FamilyCompany/Production/PlayerV8BalancedAlbedo");
             if (balancedShader == null)
                 throw new InvalidOperationException(
                     "Player V6 balanced albedo shader did not load.");

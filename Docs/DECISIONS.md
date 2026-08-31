@@ -1,5 +1,30 @@
 # DECISIONS
 
+## 2026-08-31 / 승인 Player V8과 V31 workstation을 production 기본 표시로 승격한다
+
+결정: 사용자의 명시적 교체·구형 삭제 지시에 따라 Player V8 one-package FBX, albedo,
+전용 material/shader를 `Content/Resources/Production3D/PlayerV8`로 옮기고
+`PlayerV8ProductionPresenter`가 유일한 주인공 표시를 소유한다. scale `1.024378657`, height
+`1.857258558`, stride `0.7950477`, cycle `1.4 s`, 전신 회전 `0.18 s`, same-package Humanoid
+Avatar/skin/clip을 고정한다. 에셋 누락·Avatar 오류 시 2D로 돌아가지 않고 fail-closed한다.
+
+결정: 구형 Player 선택 모드, contact/natural/baked presenter와 Resources, PSB/FBX 제작실,
+importer/baker 및 전용 QA를 삭제한다. 아직 Simulation과 분리되지 않은 기존 SpriteRenderer는
+방향·착석 시계 데이터만 공급하고 처음부터 `forceRenderingOff=true`이며 공개 전환 API가 없다.
+
+결정: 상점 구매, 4방향 회전, 초록/빨강 footprint, collision/pathfinding, save ID와 seat binding은
+기존 의미 상태가 계속 소유한다. 배치된 bound set은 한 `Family3DWorkstation` 루트가 승인 V31
+책상·CRT·키보드·원래 의자를 함께 표시하고 대응 sprite renderer는 숨긴다. 상점/ghost는 정확한
+V31 방향 sprite를 계속 써서 확인 전후 tile footprint가 달라지지 않는다.
+
+검증: Unity `6000.3.21f1` Windows Player Direct3D11에서 Player V8 locked height/stride,
+Working 착석, 4개 set/4방향, 물리 mesh 축 90도, tile-corner 오차 최대 `0.0003px`, visible retired
+Player/workstation renderer `0/0`을 확인했다. 빠른 hidden Player의 중간 자세 오판을 막기 위해
+Working 진입 뒤 실제 `0.65 s`를 기다려 production `0.42 s` sit blend 완료를 보장했고, 양쪽
+무릎 `107.45/113.16 degrees`, chair offset `0.13001`을 별도로 통과했다. 이전 isolated receipt의
+`productionEligible=false`는 당시 사실로 보존하지만 Player에 한해 이 후속 사용자 승격 결정이
+우선한다. Father는 별도 승격되지 않았고 Mother/Older Sister는 이번 변경 대상이 아니다.
+
 ## 2026-08-31 / Player V6 색과 머리 명암은 Player 전용 재질에서만 고정한다
 
 결정: Player V6의 원본 알베도는 흰 tint로 그대로 사용하고,
