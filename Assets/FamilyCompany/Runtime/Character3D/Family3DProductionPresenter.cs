@@ -24,8 +24,8 @@ namespace FamilyCompany.Runtime.Character3D
         public const int ProductionLayer = 30;
         public const float PlayerApprovedModelScale = 1.024378657f;
         public const float PlayerApprovedTargetHeight = 1.857258558f;
-        public const float FatherApprovedModelScale = 1.012728333f;
-        public const float FatherApprovedTargetHeight = 1.885507822f;
+        public const float FatherStandardizedModelScale = 0.950318127f;
+        public const float FatherStandardizedTargetHeight = 1.769311871f;
         public const float ApprovedStrideOfficeUnits = 0.7950477f;
         public const float ApprovedCycleSeconds = 1.4f;
         public const float ApprovedFacingOffsetDegrees = 0f;
@@ -192,8 +192,8 @@ namespace FamilyCompany.Runtime.Character3D
                 FatherAlbedoResourcePath,
                 FatherMaterialResourcePath,
                 FatherWalkClipName,
-                FatherApprovedModelScale,
-                FatherApprovedTargetHeight);
+                FatherStandardizedModelScale,
+                FatherStandardizedTargetHeight);
             characters.Add(player);
             characters.Add(father);
             characterById.Add(player.AgentId, player);

@@ -154,6 +154,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     out int productionActorOverlapPixels,
                     out int playerRenderedPixels,
                     out int fatherRenderedPixels,
+                    out int playerRenderedWidth,
+                    out int playerRenderedHeight,
+                    out int fatherRenderedWidth,
+                    out int fatherRenderedHeight,
                     out string pixelOverlapFailure))
             {
                 Finish(false, "production actor pixel-overlap measurement failed: " +
@@ -181,6 +185,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     productionActorOverlapPixels +
                     " playerPixels=" + playerRenderedPixels +
                     " fatherPixels=" + fatherRenderedPixels);
+                yield break;
+            }
+            float renderedAreaDifference = Mathf.Abs(
+                fatherRenderedPixels - playerRenderedPixels) /
+                (float)Mathf.Max(playerRenderedPixels, 1);
+            if (Mathf.Abs(fatherRenderedHeight - playerRenderedHeight) > 1 ||
+                Mathf.Abs(fatherRenderedWidth - playerRenderedWidth) > 1 ||
+                renderedAreaDifference > 0.08f)
+            {
+                Finish(
+                    false,
+                    "production actor visual-size standard failed player=" +
+                    playerRenderedWidth + "x" + playerRenderedHeight + "/" +
+                    playerRenderedPixels + "px father=" + fatherRenderedWidth + "x" +
+                    fatherRenderedHeight + "/" + fatherRenderedPixels + "px areaDifference=" +
+                    renderedAreaDifference.ToString("F4"));
                 yield break;
             }
 
@@ -352,6 +372,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("productionActorOverlapPixels=" + productionActorOverlapPixels);
             result.AppendLine("playerRenderedPixels=" + playerRenderedPixels);
             result.AppendLine("fatherRenderedPixels=" + fatherRenderedPixels);
+            result.AppendLine("playerRenderedBounds=" + playerRenderedWidth + "x" +
+                              playerRenderedHeight);
+            result.AppendLine("fatherRenderedBounds=" + fatherRenderedWidth + "x" +
+                              fatherRenderedHeight);
             result.AppendLine("workstations=3");
             result.AppendLine("playerSeat=" + playerSeat.SeatId);
             result.AppendLine("fatherSeat=" + fatherSeat.SeatId);
@@ -495,11 +519,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             out int overlapPixels,
             out int playerPixels,
             out int fatherPixels,
+            out int playerWidth,
+            out int playerHeight,
+            out int fatherWidth,
+            out int fatherHeight,
             out string failure)
         {
             overlapPixels = 0;
             playerPixels = 0;
             fatherPixels = 0;
+            playerWidth = 0;
+            playerHeight = 0;
+            fatherWidth = 0;
+            fatherHeight = 0;
             failure = string.Empty;
             GameObject player = GameObject.Find("PlayerV8ProductionHost");
             GameObject father = GameObject.Find("FatherV19ProductionHost");
@@ -555,12 +587,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 pixels.Apply(false, false);
                 Color32[] playerSample = pixels.GetPixels32();
                 var playerMask = new bool[playerSample.Length];
+                int playerMinX = width;
+                int playerMinY = height;
+                int playerMaxX = -1;
+                int playerMaxY = -1;
                 for (var index = 0; index < playerSample.Length; index++)
                     if (playerSample[index].a > 32)
                     {
                         playerMask[index] = true;
                         playerPixels++;
+                        int x = index % width;
+                        int y = index / width;
+                        playerMinX = Mathf.Min(playerMinX, x);
+                        playerMinY = Mathf.Min(playerMinY, y);
+                        playerMaxX = Mathf.Max(playerMaxX, x);
+                        playerMaxY = Mathf.Max(playerMaxY, y);
                     }
+                if (playerMaxX >= playerMinX && playerMaxY >= playerMinY)
+                {
+                    playerWidth = playerMaxX - playerMinX + 1;
+                    playerHeight = playerMaxY - playerMinY + 1;
+                }
 
                 for (var index = 0; index < playerRenderers.Length; index++)
                     playerRenderers[index].forceRenderingOff = true;
@@ -571,12 +618,27 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 pixels.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
                 pixels.Apply(false, false);
                 Color32[] fatherSample = pixels.GetPixels32();
+                int fatherMinX = width;
+                int fatherMinY = height;
+                int fatherMaxX = -1;
+                int fatherMaxY = -1;
                 for (var index = 0; index < fatherSample.Length; index++)
                     if (fatherSample[index].a > 32)
                     {
                         fatherPixels++;
+                        int x = index % width;
+                        int y = index / width;
+                        fatherMinX = Mathf.Min(fatherMinX, x);
+                        fatherMinY = Mathf.Min(fatherMinY, y);
+                        fatherMaxX = Mathf.Max(fatherMaxX, x);
+                        fatherMaxY = Mathf.Max(fatherMaxY, y);
                         if (playerMask[index]) overlapPixels++;
                     }
+                if (fatherMaxX >= fatherMinX && fatherMaxY >= fatherMinY)
+                {
+                    fatherWidth = fatherMaxX - fatherMinX + 1;
+                    fatherHeight = fatherMaxY - fatherMinY + 1;
+                }
                 if (playerPixels < 50 || fatherPixels < 50)
                 {
                     failure = "actor silhouette was not rendered player=" + playerPixels +

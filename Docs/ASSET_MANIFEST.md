@@ -69,8 +69,10 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
   `Assets/FamilyCompany/Content/Resources/Production3D/FatherV19/father-v19-source-receipt.json`,
   SHA-256 `F02DD0E2FC8704490D7878C9B0151B7931C6A2374A6E31DEF14C9D55C00AD4D9`.
 - clip: `FatherV19_Casual_Walk_inplace`, source frames `1..43`, 1.4 s, same FBX Avatar/skin/clip.
-- production map scale is locked to the approved V31 receipt, never recalculated from a retired
-  sprite: runtime scale `1.012728333`, standing height `1.885507822`, stride `0.7950477`.
+- production map scale is screen-standardized against Player V8 in the shipping D3D11 camera,
+  never recalculated from a retired sprite: runtime scale `0.950318127`, standing mesh height
+  `1.769311871`, stride `0.7950477`. The head-to-foot moving silhouette matches Player within one
+  pixel and rendered area within eight percent.
 - status: `USER_VISUAL_APPROVED_PRODUCTION`. Combined D3D11 evidence is
   `Docs/Evidence/PlayerFather3DProduction/`: overlap pixels `0`, `Working/Working`, occupancy
   `0/0/0`, retired visible renderers `0`.
