@@ -41,7 +41,9 @@ leaving the semantic path, grid, seat and workstation geometry unchanged.
 Every ordered frame was visually reviewed, not just the automatic PASS. Both characters retain
 exactly two legs/shoes and two arms/hands, alternating contacts and small opposite arm swing; the
 body remains upright and travel-facing through the collision stop, with no third leg, garment tear,
-rubber limb, foot slide across the path, silhouette overlap or end-frame jump.
+rubber limb, foot slide across the path, silhouette overlap or pose discontinuity before the
+collision stop. The review GIF is a one-shot approach, so its viewer loop intentionally returns
+from the stopped collision frame to the starting positions.
 
 Company-PC execution used standalone `-batchmode`, `CreateNoWindow=true`, hidden process style and
 continuous `MainWindowHandle == 0` monitoring. No Unity editor, ordinary Player or Blender window
