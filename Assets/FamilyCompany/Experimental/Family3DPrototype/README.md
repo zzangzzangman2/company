@@ -97,9 +97,12 @@ Do not duplicate Father version history. Follow `Docs/FAMILY_3D_WORKSTATION_CHAR
 
 For tile-centred review, do not stop at the semantic root or the two-foot midpoint. The current
 command-line-only legacy-size candidate proves the reusable process: read actual per-foot contact
-telemetry, ground and project both ankles every moving frame, sweep stride/phase without changing
-the package clip, validate `+X/-X/+Y/-Y`, and fail if either planted ankle comes within 6px of a
-tile boundary. Its measured coupling is `0.99380799 / 0.64 cycles`; it is candidate-only and must
+telemetry; require both toe mappings; project an expanded heel-to-toe sole plus rendered shoe width
+every moving frame; sweep stride/phase without changing the package clip; and validate
+`+X/-X/+Y/-Y`. The ankle-only `8.135/7.096px` result was a false PASS because Father's visible
+forefoot still covered a line. The current envelope requires at least 2px of clear floor and uses a
+candidate-only minimal whole-host inset while planted. Its measured coupling remains
+`0.99380799 / 0.64 cycles`; the correction releases while airborne, resets before seating and must
 not be copied over the approved production stride `0.7950477` without a new user-approved GIF.
 
 ## Safety

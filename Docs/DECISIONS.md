@@ -1,12 +1,18 @@
 # DECISIONS
 
-## 2026-09-01 / 발 평균이 아니라 개별 접지발을 타일 선에서 보호한다
+## 2026-09-01 / 발목 점이 아니라 렌더 신발 전체를 타일 선에서 보호한다
 
 결정: semantic root와 양발 평균이 타일 중앙선을 따라가도 한쪽 **접지발**은 타일 경계에 놓일 수
 있다. 이전 후보는 실제 action-613 접지 기준 최소 선 여유가 Player/Father `0.527/0.024px`, 6px
 미만 프레임이 `16/17`이었다. 따라서 `Family3DWalkActor.LeftFootPlanted/RightFootPlanted`의 실제
-텔레메트리를 읽어 왼발·오른발을 매 프레임 따로 타일 좌표로 역투영한다. 발목 Y는 바닥 `0`으로
-내린 접점으로 재며, 평균점 PASS나 네 장 정지 시트는 이 검사를 대체하지 않는다.
+텔레메트리를 읽어 왼발·오른발을 매 프레임 따로 타일 좌표로 역투영한다. 평균점 PASS나 네 장 정지
+시트는 이 검사를 대체하지 않는다.
+
+정정: `HumanBodyBones.Foot`는 신발 중심이 아니라 발목 pivot이다. 발목 최소 여유
+`8.135/7.096px`만 보고 통과시킨 직전 결과는 사용자가 올린 확대 프레임에서 Father's forefoot가
+선을 덮었으므로 무효다. 이제 `LeftToes/RightToes`가 없으면 fail-closed하고, 바닥에 내린
+ankle-to-toe 축을 heel `0.65`, toe `0.45`만큼 확장한 뒤 렌더 신발 반폭 `4px`를 차감한다. 이
+보수적 신발 envelope와 타일 선 사이에 다시 `2px` 이상이 남아야만 통과한다.
 
 결정: 위상만 10개(`0.0..0.9`) 바꿔서는 최소 여유가 최대 `2.13px`라 실패했다. 미승인
 `-familyCompanyLegacy2DScaleCandidate`에만 한 cycle을 정확한 등각 타일 중심거리
@@ -14,11 +20,18 @@
 `poseStrength=1`, 방향과 팔다리 곡선은 바꾸지 않는다. production/default는 계속 stride
 `0.7950477`, phase `0`이며 별도 D3D11 회귀 PASS를 요구한다.
 
-결정: 최종 X축 D3D11은 실제 접지 샘플 `65/66`, 최소 여유 `8.135/7.096px`, under-6px
-`0/0`; Y축 수치 sweep은 `8.767/6.453px`, `0/0`이다. 두 접근에서 두 배우가 반대 방향을
-걸어 `+X/-X/+Y/-Y`를 모두 포함한다. 후보 QA는 배우당 접지 샘플 24개 미만, 최소 여유 6px
-미만, 또는 under-6px 프레임 하나라도 있으면 fail-closed한다. 자동 PASS 뒤에도 89장 전체와
-실제 GIF를 육안 검수하며 사용자 승인 전 `productionEligible=false`를 유지한다.
+결정: phase만 바꾸는 20개 추가 후보도 보수적 신발 envelope 기준으로 모두 실패했다. 따라서
+clip/Avatar/skin/`poseStrength=1`/팔다리 곡선을 전혀 바꾸지 않고, 미승인 candidate에서 authored
+contact가 활성인 동안 **캐릭터 host 전체**에 필요한 최소 2D grid translation만 적용한다. 확장 sole은
+타일 내부 `0.20 cell`에 머물며 airborne gap에서 correction을 release하고 seat-facing 상태에서는
+즉시 0으로 리셋한다. 이는 다리 IK나 절차적 보행이 아니며 production/default에는 적용되지 않는다.
+
+결정: 최종 D3D11은 실제 접지 샘플 `65/66`, conservative rendered-shoe 최소 여유
+`3.562/3.562px`, 2px 미만 contact frame `0/0`이다. 독립 X/Y sweep은 각각
+`3.870/3.870px`, `3.870/3.870px`, `0/0`이며 두 배우의 반대 이동으로 `+X/-X/+Y/-Y`를
+포함한다. 발 중심 median/max도 Player `3.170/7.470px`, Father `2.514/3.249px`로 기존
+`4/8px` gate 안이다. 자동 PASS 뒤 89장 전체, 확대 GIF와 지적된 frame 14를 육안 검수한다.
+사용자 승인 전 `productionEligible=false`를 유지한다.
 
 ## 2026-09-01 / 2D 화면 크기·색감 비교는 미승인 후보로만 검증한다
 
@@ -51,8 +64,8 @@ semantic agent, grid, path, workstation, save와 기본 production profile은 �
 Windows Player는 `WindowStyle Hidden`만으로는 실제 render surface가 표시될 수 있으므로 금지한다.
 검수 실행은 standalone `-batchmode` + `CreateNoWindow` + 실행 중 zero `MainWindowHandle`을 동시에
 강제한다. 최종 D3D11 후보는 89 ordered walk frames, 15개 분산 샘플, 높이 중앙값 `91/94px`,
-머리 `27/28px`, 몸통 `24/24px`, 실루엣 면적 `1745/1769px`, luma `91.99/69.53`, saturation
-`0.363/0.209`, 발 중심 오차 Player `2.118/5.921px`, Father `1.286/4.170px` median/max,
+머리 `27/28px`, 몸통 `24/24px`, 실루엣 면적 `1732/1767px`, luma `91.33/69.77`, saturation
+`0.360/0.210`, 발 중심 오차 Player `3.170/7.470px`, Father `2.514/3.249px` median/max,
 직선 중심선 이탈 `0.000002/0.000212`, 겹침/침범 `0/0`, 착석 타일 중심 `0/0`,
 `Working/Working`을 기록했다.
 

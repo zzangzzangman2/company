@@ -69,7 +69,7 @@ Last updated: 2026-09-01. This file contains current handoff state only. Superse
 - The strengthened D3D11 candidate run records the complete head-on approach rather than judging
   one collision pose. Its 89 ordered frames and 15 evenly spaced silhouette samples measured
   Player height `85/91/97px` min/median/max and Father `91/94/98px`; stopped silhouette pixels
-  `1732/1766`, luma `91.61/69.56`, and saturation `0.359/0.210`. The earlier single-frame check
+  `1732/1767`, luma `91.33/69.77`, and saturation `0.360/0.210`. The earlier single-frame check
   varied with gait phase and is no longer the
   acceptance source.
 - The semantic routes already started on the exact tile centres and deviated by at most
@@ -77,32 +77,38 @@ Last updated: 2026-09-01. This file contains current handoff state only. Superse
   candidate now corrects the walking production host by Player local X/Z
   `+0.050989/+0.214083` and Father `+0.037517/+0.138023` after travel yaw. It never moves the
   imported model/Animator root and is disabled for every seat-facing phase, preserving the approved
-  seated pose. The tile-safe run's foot-midpoint centre error is Player `1.833/3.866px` and Father
-  `1.141/2.754px` median/max.
-- Midpoint centring alone was insufficient: the old `0.7950477` coupling placed an individual
-  planted ankle nearly exactly on a half-cell line (`0.527/0.024px` minimum; `16/17` moving contact
-  frames under 6px). Ten phase-only candidates also failed. Coupling the candidate to the exact
-  isometric centre distance `0.99380799` and measured phase `0.64` places alternating contacts near
-  the quarter-cell interiors. Hidden D3D11 measured `65/66` planted-contact samples, minimum
-  clearance `8.135/7.096px`, and under-6px frames `0/0`. A separate Y-axis sweep covers the other
-  two directions at `8.767/6.453px`, also `0/0`; together the two actors cover `+X/-X/+Y/-Y`.
-  Candidate QA now fails closed if either actor has fewer than 24 contact samples, a minimum below
-  6px, or any under-6px frame.
+  seated pose. After the shoe-envelope correction below, the final foot-midpoint centre error is
+  Player `3.170/7.470px` and Father `2.514/3.249px` median/max, still inside the locked `4/8px`
+  candidate gates.
+- Midpoint centring and ankle-only line distance were both insufficient. The previous report that
+  claimed `8.135/7.096px` clearance measured only each Humanoid `Foot` ankle pivot; the user's
+  enlarged frame proved Father's rendered forefoot still covered a tile line. That report is
+  superseded and must not be reused. QA now requires `LeftToes/RightToes`, expands each
+  ankle-to-toe segment by `0.65` heel / `0.45` toe ratios, subtracts a conservative `4px` shoe
+  half-width, and requires at least `2px` remaining rendered-shoe clearance.
+- The package clip, `stride 0.99380799`, phase `0.64`, Avatar, skin, pose strength, direction and
+  limb curves remain unchanged. Candidate mode alone applies a minimal whole-host translation
+  while the authored contact flag is active so the expanded sole stays at least `0.20` grid cells
+  inside one tile; the correction releases during the airborne gap and is reset for every
+  seat-facing state. It never bends or replaces a limb and is absent from production/default.
+  Final hidden D3D11 measured `65/66` planted-contact samples, minimum conservative shoe clearance
+  `3.562/3.562px`, and contact frames below `2px` `0/0`. Independent X/Y sweeps measured
+  `3.870/3.870px` and `3.870/3.870px`; the opposite-moving pair covers `+X/-X/+Y/-Y`.
 - The same run covered `3.56249/3.56993` map-unit travel, dynamic blocking with pixel overlap `0`
   and penetration `0`, followed by real purchased V31 routing to `seat_player/seat_father`, exact
   seated tile-centre error `0/0`, bent knees `83.78/95.48` and `94.60/107.66` degrees,
   `Working/Working`, and static/interaction/agent violations `0/0/0`. All 89 frames were inspected
   in enlarged chronological sheets and both GIFs. Portable evidence is under
   `Docs/Evidence/PlayerFather3DLegacy2DScaleCandidateCurrent/`; the Git-ignored local artifact
-  directory `Artifacts/PlayerFather3DLegacy2DScaleCandidateCurrent-20260901/` keeps all raw PNGs.
+  directory `Artifacts/PlayerFather3DPlantedShoeTileSafeFinal3-20260901/` keeps all raw PNGs.
 - The generic Render Clarity capture previously rendered only `Camera.main`, so the two health bars
   could appear without the production 3D bodies while the unrelated pixel-clarity gate passed.
   It now composites `Family3DProductionOverlayCamera` into the same target. This was a QA capture
   blind spot, not evidence that the shipping screen omitted the bodies; the dedicated combined
   D3D11 proof rendered both bodies normally.
 - Company-PC final script-build validation passed at
-  `Artifacts/FastQa/runs/20260901-124924-359`; the unchanged production/default profile also passed
-  hidden D3D11 at `Artifacts/PlayerFather3DDefaultRegressionTileSafeChange-20260901/` with stride
+  `Artifacts/FastQa/runs/20260901-133254-586`; the unchanged production/default profile also passed
+  hidden D3D11 at `Artifacts/PlayerFather3DDefaultRegressionShoeInsetChange-20260901/` with stride
   `0.7950477`, `productionEligible=True`, and overlap `0`. An ordinary Player with only hidden process style is
   forbidden because it can still display a render surface. The final D3D11 run used standalone
   `-batchmode`, `CreateNoWindow=true`, a continuously checked zero `MainWindowHandle`, and never

@@ -1,0 +1,3 @@
+minimumPlantedShoeTileLineClearancePx=3.869772/3.870044
+plantedShoeTileLineTouchFrames=0/0
+frames=89

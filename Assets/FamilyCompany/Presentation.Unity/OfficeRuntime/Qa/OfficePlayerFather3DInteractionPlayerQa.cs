@@ -182,7 +182,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             var footTileTrace = new StringBuilder();
             footTileTrace.AppendLine(
                 "frame,actor,phase,left_contact,right_contact,left_grid_x,left_grid_y," +
-                "right_grid_x,right_grid_y,left_line_px,right_line_px,min_contact_line_px");
+                "right_grid_x,right_grid_y,left_toe_grid_x,left_toe_grid_y," +
+                "right_toe_grid_x,right_toe_grid_y,left_ankle_line_px,right_ankle_line_px," +
+                "left_shoe_line_px,right_shoe_line_px,min_contact_shoe_line_px");
             float playerMaximumCenterLineError = 0f;
             float fatherMaximumCenterLineError = 0f;
             string approachFrameDirectory = Path.Combine(artifactDirectory, "approach-frames");
@@ -222,7 +224,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         playerMinimumPlantedFootLineClearancePx = Mathf.Min(
                             playerMinimumPlantedFootLineClearancePx,
                             playerTileSample.minimumContactLineClearancePx);
-                        if (playerTileSample.minimumContactLineClearancePx < 6f)
+                        if (playerTileSample.minimumContactLineClearancePx < 2f)
                             playerPlantedFootLineTouchFrames++;
                     }
                 }
@@ -240,7 +242,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         fatherMinimumPlantedFootLineClearancePx = Mathf.Min(
                             fatherMinimumPlantedFootLineClearancePx,
                             fatherTileSample.minimumContactLineClearancePx);
-                        if (fatherTileSample.minimumContactLineClearancePx < 6f)
+                        if (fatherTileSample.minimumContactLineClearancePx < 2f)
                             fatherPlantedFootLineTouchFrames++;
                     }
                 }
@@ -327,10 +329,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             if (footTilePhaseSweep)
             {
                 string sweepResult =
-                    "minimumPlantedFootTileLineClearancePx=" +
+                    "minimumPlantedShoeTileLineClearancePx=" +
                     Invariant(playerMinimumPlantedFootLineClearancePx) + "/" +
                     Invariant(fatherMinimumPlantedFootLineClearancePx) + Environment.NewLine +
-                    "plantedFootTileLineTouchFramesUnder6Px=" +
+                    "plantedShoeTileLineTouchFrames=" +
                     playerPlantedFootLineTouchFrames + "/" +
                     fatherPlantedFootLineTouchFrames + Environment.NewLine +
                     "frames=" + approachFrameCount + Environment.NewLine;
@@ -407,8 +409,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                   fatherMaximumFootMidpointPixelError > 8f ||
                   playerPlantedFootContactSamples < 24 ||
                   fatherPlantedFootContactSamples < 24 ||
-                  playerMinimumPlantedFootLineClearancePx < 6f ||
-                  fatherMinimumPlantedFootLineClearancePx < 6f ||
+                  playerMinimumPlantedFootLineClearancePx < 2f ||
+                  fatherMinimumPlantedFootLineClearancePx < 2f ||
                   playerPlantedFootLineTouchFrames != 0 ||
                   fatherPlantedFootLineTouchFrames != 0)))
             {
@@ -716,13 +718,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                               playerMedianFootLocalZ.ToString("F6") + "/" +
                               fatherMedianFootLocalX.ToString("F6") + "/" +
                               fatherMedianFootLocalZ.ToString("F6"));
-            result.AppendLine("minimumPlantedFootTileLineClearancePx=" +
+            result.AppendLine("minimumPlantedShoeTileLineClearancePx=" +
                               playerMinimumPlantedFootLineClearancePx.ToString("F3") + "/" +
                               fatherMinimumPlantedFootLineClearancePx.ToString("F3"));
             result.AppendLine("plantedFootContactSamples=" +
                               playerPlantedFootContactSamples + "/" +
                               fatherPlantedFootContactSamples);
-            result.AppendLine("plantedFootTileLineTouchFramesUnder6Px=" +
+            result.AppendLine("plantedShoeTileLineTouchFrames=" +
                               playerPlantedFootLineTouchFrames + "/" +
                               fatherPlantedFootLineTouchFrames);
             result.AppendLine("playerRenderedHeightRange=" + playerHeightSamples.Min() + "/" +
@@ -1178,6 +1180,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             string productionHostName,
             out FootTileLineSample sample)
         {
+            // Humanoid Foot is the ankle pivot, not the front of the rendered shoe. The old
+            // check therefore passed while the toe visibly covered a tile line. Measure an
+            // expanded ankle-to-toe sole axis and subtract a conservative rendered half-width.
+            const float heelExtensionRatio = 0.65f;
+            const float toeExtensionRatio = 0.45f;
+            const float shoeHalfWidthSafetyPixels = 4f;
             sample = default;
             Camera source = Camera.main;
             Camera overlay = Object.FindObjectsByType<Camera>(
@@ -1200,8 +1208,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         StringComparison.Ordinal));
             Transform leftFoot = animator?.GetBoneTransform(HumanBodyBones.LeftFoot);
             Transform rightFoot = animator?.GetBoneTransform(HumanBodyBones.RightFoot);
+            Transform leftToe = animator?.GetBoneTransform(HumanBodyBones.LeftToes);
+            Transform rightToe = animator?.GetBoneTransform(HumanBodyBones.RightToes);
             if (runtime?.World?.Presenter == null || source == null || overlay == null ||
-                walkActor == null || leftFoot == null || rightFoot == null || !source.orthographic)
+                walkActor == null || leftFoot == null || rightFoot == null ||
+                leftToe == null || rightToe == null || !source.orthographic)
                 return false;
 
             Vector3 sourcePoint = new Vector3(
@@ -1211,8 +1222,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             float sourceDepth = source.WorldToViewportPoint(sourcePoint).z;
             Vector3 leftFootGround = leftFoot.position;
             Vector3 rightFootGround = rightFoot.position;
+            Vector3 leftToeGround = leftToe.position;
+            Vector3 rightToeGround = rightToe.position;
             leftFootGround.y = 0f;
             rightFootGround.y = 0f;
+            leftToeGround.y = 0f;
+            rightToeGround.y = 0f;
             if (sourceDepth <= 0f ||
                 !TryMapOverlayPointToOfficeWorld(
                     source,
@@ -1225,7 +1240,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     overlay,
                     sourceDepth,
                     rightFootGround,
-                    out Vector2 rightOffice))
+                    out Vector2 rightOffice) ||
+                !TryMapOverlayPointToOfficeWorld(
+                    source,
+                    overlay,
+                    sourceDepth,
+                    leftToeGround,
+                    out Vector2 leftToeOffice) ||
+                !TryMapOverlayPointToOfficeWorld(
+                    source,
+                    overlay,
+                    sourceDepth,
+                    rightToeGround,
+                    out Vector2 rightToeOffice))
                 return false;
 
             Vector2 origin = runtime.World.Presenter.CellCenterWorld(
@@ -1233,7 +1260,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             Vector2 basisX = runtime.World.Presenter.CellBasisXWorld();
             Vector2 basisY = runtime.World.Presenter.CellBasisYWorld();
             if (!TryResolveGridCoordinate(leftOffice, origin, basisX, basisY, out Vector2 leftGrid) ||
-                !TryResolveGridCoordinate(rightOffice, origin, basisX, basisY, out Vector2 rightGrid))
+                !TryResolveGridCoordinate(rightOffice, origin, basisX, basisY, out Vector2 rightGrid) ||
+                !TryResolveGridCoordinate(leftToeOffice, origin, basisX, basisY, out Vector2 leftToeGrid) ||
+                !TryResolveGridCoordinate(rightToeOffice, origin, basisX, basisY, out Vector2 rightToeGrid))
                 return false;
 
             float leftLine = NearestGridLineClearancePixels(
@@ -1250,6 +1279,36 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 basisX,
                 basisY,
                 source);
+            Vector2 leftHeelGrid = Vector2.LerpUnclamped(
+                leftGrid,
+                leftToeGrid,
+                -heelExtensionRatio);
+            Vector2 leftTipGrid = Vector2.LerpUnclamped(
+                leftGrid,
+                leftToeGrid,
+                1f + toeExtensionRatio);
+            Vector2 rightHeelGrid = Vector2.LerpUnclamped(
+                rightGrid,
+                rightToeGrid,
+                -heelExtensionRatio);
+            Vector2 rightTipGrid = Vector2.LerpUnclamped(
+                rightGrid,
+                rightToeGrid,
+                1f + toeExtensionRatio);
+            float leftShoeLine = NearestGridLineClearancePixelsForSegment(
+                                     leftHeelGrid,
+                                     leftTipGrid,
+                                     basisX,
+                                     basisY,
+                                     source) -
+                                 shoeHalfWidthSafetyPixels;
+            float rightShoeLine = NearestGridLineClearancePixelsForSegment(
+                                      rightHeelGrid,
+                                      rightTipGrid,
+                                      basisX,
+                                      basisY,
+                                      source) -
+                                  shoeHalfWidthSafetyPixels;
             if (!TryReadWalkActorContactTelemetry(
                     walkActor,
                     out float phase,
@@ -1257,8 +1316,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     out bool rightContact))
                 return false;
             float minimumContact = float.PositiveInfinity;
-            if (leftContact) minimumContact = Mathf.Min(minimumContact, leftLine);
-            if (rightContact) minimumContact = Mathf.Min(minimumContact, rightLine);
+            if (leftContact) minimumContact = Mathf.Min(minimumContact, leftShoeLine);
+            if (rightContact) minimumContact = Mathf.Min(minimumContact, rightShoeLine);
             sample = new FootTileLineSample
             {
                 phase01 = phase,
@@ -1267,8 +1326,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 hasContact = leftContact || rightContact,
                 leftGrid = leftGrid,
                 rightGrid = rightGrid,
+                leftToeGrid = leftToeGrid,
+                rightToeGrid = rightToeGrid,
                 leftLineClearancePx = leftLine,
                 rightLineClearancePx = rightLine,
+                leftShoeLineClearancePx = leftShoeLine,
+                rightShoeLineClearancePx = rightShoeLine,
                 minimumContactLineClearancePx = minimumContact
             };
             return true;
@@ -1356,6 +1419,41 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             return Mathf.Min(distanceX, distanceY) * pixelsPerWorld;
         }
 
+        private static float NearestGridLineClearancePixelsForSegment(
+            Vector2 startGrid,
+            Vector2 endGrid,
+            Vector2 basisX,
+            Vector2 basisY,
+            Camera source)
+        {
+            float determinant = Mathf.Abs(Cross(basisX, basisY));
+            float pixelsPerWorld = 720f / (2f * source.orthographicSize);
+            float xLineSpacingWorld = determinant / Mathf.Max(basisY.magnitude, 0.000001f);
+            float yLineSpacingWorld = determinant / Mathf.Max(basisX.magnitude, 0.000001f);
+            float xClearance = NearestHalfIntegerClearanceForInterval(
+                startGrid.x,
+                endGrid.x) * xLineSpacingWorld * pixelsPerWorld;
+            float yClearance = NearestHalfIntegerClearanceForInterval(
+                startGrid.y,
+                endGrid.y) * yLineSpacingWorld * pixelsPerWorld;
+            return Mathf.Min(xClearance, yClearance);
+        }
+
+        private static float NearestHalfIntegerClearanceForInterval(float first, float second)
+        {
+            float minimum = Mathf.Min(first, second);
+            float maximum = Mathf.Max(first, second);
+            float firstBoundaryAtOrAboveMinimum = Mathf.Ceil(minimum - 0.5f) + 0.5f;
+            if (firstBoundaryAtOrAboveMinimum <= maximum + 0.000001f)
+                return 0f;
+            return Mathf.Min(
+                DistanceToNearestHalfInteger(first),
+                DistanceToNearestHalfInteger(second));
+        }
+
+        private static float DistanceToNearestHalfInteger(float value) =>
+            Mathf.Abs(value - (Mathf.Round(value - 0.5f) + 0.5f));
+
         private static float Cross(Vector2 left, Vector2 right) =>
             left.x * right.y - left.y * right.x;
 
@@ -1373,8 +1471,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 .Append(Invariant(sample.leftGrid.y)).Append(',')
                 .Append(Invariant(sample.rightGrid.x)).Append(',')
                 .Append(Invariant(sample.rightGrid.y)).Append(',')
+                .Append(Invariant(sample.leftToeGrid.x)).Append(',')
+                .Append(Invariant(sample.leftToeGrid.y)).Append(',')
+                .Append(Invariant(sample.rightToeGrid.x)).Append(',')
+                .Append(Invariant(sample.rightToeGrid.y)).Append(',')
                 .Append(Invariant(sample.leftLineClearancePx)).Append(',')
                 .Append(Invariant(sample.rightLineClearancePx)).Append(',')
+                .Append(Invariant(sample.leftShoeLineClearancePx)).Append(',')
+                .Append(Invariant(sample.rightShoeLineClearancePx)).Append(',')
                 .Append(Invariant(sample.minimumContactLineClearancePx)).AppendLine();
         }
 
@@ -1389,8 +1493,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             public bool hasContact;
             public Vector2 leftGrid;
             public Vector2 rightGrid;
+            public Vector2 leftToeGrid;
+            public Vector2 rightToeGrid;
             public float leftLineClearancePx;
             public float rightLineClearancePx;
+            public float leftShoeLineClearancePx;
+            public float rightShoeLineClearancePx;
             public float minimumContactLineClearancePx;
         }
 

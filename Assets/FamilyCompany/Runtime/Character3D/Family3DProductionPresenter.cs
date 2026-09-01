@@ -56,6 +56,13 @@ namespace FamilyCompany.Runtime.Character3D
         public const float ApprovedCycleSeconds = 1.4f;
         public const float ApprovedFacingOffsetDegrees = 0f;
         public const float TurnSeconds = 0.18f;
+        // Candidate-only rendered shoe envelope. Humanoid Foot is an ankle pivot, so the
+        // toe/heel span and a 0.20-cell clean inset are both required to keep the visible shoe
+        // away from a tile boundary. The approved production/default presentation never uses it.
+        private const float CandidateShoeHeelExtensionRatio = 0.65f;
+        private const float CandidateShoeToeExtensionRatio = 0.45f;
+        private const float CandidateShoeBoundaryInsetGrid = 0.20f;
+        private const float CandidateShoeCorrectionReleaseSpeed = 1.4f;
 
         private const string PlayerModelResourcePath =
             "Production3D/PlayerV8/player-v8-production";
@@ -535,6 +542,7 @@ namespace FamilyCompany.Runtime.Character3D
             OfficeRuntimeAgent actor = binding.Agent;
             if (actor.Phase == OfficeRuntimeAgentPhase.Outside)
             {
+                binding.TileShoeCorrectionWorld = Vector3.zero;
                 binding.Host.SetActive(false);
                 return;
             }
@@ -567,6 +575,7 @@ namespace FamilyCompany.Runtime.Character3D
 
             if (workstation != null && (binding.SeatedBlend01 > 0.0001f || seatFacingPhase))
             {
+                binding.TileShoeCorrectionWorld = Vector3.zero;
                 float positionBlend = Mathf.SmoothStep(0f, 1f, binding.SeatedBlend01);
                 Vector3 rootPosition = Vector3.Lerp(
                     actorGround,
@@ -608,6 +617,177 @@ namespace FamilyCompany.Runtime.Character3D
                 0f,
                 binding.StandingFootCenterOffsetLocal.y);
             binding.WalkActor.Tick(motionClock, visualGround, rotation, moving);
+            ApplyCandidatePlantedShoeTileInset(binding, actor, moving);
+        }
+
+        private void ApplyCandidatePlantedShoeTileInset(
+            CharacterBinding binding,
+            OfficeRuntimeAgent actor,
+            bool moving)
+        {
+            if (!legacy2DScaleCandidate || !moving)
+            {
+                binding.TileShoeCorrectionWorld = Vector3.zero;
+                return;
+            }
+
+            bool leftContact = binding.WalkActor.LeftFootPlanted;
+            bool rightContact = binding.WalkActor.RightFootPlanted;
+            if ((!leftContact && !rightContact) || sourceOfficeCamera == null ||
+                overlayCamera == null || starter?.World?.Presenter == null ||
+                !binding.WalkActor.TryGetSoleWorldPoints(
+                    out Vector3 leftAnkle,
+                    out Vector3 leftToe,
+                    out Vector3 rightAnkle,
+                    out Vector3 rightToe))
+            {
+                binding.TileShoeCorrectionWorld = Vector3.MoveTowards(
+                    binding.TileShoeCorrectionWorld,
+                    Vector3.zero,
+                    CandidateShoeCorrectionReleaseSpeed * Mathf.Max(Time.unscaledDeltaTime, 0f));
+                binding.Host.transform.position += binding.TileShoeCorrectionWorld;
+                return;
+            }
+
+            Vector2 correctionGrid = Vector2.zero;
+            var correctionCount = 0;
+            if (leftContact && TryResolveShoeInsetCorrectionGrid(
+                    actor,
+                    leftAnkle,
+                    leftToe,
+                    out Vector2 leftCorrection))
+            {
+                correctionGrid += leftCorrection;
+                correctionCount++;
+            }
+            if (rightContact && TryResolveShoeInsetCorrectionGrid(
+                    actor,
+                    rightAnkle,
+                    rightToe,
+                    out Vector2 rightCorrection))
+            {
+                correctionGrid += rightCorrection;
+                correctionCount++;
+            }
+            if (correctionCount == 0)
+            {
+                binding.TileShoeCorrectionWorld = Vector3.zero;
+                return;
+            }
+
+            correctionGrid /= correctionCount;
+            Vector3 sourceOrigin = new Vector3(
+                actor.Position.x,
+                actor.Position.y,
+                actor.transform.position.z);
+            Vector2 basisX = starter.World.Presenter.CellBasisXWorld();
+            Vector2 basisY = starter.World.Presenter.CellBasisYWorld();
+            Vector2 sourceOffset = basisX * correctionGrid.x + basisY * correctionGrid.y;
+            Vector3 correctedSource = sourceOrigin + new Vector3(sourceOffset.x, sourceOffset.y, 0f);
+            Vector3 desiredWorldCorrection =
+                MapOfficeWorldToProductionGround(correctedSource) -
+                MapOfficeWorldToProductionGround(sourceOrigin);
+            desiredWorldCorrection.y = 0f;
+            binding.TileShoeCorrectionWorld = desiredWorldCorrection;
+            binding.Host.transform.position += binding.TileShoeCorrectionWorld;
+        }
+
+        private bool TryResolveShoeInsetCorrectionGrid(
+            OfficeRuntimeAgent actor,
+            Vector3 ankleWorld,
+            Vector3 toeWorld,
+            out Vector2 correctionGrid)
+        {
+            correctionGrid = Vector2.zero;
+            ankleWorld.y = 0f;
+            toeWorld.y = 0f;
+            if (!TryMapProductionGroundToOffice(actor, ankleWorld, out Vector2 ankleOffice) ||
+                !TryMapProductionGroundToOffice(actor, toeWorld, out Vector2 toeOffice))
+                return false;
+            Vector2 origin = starter.World.Presenter.CellCenterWorld(
+                new OfficeGridCoordinate(0, 0));
+            Vector2 basisX = starter.World.Presenter.CellBasisXWorld();
+            Vector2 basisY = starter.World.Presenter.CellBasisYWorld();
+            if (!TryResolveGridCoordinate(ankleOffice, origin, basisX, basisY, out Vector2 ankleGrid) ||
+                !TryResolveGridCoordinate(toeOffice, origin, basisX, basisY, out Vector2 toeGrid))
+                return false;
+            Vector2 heelGrid = Vector2.LerpUnclamped(
+                ankleGrid,
+                toeGrid,
+                -CandidateShoeHeelExtensionRatio);
+            Vector2 tipGrid = Vector2.LerpUnclamped(
+                ankleGrid,
+                toeGrid,
+                1f + CandidateShoeToeExtensionRatio);
+            correctionGrid = new Vector2(
+                ResolveAxisInsetCorrection(heelGrid.x, tipGrid.x),
+                ResolveAxisInsetCorrection(heelGrid.y, tipGrid.y));
+            return true;
+        }
+
+        private bool TryMapProductionGroundToOffice(
+            OfficeRuntimeAgent actor,
+            Vector3 productionGround,
+            out Vector2 officeWorld)
+        {
+            officeWorld = Vector2.zero;
+            Vector3 sourcePoint = new Vector3(
+                actor.Position.x,
+                actor.Position.y,
+                actor.transform.position.z);
+            float sourceDepth = sourceOfficeCamera.WorldToViewportPoint(sourcePoint).z;
+            Vector3 viewport = overlayCamera.WorldToViewportPoint(productionGround);
+            if (sourceDepth <= 0f || viewport.z <= 0f)
+                return false;
+            Vector3 mapped = sourceOfficeCamera.ViewportToWorldPoint(
+                new Vector3(viewport.x, viewport.y, sourceDepth));
+            officeWorld = new Vector2(mapped.x, mapped.y);
+            return true;
+        }
+
+        private static bool TryResolveGridCoordinate(
+            Vector2 point,
+            Vector2 origin,
+            Vector2 basisX,
+            Vector2 basisY,
+            out Vector2 grid)
+        {
+            grid = Vector2.zero;
+            float determinant = basisX.x * basisY.y - basisX.y * basisY.x;
+            if (Mathf.Abs(determinant) <= 0.000001f)
+                return false;
+            Vector2 delta = point - origin;
+            grid = new Vector2(
+                (delta.x * basisY.y - delta.y * basisY.x) / determinant,
+                (basisX.x * delta.y - basisX.y * delta.x) / determinant);
+            return true;
+        }
+
+        private static float ResolveAxisInsetCorrection(float first, float second)
+        {
+            float minimum = Mathf.Min(first, second);
+            float maximum = Mathf.Max(first, second);
+            float midpoint = (minimum + maximum) * 0.5f;
+            float best = 0f;
+            float bestMagnitude = float.PositiveInfinity;
+            int centralCell = Mathf.RoundToInt(midpoint);
+            for (int cell = centralCell - 1; cell <= centralCell + 1; cell++)
+            {
+                float lower = cell - 0.5f + CandidateShoeBoundaryInsetGrid;
+                float upper = cell + 0.5f - CandidateShoeBoundaryInsetGrid;
+                if (maximum - minimum > upper - lower)
+                    continue;
+                float correction = minimum < lower
+                    ? lower - minimum
+                    : maximum > upper
+                        ? upper - maximum
+                        : 0f;
+                if (Mathf.Abs(correction) >= bestMagnitude)
+                    continue;
+                best = correction;
+                bestMagnitude = Mathf.Abs(correction);
+            }
+            return best;
         }
 
         private Family3DWorkstation ResolveActiveWorkstation(CharacterBinding binding)
@@ -916,6 +1096,7 @@ namespace FamilyCompany.Runtime.Character3D
             public Quaternion ActiveTurnTarget { get; set; } = Quaternion.identity;
             public float ActiveTurnRate { get; set; }
             public bool HasActiveTurn { get; set; }
+            public Vector3 TileShoeCorrectionWorld { get; set; }
         }
 
         private void OnDestroy()

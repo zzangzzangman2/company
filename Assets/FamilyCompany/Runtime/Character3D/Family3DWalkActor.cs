@@ -151,6 +151,23 @@ namespace FamilyCompany.Runtime.Character3D
         public float NaturalSdArmSwingDegrees => naturalSdArmSwingDegrees;
         public float NaturalSdElbowBendDegrees => naturalSdElbowBendDegrees;
 
+        public bool TryGetSoleWorldPoints(
+            out Vector3 leftAnkle,
+            out Vector3 leftToe,
+            out Vector3 rightAnkle,
+            out Vector3 rightToe)
+        {
+            leftAnkle = leftToe = rightAnkle = rightToe = Vector3.zero;
+            if (!initialized || leftFoot == null || leftToes == null ||
+                rightFoot == null || rightToes == null)
+                return false;
+            leftAnkle = leftFoot.position;
+            leftToe = leftToes.position;
+            rightAnkle = rightFoot.position;
+            rightToe = rightToes.position;
+            return true;
+        }
+
         private float ResolveCycleSeconds()
         {
             if (authoredCycleSeconds > 0.0001f)

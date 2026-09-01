@@ -1,99 +1,82 @@
-# Player/Father tile-centred screen-size candidate
+# Player/Father rendered-shoe tile-safe candidate
 
-Status: `productionEligible=false`. This remains a command-line review candidate and does not
-replace the approved production/default profile until the user explicitly accepts the GIF.
-Player V8 and Father V19 keep their own same-package mesh, Avatar, skin and action-613 clip at full
-pose strength.
+Status: `productionEligible=false`. This is still the command-line
+`-familyCompanyLegacy2DScaleCandidate`; it does not replace production/default until the user
+approves the actual GIF. Player V8 and Father V19 retain their same-package mesh, Avatar, skin,
+action-613 clip, `poseStrength=1`, travel facing and limb curves.
 
-## What changed
+## Corrected failure
 
-The semantic `OfficeRuntimeAgent` path already crossed the exact tile centres, but enlarged-frame
-measurement showed that the two animated foot bones had a stable midpoint bias relative to that
-path. Candidate locomotion now offsets only the visible production host by the measured amount:
+The preceding evidence was wrong. It measured only `HumanBodyBones.LeftFoot/RightFoot`, which are
+ankle pivots. The user enlarged frame 14 and correctly showed Father's visible forefoot covering a
+tile line even though the ankle pivot was reported 7px away. The old `8.135/7.096px` claim is
+superseded and must not be used as acceptance evidence.
 
-- Player local X/Z correction: `+0.050989 / +0.214083`;
-- Father local X/Z correction: `+0.037517 / +0.138023`.
+QA now requires `LeftToes/RightToes`, grounds ankle and toe, expands the sole axis by `0.65` behind
+the ankle and `0.45` beyond the toe, and subtracts a conservative `4px` rendered-shoe half-width.
+A planted shoe fails if less than `2px` of clear floor remains before the nearest tile line.
 
-The correction is applied after the whole-body travel yaw, so it follows every direction. It is
-not applied during seat alignment, sitting, working, finishing or standing up. Moving the imported
-model/Animator root was explicitly rejected because it changed the approved seated knee solution.
-The normal production/default profile continues to pass zero correction.
-
-That midpoint correction did not prove each foot was safe. Re-reading all 89 frames with the
-walk actor's actual left/right action-613 contact flags found that the former coupling put planted
-ankles almost exactly on half-cell lines: Player/Father minimum `0.527 / 0.024px`, with `16 / 17`
-moving contact frames below 6px. A ten-value phase-only sweep also failed (best minimum only
-`2.13px`), proving that this was the incommensurate `0.7950477` cycle stride versus tile period,
-not a one-frame start-pose issue.
-
-Candidate mode now couples one unmodified action-613 cycle to the exact isometric tile-centre
-distance `0.99380799` and uses measured phase offset `0.64 cycles`. This changes no mesh, Avatar,
-skin, pose strength, direction, limb curve or seating. Production/default stays at `0.7950477 / 0`.
-QA grounds and projects each ankle separately every moving frame and fails if either actor has
-fewer than 24 planted samples, minimum line clearance below 6px, or any under-6px contact frame.
-
-Candidate-only dynamic peer radii are `0.380465984 / 0.447570225`; the proven furniture and docking
-radius remains `0.22`. This prevents the newly centred visible silhouettes from overlapping while
-leaving the semantic path, grid, seat and workstation geometry unchanged.
+Twenty additional phase-only candidates all failed that corrected envelope. The final candidate
+therefore keeps the existing `stride 0.99380799 / phase 0.64` and the unmodified package walk, but
+applies the minimum whole-character translation needed to keep the contacted shoe inside a
+`0.20-cell` tile inset. The correction releases during the authored airborne gap and resets before
+seat alignment. It never moves a limb bone, never replaces the clip, and is absent from
+production/default.
 
 ## Final hidden D3D11 result
 
-- Unity `6000.3.21f1`, D3D11, 1280x720, deterministic 24 fps;
-- all `89` approach frames captured and enlarged into six chronological sheets;
-- start tile-centre error: `0.000000 / 0.000000` world units;
-- maximum straight centre-line deviation: `0.000002 / 0.000212` world units;
-- foot-midpoint tile-centre error median/max: Player `1.833 / 3.866px`, Father
-  `1.141 / 2.754px`;
-- actual planted-contact samples: Player/Father `65 / 66`;
-- X-axis minimum planted-foot line clearance: `8.135 / 7.096px`, under-6px frames `0 / 0`;
-- separate Y-axis minimum clearance: `8.767 / 6.453px`, under-6px frames `0 / 0`;
-- the two actors walk opposite ways in each run, so these cover `+X/-X/+Y/-Y`;
-- visual overlap pixels `0`, agent penetration `0`;
-- real purchased V31 routes ended `Working/Working` at `seat_player/seat_father`;
-- seated semantic tile-centre error: `0.000000 / 0.000000`;
-- seated knees: Player `83.78 / 95.48 degrees`, Father `94.60 / 107.66 degrees`;
-- working static/interaction/agent violations `0/0/0`, retired visible renderers `0`.
+- Unity `6000.3.21f1`, D3D11, deterministic 24 fps, all `89` approach frames captured;
+- Player/Father conservative planted-shoe clearance: `3.562 / 3.562px`;
+- planted contact samples: `65 / 66`; contact frames below `2px`: `0 / 0`;
+- independent X-axis sweep: `3.870 / 3.870px`, `0 / 0` touch frames;
+- independent Y-axis sweep: `3.870 / 3.870px`, `0 / 0` touch frames;
+- the actors move oppositely in each sweep, covering `+X/-X/+Y/-Y`;
+- semantic route starts on exact tile centres; maximum centre-line deviation
+  `0.000002 / 0.000212` world units;
+- foot-midpoint tile-centre error median/max: Player `3.170 / 7.470px`, Father
+  `2.514 / 3.249px`, inside the locked `4/8px` gate;
+- visual overlap `0`, agent penetration `0`;
+- real purchased V31 work routes ended `Working/Working` at `seat_player/seat_father`;
+- seated tile-centre error `0/0`; knees Player `83.78/95.48`, Father `94.60/107.66` degrees;
+- working static/interaction/agent violations `0/0/0`; retired visible renderers `0`.
 
-Every ordered frame was visually reviewed, not just the automatic PASS. Both characters retain
-exactly two legs/shoes and two arms/hands, alternating contacts and small opposite arm swing; the
-body remains upright and travel-facing through the collision stop, with no third leg, garment tear,
-rubber limb, planted foot on a tile line, silhouette overlap or pose discontinuity before the
-collision stop. At the locked map speed the clip now reads at about two natural steps per second
-rather than the former hurried 2.5-step cadence. The review GIF is a one-shot approach, so its
-viewer loop intentionally
-returns
-from the stopped collision frame to the starting positions.
+Every Father and Player frame was reviewed in six enlarged chronological sheets, including the
+reported frame 14. The contacted shoe has visible floor pixels before the line; both characters
+retain two legs/shoes, two arms/hands, upright bodies, opposite arm swing and the existing walk
+timing. Automatic PASS is supporting evidence only; user review remains the promotion authority.
 
-Company-PC execution used standalone `-batchmode`, `CreateNoWindow=true`, hidden process style and
-continuous `MainWindowHandle == 0` monitoring. No Unity editor, ordinary Player or Blender window
-was opened.
+The unchanged production/default profile separately passed hidden D3D11 at
+`Artifacts/PlayerFather3DDefaultRegressionShoeInsetChange-20260901/` with stride `0.7950477`,
+`productionEligible=True` and overlap `0`. Candidate correction is not active there.
+
+All company-PC Unity runs used standalone `-batchmode`, `CreateNoWindow=true`, hidden process style
+and continuous `MainWindowHandle == 0` monitoring. No Unity or Blender window was opened.
 
 ## Review media
 
 - `player-father-tile-center-map-walk.gif`: full map, all 89 frames;
 - `player-father-tile-center-walk-zoom.gif`: enlarged moving corridor, all 89 frames;
-- `zoom-all-frames-000-014.png` through `zoom-all-frames-075-088.png`: all frames in chronological
-  order;
-- `player-father-avoidance.png`: final non-overlapping collision stop;
-- `player-father-working.png`: real V31 simultaneous work result;
-- `player-father-3d-interaction-result.txt`: complete machine-readable measurements;
-- `player-father-foot-tile-trace.csv`: all X-axis per-frame foot/grid/contact measurements;
-- `player-father-foot-tile-trace-y-axis.csv` and
-  `player-father-foot-tile-sweep-y-axis-result.txt`: opposite-axis proof.
+- `father-user-reported-contact-frame14-fixed-4x.png`: direct enlarged replacement for the
+  user-reported bad frame;
+- `zoom-all-frames-000-014.png` through `zoom-all-frames-075-088.png`: every frame in order;
+- `player-father-foot-tile-trace.csv`: X-run ankle, toe, shoe-envelope and contact values;
+- `player-father-foot-tile-trace-y-axis.csv`: independent Y-run trace;
+- `player-father-foot-tile-sweep-x-axis-result.txt` and
+  `player-father-foot-tile-sweep-y-axis-result.txt`: four-direction summary;
+- `player-father-avoidance.png`, `player-father-working.png`, and interaction result/final receipts.
 
 ## SHA-256
 
 | File | SHA-256 |
 | --- | --- |
-| `player-father-tile-center-map-walk.gif` | `CE01C68A54F35C04045A6174508A37B37DCD0E293C0B24D3E3DB341B98C698C3` |
-| `player-father-tile-center-walk-zoom.gif` | `37F4A751DDFA443D332FC83F3FC5705BD4C4A9E653AA4B64A1B3EF4B3247D0D5` |
-| `player-father-avoidance.png` | `698D3C4CB034A8C7FD83D812672913CC79A44B2007A14C482BFB1A46248A94AC` |
-| `player-father-working.png` | `FFC4BEBB7AB2D3EBA2D3ECA41F829C9F759CCD965A55C970CE3177FBD12273F0` |
-| `player-father-3d-interaction-result.txt` | `437E16B64FD801D1A980F70D6E1B9D863799EFA54817E2113B2ACD6DF1379B0E` |
+| `father-user-reported-contact-frame14-fixed-4x.png` | `0C9C454124837D7534A7E8379A6179EB2B5D4342772584D6F5AB040581039466` |
+| `player-father-tile-center-map-walk.gif` | `466C54D202C1E37168A104F27C3E5BE6A831D33422E889E4CEA49DD6A744D7FF` |
+| `player-father-tile-center-walk-zoom.gif` | `EB406336707776812139F0D67E85CB584B29EFEF3DF54CEEF414521A170A316B` |
+| `player-father-3d-interaction-result.txt` | `A48FC70C52386AB6AC652C5CBA2D11517F826F08DC067BA8718FD5013DF89D00` |
 | `player-father-3d-interaction-final.txt` | `D126FD8872E88D72674DE719869A47EEA54EE298E0BF168B6C97997C4C6537E8` |
-| `player-father-foot-tile-trace.csv` | `8386033C6A72612A5C82298EE4A6AB1190B8E5C0AC53639D28BABCD85F199CC7` |
-| `player-father-foot-tile-trace-y-axis.csv` | `9232BE90C97C4F8C007801F88C84A1AE2B0862B16D8ED267FEF030CCB4B73760` |
-| `player-father-foot-tile-sweep-y-axis-result.txt` | `FDE2CFBC40D9A7AD3FFB9A785BE32675A1444FD0EBE53D5A99747171435D7F8F` |
-
-Automatic PASS is supporting evidence only. User review of the actual GIF remains the promotion
-authority.
+| `player-father-foot-tile-trace.csv` | `F2CA2F09C43DF60C0B5E3194C4C41C9F0ED3A7C5C97960F82CDB16CFCDA80D1A` |
+| `player-father-foot-tile-trace-y-axis.csv` | `C783B9597289752E1279C9C721B70D66B47E9DD4840591B4030441FDC74053CF` |
+| `player-father-foot-tile-sweep-x-axis-result.txt` | `116B6E051AE80282BAA7FFCE51F608366D220B2C48C9A686E66CFFAB1AA5B2A2` |
+| `player-father-foot-tile-sweep-y-axis-result.txt` | `4E32C5C4AF207E33CC4A82B90793293FA1144E8071991B6ADD8B6E5019C863A4` |
+| `player-father-avoidance.png` | `698D3C4CB034A8C7FD83D812672913CC79A44B2007A14C482BFB1A46248A94AC` |
+| `player-father-working.png` | `CB6CF5FC8AE1B334E6CB9AB5EF1D6BA93974D11F26BAC5D1E4EB4459231C4D63` |
