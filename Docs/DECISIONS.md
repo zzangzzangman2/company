@@ -17,16 +17,24 @@ alpha-bound 중앙값을 같은 runtime 조건으로 환산한 `89.25/93.75px`�
 적용한다. emission/specular/reflection은 허용하지 않는다. 렌더 QA는 두 캐릭터의 luma/saturation과
 비율을 기록하고, luma ratio `0.70..1.30`, 최소 luma `45`, 최소 saturation `0.12`를 fail-closed한다.
 V31 가구 크기는 기존 Player 승인 높이 `1.857258558`를 계속 기준으로 삼아 캐릭터 후보와 함께 커지지
-않는다. 커진 실루엣에만 동적 충돌 반경 `0.345465984/0.412570225`를 사용하고 가구/도킹 반경 `0.22`는
+않는다. 커진 실루엣에만 동적 충돌 반경 `0.380465984/0.447570225`를 사용하고 가구/도킹 반경 `0.22`는
 유지한다.
+
+결정: 경로 루트가 타일 중앙이어도 FBX 양발 뼈의 평균점은 그 중앙에서 벗어날 수 있으므로 두 값을
+별도로 측정한다. 후보 보행에만 Player 로컬 X/Z `+0.050989/+0.214083`, Father
+`+0.037517/+0.138023` 표시 호스트 보정을 진행방향 회전 뒤 적용한다. import model/Animator root를
+이동하는 방식은 착석 무릎을 바꾸므로 금지하며, seat-facing 상태에는 보정을 전혀 적용하지 않는다.
+semantic agent, grid, path, workstation, save와 기본 production profile은 변경하지 않는다.
 
 결정: 일반 Render Clarity QA의 main-camera-only 캡처가 별도 production overlay camera를 빠뜨려
 몸 없는 health bar 화면도 PASS할 수 있었으므로 두 카메라를 같은 RenderTexture에 합성한다. 회사 PC의
 Windows Player는 `WindowStyle Hidden`만으로는 실제 render surface가 표시될 수 있으므로 금지한다.
 검수 실행은 standalone `-batchmode` + `CreateNoWindow` + 실행 중 zero `MainWindowHandle`을 동시에
-강제한다. 최종 D3D11 후보는 88 ordered walk frames, 15개 분산 샘플, 높이 중앙값 `90/94px`,
-머리 `27/28px`, 몸통 `24/23px`, 실루엣 면적 `1751/1772px`, luma `91.36/69.32`, saturation
-`0.364/0.210`, 겹침/침범 `0/0`, `Working/Working`을 기록했다.
+강제한다. 최종 D3D11 후보는 89 ordered walk frames, 15개 분산 샘플, 높이 중앙값 `91/94px`,
+머리 `27/28px`, 몸통 `24/24px`, 실루엣 면적 `1745/1769px`, luma `91.99/69.53`, saturation
+`0.363/0.209`, 발 중심 오차 Player `2.118/5.921px`, Father `1.286/4.170px` median/max,
+직선 중심선 이탈 `0.000002/0.000212`, 겹침/침범 `0/0`, 착석 타일 중심 `0/0`,
+`Working/Working`을 기록했다.
 
 보정: 보행 크기는 충돌 직후 한 프레임으로 판정하지 않는다. 같은 후보도 gait phase에 따라 Father
 높이가 `88..97px`로 변해 단일 프레임은 거짓 PASS/FAIL을 만들었다. 전체 접근의 고정 간격 샘플

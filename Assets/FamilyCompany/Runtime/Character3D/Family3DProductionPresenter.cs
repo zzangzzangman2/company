@@ -39,6 +39,10 @@ namespace FamilyCompany.Runtime.Character3D
         public const float FatherLegacy2DMatchedTargetHeight = 2.454888000f;
         public const float FatherLegacy2DMatchedHorizontalScale = 0.806840529f;
         public const float FatherLegacy2DMatchedNeutralFill = 0.82f;
+        public static readonly Vector2 PlayerLegacy2DMatchedFootCenterOffsetLocal =
+            new Vector2(0.050989f, 0.214083f);
+        public static readonly Vector2 FatherLegacy2DMatchedFootCenterOffsetLocal =
+            new Vector2(0.037517f, 0.138023f);
         public const float ApprovedStrideOfficeUnits = 0.7950477f;
         public const float ApprovedCycleSeconds = 1.4f;
         public const float ApprovedFacingOffsetDegrees = 0f;
@@ -205,7 +209,10 @@ namespace FamilyCompany.Runtime.Character3D
                     ? PlayerLegacy2DMatchedTargetHeight
                     : PlayerApprovedTargetHeight,
                 1f,
-                -1f);
+                -1f,
+                legacy2DScaleCandidate
+                    ? PlayerLegacy2DMatchedFootCenterOffsetLocal
+                    : Vector2.zero);
             CharacterBinding father = CreateCharacterBinding(
                 runtimeFather,
                 "FatherV19",
@@ -226,7 +233,10 @@ namespace FamilyCompany.Runtime.Character3D
                     : FatherStandardizedHorizontalScale,
                 legacy2DScaleCandidate
                     ? FatherLegacy2DMatchedNeutralFill
-                    : -1f);
+                    : -1f,
+                legacy2DScaleCandidate
+                    ? FatherLegacy2DMatchedFootCenterOffsetLocal
+                    : Vector2.zero);
             characters.Add(player);
             characters.Add(father);
             characterById.Add(player.AgentId, player);
@@ -267,7 +277,8 @@ namespace FamilyCompany.Runtime.Character3D
             float lockedModelScale,
             float approvedTargetHeight,
             float horizontalScale,
-            float neutralFillOverride)
+            float neutralFillOverride,
+            Vector2 footCenterOffsetLocal)
         {
             GameObject modelPrefab = Resources.Load<GameObject>(modelResourcePath);
             Texture2D albedo = Resources.Load<Texture2D>(albedoResourcePath);
@@ -287,6 +298,10 @@ namespace FamilyCompany.Runtime.Character3D
             host.transform.SetPositionAndRotation(
                 ground,
                 MapOfficeDirectionToUnityYaw(agent.CurrentDirection));
+            host.transform.position += host.transform.rotation * new Vector3(
+                footCenterOffsetLocal.x,
+                0f,
+                footCenterOffsetLocal.y);
             SetLayerRecursively(host, ProductionLayer);
 
             GameObject model = Instantiate(modelPrefab, host.transform, false);
@@ -362,7 +377,8 @@ namespace FamilyCompany.Runtime.Character3D
                 walkActor,
                 runtimeMaterial,
                 appliedScale,
-                approvedTargetHeight);
+                approvedTargetHeight,
+                footCenterOffsetLocal);
         }
 
         private void EnsureOverlayPresentation()
@@ -567,7 +583,11 @@ namespace FamilyCompany.Runtime.Character3D
             double clipCycles = actor.GaitDistance / ApprovedStrideOfficeUnits;
             double motionClock =
                 (clipCycles - binding.WalkActor.PhaseOffset) * binding.WalkActor.CycleSeconds;
-            binding.WalkActor.Tick(motionClock, actorGround, rotation, moving);
+            Vector3 visualGround = actorGround + rotation * new Vector3(
+                binding.StandingFootCenterOffsetLocal.x,
+                0f,
+                binding.StandingFootCenterOffsetLocal.y);
+            binding.WalkActor.Tick(motionClock, visualGround, rotation, moving);
         }
 
         private Family3DWorkstation ResolveActiveWorkstation(CharacterBinding binding)
@@ -802,7 +822,8 @@ namespace FamilyCompany.Runtime.Character3D
                 Family3DWalkActor walkActor,
                 Material runtimeMaterial,
                 float appliedScale,
-                float approvedHeight)
+                float approvedHeight,
+                Vector2 standingFootCenterOffsetLocal)
             {
                 Agent = agent;
                 Host = host;
@@ -811,6 +832,7 @@ namespace FamilyCompany.Runtime.Character3D
                 RuntimeMaterial = runtimeMaterial;
                 AppliedScale = appliedScale;
                 ApprovedHeight = approvedHeight;
+                StandingFootCenterOffsetLocal = standingFootCenterOffsetLocal;
             }
 
             public string AgentId => Agent == null ? string.Empty : Agent.AgentId;
@@ -822,6 +844,7 @@ namespace FamilyCompany.Runtime.Character3D
             public Material RuntimeMaterial { get; }
             public float AppliedScale { get; }
             public float ApprovedHeight { get; }
+            public Vector2 StandingFootCenterOffsetLocal { get; }
             public float SeatedBlend01 { get; set; }
             public double WorkClockSeconds { get; set; }
             public Vector3 LastGroundPosition { get; set; }

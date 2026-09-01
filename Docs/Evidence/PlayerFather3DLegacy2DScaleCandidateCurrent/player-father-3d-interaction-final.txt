@@ -1,0 +1,2 @@
+FAMILY_COMPANY_PLAYER_FATHER_3D_INTERACTION: PASS
+actors=player,father margin=-0.00999 blocked=50 penetrations=0 phases=Working/Working seats=seat_player/seat_father retiredVisible=0

@@ -114,8 +114,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     {
         private const float PlayerV8ProductionCollisionRadius = 0.28f;
         private const float FatherV19ProductionCollisionRadius = 0.30f;
-        private const float PlayerLegacy2DMatchedCollisionRadius = 0.345465984f;
-        private const float FatherLegacy2DMatchedCollisionRadius = 0.412570225f;
+        private const float PlayerLegacy2DMatchedCollisionRadius = 0.380465984f;
+        private const float FatherLegacy2DMatchedCollisionRadius = 0.447570225f;
         private const string Legacy2DScaleCandidateFlag =
             "-familyCompanyLegacy2DScaleCandidate";
         private static readonly string[] FamilyMemberIds =

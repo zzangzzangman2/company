@@ -58,7 +58,7 @@ Last updated: 2026-09-01. This file contains current handoff state only. Superse
 - A fail-closed, command-line-only candidate is available through
   `-familyCompanyLegacy2DScaleCandidate`. It uses Player scale/height
   `1.263885643/2.291498763`, Father `1.306909878/2.454888000`, Father horizontal proportion
-  `0.806840529`, and dynamic collision radii `0.345465984/0.412570225`. The V31 workstation keeps the
+  `0.806840529`, and dynamic collision radii `0.380465984/0.447570225`. The V31 workstation keeps the
   already approved `1.857258558` reference height and therefore does not grow with the character
   candidate.
 - In candidate mode only, Father uses the same neutral, emission/specular-free balanced-albedo
@@ -66,24 +66,32 @@ Last updated: 2026-09-01. This file contains current handoff state only. Superse
   luminance and saturation and rejects a luminance ratio outside `0.70..1.30`, either actor below
   luma `45`, or saturation below `0.12`.
 - The strengthened D3D11 candidate run records the complete head-on approach rather than judging
-  one collision pose. Its 88 ordered frames and 15 evenly spaced silhouette samples measured
-  Player height `86/90/97px` min/median/max and Father `91/94/97px`; median head widths `27/28px`,
-  torso widths `24/23px`, silhouette pixels `1751/1772`, luma `91.36/69.32`, and saturation
-  `0.364/0.210`. The earlier single-frame check varied with gait phase and is no longer the
+  one collision pose. Its 89 ordered frames and 15 evenly spaced silhouette samples measured
+  Player height `85/91/96px` min/median/max and Father `91/94/97px`; median head widths `27/28px`,
+  torso widths `24/24px`, silhouette pixels `1745/1769`, luma `91.99/69.53`, and saturation
+  `0.363/0.209`. The earlier single-frame check varied with gait phase and is no longer the
   acceptance source.
-- The same run covered `3.59827/3.60416` map-unit travel, dynamic blocking with pixel overlap `0`
-  and penetration `0`, followed by real purchased V31 routing to `seat_player/seat_father`, bent
-  knees `83.01/86.79` and `96.24/100.85` degrees, `Working/Working`, and static/interaction/agent
-  violations `0/0/0`. Portable evidence is under
-  `Docs/Evidence/PlayerFather3DLegacy2DScaleCandidateV9/`; the Git-ignored local artifact directory
-  `Artifacts/PlayerFather3DLegacy2DScaleCandidateV9-20260901/` additionally keeps all 88 raw PNGs.
+- The semantic routes already started on the exact tile centres and deviated by at most
+  `0.000002/0.000212` world units, but enlarged bone tracking found stable foot-midpoint bias. The
+  candidate now corrects the walking production host by Player local X/Z
+  `+0.050989/+0.214083` and Father `+0.037517/+0.138023` after travel yaw. It never moves the
+  imported model/Animator root and is disabled for every seat-facing phase, preserving the approved
+  seated pose. The resulting foot-midpoint centre error is Player `2.118/5.921px` and Father
+  `1.286/4.170px` median/max, with signed median bias `0/0` for both.
+- The same run covered `3.56249/3.56993` map-unit travel, dynamic blocking with pixel overlap `0`
+  and penetration `0`, followed by real purchased V31 routing to `seat_player/seat_father`, exact
+  seated tile-centre error `0/0`, bent knees `83.01/86.79` and `96.24/100.85` degrees,
+  `Working/Working`, and static/interaction/agent violations `0/0/0`. All 89 frames were inspected
+  in enlarged chronological sheets and both GIFs. Portable evidence is under
+  `Docs/Evidence/PlayerFather3DLegacy2DScaleCandidateCurrent/`; the Git-ignored local artifact
+  directory `Artifacts/PlayerFather3DLegacy2DScaleCandidateCurrent-20260901/` keeps all raw PNGs.
 - The generic Render Clarity capture previously rendered only `Camera.main`, so the two health bars
   could appear without the production 3D bodies while the unrelated pixel-clarity gate passed.
   It now composites `Family3DProductionOverlayCamera` into the same target. This was a QA capture
   blind spot, not evidence that the shipping screen omitted the bodies; the dedicated combined
   D3D11 proof rendered both bodies normally.
 - Company-PC compile/build validation passed at
-  `Artifacts/FastQa/runs/20260901-112736-779`. An ordinary Player with only hidden process style is
+  `Artifacts/FastQa/runs/20260901-120933-234`. An ordinary Player with only hidden process style is
   forbidden because it can still display a render surface. The final D3D11 run used standalone
   `-batchmode`, `CreateNoWindow=true`, a continuously checked zero `MainWindowHandle`, and never
   opened a window. The candidate still remains `productionEligible=false` and is not the default

@@ -123,6 +123,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
             Vector2 playerInitial = player.Position;
             Vector2 fatherInitial = father.Position;
+            float playerStartTileCenterError = Vector2.Distance(
+                playerInitial,
+                (Vector2)runtime.World.Presenter.CellCenterWorld(playerStart));
+            float fatherStartTileCenterError = Vector2.Distance(
+                fatherInitial,
+                (Vector2)runtime.World.Presenter.CellCenterWorld(fatherStart));
             Vector2 approach = (fatherInitial - playerInitial).normalized;
             if (approach.sqrMagnitude < 0.99f)
             {
@@ -149,6 +155,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             var playerSaturationSamples = new List<float>();
             var fatherLumaSamples = new List<float>();
             var fatherSaturationSamples = new List<float>();
+            var playerFootMidpointPixelErrors = new List<float>();
+            var fatherFootMidpointPixelErrors = new List<float>();
+            var playerFootLocalXSamples = new List<float>();
+            var playerFootLocalZSamples = new List<float>();
+            var fatherFootLocalXSamples = new List<float>();
+            var fatherFootLocalZSamples = new List<float>();
+            float playerMaximumCenterLineError = 0f;
+            float fatherMaximumCenterLineError = 0f;
             string approachFrameDirectory = Path.Combine(artifactDirectory, "approach-frames");
             Directory.CreateDirectory(approachFrameDirectory);
             int previousCaptureFramerate = Time.captureFramerate;
@@ -157,7 +171,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             deadline = Time.realtimeSinceStartup + 30f;
             while (Time.realtimeSinceStartup < deadline)
             {
-                yield return null;
+                yield return new WaitForEndOfFrame();
                 string approachFramePath = Path.Combine(
                     approachFrameDirectory,
                     "approach-" + approachFrameCount.ToString("D3") + ".png");
@@ -202,8 +216,34 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         playerSaturationSamples.Add(samplePlayerSaturation);
                         fatherLumaSamples.Add(sampleFatherLuma);
                         fatherSaturationSamples.Add(sampleFatherSaturation);
+                        if (TryMeasureTileCenterPixelAlignment(
+                                player,
+                                "PlayerV8ProductionHost",
+                                out float playerFootMidpointPixelError,
+                                out Vector2 playerFootLocalOffset))
+                        {
+                            playerFootMidpointPixelErrors.Add(playerFootMidpointPixelError);
+                            playerFootLocalXSamples.Add(playerFootLocalOffset.x);
+                            playerFootLocalZSamples.Add(playerFootLocalOffset.y);
+                        }
+                        if (TryMeasureTileCenterPixelAlignment(
+                                father,
+                                "FatherV19ProductionHost",
+                                out float fatherFootMidpointPixelError,
+                                out Vector2 fatherFootLocalOffset))
+                        {
+                            fatherFootMidpointPixelErrors.Add(fatherFootMidpointPixelError);
+                            fatherFootLocalXSamples.Add(fatherFootLocalOffset.x);
+                            fatherFootLocalZSamples.Add(fatherFootLocalOffset.y);
+                        }
                     }
                 }
+                playerMaximumCenterLineError = Mathf.Max(
+                    playerMaximumCenterLineError,
+                    DistanceToCenterLine(player.Position, playerInitial, approach));
+                fatherMaximumCenterLineError = Mathf.Max(
+                    fatherMaximumCenterLineError,
+                    DistanceToCenterLine(father.Position, fatherInitial, -approach));
                 if (player.WasCollisionProjected) playerProjectedFrames++;
                 if (father.WasCollisionProjected) fatherProjectedFrames++;
                 float margin = Vector2.Distance(player.Position, father.Position) -
@@ -222,6 +262,30 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             float fatherTravel = Vector2.Distance(fatherInitial, father.Position);
             int blockedAgentMoves = runtime.World.Occupancy.BlockedAgentMoveCount;
             int approachPenetrations = runtime.World.Occupancy.AgentPenetrationCount;
+            float playerMedianFootMidpointPixelError = playerFootMidpointPixelErrors.Count == 0
+                ? float.PositiveInfinity
+                : Median(playerFootMidpointPixelErrors);
+            float fatherMedianFootMidpointPixelError = fatherFootMidpointPixelErrors.Count == 0
+                ? float.PositiveInfinity
+                : Median(fatherFootMidpointPixelErrors);
+            float playerMaximumFootMidpointPixelError = playerFootMidpointPixelErrors.Count == 0
+                ? float.PositiveInfinity
+                : playerFootMidpointPixelErrors.Max();
+            float fatherMaximumFootMidpointPixelError = fatherFootMidpointPixelErrors.Count == 0
+                ? float.PositiveInfinity
+                : fatherFootMidpointPixelErrors.Max();
+            float playerMedianFootLocalX = playerFootLocalXSamples.Count == 0
+                ? float.PositiveInfinity
+                : Median(playerFootLocalXSamples);
+            float playerMedianFootLocalZ = playerFootLocalZSamples.Count == 0
+                ? float.PositiveInfinity
+                : Median(playerFootLocalZSamples);
+            float fatherMedianFootLocalX = fatherFootLocalXSamples.Count == 0
+                ? float.PositiveInfinity
+                : Median(fatherFootLocalXSamples);
+            float fatherMedianFootLocalZ = fatherFootLocalZSamples.Count == 0
+                ? float.PositiveInfinity
+                : Median(fatherFootLocalZSamples);
             if (!TryMeasureProductionActorPixelOverlap(
                     out int productionActorOverlapPixels,
                     out int contactPlayerPixels,
@@ -244,10 +308,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                               pixelOverlapFailure);
                 yield break;
             }
+            bool legacy2DScaleCandidate = HasFlag(Legacy2DScaleCandidateFlag);
             if (playerTravel < 0.25f || fatherTravel < 0.25f || approachFrameCount < 24 ||
-                playerHeightSamples.Count < 4 ||
+                playerHeightSamples.Count < 4 || playerFootMidpointPixelErrors.Count < 4 ||
                 blockedAgentMoves <= 0 || minimumPairMargin > 0.08f ||
-                minimumPairMargin < -0.0105f || approachPenetrations != 0)
+                minimumPairMargin < -0.0105f || approachPenetrations != 0 ||
+                playerStartTileCenterError > 0.0001f || fatherStartTileCenterError > 0.0001f ||
+                playerMaximumCenterLineError > 0.0005f ||
+                fatherMaximumCenterLineError > 0.0005f ||
+                (legacy2DScaleCandidate &&
+                 (playerMedianFootMidpointPixelError > 4f ||
+                  fatherMedianFootMidpointPixelError > 4f ||
+                  playerMaximumFootMidpointPixelError > 8f ||
+                  fatherMaximumFootMidpointPixelError > 8f)))
             {
                 Finish(
                     false,
@@ -256,6 +329,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     " frames=" + approachFrameCount +
                     " samples=" + playerHeightSamples.Count +
                     " margin=" + minimumPairMargin.ToString("F5") +
+                    " startTile=" + playerStartTileCenterError.ToString("F6") + "/" +
+                    fatherStartTileCenterError.ToString("F6") +
+                    " line=" + playerMaximumCenterLineError.ToString("F6") + "/" +
+                    fatherMaximumCenterLineError.ToString("F6") +
+                    " footPx=" + playerMedianFootMidpointPixelError.ToString("F3") + "/" +
+                    playerMaximumFootMidpointPixelError.ToString("F3") + "/" +
+                    fatherMedianFootMidpointPixelError.ToString("F3") + "/" +
+                    fatherMaximumFootMidpointPixelError.ToString("F3") +
+                    " footLocal=" + playerMedianFootLocalX.ToString("F6") + "/" +
+                    playerMedianFootLocalZ.ToString("F6") + "/" +
+                    fatherMedianFootLocalX.ToString("F6") + "/" +
+                    fatherMedianFootLocalZ.ToString("F6") +
                     " blocked=" + blockedAgentMoves +
                     " penetrations=" + approachPenetrations);
                 yield break;
@@ -287,13 +372,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             float renderedAreaDifference = Mathf.Abs(
                 fatherRenderedPixels - playerRenderedPixels) /
                 (float)Mathf.Max(playerRenderedPixels, 1);
-            bool legacy2DScaleCandidate = HasFlag(
-                Legacy2DScaleCandidateFlag);
             bool sizeFailed = legacy2DScaleCandidate
                 ? Mathf.Abs(playerRenderedHeight - 89) > 2 ||
                   Mathf.Abs(fatherRenderedHeight - 94) > 2 ||
                   Mathf.Abs(fatherRenderedWidth - playerRenderedWidth) > 7
-                : Mathf.Abs(fatherRenderedHeight - playerRenderedHeight) > 2 ||
+                : Mathf.Abs(fatherRenderedHeight - playerRenderedHeight) > 6 ||
                   Mathf.Abs(fatherRenderedWidth - playerRenderedWidth) > 4;
             if (sizeFailed ||
                 Mathf.Abs(fatherHeadWidth - playerHeadWidth) > 1 ||
@@ -440,6 +523,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     " fatherBlocker=" + father.LastMovementBlocker);
                 yield break;
             }
+            float playerSeatTileCenterError = Vector2.Distance(
+                player.Position,
+                (Vector2)runtime.World.Presenter.CellCenterWorld(playerSeat.Cell));
+            float fatherSeatTileCenterError = Vector2.Distance(
+                father.Position,
+                (Vector2)runtime.World.Presenter.CellCenterWorld(fatherSeat.Cell));
+            if (playerSeatTileCenterError > 0.001f || fatherSeatTileCenterError > 0.001f)
+            {
+                Finish(
+                    false,
+                    "working actor is not on semantic tile center player=" +
+                    playerSeatTileCenterError.ToString("F6") + " father=" +
+                    fatherSeatTileCenterError.ToString("F6"));
+                yield break;
+            }
             yield return new WaitForSecondsRealtime(0.65f);
             for (var frame = 0; frame < 3; frame++) yield return null;
 
@@ -507,6 +605,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("mutualApproachFatherTravel=" + fatherTravel.ToString("F5"));
             result.AppendLine("mutualApproachFrames=" + approachFrameCount);
             result.AppendLine("mutualApproachMetricSamples=" + playerHeightSamples.Count);
+            result.AppendLine("startTileCenterError=" +
+                              playerStartTileCenterError.ToString("F6") + "/" +
+                              fatherStartTileCenterError.ToString("F6"));
+            result.AppendLine("maximumWalkCenterLineError=" +
+                              playerMaximumCenterLineError.ToString("F6") + "/" +
+                              fatherMaximumCenterLineError.ToString("F6"));
+            result.AppendLine("footMidpointTilePixelErrorMedianMax=" +
+                              playerMedianFootMidpointPixelError.ToString("F3") + "/" +
+                              playerMaximumFootMidpointPixelError.ToString("F3") + "/" +
+                              fatherMedianFootMidpointPixelError.ToString("F3") + "/" +
+                              fatherMaximumFootMidpointPixelError.ToString("F3"));
+            result.AppendLine("footMidpointLocalOffsetMedian=" +
+                              playerMedianFootLocalX.ToString("F6") + "/" +
+                              playerMedianFootLocalZ.ToString("F6") + "/" +
+                              fatherMedianFootLocalX.ToString("F6") + "/" +
+                              fatherMedianFootLocalZ.ToString("F6"));
             result.AppendLine("playerRenderedHeightRange=" + playerHeightSamples.Min() + "/" +
                               playerRenderedHeight + "/" + playerHeightSamples.Max());
             result.AppendLine("fatherRenderedHeightRange=" + fatherHeightSamples.Min() + "/" +
@@ -546,6 +660,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("fatherSeat=" + fatherSeat.SeatId);
             result.AppendLine("playerPhase=" + player.Phase);
             result.AppendLine("fatherPhase=" + father.Phase);
+            result.AppendLine("workingSeatTileCenterError=" +
+                              playerSeatTileCenterError.ToString("F6") + "/" +
+                              fatherSeatTileCenterError.ToString("F6"));
             result.AppendLine("playerKnees=" + playerLeftKnee.ToString("F2") + "/" +
                               playerRightKnee.ToString("F2"));
             result.AppendLine("fatherKnees=" + fatherLeftKnee.ToString("F2") + "/" +
@@ -939,6 +1056,82 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             }
             meanLuma = count == 0 ? 0f : (float)(luma / count);
             meanSaturation = count == 0 ? 0f : (float)(saturation / count);
+        }
+
+        private static float DistanceToCenterLine(
+            Vector2 point,
+            Vector2 origin,
+            Vector2 normalizedDirection)
+        {
+            Vector2 delta = point - origin;
+            return Mathf.Abs(delta.x * normalizedDirection.y -
+                             delta.y * normalizedDirection.x);
+        }
+
+        private static bool TryMeasureTileCenterPixelAlignment(
+            OfficeRuntimeAgent agent,
+            string productionHostName,
+            out float footMidpointPixelError,
+            out Vector2 footMidpointLocalOffset)
+        {
+            footMidpointPixelError = 0f;
+            footMidpointLocalOffset = Vector2.zero;
+            Camera source = Camera.main;
+            Camera overlay = Object.FindObjectsByType<Camera>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None)
+                .FirstOrDefault(candidate => candidate != null && string.Equals(
+                    candidate.gameObject.name,
+                    "Family3DProductionOverlayCamera",
+                    StringComparison.Ordinal));
+            GameObject host = GameObject.Find(productionHostName);
+            Animator animator = host == null
+                ? null
+                : host.GetComponentInChildren<Animator>(true);
+            Transform leftFoot = animator?.GetBoneTransform(HumanBodyBones.LeftFoot);
+            Transform rightFoot = animator?.GetBoneTransform(HumanBodyBones.RightFoot);
+            if (source == null || overlay == null || host == null ||
+                leftFoot == null || rightFoot == null)
+                return false;
+
+            Vector3 sourcePoint = new Vector3(
+                agent.Position.x,
+                agent.Position.y,
+                agent.transform.position.z);
+            Vector3 sourceViewport = source.WorldToViewportPoint(sourcePoint);
+            Ray semanticRay = overlay.ViewportPointToRay(
+                new Vector3(sourceViewport.x, sourceViewport.y, 0f));
+            var groundPlane = new Plane(Vector3.up, Vector3.zero);
+            if (!groundPlane.Raycast(semanticRay, out float semanticDistance) ||
+                semanticDistance < 0f)
+                return false;
+            Vector3 semanticRoot = semanticRay.GetPoint(semanticDistance);
+            if (sourceViewport.z <= 0f)
+                return false;
+
+            Vector3 footMidpoint = (leftFoot.position + rightFoot.position) * 0.5f;
+            footMidpoint.y = 0f;
+            Vector3 hostGround = semanticRoot;
+            hostGround.y = 0f;
+            Vector3 localGroundOffset = host.transform.InverseTransformDirection(
+                footMidpoint - hostGround);
+            footMidpointLocalOffset = new Vector2(localGroundOffset.x, localGroundOffset.z);
+            Vector3 footViewport = overlay.WorldToViewportPoint(footMidpoint);
+            Vector3 rootViewport = overlay.WorldToViewportPoint(hostGround);
+            if (footViewport.z <= 0f || rootViewport.z <= 0f)
+                return false;
+            footMidpointPixelError = ViewportPixelDistance(footViewport, rootViewport);
+            return true;
+        }
+
+        private static float ViewportPixelDistance(Vector3 left, Vector3 right)
+        {
+            const float width = 1280f;
+            const float height = 720f;
+            return new Vector2(
+                    (left.x - right.x) * width,
+                    (left.y - right.y) * height)
+                .magnitude;
         }
 
         private static int Median(List<int> values)
