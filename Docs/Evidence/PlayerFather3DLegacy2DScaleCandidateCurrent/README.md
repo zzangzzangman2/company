@@ -19,6 +19,19 @@ not applied during seat alignment, sitting, working, finishing or standing up. M
 model/Animator root was explicitly rejected because it changed the approved seated knee solution.
 The normal production/default profile continues to pass zero correction.
 
+That midpoint correction did not prove each foot was safe. Re-reading all 89 frames with the
+walk actor's actual left/right action-613 contact flags found that the former coupling put planted
+ankles almost exactly on half-cell lines: Player/Father minimum `0.527 / 0.024px`, with `16 / 17`
+moving contact frames below 6px. A ten-value phase-only sweep also failed (best minimum only
+`2.13px`), proving that this was the incommensurate `0.7950477` cycle stride versus tile period,
+not a one-frame start-pose issue.
+
+Candidate mode now couples one unmodified action-613 cycle to the exact isometric tile-centre
+distance `0.99380799` and uses measured phase offset `0.64 cycles`. This changes no mesh, Avatar,
+skin, pose strength, direction, limb curve or seating. Production/default stays at `0.7950477 / 0`.
+QA grounds and projects each ankle separately every moving frame and fails if either actor has
+fewer than 24 planted samples, minimum line clearance below 6px, or any under-6px contact frame.
+
 Candidate-only dynamic peer radii are `0.380465984 / 0.447570225`; the proven furniture and docking
 radius remains `0.22`. This prevents the newly centred visible silhouettes from overlapping while
 leaving the semantic path, grid, seat and workstation geometry unchanged.
@@ -29,20 +42,26 @@ leaving the semantic path, grid, seat and workstation geometry unchanged.
 - all `89` approach frames captured and enlarged into six chronological sheets;
 - start tile-centre error: `0.000000 / 0.000000` world units;
 - maximum straight centre-line deviation: `0.000002 / 0.000212` world units;
-- foot-midpoint tile-centre error median/max: Player `2.118 / 5.921px`, Father
-  `1.286 / 4.170px`;
-- signed foot-midpoint local bias median: `0/0` for both characters;
+- foot-midpoint tile-centre error median/max: Player `1.833 / 3.866px`, Father
+  `1.141 / 2.754px`;
+- actual planted-contact samples: Player/Father `65 / 66`;
+- X-axis minimum planted-foot line clearance: `8.135 / 7.096px`, under-6px frames `0 / 0`;
+- separate Y-axis minimum clearance: `8.767 / 6.453px`, under-6px frames `0 / 0`;
+- the two actors walk opposite ways in each run, so these cover `+X/-X/+Y/-Y`;
 - visual overlap pixels `0`, agent penetration `0`;
 - real purchased V31 routes ended `Working/Working` at `seat_player/seat_father`;
 - seated semantic tile-centre error: `0.000000 / 0.000000`;
-- seated knees: Player `83.01 / 86.79 degrees`, Father `96.24 / 100.85 degrees`;
+- seated knees: Player `83.78 / 95.48 degrees`, Father `94.60 / 107.66 degrees`;
 - working static/interaction/agent violations `0/0/0`, retired visible renderers `0`.
 
 Every ordered frame was visually reviewed, not just the automatic PASS. Both characters retain
 exactly two legs/shoes and two arms/hands, alternating contacts and small opposite arm swing; the
 body remains upright and travel-facing through the collision stop, with no third leg, garment tear,
-rubber limb, foot slide across the path, silhouette overlap or pose discontinuity before the
-collision stop. The review GIF is a one-shot approach, so its viewer loop intentionally returns
+rubber limb, planted foot on a tile line, silhouette overlap or pose discontinuity before the
+collision stop. At the locked map speed the clip now reads at about two natural steps per second
+rather than the former hurried 2.5-step cadence. The review GIF is a one-shot approach, so its
+viewer loop intentionally
+returns
 from the stopped collision frame to the starting positions.
 
 Company-PC execution used standalone `-batchmode`, `CreateNoWindow=true`, hidden process style and
@@ -57,18 +76,24 @@ was opened.
   order;
 - `player-father-avoidance.png`: final non-overlapping collision stop;
 - `player-father-working.png`: real V31 simultaneous work result;
-- `player-father-3d-interaction-result.txt`: complete machine-readable measurements.
+- `player-father-3d-interaction-result.txt`: complete machine-readable measurements;
+- `player-father-foot-tile-trace.csv`: all X-axis per-frame foot/grid/contact measurements;
+- `player-father-foot-tile-trace-y-axis.csv` and
+  `player-father-foot-tile-sweep-y-axis-result.txt`: opposite-axis proof.
 
 ## SHA-256
 
 | File | SHA-256 |
 | --- | --- |
-| `player-father-tile-center-map-walk.gif` | `E1A6D03A7C0AA98BCD7A072D6FD90C9177685292AB9F47D26C49895A6F3B1879` |
-| `player-father-tile-center-walk-zoom.gif` | `8841C4D0770A988D48DCE92B9E18B9427EA7197DE9CC8B6BC433262F5FA17F73` |
-| `player-father-avoidance.png` | `FF41C9A7DEED6BD5F12B0259627750B5F2030930EFA2F498F69EDF8EAFDCF219` |
-| `player-father-working.png` | `19AB2BA0B3C69539DB545EC95A9A46C088DDA730194D71CBFDD616281D2DFF3F` |
-| `player-father-3d-interaction-result.txt` | `BEE81A82DF2D58CB63172940E528037D2F23E1B3AFE9ED51DB3B8AE2B460BA24` |
+| `player-father-tile-center-map-walk.gif` | `CE01C68A54F35C04045A6174508A37B37DCD0E293C0B24D3E3DB341B98C698C3` |
+| `player-father-tile-center-walk-zoom.gif` | `37F4A751DDFA443D332FC83F3FC5705BD4C4A9E653AA4B64A1B3EF4B3247D0D5` |
+| `player-father-avoidance.png` | `698D3C4CB034A8C7FD83D812672913CC79A44B2007A14C482BFB1A46248A94AC` |
+| `player-father-working.png` | `FFC4BEBB7AB2D3EBA2D3ECA41F829C9F759CCD965A55C970CE3177FBD12273F0` |
+| `player-father-3d-interaction-result.txt` | `437E16B64FD801D1A980F70D6E1B9D863799EFA54817E2113B2ACD6DF1379B0E` |
 | `player-father-3d-interaction-final.txt` | `D126FD8872E88D72674DE719869A47EEA54EE298E0BF168B6C97997C4C6537E8` |
+| `player-father-foot-tile-trace.csv` | `8386033C6A72612A5C82298EE4A6AB1190B8E5C0AC53639D28BABCD85F199CC7` |
+| `player-father-foot-tile-trace-y-axis.csv` | `9232BE90C97C4F8C007801F88C84A1AE2B0862B16D8ED267FEF030CCB4B73760` |
+| `player-father-foot-tile-sweep-y-axis-result.txt` | `FDE2CFBC40D9A7AD3FFB9A785BE32675A1444FD0EBE53D5A99747171435D7F8F` |
 
 Automatic PASS is supporting evidence only. User review of the actual GIF remains the promotion
 authority.

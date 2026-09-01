@@ -6,6 +6,12 @@ family inputs and canonical production assets. Retired iterations are not reusab
 Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-approved. Older Sister
 and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md`.
 
+Current command-line legacy-2D-size review remains `productionEligible=false`. It keeps both
+one-package assets below unchanged, but uses candidate-only tile-safe locomotion coupling
+`stride 0.99380799 / phase 0.64 cycles`. X-axis hidden D3D11 minimum planted-foot line clearance is
+Player/Father `8.135/7.096px`; Y-axis is `8.767/6.453px`; all four travel directions have zero
+under-6px frames. The approved production/default stride remains `0.7950477`.
+
 ## Production Player V8 no-hat one-package character
 
 - identity reference:

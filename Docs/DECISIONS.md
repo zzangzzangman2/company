@@ -1,5 +1,25 @@
 # DECISIONS
 
+## 2026-09-01 / 발 평균이 아니라 개별 접지발을 타일 선에서 보호한다
+
+결정: semantic root와 양발 평균이 타일 중앙선을 따라가도 한쪽 **접지발**은 타일 경계에 놓일 수
+있다. 이전 후보는 실제 action-613 접지 기준 최소 선 여유가 Player/Father `0.527/0.024px`, 6px
+미만 프레임이 `16/17`이었다. 따라서 `Family3DWalkActor.LeftFootPlanted/RightFootPlanted`의 실제
+텔레메트리를 읽어 왼발·오른발을 매 프레임 따로 타일 좌표로 역투영한다. 발목 Y는 바닥 `0`으로
+내린 접점으로 재며, 평균점 PASS나 네 장 정지 시트는 이 검사를 대체하지 않는다.
+
+결정: 위상만 10개(`0.0..0.9`) 바꿔서는 최소 여유가 최대 `2.13px`라 실패했다. 미승인
+`-familyCompanyLegacy2DScaleCandidate`에만 한 cycle을 정확한 등각 타일 중심거리
+`0.99380799`에 결합하고 시작 위상 `0.64 cycles`를 사용한다. action 613, Avatar, skin,
+`poseStrength=1`, 방향과 팔다리 곡선은 바꾸지 않는다. production/default는 계속 stride
+`0.7950477`, phase `0`이며 별도 D3D11 회귀 PASS를 요구한다.
+
+결정: 최종 X축 D3D11은 실제 접지 샘플 `65/66`, 최소 여유 `8.135/7.096px`, under-6px
+`0/0`; Y축 수치 sweep은 `8.767/6.453px`, `0/0`이다. 두 접근에서 두 배우가 반대 방향을
+걸어 `+X/-X/+Y/-Y`를 모두 포함한다. 후보 QA는 배우당 접지 샘플 24개 미만, 최소 여유 6px
+미만, 또는 under-6px 프레임 하나라도 있으면 fail-closed한다. 자동 PASS 뒤에도 89장 전체와
+실제 GIF를 육안 검수하며 사용자 승인 전 `productionEligible=false`를 유지한다.
+
 ## 2026-09-01 / 2D 화면 크기·색감 비교는 미승인 후보로만 검증한다
 
 결정: 집 작업의 Player/Father 상호 표준화는 1280x720에서 높이 `74/72px`, 머리 폭

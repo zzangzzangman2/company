@@ -23,6 +23,10 @@ namespace FamilyCompany.Runtime.Character3D
         public const string Contract = "FC-PLAYER-FATHER-3D-PRODUCTION-PRESENTATION-V1";
         public const string Legacy2DScaleCandidateFlag =
             "-familyCompanyLegacy2DScaleCandidate";
+        public const string Legacy2DScaleCandidatePhaseOffsetArgument =
+            "-familyCompanyLegacy2DScaleCandidatePhaseOffsetCycles";
+        public const string Legacy2DScaleCandidateStrideArgument =
+            "-familyCompanyLegacy2DScaleCandidateStrideOfficeUnits";
         public const int ProductionLayer = 30;
         public const float PlayerApprovedModelScale = 1.024378657f;
         public const float PlayerApprovedTargetHeight = 1.857258558f;
@@ -44,6 +48,11 @@ namespace FamilyCompany.Runtime.Character3D
         public static readonly Vector2 FatherLegacy2DMatchedFootCenterOffsetLocal =
             new Vector2(0.037517f, 0.138023f);
         public const float ApprovedStrideOfficeUnits = 0.7950477f;
+        // Candidate-only cadence alignment: one authored cycle per isometric tile and a measured
+        // phase origin keep both alternating 613 contacts inside the tile rather than on its
+        // half-cell boundary. The approved production/default stride remains untouched above.
+        public const float Legacy2DMatchedTileSafeStrideOfficeUnits = 0.99380799f;
+        public const float Legacy2DMatchedTileSafePhaseOffsetCycles = 0.64f;
         public const float ApprovedCycleSeconds = 1.4f;
         public const float ApprovedFacingOffsetDegrees = 0f;
         public const float TurnSeconds = 0.18f;
@@ -83,6 +92,8 @@ namespace FamilyCompany.Runtime.Character3D
         private Camera sourceOfficeCamera;
         private bool bindFailureLogged;
         private bool legacy2DScaleCandidate;
+        private float legacy2DScaleCandidatePhaseOffsetCycles;
+        private float effectiveStrideOfficeUnits = ApprovedStrideOfficeUnits;
 
         public static Family3DProductionPresenter Instance => instance;
         public bool IsBound => characters.Count == 2 && characters.All(binding => binding.IsBound);
@@ -195,6 +206,12 @@ namespace FamilyCompany.Runtime.Character3D
             presentationRoot = new GameObject("PlayerV8FatherV19AndV31ProductionPresentation");
             presentationRoot.transform.SetParent(transform, false);
             legacy2DScaleCandidate = IsLegacy2DScaleCandidateActive();
+            legacy2DScaleCandidatePhaseOffsetCycles = legacy2DScaleCandidate
+                ? ResolveLegacy2DScaleCandidatePhaseOffsetCycles()
+                : 0f;
+            effectiveStrideOfficeUnits = legacy2DScaleCandidate
+                ? ResolveLegacy2DScaleCandidateStrideOfficeUnits()
+                : ApprovedStrideOfficeUnits;
             CharacterBinding player = CreateCharacterBinding(
                 runtimePlayer,
                 "PlayerV8",
@@ -261,7 +278,9 @@ namespace FamilyCompany.Runtime.Character3D
                 " scaleProfile=" +
                 (legacy2DScaleCandidate ? "Legacy2DMatchedCandidate" : "ApprovedProduction") +
                 " productionEligible=" + (!legacy2DScaleCandidate) +
-                " stride=" + ApprovedStrideOfficeUnits.ToString("F7") +
+                " stride=" + effectiveStrideOfficeUnits.ToString("F7") +
+                " candidatePhaseOffsetCycles=" +
+                legacy2DScaleCandidatePhaseOffsetCycles.ToString("F6") +
                 " workstations=" + workstations.Count +
                 " legacyCharacterVisible=0 legacyWorkstationVisible=0",
                 this);
@@ -580,7 +599,8 @@ namespace FamilyCompany.Runtime.Character3D
             }
 
             bool moving = actor.LastActualDisplacement.sqrMagnitude > MovementEpsilonSqr;
-            double clipCycles = actor.GaitDistance / ApprovedStrideOfficeUnits;
+            double clipCycles = actor.GaitDistance / effectiveStrideOfficeUnits +
+                                legacy2DScaleCandidatePhaseOffsetCycles;
             double motionClock =
                 (clipCycles - binding.WalkActor.PhaseOffset) * binding.WalkActor.CycleSeconds;
             Vector3 visualGround = actorGround + rotation * new Vector3(
@@ -747,6 +767,46 @@ namespace FamilyCompany.Runtime.Character3D
                     argument,
                     Legacy2DScaleCandidateFlag,
                     StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static float ResolveLegacy2DScaleCandidatePhaseOffsetCycles()
+        {
+            string[] arguments = Environment.GetCommandLineArgs();
+            for (var index = 0; index + 1 < arguments.Length; index++)
+            {
+                if (!string.Equals(
+                        arguments[index],
+                        Legacy2DScaleCandidatePhaseOffsetArgument,
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (float.TryParse(
+                        arguments[index + 1],
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out float parsed))
+                    return Mathf.Repeat(parsed, 1f);
+            }
+            return Legacy2DMatchedTileSafePhaseOffsetCycles;
+        }
+
+        private static float ResolveLegacy2DScaleCandidateStrideOfficeUnits()
+        {
+            string[] arguments = Environment.GetCommandLineArgs();
+            for (var index = 0; index + 1 < arguments.Length; index++)
+            {
+                if (!string.Equals(
+                        arguments[index],
+                        Legacy2DScaleCandidateStrideArgument,
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (float.TryParse(
+                        arguments[index + 1],
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out float parsed) && parsed >= 0.5f && parsed <= 2f)
+                    return parsed;
+            }
+            return Legacy2DMatchedTileSafeStrideOfficeUnits;
         }
 
         private int CountVisibleLegacyCharacterRenderers()

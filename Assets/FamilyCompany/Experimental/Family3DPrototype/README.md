@@ -95,6 +95,13 @@ The full receipt and hashes are in `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08
 
 Do not duplicate Father version history. Follow `Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md` from four-view provider generation through full actual-map GIF review. The next character gets a new candidate folder, new asset hashes, measured stride/forward and explicit runtime IDs while reusing the shared formulas and gates.
 
+For tile-centred review, do not stop at the semantic root or the two-foot midpoint. The current
+command-line-only legacy-size candidate proves the reusable process: read actual per-foot contact
+telemetry, ground and project both ankles every moving frame, sweep stride/phase without changing
+the package clip, validate `+X/-X/+Y/-Y`, and fail if either planted ankle comes within 6px of a
+tile boundary. Its measured coupling is `0.99380799 / 0.64 cycles`; it is candidate-only and must
+not be copied over the approved production stride `0.7950477` without a new user-approved GIF.
+
 ## Safety
 
 - Keep every candidate on the QA layer and under Experimental/Artifacts.

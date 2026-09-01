@@ -25,6 +25,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             "-familyCompanyPlayerFather3DInteractionArtifacts";
         private const string Legacy2DScaleCandidateFlag =
             "-familyCompanyLegacy2DScaleCandidate";
+        private const string FootTilePhaseSweepFlag =
+            "-familyCompanyFootTilePhaseSweep";
+        private const string FootTilePhaseSweepAxisArgument =
+            "-familyCompanyFootTilePhaseSweepAxis";
 
         private string artifactDirectory = string.Empty;
 
@@ -114,8 +118,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             // Keep a full walk cycle before contact. The wider eight-cell approach is visual QA,
             // not just a collision probe: at the locked runtime speed it records more than the
             // complete 1.4-second authored cycle before the two visible bodies meet.
-            OfficeGridCoordinate playerStart = new OfficeGridCoordinate(2, 6);
-            OfficeGridCoordinate fatherStart = new OfficeGridCoordinate(10, 6);
+            bool footTilePhaseSweep = HasFlag(FootTilePhaseSweepFlag);
+            bool verticalFootTileSweep = footTilePhaseSweep &&
+                                         ArgumentValue(FootTilePhaseSweepAxisArgument)
+                                             .Equals("y", StringComparison.OrdinalIgnoreCase);
+            OfficeGridCoordinate playerStart = verticalFootTileSweep
+                ? new OfficeGridCoordinate(6, 2)
+                : new OfficeGridCoordinate(2, 6);
+            OfficeGridCoordinate fatherStart = verticalFootTileSweep
+                ? new OfficeGridCoordinate(6, 10)
+                : new OfficeGridCoordinate(10, 6);
             player.QaTeleportToCell(playerStart);
             father.QaTeleportToCell(fatherStart);
             ParkOtherActors(runtime, player, father);
@@ -161,10 +173,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             var playerFootLocalZSamples = new List<float>();
             var fatherFootLocalXSamples = new List<float>();
             var fatherFootLocalZSamples = new List<float>();
+            float playerMinimumPlantedFootLineClearancePx = float.PositiveInfinity;
+            float fatherMinimumPlantedFootLineClearancePx = float.PositiveInfinity;
+            int playerPlantedFootLineTouchFrames = 0;
+            int fatherPlantedFootLineTouchFrames = 0;
+            int playerPlantedFootContactSamples = 0;
+            int fatherPlantedFootContactSamples = 0;
+            var footTileTrace = new StringBuilder();
+            footTileTrace.AppendLine(
+                "frame,actor,phase,left_contact,right_contact,left_grid_x,left_grid_y," +
+                "right_grid_x,right_grid_y,left_line_px,right_line_px,min_contact_line_px");
             float playerMaximumCenterLineError = 0f;
             float fatherMaximumCenterLineError = 0f;
             string approachFrameDirectory = Path.Combine(artifactDirectory, "approach-frames");
-            Directory.CreateDirectory(approachFrameDirectory);
+            if (!footTilePhaseSweep)
+                Directory.CreateDirectory(approachFrameDirectory);
             int previousCaptureFramerate = Time.captureFramerate;
             Time.captureFramerate = 24;
             float minimumPairMargin = float.PositiveInfinity;
@@ -172,16 +195,55 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             while (Time.realtimeSinceStartup < deadline)
             {
                 yield return new WaitForEndOfFrame();
-                string approachFramePath = Path.Combine(
-                    approachFrameDirectory,
-                    "approach-" + approachFrameCount.ToString("D3") + ".png");
-                if (!TryCaptureOverview(approachFramePath, out string approachCaptureFailure))
+                if (!footTilePhaseSweep)
                 {
-                    Time.captureFramerate = previousCaptureFramerate;
-                    Finish(false, "approach frame capture failed: " + approachCaptureFailure);
-                    yield break;
+                    string approachFramePath = Path.Combine(
+                        approachFrameDirectory,
+                        "approach-" + approachFrameCount.ToString("D3") + ".png");
+                    if (!TryCaptureOverview(approachFramePath, out string approachCaptureFailure))
+                    {
+                        Time.captureFramerate = previousCaptureFramerate;
+                        Finish(false, "approach frame capture failed: " + approachCaptureFailure);
+                        yield break;
+                    }
                 }
                 approachFrameCount++;
+                if (TryMeasureFootTileLineClearance(
+                        runtime,
+                        player,
+                        "PlayerV8ProductionHost",
+                        out FootTileLineSample playerTileSample))
+                {
+                    AppendFootTileTrace(footTileTrace, approachFrameCount - 1, "player", playerTileSample);
+                    if (player.LastActualDisplacement.sqrMagnitude > 0.000000001f &&
+                        playerTileSample.hasContact)
+                    {
+                        playerPlantedFootContactSamples++;
+                        playerMinimumPlantedFootLineClearancePx = Mathf.Min(
+                            playerMinimumPlantedFootLineClearancePx,
+                            playerTileSample.minimumContactLineClearancePx);
+                        if (playerTileSample.minimumContactLineClearancePx < 6f)
+                            playerPlantedFootLineTouchFrames++;
+                    }
+                }
+                if (TryMeasureFootTileLineClearance(
+                        runtime,
+                        father,
+                        "FatherV19ProductionHost",
+                        out FootTileLineSample fatherTileSample))
+                {
+                    AppendFootTileTrace(footTileTrace, approachFrameCount - 1, "father", fatherTileSample);
+                    if (father.LastActualDisplacement.sqrMagnitude > 0.000000001f &&
+                        fatherTileSample.hasContact)
+                    {
+                        fatherPlantedFootContactSamples++;
+                        fatherMinimumPlantedFootLineClearancePx = Mathf.Min(
+                            fatherMinimumPlantedFootLineClearancePx,
+                            fatherTileSample.minimumContactLineClearancePx);
+                        if (fatherTileSample.minimumContactLineClearancePx < 6f)
+                            fatherPlantedFootLineTouchFrames++;
+                    }
+                }
                 if ((approachFrameCount - 1) % 6 == 0)
                 {
                     if (TryMeasureProductionActorPixelOverlap(
@@ -254,9 +316,31 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     break;
             }
             Time.captureFramerate = previousCaptureFramerate;
+            File.WriteAllText(
+                Path.Combine(artifactDirectory, "player-father-foot-tile-trace.csv"),
+                footTileTrace.ToString(),
+                new UTF8Encoding(false));
             player.QaSetDirectMovementInput(Vector2.zero);
             father.QaSetDirectMovementInput(Vector2.zero);
             for (var frame = 0; frame < 3; frame++) yield return null;
+
+            if (footTilePhaseSweep)
+            {
+                string sweepResult =
+                    "minimumPlantedFootTileLineClearancePx=" +
+                    Invariant(playerMinimumPlantedFootLineClearancePx) + "/" +
+                    Invariant(fatherMinimumPlantedFootLineClearancePx) + Environment.NewLine +
+                    "plantedFootTileLineTouchFramesUnder6Px=" +
+                    playerPlantedFootLineTouchFrames + "/" +
+                    fatherPlantedFootLineTouchFrames + Environment.NewLine +
+                    "frames=" + approachFrameCount + Environment.NewLine;
+                File.WriteAllText(
+                    Path.Combine(artifactDirectory, "player-father-foot-tile-sweep-result.txt"),
+                    sweepResult,
+                    new UTF8Encoding(false));
+                Finish(true, "foot tile phase sweep completed");
+                yield break;
+            }
 
             float playerTravel = Vector2.Distance(playerInitial, player.Position);
             float fatherTravel = Vector2.Distance(fatherInitial, father.Position);
@@ -320,7 +404,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                  (playerMedianFootMidpointPixelError > 4f ||
                   fatherMedianFootMidpointPixelError > 4f ||
                   playerMaximumFootMidpointPixelError > 8f ||
-                  fatherMaximumFootMidpointPixelError > 8f)))
+                  fatherMaximumFootMidpointPixelError > 8f ||
+                  playerPlantedFootContactSamples < 24 ||
+                  fatherPlantedFootContactSamples < 24 ||
+                  playerMinimumPlantedFootLineClearancePx < 6f ||
+                  fatherMinimumPlantedFootLineClearancePx < 6f ||
+                  playerPlantedFootLineTouchFrames != 0 ||
+                  fatherPlantedFootLineTouchFrames != 0)))
             {
                 Finish(
                     false,
@@ -341,6 +431,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     playerMedianFootLocalZ.ToString("F6") + "/" +
                     fatherMedianFootLocalX.ToString("F6") + "/" +
                     fatherMedianFootLocalZ.ToString("F6") +
+                    " plantedLinePx=" +
+                    playerMinimumPlantedFootLineClearancePx.ToString("F3") + "/" +
+                    fatherMinimumPlantedFootLineClearancePx.ToString("F3") +
+                    " plantedLineTouches=" + playerPlantedFootLineTouchFrames + "/" +
+                    fatherPlantedFootLineTouchFrames +
                     " blocked=" + blockedAgentMoves +
                     " penetrations=" + approachPenetrations);
                 yield break;
@@ -621,6 +716,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                               playerMedianFootLocalZ.ToString("F6") + "/" +
                               fatherMedianFootLocalX.ToString("F6") + "/" +
                               fatherMedianFootLocalZ.ToString("F6"));
+            result.AppendLine("minimumPlantedFootTileLineClearancePx=" +
+                              playerMinimumPlantedFootLineClearancePx.ToString("F3") + "/" +
+                              fatherMinimumPlantedFootLineClearancePx.ToString("F3"));
+            result.AppendLine("plantedFootContactSamples=" +
+                              playerPlantedFootContactSamples + "/" +
+                              fatherPlantedFootContactSamples);
+            result.AppendLine("plantedFootTileLineTouchFramesUnder6Px=" +
+                              playerPlantedFootLineTouchFrames + "/" +
+                              fatherPlantedFootLineTouchFrames);
             result.AppendLine("playerRenderedHeightRange=" + playerHeightSamples.Min() + "/" +
                               playerRenderedHeight + "/" + playerHeightSamples.Max());
             result.AppendLine("fatherRenderedHeightRange=" + fatherHeightSamples.Min() + "/" +
@@ -1066,6 +1170,228 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             Vector2 delta = point - origin;
             return Mathf.Abs(delta.x * normalizedDirection.y -
                              delta.y * normalizedDirection.x);
+        }
+
+        private static bool TryMeasureFootTileLineClearance(
+            StarterOfficeRuntimeBootstrap runtime,
+            OfficeRuntimeAgent agent,
+            string productionHostName,
+            out FootTileLineSample sample)
+        {
+            sample = default;
+            Camera source = Camera.main;
+            Camera overlay = Object.FindObjectsByType<Camera>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None)
+                .FirstOrDefault(candidate => candidate != null && string.Equals(
+                    candidate.gameObject.name,
+                    "Family3DProductionOverlayCamera",
+                    StringComparison.Ordinal));
+            GameObject host = GameObject.Find(productionHostName);
+            Animator animator = host == null
+                ? null
+                : host.GetComponentInChildren<Animator>(true);
+            Component walkActor = host == null
+                ? null
+                : host.GetComponents<Component>().FirstOrDefault(component =>
+                    component != null && string.Equals(
+                        component.GetType().FullName,
+                        "FamilyCompany.Runtime.Character3D.Family3DWalkActor",
+                        StringComparison.Ordinal));
+            Transform leftFoot = animator?.GetBoneTransform(HumanBodyBones.LeftFoot);
+            Transform rightFoot = animator?.GetBoneTransform(HumanBodyBones.RightFoot);
+            if (runtime?.World?.Presenter == null || source == null || overlay == null ||
+                walkActor == null || leftFoot == null || rightFoot == null || !source.orthographic)
+                return false;
+
+            Vector3 sourcePoint = new Vector3(
+                agent.Position.x,
+                agent.Position.y,
+                agent.transform.position.z);
+            float sourceDepth = source.WorldToViewportPoint(sourcePoint).z;
+            Vector3 leftFootGround = leftFoot.position;
+            Vector3 rightFootGround = rightFoot.position;
+            leftFootGround.y = 0f;
+            rightFootGround.y = 0f;
+            if (sourceDepth <= 0f ||
+                !TryMapOverlayPointToOfficeWorld(
+                    source,
+                    overlay,
+                    sourceDepth,
+                    leftFootGround,
+                    out Vector2 leftOffice) ||
+                !TryMapOverlayPointToOfficeWorld(
+                    source,
+                    overlay,
+                    sourceDepth,
+                    rightFootGround,
+                    out Vector2 rightOffice))
+                return false;
+
+            Vector2 origin = runtime.World.Presenter.CellCenterWorld(
+                new OfficeGridCoordinate(0, 0));
+            Vector2 basisX = runtime.World.Presenter.CellBasisXWorld();
+            Vector2 basisY = runtime.World.Presenter.CellBasisYWorld();
+            if (!TryResolveGridCoordinate(leftOffice, origin, basisX, basisY, out Vector2 leftGrid) ||
+                !TryResolveGridCoordinate(rightOffice, origin, basisX, basisY, out Vector2 rightGrid))
+                return false;
+
+            float leftLine = NearestGridLineClearancePixels(
+                leftOffice,
+                leftGrid,
+                origin,
+                basisX,
+                basisY,
+                source);
+            float rightLine = NearestGridLineClearancePixels(
+                rightOffice,
+                rightGrid,
+                origin,
+                basisX,
+                basisY,
+                source);
+            if (!TryReadWalkActorContactTelemetry(
+                    walkActor,
+                    out float phase,
+                    out bool leftContact,
+                    out bool rightContact))
+                return false;
+            float minimumContact = float.PositiveInfinity;
+            if (leftContact) minimumContact = Mathf.Min(minimumContact, leftLine);
+            if (rightContact) minimumContact = Mathf.Min(minimumContact, rightLine);
+            sample = new FootTileLineSample
+            {
+                phase01 = phase,
+                leftContact = leftContact,
+                rightContact = rightContact,
+                hasContact = leftContact || rightContact,
+                leftGrid = leftGrid,
+                rightGrid = rightGrid,
+                leftLineClearancePx = leftLine,
+                rightLineClearancePx = rightLine,
+                minimumContactLineClearancePx = minimumContact
+            };
+            return true;
+        }
+
+        private static bool TryReadWalkActorContactTelemetry(
+            Component walkActor,
+            out float phase,
+            out bool leftContact,
+            out bool rightContact)
+        {
+            phase = 0f;
+            leftContact = false;
+            rightContact = false;
+            if (walkActor == null)
+                return false;
+            Type type = walkActor.GetType();
+            System.Reflection.PropertyInfo leftProperty = type.GetProperty("LeftFootPlanted");
+            System.Reflection.PropertyInfo rightProperty = type.GetProperty("RightFootPlanted");
+            System.Reflection.MethodInfo snapshotMethod = type.GetMethod("ReadPoseSnapshot");
+            if (leftProperty == null || rightProperty == null || snapshotMethod == null)
+                return false;
+            object snapshot = snapshotMethod.Invoke(walkActor, null);
+            System.Reflection.FieldInfo phaseField = snapshot?.GetType().GetField("motionPhase01");
+            if (phaseField == null)
+                return false;
+            phase = Convert.ToSingle(phaseField.GetValue(snapshot));
+            leftContact = Convert.ToBoolean(leftProperty.GetValue(walkActor));
+            rightContact = Convert.ToBoolean(rightProperty.GetValue(walkActor));
+            return true;
+        }
+
+        private static bool TryMapOverlayPointToOfficeWorld(
+            Camera source,
+            Camera overlay,
+            float sourceDepth,
+            Vector3 overlayWorld,
+            out Vector2 officeWorld)
+        {
+            officeWorld = Vector2.zero;
+            Vector3 viewport = overlay.WorldToViewportPoint(overlayWorld);
+            if (viewport.z <= 0f)
+                return false;
+            Vector3 sourceWorld = source.ViewportToWorldPoint(
+                new Vector3(viewport.x, viewport.y, sourceDepth));
+            officeWorld = new Vector2(sourceWorld.x, sourceWorld.y);
+            return true;
+        }
+
+        private static bool TryResolveGridCoordinate(
+            Vector2 point,
+            Vector2 origin,
+            Vector2 basisX,
+            Vector2 basisY,
+            out Vector2 grid)
+        {
+            grid = Vector2.zero;
+            float determinant = basisX.x * basisY.y - basisX.y * basisY.x;
+            if (Mathf.Abs(determinant) <= 0.000001f)
+                return false;
+            Vector2 delta = point - origin;
+            grid = new Vector2(
+                (delta.x * basisY.y - delta.y * basisY.x) / determinant,
+                (basisX.x * delta.y - basisX.y * delta.x) / determinant);
+            return true;
+        }
+
+        private static float NearestGridLineClearancePixels(
+            Vector2 point,
+            Vector2 grid,
+            Vector2 origin,
+            Vector2 basisX,
+            Vector2 basisY,
+            Camera source)
+        {
+            float boundaryX = Mathf.Round(grid.x - 0.5f) + 0.5f;
+            float boundaryY = Mathf.Round(grid.y - 0.5f) + 0.5f;
+            Vector2 pointOnXLine = origin + basisX * boundaryX + basisY * grid.y;
+            Vector2 pointOnYLine = origin + basisX * grid.x + basisY * boundaryY;
+            float distanceX = Mathf.Abs(Cross(point - pointOnXLine, basisY)) /
+                              Mathf.Max(basisY.magnitude, 0.000001f);
+            float distanceY = Mathf.Abs(Cross(point - pointOnYLine, basisX)) /
+                              Mathf.Max(basisX.magnitude, 0.000001f);
+            float pixelsPerWorld = 720f / (2f * source.orthographicSize);
+            return Mathf.Min(distanceX, distanceY) * pixelsPerWorld;
+        }
+
+        private static float Cross(Vector2 left, Vector2 right) =>
+            left.x * right.y - left.y * right.x;
+
+        private static void AppendFootTileTrace(
+            StringBuilder trace,
+            int frame,
+            string actor,
+            FootTileLineSample sample)
+        {
+            trace.Append(frame).Append(',').Append(actor).Append(',')
+                .Append(Invariant(sample.phase01)).Append(',')
+                .Append(sample.leftContact ? "true" : "false").Append(',')
+                .Append(sample.rightContact ? "true" : "false").Append(',')
+                .Append(Invariant(sample.leftGrid.x)).Append(',')
+                .Append(Invariant(sample.leftGrid.y)).Append(',')
+                .Append(Invariant(sample.rightGrid.x)).Append(',')
+                .Append(Invariant(sample.rightGrid.y)).Append(',')
+                .Append(Invariant(sample.leftLineClearancePx)).Append(',')
+                .Append(Invariant(sample.rightLineClearancePx)).Append(',')
+                .Append(Invariant(sample.minimumContactLineClearancePx)).AppendLine();
+        }
+
+        private static string Invariant(float value) =>
+            value.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
+
+        private struct FootTileLineSample
+        {
+            public float phase01;
+            public bool leftContact;
+            public bool rightContact;
+            public bool hasContact;
+            public Vector2 leftGrid;
+            public Vector2 rightGrid;
+            public float leftLineClearancePx;
+            public float rightLineClearancePx;
+            public float minimumContactLineClearancePx;
         }
 
         private static bool TryMeasureTileCenterPixelAlignment(

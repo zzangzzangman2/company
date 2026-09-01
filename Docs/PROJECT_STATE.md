@@ -58,29 +58,39 @@ Last updated: 2026-09-01. This file contains current handoff state only. Superse
 - A fail-closed, command-line-only candidate is available through
   `-familyCompanyLegacy2DScaleCandidate`. It uses Player scale/height
   `1.263885643/2.291498763`, Father `1.306909878/2.454888000`, Father horizontal proportion
-  `0.806840529`, and dynamic collision radii `0.380465984/0.447570225`. The V31 workstation keeps the
-  already approved `1.857258558` reference height and therefore does not grow with the character
-  candidate.
+  `0.806840529`, dynamic collision radii `0.380465984/0.447570225`, and candidate-only tile-safe
+  action-613 coupling `stride 0.99380799 / phase offset 0.64 cycles`. The approved production/default
+  coupling remains `stride 0.7950477 / phase offset 0`; the V31 workstation keeps the already
+  approved `1.857258558` reference height and therefore does not grow with the character candidate.
 - In candidate mode only, Father uses the same neutral, emission/specular-free balanced-albedo
   shader family as Player, with Father-local neutral fill `0.82`. The QA records rendered mean
   luminance and saturation and rejects a luminance ratio outside `0.70..1.30`, either actor below
   luma `45`, or saturation below `0.12`.
 - The strengthened D3D11 candidate run records the complete head-on approach rather than judging
   one collision pose. Its 89 ordered frames and 15 evenly spaced silhouette samples measured
-  Player height `85/91/96px` min/median/max and Father `91/94/97px`; median head widths `27/28px`,
-  torso widths `24/24px`, silhouette pixels `1745/1769`, luma `91.99/69.53`, and saturation
-  `0.363/0.209`. The earlier single-frame check varied with gait phase and is no longer the
+  Player height `85/91/97px` min/median/max and Father `91/94/98px`; stopped silhouette pixels
+  `1732/1766`, luma `91.61/69.56`, and saturation `0.359/0.210`. The earlier single-frame check
+  varied with gait phase and is no longer the
   acceptance source.
 - The semantic routes already started on the exact tile centres and deviated by at most
   `0.000002/0.000212` world units, but enlarged bone tracking found stable foot-midpoint bias. The
   candidate now corrects the walking production host by Player local X/Z
   `+0.050989/+0.214083` and Father `+0.037517/+0.138023` after travel yaw. It never moves the
   imported model/Animator root and is disabled for every seat-facing phase, preserving the approved
-  seated pose. The resulting foot-midpoint centre error is Player `2.118/5.921px` and Father
-  `1.286/4.170px` median/max, with signed median bias `0/0` for both.
+  seated pose. The tile-safe run's foot-midpoint centre error is Player `1.833/3.866px` and Father
+  `1.141/2.754px` median/max.
+- Midpoint centring alone was insufficient: the old `0.7950477` coupling placed an individual
+  planted ankle nearly exactly on a half-cell line (`0.527/0.024px` minimum; `16/17` moving contact
+  frames under 6px). Ten phase-only candidates also failed. Coupling the candidate to the exact
+  isometric centre distance `0.99380799` and measured phase `0.64` places alternating contacts near
+  the quarter-cell interiors. Hidden D3D11 measured `65/66` planted-contact samples, minimum
+  clearance `8.135/7.096px`, and under-6px frames `0/0`. A separate Y-axis sweep covers the other
+  two directions at `8.767/6.453px`, also `0/0`; together the two actors cover `+X/-X/+Y/-Y`.
+  Candidate QA now fails closed if either actor has fewer than 24 contact samples, a minimum below
+  6px, or any under-6px frame.
 - The same run covered `3.56249/3.56993` map-unit travel, dynamic blocking with pixel overlap `0`
   and penetration `0`, followed by real purchased V31 routing to `seat_player/seat_father`, exact
-  seated tile-centre error `0/0`, bent knees `83.01/86.79` and `96.24/100.85` degrees,
+  seated tile-centre error `0/0`, bent knees `83.78/95.48` and `94.60/107.66` degrees,
   `Working/Working`, and static/interaction/agent violations `0/0/0`. All 89 frames were inspected
   in enlarged chronological sheets and both GIFs. Portable evidence is under
   `Docs/Evidence/PlayerFather3DLegacy2DScaleCandidateCurrent/`; the Git-ignored local artifact
@@ -90,8 +100,10 @@ Last updated: 2026-09-01. This file contains current handoff state only. Superse
   It now composites `Family3DProductionOverlayCamera` into the same target. This was a QA capture
   blind spot, not evidence that the shipping screen omitted the bodies; the dedicated combined
   D3D11 proof rendered both bodies normally.
-- Company-PC compile/build validation passed at
-  `Artifacts/FastQa/runs/20260901-120933-234`. An ordinary Player with only hidden process style is
+- Company-PC final script-build validation passed at
+  `Artifacts/FastQa/runs/20260901-124924-359`; the unchanged production/default profile also passed
+  hidden D3D11 at `Artifacts/PlayerFather3DDefaultRegressionTileSafeChange-20260901/` with stride
+  `0.7950477`, `productionEligible=True`, and overlap `0`. An ordinary Player with only hidden process style is
   forbidden because it can still display a render surface. The final D3D11 run used standalone
   `-batchmode`, `CreateNoWindow=true`, a continuously checked zero `MainWindowHandle`, and never
   opened a window. The candidate still remains `productionEligible=false` and is not the default
