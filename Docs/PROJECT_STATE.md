@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-Last updated: 2026-08-31. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+Last updated: 2026-09-01. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
 ## Production cutover: Player V8 + Father V19 + V31 workstation
 
@@ -13,7 +13,8 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   `0.92`, map stride `0.7950477`, authored walk cycle `1.4 s`, full pose strength and `0.18 s`
   whole-body turns. Father never derives size from a retired sprite; 1280x720 D3D11 moving head
   and torso widths must each match Player within 1px. Each FBX's own
-  Humanoid Avatar, skin and `PlayerV6_Casual_Walk_inplace` clip stay together.
+  Humanoid Avatar, skin and named walk clip (`PlayerV6_Casual_Walk_inplace` or
+  `FatherV19_Casual_Walk_inplace`) stay together.
 - The old selectable Player sprite presentations, contact-frame Resources, PSB/FBX authoring labs,
   bakers, importers and their dedicated QAs were deleted. The simulation still supplies its
   invisible direction/seat clock through a fail-closed SpriteRenderer, but it can never render and
@@ -39,6 +40,54 @@ Last updated: 2026-08-31. This file contains current handoff state only. Superse
   [Evidence/PlayerFather3DProduction/README.md](Evidence/PlayerFather3DProduction/README.md).
 - Mother and Older Sister still await approved one-package 3D replacements; their current production
   representations remain untouched.
+
+## 2026-09-01 company-PC review: legacy-2D screen-size candidate
+
+- A pull/review of home commits `2698a21d..65971ec5` found that the latest production correction
+  successfully matches Player/Father to each other at 1280x720: rendered height `74/72px`, head
+  width `22/22px`, torso width `30/29px`, and area difference below 10%. It does **not** yet match
+  the older 2D screen-height standard.
+- All 48 retained HighMotion sprites were measured from their actual alpha bounds. Player height is
+  `197/218/222px` min/median/max and Father is `208/229/233px` at 180 PPU. With the locked runtime
+  visual scale `1.55` and shipping 16:9 camera, the median on-screen references are approximately
+  `89.25px` Player and `93.75px` Father.
+- The old 2D head/height ratios themselves are inconsistent (`0.396` Player, `0.272` Father), so
+  the candidate copies only each character's total screen height. It deliberately keeps the two
+  approved 3D head widths equal (projected `26.53/26.53px`) and torso widths close
+  (`36.18/34.98px`) instead of reproducing the old oversized-Player-head mismatch.
+- A fail-closed, command-line-only candidate is available through
+  `-familyCompanyLegacy2DScaleCandidate`. It uses Player scale/height
+  `1.263885643/2.291498763`, Father `1.306909878/2.454888000`, Father horizontal proportion
+  `0.806840529`, and dynamic collision radii `0.345465984/0.412570225`. The V31 workstation keeps the
+  already approved `1.857258558` reference height and therefore does not grow with the character
+  candidate.
+- In candidate mode only, Father uses the same neutral, emission/specular-free balanced-albedo
+  shader family as Player, with Father-local neutral fill `0.82`. The QA records rendered mean
+  luminance and saturation and rejects a luminance ratio outside `0.70..1.30`, either actor below
+  luma `45`, or saturation below `0.12`.
+- The strengthened D3D11 candidate run records the complete head-on approach rather than judging
+  one collision pose. Its 88 ordered frames and 15 evenly spaced silhouette samples measured
+  Player height `86/90/97px` min/median/max and Father `91/94/97px`; median head widths `27/28px`,
+  torso widths `24/23px`, silhouette pixels `1751/1772`, luma `91.36/69.32`, and saturation
+  `0.364/0.210`. The earlier single-frame check varied with gait phase and is no longer the
+  acceptance source.
+- The same run covered `3.59827/3.60416` map-unit travel, dynamic blocking with pixel overlap `0`
+  and penetration `0`, followed by real purchased V31 routing to `seat_player/seat_father`, bent
+  knees `83.01/86.79` and `96.24/100.85` degrees, `Working/Working`, and static/interaction/agent
+  violations `0/0/0`. Portable evidence is under
+  `Docs/Evidence/PlayerFather3DLegacy2DScaleCandidateV9/`; the Git-ignored local artifact directory
+  `Artifacts/PlayerFather3DLegacy2DScaleCandidateV9-20260901/` additionally keeps all 88 raw PNGs.
+- The generic Render Clarity capture previously rendered only `Camera.main`, so the two health bars
+  could appear without the production 3D bodies while the unrelated pixel-clarity gate passed.
+  It now composites `Family3DProductionOverlayCamera` into the same target. This was a QA capture
+  blind spot, not evidence that the shipping screen omitted the bodies; the dedicated combined
+  D3D11 proof rendered both bodies normally.
+- Company-PC compile/build validation passed at
+  `Artifacts/FastQa/runs/20260901-112736-779`. An ordinary Player with only hidden process style is
+  forbidden because it can still display a render surface. The final D3D11 run used standalone
+  `-batchmode`, `CreateNoWindow=true`, a continuously checked zero `MainWindowHandle`, and never
+  opened a window. The candidate still remains `productionEligible=false` and is not the default
+  until the user explicitly approves its GIF.
 
 ## Family character completion boundary
 
@@ -172,10 +221,10 @@ tile-placement rule”.
 - Desk footprints remain hard obstacles. Chairs remain seat-owner interaction obstacles: only the
   assigned/claimed actor can dock through its chair; everyone else routes around it.
 - The retired gold foot cap, floating drawer details and all legacy desk/chair renderers stay absent.
-- The workstation appearance is now production-selected by the user's explicit instruction. The
-  Father character itself remains gated: the isolated V31 receipt still truthfully records
-  `productionMutation=false`, `productionEligible=false`; workstation promotion does not promote
-  the Father model.
+- The isolated V31 receipt still truthfully records the pre-cutover state
+  `productionMutation=false`, `productionEligible=false`. The later explicit production cutover at
+  the top of this file separately promotes Father V19; the historical receipt itself is not
+  rewritten.
 - Higgsfield use for V31: `0 credits`.
 
 Final isolated evidence:

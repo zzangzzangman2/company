@@ -21,12 +21,24 @@ namespace FamilyCompany.Runtime.Character3D
     public sealed class Family3DProductionPresenter : MonoBehaviour
     {
         public const string Contract = "FC-PLAYER-FATHER-3D-PRODUCTION-PRESENTATION-V1";
+        public const string Legacy2DScaleCandidateFlag =
+            "-familyCompanyLegacy2DScaleCandidate";
         public const int ProductionLayer = 30;
         public const float PlayerApprovedModelScale = 1.024378657f;
         public const float PlayerApprovedTargetHeight = 1.857258558f;
         public const float FatherStandardizedModelScale = 0.950318127f;
         public const float FatherStandardizedTargetHeight = 1.769311871f;
         public const float FatherStandardizedHorizontalScale = 0.92f;
+        // Candidate-only values derived from all 48 retained legacy HighMotion walk sprites at
+        // 180 PPU, runtime visual scale 1.55 and the shipping 16:9 camera. They preserve the old
+        // Player/Father screen-height relationship while keeping their rendered head widths equal.
+        // They are never selected without the explicit candidate flag.
+        public const float PlayerLegacy2DMatchedModelScale = 1.263885643f;
+        public const float PlayerLegacy2DMatchedTargetHeight = 2.291498763f;
+        public const float FatherLegacy2DMatchedModelScale = 1.306909878f;
+        public const float FatherLegacy2DMatchedTargetHeight = 2.454888000f;
+        public const float FatherLegacy2DMatchedHorizontalScale = 0.806840529f;
+        public const float FatherLegacy2DMatchedNeutralFill = 0.82f;
         public const float ApprovedStrideOfficeUnits = 0.7950477f;
         public const float ApprovedCycleSeconds = 1.4f;
         public const float ApprovedFacingOffsetDegrees = 0f;
@@ -66,6 +78,7 @@ namespace FamilyCompany.Runtime.Character3D
         private Light presentationLight;
         private Camera sourceOfficeCamera;
         private bool bindFailureLogged;
+        private bool legacy2DScaleCandidate;
 
         public static Family3DProductionPresenter Instance => instance;
         public bool IsBound => characters.Count == 2 && characters.All(binding => binding.IsBound);
@@ -177,6 +190,7 @@ namespace FamilyCompany.Runtime.Character3D
 
             presentationRoot = new GameObject("PlayerV8FatherV19AndV31ProductionPresentation");
             presentationRoot.transform.SetParent(transform, false);
+            legacy2DScaleCandidate = IsLegacy2DScaleCandidateActive();
             CharacterBinding player = CreateCharacterBinding(
                 runtimePlayer,
                 "PlayerV8",
@@ -184,25 +198,43 @@ namespace FamilyCompany.Runtime.Character3D
                 PlayerAlbedoResourcePath,
                 PlayerMaterialResourcePath,
                 PlayerWalkClipName,
-                PlayerApprovedModelScale,
-                PlayerApprovedTargetHeight,
-                1f);
+                legacy2DScaleCandidate
+                    ? PlayerLegacy2DMatchedModelScale
+                    : PlayerApprovedModelScale,
+                legacy2DScaleCandidate
+                    ? PlayerLegacy2DMatchedTargetHeight
+                    : PlayerApprovedTargetHeight,
+                1f,
+                -1f);
             CharacterBinding father = CreateCharacterBinding(
                 runtimeFather,
                 "FatherV19",
                 FatherModelResourcePath,
                 FatherAlbedoResourcePath,
-                FatherMaterialResourcePath,
+                legacy2DScaleCandidate
+                    ? PlayerMaterialResourcePath
+                    : FatherMaterialResourcePath,
                 FatherWalkClipName,
-                FatherStandardizedModelScale,
-                FatherStandardizedTargetHeight,
-                FatherStandardizedHorizontalScale);
+                legacy2DScaleCandidate
+                    ? FatherLegacy2DMatchedModelScale
+                    : FatherStandardizedModelScale,
+                legacy2DScaleCandidate
+                    ? FatherLegacy2DMatchedTargetHeight
+                    : FatherStandardizedTargetHeight,
+                legacy2DScaleCandidate
+                    ? FatherLegacy2DMatchedHorizontalScale
+                    : FatherStandardizedHorizontalScale,
+                legacy2DScaleCandidate
+                    ? FatherLegacy2DMatchedNeutralFill
+                    : -1f);
             characters.Add(player);
             characters.Add(father);
             characterById.Add(player.AgentId, player);
             characterById.Add(father.AgentId, father);
 
-            CreateV31Workstations(player.WalkActor.StandingHeight);
+            // Furniture dimensions are an approved V31 tile contract and must not grow when a
+            // character-scale candidate is evaluated.
+            CreateV31Workstations(PlayerApprovedTargetHeight);
             for (var index = 0; index < characters.Count; index++)
                 characters[index].Agent.SetExternalDirectionalSeatingPresentation(true);
             HideRetiredPresentation();
@@ -211,8 +243,14 @@ namespace FamilyCompany.Runtime.Character3D
                 " actors=player,father playerScale=" + player.AppliedScale.ToString("F9") +
                 " playerHeight=" + player.WalkActor.StandingHeight.ToString("F6") +
                 " fatherScale=" + father.AppliedScale.ToString("F9") +
-                " fatherHorizontalScale=" + FatherStandardizedHorizontalScale.ToString("F2") +
+                " fatherHorizontalScale=" +
+                (legacy2DScaleCandidate
+                    ? FatherLegacy2DMatchedHorizontalScale
+                    : FatherStandardizedHorizontalScale).ToString("F3") +
                 " fatherHeight=" + father.WalkActor.StandingHeight.ToString("F6") +
+                " scaleProfile=" +
+                (legacy2DScaleCandidate ? "Legacy2DMatchedCandidate" : "ApprovedProduction") +
+                " productionEligible=" + (!legacy2DScaleCandidate) +
                 " stride=" + ApprovedStrideOfficeUnits.ToString("F7") +
                 " workstations=" + workstations.Count +
                 " legacyCharacterVisible=0 legacyWorkstationVisible=0",
@@ -228,7 +266,8 @@ namespace FamilyCompany.Runtime.Character3D
             string walkClipName,
             float lockedModelScale,
             float approvedTargetHeight,
-            float horizontalScale)
+            float horizontalScale,
+            float neutralFillOverride)
         {
             GameObject modelPrefab = Resources.Load<GameObject>(modelResourcePath);
             Texture2D albedo = Resources.Load<Texture2D>(albedoResourcePath);
@@ -275,6 +314,8 @@ namespace FamilyCompany.Runtime.Character3D
                 mainTexture = albedo,
                 color = Color.white
             };
+            if (neutralFillOverride >= 0f && runtimeMaterial.HasProperty("_AmbientFactor"))
+                runtimeMaterial.SetFloat("_AmbientFactor", neutralFillOverride);
             skinned[0].sharedMaterial = runtimeMaterial;
 
             if (lockedModelScale <= 0f || approvedTargetHeight <= 0f || horizontalScale <= 0f)
@@ -679,6 +720,15 @@ namespace FamilyCompany.Runtime.Character3D
                 FamilyCompany.Experimental.Family3D.Family3DStarterOfficeCandidateQa>() != null;
         }
 
+        private static bool IsLegacy2DScaleCandidateActive()
+        {
+            return Environment.GetCommandLineArgs().Any(argument =>
+                string.Equals(
+                    argument,
+                    Legacy2DScaleCandidateFlag,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
         private int CountVisibleLegacyCharacterRenderers()
         {
             var visible = 0;
@@ -740,6 +790,7 @@ namespace FamilyCompany.Runtime.Character3D
             workstations.Clear();
             workstationBySeatId.Clear();
             maskedFurnitureRenderers.Clear();
+            legacy2DScaleCandidate = false;
         }
 
         private sealed class CharacterBinding

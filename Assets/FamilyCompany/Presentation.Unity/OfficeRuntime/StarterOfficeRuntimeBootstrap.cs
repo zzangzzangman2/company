@@ -114,6 +114,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     {
         private const float PlayerV8ProductionCollisionRadius = 0.28f;
         private const float FatherV19ProductionCollisionRadius = 0.30f;
+        private const float PlayerLegacy2DMatchedCollisionRadius = 0.345465984f;
+        private const float FatherLegacy2DMatchedCollisionRadius = 0.412570225f;
+        private const string Legacy2DScaleCandidateFlag =
+            "-familyCompanyLegacy2DScaleCandidate";
         private static readonly string[] FamilyMemberIds =
             { "player", "older_sister", "father", "mother" };
         // Candidates are content only until the player hires them. Creating all eight candidates
@@ -677,10 +681,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private static float CollisionRadiusForMember(string memberId)
         {
+            bool legacy2DScaleCandidate = Environment.GetCommandLineArgs().Any(argument =>
+                string.Equals(
+                    argument,
+                    Legacy2DScaleCandidateFlag,
+                    StringComparison.OrdinalIgnoreCase));
             if (string.Equals(memberId, "player", StringComparison.Ordinal))
-                return PlayerV8ProductionCollisionRadius;
+                return legacy2DScaleCandidate
+                    ? PlayerLegacy2DMatchedCollisionRadius
+                    : PlayerV8ProductionCollisionRadius;
             if (string.Equals(memberId, "father", StringComparison.Ordinal))
-                return FatherV19ProductionCollisionRadius;
+                return legacy2DScaleCandidate
+                    ? FatherLegacy2DMatchedCollisionRadius
+                    : FatherV19ProductionCollisionRadius;
             return OfficeRuntimeAgent.DefaultRadius;
         }
 

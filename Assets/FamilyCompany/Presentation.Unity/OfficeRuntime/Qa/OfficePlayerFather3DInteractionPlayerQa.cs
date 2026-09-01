@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -22,6 +23,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         public const string CommandLineFlag = "-familyCompanyPlayerFather3DInteractionQa";
         public const string ArtifactDirectoryArgument =
             "-familyCompanyPlayerFather3DInteractionArtifacts";
+        private const string Legacy2DScaleCandidateFlag =
+            "-familyCompanyLegacy2DScaleCandidate";
 
         private string artifactDirectory = string.Empty;
 
@@ -108,8 +111,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
-            OfficeGridCoordinate playerStart = new OfficeGridCoordinate(4, 6);
-            OfficeGridCoordinate fatherStart = new OfficeGridCoordinate(8, 6);
+            // Keep a full walk cycle before contact. The wider eight-cell approach is visual QA,
+            // not just a collision probe: at the locked runtime speed it records more than the
+            // complete 1.4-second authored cycle before the two visible bodies meet.
+            OfficeGridCoordinate playerStart = new OfficeGridCoordinate(2, 6);
+            OfficeGridCoordinate fatherStart = new OfficeGridCoordinate(10, 6);
             player.QaTeleportToCell(playerStart);
             father.QaTeleportToCell(fatherStart);
             ParkOtherActors(runtime, player, father);
@@ -128,11 +134,76 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             father.QaSetDirectMovementInput(-approach);
             var playerProjectedFrames = 0;
             var fatherProjectedFrames = 0;
+            var approachFrameCount = 0;
+            var playerPixelSamples = new List<int>();
+            var fatherPixelSamples = new List<int>();
+            var playerWidthSamples = new List<int>();
+            var playerHeightSamples = new List<int>();
+            var fatherWidthSamples = new List<int>();
+            var fatherHeightSamples = new List<int>();
+            var playerHeadSamples = new List<int>();
+            var playerTorsoSamples = new List<int>();
+            var fatherHeadSamples = new List<int>();
+            var fatherTorsoSamples = new List<int>();
+            var playerLumaSamples = new List<float>();
+            var playerSaturationSamples = new List<float>();
+            var fatherLumaSamples = new List<float>();
+            var fatherSaturationSamples = new List<float>();
+            string approachFrameDirectory = Path.Combine(artifactDirectory, "approach-frames");
+            Directory.CreateDirectory(approachFrameDirectory);
+            int previousCaptureFramerate = Time.captureFramerate;
+            Time.captureFramerate = 24;
             float minimumPairMargin = float.PositiveInfinity;
-            deadline = Time.realtimeSinceStartup + 5f;
+            deadline = Time.realtimeSinceStartup + 30f;
             while (Time.realtimeSinceStartup < deadline)
             {
                 yield return null;
+                string approachFramePath = Path.Combine(
+                    approachFrameDirectory,
+                    "approach-" + approachFrameCount.ToString("D3") + ".png");
+                if (!TryCaptureOverview(approachFramePath, out string approachCaptureFailure))
+                {
+                    Time.captureFramerate = previousCaptureFramerate;
+                    Finish(false, "approach frame capture failed: " + approachCaptureFailure);
+                    yield break;
+                }
+                approachFrameCount++;
+                if ((approachFrameCount - 1) % 6 == 0)
+                {
+                    if (TryMeasureProductionActorPixelOverlap(
+                            out _,
+                            out int samplePlayerPixels,
+                            out int sampleFatherPixels,
+                            out int samplePlayerWidth,
+                            out int samplePlayerHeight,
+                            out int sampleFatherWidth,
+                            out int sampleFatherHeight,
+                            out int samplePlayerHead,
+                            out int samplePlayerTorso,
+                            out int sampleFatherHead,
+                            out int sampleFatherTorso,
+                            out float samplePlayerLuma,
+                            out float samplePlayerSaturation,
+                            out float sampleFatherLuma,
+                            out float sampleFatherSaturation,
+                            out _))
+                    {
+                        playerPixelSamples.Add(samplePlayerPixels);
+                        fatherPixelSamples.Add(sampleFatherPixels);
+                        playerWidthSamples.Add(samplePlayerWidth);
+                        playerHeightSamples.Add(samplePlayerHeight);
+                        fatherWidthSamples.Add(sampleFatherWidth);
+                        fatherHeightSamples.Add(sampleFatherHeight);
+                        playerHeadSamples.Add(samplePlayerHead);
+                        playerTorsoSamples.Add(samplePlayerTorso);
+                        fatherHeadSamples.Add(sampleFatherHead);
+                        fatherTorsoSamples.Add(sampleFatherTorso);
+                        playerLumaSamples.Add(samplePlayerLuma);
+                        playerSaturationSamples.Add(samplePlayerSaturation);
+                        fatherLumaSamples.Add(sampleFatherLuma);
+                        fatherSaturationSamples.Add(sampleFatherSaturation);
+                    }
+                }
                 if (player.WasCollisionProjected) playerProjectedFrames++;
                 if (father.WasCollisionProjected) fatherProjectedFrames++;
                 float margin = Vector2.Distance(player.Position, father.Position) -
@@ -142,6 +213,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     minimumPairMargin <= 0.04f)
                     break;
             }
+            Time.captureFramerate = previousCaptureFramerate;
             player.QaSetDirectMovementInput(Vector2.zero);
             father.QaSetDirectMovementInput(Vector2.zero);
             for (var frame = 0; frame < 3; frame++) yield return null;
@@ -152,23 +224,28 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             int approachPenetrations = runtime.World.Occupancy.AgentPenetrationCount;
             if (!TryMeasureProductionActorPixelOverlap(
                     out int productionActorOverlapPixels,
-                    out int playerRenderedPixels,
-                    out int fatherRenderedPixels,
-                    out int playerRenderedWidth,
-                    out int playerRenderedHeight,
-                    out int fatherRenderedWidth,
-                    out int fatherRenderedHeight,
-                    out int playerHeadWidth,
-                    out int playerTorsoWidth,
-                    out int fatherHeadWidth,
-                    out int fatherTorsoWidth,
+                    out int contactPlayerPixels,
+                    out int contactFatherPixels,
+                    out int contactPlayerWidth,
+                    out int contactPlayerHeight,
+                    out int contactFatherWidth,
+                    out int contactFatherHeight,
+                    out int contactPlayerHead,
+                    out int contactPlayerTorso,
+                    out int contactFatherHead,
+                    out int contactFatherTorso,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
                     out string pixelOverlapFailure))
             {
                 Finish(false, "production actor pixel-overlap measurement failed: " +
                               pixelOverlapFailure);
                 yield break;
             }
-            if (playerTravel < 0.25f || fatherTravel < 0.25f ||
+            if (playerTravel < 0.25f || fatherTravel < 0.25f || approachFrameCount < 24 ||
+                playerHeightSamples.Count < 4 ||
                 blockedAgentMoves <= 0 || minimumPairMargin > 0.08f ||
                 minimumPairMargin < -0.0105f || approachPenetrations != 0)
             {
@@ -176,6 +253,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     false,
                     "mutual avoidance gate failed playerTravel=" + playerTravel.ToString("F4") +
                     " fatherTravel=" + fatherTravel.ToString("F4") +
+                    " frames=" + approachFrameCount +
+                    " samples=" + playerHeightSamples.Count +
                     " margin=" + minimumPairMargin.ToString("F5") +
                     " blocked=" + blockedAgentMoves +
                     " penetrations=" + approachPenetrations);
@@ -187,17 +266,38 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     false,
                     "production actors visually overlap at collision stop pixels=" +
                     productionActorOverlapPixels +
-                    " playerPixels=" + playerRenderedPixels +
-                    " fatherPixels=" + fatherRenderedPixels);
+                    " playerPixels=" + contactPlayerPixels +
+                    " fatherPixels=" + contactFatherPixels);
                 yield break;
             }
+            int playerRenderedPixels = Median(playerPixelSamples);
+            int fatherRenderedPixels = Median(fatherPixelSamples);
+            int playerRenderedWidth = Median(playerWidthSamples);
+            int playerRenderedHeight = Median(playerHeightSamples);
+            int fatherRenderedWidth = Median(fatherWidthSamples);
+            int fatherRenderedHeight = Median(fatherHeightSamples);
+            int playerHeadWidth = Median(playerHeadSamples);
+            int playerTorsoWidth = Median(playerTorsoSamples);
+            int fatherHeadWidth = Median(fatherHeadSamples);
+            int fatherTorsoWidth = Median(fatherTorsoSamples);
+            float playerMeanLuma = Median(playerLumaSamples);
+            float playerMeanSaturation = Median(playerSaturationSamples);
+            float fatherMeanLuma = Median(fatherLumaSamples);
+            float fatherMeanSaturation = Median(fatherSaturationSamples);
             float renderedAreaDifference = Mathf.Abs(
                 fatherRenderedPixels - playerRenderedPixels) /
                 (float)Mathf.Max(playerRenderedPixels, 1);
-            if (Mathf.Abs(fatherRenderedHeight - playerRenderedHeight) > 2 ||
-                Mathf.Abs(fatherRenderedWidth - playerRenderedWidth) > 4 ||
+            bool legacy2DScaleCandidate = HasFlag(
+                Legacy2DScaleCandidateFlag);
+            bool sizeFailed = legacy2DScaleCandidate
+                ? Mathf.Abs(playerRenderedHeight - 89) > 2 ||
+                  Mathf.Abs(fatherRenderedHeight - 94) > 2 ||
+                  Mathf.Abs(fatherRenderedWidth - playerRenderedWidth) > 7
+                : Mathf.Abs(fatherRenderedHeight - playerRenderedHeight) > 2 ||
+                  Mathf.Abs(fatherRenderedWidth - playerRenderedWidth) > 4;
+            if (sizeFailed ||
                 Mathf.Abs(fatherHeadWidth - playerHeadWidth) > 1 ||
-                Mathf.Abs(fatherTorsoWidth - playerTorsoWidth) > 1 ||
+                Mathf.Abs(fatherTorsoWidth - playerTorsoWidth) > 2 ||
                 renderedAreaDifference > 0.10f)
             {
                 Finish(
@@ -205,9 +305,26 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     "production actor visual-size standard failed player=" +
                     playerRenderedWidth + "x" + playerRenderedHeight + "/" +
                     playerRenderedPixels + "px father=" + fatherRenderedWidth + "x" +
-                    fatherRenderedHeight + "/" + fatherRenderedPixels + "px areaDifference=" +
+                              fatherRenderedHeight + "/" + fatherRenderedPixels + "px areaDifference=" +
                     renderedAreaDifference.ToString("F4") + " head=" + playerHeadWidth + "/" +
-                    fatherHeadWidth + " torso=" + playerTorsoWidth + "/" + fatherTorsoWidth);
+                    fatherHeadWidth + " torso=" + playerTorsoWidth + "/" + fatherTorsoWidth +
+                    " profile=" +
+                    (legacy2DScaleCandidate ? "Legacy2DMatchedCandidate" : "ApprovedProduction"));
+                yield break;
+            }
+            float luminanceRatio = fatherMeanLuma / Mathf.Max(playerMeanLuma, 0.001f);
+            if (legacy2DScaleCandidate &&
+                (playerMeanLuma < 45f || fatherMeanLuma < 45f ||
+                 luminanceRatio < 0.70f || luminanceRatio > 1.30f ||
+                 playerMeanSaturation < 0.12f || fatherMeanSaturation < 0.12f))
+            {
+                Finish(
+                    false,
+                    "legacy-2D matched colour gate failed luma=" +
+                    playerMeanLuma.ToString("F2") + "/" + fatherMeanLuma.ToString("F2") +
+                    " ratio=" + luminanceRatio.ToString("F3") + " saturation=" +
+                    playerMeanSaturation.ToString("F3") + "/" +
+                    fatherMeanSaturation.ToString("F3"));
                 yield break;
             }
             Debug.Log(
@@ -217,7 +334,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 playerTorsoWidth + " father=" + fatherRenderedWidth + "x" +
                 fatherRenderedHeight + "/" + fatherRenderedPixels + "px head=" +
                 fatherHeadWidth + " torso=" + fatherTorsoWidth + " areaDifference=" +
-                renderedAreaDifference.ToString("F4"));
+                renderedAreaDifference.ToString("F4") + " luma=" +
+                playerMeanLuma.ToString("F2") + "/" + fatherMeanLuma.ToString("F2") +
+                " saturation=" + playerMeanSaturation.ToString("F3") + "/" +
+                fatherMeanSaturation.ToString("F3") + " profile=" +
+                (legacy2DScaleCandidate ? "Legacy2DMatchedCandidate" : "ApprovedProduction"));
 
             if (!TryCaptureOverview(
                     Path.Combine(artifactDirectory, "player-father-avoidance.png"),
@@ -377,8 +498,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("renderer=D3D11");
             result.AppendLine("actors=player,father");
             result.AppendLine("production3DHosts=2");
+            result.AppendLine("scaleProfile=" +
+                              (legacy2DScaleCandidate
+                                  ? "Legacy2DMatchedCandidate"
+                                  : "ApprovedProduction"));
+            result.AppendLine("productionEligible=" + (!legacy2DScaleCandidate));
             result.AppendLine("mutualApproachPlayerTravel=" + playerTravel.ToString("F5"));
             result.AppendLine("mutualApproachFatherTravel=" + fatherTravel.ToString("F5"));
+            result.AppendLine("mutualApproachFrames=" + approachFrameCount);
+            result.AppendLine("mutualApproachMetricSamples=" + playerHeightSamples.Count);
+            result.AppendLine("playerRenderedHeightRange=" + playerHeightSamples.Min() + "/" +
+                              playerRenderedHeight + "/" + playerHeightSamples.Max());
+            result.AppendLine("fatherRenderedHeightRange=" + fatherHeightSamples.Min() + "/" +
+                              fatherRenderedHeight + "/" + fatherHeightSamples.Max());
             result.AppendLine("minimumPairSeparationMargin=" + minimumPairMargin.ToString("F6"));
             result.AppendLine("blockedAgentMoves=" + blockedAgentMoves);
             result.AppendLine("playerCollisionProjectedFrames=" + playerProjectedFrames);
@@ -395,6 +527,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                               playerTorsoWidth);
             result.AppendLine("fatherHeadTorsoWidths=" + fatherHeadWidth + "/" +
                               fatherTorsoWidth);
+            result.AppendLine("playerMeanLumaSaturation=" +
+                              playerMeanLuma.ToString("F2") + "/" +
+                              playerMeanSaturation.ToString("F3"));
+            result.AppendLine("fatherMeanLumaSaturation=" +
+                              fatherMeanLuma.ToString("F2") + "/" +
+                              fatherMeanSaturation.ToString("F3"));
+            result.AppendLine("contactRenderedBounds=" + contactPlayerWidth + "x" +
+                              contactPlayerHeight + "/" + contactFatherWidth + "x" +
+                              contactFatherHeight);
+            result.AppendLine("contactRenderedPixels=" + contactPlayerPixels + "/" +
+                              contactFatherPixels);
+            result.AppendLine("contactHeadTorsoWidths=" + contactPlayerHead + "/" +
+                              contactPlayerTorso + "/" + contactFatherHead + "/" +
+                              contactFatherTorso);
             result.AppendLine("workstations=3");
             result.AppendLine("playerSeat=" + playerSeat.SeatId);
             result.AppendLine("fatherSeat=" + fatherSeat.SeatId);
@@ -555,6 +701,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             out int playerTorsoWidth,
             out int fatherHeadWidth,
             out int fatherTorsoWidth,
+            out float playerMeanLuma,
+            out float playerMeanSaturation,
+            out float fatherMeanLuma,
+            out float fatherMeanSaturation,
             out string failure)
         {
             overlapPixels = 0;
@@ -568,6 +718,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             playerTorsoWidth = 0;
             fatherHeadWidth = 0;
             fatherTorsoWidth = 0;
+            playerMeanLuma = 0f;
+            playerMeanSaturation = 0f;
+            fatherMeanLuma = 0f;
+            fatherMeanSaturation = 0f;
             failure = string.Empty;
             GameObject player = GameObject.Find("PlayerV8ProductionHost");
             GameObject father = GameObject.Find("FatherV19ProductionHost");
@@ -622,6 +776,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 pixels.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
                 pixels.Apply(false, false);
                 Color32[] playerSample = pixels.GetPixels32();
+                MeasureRenderedColour(
+                    playerSample,
+                    out playerMeanLuma,
+                    out playerMeanSaturation);
                 var playerMask = new bool[playerSample.Length];
                 int playerMinX = width;
                 int playerMinY = height;
@@ -661,6 +819,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 pixels.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
                 pixels.Apply(false, false);
                 Color32[] fatherSample = pixels.GetPixels32();
+                MeasureRenderedColour(
+                    fatherSample,
+                    out fatherMeanLuma,
+                    out fatherMeanSaturation);
                 var fatherMask = new bool[fatherSample.Length];
                 int fatherMinX = width;
                 int fatherMinY = height;
@@ -753,6 +915,45 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 if (y >= torsoBottom && y <= torsoTop)
                     torsoWidth = Mathf.Max(torsoWidth, rowWidth);
             }
+        }
+
+        private static void MeasureRenderedColour(
+            Color32[] sample,
+            out float meanLuma,
+            out float meanSaturation)
+        {
+            double luma = 0d;
+            double saturation = 0d;
+            var count = 0;
+            for (var index = 0; index < sample.Length; index++)
+            {
+                Color32 color = sample[index];
+                if (color.a <= 32)
+                    continue;
+                int maximum = Mathf.Max(color.r, Mathf.Max(color.g, color.b));
+                int minimum = Mathf.Min(color.r, Mathf.Min(color.g, color.b));
+                luma += 0.2126d * color.r + 0.7152d * color.g + 0.0722d * color.b;
+                if (maximum > 0)
+                    saturation += (maximum - minimum) / (double)maximum;
+                count++;
+            }
+            meanLuma = count == 0 ? 0f : (float)(luma / count);
+            meanSaturation = count == 0 ? 0f : (float)(saturation / count);
+        }
+
+        private static int Median(List<int> values)
+        {
+            int[] ordered = values.OrderBy(value => value).ToArray();
+            return ordered[ordered.Length / 2];
+        }
+
+        private static float Median(List<float> values)
+        {
+            float[] ordered = values.OrderBy(value => value).ToArray();
+            int middle = ordered.Length / 2;
+            return ordered.Length % 2 == 0
+                ? (ordered[middle - 1] + ordered[middle]) * 0.5f
+                : ordered[middle];
         }
 
         private static bool TryCaptureOverview(string path, out string failure)

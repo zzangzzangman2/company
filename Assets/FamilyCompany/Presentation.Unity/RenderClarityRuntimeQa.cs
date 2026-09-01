@@ -464,9 +464,29 @@ namespace FamilyCompany.Presentation.Unity.Rendering
             RenderTexture legacyOutput = null;
             Texture2D readable = null;
             RenderTexture previousActive = RenderTexture.active;
+            Camera productionOverlay = FindObjectsByType<Camera>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None)
+                .FirstOrDefault(candidate => candidate != null && string.Equals(
+                    candidate.gameObject.name,
+                    "Family3DProductionOverlayCamera",
+                    StringComparison.Ordinal));
+            RenderTexture previousOverlayTarget = null;
+            CameraClearFlags previousOverlayClearFlags = CameraClearFlags.Depth;
             try
             {
                 captureCamera.Render();
+                // The production Player/Father layer is rendered by a second camera. A main-camera
+                // only capture used to show two empty health bars and still pass. Composite the
+                // overlay into the same target so Fast QA cannot silently omit the production bodies.
+                if (productionOverlay != null && productionOverlay.isActiveAndEnabled)
+                {
+                    previousOverlayTarget = productionOverlay.targetTexture;
+                    previousOverlayClearFlags = productionOverlay.clearFlags;
+                    productionOverlay.targetTexture = source;
+                    productionOverlay.clearFlags = CameraClearFlags.Depth;
+                    productionOverlay.Render();
+                }
                 if (clarity.ComparisonMode == PixelClarityComparisonMode.LegacyHalfHeight)
                 {
                     int targetHeight = clarity.Profile.LegacyComparisonHeight;
@@ -499,6 +519,11 @@ namespace FamilyCompany.Presentation.Unity.Rendering
             }
             finally
             {
+                if (productionOverlay != null)
+                {
+                    productionOverlay.targetTexture = previousOverlayTarget;
+                    productionOverlay.clearFlags = previousOverlayClearFlags;
+                }
                 RenderTexture.active = previousActive;
                 if (readable != null) DestroyImmediate(readable);
                 if (legacyOutput != null) RenderTexture.ReleaseTemporary(legacyOutput);

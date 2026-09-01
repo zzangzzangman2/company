@@ -119,8 +119,9 @@ and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUA
   SW `DE843B921F67F5107D9020295195065EF8C313353924268C72645D98DBBE9B75`.
 - Retired: 34 standalone `office_workstation*` / `office_swivel_chair*` source, runtime,
   foreground and `.meta` files. They are deleted and excluded from regeneration/fallback.
-- Scope boundary: this promotes the workstation visual only. Father V19 remains non-production
-  until its separate character gate is approved.
+- Historical scope boundary: this V31 workstation receipt promoted the workstation visual only.
+  Father V19 was promoted later by the separate 2026-08-31 Player/Father production cutover listed
+  at the top of this manifest; the older receipt flags remain unchanged.
 ## Main Navigation HUD V2 (2026-08-14)
 
 - Runtime root: `Assets/Art/UI/Resources/MainNavigationV2/`

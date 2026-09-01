@@ -1,5 +1,38 @@
 # DECISIONS
 
+## 2026-09-01 / 2D 화면 크기·색감 비교는 미승인 후보로만 검증한다
+
+결정: 집 작업의 Player/Father 상호 표준화는 1280x720에서 높이 `74/72px`, 머리 폭
+`22/22px`, 몸통 폭 `30/29px`로 서로 간 비율은 통과했지만, 구형 HighMotion 48프레임의 실제
+alpha-bound 중앙값을 같은 runtime 조건으로 환산한 `89.25/93.75px`보다 작다. 따라서
+`-familyCompanyLegacy2DScaleCandidate`가 있을 때만 Player scale/height
+`1.263885643/2.291498763`, Father `1.306909878/2.454888000`, Father horizontal
+`0.806840529`를 사용한다. 기본 production 승인값은 바꾸지 않는다.
+
+결정: 구형 2D의 head/height 중앙 비율은 Player `0.396`, Father `0.272`로 서로 달라 그대로
+복제하지 않는다. 후보는 전체 화면 높이만 2D 기준에 맞추고 예상 3D 머리 폭 `26.53/26.53px`,
+몸통 폭 `36.18/34.98px`, 실루엣 면적 `1826/1819px`로 캐릭터 간 비율을 별도 정규화한다.
+
+결정: 후보의 Father만 Player와 같은 고정 중립 albedo shader 계열을 사용하고 neutral fill `0.82`를
+적용한다. emission/specular/reflection은 허용하지 않는다. 렌더 QA는 두 캐릭터의 luma/saturation과
+비율을 기록하고, luma ratio `0.70..1.30`, 최소 luma `45`, 최소 saturation `0.12`를 fail-closed한다.
+V31 가구 크기는 기존 Player 승인 높이 `1.857258558`를 계속 기준으로 삼아 캐릭터 후보와 함께 커지지
+않는다. 커진 실루엣에만 동적 충돌 반경 `0.345465984/0.412570225`를 사용하고 가구/도킹 반경 `0.22`는
+유지한다.
+
+결정: 일반 Render Clarity QA의 main-camera-only 캡처가 별도 production overlay camera를 빠뜨려
+몸 없는 health bar 화면도 PASS할 수 있었으므로 두 카메라를 같은 RenderTexture에 합성한다. 회사 PC의
+Windows Player는 `WindowStyle Hidden`만으로는 실제 render surface가 표시될 수 있으므로 금지한다.
+검수 실행은 standalone `-batchmode` + `CreateNoWindow` + 실행 중 zero `MainWindowHandle`을 동시에
+강제한다. 최종 D3D11 후보는 88 ordered walk frames, 15개 분산 샘플, 높이 중앙값 `90/94px`,
+머리 `27/28px`, 몸통 `24/23px`, 실루엣 면적 `1751/1772px`, luma `91.36/69.32`, saturation
+`0.364/0.210`, 겹침/침범 `0/0`, `Working/Working`을 기록했다.
+
+보정: 보행 크기는 충돌 직후 한 프레임으로 판정하지 않는다. 같은 후보도 gait phase에 따라 Father
+높이가 `88..97px`로 변해 단일 프레임은 거짓 PASS/FAIL을 만들었다. 전체 접근의 고정 간격 샘플
+중앙값과 min/max를 기록하고 그 중앙값으로 크기·비율·색을 fail-closed한다. 후보는 사용자 GIF 승인
+전까지 계속 `productionEligible=false`다.
+
 ## 2026-08-31 / Player V8과 Father V19를 같은 production runtime에서 함께 사용한다
 
 결정: 승인된 Father V19 one-package FBX/albedo/material을
