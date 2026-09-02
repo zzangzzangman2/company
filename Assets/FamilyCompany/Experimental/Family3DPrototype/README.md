@@ -82,7 +82,7 @@ Review files in `Docs/Evidence/Family3DFatherV19V31/`:
 - `father-v19-v31-original-chair-atomic-set-close.gif`
 - `father-v19-v31-original-chair-atomic-set-full.gif`
 
-The full receipt and hashes are in `Docs/FAMILY_3D_CHARACTER_STANDARD.md`.
+The full V31 receipt and media hashes are tracked under `Docs/Evidence/Family3DFatherV19V31/`; the current character standard is `Docs/FAMILY_3D_CHARACTER_STANDARD.md`.
 
 ## Code ownership
 
