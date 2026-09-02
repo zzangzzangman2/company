@@ -180,13 +180,13 @@ namespace FamilyCompany.Experimental.Family3D
                 : "father";
 
         private string Native613MapWalkPrefix => olderSisterNative613Package
-            ? "older-sister-v2-native-613-map-walk"
+            ? "older-sister-v3-sd-repair-native-613-map-walk"
             : playerNative613Package
                 ? "player-v6-native-613-map-walk"
                 : "father-v18-native-613-map-walk";
 
         private string Native613ProofStatus => olderSisterNative613Package
-            ? "OLDER_SISTER_V2_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+            ? "OLDER_SISTER_V3_SD_REPAIR_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
             : playerNative613Package
                 ? "PLAYER_V6_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
                 : "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE";
@@ -556,7 +556,7 @@ namespace FamilyCompany.Experimental.Family3D
                     playerDeskWorkQa;
                 bool playerMapWalkQa = HasCommandLineFlag("-family3d-player-v6-map-walk-qa");
                 bool olderSisterMapWalkQa = HasCommandLineFlag(
-                    "-family3d-older-sister-v2-map-walk-qa");
+                    "-family3d-older-sister-v3-map-walk-qa");
                 mapWalkFamilyId = olderSisterMapWalkQa
                     ? "older_sister"
                     : playerMapWalkQa || playerDeskWorkQa
@@ -2278,12 +2278,12 @@ namespace FamilyCompany.Experimental.Family3D
         {
             if (binding == null || binding.WalkActor == null || binding.Model == null)
                 throw new InvalidOperationException(
-                    "Older Sister V2 calibration requires a live one-package binding.");
+                    "Older Sister V3 calibration requires a live one-package binding.");
             SkinnedMeshRenderer skinned =
                 binding.Model.GetComponentInChildren<SkinnedMeshRenderer>(true);
             if (skinned == null || skinned.sharedMesh == null)
                 throw new InvalidOperationException(
-                    "Older Sister V2 calibration could not find the complete skinned mesh.");
+                    "Older Sister V3 calibration could not find the complete skinned mesh.");
 
             binding.WalkActor.Initialize();
             var baked = new Mesh();
@@ -2319,7 +2319,7 @@ namespace FamilyCompany.Experimental.Family3D
             DestroyQaObject(baked);
             if (float.IsInfinity(lowest))
                 throw new InvalidOperationException(
-                    "Older Sister V2 walk-cycle lowest skinned vertex could not be measured.");
+                    "Older Sister V3 walk-cycle lowest skinned vertex could not be measured.");
 
             Vector2 measuredFootMidpoint =
                 footMidpointSum / CandidateCalibrationSamplePhases;
@@ -2342,7 +2342,7 @@ namespace FamilyCompany.Experimental.Family3D
             binding.MaximumGroundError = 0f;
             binding.WalkActor.RebaseVisualRootAfterScale();
             Debug.Log(
-                "FAMILY_3D_OLDER_SISTER_V2_CALIBRATION: targetHeight=" +
+                "FAMILY_3D_OLDER_SISTER_V3_CALIBRATION: targetHeight=" +
                 binding.Target3DHeight.ToString("F6") +
                 " footCenterOffsetLocal=" + binding.StandingFootCenterOffsetLocal +
                 " lowestBefore=" +
@@ -3195,7 +3195,7 @@ namespace FamilyCompany.Experimental.Family3D
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
                             : UsesNative613Package
                                 ? olderSisterNative613Package
-                                    ? "one locked 2.367-unit standing height (93px target at 1280x720), independent of the retired Sister sprite; foot-centre offset measured from 24 action phases; standing ground corrected once from the 24-phase lowest skinned vertex to the approved Player reference; no per-contact translation"
+                                    ? "one locked 2.367-unit standing height (93px target at 1280x720), using the zero-credit V3 SD geometry repair; foot-centre offset measured from 24 action phases; standing ground corrected once from the 24-phase lowest skinned vertex to the approved Player reference; no per-contact translation"
                                     : "one locked uniform scale from the native action-613 rendered bounds; visible mesh/Avatar/skin/clip share one FBX; static-FBX surface material; no idle cross-retarget, anatomical sanitation, rigid-arm override, or procedural gait"
                             : FatherUsesStableBodySideArmWalk
                                 ? "V72 clean V4 lower-body/torso/action-613 contract unchanged; static-FBX surface; only the final rigid-arm tuck is replaced by straight rigid arms with a fixed-axis 6-degree opposite upper-arm swing; no elbow/wrist/finger/outward/tuck correction"

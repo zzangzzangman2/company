@@ -1,5 +1,27 @@
 # DECISIONS
 
+## 2026-09-02 (밤 2) / 누나 V3는 추가 결제 없이 이미 받은 V2 패키지를 로컬 SD 비율로 복구한다
+
+관찰: 누나 V2 실패는 최초 참조 생성에서 가족 SD 비율과 얼굴 가독성 기준을 지키지 않은 작업자 오류다.
+사용자는 이 오류를 고치기 위해 다시 비용을 부담하지 않겠다고 명시했다. 따라서 새 Higgsfield/Meshy
+작업을 제출하지 않으며 V3의 새 provider credit 차감은 `0`으로 잠근다.
+
+결정: 거부된 V2 원본 GLB는 보존하고, 그 복사본의 같은 mesh/bind skeleton에만 연속 bind-space 비율
+변환을 적용한다. skin weights, UV topology와 action 613은 같은 유료 패키지 안에서 유지한다. donor,
+retarget, procedural gait, rigid-arm rewrite, pose damping, 접지별 host 이동은 금지한다. 결과 비율은
+머리/키 `0.310`, 골반/키 `0.090`, 어깨/키 `0.036`, 다리/키 `0.460`으로 S6/S7을 통과한다.
+
+결정: 같은 UV atlas에서 skin-weight category mask와 기존 색 섬만 사용해 머리·나시·반바지 명도를
+분리하고 남색/흰 파이핑/청록 눈을 강화한다. 실제 1280x720 맵에서 실루엣 높이 median `86px`, 얼굴
+환산 `28.84px`, 두 눈 세로 `>=3px`인 정면 프레임 `4`, luma `91.49`, 흰색 clipping `0%`로 S1/S8/C3/C4를
+통과한다.
+
+검증: Unity 격리 D3D11 실제 맵을 두 바퀴 돌며 337 이미지/1,344 telemetry를 기록했다. 발 중점 타일
+오차 median/max `2.715/5.856px`, 개별 발뼈 선 밖 `0/2688`, 접지 발 밖 `0/1120`, 접지 최소 여유
+`8.85px`, occupancy `0/0/0`; 고정 바닥 보정은 `0.210697 -> 0.137600`이다. V3도 사용자 전체 GIF 승인
+전까지 `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`이며 production/기본 EXE/충돌/착석은
+변경하지 않는다. 증빙은 `Docs/Evidence/OlderSisterV3CandidateCurrent/`다.
+
 ## 2026-09-02 (밤) / 누나 V2는 불합격 — 가족 SD 비율·얼굴 가독성·의상 대비를 표준에 추가하고 재생성한다
 
 관찰: 사용자가 누나 V2의 크기·밝기·선명도·눈을 모두 불합격 판정했다. 측정: 골격 머리:키 `0.159`(아들

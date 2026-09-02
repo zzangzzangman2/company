@@ -1,7 +1,8 @@
 # Blender tooling for current Family3D packages
 
-Updated 2026-08-31. This folder intentionally contains only generic inspection tools and the two
-current one-package conversion scripts. Rejected manual modelling, donor, retopology, surface-fix,
+Updated 2026-09-02. This folder intentionally contains generic inspection tools, current
+one-package conversion scripts, and the explicit user-authorized zero-credit Sister V3 repair.
+Rejected manual modelling, donor, retopology, surface-fix,
 Father V14/V18 and Player V1-V5 pipelines were removed so they cannot be mistaken for the approved
 workflow.
 
@@ -10,11 +11,14 @@ workflow.
 - Father V19: `prepare_father_v19_meshy_one_package_unity.py`
 - Player/protagonist V6: `prepare_player_v6_meshy_one_package_unity.py`
 - Older Sister V2 candidate: `prepare_older_sister_v2_meshy_one_package_unity.py`
+- Older Sister V3 local repair: `prepare_older_sister_v3_higgsfield_sd_repair_unity.py`
+- generic FBX visual review: `render_family_humanoid_fbx_review.py`
 
 All scripts preserve the provider-created mesh, bind skeleton, skin weights, UV/albedo and action
 613 as one indivisible package. Run Blender only with `--background`; never mix a donor rig/clip,
-procedural gait, limb rewrite or pose weakening into any package. The Older Sister script remains
-candidate-only until the full actual-map animation is approved.
+procedural gait, limb rewrite or pose weakening into any package. The V3 repair is a documented
+exception requested after the paid V2 failure: it changes bind proportions only, preserves the
+same package's weights/UV/action and remains candidate-only until the full map GIF is approved.
 
 ```powershell
 & '<BLENDER>\blender.exe' --background --python `

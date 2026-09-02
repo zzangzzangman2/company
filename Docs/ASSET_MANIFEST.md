@@ -24,7 +24,38 @@ difference is internal head/leg proportion, not global camera scale. Candidate-o
 `0.475/0.578`; production/default values remain unchanged. Current evidence is
 `Docs/Evidence/PlayerFather3DIndependentQaCurrent/`.
 
-## Current Older Sister V2 one-package candidate (not production)
+## Current Older Sister V3 zero-credit SD repair candidate (not production)
+
+- paid source preserved from rejected V2: Higgsfield/Meshy GLB SHA-256
+  `62E1366BCB804E572565B2C3E57CDCE8810271647B61C729AE3AC61F9FA3D3DD`; V3 submitted no new
+  provider job and charged `0` credits.
+- identity/canon: Korean adult age 20; long near-black twin tails, large black bows, teal eyes,
+  charcoal sleeveless tank, navy dolphin shorts with white piping, barefoot, curvy-athletic SD
+  proportions. Canon image SHA-256 remains `4335F202...A0B5`.
+- package folder:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/OlderSisterV3HiggsfieldSdRepair613/`.
+- FBX `older-sister-v3-higgsfield-sd-repair-613.fbx`, SHA-256
+  `6639CB85D79B6385E089D9A3301AB1D2A9D1B20C9D8749E8144C629501846D2E`; one skinned mesh,
+  one armature/material/UV, 211,673 vertices, 118,945 polygons, 24 bones, unweighted `0`, invalid
+  references `0`, maximum influences `4`.
+- albedo `older-sister-v3-higgsfield-sd-repair-albedo.png`, SHA-256
+  `7264BEA780D2B821A4128BBB9B47B83E3CD41DA2A4A7E20B98743E38ECB71473`; deterministic same-atlas
+  category recolour, 11px source-atlas iris expansion, no generated replacement image.
+- repair: continuous bind-space geometry and bind-joint transform on the same paid package. Original
+  skin weights, UV topology and action 613 remain; no donor, retarget, procedural gait or motion
+  post-processing. Measured ratios head/hip/shoulder/leg to height are
+  `0.310/0.090/0.036/0.460`.
+- clip: `OlderSisterV3_Casual_Walk_inplace`, frames `1..43`, `1.4 s`, pose strength 1. Actual-map
+  standing target/applied scale `2.367/1.154662`, foot offset `(0.034554,0.112794)`, ground
+  correction `-0.073097`, reach `0.393736`, stride/phase `1.98761598/0.40`.
+- QA: two circuits, 337 captures/1,344 samples; target `93.02px`, visible median `86px`; projected
+  face `28.84px`, both eyes `>=3px` in four frontal frames; luma `91.49`, clipping `0%`; tile error
+  `2.715/5.856px`, foot outside `0/2688`, planted outside `0/1120`, occupancy `0/0/0`.
+- evidence: `Docs/Evidence/OlderSisterV3CandidateCurrent/`.
+- status: `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`; no production/default/
+  collision/seating change before full-GIF approval.
+
+## Rejected Older Sister V2 paid source (not production)
 
 - identity reference:
   `Assets/Art/Characters/OlderSister/older_sister_casual_neutral_v2.png`, SHA-256
@@ -52,8 +83,8 @@ difference is internal head/leg proportion, not global camera scale. Candidate-o
   `0/0/0`; individual foot bones outside the moving centred diamond `0/2688`, planted outside
   `0/1120`, minimum planted line margin `4.54px`.
 - evidence: `Docs/Evidence/OlderSisterV2CandidateCurrent/`.
-- status: `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`; no production/default/
-  seating change before full GIF approval.
+- status: `REJECTED_BY_USER_2026-09-02`, `productionEligible=false`; retained only as the immutable
+  paid source of the V3 local repair and never promoted.
 
 ## Production Player V8 no-hat one-package character
 

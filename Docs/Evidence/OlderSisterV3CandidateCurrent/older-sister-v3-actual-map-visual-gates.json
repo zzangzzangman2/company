@@ -1,0 +1,113 @@
+{
+  "contract": "FC-OLDER-SISTER-V3-ACTUAL-MAP-VISUAL-GATES-V1",
+  "status": "PASS",
+  "productionEligible": false,
+  "newProviderCreditCharge": 0,
+  "captureFrameCount": 337,
+  "backgroundPolicy": "temporal median of every tenth real Unity capture; no synthetic background",
+  "visibleSilhouette": {
+    "heightPixelsMedian": 86.0,
+    "heightPixelsP05": 80.0,
+    "heightPixelsP95": 91.0,
+    "widthPixelsMedian": 41.0,
+    "areaPixelsMedian": 1723.0,
+    "s1HeightPass": true
+  },
+  "color": {
+    "lumaMedian": 91.49047088623047,
+    "lumaP05": 80.34749908447266,
+    "lumaP95": 103.32230529785156,
+    "saturationMedian": 0.2465626299381256,
+    "valueMedian": 0.4190358519554138,
+    "whiteClippingMedian": 0.0,
+    "c3LumaPass": true,
+    "c4ClippingPass": true
+  },
+  "face": {
+    "measuredHeadToHeightRatio": 0.3100000275049687,
+    "projectedFaceHeightPixels": 28.837164813407895,
+    "faceHeightGatePixels": 22,
+    "faceHeightPass": true,
+    "eyeHeightGatePixels": 3,
+    "framesWithBothEyesAtLeastThreePixels": 4,
+    "bothEyesThreePixelsPass": true,
+    "bestEyeFrames": [
+      {
+        "frame": 127,
+        "components": [
+          {
+            "area": 3,
+            "width": 2,
+            "height": 3,
+            "x": 553,
+            "y": 516
+          },
+          {
+            "area": 7,
+            "width": 3,
+            "height": 3,
+            "x": 559,
+            "y": 517
+          }
+        ]
+      },
+      {
+        "frame": 132,
+        "components": [
+          {
+            "area": 3,
+            "width": 2,
+            "height": 3,
+            "x": 578,
+            "y": 520
+          },
+          {
+            "area": 8,
+            "width": 4,
+            "height": 4,
+            "x": 572,
+            "y": 523
+          }
+        ]
+      },
+      {
+        "frame": 295,
+        "components": [
+          {
+            "area": 3,
+            "width": 2,
+            "height": 3,
+            "x": 553,
+            "y": 516
+          },
+          {
+            "area": 7,
+            "width": 3,
+            "height": 3,
+            "x": 559,
+            "y": 517
+          }
+        ]
+      },
+      {
+        "frame": 300,
+        "components": [
+          {
+            "area": 3,
+            "width": 2,
+            "height": 3,
+            "x": 578,
+            "y": 520
+          },
+          {
+            "area": 8,
+            "width": 4,
+            "height": 4,
+            "x": 572,
+            "y": 523
+          }
+        ]
+      }
+    ]
+  }
+}

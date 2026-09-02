@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Build deterministic Older Sister V2 actual-map tile-centre QA media."""
+"""Build deterministic Older Sister V3 actual-map tile-centre QA media.
+
+The filename is retained as a compatibility entry point for the already-documented V2 QA
+workflow. Outputs and gates describe only the zero-credit V3 SD repair.
+"""
 
 from __future__ import annotations
 
@@ -160,7 +164,7 @@ def build(args: argparse.Namespace) -> None:
     candidate = receipt["candidates"][0]
     if candidate["familyId"] != "older_sister":
         raise ValueError("Runtime receipt is not the Older Sister candidate proof.")
-    if receipt["receiptStatus"] != "OLDER_SISTER_V2_NATIVE_613_WALK_MAP_PROOF_COMPLETE":
+    if receipt["receiptStatus"] != "OLDER_SISTER_V3_SD_REPAIR_NATIVE_613_WALK_MAP_PROOF_COMPLETE":
         raise ValueError("Actual-map proof did not complete.")
 
     frames = sorted((run_root / "frames").glob("*.png"), key=frame_number)
@@ -203,12 +207,12 @@ def build(args: argparse.Namespace) -> None:
     sheet = Image.new("RGB", (1920, 720), (24, 46, 48))
     for index, panel in enumerate(contact_panels):
         sheet.paste(panel, ((index % 4) * 480, (index // 4) * 360))
-    contact_path = output / "older-sister-v2-actual-map-direction-contact.png"
+    contact_path = output / "older-sister-v3-actual-map-direction-contact.png"
     sheet.save(contact_path, optimize=True)
 
     errors, individual_foot_metrics = foot_tile_metrics(receipt, offset)
     metrics = {
-        "contract": "FC-OLDER-SISTER-V2-ACTUAL-MAP-TILE-CENTRE-QA-V1",
+        "contract": "FC-OLDER-SISTER-V3-ACTUAL-MAP-TILE-CENTRE-QA-V1",
         "status": "CANDIDATE_USER_APPROVAL_REQUIRED",
         "productionEligible": False,
         "runtimeReceipt": str(receipt_path),
@@ -237,11 +241,12 @@ def build(args: argparse.Namespace) -> None:
         "strideOfficeUnits": receipt["fatherMotionStrideOfficeUnits"],
         "phaseOffsetCycles": receipt["nativeMotionPhaseOffsetCycles"],
         "cycleSeconds": receipt["sharedCycleSeconds"],
-        "sourceMotionPolicy": "unchanged same-FBX action 613; poseStrength 1; no retarget, sanitation, procedural gait, damping, or per-contact host translation",
+        "sourceMotionPolicy": "same paid V2 package mesh, skin, UV and authored action 613; deterministic bind-space SD deformation only; poseStrength 1; no donor, retarget, procedural gait, damping, or per-contact host translation",
+        "newProviderCreditCharge": 0,
         "contactSheet": str(contact_path),
         "contactSheetSha256": sha256(contact_path),
     }
-    (output / "older-sister-v2-actual-map-metrics.json").write_text(
+    (output / "older-sister-v3-actual-map-metrics.json").write_text(
         json.dumps(metrics, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
 

@@ -1,0 +1,32 @@
+{
+  "contract": "FC-FAMILY-HUMANOID-FBX-ROUNDTRIP-V1",
+  "status": "PASS",
+  "fbx": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSisterV3LocalRepair\\20260902-sd-repair-v1\\older-sister-v3-higgsfield-sd-repair-613.fbx",
+  "sha256": "6639CB85D79B6385E089D9A3301AB1D2A9D1B20C9D8749E8144C629501846D2E",
+  "blenderVersion": "4.5.10 LTS",
+  "meshObjectCount": 1,
+  "armatureObjectCount": 1,
+  "armatureModifierCount": 1,
+  "materialCount": 1,
+  "uvLayerCount": 1,
+  "activeUvLayer": "UVMap",
+  "vertexCount": 211673,
+  "polygonCount": 118945,
+  "boneCount": 24,
+  "boneNamingProfile": "meshy-one-package",
+  "missingRequiredBones": [],
+  "unweightedVertexCount": 0,
+  "invalidBoneWeightReferenceCount": 0,
+  "maximumInfluencesPerVertex": 4,
+  "boundsMin": [
+    -0.2918959856033325,
+    -0.3768516480922699,
+    1.9770089920712053e-07
+  ],
+  "boundsMax": [
+    0.29189619421958923,
+    0.3768523931503296,
+    1.6063724756240845
+  ],
+  "productionEligible": false
+}

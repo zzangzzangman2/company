@@ -47,22 +47,22 @@ PLAYER_V6_* 문서들은 2026-09-02에 삭제되어 이 문서로 대체되었�
 
 ## 3. 캐릭터별 표준 파라미터
 
-| 파라미터 | Player(아들) | Father(아빠) | Older Sister V2 후보 (**2026-09-02 사용자 불합격**, §4.3) | production 기본(참고) | 상수 위치 |
+| 파라미터 | Player(아들) | Father(아빠) | Older Sister V3 후보 (§4.4) | production 기본(참고) | 상수 위치 |
 | --- | --- | --- | --- | --- | --- |
-| FBX / albedo / material | `Production3D/PlayerV8/player-v8-production.fbx`, `player-v8-albedo.png`, `PlayerV8ProductionSurface.mat` | `Production3D/FatherV19/father-v19-production.fbx`, `father-v19-albedo.png`, Player 계열 material | Experimental `OlderSisterV2MeshyOnePackage613/*`, `OlderSisterV2CandidateSurface.mat` | 동일 | production은 `Family3DProductionPresenter`; 누나는 Experimental QA builder |
-| walk clip | `PlayerV6_Casual_Walk_inplace` (`1..43`, `1.4 s`) | `FatherV19_Casual_Walk_inplace` (`1..43`, `1.4 s`) | `OlderSisterV2_Casual_Walk_inplace` (`1..43`, `1.4 s`) | 동일 | FBX 내 clip |
-| model scale / StandingHeight | `1.263885643` / `2.291498763` | `1.306909878` / `2.454888000` | `1.212709904` / `2.367000` | `1.024378657/1.857258558`, `0.950318127/1.769311871` | `*Legacy2DMatchedModelScale/TargetHeight`; 누나 QA 상수 |
+| FBX / albedo / material | `Production3D/PlayerV8/player-v8-production.fbx`, `player-v8-albedo.png`, `PlayerV8ProductionSurface.mat` | `Production3D/FatherV19/father-v19-production.fbx`, `father-v19-albedo.png`, Player 계열 material | Experimental `OlderSisterV3HiggsfieldSdRepair613/*`, `OlderSisterV3CandidateSurface.mat` | 동일 | production은 `Family3DProductionPresenter`; 누나는 Experimental QA builder |
+| walk clip | `PlayerV6_Casual_Walk_inplace` (`1..43`, `1.4 s`) | `FatherV19_Casual_Walk_inplace` (`1..43`, `1.4 s`) | `OlderSisterV3_Casual_Walk_inplace` (`1..43`, `1.4 s`) | 동일 | FBX 내 clip |
+| model scale / StandingHeight | `1.263885643` / `2.291498763` | `1.306909878` / `2.454888000` | `1.154662251` / `2.367000` | `1.024378657/1.857258558`, `0.950318127/1.769311871` | `*Legacy2DMatchedModelScale/TargetHeight`; 누나 QA 상수 |
 | 가로 scale | `1.0` | `0.806840529` | `1.0` | `1.0` / `0.92` | `FatherLegacy2DMatchedHorizontalScale` |
-| 화면 키 (1280x720, 보행 median/목표) | `90px` (85–95) | `93.5px` (91–98) | 목표 `93.02px`; 전체 GIF 눈 검수 대기 | `73px` / `69.5px` | 측정값 |
-| 발-뿌리 offset (local x, forward) | `(0.050989, 0.214083)` | `(0.037517, 0.138023)` | `(0.041302, 0.151164)` (24위상 측정) | `(0,0)` | `*FootCenterOffsetLocal`; 누나 runtime receipt |
-| 바닥 접지 보정 | 기준(0) | `AlignCandidateStandingGround`가 측정: `-0.2910` | `-0.062942`, 최저점 `0.200542→0.137600` | 없음 | 런타임 측정, 상수 아님 |
-| 밝기 gain (`_Color`) | `1.26` | `1.28` | `1.0` 시작, 승인 전 색 측정 후보 | `1.0` | `*Legacy2DMatchedBrightnessGain` |
+| 화면 키 (1280x720, 보행 median/목표) | `90px` (85–95) | `93.5px` (91–98) | `86px` median / `93.02px` 목표 | `73px` / `69.5px` | 측정값 |
+| 발-뿌리 offset (local x, forward) | `(0.050989, 0.214083)` | `(0.037517, 0.138023)` | `(0.034554, 0.112794)` (24위상 측정) | `(0,0)` | `*FootCenterOffsetLocal`; 누나 runtime receipt |
+| 바닥 접지 보정 | 기준(0) | `AlignCandidateStandingGround`가 측정: `-0.2910` | `-0.073097`, 최저점 `0.210697→0.137600` | 없음 | 런타임 측정, 상수 아님 |
+| 밝기 gain (`_Color`) | `1.26` | `1.28` | `1.0`; 실제 맵 luma `91.49`, clipping `0%` | `1.0` | `*Legacy2DMatchedBrightnessGain` |
 | neutral fill (`_AmbientFactor`) | `0.70` (material 기본) | `0.82` | `0.70` | `0.70` / material 기본 | material |
-| stride / phase / cycle | `1.98761598` / `0.40` / `1.4 s` (두 발 착지 = 타일 2칸) | 동일 | `1.98761598` / `0.40` / `1.4 s`, 발 중점 오차 `3.549/7.829px`, 접지 발 선 밖 `0/1120` | `0.7950477` / `0` / `1.4 s` | candidate gait constants |
-| 사람 충돌 반경 | `0.475` | `0.578` | 미적용; 보행 reach `0.4423` 측정 | `0.28` / `0.30` | 승인 뒤 `StarterOfficeRuntimeBootstrap`에 추가 |
+| stride / phase / cycle | `1.98761598` / `0.40` / `1.4 s` (두 발 착지 = 타일 2칸) | 동일 | `1.98761598` / `0.40` / `1.4 s`, 발 중점 오차 `2.715/5.856px`, 접지 발 선 밖 `0/1120` | `0.7950477` / `0` / `1.4 s` | candidate gait constants |
+| 사람 충돌 반경 | `0.475` | `0.578` | 미적용; 보행 reach `0.3937` 측정 | `0.28` / `0.30` | 승인 뒤 `StarterOfficeRuntimeBootstrap`에 추가 |
 | 가구 정적 반경 + 패딩 | `0.22 + 0.18` | `0.22 + 0.18` | 미적용·승인 뒤 검증 | `0.22 + 0` | `OfficeRuntimeAgent.DefaultRadius`, `*FurnitureClearancePadding` |
 | 책상 인접 칸 경로 비용 | `+2.5` (패딩>0인 배우) | 동일 | 미적용·승인 뒤 검증 | 없음 | `OfficeRuntimePathService.DeskProximityStepPenalty` |
-| 원본 hash | receipt `player-v8-source-receipt.json` | GLB `210DC2E1…17F9`, FBX `479F883A…AEB5`, albedo `8C1418E1…962C`, Meshy job `865f2115-…-84eb-d38ca106d45d` (38 credits) | GLB `62E1366B…3D3DD`, FBX `910F85E5…28DB`, albedo `C2A6F83F…FDBA`, Meshy job `495165b9-…-ed20a` (38 credits) | — | `*-source-receipt.json` |
+| 원본 hash | receipt `player-v8-source-receipt.json` | GLB `210DC2E1…17F9`, FBX `479F883A…AEB5`, albedo `8C1418E1…962C`, Meshy job `865f2115-…-84eb-d38ca106d45d` (38 credits) | paid V2 GLB `62E1366B…3D3DD`; V3 FBX `6639CB85…846D2E`, albedo `7264BEA7…B71473`; new charge `0` | — | `*-source-receipt.json` |
 
 새 캐릭터는 이 표에 열을 추가한다. 값은 복사하지 않고 §9 절차로 **측정**한다(키, stride, forward,
 접지 보정, 밝기 gain, 팔 끝 반경).
@@ -77,6 +77,7 @@ PLAYER_V6_* 문서들은 2026-09-02에 삭제되어 이 문서로 대체되었�
 | --- | ---: | ---: | --- |
 | 아들 | `90px` | `2.11` | 화면 `1.039`, 메시 `1.071` |
 | 아빠 | `93.5px` | `2.19` | |
+| 누나 V3 후보 | `86px` median / `93.02px` 목표 | `2.02 / 2.18` | SD 비율·얼굴·눈·밝기 자동 gate 통과, GIF 승인 대기 (§4.4) |
 | 누나 V2 후보 (불합격) | `93px` | `2.18` | 키는 대역 안이지만 머리:키 `0.16`, 골반 폭 `0.059`로 가족 비율 위반(§4.3) |
 | 머리:키 | `0.307` / `0.333` | | |
 | 어깨 폭 / 몸통 폭 / 다리 높이 | `27/34/44px` / `27/32/43px` | | |
@@ -92,9 +93,9 @@ PLAYER_V6_* 문서들은 2026-09-02에 삭제되어 이 문서로 대체되었�
 | S3 키 / 타일 높이 | `2.0 ~ 2.3` | `2.11 / 2.19` | 통과 |
 | S4 책상 상판 / 키 | `35 ~ 45%` | `39% / 37%` | 통과 |
 | S5 머리·몸통 폭 | 1280x720 보행 중 머리 폭·몸통 폭 아들과 `±1px` 내(정본 비율 유지) | `28/28`, `22/20` | 통과 |
-| S6 머리:키 (골격) | GLB rest pose `(head_end − neck) / (head_end − toe)` `0.26 ~ 0.36` (가족 SD 비율) | 아들 `0.273`, 아빠 `0.337` | 통과 · 누나 V2 `0.159` 불합격 |
-| S7 몸 폭 (골격) | 골반 폭/키 `0.08 ~ 0.10`, 어깨 폭/키 `0.030 ~ 0.040`, 다리(골반→발끝)/키 `0.40 ~ 0.50` | 아들 `0.093/0.031/0.470`, 아빠 `0.093/0.037/0.413` | 통과 · 누나 V2 `0.059/0.028/0.581` 불합격 |
-| S8 얼굴 가독성 | 1280x720에서 얼굴 높이 `≥ 22px`, 눈 높이 `≥ 3px`(아들 머리 `25px`·눈 `4px` 기준); 텍스처에서 얼굴이 UV 면적의 `≥ 8%` | 아들·아빠 통과 | 누나 V2 얼굴 `~12px`, 눈 `~1px` 불합격 |
+| S6 머리:키 (골격) | GLB rest pose `(head_end − neck) / (head_end − toe)` `0.26 ~ 0.36` (가족 SD 비율) | 아들 `0.273`, 아빠 `0.337`, 누나 V3 `0.310` | 통과 · 누나 V2 `0.159` 불합격 |
+| S7 몸 폭 (골격) | 골반 폭/키 `0.08 ~ 0.10`, 어깨 폭/키 `0.030 ~ 0.040`, 다리(골반→발끝)/키 `0.40 ~ 0.50` | 아들 `0.093/0.031/0.470`, 아빠 `0.093/0.037/0.413`, 누나 V3 `0.090/0.036/0.460` | 통과 · 누나 V2 `0.059/0.028/0.581` 불합격 |
+| S8 얼굴 가독성 | 1280x720에서 얼굴 높이 `≥ 22px`, 눈 높이 `≥ 3px`(아들 머리 `25px`·눈 `4px` 기준); 텍스처에서 얼굴이 UV 면적의 `≥ 8%` | 아들·아빠 통과; 누나 V3 화면 얼굴 `28.84px`, 두 눈 세로 `≥3px` 프레임 `4` | 화면 gate 통과 · 누나 V2 얼굴 `~12px`, 눈 `~1px` 불합격 |
 
 새 캐릭터의 키는 정본 나이·체형(§CANON)을 따르되 S1 대역 안에 둔다. 엄마·언니는 아들보다 크고
 아빠보다 작거나 같은 것이 자연스럽다. **나이·체형은 SD(3~3.7등신) 안에서 표현한다**: 아들·아빠가
@@ -117,6 +118,28 @@ PLAYER_V6_* 문서들은 2026-09-02에 삭제되어 이 문서로 대체되었�
 머리·상의·하의를 같은 어두운 자주로 칩했다. 크기·밝기·오프셋 조정으로는 해결되지 않으며 **참조
 이미지부터 다시 만들어 재생성**해야 한다(§9.1 요구사항). 기존 V2 자산은 Experimental 후보 폴더에
 남기되 승격·착석 작업을 하지 않는다.
+
+### 4.4 누나 V3 로컬 SD 복구 후보 (2026-09-02, 추가 provider 비용 0)
+
+V3는 새 생성물이 아니라 이미 결제된 V2 GLB의 보존 복사본을 로컬에서 교정한 후보이다. 같은 mesh와
+bind skeleton에 연속 비율 함수를 적용하고 skin weights, UV topology와 action 613은 유지했다. albedo도
+같은 UV atlas의 기존 색/skin-weight category만 결정적으로 재분류했다. 원본 V2는 별도 보존하며 donor,
+retarget, 절차 보행, 접지별 host 이동은 없다.
+
+| 항목 | 측정 | 기준 | 판정 |
+| --- | ---: | ---: | --- |
+| 머리:키 | `0.310` | S6 `0.26~0.36` | 통과 |
+| 골반/키 · 어깨/키 · 다리/키 | `0.090 / 0.036 / 0.460` | S7 | 통과 |
+| 실제 맵 키 | median `86px`, 목표 `93.02px` | S1 `81~99px` | 통과 |
+| 얼굴·눈 | 얼굴 환산 `28.84px`; 두 눈 세로 `>=3px` 정면 프레임 `4` | S8 화면 `22/3px` | 통과 |
+| 밝기 | luma `91.49`, sat `0.247`, clipping `0%` | C3 `90~125`, C4 `<=5%` | 통과 |
+| 타일·접지 | 발 중점 `2.715/5.856px`; 발 밖 `0/2688`, 접지 발 밖 `0/1120`; 최저점 `0.1376` | §6 | 통과 |
+
+자동 gate는 사용자 시각 승인 대신이 아니다. 전체 실제 맵 GIF 승인 전 상태는
+`CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`이며 production/충돌/착석을 바꾸지 않는다.
+V3는 새 provider 제출물이 아니므로 원본 V2 UV topology를 보존했다. S8의 `UV 8%` 항목은 이후 새 생성
+제출의 사전 gate로 계속 유지하며, 이 로컬 복구는 실제 맵의 얼굴/두 눈 픽셀 측정과 사용자 GIF 판정으로만
+예외 승인할 수 있다. 이 예외는 Mother나 이후 생성물에 복사하지 않는다.
 
 ---
 

@@ -34,7 +34,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string PlayerV6MotionQaScenePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DPlayerV6MeshyOnePackage613MapQa.unity";
         public const string OlderSisterV2MotionQaScenePath =
-            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DOlderSisterV2MeshyOnePackage613MapQa.unity";
+            "Assets/FamilyCompany/Experimental/Family3DPrototype/Scenes/Family3DOlderSisterV3HiggsfieldSdRepair613MapQa.unity";
         public const string WalkClipPath =
             "Assets/FamilyCompany/Editor/PlayerWalkHumanoidAuthoring/PlayerHumanoidWalk.fbx";
         public const string PlayerModelPath =
@@ -89,13 +89,13 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const float PlayerV6MaterialKeyFactor = 0.18f;
         public const string OlderSisterV2MotionModelPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
-            "OlderSisterV2MeshyOnePackage613/older-sister-v2-meshy-one-package-613.fbx";
+            "OlderSisterV3HiggsfieldSdRepair613/older-sister-v3-higgsfield-sd-repair-613.fbx";
         public const string OlderSisterV2MotionTexturePath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
-            "OlderSisterV2MeshyOnePackage613/older-sister-v2-meshy-one-package-albedo.png";
+            "OlderSisterV3HiggsfieldSdRepair613/older-sister-v3-higgsfield-sd-repair-albedo.png";
         public const string OlderSisterV2SurfaceMaterialPath =
             "Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/" +
-            "OlderSisterV2MeshyOnePackage613/OlderSisterV2CandidateSurface.mat";
+            "OlderSisterV3HiggsfieldSdRepair613/OlderSisterV3CandidateSurface.mat";
         public const float OlderSisterV2FacingOffsetDegrees = 0f;
         public const float OlderSisterV2StrideOfficeUnits = 1.98761598f;
         public const float OlderSisterV2PhaseOffsetCycles = 0.40f;
@@ -115,7 +115,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
         public const string PlayerV6MotionDefaultBuildRoot =
             "Artifacts/Family3DStarterOfficeCandidateQaV1/PlayerV6MeshyOnePackage613MapBuildV8PlayerOnlyBalancedColor";
         public const string OlderSisterV2MotionDefaultBuildRoot =
-            "Artifacts/Family3DStarterOfficeCandidateQaV1/OlderSisterV2MeshyOnePackage613MapBuildV1";
+            "Artifacts/Family3DStarterOfficeCandidateQaV1/OlderSisterV3HiggsfieldSdRepair613MapBuildV1";
 
         /// <summary>
         /// The moving proof must use the exact imported static-model surface material. V61/V62
@@ -263,6 +263,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             }
         }
 
+        // Kept as a compatibility entry point for the existing automated QA command. It now
+        // builds the zero-credit V3 local repair; rejected V2 assets remain preserved separately.
         public static void BuildOlderSisterV2MotionFromCommandLine()
         {
             try
@@ -274,14 +276,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     false,
                     false,
                     true);
-                Debug.Log("FAMILY_3D_OLDER_SISTER_V2_MESHY_ONE_PACKAGE_613_MAP_QA_BUILD: PASS");
+                Debug.Log("FAMILY_3D_OLDER_SISTER_V3_HIGGSFIELD_SD_REPAIR_613_MAP_QA_BUILD: PASS");
                 EditorApplication.Exit(0);
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
                 Debug.LogError(
-                    "FAMILY_3D_OLDER_SISTER_V2_MESHY_ONE_PACKAGE_613_MAP_QA_BUILD: FAIL | " +
+                    "FAMILY_3D_OLDER_SISTER_V3_HIGGSFIELD_SD_REPAIR_613_MAP_QA_BUILD: FAIL | " +
                     exception.Message);
                 EditorApplication.Exit(1);
             }
@@ -321,7 +323,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : playerV6MotionOnly
                         ? "FamilyCompanyPlayerV6MeshyOnePackage613MapQa.exe"
                     : olderSisterV2MotionOnly
-                        ? "FamilyCompanyOlderSisterV2MeshyOnePackage613MapQa.exe"
+                        ? "FamilyCompanyOlderSisterV3HiggsfieldSdRepair613MapQa.exe"
                     : "FamilyCompanyStarterOffice3DCandidateQa.exe");
             var options = new BuildPlayerOptions
             {
@@ -544,7 +546,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     OlderSisterV2MotionTexturePath);
                 if (texture == null)
                     throw new InvalidOperationException(
-                        "Older Sister V2 one-package texture did not load: " +
+                        "Older Sister V3 local-repair texture did not load: " +
                         OlderSisterV2MotionTexturePath);
                 AnimationClip motionWalkClip = LoadHumanClip(
                     OlderSisterV2MotionModelPath,
@@ -596,7 +598,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             var importer = AssetImporter.GetAtPath(OlderSisterV2MotionModelPath) as ModelImporter;
             if (importer == null)
                 throw new InvalidOperationException(
-                    "Older Sister V2 ModelImporter did not load: " +
+                    "Older Sister V3 ModelImporter did not load: " +
                     OlderSisterV2MotionModelPath);
 
             importer.animationType = ModelImporterAnimationType.Human;
@@ -612,12 +614,12 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             ModelImporterClipAnimation[] sourceClips = importer.defaultClipAnimations;
             if (sourceClips == null || sourceClips.Length == 0)
                 throw new InvalidOperationException(
-                    "Older Sister V2 FBX contains no authored animation take.");
+                    "Older Sister V3 FBX contains no authored animation take.");
             ModelImporterClipAnimation clip = sourceClips.FirstOrDefault(candidate =>
                 candidate.name.IndexOf(
                     "Casual_Walk_inplace",
                     StringComparison.OrdinalIgnoreCase) >= 0) ?? sourceClips[0];
-            clip.name = "OlderSisterV2_Casual_Walk_inplace";
+            clip.name = "OlderSisterV3_Casual_Walk_inplace";
             clip.firstFrame = 1f;
             clip.lastFrame = 43f;
             clip.loopTime = true;
@@ -849,14 +851,14 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 OlderSisterV2MotionTexturePath);
             if (albedo == null)
                 throw new InvalidOperationException(
-                    "Older Sister V2 one-package albedo could not be loaded from " +
+                    "Older Sister V3 local-repair albedo could not be loaded from " +
                     OlderSisterV2MotionTexturePath);
 
             Shader balancedShader = Shader.Find(
                 "FamilyCompany/Production/PlayerV8BalancedAlbedo");
             if (balancedShader == null)
                 throw new InvalidOperationException(
-                    "Older Sister V2 balanced albedo shader did not load.");
+                    "Older Sister V3 balanced albedo shader did not load.");
             Material material = AssetDatabase.LoadAssetAtPath<Material>(
                 OlderSisterV2SurfaceMaterialPath);
             if (material == null)
@@ -871,7 +873,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 UnityEngine.Object.DestroyImmediate(clean);
             }
 
-            material.name = "OlderSisterV2CandidateSurface";
+            material.name = "OlderSisterV3CandidateSurface";
             material.mainTexture = albedo;
             material.color = Color.white;
             material.SetFloat("_AmbientFactor", PlayerV6MaterialAmbientFactor);
@@ -904,7 +906,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 OlderSisterV2SurfaceMaterialPath);
             if (created == null)
                 throw new InvalidOperationException(
-                    "Could not create Older Sister V2 candidate surface material.");
+                    "Could not create Older Sister V3 candidate surface material.");
             return created;
         }
 
@@ -1155,7 +1157,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : bundle.PlayerV6MotionOnly
                         ? "locomotion: actual player position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613; isolated desk-work flag: production seat_player route/state + separate neutral seated pose and endpoint IK only after locomotion ends"
                     : bundle.OlderSisterV2MotionOnly
-                        ? "locomotion only: actual older_sister position/direction/GaitDistance -> unchanged one-package Meshy skin, bind skeleton, and authored action 613; no seating before user walk approval"
+                        ? "locomotion only: actual older_sister position/direction/GaitDistance -> zero-credit V3 bind-space SD repair of the same paid Meshy mesh/skin/UV/skeleton plus its unchanged authored action 613; no donor, retarget, procedural gait, or seating before user walk approval"
                     : "Position + LastActualDisplacement + GaitPhase01 + CurrentDirection -> Family3DWalkActor",
                 scalePolicy = bundle.FatherV18StaticOnly
                     ? "every frame source Father sprite projected bounds height == V18 renderer projected bounds height; <=0.5% error; grounded"
@@ -1166,7 +1168,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     : bundle.PlayerV6MotionOnly
                         ? "one locked uniform scale calibrated from the one-package authored pose to the live player sprite; no per-pose rescaling"
                     : bundle.OlderSisterV2MotionOnly
-                        ? "one locked 2.367-unit standing height (93px target at 1280x720), independent of retired Older Sister 2D; 24-phase foot-centre and lowest-skinned-vertex calibration"
+                        ? "one locked 2.367-unit standing height (93px target at 1280x720) on V3 SD geometry; independent of retired Older Sister 2D; 24-phase foot-centre and lowest-skinned-vertex calibration"
                     : "live production SpriteRenderer bounds projected viewport height",
                 source2DPolicy =
                     "QA-only Renderer.forceRenderingOff replaces all four legacy workstation desk/chair pixels with V31 original-chair atomic visuals; semantic furniture, sorting data and transforms are never assigned or deleted",
@@ -1189,6 +1191,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 fatherV19MotionOnly = bundle.FatherV19MotionOnly,
                 playerV6MotionOnly = bundle.PlayerV6MotionOnly,
                 olderSisterV2MotionOnly = bundle.OlderSisterV2MotionOnly,
+                olderSisterCandidateRevision = bundle.OlderSisterV2MotionOnly
+                    ? "V3_HIGGSFIELD_SD_REPAIR_613_ZERO_CREDIT"
+                    : string.Empty,
                 staticMapScaleTolerance = Family3DStarterOfficeCandidateQa.StaticMapScaleTolerance,
                 staticTextureAsset = bundle.FatherV18StaticOnly
                     ? FatherV18StaticTexturePath
@@ -1262,7 +1267,9 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     ? "V72 legs/pelvis/torso/head unchanged; behind-body tuck disabled; straight rigid arms with fixed-axis opposite upper-arm swing 6 degrees; elbow/wrist/finger/outward/tuck correction zero"
                     : bundle.FatherV19MotionOnly || bundle.PlayerV6MotionOnly ||
                       bundle.OlderSisterV2MotionOnly
-                        ? "walking: none; native one-package skin and action sampled at poseStrength 1. desk-work QA only: post-locomotion neutral seated Humanoid pose plus two-hand/two-foot endpoint IK"
+                        ? bundle.OlderSisterV2MotionOnly
+                            ? "motion: none; the original same-package action is sampled at poseStrength 1 after one deterministic rest/bind geometry repair; no donor, retarget, procedural gait, damping, or per-contact translation"
+                            : "walking: none; native one-package skin and action sampled at poseStrength 1. desk-work QA only: post-locomotion neutral seated Humanoid pose plus two-hand/two-foot endpoint IK"
                     : string.Empty,
                 candidates = assets,
                 buildResult = report.summary.result.ToString(),
@@ -1301,7 +1308,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                 : playerV6MotionOnly
                     ? "-family3d-player-v6-motion-qa-build-output"
                 : olderSisterV2MotionOnly
-                    ? "-family3d-older-sister-v2-motion-qa-build-output"
+                    ? "-family3d-older-sister-v3-motion-qa-build-output"
                     : "-family3d-starter-office-qa-build-output";
             string[] args = Environment.GetCommandLineArgs();
             for (var index = 0; index < args.Length - 1; index++)
@@ -1410,6 +1417,7 @@ namespace FamilyCompany.Experimental.Family3D.Editor
             public bool fatherV19MotionOnly;
             public bool playerV6MotionOnly;
             public bool olderSisterV2MotionOnly;
+            public string olderSisterCandidateRevision;
             public float staticMapScaleTolerance;
             public string staticTextureAsset;
             public string staticTextureSha256;

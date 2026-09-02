@@ -1,0 +1,85 @@
+{
+  "contract": "FC-OLDER-SISTER-V3-HIGGSFIELD-SD-REPAIR-UNITY-PREP-V1",
+  "status": "LOCAL_REPAIR_VISUAL_REVIEW_REQUIRED",
+  "sourceGlb": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSister3DGeneration\\20260902-102656\\older-sister-v2-meshy-one-package-613.glb",
+  "sourceGlbSha256": "62E1366BCB804E572565B2C3E57CDCE8810271647B61C729AE3AC61F9FA3D3DD",
+  "newProviderCreditCharge": 0,
+  "repairPolicy": "continuous bind mesh and bind-joint proportion map applied to the same paid Higgsfield/Meshy package; original skin, UV and action 613 retained; no donor",
+  "targetRatios": {
+    "headToHeight": 0.31,
+    "legToHeight": 0.46,
+    "hipXScale": 1.52,
+    "shoulderXScale": 1.25,
+    "headXScale": 1.48
+  },
+  "measuredRatios": {
+    "headToHeight": 0.3100000275049687,
+    "legToHeight": 0.4599999901028146,
+    "hipWidthToHeight": 0.08996318258542815,
+    "shoulderWidthToHeight": 0.03568183568759562
+  },
+  "zAnchors": [
+    [
+      0.026812518946826458,
+      0.026812518946826458
+    ],
+    [
+      0.9665555953979492,
+      0.7713296608813107
+    ],
+    [
+      1.3871856927871704,
+      1.1435882318485528
+    ],
+    [
+      1.6453280448913574,
+      1.6453280448913574
+    ]
+  ],
+  "outputFbx": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSisterV3LocalRepair\\20260902-sd-repair-v1\\older-sister-v3-higgsfield-sd-repair-613.fbx",
+  "outputFbxSha256": "6639CB85D79B6385E089D9A3301AB1D2A9D1B20C9D8749E8144C629501846D2E",
+  "outputTexture": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSisterV3LocalRepair\\20260902-sd-repair-v1\\older-sister-v3-higgsfield-sd-repair-albedo.png",
+  "outputTextureSha256BeforePaletteRepair": "C2A6F83FCF03AB6218EC130281353C727EB5B6478C6E1B02DDE111B8C6CAFDBA",
+  "uvMaskNpz": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSisterV3LocalRepair\\20260902-sd-repair-v1\\older-sister-v3-uv-categories.npz",
+  "meshVertexCount": 211673,
+  "meshPolygonCount": 118945,
+  "boneCount": 24,
+  "action": "OlderSisterV3_Casual_Walk_inplace",
+  "actionFrameStart": 1.0,
+  "actionFrameEnd": 126.99999237060547,
+  "animationFps": 30,
+  "removedAuxiliaryObjects": [
+    "Icosphere"
+  ],
+  "sourceBoundsMin": [
+    -0.4009670913219452,
+    -0.1848384439945221,
+    -3.530405834339945e-08
+  ],
+  "sourceBoundsMax": [
+    0.40096738934516907,
+    0.18483693897724152,
+    1.649999976158142
+  ],
+  "repairedBoundsBeforeNormalizationMin": [
+    -0.2837388515472412,
+    -0.5037809014320374,
+    0.09891963750123978
+  ],
+  "repairedBoundsBeforeNormalizationMax": [
+    0.30005335807800293,
+    0.24992339313030243,
+    1.705291986465454
+  ],
+  "outputBoundsMin": [
+    -0.29189610481262207,
+    -0.3768521547317505,
+    0.0
+  ],
+  "outputBoundsMax": [
+    0.29189610481262207,
+    0.3768521547317505,
+    1.606372356414795
+  ],
+  "productionEligible": false
+}
