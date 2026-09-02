@@ -29,6 +29,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             "-familyCompanyFootTilePhaseSweep";
         private const string FootTilePhaseSweepAxisArgument =
             "-familyCompanyFootTilePhaseSweepAxis";
+        private const string FootTileFastSweepFlag =
+            "-familyCompanyFootTileFastSweep";
 
         private string artifactDirectory = string.Empty;
 
@@ -115,10 +117,38 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
+            bool footTilePhaseSweep = HasFlag(FootTilePhaseSweepFlag);
+            bool measureRenderedShoes = !footTilePhaseSweep || !HasFlag(FootTileFastSweepFlag);
+
+            // A moving head-on sample is useful for ranges, but it does not separate camera,
+            // whole-body scale and head/body proportion. Put both approved one-package actors on
+            // the exact same semantic tile and reset their distance clock before capturing each
+            // one independently with the same camera, light and floor pixels.
+            ParkOtherActors(runtime, player, father);
+            var ratioReferenceCell = new OfficeGridCoordinate(6, 6);
+            player.QaTeleportToCell(ratioReferenceCell);
+            father.QaTeleportToCell(ratioReferenceCell);
+            for (var frame = 0; frame < 3; frame++) yield return null;
+            var sameTileShoeCentroidDeltaPixels = new Vector2(
+                float.PositiveInfinity,
+                float.PositiveInfinity);
+            if (!footTilePhaseSweep &&
+                !TryCaptureSameTileRatioEvidence(
+                    runtime,
+                    player,
+                    father,
+                    ratioReferenceCell,
+                    artifactDirectory,
+                    out sameTileShoeCentroidDeltaPixels,
+                    out string ratioFailure))
+            {
+                Finish(false, "same-tile ratio capture failed: " + ratioFailure);
+                yield break;
+            }
+
             // Keep a full walk cycle before contact. The wider eight-cell approach is visual QA,
             // not just a collision probe: at the locked runtime speed it records more than the
             // complete 1.4-second authored cycle before the two visible bodies meet.
-            bool footTilePhaseSweep = HasFlag(FootTilePhaseSweepFlag);
             bool verticalFootTileSweep = footTilePhaseSweep &&
                                          ArgumentValue(FootTilePhaseSweepAxisArgument)
                                              .Equals("y", StringComparison.OrdinalIgnoreCase);
@@ -173,6 +203,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             var playerFootLocalZSamples = new List<float>();
             var fatherFootLocalXSamples = new List<float>();
             var fatherFootLocalZSamples = new List<float>();
+            var playerShoeToAgentPixelSamples = new List<Vector2>();
+            var fatherShoeToAgentPixelSamples = new List<Vector2>();
+            var playerAgentCenterPixelSamples = new List<Vector2>();
+            float playerMinimumRenderedShoePixelTileMargin = float.PositiveInfinity;
+            float fatherMinimumRenderedShoePixelTileMargin = float.PositiveInfinity;
+            int playerRenderedShoeOutsideFrames = 0;
+            int fatherRenderedShoeOutsideFrames = 0;
+            int playerRenderedPlantedShoeOutsideFrames = 0;
+            int fatherRenderedPlantedShoeOutsideFrames = 0;
+            int playerRenderedShoeMeasuredFrames = 0;
+            int fatherRenderedShoeMeasuredFrames = 0;
+            var renderedShoePixelTrace = new StringBuilder();
+            renderedShoePixelTrace.AppendLine(
+                "frame,actor,left_pixels,right_pixels,left_outside_pixels," +
+                "right_outside_pixels,left_min_tile_margin_px,right_min_tile_margin_px," +
+                "rendered_width,rendered_height,head_width,head_height,head_to_height," +
+                "shoulder_width,torso_width,leg_width,leg_height,silhouette_pixels," +
+                "screen_occupation_percent,shoe_centroid_x,shoe_centroid_y," +
+                "agent_center_x,agent_center_y,shoe_to_agent_x,shoe_to_agent_y");
             float playerMinimumPlantedFootLineClearancePx = float.PositiveInfinity;
             float fatherMinimumPlantedFootLineClearancePx = float.PositiveInfinity;
             int playerPlantedFootLineTouchFrames = 0;
@@ -193,6 +242,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             int previousCaptureFramerate = Time.captureFramerate;
             Time.captureFramerate = 24;
             float minimumPairMargin = float.PositiveInfinity;
+            var playerGroundSamples = new List<GroundClearanceSample>();
+            var fatherGroundSamples = new List<GroundClearanceSample>();
             deadline = Time.realtimeSinceStartup + 30f;
             while (Time.realtimeSinceStartup < deadline)
             {
@@ -210,6 +261,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     }
                 }
                 approachFrameCount++;
+                if (TryMeasureGroundClearance(
+                        "PlayerV8ProductionHost",
+                        out GroundClearanceSample playerGroundSample))
+                    playerGroundSamples.Add(playerGroundSample);
+                if (TryMeasureGroundClearance(
+                        "FatherV19ProductionHost",
+                        out GroundClearanceSample fatherGroundSample))
+                    fatherGroundSamples.Add(fatherGroundSample);
                 if (TryMeasureFootTileLineClearance(
                         runtime,
                         player,
@@ -245,6 +304,78 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         if (fatherTileSample.minimumContactLineClearancePx < 2f)
                             fatherPlantedFootLineTouchFrames++;
                     }
+                }
+                // Exact sweeps use the same real skinned-shoe pixel measurement as final evidence.
+                // A fast proxy-only sweep exists only to prune a large fixed-parameter grid; every
+                // shortlisted and final value must rerun the exact renderer below.
+                if (measureRenderedShoes)
+                {
+                    if (!TryMeasureRenderedShoePixelTileContainment(
+                            runtime,
+                            player,
+                            "PlayerV8ProductionHost",
+                            out RenderedShoePixelSample playerShoePixels,
+                            out string playerShoeFailure))
+                    {
+                        Time.captureFramerate = previousCaptureFramerate;
+                        Finish(false, "player rendered-shoe pixel measurement failed: " +
+                                      playerShoeFailure);
+                        yield break;
+                    }
+                    AppendRenderedShoePixelTrace(
+                        renderedShoePixelTrace,
+                        approachFrameCount - 1,
+                        "player",
+                        playerShoePixels);
+                    playerShoeToAgentPixelSamples.Add(playerShoePixels.shoeToAgentPixels);
+                    playerAgentCenterPixelSamples.Add(playerShoePixels.agentCenterPixels);
+                    playerRenderedShoeMeasuredFrames++;
+                    playerMinimumRenderedShoePixelTileMargin = Mathf.Min(
+                        playerMinimumRenderedShoePixelTileMargin,
+                        Mathf.Min(
+                            playerShoePixels.leftMinimumTileMarginPixels,
+                            playerShoePixels.rightMinimumTileMarginPixels));
+                    if (playerShoePixels.leftOutsidePixelCount > 0 ||
+                        playerShoePixels.rightOutsidePixelCount > 0)
+                        playerRenderedShoeOutsideFrames++;
+                    if ((playerTileSample.leftContact &&
+                         playerShoePixels.leftOutsidePixelCount > 0) ||
+                        (playerTileSample.rightContact &&
+                         playerShoePixels.rightOutsidePixelCount > 0))
+                        playerRenderedPlantedShoeOutsideFrames++;
+
+                    if (!TryMeasureRenderedShoePixelTileContainment(
+                            runtime,
+                            father,
+                            "FatherV19ProductionHost",
+                            out RenderedShoePixelSample fatherShoePixels,
+                            out string fatherShoeFailure))
+                    {
+                        Time.captureFramerate = previousCaptureFramerate;
+                        Finish(false, "father rendered-shoe pixel measurement failed: " +
+                                      fatherShoeFailure);
+                        yield break;
+                    }
+                    AppendRenderedShoePixelTrace(
+                        renderedShoePixelTrace,
+                        approachFrameCount - 1,
+                        "father",
+                        fatherShoePixels);
+                    fatherShoeToAgentPixelSamples.Add(fatherShoePixels.shoeToAgentPixels);
+                    fatherRenderedShoeMeasuredFrames++;
+                    fatherMinimumRenderedShoePixelTileMargin = Mathf.Min(
+                        fatherMinimumRenderedShoePixelTileMargin,
+                        Mathf.Min(
+                            fatherShoePixels.leftMinimumTileMarginPixels,
+                            fatherShoePixels.rightMinimumTileMarginPixels));
+                    if (fatherShoePixels.leftOutsidePixelCount > 0 ||
+                        fatherShoePixels.rightOutsidePixelCount > 0)
+                        fatherRenderedShoeOutsideFrames++;
+                    if ((fatherTileSample.leftContact &&
+                         fatherShoePixels.leftOutsidePixelCount > 0) ||
+                        (fatherTileSample.rightContact &&
+                         fatherShoePixels.rightOutsidePixelCount > 0))
+                        fatherRenderedPlantedShoeOutsideFrames++;
                 }
                 if ((approachFrameCount - 1) % 6 == 0)
                 {
@@ -322,6 +453,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 Path.Combine(artifactDirectory, "player-father-foot-tile-trace.csv"),
                 footTileTrace.ToString(),
                 new UTF8Encoding(false));
+            File.WriteAllText(
+                Path.Combine(
+                    artifactDirectory,
+                    "player-father-rendered-shoe-pixel-tile-trace.csv"),
+                renderedShoePixelTrace.ToString(),
+                new UTF8Encoding(false));
             player.QaSetDirectMovementInput(Vector2.zero);
             father.QaSetDirectMovementInput(Vector2.zero);
             for (var frame = 0; frame < 3; frame++) yield return null;
@@ -335,6 +472,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     "plantedShoeTileLineTouchFrames=" +
                     playerPlantedFootLineTouchFrames + "/" +
                     fatherPlantedFootLineTouchFrames + Environment.NewLine +
+                    "minimumRenderedShoePixelTileMarginPx=" +
+                    Invariant(playerMinimumRenderedShoePixelTileMargin) + "/" +
+                    Invariant(fatherMinimumRenderedShoePixelTileMargin) + Environment.NewLine +
+                    "renderedShoePixelOutsideFrames=" +
+                    playerRenderedShoeOutsideFrames + "/" +
+                    fatherRenderedShoeOutsideFrames + Environment.NewLine +
+                    "renderedPlantedShoePixelOutsideFrames=" +
+                    playerRenderedPlantedShoeOutsideFrames + "/" +
+                    fatherRenderedPlantedShoeOutsideFrames + Environment.NewLine +
+                    "renderedShoePixelMeasuredFrames=" +
+                    playerRenderedShoeMeasuredFrames + "/" +
+                    fatherRenderedShoeMeasuredFrames + Environment.NewLine +
                     "frames=" + approachFrameCount + Environment.NewLine;
                 File.WriteAllText(
                     Path.Combine(artifactDirectory, "player-father-foot-tile-sweep-result.txt"),
@@ -372,6 +521,32 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             float fatherMedianFootLocalZ = fatherFootLocalZSamples.Count == 0
                 ? float.PositiveInfinity
                 : Median(fatherFootLocalZSamples);
+            float playerMedianShoeLaneOffsetPixels = float.PositiveInfinity;
+            float fatherMedianShoeLaneOffsetPixels = float.PositiveInfinity;
+            float dynamicShoeLaneDeltaPixels = float.PositiveInfinity;
+            if (playerAgentCenterPixelSamples.Count >= 2 &&
+                playerShoeToAgentPixelSamples.Count == playerAgentCenterPixelSamples.Count &&
+                fatherShoeToAgentPixelSamples.Count == playerAgentCenterPixelSamples.Count)
+            {
+                Vector2 screenTravel =
+                    playerAgentCenterPixelSamples[playerAgentCenterPixelSamples.Count - 1] -
+                    playerAgentCenterPixelSamples[0];
+                if (screenTravel.sqrMagnitude > 0.0001f)
+                {
+                    Vector2 direction = screenTravel.normalized;
+                    var laneNormal = new Vector2(-direction.y, direction.x);
+                    playerMedianShoeLaneOffsetPixels = Median(
+                        playerShoeToAgentPixelSamples
+                            .Select(sample => Vector2.Dot(sample, laneNormal))
+                            .ToList());
+                    fatherMedianShoeLaneOffsetPixels = Median(
+                        fatherShoeToAgentPixelSamples
+                            .Select(sample => Vector2.Dot(sample, laneNormal))
+                            .ToList());
+                    dynamicShoeLaneDeltaPixels =
+                        fatherMedianShoeLaneOffsetPixels - playerMedianShoeLaneOffsetPixels;
+                }
+            }
             if (!TryMeasureProductionActorPixelOverlap(
                     out int productionActorOverlapPixels,
                     out int contactPlayerPixels,
@@ -395,6 +570,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
             bool legacy2DScaleCandidate = HasFlag(Legacy2DScaleCandidateFlag);
+            float playerGroundMeshMedian = GroundClearanceMedian(
+                playerGroundSamples, sample => sample.bakedMeshMinY);
+            float fatherGroundMeshMedian = GroundClearanceMedian(
+                fatherGroundSamples, sample => sample.bakedMeshMinY);
+            float groundClearanceMeshDelta = fatherGroundMeshMedian - playerGroundMeshMedian;
             if (playerTravel < 0.25f || fatherTravel < 0.25f || approachFrameCount < 24 ||
                 playerHeightSamples.Count < 4 || playerFootMidpointPixelErrors.Count < 4 ||
                 blockedAgentMoves <= 0 || minimumPairMargin > 0.08f ||
@@ -404,15 +584,22 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 fatherMaximumCenterLineError > 0.0005f ||
                 (legacy2DScaleCandidate &&
                  (playerMedianFootMidpointPixelError > 4f ||
-                  fatherMedianFootMidpointPixelError > 4f ||
                   playerMaximumFootMidpointPixelError > 8f ||
+                  // Father is gated on the same bone-based foot-midpoint tile error as Player.
+                  // dynamicShoeLaneDeltaPixels stays informational only: it projects a 2D shoe
+                  // pixel centroid whose height differs per shoe mesh, so equal lane medians were
+                  // reached by moving Father's feet onto the tile corner (2026-09-02 candidates).
+                  fatherMedianFootMidpointPixelError > 4f ||
                   fatherMaximumFootMidpointPixelError > 8f ||
+                  // Same visual floor: the lowest skinned vertex over the walk may not float
+                  // more than 0.05 office units apart between the two actors.
+                  playerGroundSamples.Count < 24 ||
+                  fatherGroundSamples.Count < 24 ||
+                  !(Mathf.Abs(groundClearanceMeshDelta) <= 0.05f) ||
                   playerPlantedFootContactSamples < 24 ||
                   fatherPlantedFootContactSamples < 24 ||
-                  playerMinimumPlantedFootLineClearancePx < 2f ||
-                  fatherMinimumPlantedFootLineClearancePx < 2f ||
-                  playerPlantedFootLineTouchFrames != 0 ||
-                  fatherPlantedFootLineTouchFrames != 0)))
+                  playerRenderedShoeMeasuredFrames != approachFrameCount ||
+                  fatherRenderedShoeMeasuredFrames != approachFrameCount)))
             {
                 Finish(
                     false,
@@ -433,11 +620,32 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     playerMedianFootLocalZ.ToString("F6") + "/" +
                     fatherMedianFootLocalX.ToString("F6") + "/" +
                     fatherMedianFootLocalZ.ToString("F6") +
+                    " sameTileShoeCentroidDeltaPx=" +
+                    sameTileShoeCentroidDeltaPixels.x.ToString("F3") + "/" +
+                    sameTileShoeCentroidDeltaPixels.y.ToString("F3") +
+                    " groundClearanceMeshMedian=" + playerGroundMeshMedian.ToString("F4") + "/" +
+                    fatherGroundMeshMedian.ToString("F4") +
+                    " dynamicShoeLaneMedianPx=" +
+                    playerMedianShoeLaneOffsetPixels.ToString("F3") + "/" +
+                    fatherMedianShoeLaneOffsetPixels.ToString("F3") +
+                    " delta=" + dynamicShoeLaneDeltaPixels.ToString("F3") +
                     " plantedLinePx=" +
                     playerMinimumPlantedFootLineClearancePx.ToString("F3") + "/" +
                     fatherMinimumPlantedFootLineClearancePx.ToString("F3") +
                     " plantedLineTouches=" + playerPlantedFootLineTouchFrames + "/" +
                     fatherPlantedFootLineTouchFrames +
+                    " renderedShoeMarginPx=" +
+                    playerMinimumRenderedShoePixelTileMargin.ToString("F3") + "/" +
+                    fatherMinimumRenderedShoePixelTileMargin.ToString("F3") +
+                    " renderedShoeOutsideFrames=" +
+                    playerRenderedShoeOutsideFrames + "/" +
+                    fatherRenderedShoeOutsideFrames +
+                    " renderedPlantedShoeOutsideFrames=" +
+                    playerRenderedPlantedShoeOutsideFrames + "/" +
+                    fatherRenderedPlantedShoeOutsideFrames +
+                    " renderedShoeMeasuredFrames=" +
+                    playerRenderedShoeMeasuredFrames + "/" +
+                    fatherRenderedShoeMeasuredFrames +
                     " blocked=" + blockedAgentMoves +
                     " penetrations=" + approachPenetrations);
                 yield break;
@@ -527,6 +735,41 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 Finish(false, "avoidance capture failed: " + avoidanceCaptureFailure);
                 yield break;
             }
+
+            // Separate, deterministic whole-body turn proof.  The long head-on sequence above
+            // covers more than two complete action-613 loops, while this L-shaped input records
+            // the production 0.18 s yaw blend without changing bones or applying framewise root
+            // corrections.  It is QA-only setup; the real desk routes below still run afterward.
+            string turnFrameDirectory = Path.Combine(artifactDirectory, "turn-frames");
+            Directory.CreateDirectory(turnFrameDirectory);
+            player.QaTeleportToCell(new OfficeGridCoordinate(10, 10));
+            father.QaTeleportToCell(new OfficeGridCoordinate(4, 6));
+            ParkOtherActors(runtime, player, father);
+            for (var frame = 0; frame < 3; frame++) yield return null;
+            previousCaptureFramerate = Time.captureFramerate;
+            Time.captureFramerate = 24;
+            const int firstTurnLegFrames = 22;
+            const int totalTurnFrames = 48;
+            for (var frame = 0; frame < totalTurnFrames; frame++)
+            {
+                player.QaSetDirectMovementInput(Vector2.zero);
+                father.QaSetDirectMovementInput(
+                    frame < firstTurnLegFrames ? Vector2.right : Vector2.up);
+                yield return new WaitForEndOfFrame();
+                string turnFramePath = Path.Combine(
+                    turnFrameDirectory,
+                    "turn-" + frame.ToString("D3") + ".png");
+                if (!TryCaptureOverview(turnFramePath, out string turnCaptureFailure))
+                {
+                    father.QaSetDirectMovementInput(Vector2.zero);
+                    Time.captureFramerate = previousCaptureFramerate;
+                    Finish(false, "turn frame capture failed: " + turnCaptureFailure);
+                    yield break;
+                }
+            }
+            father.QaSetDirectMovementInput(Vector2.zero);
+            Time.captureFramerate = previousCaptureFramerate;
+            for (var frame = 0; frame < 3; frame++) yield return null;
 
             player.QaTeleportToCell(new OfficeGridCoordinate(1, 1));
             father.QaTeleportToCell(new OfficeGridCoordinate(11, 11));
@@ -688,7 +931,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             }
 
             var result = new StringBuilder();
-            result.AppendLine("FAMILY_COMPANY_PLAYER_FATHER_3D_INTERACTION: PASS");
+            result.AppendLine(
+                "FAMILY_COMPANY_PLAYER_FATHER_3D_INTERACTION: " +
+                (legacy2DScaleCandidate
+                    ? "CANDIDATE_USER_APPROVAL_REQUIRED"
+                    : "PASS"));
             result.AppendLine("releasePlayer=true");
             result.AppendLine("renderer=D3D11");
             result.AppendLine("actors=player,father");
@@ -718,6 +965,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                               playerMedianFootLocalZ.ToString("F6") + "/" +
                               fatherMedianFootLocalX.ToString("F6") + "/" +
                               fatherMedianFootLocalZ.ToString("F6"));
+            result.AppendLine("sameTileShoeCentroidDeltaPx=" +
+                              sameTileShoeCentroidDeltaPixels.x.ToString("F3") + "/" +
+                              sameTileShoeCentroidDeltaPixels.y.ToString("F3"));
+            // Vertical grounding, world units above the host ground: lowest Foot/Toes bone,
+            // lowest baked skinned vertex, renderer bounds minimum. Order Player/Father, median/min.
+            result.AppendLine("walkGroundClearanceBoneY=" + FormatGroundClearance(
+                                  playerGroundSamples, fatherGroundSamples, sample => sample.boneMinY));
+            result.AppendLine("walkGroundClearanceMeshY=" + FormatGroundClearance(
+                                  playerGroundSamples, fatherGroundSamples, sample => sample.bakedMeshMinY));
+            result.AppendLine("walkGroundClearanceBoundsY=" + FormatGroundClearance(
+                                  playerGroundSamples, fatherGroundSamples, sample => sample.boundsMinY));
+            result.AppendLine("dynamicShoeLaneOffsetMedianPx=" +
+                              playerMedianShoeLaneOffsetPixels.ToString("F3") + "/" +
+                              fatherMedianShoeLaneOffsetPixels.ToString("F3") + "/" +
+                              dynamicShoeLaneDeltaPixels.ToString("F3"));
             result.AppendLine("minimumPlantedShoeTileLineClearancePx=" +
                               playerMinimumPlantedFootLineClearancePx.ToString("F3") + "/" +
                               fatherMinimumPlantedFootLineClearancePx.ToString("F3"));
@@ -727,6 +989,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("plantedShoeTileLineTouchFrames=" +
                               playerPlantedFootLineTouchFrames + "/" +
                               fatherPlantedFootLineTouchFrames);
+            result.AppendLine("minimumRenderedShoePixelTileMarginPx=" +
+                              playerMinimumRenderedShoePixelTileMargin.ToString("F3") + "/" +
+                              fatherMinimumRenderedShoePixelTileMargin.ToString("F3"));
+            result.AppendLine("renderedShoePixelOutsideFrames=" +
+                              playerRenderedShoeOutsideFrames + "/" +
+                              fatherRenderedShoeOutsideFrames);
+            result.AppendLine("renderedPlantedShoePixelOutsideFrames=" +
+                              playerRenderedPlantedShoeOutsideFrames + "/" +
+                              fatherRenderedPlantedShoeOutsideFrames);
+            result.AppendLine("renderedShoePixelMeasuredFrames=" +
+                              playerRenderedShoeMeasuredFrames + "/" +
+                              fatherRenderedShoeMeasuredFrames);
             result.AppendLine("playerRenderedHeightRange=" + playerHeightSamples.Min() + "/" +
                               playerRenderedHeight + "/" + playerHeightSamples.Max());
             result.AppendLine("fatherRenderedHeightRange=" + fatherHeightSamples.Min() + "/" +
@@ -824,6 +1098,91 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 actor.QaSetDirectMovementInput(Vector2.zero);
                 index++;
             }
+        }
+
+        private struct GroundClearanceSample
+        {
+            public float boneMinY;
+            public float bakedMeshMinY;
+            public float boundsMinY;
+        }
+
+        /// <summary>
+        /// Vertical grounding of one production host, in world units above the host ground point:
+        /// the lowest Foot/Toes bone, the lowest actually skinned vertex (BakeMesh) and the renderer
+        /// bounds minimum used by the presenter ground lift. A mesh minimum well above zero means
+        /// the visible soles float and read as standing on the far tile line in the isometric view.
+        /// </summary>
+        private static bool TryMeasureGroundClearance(string hostName, out GroundClearanceSample sample)
+        {
+            sample = default;
+            GameObject host = GameObject.Find(hostName);
+            if (host == null) return false;
+            Animator animator = host.GetComponentInChildren<Animator>(true);
+            SkinnedMeshRenderer skinned = host.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (animator == null || skinned == null || skinned.sharedMesh == null) return false;
+            // Production ground plane is world y = 0 (Plane(Vector3.up, zero) in the presenter);
+            // the host transform itself may carry the candidate standing ground correction.
+            const float groundY = 0f;
+            float boneMin = float.PositiveInfinity;
+            foreach (HumanBodyBones bone in new[]
+                     {
+                         HumanBodyBones.LeftFoot, HumanBodyBones.RightFoot,
+                         HumanBodyBones.LeftToes, HumanBodyBones.RightToes
+                     })
+            {
+                Transform boneTransform = animator.GetBoneTransform(bone);
+                if (boneTransform != null)
+                    boneMin = Mathf.Min(boneMin, boneTransform.position.y - groundY);
+            }
+            if (float.IsInfinity(boneMin)) return false;
+            var baked = new Mesh();
+            skinned.BakeMesh(baked, true);
+            Vector3[] vertices = baked.vertices;
+            Transform rendererTransform = skinned.transform;
+            float meshMin = float.PositiveInfinity;
+            for (var index = 0; index < vertices.Length; index++)
+            {
+                Vector3 world = rendererTransform.position + rendererTransform.rotation * vertices[index];
+                if (world.y < meshMin) meshMin = world.y;
+            }
+            Object.Destroy(baked);
+            if (float.IsInfinity(meshMin)) return false;
+            sample = new GroundClearanceSample
+            {
+                boneMinY = boneMin,
+                bakedMeshMinY = meshMin - groundY,
+                boundsMinY = skinned.bounds.min.y - groundY
+            };
+            return true;
+        }
+
+        private static string FormatGroundClearance(
+            List<GroundClearanceSample> playerSamples,
+            List<GroundClearanceSample> fatherSamples,
+            Func<GroundClearanceSample, float> selector)
+        {
+            return GroundClearanceMedian(playerSamples, selector).ToString("F4") + "/" +
+                   GroundClearanceMinimum(playerSamples, selector).ToString("F4") + "/" +
+                   GroundClearanceMedian(fatherSamples, selector).ToString("F4") + "/" +
+                   GroundClearanceMinimum(fatherSamples, selector).ToString("F4");
+        }
+
+        private static float GroundClearanceMedian(
+            List<GroundClearanceSample> samples,
+            Func<GroundClearanceSample, float> selector)
+        {
+            if (samples.Count == 0) return float.NaN;
+            List<float> values = samples.Select(selector).OrderBy(value => value).ToList();
+            int middle = values.Count / 2;
+            return values.Count % 2 == 1 ? values[middle] : 0.5f * (values[middle - 1] + values[middle]);
+        }
+
+        private static float GroundClearanceMinimum(
+            List<GroundClearanceSample> samples,
+            Func<GroundClearanceSample, float> selector)
+        {
+            return samples.Count == 0 ? float.NaN : samples.Min(selector);
         }
 
         private static bool TryMeasureKnees(
@@ -1174,6 +1533,1059 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                              delta.y * normalizedDirection.x);
         }
 
+        private static bool TryCaptureSameTileRatioEvidence(
+            StarterOfficeRuntimeBootstrap runtime,
+            OfficeRuntimeAgent player,
+            OfficeRuntimeAgent father,
+            OfficeGridCoordinate referenceCell,
+            string outputDirectory,
+            out Vector2 shoeCentroidDeltaPixels,
+            out string failure)
+        {
+            shoeCentroidDeltaPixels = new Vector2(
+                float.PositiveInfinity,
+                float.PositiveInfinity);
+            failure = string.Empty;
+            Vector2 expectedCenter = runtime.World.Presenter.CellCenterWorld(referenceCell);
+            if (Vector2.Distance(player.Position, expectedCenter) > 0.0001f ||
+                Vector2.Distance(father.Position, expectedCenter) > 0.0001f)
+            {
+                failure = "actors are not on the exact same reference tile";
+                return false;
+            }
+
+            if (!TryCaptureOverviewWithOnlyProductionHost(
+                    "PlayerV8ProductionHost",
+                    Path.Combine(outputDirectory, "ratio-player-same-tile.png"),
+                    out failure) ||
+                !TryCaptureOverviewWithOnlyProductionHost(
+                    "FatherV19ProductionHost",
+                    Path.Combine(outputDirectory, "ratio-father-same-tile.png"),
+                    out failure))
+                return false;
+
+            if (!TryRenderActorMaskAndMeasureBody(
+                    "PlayerV8ProductionHost",
+                    Path.Combine(outputDirectory, "ratio-player-isolated.png"),
+                    out ActorBodyPixelMetrics playerMetrics,
+                    out failure) ||
+                !TryRenderActorMaskAndMeasureBody(
+                    "FatherV19ProductionHost",
+                    Path.Combine(outputDirectory, "ratio-father-isolated.png"),
+                    out ActorBodyPixelMetrics fatherMetrics,
+                    out failure))
+                return false;
+
+            shoeCentroidDeltaPixels = new Vector2(
+                fatherMetrics.shoeCentroidX - playerMetrics.shoeCentroidX,
+                fatherMetrics.shoeCentroidY - playerMetrics.shoeCentroidY);
+
+            var result = new StringBuilder();
+            result.AppendLine("FATHER_PLAYER_SAME_TILE_PIXEL_RATIO: CAPTURED_USER_REVIEW_REQUIRED");
+            if (TryMeasureGroundClearance("PlayerV8ProductionHost", out GroundClearanceSample playerGround) &&
+                TryMeasureGroundClearance("FatherV19ProductionHost", out GroundClearanceSample fatherGround))
+            {
+                result.AppendLine("sameTileGroundClearanceBoneY=" +
+                                  playerGround.boneMinY.ToString("F4") + "/" + fatherGround.boneMinY.ToString("F4"));
+                result.AppendLine("sameTileGroundClearanceMeshY=" +
+                                  playerGround.bakedMeshMinY.ToString("F4") + "/" + fatherGround.bakedMeshMinY.ToString("F4"));
+                result.AppendLine("sameTileGroundClearanceBoundsY=" +
+                                  playerGround.boundsMinY.ToString("F4") + "/" + fatherGround.boundsMinY.ToString("F4"));
+            }
+            result.AppendLine("productionEligible=False");
+            result.AppendLine("referenceCell=" + referenceCell.X + "," + referenceCell.Y);
+            result.AppendLine("sameCameraLightTile=True");
+            result.AppendLine("measurementResolution=1280x720");
+            AppendActorBodyPixelMetrics(result, "player", playerMetrics);
+            AppendActorBodyPixelMetrics(result, "father", fatherMetrics);
+            result.AppendLine("fatherToPlayerHeightRatio=" +
+                              Invariant(fatherMetrics.height / (float)playerMetrics.height));
+            result.AppendLine("fatherToPlayerHeadHeightRatio=" +
+                              Invariant(fatherMetrics.headHeight / (float)playerMetrics.headHeight));
+            result.AppendLine("fatherToPlayerHeadWidthRatio=" +
+                              Invariant(fatherMetrics.headWidth / (float)playerMetrics.headWidth));
+            result.AppendLine("fatherToPlayerShoulderWidthRatio=" +
+                              Invariant(fatherMetrics.shoulderWidth /
+                                        (float)playerMetrics.shoulderWidth));
+            result.AppendLine("fatherToPlayerTorsoWidthRatio=" +
+                              Invariant(fatherMetrics.torsoWidth / (float)playerMetrics.torsoWidth));
+            result.AppendLine("fatherToPlayerLegHeightRatio=" +
+                              Invariant(fatherMetrics.legHeight / (float)playerMetrics.legHeight));
+            result.AppendLine("fatherToPlayerShoeAreaRatio=" +
+                              Invariant(fatherMetrics.shoePixels /
+                                        (float)Mathf.Max(playerMetrics.shoePixels, 1)));
+            result.AppendLine("sameTileShoeCentroidDeltaPx=" +
+                              Invariant(shoeCentroidDeltaPixels.x) + "/" +
+                              Invariant(shoeCentroidDeltaPixels.y));
+            result.AppendLine("fatherToPlayerSilhouetteAreaRatio=" +
+                              Invariant(fatherMetrics.pixels / (float)playerMetrics.pixels));
+            File.WriteAllText(
+                Path.Combine(outputDirectory, "father-player-same-tile-pixel-ratio.txt"),
+                result.ToString(),
+                new UTF8Encoding(false));
+            return true;
+        }
+
+        private static void AppendActorBodyPixelMetrics(
+            StringBuilder result,
+            string actor,
+            ActorBodyPixelMetrics metrics)
+        {
+            result.AppendLine(actor + "RenderedBounds=" + metrics.width + "x" + metrics.height);
+            result.AppendLine(actor + "HeadBounds=" +
+                              metrics.headWidth + "x" + metrics.headHeight);
+            result.AppendLine(actor + "HeadToHeightRatio=" + Invariant(metrics.headToHeightRatio));
+            result.AppendLine(actor + "ShoulderTorsoWidths=" +
+                              metrics.shoulderWidth + "/" + metrics.torsoWidth);
+            result.AppendLine(actor + "LegBounds=" +
+                              metrics.legWidth + "x" + metrics.legHeight);
+            result.AppendLine(actor + "ShoeBoundsPixels=" +
+                              metrics.shoeWidth + "x" + metrics.shoeHeight + "/" +
+                              metrics.shoePixels);
+            result.AppendLine(actor + "ShoeCentroidPx=" +
+                              Invariant(metrics.shoeCentroidX) + "/" +
+                              Invariant(metrics.shoeCentroidY));
+            result.AppendLine(actor + "SilhouettePixels=" + metrics.pixels);
+            result.AppendLine(actor + "ScreenOccupationPercent=" +
+                              metrics.screenOccupationPercent.ToString(
+                                  "F6",
+                                  System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        private static bool TryCaptureOverviewWithOnlyProductionHost(
+            string visibleHostName,
+            string path,
+            out string failure)
+        {
+            failure = string.Empty;
+            GameObject player = GameObject.Find("PlayerV8ProductionHost");
+            GameObject father = GameObject.Find("FatherV19ProductionHost");
+            GameObject visible = GameObject.Find(visibleHostName);
+            if (player == null || father == null || visible == null)
+            {
+                failure = "production hosts missing";
+                return false;
+            }
+            Renderer[] playerRenderers = player.GetComponentsInChildren<Renderer>(true);
+            Renderer[] fatherRenderers = father.GetComponentsInChildren<Renderer>(true);
+            Renderer[] visibleRenderers = visible.GetComponentsInChildren<Renderer>(true);
+            Renderer[] all = playerRenderers.Concat(fatherRenderers).Distinct().ToArray();
+            bool[] original = all.Select(renderer => renderer.forceRenderingOff).ToArray();
+            try
+            {
+                for (var index = 0; index < all.Length; index++)
+                    all[index].forceRenderingOff = true;
+                for (var index = 0; index < visibleRenderers.Length; index++)
+                    visibleRenderers[index].forceRenderingOff = false;
+                return TryCaptureOverview(path, out failure);
+            }
+            finally
+            {
+                for (var index = 0; index < all.Length; index++)
+                    all[index].forceRenderingOff = original[index];
+            }
+        }
+
+        private static bool TryRenderActorMaskAndMeasureBody(
+            string productionHostName,
+            string savePath,
+            out ActorBodyPixelMetrics metrics,
+            out string failure)
+        {
+            metrics = default;
+            if (!TryRenderIsolatedProductionHost(
+                    productionHostName,
+                    savePath,
+                    out Color32[] sample,
+                    out int width,
+                    out int height,
+                    out Camera overlay,
+                    out Animator animator,
+                    out failure))
+                return false;
+            if (!TryMeasureActorBodyPixels(
+                    sample,
+                    width,
+                    height,
+                    overlay,
+                    animator,
+                    out metrics))
+            {
+                failure = "body pixel segmentation failed";
+                return false;
+            }
+            if (!TryRenderIsolatedProductionShoes(
+                    productionHostName,
+                    string.IsNullOrWhiteSpace(savePath)
+                        ? string.Empty
+                        : Path.Combine(
+                            Path.GetDirectoryName(savePath) ?? string.Empty,
+                            Path.GetFileNameWithoutExtension(savePath) + "-shoes.png"),
+                    out Color32[] shoeSample,
+                    out int shoeImageWidth,
+                    out int shoeImageHeight,
+                    out _,
+                    out _,
+                    out failure))
+                return false;
+            MeasureMaskRegionBounds(
+                shoeSample,
+                shoeImageWidth,
+                0,
+                shoeImageWidth - 1,
+                0,
+                shoeImageHeight - 1,
+                out metrics.shoeWidth,
+                out metrics.shoeHeight,
+                out metrics.shoePixels);
+            if (!TryMeasureMaskCentroid(
+                    shoeSample,
+                    shoeImageWidth,
+                    out metrics.shoeCentroidX,
+                    out metrics.shoeCentroidY))
+            {
+                failure = "shoe pixel centroid failed";
+                return false;
+            }
+            return true;
+        }
+
+        private static bool TryMeasureMaskCentroid(
+            Color32[] sample,
+            int imageWidth,
+            out float centroidX,
+            out float centroidY)
+        {
+            double sumX = 0d;
+            double sumY = 0d;
+            var count = 0;
+            for (var index = 0; index < sample.Length; index++)
+            {
+                if (sample[index].a <= 32) continue;
+                sumX += index % imageWidth + 0.5d;
+                sumY += index / imageWidth + 0.5d;
+                count++;
+            }
+            centroidX = count == 0 ? float.PositiveInfinity : (float)(sumX / count);
+            centroidY = count == 0 ? float.PositiveInfinity : (float)(sumY / count);
+            return count > 0;
+        }
+
+        private static bool TryRenderIsolatedProductionHost(
+            string productionHostName,
+            string savePath,
+            out Color32[] sample,
+            out int width,
+            out int height,
+            out Camera overlay,
+            out Animator animator,
+            out string failure)
+        {
+            const int captureWidth = 1280;
+            const int captureHeight = 720;
+            sample = Array.Empty<Color32>();
+            width = captureWidth;
+            height = captureHeight;
+            overlay = Object.FindObjectsByType<Camera>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None)
+                .FirstOrDefault(candidate => candidate != null && string.Equals(
+                    candidate.gameObject.name,
+                    "Family3DProductionOverlayCamera",
+                    StringComparison.Ordinal));
+            animator = null;
+            failure = string.Empty;
+            GameObject player = GameObject.Find("PlayerV8ProductionHost");
+            GameObject father = GameObject.Find("FatherV19ProductionHost");
+            GameObject targetHost = GameObject.Find(productionHostName);
+            if (player == null || father == null || targetHost == null || overlay == null)
+            {
+                failure = "production hosts or overlay camera missing";
+                return false;
+            }
+            animator = targetHost.GetComponentInChildren<Animator>(true);
+            if (animator == null)
+            {
+                failure = "target Animator missing";
+                return false;
+            }
+            Renderer[] playerRenderers = player.GetComponentsInChildren<Renderer>(true);
+            Renderer[] fatherRenderers = father.GetComponentsInChildren<Renderer>(true);
+            Renderer[] targetRenderers = targetHost.GetComponentsInChildren<Renderer>(true);
+            Renderer[] all = playerRenderers.Concat(fatherRenderers).Distinct().ToArray();
+            bool[] original = all.Select(renderer => renderer.forceRenderingOff).ToArray();
+            var target = new RenderTexture(
+                captureWidth,
+                captureHeight,
+                24,
+                RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.sRGB);
+            var texture = new Texture2D(
+                captureWidth,
+                captureHeight,
+                TextureFormat.RGBA32,
+                false);
+            RenderTexture previousActive = RenderTexture.active;
+            RenderTexture previousTarget = overlay.targetTexture;
+            CameraClearFlags previousClearFlags = overlay.clearFlags;
+            Color previousBackground = overlay.backgroundColor;
+            try
+            {
+                for (var index = 0; index < all.Length; index++)
+                    all[index].forceRenderingOff = true;
+                for (var index = 0; index < targetRenderers.Length; index++)
+                    targetRenderers[index].forceRenderingOff = false;
+                overlay.targetTexture = target;
+                overlay.clearFlags = CameraClearFlags.SolidColor;
+                overlay.backgroundColor = Color.clear;
+                overlay.Render();
+                RenderTexture.active = target;
+                texture.ReadPixels(
+                    new Rect(0f, 0f, captureWidth, captureHeight),
+                    0,
+                    0,
+                    false);
+                texture.Apply(false, false);
+                sample = texture.GetPixels32();
+                if (!string.IsNullOrWhiteSpace(savePath))
+                    File.WriteAllBytes(savePath, texture.EncodeToPNG());
+                return sample.Any(pixel => pixel.a > 32);
+            }
+            catch (Exception exception)
+            {
+                failure = exception.GetType().Name + ":" + exception.Message;
+                return false;
+            }
+            finally
+            {
+                for (var index = 0; index < all.Length; index++)
+                    all[index].forceRenderingOff = original[index];
+                overlay.targetTexture = previousTarget;
+                overlay.clearFlags = previousClearFlags;
+                overlay.backgroundColor = previousBackground;
+                RenderTexture.active = previousActive;
+                Object.Destroy(target);
+                Object.Destroy(texture);
+            }
+        }
+
+        private static bool TryRenderIsolatedProductionShoes(
+            string productionHostName,
+            string savePath,
+            out Color32[] sample,
+            out int width,
+            out int height,
+            out Camera overlay,
+            out Animator animator,
+            out string failure)
+        {
+            const int captureWidth = 1280;
+            const int captureHeight = 720;
+            sample = Array.Empty<Color32>();
+            width = captureWidth;
+            height = captureHeight;
+            overlay = Object.FindObjectsByType<Camera>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None)
+                .FirstOrDefault(candidate => candidate != null && string.Equals(
+                    candidate.gameObject.name,
+                    "Family3DProductionOverlayCamera",
+                    StringComparison.Ordinal));
+            animator = null;
+            failure = string.Empty;
+            GameObject player = GameObject.Find("PlayerV8ProductionHost");
+            GameObject father = GameObject.Find("FatherV19ProductionHost");
+            GameObject targetHost = GameObject.Find(productionHostName);
+            if (player == null || father == null || targetHost == null || overlay == null)
+            {
+                failure = "production hosts or overlay camera missing";
+                return false;
+            }
+            animator = targetHost.GetComponentInChildren<Animator>(true);
+            SkinnedMeshRenderer source = targetHost.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (animator == null || source == null || source.sharedMesh == null)
+            {
+                failure = "target Animator or skinned mesh missing";
+                return false;
+            }
+            Transform leftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            Transform leftToe = animator.GetBoneTransform(HumanBodyBones.LeftToes);
+            Transform rightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+            Transform rightToe = animator.GetBoneTransform(HumanBodyBones.RightToes);
+            if (leftFoot == null || leftToe == null || rightFoot == null || rightToe == null)
+            {
+                failure = "shoe bones missing";
+                return false;
+            }
+
+            Transform[] bones = source.bones;
+            var shoeBoneIndices = new HashSet<int>();
+            for (var index = 0; index < bones.Length; index++)
+                if (bones[index] == leftFoot || bones[index] == leftToe ||
+                    bones[index] == rightFoot || bones[index] == rightToe)
+                    shoeBoneIndices.Add(index);
+            Mesh sourceMesh = source.sharedMesh;
+            BoneWeight[] weights = sourceMesh.boneWeights;
+            if (shoeBoneIndices.Count < 2 || weights.Length != sourceMesh.vertexCount)
+            {
+                failure = "shoe skin weights unavailable";
+                return false;
+            }
+            var shoeTriangles = new List<int>();
+            for (var subMesh = 0; subMesh < sourceMesh.subMeshCount; subMesh++)
+            {
+                int[] triangles = sourceMesh.GetTriangles(subMesh);
+                for (var triangle = 0; triangle + 2 < triangles.Length; triangle += 3)
+                {
+                    var weightedVertices = 0;
+                    for (var corner = 0; corner < 3; corner++)
+                    {
+                        BoneWeight weight = weights[triangles[triangle + corner]];
+                        float shoeWeight = 0f;
+                        if (shoeBoneIndices.Contains(weight.boneIndex0)) shoeWeight += weight.weight0;
+                        if (shoeBoneIndices.Contains(weight.boneIndex1)) shoeWeight += weight.weight1;
+                        if (shoeBoneIndices.Contains(weight.boneIndex2)) shoeWeight += weight.weight2;
+                        if (shoeBoneIndices.Contains(weight.boneIndex3)) shoeWeight += weight.weight3;
+                        if (shoeWeight >= 0.35f) weightedVertices++;
+                    }
+                    if (weightedVertices < 2) continue;
+                    shoeTriangles.Add(triangles[triangle]);
+                    shoeTriangles.Add(triangles[triangle + 1]);
+                    shoeTriangles.Add(triangles[triangle + 2]);
+                }
+            }
+            if (shoeTriangles.Count < 6)
+            {
+                failure = "no foot-weighted shoe triangles found";
+                return false;
+            }
+
+            Renderer[] playerRenderers = player.GetComponentsInChildren<Renderer>(true);
+            Renderer[] fatherRenderers = father.GetComponentsInChildren<Renderer>(true);
+            Renderer[] all = playerRenderers.Concat(fatherRenderers).Distinct().ToArray();
+            bool[] original = all.Select(renderer => renderer.forceRenderingOff).ToArray();
+            Mesh shoeMesh = Object.Instantiate(sourceMesh);
+            shoeMesh.name = sourceMesh.name + "_QaShoePixels";
+            shoeMesh.subMeshCount = 1;
+            shoeMesh.SetTriangles(shoeTriangles, 0, true);
+            GameObject shoeHost = new GameObject("~QaRenderedShoePixels")
+                { hideFlags = HideFlags.HideAndDontSave };
+            shoeHost.layer = source.gameObject.layer;
+            shoeHost.transform.SetParent(source.transform.parent, false);
+            shoeHost.transform.localPosition = source.transform.localPosition;
+            shoeHost.transform.localRotation = source.transform.localRotation;
+            shoeHost.transform.localScale = source.transform.localScale;
+            SkinnedMeshRenderer shoeRenderer = shoeHost.AddComponent<SkinnedMeshRenderer>();
+            shoeRenderer.sharedMesh = shoeMesh;
+            shoeRenderer.rootBone = source.rootBone;
+            shoeRenderer.bones = source.bones;
+            shoeRenderer.localBounds = source.localBounds;
+            shoeRenderer.updateWhenOffscreen = true;
+            // Sprites/Default is already retained by the office build and provides a stable
+            // opaque-white mask without depending on an otherwise stripped QA-only shader.
+            Shader unlit = Shader.Find("Sprites/Default");
+            if (unlit == null)
+            {
+                Object.Destroy(shoeHost);
+                Object.Destroy(shoeMesh);
+                failure = "Sprites/Default shader missing";
+                return false;
+            }
+            var shoeMaterial = new Material(unlit)
+            {
+                name = "QaRenderedShoePixelMask",
+                color = Color.white,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            shoeRenderer.sharedMaterial = shoeMaterial;
+            var target = new RenderTexture(
+                captureWidth,
+                captureHeight,
+                24,
+                RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.sRGB);
+            var texture = new Texture2D(captureWidth, captureHeight, TextureFormat.RGBA32, false);
+            RenderTexture previousActive = RenderTexture.active;
+            RenderTexture previousTarget = overlay.targetTexture;
+            CameraClearFlags previousClearFlags = overlay.clearFlags;
+            Color previousBackground = overlay.backgroundColor;
+            try
+            {
+                for (var index = 0; index < all.Length; index++)
+                    all[index].forceRenderingOff = true;
+                overlay.targetTexture = target;
+                overlay.clearFlags = CameraClearFlags.SolidColor;
+                overlay.backgroundColor = Color.clear;
+                overlay.Render();
+                RenderTexture.active = target;
+                texture.ReadPixels(new Rect(0f, 0f, captureWidth, captureHeight), 0, 0, false);
+                texture.Apply(false, false);
+                sample = texture.GetPixels32();
+                if (!string.IsNullOrWhiteSpace(savePath))
+                    File.WriteAllBytes(savePath, texture.EncodeToPNG());
+                if (!sample.Any(pixel => pixel.a > 32))
+                {
+                    failure = "shoe-only render contained no opaque pixels";
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception exception)
+            {
+                failure = exception.GetType().Name + ":" + exception.Message;
+                return false;
+            }
+            finally
+            {
+                for (var index = 0; index < all.Length; index++)
+                    all[index].forceRenderingOff = original[index];
+                overlay.targetTexture = previousTarget;
+                overlay.clearFlags = previousClearFlags;
+                overlay.backgroundColor = previousBackground;
+                RenderTexture.active = previousActive;
+                Object.Destroy(target);
+                Object.Destroy(texture);
+                Object.Destroy(shoeHost);
+                Object.Destroy(shoeMaterial);
+                Object.Destroy(shoeMesh);
+            }
+        }
+
+        private static bool TryMeasureActorBodyPixels(
+            Color32[] sample,
+            int width,
+            int height,
+            Camera overlay,
+            Animator animator,
+            out ActorBodyPixelMetrics metrics)
+        {
+            metrics = default;
+            Transform neck = animator.GetBoneTransform(HumanBodyBones.Neck);
+            Transform hips = animator.GetBoneTransform(HumanBodyBones.Hips);
+            Transform leftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            Transform rightUpperArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            Transform leftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            Transform rightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+            Transform leftToe = animator.GetBoneTransform(HumanBodyBones.LeftToes);
+            Transform rightToe = animator.GetBoneTransform(HumanBodyBones.RightToes);
+            if (neck == null || hips == null || leftUpperArm == null || rightUpperArm == null ||
+                leftFoot == null || rightFoot == null || leftToe == null || rightToe == null)
+                return false;
+
+            Vector2 neckPixel = ProjectOverlayPixel(overlay, neck.position, width, height);
+            Vector2 hipsPixel = ProjectOverlayPixel(overlay, hips.position, width, height);
+            Vector2 leftShoulderPixel = ProjectOverlayPixel(
+                overlay,
+                leftUpperArm.position,
+                width,
+                height);
+            Vector2 rightShoulderPixel = ProjectOverlayPixel(
+                overlay,
+                rightUpperArm.position,
+                width,
+                height);
+            Vector2 leftAnklePixel = ProjectOverlayPixel(overlay, leftFoot.position, width, height);
+            Vector2 rightAnklePixel = ProjectOverlayPixel(overlay, rightFoot.position, width, height);
+            Vector2 leftToePixel = ProjectOverlayPixel(overlay, leftToe.position, width, height);
+            Vector2 rightToePixel = ProjectOverlayPixel(overlay, rightToe.position, width, height);
+
+            int minX = width;
+            int minY = height;
+            int maxX = -1;
+            int maxY = -1;
+            var silhouettePixels = 0;
+            for (var index = 0; index < sample.Length; index++)
+            {
+                if (sample[index].a <= 32) continue;
+                silhouettePixels++;
+                int x = index % width;
+                int y = index / width;
+                minX = Mathf.Min(minX, x);
+                minY = Mathf.Min(minY, y);
+                maxX = Mathf.Max(maxX, x);
+                maxY = Mathf.Max(maxY, y);
+            }
+            if (maxX < minX || maxY < minY || silhouettePixels < 50)
+                return false;
+
+            int neckY = Mathf.Clamp(Mathf.RoundToInt(neckPixel.y), minY, maxY);
+            int hipsY = Mathf.Clamp(Mathf.RoundToInt(hipsPixel.y), minY, maxY);
+            int shoulderY = Mathf.Clamp(
+                Mathf.RoundToInt((leftShoulderPixel.y + rightShoulderPixel.y) * 0.5f),
+                minY,
+                maxY);
+            MeasureMaskRegionBounds(
+                sample,
+                width,
+                minX,
+                maxX,
+                neckY,
+                maxY,
+                out int headWidth,
+                out int headHeight,
+                out _);
+            int shoulderWidth = MeasureMaximumRowWidth(
+                sample,
+                width,
+                minX,
+                maxX,
+                Mathf.Max(minY, shoulderY - 4),
+                Mathf.Min(maxY, shoulderY + 4));
+            int torsoWidth = MeasureMaximumRowWidth(
+                sample,
+                width,
+                minX,
+                maxX,
+                Mathf.Min(hipsY, neckY),
+                Mathf.Max(hipsY, neckY));
+            MeasureMaskRegionBounds(
+                sample,
+                width,
+                minX,
+                maxX,
+                minY,
+                hipsY,
+                out int legWidth,
+                out int legHeight,
+                out _);
+            MeasureShoePixelBounds(
+                sample,
+                width,
+                minX,
+                maxX,
+                minY,
+                maxY,
+                leftAnklePixel,
+                leftToePixel,
+                rightAnklePixel,
+                rightToePixel,
+                out int shoeWidth,
+                out int shoeHeight,
+                out int shoePixels);
+
+            int renderedHeight = maxY - minY + 1;
+            metrics = new ActorBodyPixelMetrics
+            {
+                pixels = silhouettePixels,
+                width = maxX - minX + 1,
+                height = renderedHeight,
+                headWidth = headWidth,
+                headHeight = headHeight,
+                headToHeightRatio = headHeight / (float)Mathf.Max(renderedHeight, 1),
+                shoulderWidth = shoulderWidth,
+                torsoWidth = torsoWidth,
+                legWidth = legWidth,
+                legHeight = legHeight,
+                shoeWidth = shoeWidth,
+                shoeHeight = shoeHeight,
+                shoePixels = shoePixels,
+                screenOccupationPercent =
+                    silhouettePixels * 100f / (width * (float)height)
+            };
+            return headWidth > 0 && headHeight > 0 && shoulderWidth > 0 &&
+                   torsoWidth > 0 && legHeight > 0 && shoePixels >= 8;
+        }
+
+        private static void MeasureMaskRegionBounds(
+            Color32[] sample,
+            int imageWidth,
+            int minimumX,
+            int maximumX,
+            int minimumY,
+            int maximumY,
+            out int width,
+            out int height,
+            out int pixels)
+        {
+            int foundMinX = imageWidth;
+            int foundMinY = int.MaxValue;
+            int foundMaxX = -1;
+            int foundMaxY = -1;
+            pixels = 0;
+            for (int y = minimumY; y <= maximumY; y++)
+            {
+                int row = y * imageWidth;
+                for (int x = minimumX; x <= maximumX; x++)
+                {
+                    if (sample[row + x].a <= 32) continue;
+                    pixels++;
+                    foundMinX = Mathf.Min(foundMinX, x);
+                    foundMinY = Mathf.Min(foundMinY, y);
+                    foundMaxX = Mathf.Max(foundMaxX, x);
+                    foundMaxY = Mathf.Max(foundMaxY, y);
+                }
+            }
+            width = foundMaxX < foundMinX ? 0 : foundMaxX - foundMinX + 1;
+            height = foundMaxY < foundMinY ? 0 : foundMaxY - foundMinY + 1;
+        }
+
+        private static int MeasureMaximumRowWidth(
+            Color32[] sample,
+            int imageWidth,
+            int minimumX,
+            int maximumX,
+            int minimumY,
+            int maximumY)
+        {
+            var maximumWidth = 0;
+            for (int y = minimumY; y <= maximumY; y++)
+            {
+                int row = y * imageWidth;
+                int rowMin = imageWidth;
+                int rowMax = -1;
+                for (int x = minimumX; x <= maximumX; x++)
+                {
+                    if (sample[row + x].a <= 32) continue;
+                    rowMin = Mathf.Min(rowMin, x);
+                    rowMax = Mathf.Max(rowMax, x);
+                }
+                if (rowMax >= rowMin)
+                    maximumWidth = Mathf.Max(maximumWidth, rowMax - rowMin + 1);
+            }
+            return maximumWidth;
+        }
+
+        private static void MeasureShoePixelBounds(
+            Color32[] sample,
+            int imageWidth,
+            int minimumX,
+            int maximumX,
+            int minimumY,
+            int maximumY,
+            Vector2 leftAnkle,
+            Vector2 leftToe,
+            Vector2 rightAnkle,
+            Vector2 rightToe,
+            out int width,
+            out int height,
+            out int pixels)
+        {
+            // At the fixed 1280x720 measurement resolution the visible shoe is only about
+            // 5-7 px away from its ankle-to-toe axis.  The earlier 14 px radius admitted the
+            // lower shin and reported 250-400 "shoe" pixels per foot.  Keep this mask tight so
+            // the sampled contour follows the rendered shoe rather than the trouser leg.
+            const float soleRadiusPixels = 7f;
+            int foundMinX = imageWidth;
+            int foundMinY = int.MaxValue;
+            int foundMaxX = -1;
+            int foundMaxY = -1;
+            pixels = 0;
+            float maximumShoeY = Mathf.Max(
+                Mathf.Max(leftAnkle.y, leftToe.y),
+                Mathf.Max(rightAnkle.y, rightToe.y)) + 3f;
+            for (int y = minimumY; y <= maximumY && y <= maximumShoeY; y++)
+            {
+                int row = y * imageWidth;
+                for (int x = minimumX; x <= maximumX; x++)
+                {
+                    if (sample[row + x].a <= 32) continue;
+                    var point = new Vector2(x + 0.5f, y + 0.5f);
+                    float distance = Mathf.Min(
+                        DistancePointToSegment(point, leftAnkle, leftToe),
+                        DistancePointToSegment(point, rightAnkle, rightToe));
+                    if (distance > soleRadiusPixels) continue;
+                    pixels++;
+                    foundMinX = Mathf.Min(foundMinX, x);
+                    foundMinY = Mathf.Min(foundMinY, y);
+                    foundMaxX = Mathf.Max(foundMaxX, x);
+                    foundMaxY = Mathf.Max(foundMaxY, y);
+                }
+            }
+            width = foundMaxX < foundMinX ? 0 : foundMaxX - foundMinX + 1;
+            height = foundMaxY < foundMinY ? 0 : foundMaxY - foundMinY + 1;
+        }
+
+        private static bool TryMeasureRenderedShoePixelTileContainment(
+            StarterOfficeRuntimeBootstrap runtime,
+            OfficeRuntimeAgent agent,
+            string productionHostName,
+            out RenderedShoePixelSample result,
+            out string failure)
+        {
+            result = default;
+            failure = string.Empty;
+            if (!TryRenderIsolatedProductionHost(
+                    productionHostName,
+                    string.Empty,
+                    out Color32[] bodySample,
+                    out int width,
+                    out int height,
+                    out Camera overlay,
+                    out Animator animator,
+                    out failure))
+                return false;
+            if (!TryMeasureActorBodyPixels(
+                    bodySample,
+                    width,
+                    height,
+                    overlay,
+                    animator,
+                    out ActorBodyPixelMetrics bodyMetrics))
+            {
+                failure = "body pixel segmentation failed during shoe measurement";
+                return false;
+            }
+            if (!TryRenderIsolatedProductionShoes(
+                    productionHostName,
+                    string.Empty,
+                    out Color32[] sample,
+                    out int shoeWidth,
+                    out int shoeHeight,
+                    out overlay,
+                    out animator,
+                    out failure))
+                return false;
+            if (shoeWidth != width || shoeHeight != height)
+            {
+                failure = "shoe/body render dimensions differ";
+                return false;
+            }
+            Camera source = Camera.main;
+            Transform leftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            Transform rightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+            Transform leftToe = animator.GetBoneTransform(HumanBodyBones.LeftToes);
+            Transform rightToe = animator.GetBoneTransform(HumanBodyBones.RightToes);
+            if (source == null || leftFoot == null || rightFoot == null ||
+                leftToe == null || rightToe == null)
+            {
+                failure = "camera or foot/toe bones missing";
+                return false;
+            }
+            Vector2 leftAnklePixel = ProjectOverlayPixel(overlay, leftFoot.position, width, height);
+            Vector2 rightAnklePixel = ProjectOverlayPixel(overlay, rightFoot.position, width, height);
+            Vector2 leftToePixel = ProjectOverlayPixel(overlay, leftToe.position, width, height);
+            Vector2 rightToePixel = ProjectOverlayPixel(overlay, rightToe.position, width, height);
+            if (!TryBuildRenderedTilePolygon(
+                    runtime,
+                    agent,
+                    source,
+                    overlay,
+                    leftFoot.position,
+                    leftToe.position,
+                    width,
+                    height,
+                    out Vector2[] leftTile) ||
+                !TryBuildRenderedTilePolygon(
+                    runtime,
+                    agent,
+                    source,
+                    overlay,
+                    rightFoot.position,
+                    rightToe.position,
+                    width,
+                    height,
+                    out Vector2[] rightTile))
+            {
+                failure = "rendered shoe tile polygon mapping failed";
+                return false;
+            }
+
+            int leftPixels = 0;
+            int rightPixels = 0;
+            int leftOutside = 0;
+            int rightOutside = 0;
+            float leftMargin = float.PositiveInfinity;
+            float rightMargin = float.PositiveInfinity;
+            double shoePixelSumX = 0d;
+            double shoePixelSumY = 0d;
+            var shoePixelCount = 0;
+            for (var index = 0; index < sample.Length; index++)
+            {
+                if (sample[index].a <= 32) continue;
+                int x = index % width;
+                int y = index / width;
+                var point = new Vector2(x + 0.5f, y + 0.5f);
+                shoePixelSumX += point.x;
+                shoePixelSumY += point.y;
+                shoePixelCount++;
+                float leftDistance = DistancePointToSegment(
+                    point,
+                    leftAnklePixel,
+                    leftToePixel);
+                float rightDistance = DistancePointToSegment(
+                    point,
+                    rightAnklePixel,
+                    rightToePixel);
+                if (leftDistance <= rightDistance)
+                {
+                    leftPixels++;
+                    float margin = SignedConvexPolygonMargin(point, leftTile);
+                    leftMargin = Mathf.Min(leftMargin, margin);
+                    if (margin <= 0f) leftOutside++;
+                }
+                else
+                {
+                    rightPixels++;
+                    float margin = SignedConvexPolygonMargin(point, rightTile);
+                    rightMargin = Mathf.Min(rightMargin, margin);
+                    if (margin <= 0f) rightOutside++;
+                }
+            }
+            if (leftPixels < 4 || rightPixels < 4 ||
+                shoePixelCount < 8 || float.IsInfinity(leftMargin) || float.IsInfinity(rightMargin))
+            {
+                failure = "both rendered shoe clusters were not measurable left=" + leftPixels +
+                          " right=" + rightPixels;
+                return false;
+            }
+            var shoeCentroidPixels = new Vector2(
+                (float)(shoePixelSumX / shoePixelCount),
+                (float)(shoePixelSumY / shoePixelCount));
+            Vector3 agentViewport = source.WorldToViewportPoint(new Vector3(
+                agent.Position.x,
+                agent.Position.y,
+                agent.transform.position.z));
+            var agentCenterPixels = new Vector2(
+                agentViewport.x * width,
+                agentViewport.y * height);
+            result = new RenderedShoePixelSample
+            {
+                leftPixelCount = leftPixels,
+                rightPixelCount = rightPixels,
+                leftOutsidePixelCount = leftOutside,
+                rightOutsidePixelCount = rightOutside,
+                leftMinimumTileMarginPixels = leftMargin,
+                rightMinimumTileMarginPixels = rightMargin,
+                shoeCentroidPixels = shoeCentroidPixels,
+                agentCenterPixels = agentCenterPixels,
+                shoeToAgentPixels = shoeCentroidPixels - agentCenterPixels,
+                bodyMetrics = bodyMetrics
+            };
+            return true;
+        }
+
+        private static bool TryBuildRenderedTilePolygon(
+            StarterOfficeRuntimeBootstrap runtime,
+            OfficeRuntimeAgent agent,
+            Camera source,
+            Camera overlay,
+            Vector3 ankleWorld,
+            Vector3 toeWorld,
+            int width,
+            int height,
+            out Vector2[] polygon)
+        {
+            polygon = Array.Empty<Vector2>();
+            Vector3 sourcePoint = new Vector3(
+                agent.Position.x,
+                agent.Position.y,
+                agent.transform.position.z);
+            float sourceDepth = source.WorldToViewportPoint(sourcePoint).z;
+            ankleWorld.y = 0f;
+            toeWorld.y = 0f;
+            Vector3 soleMidpoint = (ankleWorld + toeWorld) * 0.5f;
+            if (sourceDepth <= 0f ||
+                !TryMapOverlayPointToOfficeWorld(
+                    source,
+                    overlay,
+                    sourceDepth,
+                    soleMidpoint,
+                    out Vector2 soleOffice))
+                return false;
+            Vector2 origin = runtime.World.Presenter.CellCenterWorld(
+                new OfficeGridCoordinate(0, 0));
+            Vector2 basisX = runtime.World.Presenter.CellBasisXWorld();
+            Vector2 basisY = runtime.World.Presenter.CellBasisYWorld();
+            if (!TryResolveGridCoordinate(
+                    soleOffice,
+                    origin,
+                    basisX,
+                    basisY,
+                    out Vector2 soleGrid))
+                return false;
+            var cell = new Vector2(Mathf.Round(soleGrid.x), Mathf.Round(soleGrid.y));
+            Vector2 center = origin + basisX * cell.x + basisY * cell.y;
+            Vector2[] officeCorners =
+            {
+                center - 0.5f * basisX - 0.5f * basisY,
+                center + 0.5f * basisX - 0.5f * basisY,
+                center + 0.5f * basisX + 0.5f * basisY,
+                center - 0.5f * basisX + 0.5f * basisY
+            };
+            polygon = officeCorners.Select(corner =>
+            {
+                Vector3 viewport = source.WorldToViewportPoint(
+                    new Vector3(corner.x, corner.y, agent.transform.position.z));
+                return new Vector2(viewport.x * width, viewport.y * height);
+            }).ToArray();
+            return polygon.All(point => !float.IsNaN(point.x) && !float.IsNaN(point.y));
+        }
+
+        private static Vector2 ProjectOverlayPixel(
+            Camera overlay,
+            Vector3 world,
+            int width,
+            int height)
+        {
+            Vector3 viewport = overlay.WorldToViewportPoint(world);
+            return new Vector2(viewport.x * width, viewport.y * height);
+        }
+
+        private static float DistancePointToSegment(Vector2 point, Vector2 start, Vector2 end)
+        {
+            Vector2 segment = end - start;
+            float lengthSquared = segment.sqrMagnitude;
+            if (lengthSquared <= 0.000001f) return Vector2.Distance(point, start);
+            float t = Mathf.Clamp01(Vector2.Dot(point - start, segment) / lengthSquared);
+            return Vector2.Distance(point, start + segment * t);
+        }
+
+        private static float SignedConvexPolygonMargin(Vector2 point, Vector2[] polygon)
+        {
+            float windingSign = 0f;
+            float minimumLineDistance = float.PositiveInfinity;
+            bool inside = true;
+            for (var index = 0; index < polygon.Length; index++)
+            {
+                Vector2 start = polygon[index];
+                Vector2 end = polygon[(index + 1) % polygon.Length];
+                Vector2 edge = end - start;
+                float cross = Cross(edge, point - start);
+                if (Mathf.Abs(cross) > 0.0001f)
+                {
+                    float sign = Mathf.Sign(cross);
+                    if (Mathf.Approximately(windingSign, 0f)) windingSign = sign;
+                    else if (sign != windingSign) inside = false;
+                }
+                minimumLineDistance = Mathf.Min(
+                    minimumLineDistance,
+                    Mathf.Abs(cross) / Mathf.Max(edge.magnitude, 0.000001f));
+            }
+            return inside ? minimumLineDistance : -minimumLineDistance;
+        }
+
+        private static void AppendRenderedShoePixelTrace(
+            StringBuilder trace,
+            int frame,
+            string actor,
+            RenderedShoePixelSample sample)
+        {
+            trace.Append(frame).Append(',').Append(actor).Append(',')
+                .Append(sample.leftPixelCount).Append(',')
+                .Append(sample.rightPixelCount).Append(',')
+                .Append(sample.leftOutsidePixelCount).Append(',')
+                .Append(sample.rightOutsidePixelCount).Append(',')
+                .Append(Invariant(sample.leftMinimumTileMarginPixels)).Append(',')
+                .Append(Invariant(sample.rightMinimumTileMarginPixels)).Append(',')
+                .Append(sample.bodyMetrics.width).Append(',')
+                .Append(sample.bodyMetrics.height).Append(',')
+                .Append(sample.bodyMetrics.headWidth).Append(',')
+                .Append(sample.bodyMetrics.headHeight).Append(',')
+                .Append(Invariant(sample.bodyMetrics.headToHeightRatio)).Append(',')
+                .Append(sample.bodyMetrics.shoulderWidth).Append(',')
+                .Append(sample.bodyMetrics.torsoWidth).Append(',')
+                .Append(sample.bodyMetrics.legWidth).Append(',')
+                .Append(sample.bodyMetrics.legHeight).Append(',')
+                .Append(sample.bodyMetrics.pixels).Append(',')
+                .Append(Invariant(sample.bodyMetrics.screenOccupationPercent)).Append(',')
+                .Append(Invariant(sample.shoeCentroidPixels.x)).Append(',')
+                .Append(Invariant(sample.shoeCentroidPixels.y)).Append(',')
+                .Append(Invariant(sample.agentCenterPixels.x)).Append(',')
+                .Append(Invariant(sample.agentCenterPixels.y)).Append(',')
+                .Append(Invariant(sample.shoeToAgentPixels.x)).Append(',')
+                .Append(Invariant(sample.shoeToAgentPixels.y)).AppendLine();
+        }
+
         private static bool TryMeasureFootTileLineClearance(
             StarterOfficeRuntimeBootstrap runtime,
             OfficeRuntimeAgent agent,
@@ -1485,6 +2897,40 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
         private static string Invariant(float value) =>
             value.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
 
+        private struct ActorBodyPixelMetrics
+        {
+            public int pixels;
+            public int width;
+            public int height;
+            public int headWidth;
+            public int headHeight;
+            public float headToHeightRatio;
+            public int shoulderWidth;
+            public int torsoWidth;
+            public int legWidth;
+            public int legHeight;
+            public int shoeWidth;
+            public int shoeHeight;
+            public int shoePixels;
+            public float shoeCentroidX;
+            public float shoeCentroidY;
+            public float screenOccupationPercent;
+        }
+
+        private struct RenderedShoePixelSample
+        {
+            public int leftPixelCount;
+            public int rightPixelCount;
+            public int leftOutsidePixelCount;
+            public int rightOutsidePixelCount;
+            public float leftMinimumTileMarginPixels;
+            public float rightMinimumTileMarginPixels;
+            public Vector2 shoeCentroidPixels;
+            public Vector2 agentCenterPixels;
+            public Vector2 shoeToAgentPixels;
+            public ActorBodyPixelMetrics bodyMetrics;
+        }
+
         private struct FootTileLineSample
         {
             public float phase01;
@@ -1661,12 +3107,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
 
         private void Finish(bool pass, string detail)
         {
-            string status = pass ? "PASS" : "FAIL";
+            bool reviewCandidate = pass && HasFlag(Legacy2DScaleCandidateFlag);
+            string status = reviewCandidate
+                ? "CANDIDATE_USER_APPROVAL_REQUIRED"
+                : pass ? "PASS" : "FAIL";
             File.WriteAllText(
                 Path.Combine(artifactDirectory, "player-father-3d-interaction-final.txt"),
                 "FAMILY_COMPANY_PLAYER_FATHER_3D_INTERACTION: " + status +
                 Environment.NewLine + detail + Environment.NewLine);
-            if (pass)
+            if (reviewCandidate)
+                Debug.Log(
+                    "FAMILY_COMPANY_PLAYER_FATHER_3D_INTERACTION: " + status + " | " + detail);
+            else if (pass)
                 Debug.Log("FAMILY_COMPANY_PLAYER_FATHER_3D_INTERACTION: PASS | " + detail);
             else
                 Debug.LogError("FAMILY_COMPANY_PLAYER_FATHER_3D_INTERACTION: FAIL | " + detail);

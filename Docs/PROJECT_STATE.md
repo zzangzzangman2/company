@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-Last updated: 2026-09-01. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+Last updated: 2026-09-02. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
 ## Production cutover: Player V8 + Father V19 + V31 workstation
 
@@ -41,79 +41,60 @@ Last updated: 2026-09-01. This file contains current handoff state only. Superse
 - Mother and Older Sister still await approved one-package 3D replacements; their current production
   representations remain untouched.
 
-## 2026-09-01 company-PC review: legacy-2D screen-size candidate
+## 2026-09-02 independent Father scale/walk re-QA follow-up
 
-- A pull/review of home commits `2698a21d..65971ec5` found that the latest production correction
-  successfully matches Player/Father to each other at 1280x720: rendered height `74/72px`, head
-  width `22/22px`, torso width `30/29px`, and area difference below 10%. It does **not** yet match
-  the older 2D screen-height standard.
-- All 48 retained HighMotion sprites were measured from their actual alpha bounds. Player height is
-  `197/218/222px` min/median/max and Father is `208/229/233px` at 180 PPU. With the locked runtime
-  visual scale `1.55` and shipping 16:9 camera, the median on-screen references are approximately
-  `89.25px` Player and `93.75px` Father.
-- The old 2D head/height ratios themselves are inconsistent (`0.396` Player, `0.272` Father), so
-  the candidate copies only each character's total screen height. It deliberately keeps the two
-  approved 3D head widths equal (projected `26.53/26.53px`) and torso widths close
-  (`36.18/34.98px`) instead of reproducing the old oversized-Player-head mismatch.
-- A fail-closed, command-line-only candidate is available through
-  `-familyCompanyLegacy2DScaleCandidate`. It uses Player scale/height
-  `1.263885643/2.291498763`, Father `1.306909878/2.454888000`, Father horizontal proportion
-  `0.806840529`, dynamic collision radii `0.380465984/0.447570225`, and candidate-only tile-safe
-  action-613 coupling `stride 0.99380799 / phase offset 0.64 cycles`. The approved production/default
-  coupling remains `stride 0.7950477 / phase offset 0`; the V31 workstation keeps the already
-  approved `1.857258558` reference height and therefore does not grow with the character candidate.
-- In candidate mode only, Father uses the same neutral, emission/specular-free balanced-albedo
-  shader family as Player, with Father-local neutral fill `0.82`. The QA records rendered mean
-  luminance and saturation and rejects a luminance ratio outside `0.70..1.30`, either actor below
-  luma `45`, or saturation below `0.12`.
-- The strengthened D3D11 candidate run records the complete head-on approach rather than judging
-  one collision pose. Its 89 ordered frames and 15 evenly spaced silhouette samples measured
-  Player height `85/91/97px` min/median/max and Father `91/94/98px`; stopped silhouette pixels
-  `1732/1767`, luma `91.33/69.77`, and saturation `0.360/0.210`. The earlier single-frame check
-  varied with gait phase and is no longer the
-  acceptance source.
-- The semantic routes already started on the exact tile centres and deviated by at most
-  `0.000002/0.000212` world units, but enlarged bone tracking found stable foot-midpoint bias. The
-  candidate now corrects the walking production host by Player local X/Z
-  `+0.050989/+0.214083` and Father `+0.037517/+0.138023` after travel yaw. It never moves the
-  imported model/Animator root and is disabled for every seat-facing phase, preserving the approved
-  seated pose. After the shoe-envelope correction below, the final foot-midpoint centre error is
-  Player `3.170/7.470px` and Father `2.514/3.249px` median/max, still inside the locked `4/8px`
-  candidate gates.
-- Midpoint centring and ankle-only line distance were both insufficient. The previous report that
-  claimed `8.135/7.096px` clearance measured only each Humanoid `Foot` ankle pivot; the user's
-  enlarged frame proved Father's rendered forefoot still covered a tile line. That report is
-  superseded and must not be reused. QA now requires `LeftToes/RightToes`, expands each
-  ankle-to-toe segment by `0.65` heel / `0.45` toe ratios, subtracts a conservative `4px` shoe
-  half-width, and requires at least `2px` remaining rendered-shoe clearance.
-- The package clip, `stride 0.99380799`, phase `0.64`, Avatar, skin, pose strength, direction and
-  limb curves remain unchanged. Candidate mode alone applies a minimal whole-host translation
-  while the authored contact flag is active so the expanded sole stays at least `0.20` grid cells
-  inside one tile; the correction releases during the airborne gap and is reset for every
-  seat-facing state. It never bends or replaces a limb and is absent from production/default.
-  Final hidden D3D11 measured `65/66` planted-contact samples, minimum conservative shoe clearance
-  `3.562/3.562px`, and contact frames below `2px` `0/0`. Independent X/Y sweeps measured
-  `3.870/3.870px` and `3.870/3.870px`; the opposite-moving pair covers `+X/-X/+Y/-Y`.
-- The same run covered `3.56249/3.56993` map-unit travel, dynamic blocking with pixel overlap `0`
-  and penetration `0`, followed by real purchased V31 routing to `seat_player/seat_father`, exact
-  seated tile-centre error `0/0`, bent knees `83.78/95.48` and `94.60/107.66` degrees,
-  `Working/Working`, and static/interaction/agent violations `0/0/0`. All 89 frames were inspected
-  in enlarged chronological sheets and both GIFs. Portable evidence is under
-  `Docs/Evidence/PlayerFather3DLegacy2DScaleCandidateCurrent/`; the Git-ignored local artifact
-  directory `Artifacts/PlayerFather3DPlantedShoeTileSafeFinal3-20260901/` keeps all raw PNGs.
-- The generic Render Clarity capture previously rendered only `Camera.main`, so the two health bars
-  could appear without the production 3D bodies while the unrelated pixel-clarity gate passed.
-  It now composites `Family3DProductionOverlayCamera` into the same target. This was a QA capture
-  blind spot, not evidence that the shipping screen omitted the bodies; the dedicated combined
-  D3D11 proof rendered both bodies normally.
-- Company-PC final script-build validation passed at
-  `Artifacts/FastQa/runs/20260901-133254-586`; the unchanged production/default profile also passed
-  hidden D3D11 at `Artifacts/PlayerFather3DDefaultRegressionShoeInsetChange-20260901/` with stride
-  `0.7950477`, `productionEligible=True`, and overlap `0`. An ordinary Player with only hidden process style is
-  forbidden because it can still display a render surface. The final D3D11 run used standalone
-  `-batchmode`, `CreateNoWindow=true`, a continuously checked zero `MainWindowHandle`, and never
-  opened a window. The candidate still remains `productionEligible=false` and is not the default
-  until the user explicitly approves its GIF.
+- The command-line-only `-familyCompanyLegacy2DScaleCandidate` remains
+  `productionEligible=false`. Its enlarged Player/Father scale values and approved one-package assets
+  remain unchanged. Its two alternating action-613 steps now span exactly two tile-centre distances:
+  candidate stride `1.98761598`, phase `0.40`, with no planted-contact whole-host translation. The
+  former `0.99380799` stride and contact/release translation are superseded because they caused
+  frame-dependent visible-root correction. Production/default remains `0.7950477`, phase `0`.
+- 2026-09-02 afternoon correction (Claude): the user's "Father steps on the tile lines" report was
+  confirmed on the 82-frame GIF with the tile diamond drawn around each agent centre. The
+  `(0.037517,0.500000)` and `(-0.24,0.5)` standing offsets tuned against the shoe-pixel centroid had
+  moved the Father's feet onto the tile corner (planted line touches `57/61`, foot-midpoint tile error
+  `19.3px`). The pixel centroid mixes shoe height with floor position and is now informational only.
+  Real cause: both walk clips lift the hips above the bounds-grounded bind pose, so the lowest skinned
+  vertex floats `0.138` (Player) versus `0.429` (Father) office units, drawing the Father `12-15px`
+  higher on screen. Fix: offset restored to `(0.037517,0.138023)` and a candidate-only
+  `AlignCandidateStandingGround` lowers the Father's standing/walking visual ground by the measured
+  lowest-vertex difference (`-0.2910`); seated pose and production/default untouched. Final run
+  `Artifacts/FatherStandingGroundAlignedFinal-20260902-141500/`: planted line touches `2/8` of `61/61`,
+  foot-midpoint tile error `2.227/6.129` and `1.464/4.306px`, lowest skinned vertex `0.1473/0.1502`,
+  same-tile shoe centroid delta `-0.201/1.582px`. QA now gates Father on the bone-based tile error and
+  on ground clearance within `0.05` of Player. Still `CANDIDATE_USER_APPROVAL_REQUIRED`.
+- Exact same-cell `(6,6)`, same-camera/light/tile 1280x720 masks measure total height Player/Father
+  `88/92px`, head bounds `27x27/25x31px`, head:height `0.306818/0.336957`, shoulder width `27/27px`,
+  torso width `34/32px`, leg height `44/42px`, shoe pixels `233/208`, silhouette area `1792/1900`
+  and screen occupation `0.194444/0.206163%`. Total height differs by `4.55%`; the remaining
+  difference is Father-internal proportion (head height `+14.81%`, leg height `-4.55%`), not camera
+  distance or global scale. No approved face/hair/outfit or mesh proportion was deformed.
+- Across all 82 approach frames, rendered height min/median/max is Player `85/90/95px`, Father
+  `91/93.5/98px`; head height `24/25/27` versus `30/31/33px`; leg height `41/45/49` versus
+  `40/42/48px`; silhouette area `1571/1729/1921` versus `1578/1768.5/1900px`.
+- Candidate-only peer radii are `0.475/0.578`; `0.940` only covered the removed `0.36` visible host
+  advance. The hidden D3D11 run records maximum centre-line error `0.000002/0.000117`, blocked moves
+  `47`, rendered body overlap `0px`, agent penetrations `0`, then `Working/Working` at
+  `seat_player/seat_father`, seated centre error `0/0` and static/interaction/agent violations
+  `0/0/0`.
+- QA now renders a shoe-only skinned mesh from the actual foot/toe-weighted triangles and tests every
+  rendered pixel. The strict vertical silhouette still reports actual outside-pixel frames `82/82`,
+  minimum margins `-14.022/-16.705px`, and planted outside counts `19/60`. The candidate therefore
+  does **not** pass the strict one-tile projected-contour requirement even though Father and Player
+  now share the same visual floor-centre band.
+- All 82 approach frames and 48 QA-only Father whole-body turn frames were visually inspected. The
+  two legs, arms/hands and clothing skin remain intact; expected side-view leg crossing/occlusion is
+  present without a third limb or tearing; posture, alternating weight transfer, full-body turn and
+  loop remain continuous. Action 613, confirmed direction, own Avatar/skin and full pose strength are
+  retained; no procedural gait or framewise teleport is used.
+- Final raw run: `Artifacts/FatherFootCenterFixedFinal-20260902-105300/`. Portable GIFs, all-frame
+  sheets, ratio sheet and exact receipts are under
+  [Evidence/PlayerFather3DIndependentQaCurrent/README.md](Evidence/PlayerFather3DIndependentQaCurrent/README.md).
+  Detailed analysis: [FATHER_V19_INDEPENDENT_SCALE_WALK_QA_2026-09-01.md](FATHER_V19_INDEPENDENT_SCALE_WALK_QA_2026-09-01.md).
+- The accepted run used standalone `-batchmode -force-d3d11`, `CreateNoWindow=true` and continuously
+  verified `MainWindowHandle==0`. One earlier build attempt exposed a nonzero handle and was aborted;
+  it is not evidence. No production/default, Downloads copy or deployed executable changed. User GIF
+  approval is still required before any PASS or eligibility change.
 
 ## Family character completion boundary
 

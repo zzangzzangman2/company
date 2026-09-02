@@ -1,6 +1,103 @@
 # DECISIONS
 
-## 2026-09-01 / 발목 점이 아니라 렌더 신발 전체를 타일 선에서 보호한다
+## 2026-09-02 (오후) / 아빠 “선 밟기”의 원인은 좌우 오프셋이 아니라 발이 떠 있던 것이다 — 바로 아래 결정을 대체
+
+정정: 사용자의 GIF 관찰이 맞았다. agent 중심에 타일 마름모를 그려 82프레임을 확인하면 Player 발은
+마름모 중앙, Father 발은 마름모 꼭짓점(선 교차점)에 있었다. `(0.037517,0.500000)`·`(-0.24,0.5)`
+standing offset은 2D 신발 픽셀 중심을 맞추려다 실제 발을 앞 0.38·왼쪽 0.28칸 옮긴 것이었다. 뼈 기반
+지표가 이를 기록했다: 접지 중 선 접촉 `8/61 → 45/61 → 57/61`, Father 발 중점 타일 오차 `1.5 → 19.3px`.
+신발 픽셀 중심과 그 lane median은 신발 높이와 바닥 위치가 섞이므로 타일 중앙 증거로 쓰지 않는다.
+
+결정: 원인은 수직이다. 두 보행 클립 모두 bind pose보다 골반을 높게 실어 걷는 동안 최저 skinned 정점이
+바닥 위 Player `0.138`, Father `0.429`로 떠 있었고, 같은 타일에서 Father가 화면상 `12–15px` 높게
+그려져 먼 쪽 선 위에 선 것처럼 보였다. Father offset을 `(0.037517,0.138023)`로 되돌리고, 후보 전용
+`AlignCandidateStandingGround`가 바인드 시 보행 사이클 24위상을 샘플링해 최저 정점 차이만큼
+Father의 standing/walking visual ground를 낮춘다(`-0.2910`). 상수 보정 한 개이며 접지 프레임 root
+보정·착석 포즈·production/default는 건드리지 않는다.
+
+결정: 후보 peer radius는 `0.475/0.578`이다(`0.940`은 제거된 `0.36` 가시 전진분이었다). QA 게이트는
+Father에도 Player와 같은 뼈 기반 발 중점 타일 오차(`≤4/8px`)와 두 배우 최저 정점 높이 차 `≤0.05`를
+적용하고 lane median 게이트는 삭제한다. 최종 run `Artifacts/FatherStandingGroundAlignedFinal-20260902-141500/`:
+접지 선 접촉 `2/8`(`61/61`), 발 중점 오차 `2.227/6.129`·`1.464/4.306px`, 최저 정점 `0.1473/0.1502`,
+same-tile 신발 중심 delta `-0.201/1.582px`, overlap `0px`, penetration `0`, `Working/Working`.
+`CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`는 유지한다.
+
+## 2026-09-02 / Father의 실제 신발 중심을 Player와 같은 바닥 중앙 밴드에 맞춘다 (같은 날 오후 결정으로 대체)
+
+정정: 사용자의 “아들은 바닥 중앙, 아빠는 선” 지적은 stride/cadence만의 문제가 아니었다. cell
+`(6,6)`의 동일 카메라·조명·phase에서 저장한 실제 shoe-only mask를 비교하니 X 중심은 이미 같았지만
+Father 신발 중심이 화면 Y에서 `12.97px` 어긋나 인접 타일 선 밴드에 놓였다. 이전 cadence-only
+진단은 이 원인을 해결하지 못했으므로 아래 결정보다 이 결정이 우선한다.
+
+결정: 미승인 legacy-size 후보에서만 Father의 고정 standing offset을
+`(0.037517,0.138023)`에서 `(0.037517,0.500000)`으로 바꾼다. 이는 actor 전체와 함께 회전하는 한
+개의 member-local 상수이며 contact/airborne 상태로 바뀌지 않는다. action 613, Avatar, skin,
+팔다리 curve와 production/default는 그대로다. 새 same-tile 실제 신발 중심 delta는 X/Y
+`-0.125/-1.128px`, 두 sole bottom row 차이는 `1px`다.
+
+결정: 보이는 host advance만큼 candidate-only Father peer radius를 `0.940`으로 늘리고 Player는
+`0.475`를 유지한다. 최종 82프레임 D3D11은 실제 충돌 overlap `0px`, agent penetration `0`, 이후
+`Working/Working`, seat centre `0/0`, static/interaction/agent violation `0/0/0`이다. 엄격한 세로
+3D 신발 픽셀의 평면 diamond 투영은 여전히 all-frame `82/82`, planted outside `19/60`이므로
+`CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`를 유지한다. 최종 raw run은
+`Artifacts/FatherFootCenterFixedFinal-20260902-105300/`다.
+
+## 2026-09-02 / 두 발 착지를 타일 주기에 결합하되 엄격한 3D 신발 실루엣 실패는 숨기지 않는다 (신발 중심 후속 결정으로 대체)
+
+결정: 사용자가 기존 GIF에서 “금을 밟는 것 같다”고 지적했으므로, contact별 visible-host 이동 없이
+stride/phase만 숨김 D3D11 sweep했다. action 613 한 cycle에는 좌우 두 번의 교대 착지가 있으므로 한
+cycle 이동을 정확히 두 타일 중심거리 `2 * 0.99380799 = 1.98761598`에 결합하고 phase `0.40`을
+사용한다. 이 값은 미승인 `-familyCompanyLegacy2DScaleCandidate`에만 적용한다. production/default는
+승인된 `0.7950477`, phase `0` 그대로다.
+
+결정: 보수적인 sole envelope 기준 접지 중 선 접촉은 이전 자연 stride의 Player/Father `45/40`에서
+`2/8`로 줄었고, `61/61` contact sample의 최소 여유는 `1.741/0.316px`다. 중심선 최대 오차
+`0.000222/0.000002`, 실제 두 배우 overlap `0px`, agent penetration `0`, 최종
+`Working/Working`과 seat 중심 오차 `0/0`도 유지한다. 접지 프레임에서 root를 순간 이동시키는 보정은
+없다.
+
+결정: 실제 foot/toe-weighted shoe triangle의 **세로 3D 측면까지** 평면 tile diamond에 투영하는
+엄격 검사는 여전히 Player/Father all-frame `86/86` outside, 접지 outside `19/61`, 최소 margin
+`-14.022/-13.258px`다. 착지 인상은 개선됐지만 이 별도 기준을 PASS로 바꾸지 않는다. 승인 mesh/stance
+변형, off-centre route, frame-dependent host translation 없이 해당 투영을 0으로 만들 수 없으므로
+`CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`를 유지하고 새 86프레임 GIF의 사용자
+판단을 기다린다. 최종 raw run은 `Artifacts/PlayerFather3DFootfallFixedFinal-20260902-101508/`, 증빙은
+`Docs/Evidence/PlayerFather3DIndependentQaCurrent/`다.
+
+## 2026-09-01 / 독립 재검수는 자연 보행을 보존하고 실제 렌더 신발 실패를 그대로 기록한다 (2026-09-02 후속 결정으로 대체)
+
+결정: 이전 GIF와 89장 전체를 먼저 다시 본 결과, action-613 접지 구간마다 visible host 전체를
+옮겼다가 airborne에 되돌리는 방식은 프레임 상태에 따라 위치를 바꾸는 보정이었다. 이 보정과 타일 한
+칸에 강제로 결합한 stride `0.99380799`는 폐기한다. 미승인
+`-familyCompanyLegacy2DScaleCandidate`도 자연 stride `0.7950477`, phase `0.64`, 자체
+Avatar/skin/action 613, `poseStrength=1`을 사용하고 contact/release root translation을 전혀 쓰지
+않는다. production/default는 변경하지 않는다.
+
+결정: Player와 Father를 cell `(6,6)`의 동일 카메라·조명·타일에서 각각 분리 렌더한다. 실제 픽셀은
+전체 높이 `97/98px`, 머리 `27x26/25x31px`, 머리:전체높이 `0.268041/0.316327`, 어깨
+`26/26px`, 몸통 `31/30px`, 다리 높이 `54/48px`, 실루엣 `1776/1867px`다. 전체 높이 차이는
+`1.03%`뿐이므로 카메라 거리나 전역 scale 문제가 아니다. 남은 차이는 Father 머리 높이 `+19.23%`,
+다리 높이 `-11.11%`인 내부 비율이다. 이미 승인된 얼굴·머리·의상 identity와 one-package mesh를
+훼손하는 head-only/global scale 보정은 하지 않는다.
+
+결정: 발목/toe 추정 envelope는 자동 PASS 근거가 될 수 없다. 실제 skinned mesh에서 foot/toe weight를
+가진 삼각형만 shoe-only renderer로 만들고 86프레임 모두 alpha pixel을 타일 diamond에 대조한다. 그
+결과 all-frame outside는 Player/Father `75/86`, 최소 margin `-13.952/-14.957px`, 각 67개 접지
+프레임 중 outside는 `34/67`이다. 전 프레임 시트를 육안으로도 확인했으므로 이는 FAIL 사실이다. 중심
+경로, 승인 신발/stance, 자연 root 연속성을 모두 유지한 채 매 순간 한 타일 안에 넣을 수 없으면 PASS를
+만들지 말고 사용자 판단을 기다린다.
+
+결정: 확대 후보의 동적 peer 반경만 `0.475/0.535`로 바꿔 head-on 실제 silhouette overlap `0px`,
+agent penetration `0`을 확보했다. 86개 접근 프레임과 48개 Father 전신 회전 프레임에서 두 다리,
+팔/손, 옷 skin, 자세, 교대 weight transfer, 전체 몸 회전과 loop를 모두 육안 확인했다. 최종 상태는
+`CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`다. 증빙은
+`Docs/Evidence/PlayerFather3DIndependentQaCurrent/`, 상세 기록은
+`Docs/FATHER_V19_INDEPENDENT_SCALE_WALK_QA_2026-09-01.md`다.
+
+## 2026-09-01 / 발목 점이 아니라 렌더 신발 전체를 타일 선에서 보호한다 (독립 재검수로 폐기)
+
+아래 결정은 당시 실험과 실패 경위를 보존하는 역사 기록이다. 위 독립 재검수 결정이 현재 권위이며,
+아래 `0.99380799` stride와 접지 whole-host inset 및 자동 PASS는 재사용하지 않는다.
 
 결정: semantic root와 양발 평균이 타일 중앙선을 따라가도 한쪽 **접지발**은 타일 경계에 놓일 수
 있다. 이전 후보는 실제 action-613 접지 기준 최소 선 여유가 Player/Father `0.527/0.024px`, 6px

@@ -95,15 +95,25 @@ The full receipt and hashes are in `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08
 
 Do not duplicate Father version history. Follow `Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md` from four-view provider generation through full actual-map GIF review. The next character gets a new candidate folder, new asset hashes, measured stride/forward and explicit runtime IDs while reusing the shared formulas and gates.
 
-For tile-centred review, do not stop at the semantic root or the two-foot midpoint. The current
-command-line-only legacy-size candidate proves the reusable process: read actual per-foot contact
-telemetry; require both toe mappings; project an expanded heel-to-toe sole plus rendered shoe width
-every moving frame; sweep stride/phase without changing the package clip; and validate
-`+X/-X/+Y/-Y`. The ankle-only `8.135/7.096px` result was a false PASS because Father's visible
-forefoot still covered a line. The current envelope requires at least 2px of clear floor and uses a
-candidate-only minimal whole-host inset while planted. Its measured coupling remains
-`0.99380799 / 0.64 cycles`; the correction releases while airborne, resets before seating and must
-not be copied over the approved production stride `0.7950477` without a new user-approved GIF.
+For tile-centred review, do not stop at the semantic root, the two-foot midpoint or an expanded
+ankle/toe proxy. The current command-line-only legacy-size candidate renders a shoe-only skinned mesh
+from the actual foot/toe-weighted triangles and tests every shoe pixel in every moving frame. The
+ankle-only `8.135/7.096px` and later envelope `3.562/3.562px` results were both false PASSes because
+Father's visible forefoot still covered a line. Do not move the character host on individual contact
+frames to manufacture containment: that is a frame-dependent teleport and hides slip. The current
+candidate retains action 613, couples its two alternating steps to two exact tile-centre distances
+with candidate stride `1.98761598` and phase `0.40`, and uses no contact/release host correction.
+Father keeps the measured foot-at-root standing offset `(0.037517,0.138023)`. The 2026-09-02
+`(0.037517,0.5)` / `(-0.24,0.5)` candidates matched a 2D shoe-pixel centroid that mixes shoe height
+with floor position and put the Father's planted feet on the tile corner (`57/61` planted frames on a
+line); do not tune floor offsets against pixel centroids. The real `12-15px` same-tile difference was
+vertical: the walk clips float the lowest skinned vertex `0.138` (Player) versus `0.429` (Father)
+above the ground plane, so candidate-only `AlignCandidateStandingGround` lowers the Father's
+standing/walking visual ground by the measured difference (`-0.2910`). Planted line touches are
+`2/8` of `61/61`, foot-midpoint tile error `1.464/4.306px`, lowest vertex `0.1473/0.1502`. The strict
+vertical shoe silhouette still fails, so it remains `productionEligible=false` pending a new
+user-approved GIF. Production and
+default locomotion remain stride `0.7950477`, phase `0`.
 
 ## Safety
 

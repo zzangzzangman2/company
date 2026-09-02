@@ -114,8 +114,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     {
         private const float PlayerV8ProductionCollisionRadius = 0.28f;
         private const float FatherV19ProductionCollisionRadius = 0.30f;
-        private const float PlayerLegacy2DMatchedCollisionRadius = 0.380465984f;
-        private const float FatherLegacy2DMatchedCollisionRadius = 0.447570225f;
+        // The no-teleport candidate must stop far enough apart for every authored action-613
+        // contact pose, not only the phase that happened to be sampled by the earlier QA.  The
+        // previous pair overlapped by 35 rendered pixels at the natural 0.7950477 stride.
+        private const float PlayerLegacy2DMatchedCollisionRadius = 0.475f;
+        // 2026-09-02: the 0.361977 visible host advance that justified 0.940 was removed together
+        // with the (0.0375,0.5) standing offset; Father's feet are back at the semantic agent root.
+        // Keep the previous no-overlap radius plus the 0.04 safety only (0.940 - 0.361977).
+        private const float FatherLegacy2DMatchedCollisionRadius = 0.578f;
         private const string Legacy2DScaleCandidateFlag =
             "-familyCompanyLegacy2DScaleCandidate";
         private static readonly string[] FamilyMemberIds =

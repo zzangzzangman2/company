@@ -7,13 +7,22 @@ Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-app
 and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md`.
 
 Current command-line legacy-2D-size review remains `productionEligible=false`. It keeps both
-one-package assets below unchanged, but uses candidate-only tile-safe locomotion coupling
-`stride 0.99380799 / phase 0.64 cycles` plus a candidate-only whole-host planted-shoe inset. The
-QA envelope is the expanded ankle-to-toe sole (`heel 0.65 / toe 0.45`) minus `4px` rendered shoe
-half-width, not the invalid ankle-point proxy. Hidden D3D11 minimum conservative shoe clearance is
-Player/Father `3.562/3.562px`; independent X/Y sweeps are `3.870/3.870px` in both axes, with zero
-contact frames below `2px` across all four travel directions. The approved production/default
-stride remains `0.7950477` and never receives this correction.
+one-package assets below unchanged and now couples one action-613 cycle to exactly two tile-centre
+distances: candidate `stride 1.98761598 / phase 0.40 cycles`, with no per-contact whole-host
+translation. Production/default remains `stride 0.7950477 / phase 0`. The earlier
+`0.99380799` tile-forced stride, expanded ankle/toe envelope and planted-shoe inset are superseded:
+actual foot/toe-weighted skinned shoe triangles are rendered and measured pixel-by-pixel. In the
+2026-09-02 afternoon run, Father keeps the measured foot-at-root standing offset
+`(0.037517,0.138023)`; the same-day `(0.037517,0.5)` candidate is withdrawn because it matched a
+height-biased shoe-pixel centroid by moving the feet onto the tile corner. The real same-tile
+`12-15px` difference was the Father floating: lowest skinned walk vertex `0.429` versus Player
+`0.138`. Candidate-only `AlignCandidateStandingGround` lowers the Father's standing visual ground by
+the measured difference (`-0.2910`); planted line touches are `2/8` of `61/61`, foot-midpoint tile
+error `1.464/4.306px`, same-tile shoe centroid delta `-0.201/1.582px`. The strict vertical
+shoe-contour gate is still not PASS. Same-tile body height is `88/92px`; the remaining Father
+difference is internal head/leg proportion, not global camera scale. Candidate-only peer radii are
+`0.475/0.578`; production/default values remain unchanged. Current evidence is
+`Docs/Evidence/PlayerFather3DIndependentQaCurrent/`.
 
 ## Production Player V8 no-hat one-package character
 
