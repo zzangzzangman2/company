@@ -1,5 +1,46 @@
 # DECISIONS
 
+## 2026-09-02 (밤) / 누나 V2는 불합격 — 가족 SD 비율·얼굴 가독성·의상 대비를 표준에 추가하고 재생성한다
+
+관찰: 사용자가 누나 V2의 크기·밝기·선명도·눈을 모두 불합격 판정했다. 측정: 골격 머리:키 `0.159`(아들
+`0.273`, 아빠 `0.337`), 골반 폭/키 `0.059`(가족 `0.093`), 다리/키 `0.581`(가족 `0.41~0.47`) — 실사
+6등신이라 같은 93px에서도 가족과 다른 게임 캐릭터로 보인다. albedo의 `57.6%`가 같은 어두운 자주
+(머리·나시·반바지 구분 없음, 남색 `0.3%`, 흰 파이핑 없음), 얼굴 UV가 작아 눈이 `~1px`로 사라진다.
+평균 밝기(근사 luma `121`)는 기준 안이라 gain으로는 고칠 수 없다. 원인은 참조 4장이 실사 비율
+일러스트였던 것이다.
+
+결정: `FAMILY_3D_CHARACTER_STANDARD.md`에 S6(머리:키 `0.26~0.36`), S7(골반/어깨/다리 비), S8(얼굴·눈
+크기), §9.1 참조 이미지 비율·대비 요구를 추가한다. 누나는 이 요구를 만족하는 참조를 새로 만들어
+Meshy 한 패키지로 재생성한다(credit·Higgsfield 인증은 사용자/Codex 세션 필요). V2 자산은 Experimental
+후보 폴더에 두고 승격·착석·충돌 작업을 하지 않는다. 대용량 V2 바이너리는 커밋하지 않는다.
+
+## 2026-09-02 (저녁) / 누나 V2는 Higgsfield 한 패키지 보행 후보로만 검수한다
+
+결정: 정본 `older_sister_casual_neutral_v2.png`만 identity 입력으로 쓰고, 폐기된 Older Sister V1과
+구 2D는 mesh/texture/rig/motion donor나 크기 기준으로 쓰지 않는다. 사용자 승인 42 credit 중 4 credit로
+4K front/three-quarter/left-side/back A-pose를 만들고, 38 credit 단일 Meshy
+`multi_image_to_3d`(`495165b9-e47c-47e5-9836-8a8725ced20a`)에 네 장을 함께 넣었다. rigging,
+animation, PBR, remesh, quad 60,000, symmetry, A-pose 1.65 m, action 613을 켰다. GLB hash는
+`62E1366B...3D3DD`; 변환은 알려진 helper `Icosphere`만 제거하고 mesh/skeleton/weights/UV/albedo/action을
+그대로 둔다.
+
+결정: 보행 승인 전에는 Experimental 후보 경로와 복제 QA scene에서만 실행한다. 목표 키는 폐기 2D의
+84px가 아니라 가족 S1 규칙에 따라 `2.367 = 93.02px`로 잠그며, 아들 90px보다 크고 아빠 93.5px보다
+크지 않다. material은 `PlayerV8BalancedAlbedo`, white, ambient `0.70`, key `0.18`, emission/specular
+off로 시작한다. 같은 FBX action 613 `1..43`, `1.4 s`, poseStrength 1이며 retarget, sanitation,
+procedural gait, damping을 금지한다.
+
+결정: 아빠 선 밟기 사고를 반복하지 않기 위해 신발 픽셀 중심을 맞추지 않는다. 누나 FBX의 24위상
+양발 뼈 중점을 측정한 고정 offset `(0.041302,0.151164)`만 진행 방향 회전 뒤 적용한다. 24위상 최저
+skinned 정점은 한 번만 `0.200542 -> 0.137600`으로 아들 기준에 맞춘다(`-0.062942`); contact별 host
+이동은 없다. 실제 맵 1,344프레임의 발 중점 타일 오차 median/max `3.549/7.829px`로 `4/8px` gate를
+통과했고 두 바퀴 occupancy는 `0/0/0`이다. stride/phase/cycle은 `1.98761598/0.40/1.4 s`.
+좌우 발뼈를 따로 대조해도 마름모 밖 `0/2688`, 접지 발 밖 `0/1120`, 접지 최소 선 여유 `4.54px`다.
+
+결정: 결과는 `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`. 사용자 전체 GIF 승인
+전에는 production 승격, 기본 EXE 반영, 충돌 반경 변경, 착석/책상 fitting을 하지 않는다. 증빙은
+`Docs/Evidence/OlderSisterV2CandidateCurrent/`다.
+
 ## 2026-09-02 (오후 3) / 3D 후보 두 명의 절대 밝기를 tint gain으로 올린다
 
 관찰: 사용자가 3D 두 명이 어둡다고 했고, 2D는 삭제 예정이라 3D끼리만 맞추면 된다고 했다. 분리 렌더

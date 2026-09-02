@@ -9,10 +9,12 @@ workflow.
 
 - Father V19: `prepare_father_v19_meshy_one_package_unity.py`
 - Player/protagonist V6: `prepare_player_v6_meshy_one_package_unity.py`
+- Older Sister V2 candidate: `prepare_older_sister_v2_meshy_one_package_unity.py`
 
-Both scripts preserve the provider-created mesh, bind skeleton, skin weights, UV/albedo and action
+All scripts preserve the provider-created mesh, bind skeleton, skin weights, UV/albedo and action
 613 as one indivisible package. Run Blender only with `--background`; never mix a donor rig/clip,
-procedural gait, limb rewrite or pose weakening into either package.
+procedural gait, limb rewrite or pose weakening into any package. The Older Sister script remains
+candidate-only until the full actual-map animation is approved.
 
 ```powershell
 & '<BLENDER>\blender.exe' --background --python `

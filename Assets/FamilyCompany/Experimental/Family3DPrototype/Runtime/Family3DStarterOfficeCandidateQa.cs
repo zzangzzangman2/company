@@ -24,6 +24,8 @@ namespace FamilyCompany.Experimental.Family3D
         public const float MovementEpsilonSqr = 0.000001f;
         public const float StaticMapScaleTolerance = 0.005f;
         private const int DefaultMaximumFatherCompositeFrames = 180;
+        private const int CandidateCalibrationSamplePhases = 24;
+        private const float ApprovedPlayerWalkCycleLowestVertex = 0.1376f;
 
         // Capture contract, rewritten 2026-08-26.
         //
@@ -59,6 +61,7 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool fatherHiggsfieldIdleRun;
         [SerializeField] private bool fatherCleanBipedNaturalWalk;
         [SerializeField] private bool playerNative613Package;
+        [SerializeField] private bool olderSisterNative613Package;
 
         // Facing offset and stride belong to the body-and-clip pair, not to the project. Putting
         // Each clean-rig/action revision is measured again, so both are configured per candidate
@@ -70,6 +73,8 @@ namespace FamilyCompany.Experimental.Family3D
         [SerializeField] private bool fatherClipMuscleDeltaRetargetAsset;
         [SerializeField] private bool fatherClipStableBodySideArmsAsset;
         [SerializeField] private float fatherMotionCycleSecondsAsset;
+        [SerializeField] private float nativeMotionPhaseOffsetCyclesAsset;
+        [SerializeField] private float nativeTargetStandingHeightAsset;
         [SerializeField] private Texture2D fatherStaticAlbedo;
 
         // Serialized rather than resolved by Shader.Find at runtime. Unity strips any shader no
@@ -168,7 +173,23 @@ namespace FamilyCompany.Experimental.Family3D
             !fatherClipMuscleDeltaRetargetAsset &&
             !fatherClipAnatomicalSanitizationAsset;
 
-        private string Native613FamilyId => playerNative613Package ? "player" : "father";
+        private string Native613FamilyId => olderSisterNative613Package
+            ? "older_sister"
+            : playerNative613Package
+                ? "player"
+                : "father";
+
+        private string Native613MapWalkPrefix => olderSisterNative613Package
+            ? "older-sister-v2-native-613-map-walk"
+            : playerNative613Package
+                ? "player-v6-native-613-map-walk"
+                : "father-v18-native-613-map-walk";
+
+        private string Native613ProofStatus => olderSisterNative613Package
+            ? "OLDER_SISTER_V2_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+            : playerNative613Package
+                ? "PLAYER_V6_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+                : "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE";
 
         public void Configure(
             GameObject player,
@@ -194,9 +215,12 @@ namespace FamilyCompany.Experimental.Family3D
             fatherHiggsfieldIdleRun = false;
             fatherCleanBipedNaturalWalk = false;
             playerNative613Package = false;
+            olderSisterNative613Package = false;
             fatherHiggsfieldIdleClip = null;
             fatherStaticAlbedo = null;
             fatherMotionCycleSecondsAsset = 0f;
+            nativeMotionPhaseOffsetCyclesAsset = 0f;
+            nativeTargetStandingHeightAsset = 0f;
         }
 
         public void ConfigureFatherStaticRootMotionOnly(
@@ -223,8 +247,11 @@ namespace FamilyCompany.Experimental.Family3D
             fatherHiggsfieldIdleRun = false;
             fatherCleanBipedNaturalWalk = false;
             playerNative613Package = false;
+            olderSisterNative613Package = false;
             fatherHiggsfieldIdleClip = null;
             fatherMotionCycleSecondsAsset = 0f;
+            nativeMotionPhaseOffsetCyclesAsset = 0f;
+            nativeTargetStandingHeightAsset = 0f;
         }
 
         public void ConfigureFatherHiggsfieldIdleRun(
@@ -260,12 +287,15 @@ namespace FamilyCompany.Experimental.Family3D
             fatherHiggsfieldIdleRun = true;
             fatherCleanBipedNaturalWalk = false;
             playerNative613Package = false;
+            olderSisterNative613Package = false;
             fatherMotionFacingOffsetDegreesAsset = facingOffsetDegrees;
             fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
             fatherClipMuscleDeltaRetargetAsset = clipMuscleDeltaRetarget;
             fatherClipAnatomicalSanitizationAsset = clipAnatomicalSanitization;
             fatherClipStableBodySideArmsAsset = clipStableBodySideArms;
             fatherMotionCycleSecondsAsset = Mathf.Max(0f, sourceAuthoredCycleSeconds);
+            nativeMotionPhaseOffsetCyclesAsset = 0f;
+            nativeTargetStandingHeightAsset = 0f;
         }
 
         public void ConfigureFatherCleanBipedNaturalWalk(
@@ -294,6 +324,9 @@ namespace FamilyCompany.Experimental.Family3D
             fatherHiggsfieldIdleRun = false;
             fatherCleanBipedNaturalWalk = true;
             playerNative613Package = false;
+            olderSisterNative613Package = false;
+            nativeMotionPhaseOffsetCyclesAsset = 0f;
+            nativeTargetStandingHeightAsset = 0f;
         }
 
         public void ConfigurePlayerNative613Package(
@@ -325,12 +358,57 @@ namespace FamilyCompany.Experimental.Family3D
             fatherHiggsfieldIdleRun = true;
             fatherCleanBipedNaturalWalk = false;
             playerNative613Package = true;
+            olderSisterNative613Package = false;
             fatherMotionFacingOffsetDegreesAsset = facingOffsetDegrees;
             fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
             fatherClipMuscleDeltaRetargetAsset = false;
             fatherClipAnatomicalSanitizationAsset = false;
             fatherClipStableBodySideArmsAsset = false;
             fatherMotionCycleSecondsAsset = Mathf.Max(0f, sourceAuthoredCycleSeconds);
+            nativeMotionPhaseOffsetCyclesAsset = 0f;
+            nativeTargetStandingHeightAsset = 0f;
+        }
+
+        public void ConfigureOlderSisterNative613Package(
+            GameObject olderSister,
+            Texture2D albedo,
+            Material exactAlbedoMaterial,
+            AnimationClip walkClip,
+            Camera overlayCamera,
+            int isolatedLayer,
+            float facingOffsetDegrees,
+            float strideOfficeUnits,
+            float phaseOffsetCycles,
+            float sourceAuthoredCycleSeconds,
+            float targetStandingHeight,
+            float fallbackScale = 1f,
+            float qaGroundY = 0f)
+        {
+            playerCandidate = null;
+            olderSisterCandidate = olderSister;
+            fatherCandidate = null;
+            motherCandidate = null;
+            sharedHumanoidWalkClip = walkClip;
+            fatherHiggsfieldIdleClip = null;
+            fatherStaticAlbedo = albedo;
+            fatherExactAlbedoMaterial = exactAlbedoMaterial;
+            qaOverlayCamera = overlayCamera;
+            qaLayer = Mathf.Clamp(isolatedLayer, 0, 31);
+            fallbackOfficeWorldToQaScale = Mathf.Max(0.0001f, fallbackScale);
+            groundY = qaGroundY;
+            fatherStaticRootMotionOnly = false;
+            fatherHiggsfieldIdleRun = true;
+            fatherCleanBipedNaturalWalk = false;
+            playerNative613Package = false;
+            olderSisterNative613Package = true;
+            fatherMotionFacingOffsetDegreesAsset = facingOffsetDegrees;
+            fatherMotionStrideOfficeUnitsAsset = strideOfficeUnits;
+            fatherClipMuscleDeltaRetargetAsset = false;
+            fatherClipAnatomicalSanitizationAsset = false;
+            fatherClipStableBodySideArmsAsset = false;
+            fatherMotionCycleSecondsAsset = Mathf.Max(0f, sourceAuthoredCycleSeconds);
+            nativeMotionPhaseOffsetCyclesAsset = Mathf.Repeat(phaseOffsetCycles, 1f);
+            nativeTargetStandingHeightAsset = Mathf.Max(0.0001f, targetStandingHeight);
         }
 
         /// <summary>
@@ -477,9 +555,16 @@ namespace FamilyCompany.Experimental.Family3D
                     HasCommandLineFlag("-family3d-father-v19-desk-work-qa") ||
                     playerDeskWorkQa;
                 bool playerMapWalkQa = HasCommandLineFlag("-family3d-player-v6-map-walk-qa");
-                mapWalkFamilyId = playerMapWalkQa || playerDeskWorkQa ? "player" : "father";
+                bool olderSisterMapWalkQa = HasCommandLineFlag(
+                    "-family3d-older-sister-v2-map-walk-qa");
+                mapWalkFamilyId = olderSisterMapWalkQa
+                    ? "older_sister"
+                    : playerMapWalkQa || playerDeskWorkQa
+                        ? "player"
+                        : "father";
                 fatherMapWalkQa = fatherDeskWorkQa ||
                     playerMapWalkQa ||
+                    olderSisterMapWalkQa ||
                     HasCommandLineFlag("-family3d-father-map-walk-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-static-map-qa") ||
                     HasCommandLineFlag("-family3d-father-v18-motion-map-qa");
@@ -700,9 +785,7 @@ namespace FamilyCompany.Experimental.Family3D
                                 fatherStaticRootMotionOnly
                                     ? "father-v18-higgsfield-static-map-walk"
                                     : UsesNative613Package
-                                        ? playerNative613Package
-                                            ? "player-v6-native-613-map-walk"
-                                            : "father-v18-native-613-map-walk"
+                                        ? Native613MapWalkPrefix
                                     : FatherUsesStableBodySideArmWalk
                                         ? "father-v18-clean-biped-stable-arm-walk-map"
                                     : FatherUsesCleanBipedCasualWalk
@@ -1856,9 +1939,7 @@ namespace FamilyCompany.Experimental.Family3D
                             (fatherStaticRootMotionOnly
                                 ? "father-v18-higgsfield-static-map-walk"
                                 : UsesNative613Package
-                                    ? playerNative613Package
-                                        ? "player-v6-native-613-map-walk"
-                                        : "father-v18-native-613-map-walk"
+                                    ? Native613MapWalkPrefix
                                 : FatherUsesStableBodySideArmWalk
                                     ? "father-v18-clean-biped-stable-arm-walk-map"
                                 : FatherUsesCleanBipedCasualWalk
@@ -1895,12 +1976,10 @@ namespace FamilyCompany.Experimental.Family3D
             fatherProofRouteCircuit = 2;
             fatherProofRouteLeg = -1;
             WriteRuntimeReceipt(
-                playerNative613Package
-                    ? "PLAYER_V6_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+                UsesNative613Package
+                    ? Native613ProofStatus
                     : fatherStaticRootMotionOnly
                     ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
-                    : UsesNative613Package
-                        ? "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
                     : FatherUsesStableBodySideArmWalk
                         ? "FATHER_V18_CLEAN_BIPED_STABLE_ARM_WALK_MAP_PROOF_COMPLETE"
                     : FatherUsesCleanBipedCasualWalk
@@ -2098,7 +2177,9 @@ namespace FamilyCompany.Experimental.Family3D
             Bounds candidateBounds = EncapsulateBounds(skinned);
             float candidateHeight = Mathf.Max(candidateBounds.size.y, 0.0001f);
             float spriteViewportHeight = MeasureSpriteViewportHeight(sourceRenderer, sourceOfficeCamera);
-            float targetHeight = ResolveQaHeightForViewport(spriteViewportHeight, qaPosition);
+            float targetHeight = olderSisterNative613Package
+                ? nativeTargetStandingHeightAsset
+                : ResolveQaHeightForViewport(spriteViewportHeight, qaPosition);
             if (targetHeight <= 0.0001f)
             {
                 targetHeight = Mathf.Max(
@@ -2184,10 +2265,94 @@ namespace FamilyCompany.Experimental.Family3D
             host.SetActive(true);
             if (fatherHiggsfieldIdleRun || fatherCleanBipedNaturalWalk)
             {
-                ApplyExactStaticMapScale(binding, sourceOfficeCamera, true);
+                if (!olderSisterNative613Package)
+                    ApplyExactStaticMapScale(binding, sourceOfficeCamera, true);
+                else
+                    CalibrateOlderSisterNative613Binding(binding);
                 walkActor.RebaseVisualRootAfterScale();
             }
             return binding;
+        }
+
+        private void CalibrateOlderSisterNative613Binding(Binding binding)
+        {
+            if (binding == null || binding.WalkActor == null || binding.Model == null)
+                throw new InvalidOperationException(
+                    "Older Sister V2 calibration requires a live one-package binding.");
+            SkinnedMeshRenderer skinned =
+                binding.Model.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (skinned == null || skinned.sharedMesh == null)
+                throw new InvalidOperationException(
+                    "Older Sister V2 calibration could not find the complete skinned mesh.");
+
+            binding.WalkActor.Initialize();
+            var baked = new Mesh();
+            var vertices = new List<Vector3>(skinned.sharedMesh.vertexCount);
+            Vector2 footMidpointSum = Vector2.zero;
+            float lowest = float.PositiveInfinity;
+            float maximumHorizontalReach = 0f;
+            for (var sample = 0; sample < CandidateCalibrationSamplePhases; sample++)
+            {
+                double phase = sample / (double)CandidateCalibrationSamplePhases;
+                double motionClock =
+                    (phase - binding.WalkActor.PhaseOffset) *
+                    binding.WalkActor.CycleSeconds;
+                binding.WalkActor.Tick(
+                    motionClock,
+                    binding.Host.transform.position,
+                    binding.Host.transform.rotation,
+                    true);
+                Family3DWalkActor.PoseSnapshot pose = binding.WalkActor.ReadPoseSnapshot();
+                Vector3 footMidpoint = (pose.leftFootLocal + pose.rightFootLocal) * 0.5f;
+                footMidpointSum += new Vector2(footMidpoint.x, footMidpoint.z);
+                maximumHorizontalReach = Mathf.Max(
+                    maximumHorizontalReach,
+                    new Vector2(pose.leftHandLocal.x, pose.leftHandLocal.z).magnitude,
+                    new Vector2(pose.rightHandLocal.x, pose.rightHandLocal.z).magnitude);
+
+                skinned.BakeMesh(baked, true);
+                baked.GetVertices(vertices);
+                for (var vertex = 0; vertex < vertices.Count; vertex++)
+                    lowest = Mathf.Min(lowest, skinned.transform.TransformPoint(vertices[vertex]).y);
+            }
+
+            DestroyQaObject(baked);
+            if (float.IsInfinity(lowest))
+                throw new InvalidOperationException(
+                    "Older Sister V2 walk-cycle lowest skinned vertex could not be measured.");
+
+            Vector2 measuredFootMidpoint =
+                footMidpointSum / CandidateCalibrationSamplePhases;
+            binding.StandingFootCenterOffsetLocal = -measuredFootMidpoint;
+            binding.WalkGroundClearanceBeforeCorrection =
+                lowest - binding.Host.transform.position.y;
+            binding.StandingGroundLiftCorrection =
+                ApprovedPlayerWalkCycleLowestVertex -
+                binding.WalkGroundClearanceBeforeCorrection;
+            binding.Model.transform.position +=
+                Vector3.up * binding.StandingGroundLiftCorrection;
+            binding.WalkGroundClearanceAfterCorrection =
+                binding.WalkGroundClearanceBeforeCorrection +
+                binding.StandingGroundLiftCorrection;
+            binding.WalkBodyHorizontalReach = maximumHorizontalReach;
+            binding.LastScaleMatchRatio = 1f;
+            binding.MinimumScaleMatchRatio = 1f;
+            binding.MaximumScaleMatchRatio = 1f;
+            binding.MaximumScaleError = 0f;
+            binding.MaximumGroundError = 0f;
+            binding.WalkActor.RebaseVisualRootAfterScale();
+            Debug.Log(
+                "FAMILY_3D_OLDER_SISTER_V2_CALIBRATION: targetHeight=" +
+                binding.Target3DHeight.ToString("F6") +
+                " footCenterOffsetLocal=" + binding.StandingFootCenterOffsetLocal +
+                " lowestBefore=" +
+                binding.WalkGroundClearanceBeforeCorrection.ToString("F6") +
+                " groundCorrection=" +
+                binding.StandingGroundLiftCorrection.ToString("F6") +
+                " lowestAfter=" +
+                binding.WalkGroundClearanceAfterCorrection.ToString("F6") +
+                " horizontalReach=" + binding.WalkBodyHorizontalReach.ToString("F6"),
+                this);
         }
 
         private void ApplyFatherV18HiggsfieldMaterial(Renderer[] renderers)
@@ -2348,10 +2513,16 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherMotionStrideOfficeUnits > 0f
                     ? binding.Agent.GaitDistance / fatherMotionStrideOfficeUnits
                     : gaitPhase01;
+                if (olderSisterNative613Package)
+                    clipCycles += nativeMotionPhaseOffsetCyclesAsset;
                 double motionClock =
                     (clipCycles - binding.WalkActor.PhaseOffset) *
                     binding.WalkActor.CycleSeconds;
-                binding.WalkActor.Tick(motionClock, worldPosition, worldRotation, isMoving);
+                Vector3 visualGround = worldPosition + worldRotation * new Vector3(
+                    binding.StandingFootCenterOffsetLocal.x,
+                    0f,
+                    binding.StandingFootCenterOffsetLocal.y);
+                binding.WalkActor.Tick(motionClock, visualGround, worldRotation, isMoving);
             }
             binding.LastObservedDisplacement = binding.Agent.LastActualDisplacement;
             binding.LastObservedGaitPhase01 = gaitPhase01;
@@ -2825,6 +2996,13 @@ namespace FamilyCompany.Experimental.Family3D
 
         private CandidateDefinition[] CandidateDefinitions()
         {
+            if (olderSisterNative613Package)
+            {
+                return new[]
+                {
+                    new CandidateDefinition("older_sister", olderSisterCandidate)
+                };
+            }
             if (playerNative613Package)
             {
                 return new[]
@@ -2970,6 +3148,15 @@ namespace FamilyCompany.Experimental.Family3D
                             ? binding.MinimumObservedGaitPhase01
                             : 0f,
                         maximumObservedGaitPhase01 = binding.MaximumObservedGaitPhase01,
+                        standingFootCenterOffsetLocal =
+                            binding.StandingFootCenterOffsetLocal,
+                        standingGroundLiftCorrection =
+                            binding.StandingGroundLiftCorrection,
+                        walkGroundClearanceBeforeCorrection =
+                            binding.WalkGroundClearanceBeforeCorrection,
+                        walkGroundClearanceAfterCorrection =
+                            binding.WalkGroundClearanceAfterCorrection,
+                        walkBodyHorizontalReach = binding.WalkBodyHorizontalReach,
                         qaHostWorldPosition = binding.Host == null
                             ? Vector3.zero
                             : binding.Host.transform.position
@@ -2992,6 +3179,10 @@ namespace FamilyCompany.Experimental.Family3D
                     fatherCleanBipedCasualWalk = FatherUsesCleanBipedCasualWalk,
                     fatherStableBodySideArmWalk = FatherUsesStableBodySideArmWalk,
                     fatherNative613Package = UsesNative613Package,
+                    playerNative613Package = playerNative613Package,
+                    olderSisterNative613Package = olderSisterNative613Package,
+                    nativeMotionPhaseOffsetCycles = nativeMotionPhaseOffsetCyclesAsset,
+                    nativeTargetStandingHeight = nativeTargetStandingHeightAsset,
                     coordinateMapping =
                         "Office actor XY -> production Camera.WorldToViewportPoint -> QA " +
                         "Camera.ViewportPointToRay -> Y=ground plane; raw (x,y)->(x,groundY,y) fallback",
@@ -3003,7 +3194,9 @@ namespace FamilyCompany.Experimental.Family3D
                             ? "every frame: live Father SpriteRenderer projected bounds height == " +
                               "Father V18 projected renderer bounds height; tolerance <= 0.5%; grounded"
                             : UsesNative613Package
-                                ? "one locked uniform scale from the native action-613 rendered bounds; visible mesh/Avatar/skin/clip share one FBX; static-FBX surface material; no idle cross-retarget, anatomical sanitation, rigid-arm override, or procedural gait"
+                                ? olderSisterNative613Package
+                                    ? "one locked 2.367-unit standing height (93px target at 1280x720), independent of the retired Sister sprite; foot-centre offset measured from 24 action phases; standing ground corrected once from the 24-phase lowest skinned vertex to the approved Player reference; no per-contact translation"
+                                    : "one locked uniform scale from the native action-613 rendered bounds; visible mesh/Avatar/skin/clip share one FBX; static-FBX surface material; no idle cross-retarget, anatomical sanitation, rigid-arm override, or procedural gait"
                             : FatherUsesStableBodySideArmWalk
                                 ? "V72 clean V4 lower-body/torso/action-613 contract unchanged; static-FBX surface; only the final rigid-arm tuck is replaced by straight rigid arms with a fixed-axis 6-degree opposite upper-arm swing; no elbow/wrist/finger/outward/tuck correction"
                             : FatherUsesCleanBipedCasualWalk
@@ -3522,12 +3715,10 @@ namespace FamilyCompany.Experimental.Family3D
                         ? "PLAYER_V6_FULL_3D_DESK_WORK_PROOF_COMPLETE"
                         : "FATHER_V19_FULL_3D_ALL_WORKSTATIONS_PROOF_COMPLETE"
                     : fatherProofRouteCompleted
-                    ? playerNative613Package
-                        ? "PLAYER_V6_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
+                    ? UsesNative613Package
+                        ? Native613ProofStatus
                         : fatherStaticRootMotionOnly
                         ? "FATHER_V18_STATIC_MAP_MOVE_PROOF_COMPLETE"
-                        : UsesNative613Package
-                            ? "FATHER_V18_NATIVE_613_WALK_MAP_PROOF_COMPLETE"
                         : FatherUsesStableBodySideArmWalk
                             ? "FATHER_V18_CLEAN_BIPED_STABLE_ARM_WALK_MAP_PROOF_COMPLETE"
                         : FatherUsesCleanBipedCasualWalk
@@ -3571,6 +3762,10 @@ namespace FamilyCompany.Experimental.Family3D
             public bool fatherCleanBipedCasualWalk;
             public bool fatherStableBodySideArmWalk;
             public bool fatherNative613Package;
+            public bool playerNative613Package;
+            public bool olderSisterNative613Package;
+            public float nativeMotionPhaseOffsetCycles;
+            public float nativeTargetStandingHeight;
             public string coordinateMapping;
             public string directionMapping;
             public string scalePolicy;
@@ -3754,6 +3949,11 @@ namespace FamilyCompany.Experimental.Family3D
             public int observedDirectionMask;
             public float minimumObservedGaitPhase01;
             public float maximumObservedGaitPhase01;
+            public Vector2 standingFootCenterOffsetLocal;
+            public float standingGroundLiftCorrection;
+            public float walkGroundClearanceBeforeCorrection;
+            public float walkGroundClearanceAfterCorrection;
+            public float walkBodyHorizontalReach;
             public Vector3 qaHostWorldPosition;
         }
 
@@ -3833,6 +4033,11 @@ namespace FamilyCompany.Experimental.Family3D
             public int LastObservedDirection { get; set; }
             public bool IsMoving { get; set; }
             public int MovingFrameCount { get; set; }
+            public Vector2 StandingFootCenterOffsetLocal { get; set; }
+            public float StandingGroundLiftCorrection { get; set; }
+            public float WalkGroundClearanceBeforeCorrection { get; set; }
+            public float WalkGroundClearanceAfterCorrection { get; set; }
+            public float WalkBodyHorizontalReach { get; set; }
 
             /// <summary>
             /// Yaw actually applied to the 3D host, blended toward the office facing instead of

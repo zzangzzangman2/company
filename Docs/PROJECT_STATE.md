@@ -38,8 +38,53 @@ Last updated: 2026-09-02. This file contains current handoff state only. Superse
   penetrations `0`, rendered silhouette overlap pixels `0`, then `Working/Working` at
   `seat_player/seat_father` with static/interaction/agent violations `0/0/0`. Evidence:
   [Evidence/PlayerFather3DProduction/README.md](Evidence/PlayerFather3DProduction/README.md).
-- Mother and Older Sister still await approved one-package 3D replacements; their current production
-  representations remain untouched.
+- Mother still awaits an approved one-package 3D replacement. Older Sister now has an isolated V2
+  one-package walk candidate, described below; her production representation remains untouched.
+
+## 2026-09-02 Older Sister V2 Higgsfield one-package walking candidate
+
+> **User verdict (2026-09-02 evening): rejected** — size, brightness, sharpness and eyes all wrong.
+> Measured causes (Claude): the model is a realistic 6-head adult (skeleton head:height `0.159`
+> versus Player `0.273` / Father `0.337`; hip width/height `0.059` versus `0.093`; legs `58%` of
+> height versus `41-47%`), so at the same `93px` it reads as a different game's character. The
+> albedo paints hair, tank and shorts in one near-black purple (`57.6%` of texels, val `0.205`; navy
+> shorts `0.3%`, no white piping) and the face occupies a tiny UV area (eye about `40px/2048`
+> versus Player `150px`), so eyes vanish at map scale. Average brightness is not the problem (approx
+> luma `121`) and a tint gain would only blow out the pale skin. Locomotion metrics themselves pass.
+> Fix requires regenerating from new SD-proportion references (standard §4.3 and §9.1 rules
+> S6-S8); the V2 assets stay in the Experimental candidate folder and are not promoted. The heavy
+> V2 binaries (FBX, albedo, reference PNGs, 13 MB GIF) are kept locally only.
+
+- Canon was read before generation: Korean adult age 20, long near-black twin tails with large
+  black bows, teal eyes, dark sleeveless tank, navy dolphin shorts with white piping, barefoot,
+  curvy-athletic adult proportions. The rejected V1 turnaround and all legacy 2D assets were not
+  used as mesh, texture, rig or motion donors.
+- User approved 42 Higgsfield credits. Turnaround job
+  `cb63c171-c910-4d46-817a-3e1820c268f9` cost 4; the single Meshy
+  `multi_image_to_3d` job `495165b9-e47c-47e5-9836-8a8725ced20a` cost 38 and used four clean
+  A-pose views, texture/rig/animation/PBR/remesh on, quad target 60,000, 1.65 m and action 613.
+  Source GLB SHA-256 is
+  `62E1366BCB804E572565B2C3E57CDCE8810271647B61C729AE3AC61F9FA3D3DD`.
+- Blender conversion preserved one indivisible provider mesh/skeleton/skin/UV/albedo/action package
+  and removed only `Icosphere`. The Unity FBX has one skinned mesh, one Humanoid armature/material/
+  UV, 211,673 vertices, 118,945 polygons, 24 bones, zero unweighted vertices, zero invalid bone
+  references and at most four influences. Clip is the same-FBX
+  `OlderSisterV2_Casual_Walk_inplace`, frames `1..43`, `1.4 s`, pose strength 1; no retarget,
+  sanitation, procedural gait, rigid-arm rewrite or damping.
+- The isolated actual-map D3D11 run completed two real 3x3 circuits: 337 visual frames, 1,344
+  telemetry frames, four diagonal directions, occupancy `0/0/0`. Size is independent of the
+  rejected 2D Sister: locked standing height `2.367` = `93.02px` at 1280x720. Measured foot-centre
+  offset `(0.041302,0.151164)` gives tile error median/max `3.549/7.829px` (gate `<=4/<=8`). The
+  per-foot bone check is also inside the moving agent-centred diamond for `2,688/2,688` points and
+  `1,120/1,120` planted points, with minimum planted line margin `4.54px`. The
+  one-time 24-phase lowest-skinned-vertex correction `-0.062942` aligns `0.200542 -> 0.137600` to
+  the Player reference; no contact-frame translation. Stride/phase/cycle are
+  `1.98761598/0.40/1.4 s`.
+- Evidence: `Docs/Evidence/OlderSisterV2CandidateCurrent/`; exact source IDs/options/hashes:
+  `Docs/ReferenceImages/OlderSisterV2Higgsfield/generation-receipt.json`.
+- Status remains `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`. No production
+  resources/default executable were changed, and seating is prohibited until the full GIF is
+  visually approved.
 
 ## 2026-09-02 independent Father scale/walk re-QA follow-up
 

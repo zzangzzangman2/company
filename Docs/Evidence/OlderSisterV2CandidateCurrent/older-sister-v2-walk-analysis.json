@@ -1,0 +1,168 @@
+{
+  "contract": "FC-GENERATED-BIPED-WALK-MEASUREMENT-V1",
+  "glb": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSister3DGeneration\\20260902-102656\\older-sister-v2-meshy-one-package-613.glb",
+  "action": "Armature|Casual_Walk_inplace|baselayer",
+  "frameStart": 1,
+  "frameEnd": 127,
+  "frameCount": 127,
+  "fps": 30.0,
+  "bestRepeatedPeriodFrames": 42,
+  "bestRepeatedPeriodSeconds": 1.4,
+  "bestRepeatedPeriodRms": 0.017049640528561578,
+  "bestRepeatedPeriodMaximum": 0.13388316776163167,
+  "nextBestPeriodCandidates": [
+    {
+      "period": 42,
+      "rms": 0.017049640528561578,
+      "maximum": 0.13388316776163167
+    },
+    {
+      "period": 41,
+      "rms": 0.023235240626131214,
+      "maximum": 0.1584684153211647
+    },
+    {
+      "period": 43,
+      "rms": 0.02648258803333173,
+      "maximum": 0.1463610412276269
+    },
+    {
+      "period": 40,
+      "rms": 0.03793459088071556,
+      "maximum": 0.18733912145287804
+    },
+    {
+      "period": 44,
+      "rms": 0.041715272356951036,
+      "maximum": 0.2298517777950102
+    },
+    {
+      "period": 39,
+      "rms": 0.0541674604076809,
+      "maximum": 0.2874157078102609
+    },
+    {
+      "period": 45,
+      "rms": 0.05779672445225401,
+      "maximum": 0.31468807389617887
+    },
+    {
+      "period": 38,
+      "rms": 0.07030352457077195,
+      "maximum": 0.3832811490345269
+    },
+    {
+      "period": 46,
+      "rms": 0.07360138096054916,
+      "maximum": 0.4017507132000894
+    },
+    {
+      "period": 37,
+      "rms": 0.08583448055408684,
+      "maximum": 0.4719254241885288
+    }
+  ],
+  "forwardAxisIndex": 1,
+  "sideAxisIndex": 0,
+  "footForwardCorrelation": -0.8309913607029403,
+  "handForwardCorrelation": -0.9377580197996803,
+  "leftFootForwardRange": 0.668454647064209,
+  "rightFootForwardRange": 0.6089668571949005,
+  "leftHandForwardRange": 0.2956017404794693,
+  "rightHandForwardRange": 0.32240496575832367,
+  "leftFootHeightRange": 0.12258277833461761,
+  "rightFootHeightRange": 0.11703123152256012,
+  "contactFrames": {
+    "Left": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101
+    ],
+    "Right": [
+      1,
+      2,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124
+    ]
+  },
+  "torsoLeanDegrees": {
+    "minimum": 1.0739438924974931,
+    "maximum": 6.17046580747512,
+    "mean": 4.228923689161655
+  },
+  "visualFullCycleStillRequired": true,
+  "productionEligible": false
+}

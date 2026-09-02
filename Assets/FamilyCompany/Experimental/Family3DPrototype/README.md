@@ -9,8 +9,28 @@ are under `Assets/FamilyCompany/Content/Resources/Production3D/`, and the produc
 moved with their Unity GUIDs; the descriptions below are historical proof instructions only.
 
 Completion boundary: Father V19/V31 and Player V6/V8 are the only user-approved completed family
-characters. Older Sister and Mother remain unapproved/not complete. See
-`Docs/FAMILY_3D_CHARACTER_STANDARD.md` before generating either one.
+characters. Older Sister V2 now has a walking-only candidate but remains unapproved/not complete;
+Mother has no current candidate. See `Docs/FAMILY_3D_CHARACTER_STANDARD.md` before continuing either.
+
+## Current Older Sister V2 candidate
+
+The V2 package is one indivisible Higgsfield/Meshy result under
+`Candidates/OlderSisterV2MeshyOnePackage613/`: one mesh, Humanoid Avatar, skin, UV/albedo and the
+same-FBX `OlderSisterV2_Casual_Walk_inplace` action 613 clip (`1..43`, `1.4 s`). The rejected V1
+turnaround and legacy 2D were not donors or size inputs.
+
+- isolated scene: `Scenes/Family3DOlderSisterV2MeshyOnePackage613MapQa.unity`
+- build: `Artifacts/Family3DStarterOfficeCandidateQaV1/OlderSisterV2MeshyOnePackage613MapBuildV1`
+- run: `Artifacts/OlderSister3DGeneration/20260902-102656/actual-map-run-v2`
+- measured standing height/foot offset/ground correction:
+  `2.367 / (0.041302,0.151164) / -0.062942`
+- stride/phase/cycle: `1.98761598 / 0.40 / 1.4 s`
+- 1,344-frame foot-midpoint tile error: median/max `3.549/7.829px`; occupancy `0/0/0`
+- individual foot bones outside centred diamond `0/2688`; planted outside `0/1120`; minimum planted
+  line margin `4.54px`
+- evidence: `Docs/Evidence/OlderSisterV2CandidateCurrent/`
+- status: `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`; walking only, no seating
+  or production/default cutover before full-GIF approval
 
 ## Current Player V6 walk + seated-work input
 
@@ -119,6 +139,6 @@ default locomotion remain stride `0.7950477`, phase `0`.
 
 - Keep every candidate on the QA layer and under Experimental/Artifacts.
 - Do not touch production/default/Downloads/deployed executables.
-- Keep only the two current one-package candidates and their current QA scenes/evidence in Git.
+- Keep only current one-package candidates and their current QA scenes/evidence in Git.
 - Run Unity and Blender hidden/background on a company PC.
 - Do not mark a result production eligible before the user approves the complete actual animation.

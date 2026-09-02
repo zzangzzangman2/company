@@ -1,0 +1,63 @@
+{
+  "contract": "FC-GENERATED-BIPED-SKIN-FAIL-CLOSED-V1",
+  "status": "FAIL",
+  "glb": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSister3DGeneration\\20260902-102656\\older-sister-v2-meshy-one-package-613.glb",
+  "sha256": "62E1366BCB804E572565B2C3E57CDCE8810271647B61C729AE3AC61F9FA3D3DD",
+  "blenderVersion": "4.5.10 LTS",
+  "meshObjectCount": 2,
+  "skinnedMeshCount": 1,
+  "armatureObjectCount": 1,
+  "boneCount": 24,
+  "missingRequiredBones": [],
+  "actionNames": [
+    "Armature|Casual_Walk_inplace|baselayer"
+  ],
+  "metrics": {
+    "crossLegStrongVertexCount": 2646,
+    "armLegStrongVertexCount": 0,
+    "armLegDominantVertexCount": 0,
+    "headLegStrongVertexCount": 1666,
+    "lowerLegCrossWeightVertexCount": 0,
+    "footRegionCrossWeightVertexCount": 0,
+    "unweightedVertexCount": 0,
+    "maximumInfluencesPerVertex": 4,
+    "dominantBoneCounts": {
+      "LeftArm": 45135,
+      "RightArm": 43955,
+      "Head": 27889,
+      "Hips": 15489,
+      "LeftUpLeg": 11581,
+      "RightUpLeg": 11516,
+      "LeftLeg": 7688,
+      "RightLeg": 7443,
+      "Spine01": 6242,
+      "Spine02": 5404,
+      "RightForeArm": 3513,
+      "LeftForeArm": 3481,
+      "RightFoot": 3389,
+      "LeftFoot": 3340,
+      "RightShoulder": 3236,
+      "LeftHand": 2665,
+      "RightHand": 2570,
+      "LeftShoulder": 1807,
+      "neck": 1761,
+      "LeftToeBase": 1428,
+      "RightToeBase": 1350,
+      "Spine": 791
+    },
+    "dominantFamilyCounts": {
+      "right_arm": 65701,
+      "left_arm": 65688,
+      "left_leg": 29262,
+      "right_leg": 28472
+    },
+    "leftRightLegDominantRatio": 1.0277465580219163,
+    "hipJointSeparationOverMeshWidth": 0.11946832184137025,
+    "surfaceComponentCount": 46409
+  },
+  "failureReasons": [
+    "head-leg-mixed:1666"
+  ],
+  "visualFullCycleStillRequired": true,
+  "productionEligible": false
+}

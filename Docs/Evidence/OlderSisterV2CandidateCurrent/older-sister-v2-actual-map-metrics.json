@@ -1,0 +1,43 @@
+{
+  "contract": "FC-OLDER-SISTER-V2-ACTUAL-MAP-TILE-CENTRE-QA-V1",
+  "status": "CANDIDATE_USER_APPROVAL_REQUIRED",
+  "productionEligible": false,
+  "runtimeReceipt": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSister3DGeneration\\20260902-102656\\actual-map-run-v2\\runtime-receipt.json",
+  "runtimeReceiptSha256": "E3A4DBEE45033C11F00D3E0E4E6C22839774F54DE7C0A0594DD6FB1B43D9BB2C",
+  "captureFrameCount": 337,
+  "telemetrySampleCount": 1344,
+  "directions": [
+    1,
+    3,
+    5,
+    7
+  ],
+  "targetStandingHeight": 2.367000102996826,
+  "targetScreenHeightPixels1280x720": 93.02310404777526,
+  "standingFootCenterOffsetLocal": {
+    "x": 0.041302330791950226,
+    "y": 0.15116380155086517
+  },
+  "footMidpointTileErrorMedianPixels": 3.548692162372178,
+  "footMidpointTileErrorMaximumPixels": 7.828963313836127,
+  "footMidpointTileErrorGateMedianPixels": 4.0,
+  "footMidpointTileErrorGateMaximumPixels": 8.0,
+  "footMidpointTileErrorPass": true,
+  "individualFootBonePointCount": 2688,
+  "individualFootBoneOutsideDiamondCount": 0,
+  "minimumIndividualFootBoneLineMarginPixels": 2.0112494845988658,
+  "plantedFootBonePointCount": 1120,
+  "plantedFootBoneOutsideDiamondCount": 0,
+  "minimumPlantedFootBoneLineMarginPixels": 4.537528099382464,
+  "walkGroundClearanceBeforeCorrection": 0.20054195821285248,
+  "standingGroundLiftCorrection": -0.06294195353984833,
+  "walkGroundClearanceAfterCorrection": 0.13760000467300415,
+  "approvedPlayerWalkCycleLowestVertex": 0.1376,
+  "walkBodyHorizontalReach": 0.44230127334594727,
+  "strideOfficeUnits": 1.987615942955017,
+  "phaseOffsetCycles": 0.4000000059604645,
+  "cycleSeconds": 1.399999976158142,
+  "sourceMotionPolicy": "unchanged same-FBX action 613; poseStrength 1; no retarget, sanitation, procedural gait, damping, or per-contact host translation",
+  "contactSheet": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSister3DGeneration\\20260902-102656\\actual-map-media-v2\\older-sister-v2-actual-map-direction-contact.png",
+  "contactSheetSha256": "6239F6856CE94D8D19902BEA766E1BA83459E13DCAC51F779B5187A6AA72596B"
+}

@@ -24,6 +24,37 @@ difference is internal head/leg proportion, not global camera scale. Candidate-o
 `0.475/0.578`; production/default values remain unchanged. Current evidence is
 `Docs/Evidence/PlayerFather3DIndependentQaCurrent/`.
 
+## Current Older Sister V2 one-package candidate (not production)
+
+- identity reference:
+  `Assets/Art/Characters/OlderSister/older_sister_casual_neutral_v2.png`, SHA-256
+  `4335F2025D6FA3AC7145FBA93B4447CC934D85ABFD38452A2A8F3E977A7EA0B5`.
+- turnaround: Higgsfield job `cb63c171-c910-4d46-817a-3e1820c268f9`, 4 credits, 4K 16:9;
+  clean front/three-quarter/left-side/back inputs and receipt under
+  `Docs/ReferenceImages/OlderSisterV2Higgsfield/`.
+- source: Higgsfield/Meshy job `495165b9-e47c-47e5-9836-8a8725ced20a`, 38 credits,
+  `multi_image_to_3d`, rigging/animation/PBR/remesh on, quad 60,000, symmetry on, A-pose 1.65 m,
+  action 613. Total charge 42 credits (`72 -> 30`).
+- source GLB SHA-256:
+  `62E1366BCB804E572565B2C3E57CDCE8810271647B61C729AE3AC61F9FA3D3DD`.
+- candidate FBX:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/OlderSisterV2MeshyOnePackage613/older-sister-v2-meshy-one-package-613.fbx`,
+  SHA-256 `910F85E51B6B22524735E00867ABFC18CC4E02F31FC46357EB846EDF2F2B28DB`.
+- candidate albedo: same folder `older-sister-v2-meshy-one-package-albedo.png`, SHA-256
+  `C2A6F83FCF03AB6218EC130281353C727EB5B6478C6E1B02DDE111B8C6CAFDBA`.
+- structure: one skinned mesh/armature/material/UV, 211,673 vertices, 118,945 polygons, 24 Meshy
+  bones, unweighted `0`, invalid references `0`, maximum influences `4`; helper `Icosphere` removed.
+- clip: `OlderSisterV2_Casual_Walk_inplace`, frames `1..43`, `1.4 s`, same FBX
+  Avatar/skin/weights, pose strength 1, no motion post-processing.
+- actual-map candidate values: standing target `2.367` (`93.02px`), measured foot offset
+  `(0.041302,0.151164)`, one-time ground correction `-0.062942`, measured body reach `0.4423`,
+  stride/phase `1.98761598/0.40`. Foot-midpoint tile error `3.549/7.829px`; two-circuit occupancy
+  `0/0/0`; individual foot bones outside the moving centred diamond `0/2688`, planted outside
+  `0/1120`, minimum planted line margin `4.54px`.
+- evidence: `Docs/Evidence/OlderSisterV2CandidateCurrent/`.
+- status: `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`; no production/default/
+  seating change before full GIF approval.
+
 ## Production Player V8 no-hat one-package character
 
 - identity reference:
