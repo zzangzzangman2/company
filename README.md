@@ -92,6 +92,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 | 3 | [CANON.md](Docs/CANON.md) | 가족·직원 후보·시각 콘텐츠 정본 |
 | 4 | [DECISIONS.md](Docs/DECISIONS.md) | 구조와 방향 결정의 이유 |
 | 가족 3D | [FAMILY_3D_CHARACTER_CANON_2026-08-24.md](Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md), [FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md](Docs/FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md) | 3D-only 캐릭터 정본·비용·제작·검수·다른 PC 인계 |
+| 가족 크기·색 기준 | [FAMILY_CHARACTER_SCALE_COLOR_STANDARD_2026-09-02.md](Docs/FAMILY_CHARACTER_SCALE_COLOR_STANDARD_2026-09-02.md) | 아들·아빠·2D 가족의 화면 크기/색 실측값, 환산식, 판정 규칙 |
 | 구조 | [ARCHITECTURE.md](Docs/ARCHITECTURE.md) | 순수 시뮬레이션·저장·Unity 경계 |
 | 반복 루프 | [ITERATION_LOOP.md](Docs/ITERATION_LOOP.md), [FAST_QA_WINDOWS.md](Docs/FAST_QA_WINDOWS.md) | 변경 종류별 명령과 warm 캐시 규칙 |
 | 사무실·UI | [ART_STYLE.md](Docs/ART_STYLE.md), [OFFICE_BUILD_EDITOR_V1.md](Docs/OFFICE_BUILD_EDITOR_V1.md), [MAIN_NAVIGATION_HUD_V2.md](Docs/MAIN_NAVIGATION_HUD_V2.md), [FRONTEND_V0_4.md](Docs/FRONTEND_V0_4.md) | 현재 런타임 시각·편집·내비게이션 |
