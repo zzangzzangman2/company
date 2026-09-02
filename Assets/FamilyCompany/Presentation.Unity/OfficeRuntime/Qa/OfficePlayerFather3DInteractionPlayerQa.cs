@@ -846,14 +846,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             string detourFrameDirectory = Path.Combine(artifactDirectory, "detour-frames");
             Directory.CreateDirectory(detourFrameDirectory);
             var detourTrace = new StringBuilder();
-            detourTrace.AppendLine("frame,actor,phase,grid_x,grid_y,position_x,position_y,radius");
+            detourTrace.AppendLine(
+                "frame,actor,phase,grid_x,grid_y,position_x,position_y,radius," +
+                "desk_penetrating_vertices,desk_min_clearance,body_reach");
             Vector2 detourOrigin = runtime.World.Presenter.CellCenterWorld(new OfficeGridCoordinate(0, 0));
             Vector2 detourBasisX = runtime.World.Presenter.CellBasisXWorld();
             Vector2 detourBasisY = runtime.World.Presenter.CellBasisYWorld();
             var detourFrame = 0;
             var detourCaptured = 0;
-            deadline = Time.realtimeSinceStartup + 30f;
-            while (Time.realtimeSinceStartup < deadline &&
+            // Visible-body versus desk geometry: every skinned vertex of each actor is tested
+            // against the desk/CRT/keyboard renderer bounds each frame. Index 0 = Player, 1 = Father.
+            Renderer[] deskParts = FindDeskPartRenderers();
+            var deskPenetrationFrames = new int[2];
+            var deskMaxPenetratingVertices = new int[2];
+            var deskMinVertexClearance = new[] { float.PositiveInfinity, float.PositiveInfinity };
+            var deskBodyHorizontalReach = new float[2];
+            deadline = Time.realtimeSinceStartup + 150f;
+            while (Time.realtimeSinceStartup < deadline && detourFrame < 700 &&
                    !(player.QaReachedCell(detourPlayerTarget) && father.QaReachedCell(detourFatherTarget)))
             {
                 yield return new WaitForEndOfFrame();
@@ -861,6 +870,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 {
                     TryResolveGridCoordinate(
                         detourActor.Position, detourOrigin, detourBasisX, detourBasisY, out Vector2 detourGrid);
+                    int actorIndex = detourActor == player ? 0 : 1;
+                    bool measured = MeasureDeskMeshPenetration(
+                        actorIndex == 0 ? "PlayerV8ProductionHost" : "FatherV19ProductionHost",
+                        deskParts,
+                        out int penetratingVertices,
+                        out float vertexClearance,
+                        out float horizontalReach);
                     detourTrace.Append(detourFrame).Append(',')
                         .Append(detourActor == player ? "player" : "father").Append(',')
                         .Append(detourActor.Phase).Append(',')
@@ -868,7 +884,20 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                         .Append(Invariant(detourGrid.y)).Append(',')
                         .Append(Invariant(detourActor.Position.x)).Append(',')
                         .Append(Invariant(detourActor.Position.y)).Append(',')
-                        .Append(Invariant(detourActor.AgentRadius)).AppendLine();
+                        .Append(Invariant(detourActor.AgentRadius)).Append(',')
+                        .Append(measured ? penetratingVertices : -1).Append(',')
+                        .Append(measured ? Invariant(vertexClearance) : "nan").Append(',')
+                        .Append(measured ? Invariant(horizontalReach) : "nan").AppendLine();
+                    if (measured)
+                    {
+                        deskBodyHorizontalReach[actorIndex] = Mathf.Max(
+                            deskBodyHorizontalReach[actorIndex], horizontalReach);
+                        if (penetratingVertices > 0) deskPenetrationFrames[actorIndex]++;
+                        deskMaxPenetratingVertices[actorIndex] = Mathf.Max(
+                            deskMaxPenetratingVertices[actorIndex], penetratingVertices);
+                        deskMinVertexClearance[actorIndex] = Mathf.Min(
+                            deskMinVertexClearance[actorIndex], vertexClearance);
+                    }
                 }
                 if (detourFrame % 2 == 0 && detourCaptured < 400 &&
                     TryCaptureOverview(
@@ -961,6 +990,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     .Append(furniture.Origin.X).Append(',').Append(furniture.Origin.Y).Append(',')
                     .Append(furniture.Width).Append(',').Append(furniture.Height).AppendLine();
             File.WriteAllText(Path.Combine(artifactDirectory, "office-furniture-footprints.csv"), footprints.ToString());
+            var partBounds = new StringBuilder();
+            partBounds.AppendLine("part,min_x,min_y,min_z,max_x,max_y,max_z");
+            foreach (Renderer part in FindDeskPartRenderers())
+            {
+                Bounds bounds = part.bounds;
+                partBounds.Append(part.transform.parent == null ? part.name : part.transform.parent.name + "/" + part.name).Append(',')
+                    .Append(Invariant(bounds.min.x)).Append(',').Append(Invariant(bounds.min.y)).Append(',').Append(Invariant(bounds.min.z)).Append(',')
+                    .Append(Invariant(bounds.max.x)).Append(',').Append(Invariant(bounds.max.y)).Append(',').Append(Invariant(bounds.max.z)).AppendLine();
+            }
+            File.WriteAllText(Path.Combine(artifactDirectory, "office-desk-part-bounds.csv"), partBounds.ToString());
             if (player.Phase != OfficeRuntimeAgentPhase.Working ||
                 father.Phase != OfficeRuntimeAgentPhase.Working)
             {
@@ -1160,6 +1199,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             result.AppendLine("deskDetourReached=" + playerDetourReached + "/" + fatherDetourReached);
             result.AppendLine("deskDetourStaticViolations=" + detourStaticViolations);
             result.AppendLine("deskDetourInteractionViolations=" + detourInteractionViolations);
+            result.AppendLine("deskDetourMeshPenetrationFrames=" +
+                              deskPenetrationFrames[0] + "/" + deskPenetrationFrames[1]);
+            result.AppendLine("deskDetourMaxPenetratingVertices=" +
+                              deskMaxPenetratingVertices[0] + "/" + deskMaxPenetratingVertices[1]);
+            result.AppendLine("deskDetourMinVertexToDeskXZ=" +
+                              deskMinVertexClearance[0].ToString("F4") + "/" +
+                              deskMinVertexClearance[1].ToString("F4"));
+            // Largest horizontal distance of any visible vertex from the agent centre while walking
+            // (arm swing included): the static clearance radius must cover this to keep the body
+            // out of furniture.
+            result.AppendLine("walkBodyHorizontalReach=" +
+                              deskBodyHorizontalReach[0].ToString("F4") + "/" +
+                              deskBodyHorizontalReach[1].ToString("F4"));
             result.AppendLine("workingStaticViolations=" + staticViolations);
             result.AppendLine("workingInteractionViolations=" + interactionViolations);
             result.AppendLine("workingAgentPenetrations=" + workPenetrations);
@@ -1211,6 +1263,105 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 actor.QaSetDirectMovementInput(Vector2.zero);
                 index++;
             }
+        }
+
+        private static Renderer[] FindDeskPartRenderers()
+        {
+            return Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                .Where(renderer => renderer != null && renderer.enabled &&
+                                   (renderer.gameObject.name.StartsWith("Desk_", StringComparison.Ordinal) ||
+                                    renderer.gameObject.name.StartsWith("Crt_", StringComparison.Ordinal) ||
+                                    renderer.gameObject.name.StartsWith("Keyboard_", StringComparison.Ordinal)))
+                .ToArray();
+        }
+
+        /// <summary>
+        /// Counts skinned vertices of one production host that lie inside any desk/CRT/keyboard
+        /// renderer bounds (visible body inside furniture), and returns the smallest horizontal
+        /// distance from any vertex below the part's top to that part's XZ rectangle.
+        /// </summary>
+        private static bool MeasureDeskMeshPenetration(
+            string hostName,
+            Renderer[] deskParts,
+            out int penetratingVertices,
+            out float minimumClearance,
+            out float horizontalReach)
+        {
+            penetratingVertices = 0;
+            minimumClearance = float.PositiveInfinity;
+            horizontalReach = 0f;
+            GameObject host = GameObject.Find(hostName);
+            SkinnedMeshRenderer skinned = host == null ? null : host.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (skinned == null || skinned.sharedMesh == null || deskParts == null || deskParts.Length == 0)
+                return false;
+            Vector3 hostPosition = host.transform.position;
+            // Desk parts are grid-aligned boxes rotated against the world axes, so their world AABB
+            // over-reports overlap. Test each vertex in the part's own local space against the
+            // mesh's local bounds instead (exact for the authored box/cylinder parts).
+            var nearby = new List<DeskPartBox>();
+            foreach (Renderer part in deskParts)
+            {
+                if (part == null) continue;
+                Bounds bounds = part.bounds;
+                Vector3 closest = bounds.ClosestPoint(hostPosition);
+                if (new Vector2(closest.x - hostPosition.x, closest.z - hostPosition.z).magnitude > 2.5f)
+                    continue;
+                MeshFilter filter = part.GetComponent<MeshFilter>();
+                if (filter == null || filter.sharedMesh == null) continue;
+                nearby.Add(new DeskPartBox
+                {
+                    Transform = part.transform,
+                    LocalBounds = filter.sharedMesh.bounds,
+                    Scale = part.transform.lossyScale,
+                    WorldTop = bounds.max.y
+                });
+            }
+            var baked = new Mesh();
+            skinned.BakeMesh(baked, true);
+            var vertices = new List<Vector3>(skinned.sharedMesh.vertexCount);
+            baked.GetVertices(vertices);
+            Transform rendererTransform = skinned.transform;
+            Vector3 rendererPosition = rendererTransform.position;
+            Quaternion rendererRotation = rendererTransform.rotation;
+            // Every fifth vertex keeps the 209k-vertex meshes measurable within one QA frame budget.
+            for (var index = 0; index < vertices.Count; index += 5)
+            {
+                Vector3 world = rendererPosition + rendererRotation * vertices[index];
+                float reach = new Vector2(world.x - hostPosition.x, world.z - hostPosition.z).magnitude;
+                if (reach > horizontalReach) horizontalReach = reach;
+                var inside = false;
+                for (var partIndex = 0; partIndex < nearby.Count; partIndex++)
+                {
+                    DeskPartBox box = nearby[partIndex];
+                    Vector3 local = box.Transform.InverseTransformPoint(world);
+                    Bounds bounds = box.LocalBounds;
+                    if (bounds.Contains(local))
+                    {
+                        inside = true;
+                        break;
+                    }
+                    if (world.y > box.WorldTop) continue;
+                    float dx = Mathf.Max(bounds.min.x - local.x, 0f, local.x - bounds.max.x) * Mathf.Abs(box.Scale.x);
+                    float dz = Mathf.Max(bounds.min.z - local.z, 0f, local.z - bounds.max.z) * Mathf.Abs(box.Scale.z);
+                    float clearance = Mathf.Sqrt(dx * dx + dz * dz);
+                    if (clearance < minimumClearance) minimumClearance = clearance;
+                }
+                if (inside)
+                {
+                    penetratingVertices++;
+                    minimumClearance = 0f;
+                }
+            }
+            Object.Destroy(baked);
+            return true;
+        }
+
+        private struct DeskPartBox
+        {
+            public Transform Transform;
+            public Bounds LocalBounds;
+            public Vector3 Scale;
+            public float WorldTop;
         }
 
         private struct GroundClearanceSample

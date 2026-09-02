@@ -122,6 +122,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         // with the (0.0375,0.5) standing offset; Father's feet are back at the semantic agent root.
         // Keep the previous no-overlap radius plus the 0.04 safety only (0.940 - 0.361977).
         private const float FatherLegacy2DMatchedCollisionRadius = 0.578f;
+        // Candidate-only furniture clearance. Measured 2026-09-02 over the desk detour walk: the
+        // farthest visible vertex (arm swing) reaches 0.5143 (Player) / 0.4074 (Father) office
+        // world units from the agent centre while the static radius is 0.22, so arms entered desk
+        // geometry on 36/68 of 113 frames. One grid cell is about 0.874 world units, so a total
+        // furniture clearance must stay below the 0.437 half-cell for desk-adjacent cells to remain
+        // walkable; 0.22 + 0.18 = 0.40 keeps that margin. It removes the Father's penetration and
+        // leaves the Player at most 0.08 world units (about 3px) of arm-tip overlap when he walks
+        // the cell directly beside a desk. The own permitted seat desk stays exempt so docking is
+        // unchanged. Production/default padding is 0.
+        private const float PlayerLegacy2DMatchedFurnitureClearancePadding = 0.18f;
+        private const float FatherLegacy2DMatchedFurnitureClearancePadding = 0.18f;
         private const string Legacy2DScaleCandidateFlag =
             "-familyCompanyLegacy2DScaleCandidate";
         private static readonly string[] FamilyMemberIds =
@@ -310,6 +321,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 usedSpawns.Add(spawn);
                 OfficeRuntimeAgent actor = CreateActor(memberId, memberId == "player", spawn);
                 _world.RegisterActor(actor);
+                float furniturePadding = FurnitureClearancePaddingForMember(memberId);
+                if (furniturePadding > 0f)
+                    _world.Occupancy.SetFurnitureClearancePadding(actor.AgentId, furniturePadding);
                 if (_layoutSnapshots.TryGetValue(memberId, out snapshot) &&
                     !actor.RestoreLayoutSnapshot(snapshot))
                 {
@@ -683,6 +697,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 }
             }
             throw new InvalidOperationException("Starter Office has no valid actor spawn cell.");
+        }
+
+        private static float FurnitureClearancePaddingForMember(string memberId)
+        {
+            bool legacy2DScaleCandidate = Environment.GetCommandLineArgs().Any(argument =>
+                string.Equals(
+                    argument,
+                    Legacy2DScaleCandidateFlag,
+                    StringComparison.OrdinalIgnoreCase));
+            if (!legacy2DScaleCandidate) return 0f;
+            if (string.Equals(memberId, "player", StringComparison.Ordinal))
+                return PlayerLegacy2DMatchedFurnitureClearancePadding;
+            if (string.Equals(memberId, "father", StringComparison.Ordinal))
+                return FatherLegacy2DMatchedFurnitureClearancePadding;
+            return 0f;
         }
 
         private static float CollisionRadiusForMember(string memberId)

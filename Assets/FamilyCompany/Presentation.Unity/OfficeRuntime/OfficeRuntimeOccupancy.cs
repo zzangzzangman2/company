@@ -91,6 +91,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             public Vector2 DesiredVelocity;
             public float Radius;
             public float StaticRadius;
+            // Extra radius applied to furniture obstacles only (never to hard floor or walls), so a
+            // visible body whose arm swing reaches beyond StaticRadius stays out of desk geometry.
+            public float FurnitureClearancePadding;
             public float StuckSeconds;
             public OfficeGridCoordinate CurrentCell;
             public bool IsPresent = true;
@@ -386,6 +389,47 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             });
         }
 
+        /// <summary>
+        /// Furniture-only clearance added to the actor's static radius. Hard-floor and wall cells
+        /// keep the plain radius so wall-adjacent rows stay walkable; the actor's own permitted seat
+        /// desk stays exempt through <see cref="FurnitureObstacle.IsPermitted"/>.
+        /// </summary>
+        public void SetFurnitureClearancePadding(string agentId, float padding)
+        {
+            if (float.IsNaN(padding) || float.IsInfinity(padding) || padding < 0f)
+                throw new ArgumentOutOfRangeException(nameof(padding));
+            RequiredActor(agentId).FurnitureClearancePadding = padding;
+        }
+
+        /// <summary>
+        /// True when a blocking (StaticHard) furniture footprint touches the 8-neighbourhood of
+        /// the cell. The permitted seat's own work surface is ignored so seat approaches keep their
+        /// natural final cell. Used by the path service to steer padded (wide-bodied) actors one
+        /// cell away from desks whenever the layout leaves room.
+        /// </summary>
+        public bool HasBlockingFurnitureAdjacent(OfficeGridCoordinate cell, string permittedSeatId)
+        {
+            string permitted = permittedSeatId ?? string.Empty;
+            foreach (FurnitureObstacle obstacle in _furnitureObstacles)
+            {
+                if (obstacle.Layer != OfficeRuntimeOccupancyLayer.StaticHard) continue;
+                if (obstacle.IsPermitted(permitted)) continue;
+                PlacedOfficeFurniture furniture = obstacle.Furniture;
+                int minX = furniture.Origin.X - 1;
+                int minY = furniture.Origin.Y - 1;
+                int maxX = furniture.Origin.X + furniture.Width;
+                int maxY = furniture.Origin.Y + furniture.Height;
+                if (cell.X >= minX && cell.X <= maxX && cell.Y >= minY && cell.Y <= maxY)
+                    return true;
+            }
+            return false;
+        }
+
+        public float FurnitureClearancePaddingOf(string agentId) =>
+            _actors.TryGetValue(agentId ?? string.Empty, out ActorState state)
+                ? state.FurnitureClearancePadding
+                : 0f;
+
         public void UnregisterActor(string agentId)
         {
             ReleaseAttendanceIngress(agentId);
@@ -446,7 +490,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     position,
                     state.StaticRadius,
                     permittedSeatId,
-                    out OfficeRuntimeOccupancyLayer blockedLayer))
+                    out OfficeRuntimeOccupancyLayer blockedLayer,
+                    state.FurnitureClearancePadding))
             {
                 if (blockedLayer == OfficeRuntimeOccupancyLayer.Interaction) InteractionViolationCount++;
                 else StaticViolationCount++;
@@ -777,7 +822,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     targetWorld,
                     radius,
                     permitted,
-                    out _)) return false;
+                    out _,
+                    actor.FurnitureClearancePadding)) return false;
 
             bool reservationRequired = !string.IsNullOrEmpty(requiredReservationOwner);
             if (reservationRequired &&
@@ -939,7 +985,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 point,
                 radius,
                 permittedSeatId ?? string.Empty,
-                out _);
+                out _,
+                self.FurnitureClearancePadding);
             dynamicOverlap = false;
             foreach (ActorState peer in _actors.Values)
             {
@@ -1016,7 +1063,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             for (var sample = 1; sample <= samples; sample++)
             {
                 Vector2 point = Vector2.Lerp(start, end, sample / (float)samples);
-                if (!PointClearsStatic(point, radius, permittedSeatId, out OfficeRuntimeOccupancyLayer blockedLayer))
+                if (!PointClearsStatic(
+                        point, radius, permittedSeatId, out OfficeRuntimeOccupancyLayer blockedLayer,
+                        self.FurnitureClearancePadding))
                 {
                     if (blockedLayer == OfficeRuntimeOccupancyLayer.Interaction) BlockedInteractionMoveCount++;
                     else BlockedStaticMoveCount++;
@@ -1055,7 +1104,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             for (var sample = 1; sample <= samples; sample++)
             {
                 Vector2 point = Vector2.Lerp(start, end, sample / (float)samples);
-                if (!PointClearsStatic(point, radius, permittedSeatId, out OfficeRuntimeOccupancyLayer layer))
+                if (!PointClearsStatic(
+                        point, radius, permittedSeatId, out OfficeRuntimeOccupancyLayer layer,
+                        self.FurnitureClearancePadding))
                     return "static=" + DescribeStaticBlocker(point, radius, permittedSeatId, layer);
                 OfficeGridCoordinate pointCell = _presenter.NearestCell(new Vector3(point.x, point.y, 0f));
                 foreach (ActorState peer in _actors.Values)
@@ -1301,7 +1352,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             Vector2 point,
             float radius,
             string permittedSeatId,
-            out OfficeRuntimeOccupancyLayer blockedLayer)
+            out OfficeRuntimeOccupancyLayer blockedLayer,
+            float furniturePadding = 0f)
         {
             string permitted = permittedSeatId ?? string.Empty;
             foreach (Vector2 direction in CollisionDirections)
@@ -1337,7 +1389,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (FurnitureObstacle obstacle in _furnitureObstacles)
             {
                 if (obstacle.IsPermitted(permitted)) continue;
-                float expandedRadius = radius + obstacle.ClearancePadding;
+                float expandedRadius = radius + obstacle.ClearancePadding + furniturePadding;
                 gridTransform.GridRadiusExtents(
                     expandedRadius,
                     out float gridRadiusX,

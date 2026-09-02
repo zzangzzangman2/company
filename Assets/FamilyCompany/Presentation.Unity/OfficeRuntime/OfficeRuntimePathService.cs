@@ -77,6 +77,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     avoidDynamic,
                     radius);
             StaticTraversalGraph graph = StaticGraph(permittedSeatId, radius);
+            if (_occupancy.FurnitureClearancePaddingOf(agentId) > 0f)
+                return FindPathWithDeskProximityCost(
+                    agentId, start, goal, permittedSeatId, avoidDynamic, radius, graph);
             _pathQueue.Clear();
             _pathVisited.Clear();
             _pathParents.Clear();
@@ -104,6 +107,84 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _pathVisited.Add(next);
                     _pathParents[next] = current;
                     _pathQueue.Enqueue(next);
+                }
+            }
+
+            if (!_pathVisited.Contains(goal)) return Array.Empty<OfficeGridCoordinate>();
+            var path = new List<OfficeGridCoordinate> { goal };
+            while (!path[path.Count - 1].Equals(start))
+                path.Add(_pathParents[path[path.Count - 1]]);
+            path.Reverse();
+            return path;
+        }
+
+        // Wide-bodied (furniture-padded) actors: a cell touching a blocking desk footprint costs
+        // this much extra, so the search prefers a route one cell further away whenever the layout
+        // leaves room, while still using desk-adjacent cells when they are the only way (or the
+        // goal itself). The arm swing of the enlarged candidate bodies reaches past the half-cell,
+        // so hugging a desk visibly puts the arm inside the desk top.
+        private const float DeskProximityStepPenalty = 2.5f;
+
+        private readonly Dictionary<OfficeGridCoordinate, float> _pathCost =
+            new Dictionary<OfficeGridCoordinate, float>();
+        private readonly List<OfficeGridCoordinate> _pathOpen = new List<OfficeGridCoordinate>();
+
+        private IReadOnlyList<OfficeGridCoordinate> FindPathWithDeskProximityCost(
+            string agentId,
+            OfficeGridCoordinate start,
+            OfficeGridCoordinate goal,
+            string permittedSeatId,
+            bool avoidDynamic,
+            float radius,
+            StaticTraversalGraph graph)
+        {
+            _pathCost.Clear();
+            _pathParents.Clear();
+            _pathVisited.Clear();
+            _pathOpen.Clear();
+            _pathCost[start] = 0f;
+            _pathOpen.Add(start);
+            while (_pathOpen.Count > 0)
+            {
+                // Uniform-cost search; office grids are small enough for a linear open-list scan.
+                var bestIndex = 0;
+                float bestCost = _pathCost[_pathOpen[0]];
+                for (var index = 1; index < _pathOpen.Count; index++)
+                {
+                    float cost = _pathCost[_pathOpen[index]];
+                    if (cost < bestCost)
+                    {
+                        bestCost = cost;
+                        bestIndex = index;
+                    }
+                }
+                OfficeGridCoordinate current = _pathOpen[bestIndex];
+                _pathOpen.RemoveAt(bestIndex);
+                if (_pathVisited.Contains(current)) continue;
+                _pathVisited.Add(current);
+                PathVisitedNodeCount++;
+                if (current.Equals(goal)) break;
+                OfficeGridCoordinate[] neighbors = ResolveStaticNeighbors(
+                    graph,
+                    current,
+                    permittedSeatId,
+                    radius);
+                for (var index = 0; index < neighbors.Length; index++)
+                {
+                    OfficeGridCoordinate next = neighbors[index];
+                    if (_pathVisited.Contains(next)) continue;
+                    bool includeDynamic = avoidDynamic && !next.Equals(goal);
+                    if (includeDynamic &&
+                        !_occupancy.IsCellPassable(next, agentId, permittedSeatId, true)) continue;
+                    float step = (next.X != current.X && next.Y != current.Y) ? 1.41421356f : 1f;
+                    if (!next.Equals(goal) &&
+                        _occupancy.HasBlockingFurnitureAdjacent(next, permittedSeatId))
+                        step += DeskProximityStepPenalty;
+                    float candidate = bestCost + step;
+                    if (_pathCost.TryGetValue(next, out float known) && known <= candidate) continue;
+                    _pathCost[next] = candidate;
+                    _pathParents[next] = current;
+                    _pathOpen.Add(next);
                 }
             }
 

@@ -58,24 +58,39 @@ centre error `0/0` and static/interaction/agent violations `0/0/0`.
 The strict test that projects every vertical 3D shoe-side pixel into one flat floor diamond still
 does not pass and is retained as a failure, not used to negate the visual alignment.
 
-## Desk detour proof (added 2026-09-02, run `Artifacts/FatherDeskDetourProof-20260902-145500/`)
+## Desk detour proof (2026-09-02, run `Artifacts/FatherDeskClearanceFinal-20260902-160500/`)
 
-The QA now forces both agents across a blocking V31 desk: Player `(3,8)->(3,2)` through the desk at
+The QA forces both agents across a blocking V31 desk: Player `(3,8)->(3,2)` through the desk at
 cells `(3..4,5)`, Father `(7,8)->(11,8)` through the desk at `(9..10,8)`. Both reached their targets
-in `271` frames with static/interaction violations `0/0`.
+in `138` frames with static/interaction violations `0/0`.
+
+The user then noticed arms sinking into desk tops while walking past. Measured cause: the enlarged
+candidate bodies swing their arms out to `0.514` (Player) / `0.407` (Father) world units from the
+agent centre, while the furniture clearance radius was `0.22` and one grid cell is only about
+`0.79` world units across its edge normal, so a body hugging a desk-adjacent cell put its arm inside
+the desk top. Two candidate-only navigation rules fix it:
+
+- furniture-only clearance padding `+0.18` (total `0.40`, below the `0.397` half-cell so
+  desk-adjacent cells stay walkable and the own seat desk stays exempt), and
+- a desk-proximity step penalty (`+2.5`) in path search for padded actors, so routes keep one cell
+  away from desks whenever the layout leaves room.
 
 | | Player | Father |
 | --- | --- | --- |
-| cells visited | `(3,8) (3,7) (3,6) (2,6) (2,5) (2,4) (3,4) (3,3) (3,2)` | `(7,8) (8,8) (8,7) (9,7) (10,7) (11,7) (11,8)` |
-| closest body edge to a desk footprint | `+0.17` cells | `+0.23` cells |
-| frames inside a desk footprint | `0` | `0` |
+| cells visited | `(3,8) (3,7) (2,7) (1,7) (1,6) (1,5) (1,4) (1,3) (2,3) (3,3) (3,2)` | `(7,8) (7,9) (7,10) (8,10) (9,10) (10,10) (11,10) (11,9) (11,8)` |
+| closest agent centre to a desk footprint | `1.39` cells | `0.50` cells (the goal cell is desk-adjacent) |
+| frames with any skinned vertex inside desk geometry | `0 / 138` | `0 / 138` |
+| closest visible vertex to desk geometry | `0.547` world | `0.199` world |
 
-Files: `player-father-desk-detour.gif`, `player-father-desk-detour-sheet.png`,
-`player-father-desk-detour-trace.csv`, `office-furniture-footprints.csv`. Desk footprints are
-`StaticHard` occupancy obstacles with sub-cell masks; chairs are `Interaction` cells open only to
-their seat owner. Peer avoidance: a move is rejected when the target point is closer to another actor
-than the two radii (`0.475/0.578` candidate, `0.28/0.30` production); blocked agents stop, yield to a
-side cell after `0.8 s`, replan after `1.1 s` and drop path reservations after `2 s`.
+Vertex penetration is tested in each desk part's own local box (the grid is skewed against the
+world axes, so world AABBs over-report). Files: `player-father-desk-detour.gif`,
+`player-father-desk-detour-sheet.png`, `player-father-desk-detour-trace.csv` (per-frame position,
+penetrating vertices, clearance, reach), `office-furniture-footprints.csv`,
+`office-desk-part-bounds.csv`. Desk footprints are `StaticHard` occupancy obstacles with sub-cell
+masks; chairs are `Interaction` cells open only to their seat owner. Peer avoidance: a move is
+rejected when the target point is closer to another actor than the two radii (`0.475/0.578`
+candidate, `0.28/0.30` production); blocked agents stop, yield to a side cell after `0.8 s`, replan
+after `1.1 s` and drop path reservations after `2 s`.
 
 ## Review files
 

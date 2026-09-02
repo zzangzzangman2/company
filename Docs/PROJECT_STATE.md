@@ -69,6 +69,16 @@ Last updated: 2026-09-02. This file contains current handoff state only. Superse
   closest body edge `+0.17/+0.23` cells, frames inside a footprint `0/0`, static/interaction violations
   `0/0`. Seat-route frames are also captured (`route-frames/`). Evidence:
   `Docs/Evidence/PlayerFather3DIndependentQaCurrent/player-father-desk-detour.gif`.
+- Arms in desk tops (user report, same day): the candidate bodies' arm swing reaches `0.514/0.407`
+  world units from the agent centre while furniture clearance was `0.22`, so walking the cell beside
+  a desk put the arm inside the desk top (measured `36/68` of `113` detour frames with skinned
+  vertices inside desk part boxes). Candidate-only fixes: `OfficeRuntimeOccupancy` furniture-only
+  clearance padding `+0.18` (total `0.40`, below the `0.397` half-cell edge distance; own seat desk
+  exempt) and a `+2.5` desk-proximity step cost in `OfficeRuntimePathService` for padded actors.
+  Final run `Artifacts/FatherDeskClearanceFinal-20260902-160500/`: routes keep one cell from desks
+  (`(1,x)` column / `(x,10)` row), vertices inside desk geometry `0/0` frames, closest vertex
+  `0.547/0.199` world, static/interaction violations `0/0`, seats still reached. Production/default
+  padding and path cost are unchanged (`0`).
 - Exact same-cell `(6,6)`, same-camera/light/tile 1280x720 masks measure total height Player/Father
   `88/92px`, head bounds `27x27/25x31px`, head:height `0.306818/0.336957`, shoulder width `27/27px`,
   torso width `34/32px`, leg height `44/42px`, shoe pixels `233/208`, silhouette area `1792/1900`
