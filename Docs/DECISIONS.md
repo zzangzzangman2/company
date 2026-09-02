@@ -1,5 +1,18 @@
 # DECISIONS
 
+## 2026-09-02 (오후 3) / 3D 후보 두 명의 절대 밝기를 tint gain으로 올린다
+
+관찰: 사용자가 3D 두 명이 어둡다고 했고, 2D는 삭제 예정이라 3D끼리만 맞추면 된다고 했다. 분리 렌더
+실루엣 luma는 아들 `93.9`, 아빠 `73.7`(HSV value `0.41/0.33`)였다. 캐릭터 셰이더
+`PlayerV8BalancedAlbedo`는 `albedo × _Color × saturate(ambient + 0.18·form)`의 고정 중립광이어서
+방향광 세기는 밝기에 무관하고, albedo 위로 밝아질 수단은 `_Color` gain 또는 albedo 수정뿐이다.
+
+결정: 후보 전용 runtime material tint gain을 아들 `1.26`, 아빠 `1.28`로 둔다(`Family3DProductionPresenter`
+`*Legacy2DMatchedBrightnessGain`, production/default는 `1.0`). 결과 luma `118.2 / 93.2`, 비 `0.789`
+(gate 0.70~1.30 통과), 흰색 클리핑 `3.0% / 0%`. 아빠 `1.42`는 얼굴·손 피부가 날아가고 두 명 `1.32`는
+아들 후드 클리핑 `11%`라 폐기했다. 정본 색상·채도는 곱셈이라 유지된다. 기준표 C4를 "luma 아들
+`≥110`, 아빠 `≥90`, 클리핑 `≤5%`"로 바꾼다. 최종 run `Artifacts/FatherBrightnessFinal-20260902-165000/`.
+
 ## 2026-09-02 (오후 2) / 후보 캐릭터는 책상 옆 칸을 피해 걷고, 가구 여유 반경을 팔 길이에 맞춘다
 
 관찰: 사용자가 이동 중 팔이 책상에 파묻힌다고 지적했다. 측정하니 후보(확대) 캐릭터의 팔 끝은 agent

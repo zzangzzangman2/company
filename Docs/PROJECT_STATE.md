@@ -83,9 +83,15 @@ Last updated: 2026-09-02. This file contains current handoff state only. Superse
   (`48.0 px` per office world, `39.3 px` per 3D unit, tile `85.3x42.7 px` at 1280x720), the family
   height table (candidate 3D `90/93.5 px` versus visible 2D Mother/Sister `93.0/84.3 px` and legacy 2D
   Player/Father `90.1/94.7 px`; approved production 3D `73/69.5 px` is `20%+` smaller than the 2D
-  family) and the colour table (3D renders are darker than the 2D art: val `0.41/0.33` versus
-  `0.64/0.44`, mostly from the albedo itself). Size rules S1-S7 pass; colour rule C4 (3D vs 2D
-  brightness) is flagged for user judgement.
+  family) and the colour table. Size rules S1-S7 pass.
+- Brightness (user: "dark is unacceptable; only the 3D pair must match each other, 2D will be
+  deleted"): candidate-only material tint gain Player `1.26` / Father `1.28`
+  (`*Legacy2DMatchedBrightnessGain`, runtime `_Color`). Isolated same-tile silhouette luma rose from
+  `93.9/73.7` to `118.2/93.2` (ratio `0.789`, white clipping `3.0%/0%`). Father `1.42` blew out skin
+  and `1.32/1.32` clipped `11%` of the Player hoodie, so both were rejected. The neutral shader
+  ignores the directional light, so gain (or albedo) is the only brightness control. Final run
+  `Artifacts/FatherBrightnessFinal-20260902-165000/`; all tile/ground/desk metrics unchanged. C4 in
+  the standard now reads luma `>=110/>=90`, clipping `<=5%`. Production/default gain is `1.0`.
 - Exact same-cell `(6,6)`, same-camera/light/tile 1280x720 masks measure total height Player/Father
   `88/92px`, head bounds `27x27/25x31px`, head:height `0.306818/0.336957`, shoulder width `27/27px`,
   torso width `34/32px`, leg height `44/42px`, shoe pixels `233/208`, silhouette area `1792/1900`

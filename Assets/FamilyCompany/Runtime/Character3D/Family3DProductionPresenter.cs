@@ -43,6 +43,14 @@ namespace FamilyCompany.Runtime.Character3D
         public const float FatherLegacy2DMatchedTargetHeight = 2.454888000f;
         public const float FatherLegacy2DMatchedHorizontalScale = 0.806840529f;
         public const float FatherLegacy2DMatchedNeutralFill = 0.82f;
+        // Candidate-only absolute brightness. The fixed neutral shader multiplies albedo by
+        // saturate(ambient + key * form), so the rendered body can never exceed the albedo and the
+        // approved albedos are dark (isolated same-tile render luma 93.9 / 73.7, HSV value
+        // 0.41 / 0.33 on 2026-09-02). The user asked for brighter, mutually consistent 3D actors;
+        // the tint gain scales RGB (hue and saturation preserved until clipping) and the Father's
+        // larger gain narrows the Father/Player luma ratio while keeping his darker outfit darker.
+        public const float PlayerLegacy2DMatchedBrightnessGain = 1.26f;
+        public const float FatherLegacy2DMatchedBrightnessGain = 1.28f;
         public static readonly Vector2 PlayerLegacy2DMatchedFootCenterOffsetLocal =
             new Vector2(0.050989f, 0.214083f);
         public static readonly Vector2 FatherLegacy2DMatchedFootCenterOffsetLocal =
@@ -232,6 +240,7 @@ namespace FamilyCompany.Runtime.Character3D
                     : PlayerApprovedTargetHeight,
                 1f,
                 -1f,
+                legacy2DScaleCandidate ? PlayerLegacy2DMatchedBrightnessGain : 1f,
                 legacy2DScaleCandidate
                     ? PlayerLegacy2DMatchedFootCenterOffsetLocal
                     : Vector2.zero);
@@ -256,6 +265,7 @@ namespace FamilyCompany.Runtime.Character3D
                 legacy2DScaleCandidate
                     ? FatherLegacy2DMatchedNeutralFill
                     : -1f,
+                legacy2DScaleCandidate ? FatherLegacy2DMatchedBrightnessGain : 1f,
                 legacy2DScaleCandidate
                     ? FatherLegacy2DMatchedFootCenterOffsetLocal
                     : Vector2.zero);
@@ -303,6 +313,7 @@ namespace FamilyCompany.Runtime.Character3D
             float approvedTargetHeight,
             float horizontalScale,
             float neutralFillOverride,
+            float brightnessGain,
             Vector2 footCenterOffsetLocal)
         {
             GameObject modelPrefab = Resources.Load<GameObject>(modelResourcePath);
@@ -352,7 +363,7 @@ namespace FamilyCompany.Runtime.Character3D
             {
                 name = productionName + "ProductionSurface_Runtime",
                 mainTexture = albedo,
-                color = Color.white
+                color = new Color(brightnessGain, brightnessGain, brightnessGain, 1f)
             };
             if (neutralFillOverride >= 0f && runtimeMaterial.HasProperty("_AmbientFactor"))
                 runtimeMaterial.SetFloat("_AmbientFactor", neutralFillOverride);
