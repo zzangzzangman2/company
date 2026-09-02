@@ -58,6 +58,25 @@ centre error `0/0` and static/interaction/agent violations `0/0/0`.
 The strict test that projects every vertical 3D shoe-side pixel into one flat floor diamond still
 does not pass and is retained as a failure, not used to negate the visual alignment.
 
+## Desk detour proof (added 2026-09-02, run `Artifacts/FatherDeskDetourProof-20260902-145500/`)
+
+The QA now forces both agents across a blocking V31 desk: Player `(3,8)->(3,2)` through the desk at
+cells `(3..4,5)`, Father `(7,8)->(11,8)` through the desk at `(9..10,8)`. Both reached their targets
+in `271` frames with static/interaction violations `0/0`.
+
+| | Player | Father |
+| --- | --- | --- |
+| cells visited | `(3,8) (3,7) (3,6) (2,6) (2,5) (2,4) (3,4) (3,3) (3,2)` | `(7,8) (8,8) (8,7) (9,7) (10,7) (11,7) (11,8)` |
+| closest body edge to a desk footprint | `+0.17` cells | `+0.23` cells |
+| frames inside a desk footprint | `0` | `0` |
+
+Files: `player-father-desk-detour.gif`, `player-father-desk-detour-sheet.png`,
+`player-father-desk-detour-trace.csv`, `office-furniture-footprints.csv`. Desk footprints are
+`StaticHard` occupancy obstacles with sub-cell masks; chairs are `Interaction` cells open only to
+their seat owner. Peer avoidance: a move is rejected when the target point is closer to another actor
+than the two radii (`0.475/0.578` candidate, `0.28/0.30` production); blocked agents stop, yield to a
+side cell after `0.8 s`, replan after `1.1 s` and drop path reservations after `2 s`.
+
 ## Review files
 
 - `player-father-independent-zoom-walk.gif`: tracked 86-frame Player/Father comparison.

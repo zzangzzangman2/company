@@ -63,6 +63,12 @@ Last updated: 2026-09-02. This file contains current handoff state only. Superse
   foot-midpoint tile error `2.227/6.129` and `1.464/4.306px`, lowest skinned vertex `0.1473/0.1502`,
   same-tile shoe centroid delta `-0.201/1.582px`. QA now gates Father on the bone-based tile error and
   on ground clearance within `0.05` of Player. Still `CANDIDATE_USER_APPROVAL_REQUIRED`.
+- Desk detour proof (same day, `Artifacts/FatherDeskDetourProof-20260902-145500/`): the QA now routes
+  Player `(3,8)->(3,2)` and Father `(7,8)->(11,8)` straight through blocking V31 desk footprints. Both
+  detour around the desk (`(3,6)->(2,6)->(2,5)->(2,4)->(3,4)` and `(8,8)->(8,7)->...->(11,7)->(11,8)`),
+  closest body edge `+0.17/+0.23` cells, frames inside a footprint `0/0`, static/interaction violations
+  `0/0`. Seat-route frames are also captured (`route-frames/`). Evidence:
+  `Docs/Evidence/PlayerFather3DIndependentQaCurrent/player-father-desk-detour.gif`.
 - Exact same-cell `(6,6)`, same-camera/light/tile 1280x720 masks measure total height Player/Father
   `88/92px`, head bounds `27x27/25x31px`, head:height `0.306818/0.336957`, shoulder width `27/27px`,
   torso width `34/32px`, leg height `44/42px`, shoe pixels `233/208`, silhouette area `1792/1900`

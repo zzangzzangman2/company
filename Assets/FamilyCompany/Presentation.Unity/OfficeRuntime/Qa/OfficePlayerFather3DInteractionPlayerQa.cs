@@ -832,6 +832,73 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
             }
 
             runtime.World.Occupancy.ResetMetrics();
+
+            // Desk detour proof. The straight lines (3,8)->(3,2) and (7,8)->(11,8) cross the blocking
+            // V31 desk footprints at cells (3..4,5) and (9..10,8), so both agents must route around a
+            // desk. Every frame position is traced and every second frame is captured.
+            var detourPlayerTarget = new OfficeGridCoordinate(3, 2);
+            var detourFatherTarget = new OfficeGridCoordinate(11, 8);
+            player.QaTeleportToCell(new OfficeGridCoordinate(3, 8));
+            father.QaTeleportToCell(new OfficeGridCoordinate(7, 8));
+            for (var frame = 0; frame < 3; frame++) yield return null;
+            bool playerDetourAccepted = player.QaMoveToCell(detourPlayerTarget, "player-father-desk-detour");
+            bool fatherDetourAccepted = father.QaMoveToCell(detourFatherTarget, "player-father-desk-detour");
+            string detourFrameDirectory = Path.Combine(artifactDirectory, "detour-frames");
+            Directory.CreateDirectory(detourFrameDirectory);
+            var detourTrace = new StringBuilder();
+            detourTrace.AppendLine("frame,actor,phase,grid_x,grid_y,position_x,position_y,radius");
+            Vector2 detourOrigin = runtime.World.Presenter.CellCenterWorld(new OfficeGridCoordinate(0, 0));
+            Vector2 detourBasisX = runtime.World.Presenter.CellBasisXWorld();
+            Vector2 detourBasisY = runtime.World.Presenter.CellBasisYWorld();
+            var detourFrame = 0;
+            var detourCaptured = 0;
+            deadline = Time.realtimeSinceStartup + 30f;
+            while (Time.realtimeSinceStartup < deadline &&
+                   !(player.QaReachedCell(detourPlayerTarget) && father.QaReachedCell(detourFatherTarget)))
+            {
+                yield return new WaitForEndOfFrame();
+                foreach (OfficeRuntimeAgent detourActor in new[] { player, father })
+                {
+                    TryResolveGridCoordinate(
+                        detourActor.Position, detourOrigin, detourBasisX, detourBasisY, out Vector2 detourGrid);
+                    detourTrace.Append(detourFrame).Append(',')
+                        .Append(detourActor == player ? "player" : "father").Append(',')
+                        .Append(detourActor.Phase).Append(',')
+                        .Append(Invariant(detourGrid.x)).Append(',')
+                        .Append(Invariant(detourGrid.y)).Append(',')
+                        .Append(Invariant(detourActor.Position.x)).Append(',')
+                        .Append(Invariant(detourActor.Position.y)).Append(',')
+                        .Append(Invariant(detourActor.AgentRadius)).AppendLine();
+                }
+                if (detourFrame % 2 == 0 && detourCaptured < 400 &&
+                    TryCaptureOverview(
+                        Path.Combine(detourFrameDirectory, "detour-" + detourFrame.ToString("D3") + ".png"),
+                        out _))
+                    detourCaptured++;
+                detourFrame++;
+            }
+            bool playerDetourReached = player.QaReachedCell(detourPlayerTarget);
+            bool fatherDetourReached = father.QaReachedCell(detourFatherTarget);
+            int detourStaticViolations = runtime.World.Occupancy.StaticViolationCount;
+            int detourInteractionViolations = runtime.World.Occupancy.InteractionViolationCount;
+            File.WriteAllText(
+                Path.Combine(artifactDirectory, "player-father-desk-detour-trace.csv"),
+                detourTrace.ToString());
+            if (!playerDetourAccepted || !fatherDetourAccepted || !playerDetourReached || !fatherDetourReached)
+            {
+                Finish(
+                    false,
+                    "desk detour did not complete accepted=" + playerDetourAccepted + "/" + fatherDetourAccepted +
+                    " reached=" + playerDetourReached + "/" + fatherDetourReached +
+                    " frames=" + detourFrame +
+                    " playerBlocker=" + player.LastMovementBlocker +
+                    " fatherBlocker=" + father.LastMovementBlocker);
+                yield break;
+            }
+            player.QaTeleportToCell(new OfficeGridCoordinate(1, 1));
+            father.QaTeleportToCell(new OfficeGridCoordinate(11, 11));
+            for (var frame = 0; frame < 3; frame++) yield return null;
+
             bool playerAccepted = player.QaBeginSeatedWorkAtSeat(
                 playerSeat.SeatId,
                 "player-father-production-work");
@@ -847,11 +914,53 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                 yield break;
             }
 
+            // Seat-route evidence: every third rendered frame until both actors are Working, plus
+            // per-frame agent grid positions and the blocking furniture footprints, so the review
+            // can prove the walk goes around the V31 desks rather than through them.
+            string routeFrameDirectory = Path.Combine(artifactDirectory, "route-frames");
+            Directory.CreateDirectory(routeFrameDirectory);
+            var routeTrace = new StringBuilder();
+            routeTrace.AppendLine("frame,actor,phase,grid_x,grid_y,position_x,position_y,radius");
+            Vector2 routeOrigin = runtime.World.Presenter.CellCenterWorld(new OfficeGridCoordinate(0, 0));
+            Vector2 routeBasisX = runtime.World.Presenter.CellBasisXWorld();
+            Vector2 routeBasisY = runtime.World.Presenter.CellBasisYWorld();
+            var routeFrame = 0;
+            var routeCaptured = 0;
             deadline = Time.realtimeSinceStartup + 40f;
             while (Time.realtimeSinceStartup < deadline &&
                    (player.Phase != OfficeRuntimeAgentPhase.Working ||
                     father.Phase != OfficeRuntimeAgentPhase.Working))
-                yield return null;
+            {
+                yield return new WaitForEndOfFrame();
+                foreach (OfficeRuntimeAgent routeActor in new[] { player, father })
+                {
+                    TryResolveGridCoordinate(
+                        routeActor.Position, routeOrigin, routeBasisX, routeBasisY, out Vector2 routeGrid);
+                    routeTrace.Append(routeFrame).Append(',')
+                        .Append(routeActor == player ? "player" : "father").Append(',')
+                        .Append(routeActor.Phase).Append(',')
+                        .Append(Invariant(routeGrid.x)).Append(',')
+                        .Append(Invariant(routeGrid.y)).Append(',')
+                        .Append(Invariant(routeActor.Position.x)).Append(',')
+                        .Append(Invariant(routeActor.Position.y)).Append(',')
+                        .Append(Invariant(routeActor.AgentRadius)).AppendLine();
+                }
+                if (routeFrame % 3 == 0 && routeCaptured < 400 &&
+                    TryCaptureOverview(
+                        Path.Combine(routeFrameDirectory, "route-" + routeFrame.ToString("D3") + ".png"),
+                        out _))
+                    routeCaptured++;
+                routeFrame++;
+            }
+            File.WriteAllText(Path.Combine(artifactDirectory, "player-father-route-trace.csv"), routeTrace.ToString());
+            var footprints = new StringBuilder();
+            footprints.AppendLine("furniture_id,blocks_movement,origin_x,origin_y,width,height");
+            foreach (PlacedOfficeFurniture furniture in runtime.World.Grid.Furniture)
+                footprints.Append(furniture.FurnitureId).Append(',')
+                    .Append(furniture.BlocksMovement).Append(',')
+                    .Append(furniture.Origin.X).Append(',').Append(furniture.Origin.Y).Append(',')
+                    .Append(furniture.Width).Append(',').Append(furniture.Height).AppendLine();
+            File.WriteAllText(Path.Combine(artifactDirectory, "office-furniture-footprints.csv"), footprints.ToString());
             if (player.Phase != OfficeRuntimeAgentPhase.Working ||
                 father.Phase != OfficeRuntimeAgentPhase.Working)
             {
@@ -1047,6 +1156,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                               playerRightKnee.ToString("F2"));
             result.AppendLine("fatherKnees=" + fatherLeftKnee.ToString("F2") + "/" +
                               fatherRightKnee.ToString("F2"));
+            result.AppendLine("deskDetourFrames=" + detourFrame);
+            result.AppendLine("deskDetourReached=" + playerDetourReached + "/" + fatherDetourReached);
+            result.AppendLine("deskDetourStaticViolations=" + detourStaticViolations);
+            result.AppendLine("deskDetourInteractionViolations=" + detourInteractionViolations);
             result.AppendLine("workingStaticViolations=" + staticViolations);
             result.AppendLine("workingInteractionViolations=" + interactionViolations);
             result.AppendLine("workingAgentPenetrations=" + workPenetrations);
