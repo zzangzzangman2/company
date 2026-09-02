@@ -11,8 +11,7 @@
 7. 코드를 고치고 확인해야 하면 Docs/ITERATION_LOOP.md
 8. 작업과 직접 관련된 추가 문서
 9. 가족 캐릭터를 생성·편집·가져오기·검증하면 작업 시작 전에
-   `Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md`와
-   `Docs/FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`를 모두 읽는다. 모든 신규 Player/Father/Mother/Older
+   `Docs/FAMILY_3D_CHARACTER_STANDARD.md`를 읽는다(크기·밝기·접지·보행·충돌·착석 표준과 절차). 모든 신규 Player/Father/Mother/Older
    Sister 작업은 **3D 전용**이다. 기존 2D sprite·atlas·PSB·R-series·분리 팔다리·보행 프레임은 mesh,
    texture, decal, billboard, motion donor, fallback으로 사용할 수 없다.
    네 캐릭터는 각각 한 개의 완전한 skinned body와 유효한 Humanoid Avatar를 가져야 하며, 같은 walk clip,

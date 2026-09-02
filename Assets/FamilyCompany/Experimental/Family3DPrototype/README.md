@@ -10,7 +10,7 @@ moved with their Unity GUIDs; the descriptions below are historical proof instru
 
 Completion boundary: Father V19/V31 and Player V6/V8 are the only user-approved completed family
 characters. Older Sister and Mother remain unapproved/not complete. See
-`Docs/FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md` before generating either one.
+`Docs/FAMILY_3D_CHARACTER_STANDARD.md` before generating either one.
 
 ## Current Player V6 walk + seated-work input
 
@@ -40,7 +40,7 @@ Father/mixed retargeting, procedural gait, pose damping or limb correction.
   `USER_VISUAL_APPROVED_PRODUCTION`
 
 Exact generation inputs and hashes are in `Docs/ASSET_MANIFEST.md`; walk, seated and appearance
-proof details are consolidated in `Docs/PLAYER_V6_FULL_3D_DESK_WORK_QA_2026-08-31.md`.
+proof details are consolidated in `Docs/FAMILY_3D_CHARACTER_STANDARD.md`.
 
 ## Current Father input
 
@@ -82,7 +82,7 @@ Review files in `Docs/Evidence/Family3DFatherV19V31/`:
 - `father-v19-v31-original-chair-atomic-set-close.gif`
 - `father-v19-v31-original-chair-atomic-set-full.gif`
 
-The full receipt and hashes are in `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08-28.md`.
+The full receipt and hashes are in `Docs/FAMILY_3D_CHARACTER_STANDARD.md`.
 
 ## Code ownership
 
@@ -93,7 +93,7 @@ The full receipt and hashes are in `Docs/FATHER_V19_FULL_3D_DESK_WORK_QA_2026-08
 
 ## Next character
 
-Do not duplicate Father version history. Follow `Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md` from four-view provider generation through full actual-map GIF review. The next character gets a new candidate folder, new asset hashes, measured stride/forward and explicit runtime IDs while reusing the shared formulas and gates.
+Do not duplicate Father version history. Follow `Docs/FAMILY_3D_CHARACTER_STANDARD.md` from four-view provider generation through full actual-map GIF review. The next character gets a new candidate folder, new asset hashes, measured stride/forward and explicit runtime IDs while reusing the shared formulas and gates.
 
 For tile-centred review, do not stop at the semantic root, the two-foot midpoint or an expanded
 ankle/toe proxy. The current command-line-only legacy-size candidate renders a shoe-only skinned mesh

@@ -7,7 +7,7 @@ four resulting identities because they did not resemble the existing 2D family; 
 also removed the mandatory red newsboy cap. They must not be used as identity inputs for V2.
 
 The files remain only to explain the rejected V1 lineage. See
-`Docs/FAMILY_3D_RUNTIME2D_V2_STYLE_LOCK_2026-08-24.md` for the replacement source order and visual
+`Docs/FAMILY_3D_CHARACTER_STANDARD.md` for the replacement source order and visual
 contract. No rejected mesh, atlas, texture, or rendered pixel may become a V2 donor.
 
 `IDENTITY_TURNAROUND_REVIEW.md` preserves the enlarged visual review, source hierarchy, and exact
@@ -20,4 +20,4 @@ generation prompts used for these sheets.
 - `mother-3d-identity-turnaround-v1.png` — `6FFC0A5699F2B897F99A532F3264E58911A9B4ECA09C717450D9D588284FE604`
 - `older-sister-3d-identity-turnaround-v1.png` — `D08E92BEF5C3658025ADBAE8F13A6207CB64DDDA60935C345DC3A71046D3F1DD`
 
-See `Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md` before using these files.
+See `Docs/FAMILY_3D_CHARACTER_STANDARD.md` before using these files.

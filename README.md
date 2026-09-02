@@ -6,8 +6,8 @@
 
 - **가족 캐릭터 신규 구현은 2026-08-24부터 3D 전용이다.** Player/Father/Mother/Older Sister의 기존 2D
   sprite·atlas·PSB·R-series·분리 신체·보행 프레임은 mesh/texture/motion donor나 fallback으로 사용하지
-  않는다. 시작 문서는 `Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md`, 실행 순서는
-  `Docs/FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`다.
+  않는다. 시작 문서와 실행 순서는 모두
+  `Docs/FAMILY_3D_CHARACTER_STANDARD.md`다.
 - 네 가족 identity turnaround는 준비됐고, 공통 3D 보행·방향·루트·mute 구조는 Styloo proxy V3로만
   검증됐다. 최종 네 가족 textured Humanoid mesh는 아직 없으며, proxy와 Blender V1/V2를 최종 캐릭터로
   오인하지 않는다. production/default/Downloads 실행본은 사용자 승인 전 바꾸지 않는다.
@@ -91,8 +91,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 | 2 | [PROJECT_STATE.md](Docs/PROJECT_STATE.md) | 현재 통합/대기/미완료와 최신 검증 |
 | 3 | [CANON.md](Docs/CANON.md) | 가족·직원 후보·시각 콘텐츠 정본 |
 | 4 | [DECISIONS.md](Docs/DECISIONS.md) | 구조와 방향 결정의 이유 |
-| 가족 3D | [FAMILY_3D_CHARACTER_CANON_2026-08-24.md](Docs/FAMILY_3D_CHARACTER_CANON_2026-08-24.md), [FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md](Docs/FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md) | 3D-only 캐릭터 정본·비용·제작·검수·다른 PC 인계 |
-| 가족 크기·색 기준 | [FAMILY_CHARACTER_SCALE_COLOR_STANDARD_2026-09-02.md](Docs/FAMILY_CHARACTER_SCALE_COLOR_STANDARD_2026-09-02.md) | 아들·아빠·2D 가족의 화면 크기/색 실측값, 환산식, 판정 규칙 |
+| 가족 3D | [FAMILY_3D_CHARACTER_STANDARD.md](Docs/FAMILY_3D_CHARACTER_STANDARD.md) | 가족 3D 캐릭터 크기·밝기·접지·보행·충돌·착석 표준과 새 캐릭터 추가 절차 |
 | 구조 | [ARCHITECTURE.md](Docs/ARCHITECTURE.md) | 순수 시뮬레이션·저장·Unity 경계 |
 | 반복 루프 | [ITERATION_LOOP.md](Docs/ITERATION_LOOP.md), [FAST_QA_WINDOWS.md](Docs/FAST_QA_WINDOWS.md) | 변경 종류별 명령과 warm 캐시 규칙 |
 | 사무실·UI | [ART_STYLE.md](Docs/ART_STYLE.md), [OFFICE_BUILD_EDITOR_V1.md](Docs/OFFICE_BUILD_EDITOR_V1.md), [MAIN_NAVIGATION_HUD_V2.md](Docs/MAIN_NAVIGATION_HUD_V2.md), [FRONTEND_V0_4.md](Docs/FRONTEND_V0_4.md) | 현재 런타임 시각·편집·내비게이션 |

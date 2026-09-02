@@ -79,7 +79,12 @@ Last updated: 2026-09-02. This file contains current handoff state only. Superse
   (`(1,x)` column / `(x,10)` row), vertices inside desk geometry `0/0` frames, closest vertex
   `0.547/0.199` world, static/interaction violations `0/0`, seats still reached. Production/default
   padding and path cost are unchanged (`0`).
-- Size/colour standard: `Docs/FAMILY_CHARACTER_SCALE_COLOR_STANDARD_2026-09-02.md` fixes the units
+- Character docs consolidated (2026-09-02, user request): all FAMILY_3D_*, FATHER_V19_*, PLAYER_V6_*
+  and the size/colour standard were deleted and replaced by one authority,
+  `Docs/FAMILY_3D_CHARACTER_STANDARD.md` (rules, per-character parameter table, size S1-S5, colour
+  C1-C6, grounding, collision, seating contract, new-character procedure, QA commands, failure list).
+  Old texts remain in git history before `4c1cb829`.
+- Size/colour standard (now folded into `FAMILY_3D_CHARACTER_STANDARD.md`) fixed the units
   (`48.0 px` per office world, `39.3 px` per 3D unit, tile `85.3x42.7 px` at 1280x720), the family
   height table (candidate 3D `90/93.5 px` versus visible 2D Mother/Sister `93.0/84.3 px` and legacy 2D
   Player/Father `90.1/94.7 px`; approved production 3D `73/69.5 px` is `20%+` smaller than the 2D

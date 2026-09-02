@@ -3,8 +3,7 @@
 이 안내는 특정 날짜의 작업 폴더를 복제하는 문서가 아니라, 어느 Windows PC에서든 현재 `main`을 안전하게 받아 실행하는 절차다.
 
 > **현재 가족 캐릭터를 이어갈 때는 먼저
-> [FAMILY_3D_CHARACTER_CANON_2026-08-24.md](FAMILY_3D_CHARACTER_CANON_2026-08-24.md)와
-> [FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md](FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md)를 읽는다.**
+> [FAMILY_3D_CHARACTER_STANDARD.md](FAMILY_3D_CHARACTER_STANDARD.md)를 읽는다.**
 > 신규 캐릭터는 3D-only이며 기존 2D family asset은 신규 입력이나 fallback이 아니다.
 
 ## 인계 상태

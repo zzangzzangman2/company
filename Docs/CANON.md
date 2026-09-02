@@ -12,6 +12,11 @@
 
 ## 가족
 
+> **2026-09-02 표시 표준:** 크기·밝기·바닥 접지·타일 보행·충돌·착석의 승인 수치와 새 캐릭터 절차는
+> `FAMILY_3D_CHARACTER_STANDARD.md`가 소유한다(사용자 승인 후보 프로필: 아들 키 `90px`/아빠 `93.5px`
+> @1280x720, 밝기 gain `1.26/1.28`, 가구 여유 `0.40`, 반경 `0.475/0.578`). 아래 2026-08-31 값은 아직
+> 코드의 production 기본 프로필이며 승격 시 표준 값으로 교체한다.
+>
 > **2026-08-31 production 정본:** 주인공은 승인된 Player V8, 아빠는 승인된 Father V19 3D
 > 한 몸만 표시한다. 프로덕션 FBX·albedo·material은
 > `Assets/FamilyCompany/Content/Resources/Production3D/{PlayerV8,FatherV19}/`, 런타임 소유자는
@@ -28,8 +33,7 @@
 
 > **2026-08-24 최우선 정본:** 아래에 남은 2D 보행 수치와 R-series 기록은 migration/rollback 분석용
 > 퇴역 기록이다. 모든 신규 가족 캐릭터는
-> `FAMILY_3D_CHARACTER_CANON_2026-08-24.md`와
-> `FAMILY_3D_CHARACTER_HANDOFF_2026-08-24.md`를 따른다. 기존 2D sprite·atlas·PSB·분리 팔다리·보행
+> `FAMILY_3D_CHARACTER_STANDARD.md`(크기·밝기·접지·보행·충돌·착석·절차)를 따른다. 기존 2D sprite·atlas·PSB·분리 팔다리·보행
 > 프레임은 최종 표시, mesh/texture/decal/billboard, motion donor, silent fallback으로 사용할 수 없다.
 > 신규 정체성 입력은 `Assets/FamilyCompany/Experimental/Family3DPrototype/References/FamilyIdentityTurnaroundsV1/`
 > 의 네 turnaround뿐이며, 네 역할은 같은 Humanoid walk/clock/cadence/phase/root와 실제 SW/NW/NE/SE

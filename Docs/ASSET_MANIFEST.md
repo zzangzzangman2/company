@@ -4,7 +4,7 @@ This manifest lists the production Player V8 and Father V19 packages first, foll
 family inputs and canonical production assets. Retired iterations are not reusable sources.
 
 Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-approved. Older Sister
-and Mother are not complete. See `FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md`.
+and Mother are not complete. See `FAMILY_3D_CHARACTER_STANDARD.md`.
 
 Current command-line legacy-2D-size review remains `productionEligible=false`. It keeps both
 one-package assets below unchanged and now couples one action-613 cycle to exactly two tile-centre
@@ -111,7 +111,7 @@ difference is internal head/leg proportion, not global camera scale. Candidate-o
   user-selected V29 chair, actor and CRT composition is unchanged; 132/132 corresponding frame
   hashes match V29. Production desk/chair collision and seat-owner permissions remain semantic and
   unchanged. Actual route violations: static `0`, interaction `0`, agent penetration `0`.
-- exact next-character recipe: `Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md`.
+- exact next-character recipe: `Docs/FAMILY_3D_CHARACTER_STANDARD.md`.
 - isolated Father-character proof status: `USER_VISUAL_APPROVED_ISOLATED`; Higgsfield use for V31 is
   0 credits. The workstation geometry itself is separately promoted below.
 

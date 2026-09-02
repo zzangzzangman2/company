@@ -21,7 +21,7 @@ procedural gait, limb rewrite or pose weakening into either package.
 ```
 
 The exact inputs, options, hashes and approved state are recorded in `Docs/ASSET_MANIFEST.md` and
-`Docs/FAMILY_3D_CHARACTER_COMPLETION_AND_FAILURE_GUARD_2026-08-31.md`.
+`Docs/FAMILY_3D_CHARACTER_STANDARD.md`.
 
 ## Tools retained for the next one-package character
 
@@ -35,5 +35,5 @@ The exact inputs, options, hashes and approved state are recorded in `Docs/ASSET
 For Mother or Older Sister, start with a new four-view provider `multi_image_to_3d` job and make a
 character-specific copy of the current conversion contract. Do not resurrect the deleted Blender
 identity builders. Follow
-`Docs/FAMILY_3D_WORKSTATION_CHARACTER_REUSE_CONTRACT_2026-08-28.md` and keep the result
+`Docs/FAMILY_3D_CHARACTER_STANDARD.md` and keep the result
 `productionEligible=false` until the user approves its full actual-map animation.

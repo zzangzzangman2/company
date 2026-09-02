@@ -10,7 +10,7 @@ brightness all from this run; the earlier `FatherStandingGroundAlignedFinal-2026
 Brightness (user request, 2026-09-02): candidate-only material tint gain Player `1.26` / Father
 `1.28` raised the isolated same-tile silhouette luma from `93.9/73.7` to `118.2/93.2` (ratio `0.789`,
 white clipping `3.0%/0%`). See `player-father-brightness-before-after.png` and
-`Docs/FAMILY_CHARACTER_SCALE_COLOR_STANDARD_2026-09-02.md` (rule C4). `family-size-color-standard-sheet.png`
+`Docs/FAMILY_3D_CHARACTER_STANDARD.md` (rule C4). `family-size-color-standard-sheet.png`
 puts the 3D pair and the 2D family at one screen scale.
 
 ## What was wrong (2026-09-02 correction)
