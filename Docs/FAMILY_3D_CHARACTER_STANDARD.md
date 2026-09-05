@@ -54,22 +54,22 @@ sprite는 fail-closed다. 이 요청은 엄마·누나 정식 외형의 승인 �
 
 ## 3. 캐릭터별 표준 파라미터
 
-| 파라미터 | Player(아들) | Father(아빠) | production 기본(참고) | 상수 위치 |
-| --- | --- | --- | --- | --- |
-| FBX / albedo / material | `Production3D/PlayerV8/player-v8-production.fbx`, `player-v8-albedo.png`, `PlayerV8ProductionSurface.mat` | `Production3D/FatherV19/father-v19-production.fbx`, `father-v19-albedo.png`, Player 계열 material | 동일 | `Family3DProductionPresenter` 리소스 경로 |
-| walk clip | `PlayerV6_Casual_Walk_inplace` (`1..43`, `1.4 s`) | `FatherV19_Casual_Walk_inplace` (`1..43`, `1.4 s`) | 동일 | FBX 내 clip |
-| model scale / StandingHeight | `1.263885643` / `2.291498763` | `1.306909878` / `2.454888000` | `1.024378657/1.857258558`, `0.950318127/1.769311871` | `*Legacy2DMatchedModelScale/TargetHeight` |
-| 가로 scale | `1.0` | `0.806840529` | `1.0` / `0.92` | `FatherLegacy2DMatchedHorizontalScale` |
-| 화면 키 (1280x720, 보행 median) | `90px` (85–95) | `93.5px` (91–98) | `73px` / `69.5px` | 측정값 |
-| 발-뿌리 offset (local x, forward) | `(0.050989, 0.214083)` | `(0.037517, 0.138023)` | `(0,0)` | `*FootCenterOffsetLocal` |
-| 바닥 접지 보정 | 기준(0) | `AlignCandidateStandingGround`가 측정: `-0.2910` | 없음 | 런타임 측정, 상수 아님 |
-| 밝기 gain (`_Color`) | `1.26` | `1.28` | `1.0` | `*Legacy2DMatchedBrightnessGain` |
-| neutral fill (`_AmbientFactor`) | `0.70` (material 기본) | `0.82` | `0.70` / material 기본 | `FatherLegacy2DMatchedNeutralFill` |
-| stride / phase / cycle | `1.98761598` / `0.40` / `1.4 s` (두 발 착지 = 타일 2칸) | 동일 | `0.7950477` / `0` / `1.4 s` | `Legacy2DMatchedTileSynchronizedStrideOfficeUnits`, `Legacy2DMatchedTileSafePhaseOffsetCycles` |
-| 사람 충돌 반경 | `0.475` | `0.578` | `0.28` / `0.30` | `StarterOfficeRuntimeBootstrap.*CollisionRadius` |
-| 가구 정적 반경 + 패딩 | `0.22 + 0.18` | `0.22 + 0.18` | `0.22 + 0` | `OfficeRuntimeAgent.DefaultRadius`, `*FurnitureClearancePadding` |
-| 책상 인접 칸 경로 비용 | `+2.5` (패딩>0인 배우) | 동일 | 없음 | `OfficeRuntimePathService.DeskProximityStepPenalty` |
-| 원본 hash | receipt `player-v8-source-receipt.json` | GLB `210DC2E1…17F9`, FBX `479F883A…AEB5`, albedo `8C1418E1…962C`, Meshy job `865f2115-…-84eb-d38ca106d45d` (38 credits) | — | `*-source-receipt.json` |
+| 파라미터 | Player(아들) | Father(아빠) | Older Sister V3 후보 (§4.4) | production 기본(참고) | 상수 위치 |
+| --- | --- | --- | --- | --- | --- |
+| FBX / albedo / material | `Production3D/PlayerV8/player-v8-production.fbx`, `player-v8-albedo.png`, `PlayerV8ProductionSurface.mat` | `Production3D/FatherV19/father-v19-production.fbx`, `father-v19-albedo.png`, Player 계열 material | Experimental `OlderSisterV3HiggsfieldSdRepair613/*`, `OlderSisterV3CandidateSurface.mat` | 동일 | production은 `Family3DProductionPresenter`; 누나는 Experimental QA builder |
+| walk clip | `PlayerV6_Casual_Walk_inplace` (`1..43`, `1.4 s`) | `FatherV19_Casual_Walk_inplace` (`1..43`, `1.4 s`) | `OlderSisterV3_Casual_Walk_inplace` (`1..43`, `1.4 s`) | 동일 | FBX 내 clip |
+| model scale / StandingHeight | `1.263885643` / `2.291498763` | `1.306909878` / `2.454888000` | `1.154662251` / `2.367000` | `1.024378657/1.857258558`, `0.950318127/1.769311871` | `*Legacy2DMatchedModelScale/TargetHeight`; 누나 QA 상수 |
+| 가로 scale | `1.0` | `0.806840529` | `1.0` | `1.0` / `0.92` | `FatherLegacy2DMatchedHorizontalScale` |
+| 화면 키 (1280x720, 보행 median/목표) | `90px` (85–95) | `93.5px` (91–98) | `86px` median / `93.02px` 목표 | `73px` / `69.5px` | 측정값 |
+| 발-뿌리 offset (local x, forward) | `(0.050989, 0.214083)` | `(0.037517, 0.138023)` | `(0.034554, 0.112794)` (24위상 측정) | `(0,0)` | `*FootCenterOffsetLocal`; 누나 runtime receipt |
+| 바닥 접지 보정 | 기준(0) | `AlignCandidateStandingGround`가 측정: `-0.2910` | `-0.073097`, 최저점 `0.210697→0.137600` | 없음 | 런타임 측정, 상수 아님 |
+| 밝기 gain (`_Color`) | `1.26` | `1.28` | `1.0`; 실제 맵 luma `91.49`, clipping `0%` | `1.0` | `*Legacy2DMatchedBrightnessGain` |
+| neutral fill (`_AmbientFactor`) | `0.70` (material 기본) | `0.82` | `0.70` | `0.70` / material 기본 | material |
+| stride / phase / cycle | `1.98761598` / `0.40` / `1.4 s` (두 발 착지 = 타일 2칸) | 동일 | `1.98761598` / `0.40` / `1.4 s`, 발 중점 오차 `2.715/5.856px`, 접지 발 선 밖 `0/1120` | `0.7950477` / `0` / `1.4 s` | candidate gait constants |
+| 사람 충돌 반경 | `0.475` | `0.578` | 미적용; 보행 reach `0.3937` 측정 | `0.28` / `0.30` | 승인 뒤 `StarterOfficeRuntimeBootstrap`에 추가 |
+| 가구 정적 반경 + 패딩 | `0.22 + 0.18` | `0.22 + 0.18` | 미적용·승인 뒤 검증 | `0.22 + 0` | `OfficeRuntimeAgent.DefaultRadius`, `*FurnitureClearancePadding` |
+| 책상 인접 칸 경로 비용 | `+2.5` (패딩>0인 배우) | 동일 | 미적용·승인 뒤 검증 | 없음 | `OfficeRuntimePathService.DeskProximityStepPenalty` |
+| 원본 hash | receipt `player-v8-source-receipt.json` | GLB `210DC2E1…17F9`, FBX `479F883A…AEB5`, albedo `8C1418E1…962C`, Meshy job `865f2115-…-84eb-d38ca106d45d` (38 credits) | paid V2 GLB `62E1366B…3D3DD`; V3 FBX `6639CB85…846D2E`, albedo `7264BEA7…B71473`; new charge `0` | — | `*-source-receipt.json` |
 
 새 캐릭터는 이 표에 열을 추가한다. 값은 복사하지 않고 §9 절차로 **측정**한다(키, stride, forward,
 접지 보정, 밝기 gain, 팔 끝 반경).
@@ -84,6 +84,8 @@ sprite는 fail-closed다. 이 요청은 엄마·누나 정식 외형의 승인 �
 | --- | ---: | ---: | --- |
 | 아들 | `90px` | `2.11` | 화면 `1.039`, 메시 `1.071` |
 | 아빠 | `93.5px` | `2.19` | |
+| 누나 V3 후보 | `86px` median / `93.02px` 목표 | `2.02 / 2.18` | SD 비율·얼굴·눈·밝기 자동 gate 통과, GIF 승인 대기 (§4.4) |
+| 누나 V2 후보 (불합격) | `93px` | `2.18` | 키는 대역 안이지만 머리:키 `0.16`, 골반 폭 `0.059`로 가족 비율 위반(§4.3) |
 | 머리:키 | `0.307` / `0.333` | | |
 | 어깨 폭 / 몸통 폭 / 다리 높이 | `27/34/44px` / `27/32/43px` | | |
 | 실루엣 픽셀 / 화면 점유 | `1792` `0.194%` / `1906` `0.207%` | | |
@@ -98,9 +100,53 @@ sprite는 fail-closed다. 이 요청은 엄마·누나 정식 외형의 승인 �
 | S3 키 / 타일 높이 | `2.0 ~ 2.3` | `2.11 / 2.19` | 통과 |
 | S4 책상 상판 / 키 | `35 ~ 45%` | `39% / 37%` | 통과 |
 | S5 머리·몸통 폭 | 1280x720 보행 중 머리 폭·몸통 폭 아들과 `±1px` 내(정본 비율 유지) | `28/28`, `22/20` | 통과 |
+| S6 머리:키 (골격) | GLB rest pose `(head_end − neck) / (head_end − toe)` `0.26 ~ 0.36` (가족 SD 비율) | 아들 `0.273`, 아빠 `0.337`, 누나 V3 `0.310` | 통과 · 누나 V2 `0.159` 불합격 |
+| S7 몸 폭 (골격) | 골반 폭/키 `0.08 ~ 0.10`, 어깨 폭/키 `0.030 ~ 0.040`, 다리(골반→발끝)/키 `0.40 ~ 0.50` | 아들 `0.093/0.031/0.470`, 아빠 `0.093/0.037/0.413`, 누나 V3 `0.090/0.036/0.460` | 통과 · 누나 V2 `0.059/0.028/0.581` 불합격 |
+| S8 얼굴 가독성 | 1280x720에서 얼굴 높이 `≥ 22px`, 눈 높이 `≥ 3px`(아들 머리 `25px`·눈 `4px` 기준); 텍스처에서 얼굴이 UV 면적의 `≥ 8%` | 아들·아빠 통과; 누나 V3 화면 얼굴 `28.84px`, 두 눈 세로 `≥3px` 프레임 `4` | 화면 gate 통과 · 누나 V2 얼굴 `~12px`, 눈 `~1px` 불합격 |
 
 새 캐릭터의 키는 정본 나이·체형(§CANON)을 따르되 S1 대역 안에 둔다. 엄마·언니는 아들보다 크고
-아빠보다 작거나 같은 것이 자연스럽다(참고: 삭제 예정 2D 엄마 93px, 언니 84px).
+아빠보다 작거나 같은 것이 자연스럽다. **나이·체형은 SD(3~3.7등신) 안에서 표현한다**: 아들·아빠가
+이미 3등신대이므로, 어른 캐릭터를 실사 6등신으로 만들면 같은 키라도 가족이 아니라 다른 게임의
+캐릭터로 보인다(누나 V2 사고). 참조 이미지 단계에서 S6·S7을 먼저 만족시킨다.
+
+### 4.3 누나 V2 후보 판정 (2026-09-02, 사용자 "크기·밝기·선명도·눈 전부 불합격")
+
+| 항목 | 측정 | 기준 | 판정 |
+| --- | --- | --- | --- |
+| 화면 키 | `93px` (목표 `93.02`) | S1 81–99px | 통과 |
+| 머리:키 (골격) | `0.159` | S6 `0.26~0.36` (아들 `0.273`, 아빠 `0.337`) | **불합격** — 실사 6등신 |
+| 골반 폭/키 · 어깨/키 · 다리/키 | `0.059 / 0.028 / 0.581` | S7 | **불합격** — 가족의 절반 폭, 다리 과장 |
+| 얼굴·눈 | 얼굴 `~12px`, 눈 `~1px`; 텍스처 눈 지름 `~40px/2048`(아들 `~150px`) | S8 | **불합격** — 눈이 보이지 않음 |
+| 텍스처 대비 | albedo `57.6%`가 거의 검정 자주(`RGB 49/36/51`, val `0.205`): 머리·나시·반바지 구분 없음, 남색 반바지 `0.3%`, 흰 파이핑 없음 | C6 정본 의상색·구분 | **불합격** — 실루엣이 한 덩어리 |
+| 밝기 | 렌더 근사 luma `121`, val `0.55` (피부 `38.8%`가 val `0.98`) | C3 | 평균은 통과지만 원인은 밝기가 아니라 대비. gain으로 고칠 수 없음(피부만 날아감) |
+| 보행·타일·접지 | 발 중점 오차 `3.55/7.83px`, 최저 정점 `0.1376`, occupancy `0/0/0` | §6 | 통과 (파이프라인 자체는 정상) |
+
+원인: Higgsfield 참조 4장 자체가 실사 비율의 성인 일러스트였고, Meshy가 그대로 재현했다. 텍스처는
+머리·상의·하의를 같은 어두운 자주로 칩했다. 크기·밝기·오프셋 조정으로는 해결되지 않으며 **참조
+이미지부터 다시 만들어 재생성**해야 한다(§9.1 요구사항). 기존 V2 자산은 Experimental 후보 폴더에
+남기되 승격·착석 작업을 하지 않는다.
+
+### 4.4 누나 V3 로컬 SD 복구 후보 (2026-09-02, 추가 provider 비용 0)
+
+V3는 새 생성물이 아니라 이미 결제된 V2 GLB의 보존 복사본을 로컬에서 교정한 후보이다. 같은 mesh와
+bind skeleton에 연속 비율 함수를 적용하고 skin weights, UV topology와 action 613은 유지했다. albedo도
+같은 UV atlas의 기존 색/skin-weight category만 결정적으로 재분류했다. 원본 V2는 별도 보존하며 donor,
+retarget, 절차 보행, 접지별 host 이동은 없다.
+
+| 항목 | 측정 | 기준 | 판정 |
+| --- | ---: | ---: | --- |
+| 머리:키 | `0.310` | S6 `0.26~0.36` | 통과 |
+| 골반/키 · 어깨/키 · 다리/키 | `0.090 / 0.036 / 0.460` | S7 | 통과 |
+| 실제 맵 키 | median `86px`, 목표 `93.02px` | S1 `81~99px` | 통과 |
+| 얼굴·눈 | 얼굴 환산 `28.84px`; 두 눈 세로 `>=3px` 정면 프레임 `4` | S8 화면 `22/3px` | 통과 |
+| 밝기 | luma `91.49`, sat `0.247`, clipping `0%` | C3 `90~125`, C4 `<=5%` | 통과 |
+| 타일·접지 | 발 중점 `2.715/5.856px`; 발 밖 `0/2688`, 접지 발 밖 `0/1120`; 최저점 `0.1376` | §6 | 통과 |
+
+자동 gate는 사용자 시각 승인 대신이 아니다. 전체 실제 맵 GIF 승인 전 상태는
+`CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`이며 production/충돌/착석을 바꾸지 않는다.
+V3는 새 provider 제출물이 아니므로 원본 V2 UV topology를 보존했다. S8의 `UV 8%` 항목은 이후 새 생성
+제출의 사전 gate로 계속 유지하며, 이 로컬 복구는 실제 맵의 얼굴/두 눈 픽셀 측정과 사용자 GIF 판정으로만
+예외 승인할 수 있다. 이 예외는 Mother나 이후 생성물에 복사하지 않는다.
 
 ---
 
@@ -139,7 +185,9 @@ sky probe는 캐릭터 밝기에 영향이 없다. 밝기 조정 수단은 `_Col
 
 새 캐릭터 절차: white tint(gain 1.0)·neutral fill 0.70으로 시작 → 분리 렌더 측정 → gain을 0.02 단위로
 올려 C3를 만족시키되 C4를 넘기 직전에서 멈춘다. 피부가 먼저 날아가면 gain 대신 albedo 밝기 보정을
-검토한다(정본 색상 유지).
+검토한다(정본 색상 유지). **gain은 대비를 만들지 못한다**: 누나 V2처럼 머리·상의·하의가 한 어두운
+색이면 평균 luma가 기준을 넘어도 실루엣이 한 덩어리로 읽힌다. C6 의상 색 블록 구분은 텍스처(참조
+이미지) 단계에서 확보한다.
 
 ---
 
@@ -205,7 +253,14 @@ sky probe는 캐릭터 밝기에 영향이 없다. 밝기 조정 수단은 `_Col
 ## 9. 새 캐릭터 추가 절차
 
 1. **참조 4장**(front·three-quarter·side·back, 같은 의상·비율·조명). 확대 검사: 팔다리 중복/누락, 손
-   가림, 다리 겹침, 신발 잘림, 뷰 간 정체성 변화 있으면 재작업.
+   가림, 다리 겹침, 신발 잘림, 뷰 간 정체성 변화 있으면 재작업. **비율 요구(누나 V2 실패 후 추가)**:
+   - 아들·아빠와 같은 SD 3~3.7등신(머리:키 `0.26~0.36`), 어깨/키 `0.030~0.040`, 골반/키 `0.08~0.10`,
+     다리/키 `0.40~0.50`. 참조 프롬프트에 "same chibi proportions as the approved Player/Father
+     models, large head, short legs" 수준으로 명시하고, 아들·아빠 정면 렌더를 비율 참고로 첨부한다.
+   - 얼굴이 크고 눈이 큼(아들 기준 머리 높이의 `≥15%`). 정면 참조에서 눈이 또렷해야 한다.
+   - 의상 색 블록이 명도로 구분됨: 누나는 머리(거의 검정) < 나시(차콜, 머리보다 밝게) < 반바지(남색)
+     + 흰 파이핑이 참조에서 보여야 한다. Meshy는 참조의 대비를 그대로 텍스처에 옮긴다.
+   - 참조 생성 뒤 Meshy 제출 전에 이 문서 S6~S8을 참조 이미지에서 먼저 눈으로 판정한다.
 2. **생성**: Higgsfield MCP → Meshy `multi_image_to_3d`, rigging/animation/PBR/remesh on, quad, target
    60,000, A-pose 1.65 m, action `613 Casual_Walk_inplace`. 먼저 credit preflight, 사용자 승인 후 제출.
    job ID·옵션·차감 credit·GLB SHA-256 기록. OAuth URL/토큰은 저장소에 넣지 않는다.

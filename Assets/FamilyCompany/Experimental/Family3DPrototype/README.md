@@ -9,8 +9,31 @@ are under `Assets/FamilyCompany/Content/Resources/Production3D/`, and the produc
 moved with their Unity GUIDs; the descriptions below are historical proof instructions only.
 
 Completion boundary: Father V19/V31 and Player V6/V8 are the only user-approved completed family
-characters. Older Sister and Mother remain unapproved/not complete. See
-`Docs/FAMILY_3D_CHARACTER_STANDARD.md` before generating either one.
+characters. Older Sister V3 now has a zero-credit repaired walking candidate but remains unapproved;
+Mother has no current candidate. See `Docs/FAMILY_3D_CHARACTER_STANDARD.md` before continuing either.
+
+## Current Older Sister V3 zero-credit repair candidate
+
+V2 was rejected for six-head proportions, tiny face/eyes and merged dark clothing. V3 is a local,
+deterministic repair of that already-paid package under `Candidates/OlderSisterV3HiggsfieldSdRepair613/`.
+It applies one continuous bind-space SD proportion transform to the same mesh/skeleton and retains
+the original skin weights, UV topology and action 613. Its atlas is recoloured from existing
+categories only. No new provider job, donor, retarget or procedural motion is involved.
+
+- isolated scene: `Scenes/Family3DOlderSisterV3HiggsfieldSdRepair613MapQa.unity`
+- build: `Artifacts/Family3DStarterOfficeCandidateQaV1/OlderSisterV3HiggsfieldSdRepair613MapBuildV1`
+- run: `Artifacts/OlderSisterV3LocalRepair/20260902-sd-repair-v1/actual-map-run-v2`
+- measured standing height/foot offset/ground correction:
+  `2.367 / (0.034554,0.112794) / -0.073097`
+- stride/phase/cycle: `1.98761598 / 0.40 / 1.4 s`
+- 1,344-frame foot-midpoint tile error: median/max `2.715/5.856px`; occupancy `0/0/0`
+- individual foot bones outside centred diamond `0/2688`; planted outside `0/1120`; minimum planted
+  line margin `8.85px`
+- actual-map visual gates: silhouette height `86px`, face `28.84px`, both eyes `>=3px`, luma
+  `91.49`, white clipping `0%`
+- evidence: `Docs/Evidence/OlderSisterV3CandidateCurrent/`
+- status: `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`; walking only, no seating
+  or production/default cutover before full-GIF approval
 
 ## Current Player V6 walk + seated-work input
 
@@ -119,6 +142,6 @@ default locomotion remain stride `0.7950477`, phase `0`.
 
 - Keep every candidate on the QA layer and under Experimental/Artifacts.
 - Do not touch production/default/Downloads/deployed executables.
-- Keep only the two current one-package candidates and their current QA scenes/evidence in Git.
+- Keep only current one-package candidates and their current QA scenes/evidence in Git.
 - Run Unity and Blender hidden/background on a company PC.
 - Do not mark a result production eligible before the user approves the complete actual animation.

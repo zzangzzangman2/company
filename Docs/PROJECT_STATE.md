@@ -161,7 +161,8 @@ Last updated: 2026-09-05. This file contains current handoff state only. Superse
   bent knees `107.45 degrees / 113.16 degrees`, seated chair offset `0.13001`, and visible retired
   Player/workstation renderers `0/0`. Tracked screenshot and receipt:
   [Evidence/PlayerV8Production/README.md](Evidence/PlayerV8Production/README.md).
-- Player and Father each move through the real `OfficeRuntimeAgent` path and sit at their own
+- Historical 2026-09-02 proof (superseded by the current contact failure at the top): Player and Father
+  each moved through the real `OfficeRuntimeAgent` path and sat at their own
   purchased V31 seat. Peer avoidance uses visible-body radii `0.28/0.30`, while proven static
   furniture/docking clearance remains `0.22`. A head-on D3D11 run recorded blocked agent moves `45`,
   penetrations `0`, rendered silhouette overlap pixels `0`, then `Working/Working` at
@@ -169,7 +170,7 @@ Last updated: 2026-09-05. This file contains current handoff state only. Superse
   [Evidence/PlayerFather3DProduction/README.md](Evidence/PlayerFather3DProduction/README.md).
 - Mother and Older Sister still await approved one-package 3D replacements; their current visible
   bodies use the 2026-09-05 temporary mapping above, while their semantic identities stay unchanged.
-- Older Sister V2 preparation (2026-09-02): a new front/three-quarter/left/back source set was made
+- Historical Older Sister V2 preparation note (before the subsequent V2/V3 work): a new front/three-quarter/left/back source set was made
   from her canon identity plus the current Player/Father 3D style only. The rejected V1 turnaround was
   not used. Original-resolution inspection found separate arms, hands, shorts openings, legs and two
   complete bare feet. Higgsfield MCP preflight for the locked Meshy one-package contract returned
@@ -177,6 +178,42 @@ Last updated: 2026-09-05. This file contains current handoff state only. Superse
   and the workspace requires an upgrade. Source, hashes, exact order and parameters:
   `Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/README.md`.
   Status remains `productionEligible=false`.
+- The V2 preparation inputs above remain locally untracked and are preserved. Subsequent remote
+  commits added the isolated V3 zero-credit SD repair candidate below. It is not the current sister
+  appearance: the 2026-09-05 opening still uses the requested Player stand-in until approval.
+
+## 2026-09-02 Older Sister V3 zero-credit SD repair walking candidate
+
+- V2 remains explicitly rejected for its realistic six-head body, tiny face/eyes and merged dark
+  clothing. The user required a repair without paying again. V3 therefore derives only from the
+  already-paid V2 GLB (`62E1366B...3D3DD`) and charges **0 new provider credits**. No Higgsfield or
+  Meshy generation was submitted for V3.
+- The repair is deterministic and local: one continuous bind-space proportion map modifies the
+  same mesh and bind skeleton while retaining its skin weights, UV topology and original action
+  613. No donor, retarget, procedural gait, rigid-arm rewrite, pose damping or contact-frame host
+  translation is used. The source V2 package is preserved separately.
+- Measured rest ratios now pass the family standard: head/height `0.310`, hip width/height `0.090`,
+  shoulder width/height `0.036`, leg/height `0.460` (S6/S7). The same UV atlas is deterministically
+  recoloured so near-black hair, lighter charcoal tank, navy shorts, white piping, skin and teal
+  irises remain separate at map scale.
+- The Unity package still contains exactly one skinned mesh, one Humanoid armature, one material,
+  one UV set, 211,673 vertices, 118,945 polygons and 24 bones; unweighted/invalid references are
+  `0/0`, with at most four influences. FBX SHA-256 is `6639CB85...846D2E`; albedo SHA-256 is
+  `7264BEA7...B71473`. Clip is `OlderSisterV3_Casual_Walk_inplace`, frames `1..43`, `1.4 s`.
+- The hidden Windows D3D11 run completed two real 3x3 map circuits: 337 images, 1,344 telemetry
+  samples, all four diagonal directions, occupancy `0/0/0`. Locked target is `2.367 = 93.02px`;
+  temporal-background silhouette median is `86px`, inside S1 `81..99px`. Face projection is
+  `28.84px` and four frontal frames show both eyes at least `3px` high, passing S8.
+- Actual-map silhouette luma is `91.49` (C3 `90..125`), saturation `0.247`, and white clipping `0%`.
+  The measured foot-centre offset `(0.034554,0.112794)` gives tile error median/max
+  `2.715/5.856px` (gate `4/8`). All individual foot-bone points are inside the agent-centred tile
+  (`0/2688` outside; planted `0/1120`; minimum planted margin `8.85px`). One fixed ground correction
+  `-0.073097` aligns the walk-cycle minimum `0.210697 -> 0.137600` to Player.
+- Candidate assets: `Assets/FamilyCompany/Experimental/Family3DPrototype/Candidates/OlderSisterV3HiggsfieldSdRepair613/`.
+  Evidence: `Docs/Evidence/OlderSisterV3CandidateCurrent/`.
+- Status is `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`. Production resources,
+  normal executable, collision radii and seating remain unchanged until the user approves the full
+  actual-map GIF.
 
 ## 2026-09-02 independent Father scale/walk re-QA follow-up
 

@@ -1,0 +1,32 @@
+{
+  "contract": "FC-FAMILY-HUMANOID-FBX-ROUNDTRIP-V1",
+  "status": "PASS",
+  "fbx": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Assets\\FamilyCompany\\Experimental\\Family3DPrototype\\Candidates\\OlderSisterV2MeshyOnePackage613\\older-sister-v2-meshy-one-package-613.fbx",
+  "sha256": "910F85E51B6B22524735E00867ABFC18CC4E02F31FC46357EB846EDF2F2B28DB",
+  "blenderVersion": "4.5.10 LTS",
+  "meshObjectCount": 1,
+  "armatureObjectCount": 1,
+  "armatureModifierCount": 1,
+  "materialCount": 1,
+  "uvLayerCount": 1,
+  "activeUvLayer": "UVMap",
+  "vertexCount": 211673,
+  "polygonCount": 118945,
+  "boneCount": 24,
+  "boneNamingProfile": "meshy-one-package",
+  "missingRequiredBones": [],
+  "unweightedVertexCount": 0,
+  "invalidBoneWeightReferenceCount": 0,
+  "maximumInfluencesPerVertex": 4,
+  "boundsMin": [
+    -0.2843121886253357,
+    -0.3829987645149231,
+    -2.9773326559734414e-07
+  ],
+  "boundsMax": [
+    0.28431224822998047,
+    0.3830050230026245,
+    1.6078449487686157
+  ],
+  "productionEligible": false
+}

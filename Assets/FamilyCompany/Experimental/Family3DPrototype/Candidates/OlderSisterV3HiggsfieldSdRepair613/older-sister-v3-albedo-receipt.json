@@ -1,0 +1,28 @@
+{
+  "contract": "FC-OLDER-SISTER-V3-SD-ALBEDO-REPAIR-V1",
+  "status": "LOCAL_REPAIR_VISUAL_REVIEW_REQUIRED",
+  "input": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Assets\\FamilyCompany\\Experimental\\Family3DPrototype\\Candidates\\OlderSisterV2MeshyOnePackage613\\older-sister-v2-meshy-one-package-albedo.png",
+  "inputSha256": "C2A6F83FCF03AB6218EC130281353C727EB5B6478C6E1B02DDE111B8C6CAFDBA",
+  "uvMaskNpz": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSisterV3LocalRepair\\20260902-sd-repair-v1\\older-sister-v3-uv-categories.npz",
+  "output": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSisterV3LocalRepair\\20260902-sd-repair-v1\\older-sister-v3-higgsfield-sd-repair-albedo.png",
+  "outputSha256": "7264BEA780D2B821A4128BBB9B47B83E3CD41DA2A4A7E20B98743E38ECB71473",
+  "newProviderCreditCharge": 0,
+  "pixelCounts": {
+    "hair": 173418,
+    "tank": 152146,
+    "navyShorts": 109584,
+    "whitePiping": 18953,
+    "tealIris": 1445,
+    "skinControlled": 722363
+  },
+  "tealSourceComponentAreas": [
+    174,
+    156,
+    8
+  ],
+  "irisExpansionKernelPixels": 11,
+  "irisOutlineKernelPixels": 13,
+  "atlasMeanLuma": 113.58116149902344,
+  "policy": "same Meshy UV atlas, deterministic category masks from original skin weights; value-separated hair/tank/shorts, thickened existing piping, enlarged existing teal iris pixels, controlled skin highlights",
+  "productionEligible": false
+}

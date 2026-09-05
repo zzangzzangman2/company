@@ -1,0 +1,38 @@
+{
+  "contract": "FC-GENERATED-BIPED-SKIN-OVERLAP-AUDIT-V1",
+  "glb": "C:\\Users\\godho\\Documents\\Codex\\family_company_unity\\Artifacts\\OlderSister3DGeneration\\20260902-102656\\older-sister-v2-meshy-one-package-613.glb",
+  "mesh": "char1",
+  "objects": [
+    {
+      "name": "Armature",
+      "type": "ARMATURE",
+      "parent": null
+    },
+    {
+      "name": "char1",
+      "type": "MESH",
+      "parent": "Armature"
+    },
+    {
+      "name": "Icosphere",
+      "type": "MESH",
+      "parent": null
+    }
+  ],
+  "meshVertexCount": 211673,
+  "localBoundsMin": [
+    -40.096710205078125,
+    -18.48384666442871,
+    -3.4483691706554964e-06
+  ],
+  "localBoundsMax": [
+    40.09674072265625,
+    18.48369598388672,
+    164.99998474121094
+  ],
+  "flaggedVertexCount": 0,
+  "clusterCount": 0,
+  "clusters": [],
+  "vertices": [],
+  "productionEligible": false
+}
