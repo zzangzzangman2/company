@@ -112,8 +112,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     [DisallowMultipleComponent]
     public sealed class StarterOfficeRuntimeBootstrap : MonoBehaviour
     {
-        private const float PlayerV8ProductionCollisionRadius = 0.28f;
-        private const float FatherV19ProductionCollisionRadius = 0.30f;
+        // Standing-foot calibration translates the unchanged meshes relative to their semantic root.
+        // Preserve the former silhouette envelope by adding ceil(|calibrated XZ offset|, .005):
+        // Player (.042546,.155708) => .165; Father (.031821,.105393) => .115.
+        // Dynamic body/body clearance only; furniture radius, size and legacy candidate stay unchanged.
+        private const float PlayerV8ProductionCollisionRadius = 0.445f;
+        private const float FatherV19ProductionCollisionRadius = 0.415f;
         // The no-teleport candidate must stop far enough apart for every authored action-613
         // contact pose, not only the phase that happened to be sampled by the earlier QA.  The
         // previous pair overlapped by 35 rendered pixels at the natural 0.7950477 stride.
@@ -559,12 +563,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             renderer.sortingLayerName = "Default";
             var animator = root.AddComponent<DirectionalSpriteAnimator>();
             bool familyMember = Array.IndexOf(FamilyMemberIds, memberId) >= 0;
-            bool controlledPlayer = playerControlled &&
-                                    string.Equals(memberId, "player", StringComparison.Ordinal);
-            bool production3DCharacter =
-                string.Equals(memberId, "player", StringComparison.Ordinal) ||
-                string.Equals(memberId, "father", StringComparison.Ordinal);
-            // Player V8 and Father V19 own every visible pixel for their production actors. The
+            string modelMemberId = OfficeFamily3DVisualRoster.ModelMemberId(memberId);
+            bool production3DCharacter = modelMemberId.Length > 0;
+            // Player V8/Father V19 and their explicit temporary family stand-ins own all pixels. The
             // former 2D renderers remain only as hidden locomotion/seating state data until those
             // simulation clocks are separated from sprites; no missing-asset fallback can revive them.
             Sprite[] walkFrames = ResolveWalkFrames(memberId);
@@ -590,7 +591,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 renderer.forceRenderingOff = true;
                 Debug.Log(
                     "FAMILY_3D_VISUAL_PRESENTATION | member=" + memberId +
-                    " mode=" + (controlledPlayer ? "Production3DPlayerV8" : "Production3DFatherV19") +
+                    " mode=" + OfficeFamily3DVisualRoster.ProductionName(memberId) +
+                    " temporaryStandIn=" + OfficeFamily3DVisualRoster.IsTemporaryStandIn(memberId) +
                     " | " +
                     "legacy2DVisible=false fallback=false");
             }
@@ -701,6 +703,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private static float FurnitureClearancePaddingForMember(string memberId)
         {
+            memberId = OfficeFamily3DVisualRoster.ModelMemberId(memberId);
             bool legacy2DScaleCandidate = Environment.GetCommandLineArgs().Any(argument =>
                 string.Equals(
                     argument,
@@ -716,6 +719,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private static float CollisionRadiusForMember(string memberId)
         {
+            memberId = OfficeFamily3DVisualRoster.ModelMemberId(memberId);
             bool legacy2DScaleCandidate = Environment.GetCommandLineArgs().Any(argument =>
                 string.Equals(
                     argument,

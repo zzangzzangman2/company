@@ -5,6 +5,7 @@ using System.Linq;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Simulation.OfficeLayout;
+using FamilyCompany.Simulation.Navigation;
 using UnityEngine;
 
 namespace FamilyCompany.Runtime.Character3D
@@ -109,7 +110,8 @@ namespace FamilyCompany.Runtime.Character3D
         private float effectiveStrideOfficeUnits = ApprovedStrideOfficeUnits;
 
         public static Family3DProductionPresenter Instance => instance;
-        public bool IsBound => characters.Count == 2 && characters.All(binding => binding.IsBound);
+        public bool IsBound => characters.Count == OfficeFamily3DVisualRoster.FamilyCount &&
+                               characters.All(binding => binding.IsBound);
         public int BoundCharacterCount => characters.Count(binding => binding.IsBound);
         public int WorkstationCount => workstations.Count;
         public int VisibleLegacyCharacterRendererCount => CountVisibleLegacyCharacterRenderers();
@@ -153,7 +155,9 @@ namespace FamilyCompany.Runtime.Character3D
 
             if (!BindingStillMatchesStarter())
             {
-                if (IsBound)
+                // A layout rebuild can destroy semantic agents before this LateUpdate. Such
+                // partially invalid bindings still own 3D hosts and must be released as well.
+                if (characters.Count > 0)
                     ReleaseBinding();
                 TryBindWhenReady();
             }
@@ -179,11 +183,16 @@ namespace FamilyCompany.Runtime.Character3D
                 actor != null && string.Equals(actor.AgentId, "player", StringComparison.Ordinal));
             OfficeRuntimeAgent candidateFather = candidate.Actors.FirstOrDefault(actor =>
                 actor != null && string.Equals(actor.AgentId, "father", StringComparison.Ordinal));
-            if (candidatePlayer == null || candidateFather == null)
+            if (candidatePlayer == null || candidateFather == null ||
+                candidate.Actors.Count(actor => actor != null &&
+                    OfficeFamily3DVisualRoster.ModelMemberId(actor.AgentId).Length > 0) !=
+                OfficeFamily3DVisualRoster.FamilyCount)
                 return;
 
             try
             {
+                if (characters.Count > 0)
+                    ReleaseBinding();
                 Bind(candidate, candidatePlayer, candidateFather);
                 bindFailureLogged = false;
             }
@@ -274,6 +283,39 @@ namespace FamilyCompany.Runtime.Character3D
             characterById.Add(player.AgentId, player);
             characterById.Add(father.AgentId, father);
             AlignCandidateStandingGround(player, father);
+            if (!legacy2DScaleCandidate)
+            {
+                float referenceGround = CalibrateDefaultStanding(player);
+                float fatherGround = CalibrateDefaultStanding(father);
+                father.StandingGroundLiftCorrection = referenceGround - fatherGround;
+            }
+            foreach (OfficeRuntimeAgent actor in starter.Actors.Where(actor =>
+                         OfficeFamily3DVisualRoster.IsTemporaryStandIn(actor.AgentId)))
+            {
+                bool usePlayer = OfficeFamily3DVisualRoster.ModelMemberId(actor.AgentId) == "player";
+                CharacterBinding source = usePlayer ? player : father;
+                CharacterBinding standIn = CreateCharacterBinding(
+                    actor,
+                    OfficeFamily3DVisualRoster.ProductionName(actor.AgentId),
+                    usePlayer ? PlayerModelResourcePath : FatherModelResourcePath,
+                    usePlayer ? PlayerAlbedoResourcePath : FatherAlbedoResourcePath,
+                    usePlayer || legacy2DScaleCandidate ? PlayerMaterialResourcePath : FatherMaterialResourcePath,
+                    usePlayer ? PlayerWalkClipName : FatherWalkClipName,
+                    source.AppliedScale,
+                    source.ApprovedHeight,
+                    usePlayer ? 1f : legacy2DScaleCandidate
+                        ? FatherLegacy2DMatchedHorizontalScale : FatherStandardizedHorizontalScale,
+                    !usePlayer && legacy2DScaleCandidate ? FatherLegacy2DMatchedNeutralFill : -1f,
+                    legacy2DScaleCandidate
+                        ? usePlayer ? PlayerLegacy2DMatchedBrightnessGain : FatherLegacy2DMatchedBrightnessGain
+                        : 1f,
+                    source.StandingFootCenterOffsetLocal);
+                characters.Add(standIn);
+                characterById.Add(standIn.AgentId, standIn);
+                AlignCandidateStandingGround(player, standIn);
+                if (!legacy2DScaleCandidate)
+                    standIn.StandingGroundLiftCorrection = source.StandingGroundLiftCorrection;
+            }
 
             // Furniture dimensions are an approved V31 tile contract and must not grow when a
             // character-scale candidate is evaluated.
@@ -283,7 +325,7 @@ namespace FamilyCompany.Runtime.Character3D
             HideRetiredPresentation();
             Debug.Log(
                 "FAMILY_3D_PRODUCTION: BOUND | contract=" + Contract +
-                " actors=player,father playerScale=" + player.AppliedScale.ToString("F9") +
+                " actors=player,older_sister,father,mother temporaryStandIns=older_sister:PlayerV8,mother:FatherV19 playerScale=" + player.AppliedScale.ToString("F9") +
                 " playerHeight=" + player.WalkActor.StandingHeight.ToString("F6") +
                 " fatherScale=" + father.AppliedScale.ToString("F9") +
                 " fatherHorizontalScale=" +
@@ -293,7 +335,8 @@ namespace FamilyCompany.Runtime.Character3D
                 " fatherHeight=" + father.WalkActor.StandingHeight.ToString("F6") +
                 " scaleProfile=" +
                 (legacy2DScaleCandidate ? "Legacy2DMatchedCandidate" : "ApprovedProduction") +
-                " productionEligible=" + (!legacy2DScaleCandidate) +
+                " productionEligible=False runtimeReview=TileCentreCollisionRetestRequired" +
+                " approvedPackageBaseline=" + (!legacy2DScaleCandidate) +
                 " stride=" + effectiveStrideOfficeUnits.ToString("F7") +
                 " candidatePhaseOffsetCycles=" +
                 legacy2DScaleCandidatePhaseOffsetCycles.ToString("F6") +
@@ -616,16 +659,61 @@ namespace FamilyCompany.Runtime.Character3D
             }
 
             bool moving = actor.LastActualDisplacement.sqrMagnitude > MovementEpsilonSqr;
-            double clipCycles = actor.GaitDistance / effectiveStrideOfficeUnits +
-                                legacy2DScaleCandidatePhaseOffsetCycles;
+            var tuning = OfficeDevelopmentTuningSession.Current;
+            float stride = tuning?.Stride ?? effectiveStrideOfficeUnits;
+            if (binding.LastStride > 0f && Math.Abs(stride - binding.LastStride) > 0.000001f)
+                binding.StrideContinuityBias += actor.GaitDistance / binding.LastStride - actor.GaitDistance / stride;
+            binding.LastStride = stride;
+            double clipCycles = actor.GaitDistance / stride + binding.StrideContinuityBias +
+                                (tuning?.Phase ?? legacy2DScaleCandidatePhaseOffsetCycles);
             double motionClock =
                 (clipCycles - binding.WalkActor.PhaseOffset) * binding.WalkActor.CycleSeconds;
+            bool playerBody = OfficeFamily3DVisualRoster.ModelMemberId(binding.AgentId) == "player";
             Vector3 visualGround = actorGround + rotation * new Vector3(
-                binding.StandingFootCenterOffsetLocal.x,
+                binding.StandingFootCenterOffsetLocal.x + (tuning == null ? 0f : playerBody ? tuning.PlayerFootX : tuning.FatherFootX),
                 0f,
-                binding.StandingFootCenterOffsetLocal.y) +
+                binding.StandingFootCenterOffsetLocal.y + (tuning == null ? 0f : playerBody ? tuning.PlayerFootZ : tuning.FatherFootZ)) +
                 Vector3.up * binding.StandingGroundLiftCorrection;
             binding.WalkActor.Tick(motionClock, visualGround, rotation, moving);
+        }
+
+        private static float CalibrateDefaultStanding(CharacterBinding binding)
+        {
+            // Measure this complete package at its unchanged production scale. Correct only the
+            // constant standing ground anchor; no contact-frame root shift, rig edit or seated IK.
+            Vector3 ground = binding.Host.transform.position;
+            Quaternion yaw = binding.Host.transform.rotation;
+            var skin = binding.Model.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            var mesh = new Mesh();
+            var points = new List<Vector3>(skin.sharedMesh.vertexCount);
+            Vector3 midpointSum = Vector3.zero;
+            float minimum = float.PositiveInfinity;
+            const int phases = 48;
+            try
+            {
+                for (int i = 0; i < phases; i++)
+                {
+                    binding.WalkActor.Tick((2d + (double)i / phases) * ApprovedCycleSeconds, ground, yaw, true);
+                    var pose = binding.WalkActor.ReadPoseSnapshot();
+                    midpointSum += Quaternion.Inverse(yaw) * ((pose.leftFootWorld + pose.rightFootWorld) * 0.5f - ground);
+                    skin.BakeMesh(mesh, true);
+                    mesh.GetVertices(points);
+                    foreach (Vector3 vertex in points)
+                        minimum = Mathf.Min(minimum, (skin.transform.position + skin.transform.rotation * vertex).y - ground.y);
+                }
+                Vector3 mean = midpointSum / phases;
+                binding.StandingFootCenterOffsetLocal = new Vector2(-mean.x, -mean.z);
+                if (binding.StandingFootCenterOffsetLocal.magnitude > 0.35f || float.IsInfinity(minimum))
+                    throw new InvalidOperationException("Standing calibration exceeded safe package bounds.");
+                Debug.Log("FAMILY_3D_STANDING_CALIBRATION: actor=" + binding.AgentId +
+                    " offset=" + binding.StandingFootCenterOffsetLocal.ToString("F6") + " cycleMinimum=" + minimum.ToString("F6"));
+                return minimum;
+            }
+            finally
+            {
+                Destroy(mesh);
+                binding.WalkActor.Tick(0d, ground, yaw, false);
+            }
         }
 
         // Candidate-only vertical grounding. The bounds lift grounds the bind pose, but both
@@ -979,7 +1067,9 @@ namespace FamilyCompany.Runtime.Character3D
             public Material RuntimeMaterial { get; }
             public float AppliedScale { get; }
             public float ApprovedHeight { get; }
-            public Vector2 StandingFootCenterOffsetLocal { get; }
+            public Vector2 StandingFootCenterOffsetLocal { get; set; }
+            public float LastStride { get; set; }
+            public double StrideContinuityBias { get; set; }
             public float StandingGroundLiftCorrection { get; set; }
             public float SeatedBlend01 { get; set; }
             public double WorkClockSeconds { get; set; }

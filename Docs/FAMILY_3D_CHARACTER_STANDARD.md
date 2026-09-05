@@ -1,6 +1,6 @@
 # 가족 3D 캐릭터 표준 (FAMILY_3D_CHARACTER_STANDARD)
 
-최종 갱신 2026-09-02. 가족 3D 캐릭터(아들 Player, 아빠 Father, 이후 엄마 Mother, 언니 Older Sister)의
+최종 갱신 2026-09-05. 가족 3D 캐릭터(아들 Player, 아빠 Father, 이후 엄마 Mother, 언니 Older Sister)의
 **크기·밝기·바닥 접지·타일 보행·충돌·착석·검증 절차**를 한 문서로 고정한다. 새 캐릭터를 추가할 때는
 이 문서의 표에 한 줄을 추가하고 같은 규칙으로 통과시킨다. 이전의 FAMILY_3D_*, FATHER_V19_*,
 PLAYER_V6_* 문서들은 2026-09-02에 삭제되어 이 문서로 대체되었다(이력은 §12).
@@ -9,6 +9,13 @@ PLAYER_V6_* 문서들은 2026-09-02에 삭제되어 이 문서로 대체되었�
 `-familyCompanyLegacy2DScaleCandidate` 플래그(후보 프로필)로 켜지며 receipt는
 `CANDIDATE_USER_APPROVAL_REQUIRED`, `productionEligible=false`다. production 기본 프로필로 승격하는
 일은 별도 작업이며, 승격 시 §3 "production 기본" 열을 이 표준 열로 바꾼다.
+
+2026-09-05 사용자 요청의 **임시 외형 예외**: 정식 엄마·누나가 준비되기 전에는 아들 2명·아빠 2명으로
+4인을 표시한다. `OfficeFamily3DVisualRoster`에서 `older_sister -> player`, `mother -> father`만 매핑하고
+가족 identity/save/좌석/독립 이동은 원래 ID를 보존한다. 승인된 전체 FBX·자기 Avatar·자기 clip을
+통째로 별도 인스턴스화하므로 서로 다른 패키지의 mesh/rig/clip 혼합이 아니다. 각 복제 외형은 원본과
+동일한 스케일·밝기·접지·stride·반경·착석 규칙을 사용한다. 네 가족 renderer는 모두 3D이고 구형
+sprite는 fail-closed다. 이 요청은 엄마·누나 정식 외형의 승인 또는 후보 프로필의 기본값 승격이 아니다.
 
 ---
 

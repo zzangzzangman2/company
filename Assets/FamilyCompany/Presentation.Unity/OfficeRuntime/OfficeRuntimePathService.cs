@@ -632,6 +632,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (semanticStartIndex < 0 || semanticStartIndex >= semanticPath.Count)
                 throw new ArgumentOutOfRangeException(nameof(semanticStartIndex));
             if (maximumLookAhead < 1) throw new ArgumentOutOfRangeException(nameof(maximumLookAhead));
+            // Node zero is an explicit joining centre after an off-centre replan. Visibility of
+            // a farther node does not permit skipping it, even when the new route is straight.
+            if (semanticStartIndex == 0) return 0;
             int furthest = Math.Min(semanticPath.Count - 1, semanticStartIndex + maximumLookAhead - 1);
             for (var index = furthest; index >= semanticStartIndex; index--)
             {

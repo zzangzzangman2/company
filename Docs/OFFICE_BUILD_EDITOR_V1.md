@@ -2,6 +2,10 @@
 
 ## Current integration status
 
+- **2026-09-05 현재 상점:** 시작 자금 5,000,000원, 승인 V31 책상·PC·의자 한 세트만 400,000원에
+  판매한다. 무료 세트는 없고 4개를 직접 확정하면 3,400,000원이 남는다. 카테고리 전환 UI는 숨겼다.
+  점유는 책상 2칸 + 의자 1칸이며 접근칸은 녹색 구매 면적에 포함하지 않는다. 아래 다른 가구 정의는
+  이전 save/fixture 호환용으로 남아 있을 뿐 현재 상점 판매 목록이 아니다. 과거 native 클릭 금액은 당시 값이다.
 - Pending 구매 좌클릭은 preview 셀을 갱신한 같은 frame에서
   `Input.GetMouseButtonDown(0)` → `ConfirmPreview()`까지 진행하며 `OFFICE_BUILD_POINTER_COMMIT` 로그와
   `DiagnosticPointerCommitCount`를 남긴다. 2026-08-29 actual Windows native pointer의 CRT 워크스테이션
@@ -17,7 +21,7 @@
   `build-editor-from-company-*.png`는 빈 사무실만 담고 있으므로 렌더 근거로 쓰지 않는다.
 - 가구 재고는 전체 저장 스키마 v8에서 도입되었고, 현재 전체 스키마는 v11이며 v1~v10을 읽는다. OfficeGrid 하위 스키마는 v4, 가구 재고 하위 스키마는 v1이다.
 - 진입점은 `사무실 → 회사 → 사무실 관리`다. 하단 여섯 번째 탭이나 별도 wallet/save를 만들지 않는다.
-- 실제 새 게임은 바닥·외곽만 있는 빈 13×13 사무실로 시작하고 카테고리별 가구를 여기서 구매·배치한다. furnished `StarterOfficeV1`은 기존 저장/QA fixture다.
+- 실제 새 게임은 바닥·외곽만 있는 빈 13×13 사무실에서 가족 4인과 시작하고 현재 승인된 V31 세트만 여기서 구매·배치한다. furnished `StarterOfficeV1`은 기존 저장/QA fixture다.
 - 배치 geometry는 `OfficeRuntimeOccupancy`가 read-only query로 직접 소비한다. 알려진 가구는 canonical 4방향 profile, 이전 저장의 미등록 콘텐츠는 부분 legacy profile 없이 전체 셀 차단 fallback을 사용한다. 최종 seating/stamina 결합과 portable build 상태는 [PROJECT_STATE.md](PROJECT_STATE.md)를 따른다.
 
 ## Audit: canonical versus legacy
@@ -47,8 +51,8 @@ as a definition ID.
 
 | stable definition ID | Korean name | category | base footprint | capability / capacity | access | desired facing | nav | sprite policy | 2000 base KRW | gameplay KRW | resale | maintenance/day base |
 |---|---|---:|---:|---|---|---|---|---|---:|---:|---:|---:|
-| `desk_with_pc` | CRT 업무 책상·회전의자 세트 | Work | 2x2 set pivot (desk 2x1 + chair 1x1) | WorkDesk + bound Seat / 1 | rotated approach + seat cell | SE desk / NW chair | hard desk + owner-only chair | V31 dark-walnut exact 4-direction Resources; no legacy/mirror fallback; one atomic shop offer | 1,510,000 combined | 377,500 combined | component basis | 1,000 combined |
-| `swivel_chair` | 사무용 회전의자 (set component) | Seating | 1x1 | Seat / 1 | seat cell | NW | owner-only interaction | V31 graphite open-back exact 4-direction Resources; old green chair deleted; hidden as a separate shop offer | 160,000 component | 40,000 component | 55% | 100 |
+| `desk_with_pc` | CRT 업무 책상·회전의자 세트 | Work | 3 occupied cells in 2x2 bounds (desk 2x1 + chair 1x1) | WorkDesk + bound Seat / 1 | rotated approach + seat cell | SE desk / NW chair | hard desk + owner-only chair | V31 dark-walnut exact 4-direction Resources; no legacy/mirror fallback; one atomic shop offer | 1,600,000 combined | 400,000 combined | component basis | 1,000 combined |
+| `swivel_chair` | 사무용 회전의자 (set component) | Seating | 1x1 | Seat / 1 | seat cell | NW | owner-only interaction | V31 graphite open-back exact 4-direction Resources; old green chair deleted; hidden as a separate shop offer | 200,000 component | 50,000 component | 55% | 100 |
 | `reception_counter` | 접수 카운터 | Work | 2x1 | WorkDesk / 1 | cardinal | SE | block | canonical authored/mirror | 360,000 | 90,000 | 50% | 250 |
 | `meeting_table` | 4인 회의 탁자 | Work | 2x1 | WorkDesk / 4 | cardinal | SE | block | canonical authored/mirror | 420,000 | 105,000 | 50% | 250 |
 | `document_bookcase` | 문서 책장 | Storage | 1x1 | Filing / 1 | cardinal | SE | block | canonical authored/mirror | 180,000 | 45,000 | 55% | 120 |
@@ -89,6 +93,10 @@ CPI ratio, reconciled against the existing KRW 5,000,000 starting company scale,
 reasonable KRW 5,000/10,000 base-year anchors. Real 2000 reference values remain in each
 definition. A single explicit `GameplayPriceScaleBasisPoints = 2500` (25%) is then applied to
 every item; there are no hidden per-item multipliers.
+
+2026-09-05 exception to the historical price inference: the user explicitly selected a 400,000-won
+opening workstation balance. Its component bases are now 1,400,000 desk + 200,000 chair, still using
+the common 25% scale. This is a game-balance decision, not a new claim about actual year-2000 prices.
 
 Purchases debit `office_furniture_assets` and credit cash. Purchased-asset sales debit cash,
 debit explicit disposal loss, and credit the original asset basis. Migrated legacy items use a

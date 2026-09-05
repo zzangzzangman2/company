@@ -194,10 +194,10 @@ namespace FamilyCompany.Simulation.OfficeLayout
             Array.AsReadOnly(new[]
             {
                 D(OfficeGridLayouts.DeskWithPcKind, "CRT 업무 책상·회전의자 세트", OfficeFurnitureCategory.Work, 2, 1,
-                    1350000, 3500, 900, OfficeFurnitureCapability.WorkDesk, 1,
+                    1400000, 3500, 900, OfficeFurnitureCapability.WorkDesk, 1,
                     OfficeFurnitureAccessPolicy.AdjacentCardinal, true, "WorkDesk"),
                 D(OfficeGridLayouts.SwivelChairKind, "사무용 회전의자", OfficeFurnitureCategory.Seating, 1, 1,
-                    160000, 5500, 100, OfficeFurnitureCapability.Seat, 1,
+                    200000, 5500, 100, OfficeFurnitureCapability.Seat, 1,
                     OfficeFurnitureAccessPolicy.SeatCell, false, "Seat", OfficeFurnitureFacing.NorthWest),
                 D(OfficeGridLayouts.ReceptionCounterKind, "접수 카운터", OfficeFurnitureCategory.Work, 2, 1,
                     360000, 5000, 250, OfficeFurnitureCapability.WorkDesk, 1,
@@ -243,11 +243,10 @@ namespace FamilyCompany.Simulation.OfficeLayout
         public static IReadOnlyList<OfficeFurnitureDefinition> All => CanonicalDefinitions;
         public static IEnumerable<OfficeFurnitureDefinition> Purchasable =>
             CanonicalDefinitions.Where(item => item.IsPurchasable);
+        // Only the approved 3D workstation is currently sold. Keep the other definitions and
+        // generic transactions for existing saves/fixtures; they are not new-game shop offers.
         public static IEnumerable<OfficeFurnitureDefinition> ShopOffers =>
-            Purchasable.Where(item => !string.Equals(
-                item.DefinitionId,
-                OfficeGridLayouts.SwivelChairKind,
-                StringComparison.Ordinal));
+            Purchasable.Where(item => IsWorkstationSetOffer(item.DefinitionId));
 
         public static bool IsWorkstationSetOffer(string definitionId) =>
             string.Equals(definitionId, OfficeGridLayouts.DeskWithPcKind, StringComparison.Ordinal);
@@ -260,8 +259,19 @@ namespace FamilyCompany.Simulation.OfficeLayout
             if (definition == null) throw new ArgumentNullException(nameof(definition));
             long price = OfficeFurnitureEconomyConfig.GameplayPrice(definition.PurchasePriceWon);
             if (!IsWorkstationSetOffer(definition.DefinitionId)) return price;
-            return checked(price + OfficeFurnitureEconomyConfig.GameplayPrice(
-                Require(OfficeGridLayouts.SwivelChairKind).PurchasePriceWon));
+            return checked(GameplayWorkstationComponentPrice(false) + GameplayWorkstationComponentPrice(true));
+        }
+
+        public static long GameplayWorkstationComponentPrice(bool chair)
+        {
+            var tuning = Navigation.OfficeDevelopmentTuningSession.Current;
+            if (tuning != null)
+            {
+                long chairBasis = tuning.WorkstationPriceWon / 8;
+                return chair ? chairBasis : tuning.WorkstationPriceWon - chairBasis;
+            }
+            return OfficeFurnitureEconomyConfig.GameplayPrice(Require(chair
+                ? OfficeGridLayouts.SwivelChairKind : OfficeGridLayouts.DeskWithPcKind).PurchasePriceWon);
         }
 
         public static long ShopDailyMaintenanceWon(OfficeFurnitureDefinition definition)

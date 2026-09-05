@@ -69,29 +69,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeGridCoordinate _dragPointerOrigin;
         private OfficeGridCoordinate _dragFurnitureOrigin;
         private Vector2 _catalogScroll;
-        private int _categoryIndex;
         private Confirmation _confirmation;
         private string _confirmationCommandId = string.Empty;
         private string _toast = string.Empty;
         private float _toastUntil;
         private int _instanceSequence;
         private bool _previewPointerLockedForPlayerQa;
-
-        private static readonly OfficeFurnitureCategory?[] CategoryCycle =
-        {
-            null,
-            OfficeFurnitureCategory.Work,
-            OfficeFurnitureCategory.Seating,
-            OfficeFurnitureCategory.OfficeEquipment,
-            OfficeFurnitureCategory.Storage,
-            OfficeFurnitureCategory.Refreshment,
-            OfficeFurnitureCategory.Rest,
-            OfficeFurnitureCategory.Decoration,
-            OfficeFurnitureCategory.Divider
-        };
-
-        private static readonly string[] CategoryNames =
-            { "전체", "업무", "좌석", "기기", "수납", "음료", "휴식", "장식", "구획" };
 
         public bool IsOpen { get; private set; }
 
@@ -858,20 +841,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             GUI.Label(new Rect(x + width * 0.45f, y, width * 0.55f, line), Won(cash), _skin.ValueStyle);
             y += line + _skin.Round(6);
 
-            if (Button(new Rect(x, y, _skin.Round(105), _skin.Round(34)),
-                    "분류: " + CategoryNames[_categoryIndex], true))
-                _categoryIndex = (_categoryIndex + 1) % CategoryCycle.Length;
-            GUI.Label(new Rect(x + _skin.Round(116), y, width - _skin.Round(116), _skin.Round(34)),
-                "가격은 2000년 KRW 기준 · 게임 배율 25%", _skin.HintStyle);
+            GUI.Label(new Rect(x, y, width, _skin.Round(34)),
+                "현재 판매: 3D 책상·PC·의자 세트", _skin.BodyStyle);
             y += _skin.Round(42);
 
             float detailsHeight = _skin.Round(190);
             float catalogHeight = Mathf.Max(_skin.Round(180), panel.yMax - y - detailsHeight - pad);
             Rect scrollRect = new Rect(x, y, width, catalogHeight);
-            List<OfficeFurnitureDefinition> definitions = OfficeFurnitureCatalog.ShopOffers
-                .Where(item => !CategoryCycle[_categoryIndex].HasValue ||
-                               item.Category == CategoryCycle[_categoryIndex].Value)
-                .ToList();
+            List<OfficeFurnitureDefinition> definitions = OfficeFurnitureCatalog.ShopOffers.ToList();
             float rowHeight = _skin.Round(82);
             Rect view = new Rect(0, 0, width - _skin.Round(18), definitions.Count * rowHeight);
             // The built-in skin draws a black scrollbar over the cream catalog. Swap in the editor
@@ -917,7 +894,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 definition.KoreanDisplayName, _skin.TitleStyle);
             long price = OfficeFurnitureCatalog.GameplayShopPrice(definition);
             string footprint = OfficeFurnitureCatalog.IsWorkstationSetOffer(definition.DefinitionId)
-                ? "2×2 세트"
+                ? "3칸 세트"
                 : definition.BaseWidth + "×" + definition.BaseHeight;
             GUI.Label(new Rect(x, rect.y + _skin.Round(31), textWidth, _skin.Round(20)),
                 $"{Won(price)} · {footprint} · {CapabilityText(definition)}",
@@ -959,7 +936,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             long price = OfficeFurnitureCatalog.GameplayShopPrice(definition);
             long after = _pendingSource == PendingSource.Purchase ? State.Company.CashWon - price : State.Company.CashWon;
             string footprint = OfficeFurnitureCatalog.IsWorkstationSetOffer(definition.DefinitionId)
-                ? "2×2 책상+의자 세트"
+                ? "책상 2칸 + 의자 1칸 세트"
                 : definition.BaseWidth + "×" + definition.BaseHeight;
             GUI.Label(new Rect(x, y, width, _skin.Round(20)),
                 $"{footprint} · {CapabilityText(definition)} · 유지비 {Won(OfficeFurnitureCatalog.ShopDailyMaintenanceWon(definition))}/일",

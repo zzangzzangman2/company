@@ -1261,6 +1261,13 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime.Qa
                     continue;
                 actor.QaTeleportToCell(cells[Mathf.Min(index, cells.Length - 1)]);
                 actor.QaSetDirectMovementInput(Vector2.zero);
+                // Pair-only fixture: the two temporary 3D stand-ins are not subjects of its
+                // isolated silhouette/ratio captures. Normal gameplay keeps all four enabled.
+                GameObject host = GameObject.Find(
+                    OfficeFamily3DVisualRoster.ProductionName(actor.AgentId) + "ProductionHost");
+                if (host != null)
+                    foreach (Renderer renderer in host.GetComponentsInChildren<Renderer>(true))
+                        renderer.enabled = false;
                 index++;
             }
         }

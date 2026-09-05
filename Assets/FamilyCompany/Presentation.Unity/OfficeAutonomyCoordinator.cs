@@ -359,7 +359,7 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (StarterOfficeRuntimeBootstrap.IsLayoutRebuilding) return;
             DateTime now = bootstrap.State.Time.Now;
-            OfficeAttendancePhase attendance = OfficeAttendanceRules.Resolve(now);
+            OfficeAttendancePhase attendance = OfficeAttendanceRules.ResolveOfficePresentation(now);
             RefreshAttendanceDoorSfxArm(now, attendance);
             IOfficeRuntimeAgent[] orderedAgents = _runtimeAgents
                           .Where(item => item != null && item is Component component &&

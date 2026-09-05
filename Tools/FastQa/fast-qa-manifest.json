@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "rules": [
+    { "pattern": "OfficeFurnitureBuildSystemValidation|OfficeFamily3DVisualRoster|OfficeAttendanceRules", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.OfficeGrid.OfficeFurnitureBuildSystemValidation.Run"] },
     { "pattern": "^Assets/FamilyCompany/Simulation/.*\\.cs$", "profile": "simulation-pure", "methods": [] },
     { "pattern": "^Assets/FamilyCompany/Editor/(StaminaSimulationValidation|StaminaGameStateIntegrationValidation)\\.cs$", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.StaminaSimulationValidation.Run", "FamilyCompany.Editor.StaminaGameStateIntegrationValidation.Run"] },
     { "pattern": "^Assets/FamilyCompany/Editor/OverheadStaminaBarValidation\\.cs$", "profile": "editor-validation", "methods": ["FamilyCompany.Editor.OverheadStaminaBarValidation.Run"] },

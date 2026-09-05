@@ -209,8 +209,8 @@ namespace FamilyCompany.Simulation.OfficeLayout
                     "최대 보유 수량에 도달했습니다.",
                     deskId);
 
-            long deskPriceWon = OfficeFurnitureEconomyConfig.GameplayPrice(deskDefinition.PurchasePriceWon);
-            long chairPriceWon = OfficeFurnitureEconomyConfig.GameplayPrice(chairDefinition.PurchasePriceWon);
+            long deskPriceWon = OfficeFurnitureCatalog.GameplayWorkstationComponentPrice(false);
+            long chairPriceWon = OfficeFurnitureCatalog.GameplayWorkstationComponentPrice(true);
             long totalPriceWon = checked(deskPriceWon + chairPriceWon);
             if (state.Company.CashWon < totalPriceWon)
                 return OfficeFurnitureCommandResult.Fail(

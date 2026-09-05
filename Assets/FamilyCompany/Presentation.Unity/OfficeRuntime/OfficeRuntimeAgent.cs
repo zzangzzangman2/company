@@ -35,6 +35,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     {
         public const float DefaultRadius = 0.22f;
         public const float DefaultMoveSpeed = 1.00f;
+        private float MoveSpeed => OfficeDevelopmentTuningSession.Current?.MoveSpeed ?? DefaultMoveSpeed;
         internal const int RequiredR5eSeatPreloadDirection = (int)OfficeSeatFacing8.Northwest;
         private const float ArrivalDistance = 0.035f;
         // Keep the generated displacement strictly below the public 0.9 px contract so camera
@@ -1672,7 +1673,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public void BeginPresentationFrame()
         {
             _visibleFrameMovementBudgetWorld =
-                DefaultMoveSpeed * OfficeRuntimeWorld.MaximumVisibleMotionDeltaSeconds;
+                MoveSpeed * OfficeRuntimeWorld.MaximumVisibleMotionDeltaSeconds;
             _visibleFrameMovementWorld = 0f;
             _seatEgressFrameMovementBudgetWorld =
                 MaximumSeatEgressStepPx / OfficeGridTilemapPresenter.PixelsPerUnit;
@@ -1998,7 +1999,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
 
             float arrivalScale = Mathf.Clamp01(delta.magnitude / 0.32f);
-            float speed = Mathf.Lerp(0.34f, DefaultMoveSpeed, arrivalScale);
+            float speed = Mathf.Lerp(0.34f, MoveSpeed, arrivalScale);
             MoveAttendanceIngress(delta.normalized * speed, deltaTime, delta.magnitude);
         }
 
@@ -2082,7 +2083,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             }
             transform.position = new Vector3(target.x, target.y, transform.position.z);
             ConsumeVisibleFrameMovement(distance);
-            Vector2 semanticVelocity = intended.normalized * DefaultMoveSpeed;
+            Vector2 semanticVelocity = intended.normalized * MoveSpeed;
             _animator.AccumulateTileMotion(semanticVelocity, intended, deltaTime, false);
             _lastActualDisplacement = intended;
             _desiredVelocity = semanticVelocity;
@@ -2119,12 +2120,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 AgentRadius);
             _path.Clear();
             _path.AddRange(result);
-            _pathIndex = _path.Count > 1 ? 1 : 0;
+            if (_path.Count == 0) return false;
+            Vector2 startCentre = _world.Presenter.CellCenterWorld(_path[0]);
+            float startDistanceSquared = (Position - startCentre).sqrMagnitude;
+            _pathIndex = OfficeSemanticPathProgressRules.InitialWaypointIndex(_path.Count, startDistanceSquared);
             _presentationPathIndex = _pathIndex;
             _pathRevision = _world.Occupancy.Revision;
-            if (_path.Count == 0) return false;
             AdvanceR5eRouteGeneration();
-            if (_path.Count == 1) CompleteNavigation();
+            if (_path.Count == 1 && startDistanceSquared <= 0.0000000001f) CompleteNavigation();
             return true;
         }
 
@@ -2178,7 +2181,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float arrivalSpeedScale = presentationTargetIndex == _path.Count - 1
                 ? OfficeNavigationMotionIntegrator.ResolveArrivalSpeedScale(delta.magnitude)
                 : 1f;
-            _desiredVelocity = desiredDirection * (DefaultMoveSpeed * arrivalSpeedScale);
+            _desiredVelocity = desiredDirection * (MoveSpeed * arrivalSpeedScale);
             _world.Occupancy.UpdateActor(
                 _agentId,
                 Position,
@@ -2219,7 +2222,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 {
                     var recovery = new Vector2(
                         blockedTraffic.RecoveryDirection.X,
-                        blockedTraffic.RecoveryDirection.Z) * (DefaultMoveSpeed * 0.72f);
+                        blockedTraffic.RecoveryDirection.Z) * (MoveSpeed * 0.72f);
                     MoveWithCollision(recovery, deltaTime, _destination.Value.SeatId);
                 }
                 else StopMotion(keepStuck: true);
@@ -2237,7 +2240,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         target,
                         deltaTime,
                         _destination.Value.SeatId,
-                        desiredDirection * DefaultMoveSpeed)) return;
+                        desiredDirection * MoveSpeed)) return;
                 _pathIndex = presentationTargetIndex + 1;
                 if (_pathIndex >= _path.Count) CompleteNavigation();
                 return;
@@ -2254,7 +2257,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 var recovery = new Vector2(
                     traffic.RecoveryDirection.X,
-                    traffic.RecoveryDirection.Z) * DefaultMoveSpeed;
+                    traffic.RecoveryDirection.Z) * MoveSpeed;
                 targetVelocity = Vector2.Lerp(targetVelocity, recovery, traffic.RecoveryWeight);
             }
             if (traffic.ShouldReplan) _pathRevision = -1;
@@ -2263,7 +2266,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 deltaTime,
                 _destination.Value.SeatId,
                 delta.magnitude,
-                presentationSemanticDirection * targetVelocity.magnitude);
+                presentationSemanticDirection * targetVelocity.magnitude,
+                constrainToPathSegment: true);
         }
 
         private bool TryTickGridYield(
@@ -2317,7 +2321,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                         deltaTime,
                         permittedSeatId,
                         delta.sqrMagnitude > 0.000001f
-                            ? delta.normalized * (DefaultMoveSpeed * 0.72f)
+                            ? delta.normalized * (MoveSpeed * 0.72f)
                             : Vector2.zero)) return true;
                 _world.Occupancy.UpdateActor(
                     _agentId,
@@ -2336,7 +2340,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             float preservedStuck = _stuckSeconds;
             MoveWithCollision(
-                delta.normalized * (DefaultMoveSpeed * 0.72f),
+                delta.normalized * (MoveSpeed * 0.72f),
                 deltaTime,
                 permittedSeatId,
                 delta.magnitude);
@@ -4291,7 +4295,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private void TickDirectPlayerMovement(float deltaTime)
         {
-            Vector2 velocity = _playerInput.normalized * DefaultMoveSpeed;
+            Vector2 velocity = _playerInput.normalized * MoveSpeed;
             MoveWithCollision(velocity, deltaTime, string.Empty);
             Phase = velocity.sqrMagnitude > 0.0001f
                 ? OfficeRuntimeAgentPhase.Navigating
@@ -4306,7 +4310,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             float deltaTime,
             string permittedSeatId,
             float maximumDistance = float.PositiveInfinity,
-            Vector2? presentationSemanticVelocity = null)
+            Vector2? presentationSemanticVelocity = null,
+            bool constrainToPathSegment = false)
         {
             if (_visibleFrameMovementBudgetWorld <= 0.0000001f)
             {
@@ -4315,6 +4320,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _lastActualDisplacement = Vector2.zero;
                 _desiredVelocity = targetVelocity;
                 return;
+            }
+            if (constrainToPathSegment)
+            {
+                // A tile-centre turn has finished its incoming leg. Inertia from that leg must
+                // not carry the root across the inside/outside of the next cardinal segment.
+                Vector2 axis = (presentationSemanticVelocity ?? targetVelocity).normalized;
+                targetVelocity = axis * Mathf.Max(0f, Vector2.Dot(targetVelocity, axis));
+                _currentVelocity = axis * Mathf.Max(0f, Vector2.Dot(_currentVelocity, axis));
             }
             // Movement direction changes are continuous. Seat-facing remains a presentation lock
             // during egress, but it no longer zeros the actor velocity just to turn a sprite row.
@@ -4349,6 +4362,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 AgentRadius,
                 permittedSeatId,
                 out bool collisionProjected);
+            if (constrainToPathSegment && collisionProjected &&
+                Mathf.Abs(intended.x * actual.y - intended.y * actual.x) > 0.0000001f)
+            {
+                // Do not slide sideways off a semantic rail. Wait/replan through a real cell.
+                actual = Vector2.zero;
+            }
             if (actual.sqrMagnitude > OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
             {
                 transform.position = new Vector3(

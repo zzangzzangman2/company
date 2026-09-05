@@ -6,6 +6,9 @@ using FamilyCompany.Save.OfficeGrid;
 using FamilyCompany.Simulation.Game;
 using FamilyCompany.Simulation.OfficeLayout;
 using FamilyCompany.Simulation.Prototype;
+using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.Family;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEditor;
 using UnityEngine;
 using OfficeGridState = FamilyCompany.Simulation.OfficeLayout.OfficeGrid;
@@ -35,6 +38,8 @@ namespace FamilyCompany.Editor.OfficeGrid
             ValidateLegacyGeometryRoundTrips(failures);
             ValidateBlockedSocketPlacement(failures);
             ValidateWorkstationShopOffer(failures);
+            ValidateDeveloperWorkstationPricing(failures);
+            ValidateOpeningFamilyRoster(failures);
             ValidateEveryCatalogTransaction(failures);
             ValidateInsufficientFundsAndLegacyMigration(failures);
 
@@ -150,7 +155,8 @@ namespace FamilyCompany.Editor.OfficeGrid
                     "OFFICE_FURNITURE_BUILD_SYSTEM_QA: FAIL | " + string.Join(" | ", failures.Take(12)));
             Debug.Log(
                 "OFFICE_FURNITURE_BUILD_SYSTEM_QA: PASS | geometry=13x4 | catalogTransactions=13 | " +
-                "geometryMigration=52 | bought=6 | schema=8+v7-migration | family=4 | cash=" +
+                "geometryMigration=52 | bought=6 | openingCash=5000000 | setPrice=400000 | fourSetsCash=3400000 | " +
+                "openingRoster=4 | standIns=2 | family=4 | cash=" +
                 state.Company.CashWon);
         }
 
@@ -403,8 +409,81 @@ namespace FamilyCompany.Editor.OfficeGrid
             }
         }
 
+        private static void ValidateDeveloperWorkstationPricing(ICollection<string> failures)
+        {
+            var original = FamilyCompany.Simulation.Navigation.OfficeDevelopmentTuningSession.Current;
+            try
+            {
+                var tuning = new FamilyCompany.Simulation.Navigation.OfficeDevelopmentTuning(
+                    1f, 0.7950477f, 0f, 0f, 0f, 0f, 0f, 480003);
+                FamilyCompany.Simulation.Navigation.OfficeDevelopmentTuningSession.Apply(tuning);
+                GameState state = PrototypeStateFactory.Create();
+                long before = state.Company.CashWon;
+                var result = OfficeFurnitureTransactionService.PurchaseAndPlaceWorkstation(state,
+                    "dev-price-once", "dev-price-desk", FindValidWorkstationSeatCell(state.OfficeGrid,
+                        OfficeFurnitureFacing.SouthEast), OfficeFurnitureFacing.SouthEast);
+                Require(failures, result.Success && before - state.Company.CashWon == 480003,
+                    "developer price quote and exact transaction agree");
+                Require(failures, OfficeFurnitureCatalog.GameplayShopPrice(
+                    OfficeFurnitureCatalog.Require(OfficeGridLayouts.DeskWithPcKind)) == 480003,
+                    "developer price is also the shop preview");
+                Require(failures, state.OfficeFurnitureInventory.Instances.Sum(item => item.PurchaseBasisWon) == 480003,
+                    "component purchase bases preserve the exact atomic set price");
+                bool rejected = false;
+                try { new FamilyCompany.Simulation.Navigation.OfficeDevelopmentTuning(
+                    float.NaN, 1f, 0f, 0f, 0f, 0f, 0f, 400000); }
+                catch (ArgumentOutOfRangeException) { rejected = true; }
+                Require(failures, rejected, "invalid developer snapshot rejected");
+            }
+            finally { FamilyCompany.Simulation.Navigation.OfficeDevelopmentTuningSession.Apply(original); }
+        }
+
+        private static void ValidateOpeningFamilyRoster(ICollection<string> failures)
+        {
+            string[] ids = PrototypeStateFactory.Create().Family.Members.Select(item => item.MemberId).ToArray();
+            Require(failures, ids.Length == OfficeFamily3DVisualRoster.FamilyCount && ids.Distinct().Count() == 4,
+                "four distinct semantic family IDs");
+            Require(failures, ids.Count(id => OfficeFamily3DVisualRoster.ModelMemberId(id) == "player") == 2 &&
+                ids.Count(id => OfficeFamily3DVisualRoster.ModelMemberId(id) == "father") == 2 &&
+                ids.Select(OfficeFamily3DVisualRoster.ProductionName).Distinct().Count() == 4,
+                "two Player and two Father bodies have independent production hosts");
+            Require(failures, OfficeFamily3DVisualRoster.IsTemporaryStandIn("mother") &&
+                OfficeFamily3DVisualRoster.IsTemporaryStandIn("older_sister") &&
+                !OfficeFamily3DVisualRoster.IsTemporaryStandIn("player") &&
+                !OfficeFamily3DVisualRoster.IsTemporaryStandIn("father"), "stand-ins only change absent appearances");
+            Require(failures, OfficeAttendanceRules.ResolveOfficePresentation(GameTime.CampaignStart) ==
+                OfficeAttendancePhase.Working && OfficeAttendanceRules.Resolve(GameTime.CampaignStart) ==
+                OfficeAttendancePhase.BeforeWork, "founding arrival is presentation-only, not early paid work");
+            Require(failures, OfficeAttendanceRules.ResolveOfficePresentation(GameTime.CampaignStart.AddDays(1)) ==
+                OfficeAttendancePhase.BeforeWork, "next morning keeps normal 09:00 attendance");
+            Require(failures, OfficeAttendanceRules.ResolveOfficePresentation(GameTime.CampaignStart.Date.AddHours(18)) ==
+                OfficeAttendancePhase.AfterWork, "opening evening retains departure");
+        }
+
         private static void ValidateWorkstationShopOffer(ICollection<string> failures)
         {
+            Require(failures, OfficeFurnitureCatalog.ShopOffers.Count() == 1,
+                "only the approved 3D workstation is sold");
+            Require(failures, PrototypeStateFactory.StartingCapitalWon == 5_000_000,
+                "opening capital is five million won");
+            Require(failures, OfficeFurnitureCatalog.GameplayShopPrice(
+                OfficeFurnitureCatalog.Require(OfficeGridLayouts.DeskWithPcKind)) == 400_000,
+                "one complete workstation costs four hundred thousand won");
+            GameState opening = PrototypeStateFactory.Create();
+            Require(failures, opening.OfficeGrid.SeatSlots.Count == 0 &&
+                opening.OfficeFurnitureInventory.Instances.Count == 0 &&
+                opening.Family.Members.Count == 4, "four family members start without free furniture");
+            foreach (var member in opening.Family.Members)
+            {
+                OfficeFurnitureCommandResult set = OfficeFurnitureTransactionService.PurchaseAndPlaceWorkstation(
+                    opening, "opening-buy:" + member.MemberId, "opening-desk:" + member.MemberId,
+                    FindValidWorkstationSeatCell(opening.OfficeGrid, OfficeFurnitureFacing.SouthEast),
+                    OfficeFurnitureFacing.SouthEast);
+                Require(failures, set.Success, "opening workstation purchase: " + member.MemberId);
+            }
+            Require(failures, opening.Company.CashWon == 3_400_000 &&
+                opening.OfficeGrid.SeatSlots.Count == 4 && opening.OfficeFurnitureInventory.Instances.Count == 8,
+                "four sets cost 1.6 million and leave 3.4 million won");
             Require(failures,
                 OfficeFurnitureCatalog.ShopOffers.Any(item =>
                     item.DefinitionId == OfficeGridLayouts.DeskWithPcKind) &&

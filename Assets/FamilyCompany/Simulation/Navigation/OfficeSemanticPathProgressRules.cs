@@ -10,6 +10,15 @@ namespace FamilyCompany.Simulation.Navigation
     /// </summary>
     public static class OfficeSemanticPathProgressRules
     {
+        public static int InitialWaypointIndex(int count, float distanceSquaredToStartCentre)
+        {
+            if (count < 1) throw new ArgumentOutOfRangeException(nameof(count));
+            if (float.IsNaN(distanceSquaredToStartCentre) || float.IsInfinity(distanceSquaredToStartCentre) ||
+                distanceSquaredToStartCentre < 0f) throw new ArgumentOutOfRangeException(nameof(distanceSquaredToStartCentre));
+            // Replanning between centres must finish the joining leg, not cut diagonally to node 1.
+            return count > 1 && distanceSquaredToStartCentre <= 0.0000000001f ? 1 : 0;
+        }
+
         public static int AdvanceThroughOccupiedCell(
             IReadOnlyList<OfficeGridCoordinate> semanticPath,
             int nextWaypointIndex,

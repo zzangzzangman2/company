@@ -6,6 +6,20 @@ family inputs and canonical production assets. Retired iterations are not reusab
 Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-approved. Older Sister
 and Mother are not complete. See `FAMILY_3D_CHARACTER_STANDARD.md`.
 
+2026-09-05 temporary runtime roster (explicit user request): instantiate the existing complete
+Player V8 package separately for `player` and `older_sister`, and the existing Father V19 package
+separately for `father` and `mother`. All four visible bodies are 3D; each has its own renderer,
+Humanoid runtime and semantic agent/seat ID. `OfficeFamily3DVisualRoster` owns the appearance mapping.
+No new source package, mesh edit, texture edit, re-rig or generation charge is involved; all original
+scale/colour/source-clip/seat parameters and candidate eligibility remain unchanged. These two extra bodies
+are stand-ins, not approved Mother/Older Sister identities. The public shop offers only the approved
+V31 desk+PC+chair atomic set at 400,000 won. Other legacy furniture assets are not newly offered.
+
+2026-09-05 runtime centring follow-up does not modify those asset bytes. Fixed standing XZ calibration
+and Father ground correction are runtime-only. Dynamic body/body clearance source was expanded after
+a new 84-pixel overlap failure and still requires a new player test. No source asset or enlarged
+candidate profile was promoted; runtime release eligibility remains false. See PROJECT_STATE.md.
+
 Current command-line legacy-2D-size review remains `productionEligible=false`. It keeps both
 one-package assets below unchanged and now couples one action-613 cycle to exactly two tile-centre
 distances: candidate `stride 1.98761598 / phase 0.40 cycles`, with no per-contact whole-host

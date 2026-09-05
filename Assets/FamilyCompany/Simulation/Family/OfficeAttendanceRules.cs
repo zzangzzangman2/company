@@ -1,4 +1,5 @@
 using System;
+using FamilyCompany.Simulation.Core;
 
 namespace FamilyCompany.Simulation.Family
 {
@@ -19,6 +20,15 @@ namespace FamilyCompany.Simulation.Family
         public const int WorkStartsMinuteOfDay = 9 * 60;
         public const int WorkEndsMinuteOfDay = 18 * 60;
         public const int StaggerGameMinutes = 1;
+
+        // On the founding morning all four family members are already inside the empty office.
+        // Later days retain the normal staggered 09:00 arrival and 18:00 departure contract.
+        public static bool IsFoundingMorning(DateTime now) =>
+            now >= GameTime.CampaignStart &&
+            now < GameTime.CampaignStart.Date.AddMinutes(WorkStartsMinuteOfDay);
+
+        public static OfficeAttendancePhase ResolveOfficePresentation(DateTime now) =>
+            IsFoundingMorning(now) ? OfficeAttendancePhase.Working : Resolve(now);
 
         public static OfficeAttendancePhase Resolve(DateTime now)
         {

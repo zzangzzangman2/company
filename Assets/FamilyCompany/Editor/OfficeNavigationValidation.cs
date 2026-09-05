@@ -11,6 +11,11 @@ namespace FamilyCompany.Editor
         [MenuItem("Family Company/Validate Office Navigation")]
         public static void Run()
         {
+            var replan = FamilyCompany.Simulation.Navigation.OfficeSemanticPathProgressRules.InitialWaypointIndex(7, 0.2f);
+            var centred = FamilyCompany.Simulation.Navigation.OfficeSemanticPathProgressRules.InitialWaypointIndex(7, 0f);
+            var sameCell = FamilyCompany.Simulation.Navigation.OfficeSemanticPathProgressRules.InitialWaypointIndex(1, 0.2f);
+            if (replan != 0 || centred != 1 || sameCell != 0)
+                throw new InvalidOperationException("Replan must consume the exact start centre before its next leg.");
             var report = OfficeNavigationRegressionSuite.Run(128);
             OfficeSharedLocomotionStrictReport strict =
                 OfficeSharedLocomotionStrictValidation.Run();

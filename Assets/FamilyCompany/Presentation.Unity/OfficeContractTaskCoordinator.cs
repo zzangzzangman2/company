@@ -186,7 +186,13 @@ namespace FamilyCompany.Presentation.Unity
                 agent.CancelAssignedTask();
             }
             foreach (var agent in _runtimeAgents.Where(item => item != null))
+            {
+                // Interface references do not use Unity's destroyed-object null operator. A
+                // layout rebuild has already destroyed these old agents and restored their
+                // snapshots onto new agents; cancelling a dead one would resume its old path.
+                if (agent is UnityEngine.Object unityAgent && unityAgent == null) continue;
                 agent.CancelAssignedTask();
+            }
 
             _pending.Clear();
             _taskSequence = 0;

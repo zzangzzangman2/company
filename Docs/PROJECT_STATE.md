@@ -1,6 +1,135 @@
 # PROJECT STATE
 
-Last updated: 2026-09-02. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+Last updated: 2026-09-05. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+
+## 2026-09-05 tile-centre fixes + hot settings + GitHub patcher: RELEASE BLOCKED
+
+- User approved proceeding with the opening loop, tile-centred walking, numeric live reload and
+  **existing GitHub Releases** distribution, then PC shutdown after completion. Work is not complete:
+  no game Release/Downloads promotion or shutdown has occurred.
+- Normal path replans now first return to their start-cell centre; presentation lookahead cannot
+  skip that joining segment. At cardinal corners residual velocity is projected onto the new segment.
+  Blocked normal navigation waits/replans instead of sliding sideways off the tile-centre line.
+- Approved Player V8 / Father V19 meshes, Avatars, clips, body scales, materials, V31 furniture and
+  seating sockets are unchanged. A fixed whole-cycle mean ankle-centre offset aligns each body to
+  its semantic root; a fixed Father ground correction (-0.135403 world units) aligns the cycle minimum
+  with Player. No planted-frame translation, procedural gait or enlarged legacy profile promotion.
+- Latest completed normal capture: `Artifacts/FastQa/WalkAudit-default-20260905-214939/`.
+  **433 consecutive rendered frames / 23.943 s**, all 22 chronological sheets inspected. Four independent
+  bodies, forced routes/teleports 0, runtime errors 0, occupancy violations 0/0/0. Maximum cardinal
+  root-line error <= **0.000076 px**. Moving ankle midpoint median/max in pixels:
+  player **2.03/4.27**, sister stand-in **2.03/4.29**, father **1.60/3.25**, mother stand-in **1.64/3.30**.
+  This passes root/ankle-centre measurements, NOT independent pixel-sole slip or full visual release
+  acceptance. TGA capture improved actual evidence to about 18 fps; 30fps MP4 duplicates are not a
+  native performance PASS. Clips remain at measured capture timing.
+- **New failing gate:** forced head-on Player/Father test
+  `Artifacts/FastQa/PlayerFather-centres-20260905-220419/` found **84 overlapping silhouette pixels**
+  at collision stop, despite no collider penetration. It stopped before work/seat checks.
+  Source now expands only dynamic body/body clearance by the fixed calibration envelope:
+  Player 0.28 -> **0.445**, Father 0.30 -> **0.415**. Static furniture radius stays 0.22.
+  This last radius correction **compiled but has NOT been tested in a new player**. Do not call it fixed.
+- Failed QA executable root:
+  `Artifacts/FastQa/cache/WindowsPlayer`. Exact-root cleanup was rejected by the tool safety policy;
+  **the payload was NOT deleted**. Non-executable hashes/failure record are preserved under
+  `Artifacts/FastQa/FailedPayloadEvidence/20260905-220419-contact-overlap/`.
+  Do not run/promote/reuse that failed payload. Resolve its exact cleanup before a fresh QA identity;
+  preserve Library/Bee, sibling caches, source and AppData saves. No broad recursive cleanup.
+- Development settings: `OfficeDevelopmentTuningLoader` polls an explicitly named JSON every 0.5s,
+  validates all fields and atomically swaps an immutable pure-C# snapshot. Editor/Development/FastQA
+  only; ordinary Release ignores the flag. Invalid partial edits keep the last good snapshot.
+  Live test `Artifacts/FastQa/DevReload-20260905-220249/reload-result.json`: **PASS**, same EXE, 0 builds,
+  all four cruising speeds 1 -> 0.5 -> invalid edit remains 0.50001 -> 1; prices 400000 -> 480003 -> 400000.
+  Actual transaction test also checks odd total rounding/purchase bases; existing inventory/save costs
+  are never repriced. C# changes still need compilation.
+- GitHub updater source is in `Tools/Updater/`; detailed operation and remaining gates:
+  [GITHUB_PATCHING.md](GITHUB_PATCHING.md). It is **implemented/tested locally, not internet game
+  distribution complete**. Per-file gzip, SHA-256, verified reuse, atomic active-version pointer,
+  interrupted activation recovery, invalid-path/junction/concurrency checks, verified-only offline
+  fallback. Public GitHub repo pinned; no embedded account token. Saves remain outside the patch store.
+- Windows PowerShell 5.1 updater: **36 checks PASS** in
+  `Artifacts/UpdaterTests/c589cb5346ed40f4b23fff4b94c4d3fa/result.json` (inert non-PE fixtures, no game
+  launched). Real GitHub first-start check correctly returns 404/no installation because no Release
+  exists; it does not fall back to a random local EXE. Actual internet game download/publish untested.
+- Other fresh checks: normal opening/shop 60s PASS
+  `Artifacts/FastQa/OpeningShop-20260905-215359/`, four paid rotations leave 3400000 won, overlap no
+  charge, errors 0. Navigation validation PASS: 1,152 paths / 53,108 oracle segments / 128 replans.
+  Furniture validation PASS: `Artifacts/FastQa/dev-pricing-validation.log`.
+  Pure simulation PASS 3.978s; latest editor compile/PrototypeValidation PASS **19.372s**
+  (`Artifacts/FastQa/runs/20260905-221154-151/`). Last player build before radius fix PASS **48.655s**.
+- Remote fetch found two new source commits, ending `e7830bb1` (Older Sister V3 isolated candidate).
+  Preserve them and the existing untracked Older Sister V2 inputs; do not auto-promote that candidate.
+  Initial complete branch/tag/release/LFS inventory: prohibited=0, unknown=0; source push must rerun it.
+- Remaining: exact failed-QA cleanup, fresh hidden build/radius + normal four-actor and furniture
+  avoidance retest, complete seated/working four directions, independent native shop pointer and
+  next-day 09:00/09:01/09:02/09:03 attendance, foot-slip/grounding/mute and user visual approval,
+  then clean committed Release provenance and actual GitHub publish/download test. Only after all
+  requested work is genuinely finished should the authorized PC shutdown run.
+- Baseline comparisons and their limitations are retained in
+  [Evidence/OpeningWalkPatch20260905/BASELINE.md](Evidence/OpeningWalkPatch20260905/BASELINE.md).
+
+## 2026-09-05 current opening: four temporary 3D family bodies + buy/place first
+
+- Implemented in canonical `main` at `C:/Users/godho/Documents/Codex/fc_agents/integration_p0`.
+  New game begins at **08:50 with all four family actors already walking inside the empty office**.
+  No free editable furniture, seats or inventory are supplied. The founding-morning presentation
+  exception does not change the pure 09:00 work schedule or later days' staggered arrival/departure.
+- The user approved **5,000,000 won opening capital / 400,000 won per complete V31 desk+PC+chair set**.
+  The public shop exposes this one atomic set only; four purchases leave **3,400,000 won**. Old generic
+  furniture definitions/transactions remain for saves/fixtures, not as other public shop offers.
+- Temporary appearance map: `player + older_sister -> Player V8`, `father + mother -> Father V19`.
+  Thus the office shows **two sons and two fathers, all 3D**. `OfficeFamily3DVisualRoster` is the one
+  appearance authority. Each retains its original family ID, age, role, save state, independent
+  runtime/occupancy and `seat_<memberId>`. Mother/Older Sister remain unfinished identities; this is
+  NOT a new package generation or an approval of their final bodies. Their 2D body/seat pixels are
+  now suppressed with no fallback. Original 3D mesh, Avatar, clip, size, colour and seating are unchanged.
+- Purchase preview retains three real occupied tiles (desk 2 + chair 1), four rigid quarter-turns,
+  rotated approach/seat sockets, overlap rejection and one confirmation/one charge. Layout rebuilding
+  now also releases partially invalid 3D bindings so destroyed semantic actors cannot leave stale
+  hosts for the next binding. `OfficeContractTaskCoordinator.ResetAssignments` also checks the Unity
+  lifetime of interface-held actors before cancelling tasks; destroyed actors must not resume paths
+  against their already-removed Grid/Transform. The existing pair-only ratio QA explicitly hides the
+  two parked stand-ins.
+- Current verification, Unity **6000.3.21f1**, same warm main checkout:
+  - `FAST_QA` simulation-pure: PASS, 4.004 s, `Artifacts/FastQa/runs/20260905-095412-336/`.
+  - `FAST_QA` editor-validation (`PrototypeValidation`): PASS, 48.201 s,
+    `Artifacts/FastQa/runs/20260905-095632-435/`.
+  - `OfficeFurnitureBuildSystemValidation.RunBatch`: PASS, `Artifacts/FastQa/OpeningShopLogic-20260905/editor.log`.
+    It checks four semantic/visual bindings, founding-vs-next-day attendance, 5000000/400000/3400000,
+    single shop offer, 4-direction footprint/seat/approach, duplicate charge, overlap and save round trips.
+  - Final FAST_QA scripts build: PASS, 18.033 s, `Artifacts/FastQa/runs/20260905-100738-406/`.
+  - Final hidden D3D11 Player: **PASS**, `Artifacts/FastQa/OpeningShop-20260905-100825/`.
+    `MainWindowHandle=0` in 399 checks; runtime errors/exceptions **0** (receipt plus completed-log audit).
+    Normal 60-second 08:50→09:48 observation used no teleport,
+    injected route or forced clock advance. Travel: father `51.7100`, mother `53.1719`, older_sister
+    `53.5624`, player `49.4328` office units; all four used eight directions and independent
+    coordinator destinations. Static/interaction/agent penetration counters `0/0/0`.
+    Four controller confirmations charged 400000 each; cash `4600000/4200000/3800000/3400000`,
+    seats `1/2/3/4`, final inventory `8`, final 3D workstation roots `4`. Overlap confirmation was
+    rejected without a charge. Legacy character/workstation renderers visible `0/0`.
+    `normal-wander.csv`, `wander-000..029.png`, `shop-preview-0..3.png`, `shop-overlap-rejected.png`,
+    `four-family-four-workstations.png`, `opening-shop-final.txt` contain current evidence.
+- Capture caveat: the first attempt (`OpeningShop-20260905-100000`) produced black batch swap-chain
+  screenshots and asserted before asynchronous layout preparation completed. It is **not** accepted
+  visual evidence. Final capture explicitly renders the actual office camera + actual 3D overlay,
+  rejecting blank pixels; it does not include IMGUI. Final screenshots were visually inspected.
+  Confirmations used the real controller method programmatically, **not native pointer input**.
+  IMGUI/full-window visual and real click→confirm retest remain pending; do not relabel old native PASS
+  or this programmatic PASS as current native-pointer evidence. Pair-only seating QA was not rerun.
+  The intermediate `OpeningShop-20260905-100332` passed functional assertions but its final log audit
+  found four caught stale-agent NullReferenceExceptions during unbind. It is **not** the final clean
+  runtime PASS. After the lifetime fix, the QA fails any Error/Exception and the runner also checks
+  the completed log; the final clean rerun is `OpeningShop-20260905-100825` above. A Unity shutdown
+  ComputeBuffer disposal warning remains; it is not counted as a runtime exception or a new visual gate.
+- Rerun from repo: `Tools/Invoke-FamilyCompanyFastQa.ps1 -Profile player-scripts -NoPlayerSmoke`, then
+  `Tools/Invoke-FamilyCompanyOpeningShopQa.ps1` (hidden player, bounded timeout, window-handle guard).
+  Initial four-person layout intentionally stays empty; the QA's four purchased sets are a test state,
+  not automatic gameplay furniture.
+- No Higgsfield call/charge, production-candidate profile promotion, Downloads/deployed build change,
+  save overwrite, commit or push was requested/performed. Existing Older Sister V2 inputs and the
+  pre-existing PROJECT_STATE preparation note below are preserved. Unity generated `.meta` files for
+  those pre-existing untracked inputs; preserve them too. Next: user review of this opening loop and,
+  when a foreground window is allowed, native build-editor click + full IMGUI acceptance. Mother/Sister
+  final 3D generation remains deferred.
 
 ## Production cutover: Player V8 + Father V19 + V31 workstation
 
@@ -38,8 +167,16 @@ Last updated: 2026-09-02. This file contains current handoff state only. Superse
   penetrations `0`, rendered silhouette overlap pixels `0`, then `Working/Working` at
   `seat_player/seat_father` with static/interaction/agent violations `0/0/0`. Evidence:
   [Evidence/PlayerFather3DProduction/README.md](Evidence/PlayerFather3DProduction/README.md).
-- Mother and Older Sister still await approved one-package 3D replacements; their current production
-  representations remain untouched.
+- Mother and Older Sister still await approved one-package 3D replacements; their current visible
+  bodies use the 2026-09-05 temporary mapping above, while their semantic identities stay unchanged.
+- Older Sister V2 preparation (2026-09-02): a new front/three-quarter/left/back source set was made
+  from her canon identity plus the current Player/Father 3D style only. The rejected V1 turnaround was
+  not used. Original-resolution inspection found separate arms, hands, shorts openings, legs and two
+  complete bare feet. Higgsfield MCP preflight for the locked Meshy one-package contract returned
+  exactly `38 credits`; no 3D job was submitted because the selected MCP trial expired on 2026-08-28
+  and the workspace requires an upgrade. Source, hashes, exact order and parameters:
+  `Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/README.md`.
+  Status remains `productionEligible=false`.
 
 ## 2026-09-02 independent Father scale/walk re-QA follow-up
 

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "moveSpeed": 1.0,
+  "strideOfficeUnits": 0.7950477,
+  "phaseOffsetCycles": 0.0,
+  "playerFootOffsetX": 0.0,
+  "playerFootOffsetZ": 0.0,
+  "fatherFootOffsetX": 0.0,
+  "fatherFootOffsetZ": 0.0,
+  "workstationPriceWon": 400000
+}
