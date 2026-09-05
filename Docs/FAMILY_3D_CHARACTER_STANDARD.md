@@ -56,7 +56,9 @@ sprite는 fail-closed다. 이 요청은 엄마·누나 정식 외형의 승인 �
 
 2026-09-05 기본 프로필은 아래의 발 중심/고정 접지 보정을 소스에 적용했지만 **배포 보류**다.
 보정 뒤 정면 충돌 시 84픽셀 외곽 겹침이 발견되어 사람 반경을 0.445/0.415로 확장했다.
-반경 확장과 traffic-recovery 축 보호는 컴파일만 확인됐고 새 Player 재검증 전이다.
+새 기본 Player 재검사에서 정면 겹침 0픽셀을 확인했다. 가구 패딩 0.18/인접 비용 +2.5로
+책상 관통 0/0프레임도 확인했고, 타일 예약 교착은 낮은 우선순위 배우의 중심선 후퇴로 회복한다.
+60초 정상 산책 최대 무진행 1.9206초, 네 명 이동 50~54 world units. 독립 release/화면 승인은 별도다.
 승인된 모델/클립/색/가구 크기는 그대로다. 이 수정이 왼쪽의 확대 후보 프로필 승격은 아니다.
 
 | 파라미터 | Player(아들) | Father(아빠) | Older Sister V3 후보 (§4.4) | production 기본(참고) | 상수 위치 |
@@ -71,9 +73,9 @@ sprite는 fail-closed다. 이 요청은 엄마·누나 정식 외형의 승인 �
 | 밝기 gain (`_Color`) | `1.26` | `1.28` | `1.0`; 실제 맵 luma `91.49`, clipping `0%` | `1.0` | `*Legacy2DMatchedBrightnessGain` |
 | neutral fill (`_AmbientFactor`) | `0.70` (material 기본) | `0.82` | `0.70` | `0.70` / material 기본 | material |
 | stride / phase / cycle | `1.98761598` / `0.40` / `1.4 s` (두 발 착지 = 타일 2칸) | 동일 | `1.98761598` / `0.40` / `1.4 s`, 발 중점 오차 `2.715/5.856px`, 접지 발 선 밖 `0/1120` | `0.7950477` / `0` / `1.4 s` | candidate gait constants |
-| 사람 충돌 반경 | `0.475` | `0.578` | 미적용; 보행 reach `0.3937` 측정 | 소스 `0.445` / `0.415`, 새 Player 검증 대기 (실패 캡처 `0.28/0.30`) | `StarterOfficeRuntimeBootstrap` |
-| 가구 정적 반경 + 패딩 | `0.22 + 0.18` | `0.22 + 0.18` | 미적용·승인 뒤 검증 | `0.22 + 0` | `OfficeRuntimeAgent.DefaultRadius`, `*FurnitureClearancePadding` |
-| 책상 인접 칸 경로 비용 | `+2.5` (패딩>0인 배우) | 동일 | 미적용·승인 뒤 검증 | 없음 | `OfficeRuntimePathService.DeskProximityStepPenalty` |
+| 사람 충돌 반경 | `0.475` | `0.578` | 미적용; 보행 reach `0.3937` 측정 | `0.445` / `0.415`, 새 Player 정면 겹침 0px | `StarterOfficeRuntimeBootstrap` |
+| 가구 정적 반경 + 패딩 | `0.22 + 0.18` | `0.22 + 0.18` | 미적용·승인 뒤 검증 | `0.22 + 0.18` | `OfficeRuntimeAgent.DefaultRadius`, `*FurnitureClearancePadding` |
+| 책상 인접 칸 경로 비용 | `+2.5` (패딩>0인 배우) | 동일 | 미적용·승인 뒤 검증 | `+2.5` | `OfficeRuntimePathService.DeskProximityStepPenalty` |
 | 원본 hash | receipt `player-v8-source-receipt.json` | GLB `210DC2E1…17F9`, FBX `479F883A…AEB5`, albedo `8C1418E1…962C`, Meshy job `865f2115-…-84eb-d38ca106d45d` (38 credits) | paid V2 GLB `62E1366B…3D3DD`; V3 FBX `6639CB85…846D2E`, albedo `7264BEA7…B71473`; new charge `0` | — | `*-source-receipt.json` |
 
 새 캐릭터는 이 표에 열을 추가한다. 값은 복사하지 않고 §9 절차로 **측정**한다(키, stride, forward,

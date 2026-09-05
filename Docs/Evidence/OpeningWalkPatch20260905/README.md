@@ -24,13 +24,15 @@
 그 뒤 변경된 0.445/0.415 동적 충돌 반경과 traffic recovery의 semantic 축 보호는 아직
 새 Player 영상에 포함되지 않았다. 따라서 이 영상을 최신 모든 소스 변경의 검증이라고 부르지 않는다.
 
-실패 확인용 payload의 정리 명령이 도구 안전정책에 차단됐다. 정확한 로컬 대상은
-`C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/cache/WindowsPlayer`이며
-**삭제되지 않았다**. 해시/실패 기록은 같은 프로젝트의
+당시 정리 차단은 이후 사용자 `너가해` 재승인으로 **해결됐다**. 정확한 로컬 대상
+`C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/cache/WindowsPlayer`의
+해당 실패 identity 166개 파일을 검증한 뒤 휴지통으로 옮기고 root=0을 확인했다. 해시/실패 기록은
 `Artifacts/FastQa/FailedPayloadEvidence/20260905-220419-contact-overlap/`에 보존돼 있다.
-이 대상 정리 문제를 해결하기 전 실패 EXE를 실행/배포하지 않는다. source, Library/Bee, 다른 캐시,
+새 개발 캐시는 별도 identity다. 휴지통의 실패 EXE를 복구해 실행/배포하지 않는다. source, Library/Bee, 다른 캐시,
 사용자 저장 데이터, 누나 입력 파일은 삭제 대상이 아니다. 상위 폴더를 통째로 지우지 않는다.
 
-다음 담당자는 정리 완료 후 새로운 QA identity로 충돌→정상4인→가구 회피→4방향 착석/업무를 재검사하고,
+후속 충돌/가구 여유/정상 산책 교착 수정 결과는 PROJECT_STATE 및
+`../OpeningCollisionRetest20260905/README.md`가 최신이다. 이 폴더 영상 자체는 이전 촬영 그대로다.
+다음 담당자는 새 identity의 4방향 착석/업무 및
 독립 native shop/다음날 출근/mute/발바닥 미끄러짐과 사용자 화면 승인까지 통과해야 한다.
 그 뒤에만 `GITHUB_PATCHING.md`의 공개 Release 단계를 진행한다. 종료 요청은 전부 완료된 뒤에만 실행한다.

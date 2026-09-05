@@ -2134,6 +2134,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private void TickNavigation(float deltaTime)
         {
             if (!_destination.HasValue) return;
+            if (_emptyOfficeWanderActive &&
+                (_yieldCell.HasValue || _stuckSeconds >= OfficeNavigationTrafficRules.RecoveryThresholdSeconds) &&
+                TryTickWanderRailYield(deltaTime)) return;
             if (_pathRevision != _world.Occupancy.Revision || _path.Count == 0)
             {
                 if (!RebuildPath())
@@ -2250,8 +2253,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _agentId,
                 Position,
                 _desiredVelocity,
-                AgentRadius,
+                DynamicAgentRadius,
                 _stuckSeconds);
+            if (_emptyOfficeWanderActive && traffic.ForwardScale <= 0.0001f)
+            {
+                // A deliberate traffic wait has zero target velocity, so MoveWithCollision
+                // cannot count it as blocked motion. Count it here to enable bounded recovery.
+                _stuckSeconds += deltaTime;
+                StopMotion(keepStuck: true);
+                if (traffic.ShouldReplan) _pathRevision = -1;
+                return;
+            }
             Vector2 targetVelocity = _desiredVelocity * traffic.ForwardScale;
             if (!_emptyOfficeWanderActive && traffic.RecoveryWeight > 0f)
             {
@@ -2268,6 +2280,91 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 delta.magnitude,
                 presentationSemanticDirection * targetVelocity.magnitude,
                 constrainToPathSegment: true);
+        }
+
+        private bool TryTickWanderRailYield(float deltaTime)
+        {
+            string permitted = _destination.Value.SeatId;
+            if (!_yieldCell.HasValue)
+            {
+                // The lower ordinal ID keeps priority. Only the yielding actor retreats, on
+                // its existing cardinal rail, before asking the normal coordinator path again.
+                OfficeRuntimeAgent blocker = null;
+                foreach (OfficeRuntimeAgent peer in _world.Registry.Actors)
+                {
+                    if (peer == null || peer == this || peer.IsPresentationAway ||
+                        string.CompareOrdinal(_agentId, peer.AgentId) <= 0) continue;
+                    // Reservation conflicts can stop both actors more than a body radius apart
+                    // (two-cell lookahead). The recorded blocking owner is authoritative there.
+                    bool reservationOwner = LastReservationBlocker.StartsWith(
+                        "peer=" + peer.AgentId + ":", StringComparison.Ordinal);
+                    if (!reservationOwner && Vector2.Distance(Position, peer.Position) >
+                        DynamicAgentRadius + peer.DynamicAgentRadius + 0.35f) continue;
+                    if (blocker == null || string.CompareOrdinal(peer.AgentId, blocker.AgentId) < 0)
+                        blocker = peer;
+                }
+                if (blocker == null) return false;
+                OfficeGridCoordinate cell = CurrentCell;
+                Vector2 bx = _world.Presenter.CellBasisXWorld().normalized;
+                Vector2 by = _world.Presenter.CellBasisYWorld().normalized;
+                float bestSeparation = Vector2.Distance(Position, blocker.Position) + 0.02f;
+                foreach (OfficeGridCoordinate offset in new[]
+                         {
+                             new OfficeGridCoordinate(0, 0), new OfficeGridCoordinate(1, 0),
+                             new OfficeGridCoordinate(-1, 0), new OfficeGridCoordinate(0, 1),
+                             new OfficeGridCoordinate(0, -1)
+                         })
+                {
+                    var candidate = new OfficeGridCoordinate(cell.X + offset.X, cell.Y + offset.Y);
+                    if (!_world.Grid.Contains(candidate)) continue;
+                    Vector2 target = _world.Presenter.CellCenterWorld(candidate);
+                    Vector2 delta = target - Position;
+                    if (delta.sqrMagnitude < 0.000001f) continue;
+                    // Do not cut diagonally from a half-traversed edge to an adjacent cell.
+                    float crossX = Mathf.Abs(delta.x * bx.y - delta.y * bx.x);
+                    float crossY = Mathf.Abs(delta.x * by.y - delta.y * by.x);
+                    if (Mathf.Min(crossX, crossY) > 0.00001f) continue;
+                    float separation = Vector2.Distance(target, blocker.Position);
+                    if (separation <= bestSeparation ||
+                        !_world.Occupancy.IsCellPassable(candidate, _agentId, permitted, true) ||
+                        !_world.Occupancy.CanMove(_agentId, Position, target, AgentRadius, permitted)) continue;
+                    bestSeparation = separation;
+                    _yieldCell = candidate;
+                }
+                if (!_yieldCell.HasValue) return false;
+                _world.Occupancy.ClearReservations(_agentId);
+                _currentVelocity = Vector2.zero;
+                _stuckSeconds = 0f;
+            }
+
+            Vector2 endpoint = _world.Presenter.CellCenterWorld(_yieldCell.Value);
+            Vector2 remaining = endpoint - Position;
+            if (!_world.Occupancy.TryReserveSingleCell(_agentId, CurrentCell, _yieldCell.Value))
+            {
+                _yieldCell = null;
+                _pathRevision = -1;
+                StopMotion(keepStuck: true);
+                return true;
+            }
+            if (remaining.magnitude <= ArrivalDistance)
+            {
+                if (!TryConsumeExactEndpoint(endpoint, deltaTime, permitted, remaining.normalized * MoveSpeed))
+                    return true;
+                _yieldCell = null;
+                _pathRevision = -1;
+                _world.Occupancy.ClearReservations(_agentId);
+                StopMotion();
+                return true;
+            }
+            Vector2 velocity = remaining.normalized * (MoveSpeed * 0.72f);
+            MoveWithCollision(velocity, deltaTime, permitted, remaining.magnitude, velocity,
+                constrainToPathSegment: true);
+            if (_stuckSeconds > 2f)
+            {
+                _yieldCell = null;
+                _pathRevision = -1;
+            }
+            return true;
         }
 
         private bool TryTickGridYield(

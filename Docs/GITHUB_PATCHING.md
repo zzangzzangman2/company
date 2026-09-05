@@ -34,7 +34,7 @@ Editor/Development/FastQA만 허용하며 일반 `FamilyCompany_Data` Release는
 한 세트 실제 결제액, UI 견적, 재판매용 구매 원가가 같은 금액을 사용한다. 보폭 변경 시 누적거리 때문에
 보행 phase가 갑자기 뛰지 않도록 연속성 bias를 유지한다. 명시적 phase 변경 자체는 개발자 조정이다.
 
-회귀 테스트(확인용 실패 payload 정리/새 QA identity 확보 후):
+회귀 테스트(현재 개발용 FastQA identity에서만 실행; 실패 payload 재사용 금지):
 
 ```powershell
 ./Tools/Test-FamilyCompanyDevelopmentReload.ps1
@@ -76,7 +76,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-Famil
 
 ## 실제 배포 전 필수 조건
 
-1. 현재 실패 QA payload의 exact cleanup부터 해결한다. source/Library/Bee/다른 실행본/저장 파일은 제외한다.
+1. 2026-09-05 exact cleanup 차단은 해결됐다. 실패한 네 QA identity의 각 166개 파일을 해시 검증 후
+   휴지통으로 옮기고 target=0을 확인했다. 새 검사에서도 실패하면 같은 evidence-before-delete 원칙을
+   적용한다. source/Library/Bee/다른 실행본/저장 파일은 제외한다. 상세 기록은 PROJECT_STATE.md.
 2. 보행·충돌 보정, 4방향 착석/업무, native shop 클릭, 다음 날 가족별 출근, 음소거를 독립 runner로 검증한다.
 3. 사용자 실제 보행 화면 승인, clean committed main, 정확한 Unity 6000.3.21f1 Release 빌드가 필요하다.
 4. `REGRESSION_BUILD_POLICY.md`의 독립 gate 및 실패 후 삭제/복귀 계약을 만족하는 빌드 경로를 사용한다.

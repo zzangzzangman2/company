@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "passed": true,
+  "sloMet": true,
+  "sloSeconds": 60,
+  "sloObservedSeconds": 20.905,
+  "totalSeconds": 22.814,
+  "profile": "player-scripts",
+  "selectionReason": "explicit profile",
+  "fallbackReasons": [
+    "scripts-only cache absent; seeded with normal data build"
+  ],
+  "head": "b09e0451fd0e7def3b511f1ee62aa1cfcc31836b",
+  "baseRef": "HEAD",
+  "unityVersion": "6000.3.21f1",
+  "unityEditor": "C:\\Users\\godho\\Documents\\Codex\\UnityEditors\\6000.3.21f1\\Editor\\Unity.exe",
+  "projectPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0",
+  "cache": {
+    "status": "miss-normal-seed",
+    "playerExists": true,
+    "compatibilityFingerprint": "c89a3e9d0bdca2dfdb984939564ea156fcd836f4477c3a14845fe2786f012511"
+  },
+  "timings": {
+    "startupAndOtherSeconds": 0.0,
+    "licenseSeconds": 0.25,
+    "assetImportSeconds": 5.434,
+    "scriptCompilationSeconds": 2.088,
+    "domainReloadSeconds": 3.443,
+    "editorMethodSeconds": 12.866,
+    "compileSeconds": 0.0,
+    "buildSeconds": 20.648,
+    "playerSeconds": 0.0,
+    "captureSeconds": 0.0
+  },
+  "changedFiles": [
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2.meta",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-3d-identity-turnaround-v2.png",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-3d-identity-turnaround-v2.png.meta",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-v2-back.png",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-v2-back.png.meta",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-v2-front.png",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-v2-front.png.meta",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-v2-left.png",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-v2-left.png.meta",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-v2-three-quarter.png",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/older-sister-v2-three-quarter.png.meta",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/README.md",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/References/OlderSisterIdentityTurnaroundV2/README.md.meta",
+    "Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/OfficeRuntimeAgent.cs",
+    "Assets/FamilyCompany/Presentation.Unity/OfficeRuntime/StarterOfficeRuntimeBootstrap.cs",
+    "Assets/FamilyCompany/Runtime/Character3D/Family3DOpeningShopQa.cs",
+    "Tools/Invoke-FamilyCompanyPlayerFatherInteractionQa.ps1"
+  ],
+  "error": "",
+  "runDirectory": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\runs\\20260905-230213-598",
+  "completedUtc": "2026-09-05T14:02:36.4293553Z",
+  "iterations": [
+    {
+      "number": 1,
+      "elapsedSeconds": 20.905
+    }
+  ]
+}

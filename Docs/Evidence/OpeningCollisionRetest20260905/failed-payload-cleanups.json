@@ -1,0 +1,26 @@
+[
+  {
+    "identity": "20260905-220419-contact-overlap",
+    "evidence": "Artifacts\\FastQa\\FailedPayloadEvidence\\20260905-220419-contact-overlap\\payload-evidence.json",
+    "deletionRecord": "User reauthorized exact cleanup. All 166 manifest files verified before removal. Recycled only the exact WindowsPlayer root. Remaining payload at exact root=0. Source, Library/Bee, sibling cache manifest preserved. Recoverable from Windows Recycle Bin. 2026-09-05T13:30:59.7109671Z",
+    "evidenceSha256": "EE68352D44AE392AD19EBCC8A1C601A76D7CC991FA92A0994F4B76DD8C0320F0"
+  },
+  {
+    "identity": "20260905-223352-desk-intersections",
+    "evidence": "Artifacts\\FastQa\\FailedPayloadEvidence\\20260905-223352-desk-intersections\\payload-evidence.json",
+    "deletionRecord": "Recycled exact verified failed QA root. Files=166; remaining payload=0; sibling manifest preserved; source/Library/Bee/save untouched. UTC=2026-09-05T13:45:22.8451799Z",
+    "evidenceSha256": "3B24515A069C0EA2B1174C6AA5F1ADAD8715ED36F7888D47098AC387DA23670E"
+  },
+  {
+    "identity": "20260905-224844-wander-deadlock",
+    "evidence": "Artifacts\\FastQa\\FailedPayloadEvidence\\20260905-224844-wander-deadlock\\payload-evidence.json",
+    "deletionRecord": "Recycled exact verified failed QA root. Files=166; remaining payload=0; sibling manifest preserved; source/Library/Bee/save untouched. UTC=2026-09-05T13:57:04.0234385Z",
+    "evidenceSha256": "AA4D7764CC62CF0962508B5DA8CBD2559ACD8B20937B2A0B0CCE8AA2F9EBF0D1"
+  },
+  {
+    "identity": "20260905-225826-reservation-deadlock",
+    "evidence": "Artifacts\\FastQa\\FailedPayloadEvidence\\20260905-225826-reservation-deadlock\\payload-evidence.json",
+    "deletionRecord": "Recycled verified166 files; exact-root remaining=0; source/Bee/saves/sibling preserved; UTC=2026-09-05T14:02:13.0716845Z",
+    "evidenceSha256": "A2D12FC981E39DD1B815A30DE2F7DE75F83722F43D6085395CB354F388C0CDC1"
+  }
+]

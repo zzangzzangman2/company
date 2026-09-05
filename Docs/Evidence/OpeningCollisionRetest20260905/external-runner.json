@@ -1,0 +1,43 @@
+{
+  "releasePlayer": false,
+  "elapsedSeconds": 71.3828471,
+  "cacheIdentity": {
+    "schemaVersion": 1,
+    "compatibilityFingerprint": "c89a3e9d0bdca2dfdb984939564ea156fcd836f4477c3a14845fe2786f012511",
+    "head": "b09e0451fd0e7def3b511f1ee62aa1cfcc31836b",
+    "unityVersion": "6000.3.21f1",
+    "target": "StandaloneWindows64",
+    "output": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\cache\\WindowsPlayer\\FamilyCompany_FastQa.exe",
+    "baseDataFiles": [
+      {
+        "relativePath": "UnityPlayer.dll",
+        "sha256": "35F489B6A7753D536CE2E7B1BD1F729AFB8B4E70B43CAAA01AF03D1C20F64D6C"
+      },
+      {
+        "relativePath": "FamilyCompany_FastQa_Data\\globalgamemanagers",
+        "sha256": "A4533185D6DD42C8018DD7D83D73CDA0FCE98E65B48570F7EEB3F1512B8E37AE"
+      },
+      {
+        "relativePath": "FamilyCompany_FastQa_Data\\resources.assets",
+        "sha256": "DBC017502D8F4B127588D450C0B0067EED7712CAC132EFD837BEC9DF9CB112B7"
+      },
+      {
+        "relativePath": "FamilyCompany_FastQa_Data\\sharedassets0.assets",
+        "sha256": "CFC24BCC64CCBD470F3794FF454120B62A8CDA6DA84EE8A4A6FFC21A9798E619"
+      }
+    ],
+    "updatedUtc": "2026-09-05T14:02:36.3986602Z"
+  },
+  "executableSha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+  "passed": true,
+  "managedAssemblySha256": {
+    "FamilyCompany.Simulation.dll": "00884CA992E77546F8DF7CBB1EC2431AC19EB7597E837E00F09A2BBD63800B0A",
+    "FamilyCompany.Presentation.Unity.dll": "865E6CF2DABB023C93A83100E5DE9067BE5A5340AA1479AC4A386840B8D610D8"
+  },
+  "productionEligible": false,
+  "timeUtc": "2026-09-05T14:06:14.1662389Z",
+  "independentReleaseGate": false,
+  "profile": "FastQA-default",
+  "executable": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\cache\\WindowsPlayer\\FamilyCompany_FastQa.exe",
+  "windowHandleZeroSamples": 349
+}

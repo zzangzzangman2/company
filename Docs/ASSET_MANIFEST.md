@@ -17,7 +17,8 @@ V31 desk+PC+chair atomic set at 400,000 won. Other legacy furniture assets are n
 
 2026-09-05 runtime centring follow-up does not modify those asset bytes. Fixed standing XZ calibration
 and Father ground correction are runtime-only. Dynamic body/body clearance source was expanded after
-a new 84-pixel overlap failure and still requires a new player test. No source asset or enlarged
+a new 84-pixel overlap failure; a fresh default player now measures zero contact overlap. Default
+furniture padding 0.18 and cardinal rail yield are runtime-only corrections, not new asset bytes. No source asset or enlarged
 candidate profile was promoted; runtime release eligibility remains false. See PROJECT_STATE.md.
 
 Current command-line legacy-2D-size review remains `productionEligible=false`. It keeps both

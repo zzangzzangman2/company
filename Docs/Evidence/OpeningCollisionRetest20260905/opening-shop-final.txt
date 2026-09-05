@@ -1,0 +1,20 @@
+FAMILY_3D_OPENING_SHOP_QA: PASS
+initialTime=2000-01-03T08:50:00
+initialCash=5000000 initialSeats=0 initialInventory=0 familyIds=father,mother,older_sister,player
+father maximumNavigatingNoProgressSeconds=1.9206
+father normalTravel=51.3456 destinationFrames=3277 directions=5/7/1/3
+mother maximumNavigatingNoProgressSeconds=0.0890
+mother normalTravel=53.9563 destinationFrames=3267 directions=1/2/3/5/7
+older_sister maximumNavigatingNoProgressSeconds=0.9011
+older_sister normalTravel=52.5758 destinationFrames=3293 directions=1/3/7/5
+player maximumNavigatingNoProgressSeconds=0.0889
+player normalTravel=50.5686 destinationFrames=3252 directions=5/3/7/1
+normalObservationSeconds=60 teleports=0 injectedRoutes=0 injectedClockMinutes=0 staticViolations=0 interactionViolations=0 agentPenetrations=0 finalTime=2000-01-03T09:47:00
+purchase=1 facing=SouthEast cash=4600000 previewCells=3 seats=1
+purchase=2 facing=SouthWest cash=4200000 previewCells=3 seats=2
+purchase=3 facing=NorthWest cash=3800000 previewCells=3 seats=3
+purchase=4 facing=NorthEast cash=3400000 previewCells=3 seats=4
+fourSetsCash=3400000 seats=4 inventory=8 onlyShopOffer=V31 threeTilePreview=PASS overlapNoCharge=PASS
+capture=explicitD3D11CameraStack IMGUI=NOT_CAPTURED nativePointer=NOT_TESTED finalMotherSisterAssets=NOT_PRESENT temporaryPresentationOnly=true
+
+runtimeErrors=0

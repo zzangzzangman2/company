@@ -113,7 +113,10 @@ namespace FamilyCompany.Runtime.Character3D
             var travel = ids.ToDictionary(id => id, id => 0f);
             var pathFrames = ids.ToDictionary(id => id, id => 0);
             var directions = ids.ToDictionary(id => id, id => new HashSet<string>());
-            var samples = new StringBuilder("seconds,gameTime,member,x,y,gaitDistance,phase,destination,direction\n");
+            var progressAnchor = new Dictionary<string, Vector2>(previous);
+            var progressAt = ids.ToDictionary(id => id, id => 0f);
+            var maximumStall = ids.ToDictionary(id => id, id => 0f);
+            var samples = new StringBuilder("seconds,gameTime,member,x,y,gaitDistance,phase,destination,direction,reservationBlocker,movementBlocker\n");
             runtime.World.Occupancy.ResetMetrics();
             float start = Time.realtimeSinceStartup;
             float nextSample = 0f;
@@ -129,11 +132,20 @@ namespace FamilyCompany.Runtime.Character3D
                     previous[actor.AgentId] = actor.Position;
                     if (actor.ActiveDestinationCell.HasValue) pathFrames[actor.AgentId]++;
                     if (distance > 0.0001f) directions[actor.AgentId].Add(actor.CurrentDirection.ToString());
+                    string actorId = actor.AgentId;
+                    if (actor.Phase != OfficeRuntimeAgentPhase.Navigating ||
+                        Vector2.Distance(progressAnchor[actorId], actor.Position) >= 0.02f)
+                    {
+                        progressAnchor[actorId] = actor.Position;
+                        progressAt[actorId] = elapsed;
+                    }
+                    maximumStall[actorId] = Mathf.Max(maximumStall[actorId], elapsed - progressAt[actorId]);
                     Require(!actor.IsPresentationAway, "actor left initial observation: " + actor.AgentId);
                     if (elapsed >= nextSample)
                         samples.AppendLine(string.Join(",", F(elapsed), state.Time.Now.ToString("HH:mm"), actor.AgentId,
                             F(actor.Position.x), F(actor.Position.y), F(actor.GaitDistance), actor.Phase.ToString(),
-                            actor.ActiveDestinationCell.ToString().Replace(',', ':'), actor.CurrentDirection.ToString()));
+                            actor.ActiveDestinationCell.ToString().Replace(',', ':'), actor.CurrentDirection.ToString(),
+                            actor.LastReservationBlocker.Replace(',', ':'), actor.LastMovementBlocker.Replace(',', ':')));
                 }
                 if (elapsed >= nextSample) nextSample += 0.5f;
                 if (elapsed >= nextCapture)
@@ -148,6 +160,8 @@ namespace FamilyCompany.Runtime.Character3D
             File.WriteAllText(Path.Combine(directory, "normal-wander.csv"), samples.ToString());
             foreach (string id in ids)
             {
+                receipt.AppendLine(id + " maximumNavigatingNoProgressSeconds=" + F(maximumStall[id]));
+                Require(maximumStall[id] < 8f, "normal actor deadlocked for eight seconds: " + id);
                 Require(travel[id] > 1f && pathFrames[id] > 10 && directions[id].Count >= 2,
                     "normal coordinator did not produce independent movement: " + id);
                 receipt.AppendLine(id + " normalTravel=" + F(travel[id]) + " destinationFrames=" + pathFrames[id] +

@@ -115,9 +115,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         // Standing-foot calibration translates the unchanged meshes relative to their semantic root.
         // Preserve the former silhouette envelope by adding ceil(|calibrated XZ offset|, .005):
         // Player (.042546,.155708) => .165; Father (.031821,.105393) => .115.
-        // Dynamic body/body clearance only; furniture radius, size and legacy candidate stay unchanged.
+        // Dynamic body/body clearance only; body size and legacy candidate stay unchanged.
         private const float PlayerV8ProductionCollisionRadius = 0.445f;
         private const float FatherV19ProductionCollisionRadius = 0.415f;
+        // The default bodies also need visible arm clearance: the unpadded 2026-09-05 detour
+        // intersected authored desk parts on 11/14 frames (Player/Father). Enable the existing
+        // desk-proximity route cost and a 0.40 total furniture radius without changing tile
+        // centres, the purchased footprint or the permitted own-seat docking exemption.
+        private const float ProductionFurnitureClearancePadding = 0.18f;
         // The no-teleport candidate must stop far enough apart for every authored action-613
         // contact pose, not only the phase that happened to be sampled by the earlier QA.  The
         // previous pair overlapped by 35 rendered pixels at the natural 0.7950477 stride.
@@ -134,7 +139,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         // walkable; 0.22 + 0.18 = 0.40 keeps that margin. It removes the Father's penetration and
         // leaves the Player at most 0.08 world units (about 3px) of arm-tip overlap when he walks
         // the cell directly beside a desk. The own permitted seat desk stays exempt so docking is
-        // unchanged. Production/default padding is 0.
+        // unchanged. Default-profile clearance is independently configured above.
         private const float PlayerLegacy2DMatchedFurnitureClearancePadding = 0.18f;
         private const float FatherLegacy2DMatchedFurnitureClearancePadding = 0.18f;
         private const string Legacy2DScaleCandidateFlag =
@@ -709,7 +714,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     argument,
                     Legacy2DScaleCandidateFlag,
                     StringComparison.OrdinalIgnoreCase));
-            if (!legacy2DScaleCandidate) return 0f;
+            if (!legacy2DScaleCandidate &&
+                (string.Equals(memberId, "player", StringComparison.Ordinal) ||
+                 string.Equals(memberId, "father", StringComparison.Ordinal)))
+                return ProductionFurnitureClearancePadding;
             if (string.Equals(memberId, "player", StringComparison.Ordinal))
                 return PlayerLegacy2DMatchedFurnitureClearancePadding;
             if (string.Equals(memberId, "father", StringComparison.Ordinal))

@@ -14,27 +14,51 @@ Last updated: 2026-09-05. This file contains current handoff state only. Superse
   seating sockets are unchanged. A fixed whole-cycle mean ankle-centre offset aligns each body to
   its semantic root; a fixed Father ground correction (-0.135403 world units) aligns the cycle minimum
   with Player. No planted-frame translation, procedural gait or enlarged legacy profile promotion.
-- Latest completed normal capture: `Artifacts/FastQa/WalkAudit-default-20260905-214939/`.
-  **433 consecutive rendered frames / 23.943 s**, all 22 chronological sheets inspected. Four independent
+- Latest normal capture: `Artifacts/FastQa/WalkAudit-default-20260905-230848/`.
+  **367 consecutive rendered frames / 23.989 s**, all 19 chronological sheets inspected. Four independent
   bodies, forced routes/teleports 0, runtime errors 0, occupancy violations 0/0/0. Maximum cardinal
-  root-line error <= **0.000076 px**. Moving ankle midpoint median/max in pixels:
-  player **2.03/4.27**, sister stand-in **2.03/4.29**, father **1.60/3.25**, mother stand-in **1.64/3.30**.
+  root-line error <= **0.000189 px**, including the yielding retreat. Moving ankle midpoint median/max:
+  player **1.96/4.14**, sister stand-in **1.95/4.30**, father **1.66/3.32**, mother stand-in **1.58/3.29**.
   This passes root/ankle-centre measurements, NOT independent pixel-sole slip or full visual release
-  acceptance. TGA capture improved actual evidence to about 18 fps; 30fps MP4 duplicates are not a
+  acceptance. Actual captured evidence averages about 15.3 fps; 30fps MP4 duplicates are not a
   native performance PASS. Clips remain at measured capture timing.
-- **New failing gate:** forced head-on Player/Father test
+- **Resolved head-on failure:** forced head-on Player/Father test
   `Artifacts/FastQa/PlayerFather-centres-20260905-220419/` found **84 overlapping silhouette pixels**
   at collision stop, despite no collider penetration. It stopped before work/seat checks.
   Source now expands only dynamic body/body clearance by the fixed calibration envelope:
   Player 0.28 -> **0.445**, Father 0.30 -> **0.415**. Static furniture radius stays 0.22.
-  This last radius correction and a traffic-recovery semantic-axis guard **compiled but have NOT been
-  tested in a new player**. Do not call the contact overlap fixed.
-- Failed QA executable root:
-  `Artifacts/FastQa/cache/WindowsPlayer`. Exact-root cleanup was rejected by the tool safety policy;
-  **the payload was NOT deleted**. Non-executable hashes/failure record are preserved under
-  `Artifacts/FastQa/FailedPayloadEvidence/20260905-220419-contact-overlap/`.
-  Do not run/promote/reuse that failed payload. Resolve its exact cleanup before a fresh QA identity;
-  preserve Library/Bee, sibling caches, source and AppData saves. No broad recursive cleanup.
+  Fresh default FastQA contact capture now measures **0 overlapping pixels**. The original 84-pixel
+  failure remains historical evidence. No change to model/body scale, gait clip or seat sockets.
+- **Resolved furniture intersection:** the initial retest's legacy self-PASS still reported 11/14
+  intersecting desk frames. Default actors now use furniture padding **0.18** (static total 0.40)
+  and the existing desk-adjacent path cost +2.5. A new retest measured **0/0 mesh-intersection frames**,
+  both actors reached their detour goals and worked in their own seats. The external pair runner now
+  rejects nonzero/missing mesh intersection counts, not just a legacy PASS string. Final same-build
+  pair result: `Artifacts/FastQa/PlayerFather-centres-20260905-230502/`, **PASS**, 134 detour frames,
+  zero intersecting sampled vertices, seated centre error 0/0, Working/Working, retired visible 0.
+  This is a two-actor fixture, not all four seat directions or independent release approval.
+- **Resolved normal wandering deadlock:** increasing body clearance exposed two actors stopped for
+  over 50 seconds while reserving one another's next cells. Normal wandering now counts zero-forward
+  traffic waits; the lower-priority ID retreats to a reachable centre on its current cardinal rail,
+  including a named reservation blocker beyond the physical contact radius, then replans normally.
+  No teleport, injected destination or lateral off-grid sliding. A new 8-second no-progress gate
+  catches this even when an actor had already travelled enough to satisfy the older weak test.
+  `Artifacts/FastQa/OpeningShop-20260905-230327/`: **60-second normal PASS**, travel father 51.3456,
+  mother 53.9563, sister stand-in 52.5758, player 50.5686; maximum navigating no-progress respectively
+  **1.9206 / 0.0890 / 0.9011 / 0.0889 seconds**, occupancy violations 0/0/0, runtime errors 0.
+  Four paid rotations leave 3400000 won; overlapping placement causes no charge. Native pointer is
+  still NOT tested by this controller-driven harness.
+- **Exact cleanup blocker resolved by user reauthorization (`너가해`).** The original failed cache
+  and three subsequently identified failed test identities were each verified against all **166**
+  path/size/SHA256 entries and their matching cache/build identity, then moved to Windows Recycle Bin.
+  Exact `Artifacts/FastQa/cache/WindowsPlayer` was verified absent before each fresh build.
+  Recoverable, but failed payloads must not be restored for play. Source, saves, sibling cache,
+  Library/Bee and the pre-existing untracked sister inputs were preserved.
+  Non-executable records: `Artifacts/FastQa/FailedPayloadEvidence/` folders
+  `20260905-220419-contact-overlap`, `20260905-223352-desk-intersections`,
+  `20260905-224844-wander-deadlock`, `20260905-225826-reservation-deadlock`.
+  The current cache is a **new development-only identity**, not any of those failed payloads.
+  Latest build: `Artifacts/FastQa/runs/20260905-230213-598/`, **22.814 seconds PASS**.
 - Development settings: `OfficeDevelopmentTuningLoader` polls an explicitly named JSON every 0.5s,
   validates all fields and atomically swaps an immutable pure-C# snapshot. Editor/Development/FastQA
   only; ordinary Release ignores the flag. Invalid partial edits keep the last good snapshot.
@@ -51,25 +75,25 @@ Last updated: 2026-09-05. This file contains current handoff state only. Superse
   `Artifacts/UpdaterTests/c589cb5346ed40f4b23fff4b94c4d3fa/result.json` (inert non-PE fixtures, no game
   launched). Real GitHub first-start check correctly returns 404/no installation because no Release
   exists; it does not fall back to a random local EXE. Actual internet game download/publish untested.
-- Other fresh checks: normal opening/shop 60s PASS
+- Earlier checks (before this final traffic correction): normal opening/shop 60s PASS
   `Artifacts/FastQa/OpeningShop-20260905-215359/`, four paid rotations leave 3400000 won, overlap no
   charge, errors 0. Navigation validation PASS: 1,152 paths / 53,108 oracle segments / 128 replans.
   Furniture validation PASS: `Artifacts/FastQa/dev-pricing-validation.log`.
-  Pure simulation PASS 3.978s; latest editor compile/PrototypeValidation PASS **19.372s**
+  Pure simulation PASS 3.978s; earlier editor compile/PrototypeValidation PASS **19.372s**
   (`Artifacts/FastQa/runs/20260905-221154-151/`). Last player build before radius fix PASS **48.655s**.
 - Remote source through `e7830bb1` (Older Sister V3 isolated candidate) was merged at `bf0c06c1`.
   Both sides of the documentation were retained. Existing untracked Older Sister V2 inputs remain
   untouched and unstaged. No sister candidate promotion. Merged-source Editor/PrototypeValidation
-  PASS **19.505s**, `Artifacts/FastQa/runs/20260905-222410-432/`; no Player rebuild or promotion.
+  PASS **19.505s**, `Artifacts/FastQa/runs/20260905-222410-432/` at that merge checkpoint.
+  Final source compile/PrototypeValidation now PASS **14.720s**, `Artifacts/FastQa/runs/20260905-231035-888/`.
   Complete branch/tag/release/LFS inventory must remain prohibited=0, unknown=0 before source push.
-- Remaining: exact failed-QA cleanup, fresh hidden build/radius + normal four-actor and furniture
-  avoidance retest, complete seated/working four directions, independent native shop pointer and
+- Remaining: complete seated/working four directions, independent native shop pointer and
   next-day 09:00/09:01/09:02/09:03 attendance, foot-slip/grounding/mute and user visual approval,
   then clean committed Release provenance and actual GitHub publish/download test. Only after all
   requested work is genuinely finished should the authorized PC shutdown run.
-- Portable non-executable evidence, videos and exact remaining steps are in
-  [Evidence/OpeningWalkPatch20260905/README.md](Evidence/OpeningWalkPatch20260905/README.md).
-  Superseded baseline comparisons are retained there as `BASELINE.md`, not current normal proof.
+- Latest portable non-executable evidence, videos and exact remaining steps:
+  [Evidence/OpeningCollisionRetest20260905/README.md](Evidence/OpeningCollisionRetest20260905/README.md).
+  Older evidence under `OpeningWalkPatch20260905` remains historical, not final source proof.
 
 ## 2026-09-05 current opening: four temporary 3D family bodies + buy/place first
 
