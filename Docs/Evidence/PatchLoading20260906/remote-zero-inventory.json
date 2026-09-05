@@ -1,0 +1,32 @@
+{
+    "gitVersion":  "git version 2.54.0.windows.1",
+    "passed":  true,
+    "tool":  "Test-FamilyCompanyRemoteInventory-v1",
+    "refs":  [
+                 {
+                     "tree":  "171dbe54c95e42886505238cc9c91c1f3fe9844a",
+                     "object":  "115817b41f635d17c7c80cca692c6e41eeb545a9",
+                     "ref":  "refs/remotes/origin/HEAD"
+                 },
+                 {
+                     "tree":  "171dbe54c95e42886505238cc9c91c1f3fe9844a",
+                     "object":  "115817b41f635d17c7c80cca692c6e41eeb545a9",
+                     "ref":  "refs/remotes/origin/main"
+                 }
+             ],
+    "releases":  [
+
+                 ],
+    "unknown":  [
+
+                ],
+    "prohibitedCount":  0,
+    "observationUtc":  "2026-09-05T14:54:11.0071482Z",
+    "remote":  "https://github.com/zzangzzangman2/company.git",
+    "paginationComplete":  true,
+    "unknownCount":  0,
+    "main":  "115817b41f635d17c7c80cca692c6e41eeb545a9",
+    "prohibited":  [
+
+                   ]
+}

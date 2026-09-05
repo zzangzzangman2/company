@@ -82,6 +82,12 @@ namespace FamilyCompany.Editor
             if (!File.Exists(outputPath))
                 throw new FileNotFoundException("Unity reported success but the player executable is missing.", outputPath);
 
+            // The real Unity game draws patch loading. Only invisible workers are bundled beside it.
+            var patchDirectory = Path.Combine(outputDirectory, "FamilyCompanyPatch");
+            Directory.CreateDirectory(patchDirectory);
+            foreach (var file in new[] { "FamilyCompany.Update.ps1", "FamilyCompany.InGame.ps1", "FamilyCompany.Restart.ps1" })
+                File.Copy(Path.Combine(Directory.GetCurrentDirectory(), "Tools", "Updater", file), Path.Combine(patchDirectory, file), false);
+
             Debug.Log(
                 "FAMILY_COMPANY_WINDOWS_BUILD: PASS " +
                 $"output={outputPath} bytes={summary.totalSize} warnings={summary.totalWarnings} " +

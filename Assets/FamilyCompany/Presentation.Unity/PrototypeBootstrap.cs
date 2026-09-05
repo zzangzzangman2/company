@@ -144,6 +144,7 @@ namespace FamilyCompany.Presentation.Unity
         private void Update()
         {
             if (!Application.isPlaying) return;
+            if (GamePatchBootstrap.IsBlocking) return;
             if (Input.GetKeyDown(KeyCode.F11)) ToggleFullscreenNow();
             if (_hasSession && _screen == PrototypeUiScreen.Playing && Input.GetKeyDown(KeyCode.C))
                 ToggleOfficeObservationCameraNow();
@@ -663,6 +664,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private void OnGUI()
         {
+            if (GamePatchBootstrap.IsBlocking) return;
             EnsureStyles();
             switch (_screen)
             {

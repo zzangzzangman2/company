@@ -114,8 +114,9 @@ namespace FamilyCompany.Presentation.Unity
             _instance.BeginShowStarterOffice();
         }
 
-        private void Start()
+        private IEnumerator Start()
         {
+            while (GamePatchBootstrap.IsBlocking) yield return null;
             string[] commandLine = Environment.GetCommandLineArgs();
             bool extendedPlayerQa = Array.IndexOf(
                 commandLine,
@@ -176,6 +177,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private void OnGUI()
         {
+            if (GamePatchBootstrap.IsBlocking) return;
             if (!_loading) return;
             var gameBootstrap = Object.FindFirstObjectByType<PrototypeBootstrap>();
             if (gameBootstrap == null || gameBootstrap.UiScreen != PrototypeUiScreen.Playing) return;
@@ -187,7 +189,12 @@ namespace FamilyCompany.Presentation.Unity
             DrawLoadingPresentation();
         }
 
-        private void DrawLoadingPresentation()
+        public static void DrawPatchLoading(string stage, string detail, double percent)
+        {
+            if (_instance != null) _instance.DrawLoadingPresentation("게임 업데이트", stage, detail, percent);
+        }
+
+        private void DrawLoadingPresentation(string title = null, string stage = null, string detail = null, double measuredPercent = -2)
         {
             EnsureLoadingPresentationResources();
             if (!_loadingAssetsReady) return;
@@ -200,13 +207,13 @@ namespace FamilyCompany.Presentation.Unity
             var icon = layout.Icon;
             icon.y += Mathf.Round(Mathf.Sin(Time.unscaledTime * 3.2f) * 3f);
             GUI.DrawTexture(icon, _loadingIcon, ScaleMode.ScaleToFit, true);
-            GUI.Label(layout.Title, "출근 준비 중", _loadingTitleStyle);
-            GUI.Label(layout.Status, _loadingStage, _loadingBodyStyle);
+            GUI.Label(layout.Title, title ?? "출근 준비 중", _loadingTitleStyle);
+            GUI.Label(layout.Status, stage ?? _loadingStage, _loadingBodyStyle);
 
             // The displayed value is the rate-limited presentation authority.  Taking Max with
             // the raw producer value here bypassed the clamp in Update and made synchronous warm
             // stages jump visually even though _loadingDisplayedProgress itself was smooth.
-            var progress = Mathf.Clamp01(_loadingDisplayedProgress);
+            var progress = measuredPercent == -2 ? Mathf.Clamp01(_loadingDisplayedProgress) : Mathf.Clamp01((float)measuredPercent / 100f);
             GUI.Box(layout.Track, GUIContent.none, _loadingTrackStyle);
             if (progress > 0.001f)
             {
@@ -219,10 +226,11 @@ namespace FamilyCompany.Presentation.Unity
                 GUI.Box(fill, GUIContent.none, _loadingFillStyle);
             }
 
-            GUI.Label(layout.Percent, Mathf.RoundToInt(progress * 100f) + "%", _loadingPercentStyle);
+            GUI.Label(layout.Percent, measuredPercent == -2 ? Mathf.RoundToInt(progress * 100f) + "%" :
+                measuredPercent < 0 ? "확인 중" : measuredPercent.ToString("0.0") + "%", _loadingPercentStyle);
             var dots = Mathf.FloorToInt(Time.unscaledTime * 2.4f) % 4;
             GUI.Label(layout.Detail,
-                "가족별 출근 경로와 지정 좌석을 준비하고 있습니다" + new string('·', dots),
+                detail ?? "가족별 출근 경로와 지정 좌석을 준비하고 있습니다" + new string('·', dots),
                 _loadingBodyStyle);
         }
 

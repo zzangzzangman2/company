@@ -1,6 +1,50 @@
 # PROJECT STATE
 
-Last updated: 2026-09-05. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+
+## 2026-09-06 IN-GAME patch loading: UI VERIFIED, GAME RELEASE STILL BLOCKED
+
+- User accepted the latest default four-body walk video (`괜찮아 패치배포하고 ... 로딩창 ... 정확히`).
+  This records visual approval of `OpeningCollisionRetest20260905` normal walking, not an invented
+  receipt for four-direction seating, native shop clicks, next-day attendance or mute.
+- User explicitly rejected the separate Windows launcher: **`아니 이렇게말고 게임안에서패치`**.
+  Its C# source/build entry/test compiler were removed; do not restore that external GUI.
+- `GamePatchBootstrap` draws through the existing `ScenePreviewJump` / UiRemasterV3 loading screen,
+  inside the actual Unity player. It blocks title input and office warmup until patch checking finishes.
+  The ordinary release builder bundles only invisible workers under `FamilyCompanyPatch/`.
+  First install is `FamilyCompany-Windows.zip` containing the real Unity EXE/Data, not a launcher-only ZIP.
+- Download percentage = floor(1000 * received packed bytes / all changed packed bytes) / 10.
+  Hash-verified reusable files are excluded. Checking, copying and extraction are indeterminate;
+  verification has its own measured byte progress. Download 100% does not mean verification/activation
+  finished. `PrepareOnly` downloads/copies and validates a separate immutable snapshot while Unity runs;
+  it does NOT activate. The invisible restart helper checks the exact parent PID/start time/path, signals
+  readiness, waits for Unity to exit, rechecks all files and only then switches the pointer and restarts.
+  Real-game restart/network interruption end-to-end is still NOT verified.
+- Actual Unity UI capture: `Artifacts/InGamePatchTests/e6e108d7f2444cf595a4d2d8db0e2f60/`, visible D3D11
+  invocation announced to the user. **20.3% / 0.81 of 4.00 MiB** was visually inspected on the existing
+  full-screen loading art; local paced stream total **4,195,675 bytes**, prepared snapshot, no activation.
+  This is NOT a real GitHub game download. Core Windows PowerShell 5.1 tests: **51 PASS**, including
+  preparation/seed reuse/no activation and a separate closed-game activation gate.
+- First QA invocation incorrectly required Debug.isDebugBuild; FastQA is not necessarily Development.
+  It timed out without entering patch mode. Its exact 166-file cache was hashed and recycled, target=0;
+  source/Library/Bee/saves preserved. Evidence `Artifacts/FastQa/FailedPayloadEvidence/20260906-000832-patch-qa-entry/`.
+  Corrected fresh FastQA build **30.850s PASS**, run `20260906-001422-391`.
+- Hidden batch-mode UI capture produced a black PNG (no presented swapchain), even though bytes reached
+  100%. That harness-only PASS is invalid visual evidence. The test now requires explicit `-ShowWindow`
+  and rejects black pixels. The final visible run above uses the same compiled player and actually passed.
+- Final source Editor/PrototypeValidation: **17.478s PASS**, `20260906-002614-902` (includes a guarded
+  restart-helper startup failure path added after the screenshot; no change to drawing or download math).
+  Actual screenshot/51 checks: [InGamePatch20260906](Evidence/InGamePatch20260906/README.md).
+  The rejected `Artifacts/Launcher` EXE + receipt were hashed and recycled; original game/Downloads/saves
+  untouched. It is recoverable in Recycle Bin but is not a product entry point.
+- A fresh GitHub `release list` returned **zero**. The real production launcher correctly showed a
+  first-release-unavailable error in the now-rejected external prototype; no random Downloads build was started. No game Release, Downloads
+  replacement, actual internet game update, or PC shutdown has occurred.
+- Release packaging still requires clean committed source, independent gameplay gates and provenance.
+  The 13 pre-existing `OlderSisterIdentityTurnaroundV2` image/meta/README files remain untouched and
+  unstaged. Asked whether to commit these exact originals for clean source; no answer recorded yet.
+  Do not silently stage, delete, move or hide them. This is separate from the still-needed game gates
+  listed below; source push is not game publication.
 
 ## 2026-09-05 tile-centre fixes + hot settings + GitHub patcher: RELEASE BLOCKED
 
@@ -88,7 +132,7 @@ Last updated: 2026-09-05. This file contains current handoff state only. Superse
   Final source compile/PrototypeValidation now PASS **14.720s**, `Artifacts/FastQa/runs/20260905-231035-888/`.
   Complete branch/tag/release/LFS inventory must remain prohibited=0, unknown=0 before source push.
 - Remaining: complete seated/working four directions, independent native shop pointer and
-  next-day 09:00/09:01/09:02/09:03 attendance, foot-slip/grounding/mute and user visual approval,
+  next-day 09:00/09:01/09:02/09:03 attendance, independent foot-slip/grounding/mute measurements,
   then clean committed Release provenance and actual GitHub publish/download test. Only after all
   requested work is genuinely finished should the authorized PC shutdown run.
 - Latest portable non-executable evidence, videos and exact remaining steps:

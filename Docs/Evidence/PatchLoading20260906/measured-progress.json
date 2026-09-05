@@ -1,0 +1,27 @@
+{
+  "workerLogSha256": "cb439a63b7fa09a4c5c3d5610dd0780586f794e9297bc4702efb76703ebd775a",
+  "finalPhase": "complete",
+  "displayedNativeExample": "21.8% / 0.88 MiB / 4.00 MiB",
+  "totalEvents": 147,
+  "passed": true,
+  "last": {
+    "schemaVersion": 1,
+    "phase": "download",
+    "detail": "[LOCAL STREAM TEST] FamilyCompany_Data/progress-fixture.bytes",
+    "done": 4195684,
+    "total": 4195684,
+    "percent": 100
+  },
+  "first": {
+    "schemaVersion": 1,
+    "phase": "download",
+    "detail": "[LOCAL STREAM TEST] ",
+    "done": 0,
+    "total": 4195684,
+    "percent": 0
+  },
+  "fixture": "inert paced local stream; not internet game download",
+  "expectedBytes": 4195684,
+  "downloadEvents": 135,
+  "roundedPercentage": "floor(1000*actualReceivedBytes/totalChangedPackedBytes)/10"
+}

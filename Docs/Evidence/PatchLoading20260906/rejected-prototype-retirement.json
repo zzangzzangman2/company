@@ -1,0 +1,17 @@
+{
+  "files": [
+    {
+      "name": "FamilyCompany.exe",
+      "size": 40448,
+      "sha256": "fc47c5aa17a34b780994127139bb997f7f7e3598d2f7d20225b270a1621f3c94"
+    },
+    {
+      "name": "launcher-build.json",
+      "size": 678,
+      "sha256": "190a0e60b5b241f3fb18089c0f4df3c596793ce9ec536172a1f0a32e4dfed72c"
+    }
+  ],
+  "root": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\Launcher",
+  "reason": "user requested patch UI inside game, not external window",
+  "recovery": "Windows Recycle Bin"
+}

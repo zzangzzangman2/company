@@ -1,10 +1,55 @@
 # Shared by the launcher, publisher and isolated regression tests. Windows PowerShell 5.1+.
 Set-StrictMode -Version 2
 $ErrorActionPreference = 'Stop'
+# The GUI worker must not depend on inherited PowerShell module auto-loading preferences.
+Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 $script:PatchRepository = 'zzangzzangman2/company'
 $script:PatchProduct = 'family-company-windows-v1'
+$script:PatchProgressSink = $null
+$script:PatchCancellationCheck = $null
 
-function Get-PatchHash([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Test-PatchCancellation {
+    if ($script:PatchCancellationCheck -and (& $script:PatchCancellationCheck)) {
+        throw [OperationCanceledException]::new('Update cancelled. No incomplete installation will be started.')
+    }
+}
+
+function Send-PatchProgress([string]$Phase, [string]$Detail = '', [long]$Done = 0, [long]$Total = 0) {
+    Test-PatchCancellation
+    if ($Done -lt 0 -or $Total -lt 0 -or ($Total -gt 0 -and $Done -gt $Total)) { throw 'Invalid progress measurement.' }
+    if ($script:PatchProgressSink) {
+        # Percent is phase-specific. Unknown work is indeterminate, never a timer-generated percentage.
+        & $script:PatchProgressSink ([ordered]@{schemaVersion=1; phase=$Phase; detail=$Detail;
+            done=$Done; total=$Total; percent=$(if ($Total -gt 0) { [Math]::Floor(1000.0*$Done/$Total)/10.0 } else { -1 })}) | Out-Null
+    }
+}
+
+function Copy-PatchStream($InputStream, $OutputStream, [long]$ExpectedSize, [scriptblock]$OnBytes) {
+    $buffer = New-Object byte[] 131072
+    [long]$received = 0
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    if ($OnBytes) { & $OnBytes $received | Out-Null }
+    while (($count = $InputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+        Test-PatchCancellation
+        $received += $count
+        if ($received -gt $ExpectedSize) { throw 'Download exceeds declared size.' }
+        $OutputStream.Write($buffer, 0, $count)
+        if ($OnBytes -and ($clock.ElapsedMilliseconds -ge 100 -or $received -eq $ExpectedSize)) {
+            & $OnBytes $received | Out-Null
+            $clock.Restart()
+        }
+    }
+    if ($received -ne $ExpectedSize) { throw 'Truncated download.' }
+    $OutputStream.Flush()
+}
+
+function Get-PatchHash([string]$Path) {
+    # Hashing must also work in the 32-bit Windows PowerShell selected by an AnyCPU GUI.
+    $stream = [IO.File]::OpenRead($Path)
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($hasher.ComputeHash($stream))).Replace('-','').ToLowerInvariant() }
+    finally { $hasher.Dispose(); $stream.Dispose() }
+}
 
 function Assert-PatchNoReparse([string]$Path) {
     $node = [IO.Path]::GetFullPath($Path)
@@ -78,12 +123,28 @@ function Read-PatchManifest([string]$Path) {
     return $manifest
 }
 
-function Receive-PatchFile([string]$Url, [string]$Output, [long]$ExpectedSize, [string]$ExpectedHash) {
+function Receive-PatchFile([string]$Url, [string]$Output, [long]$ExpectedSize, [string]$ExpectedHash, [scriptblock]$OnBytes) {
     if ($Url -notmatch '^https://github\.com/zzangzzangman2/company/releases/download/fc-win-[0-9]{8}\.[0-9]+/(?:[0-9a-f]{64}\.gz|family-company-manifest\.json)$') {
         throw 'Download is not a pinned company GitHub release asset.'
     }
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -UseBasicParsing -Uri $Url -OutFile $Output -TimeoutSec 180 -Headers @{'User-Agent'='FamilyCompany-Updater/1'}
+    Test-PatchCancellation
+    $request = [Net.HttpWebRequest]::Create($Url)
+    $request.UserAgent = 'FamilyCompany-Updater/2'
+    $request.Timeout = 30000
+    $request.ReadWriteTimeout = 30000
+    $response = $null; $inputStream = $null; $outputStream = $null
+    try {
+        $response = $request.GetResponse()
+        if ($response.ContentLength -ge 0 -and $response.ContentLength -ne $ExpectedSize) { throw 'Download content length mismatch.' }
+        $inputStream = $response.GetResponseStream()
+        $outputStream = [IO.File]::Open($Output, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        Copy-PatchStream $inputStream $outputStream $ExpectedSize $OnBytes
+    } finally {
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+        if ($response) { $response.Dispose() }
+    }
     if ((Get-Item -LiteralPath $Output).Length -ne $ExpectedSize -or (Get-PatchHash $Output) -cne $ExpectedHash) {
         throw 'Downloaded release asset failed size/SHA-256 verification.'
     }
@@ -97,6 +158,7 @@ function Expand-PatchFile([string]$Packed, [string]$Output, [long]$ExpectedSize,
         $buffer = New-Object byte[] 131072
         [long]$written = 0
         while (($count = $gzip.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            Test-PatchCancellation
             $written += $count
             if ($written -gt $ExpectedSize) { throw 'Expanded file exceeds its declared size.' }
             $destination.Write($buffer, 0, $count)
@@ -110,11 +172,17 @@ function Expand-PatchFile([string]$Packed, [string]$Output, [long]$ExpectedSize,
 function Assert-PatchInstalled([string]$Directory, $Manifest) {
     $allowed = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     [void]$allowed.Add('family-company-manifest.json')
+    [long]$verified = 0
+    [long]$totalSize = ($Manifest.files | Measure-Object -Property size -Sum).Sum
+    Send-PatchProgress 'verify' '' 0 $totalSize
     foreach ($file in $Manifest.files) {
+        Test-PatchCancellation
         [void]$allowed.Add($file.path)
         $path = Resolve-PatchChild $Directory $file.path
         if (!(Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -ne $file.size -or
             (Get-PatchHash $path) -cne $file.sha256) { throw "Installed file missing/corrupted: $($file.path)" }
+        $verified += [long]$file.size
+        Send-PatchProgress 'verify' $file.path $verified $totalSize
     }
     foreach ($item in Get-ChildItem -LiteralPath $Directory -Recurse -Force) {
         Assert-PatchNoReparse $item.FullName
@@ -168,7 +236,8 @@ function Get-PatchCurrent([string]$Root) {
 }
 
 function Install-CompanyPatch {
-    param([string]$InstallRoot, [string]$ManifestPath, [string]$ExpectedManifestHash, [string]$LocalFeed = '')
+    param([string]$InstallRoot, [string]$ManifestPath, [string]$ExpectedManifestHash, [string]$LocalFeed = '',
+        [switch]$PrepareOnly, [string]$SeedDirectory = '')
     $root = Initialize-PatchStore $InstallRoot
     $lock = [IO.File]::Open((Join-Path $root 'update.lock'), [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
     $stage = $null
@@ -181,7 +250,8 @@ function Install-CompanyPatch {
             throw 'Published version was mutated; refusing same-version replacement.'
         }
         # No file belonging to a running game is changed and no process is forcibly terminated.
-        Assert-PatchGameClosed $root
+        if (!$PrepareOnly) { Assert-PatchGameClosed $root }
+        if ($SeedDirectory) { Assert-PatchNoReparse $SeedDirectory }
         if ($current -and $current.Hash -ceq $ExpectedManifestHash) {
             Assert-PatchInstalled $current.Directory $manifest
             return [pscustomobject]@{Status='current'; Directory=$current.Directory; DownloadedFiles=0; ReusedFiles=@($manifest.files).Count; DownloadedBytes=0}
@@ -194,6 +264,9 @@ function Install-CompanyPatch {
                 throw 'Interrupted version manifest does not match.'
             }
             Assert-PatchInstalled $version $manifest
+            if ($PrepareOnly) {
+                return [pscustomobject]@{Status='prepared'; Directory=$version; DownloadedFiles=0; ReusedFiles=@($manifest.files).Count; DownloadedBytes=0}
+            }
             Write-PatchJsonAtomic (Join-Path $root 'current.json') @{directory=$versionRelative; manifestSha256=$ExpectedManifestHash; activatedUtc=[DateTime]::UtcNow.ToString('o')}
             return [pscustomobject]@{Status='recovered'; Directory=$version; DownloadedFiles=0; ReusedFiles=@($manifest.files).Count; DownloadedBytes=0}
         }
@@ -201,22 +274,37 @@ function Install-CompanyPatch {
         $stage = Resolve-PatchChild $root $stageRelative
         [void][IO.Directory]::CreateDirectory($stage)
         [int]$downloaded = 0; [int]$reused = 0; [long]$bytes = 0
+        [long]$downloadTotal = 0
+        $reuse = @{}
+        foreach ($file in $manifest.files) {
+            Send-PatchProgress 'check-files' $file.path
+            $old = if ($current) { Resolve-PatchChild $current.Directory $file.path } elseif ($SeedDirectory) { Resolve-PatchChild $SeedDirectory $file.path } else { $null }
+            $canReuse = $old -and (Test-Path -LiteralPath $old -PathType Leaf) -and (Get-Item -LiteralPath $old).Length -eq $file.size -and
+                (Get-PatchHash $old) -ceq $file.sha256
+            if ($canReuse) { $reuse[$file.path] = $old }
+            else { $downloadTotal += [long]$file.packedSize }
+        }
+        Send-PatchProgress 'download' '' 0 $downloadTotal
         foreach ($file in $manifest.files) {
             $output = Resolve-PatchChild $stage $file.path
             [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($output))
-            $old = if ($current) { Resolve-PatchChild $current.Directory $file.path } else { $null }
-            if ($old -and (Test-Path -LiteralPath $old -PathType Leaf) -and (Get-Item -LiteralPath $old).Length -eq $file.size -and
-                (Get-PatchHash $old) -ceq $file.sha256) {
-                [IO.File]::Copy($old, $output, $false); $reused++; continue
+            if ($reuse.ContainsKey($file.path)) {
+                Send-PatchProgress 'reuse' $file.path
+                [IO.File]::Copy($reuse[$file.path], $output, $false); $reused++; continue
             }
             $packed = Join-Path $stage ('.download-' + [Guid]::NewGuid().ToString('N'))
+            $onBytes = { param([long]$received) Send-PatchProgress 'download' $file.path ($bytes + $received) $downloadTotal }
             if ($LocalFeed) {
                 $source = Resolve-PatchChild $LocalFeed ($file.assetTag + '/' + $file.assetName)
-                [IO.File]::Copy($source, $packed, $false)
+                $localInput = [IO.File]::OpenRead($source)
+                $localOutput = [IO.File]::Open($packed, [IO.FileMode]::CreateNew)
+                try { Copy-PatchStream $localInput $localOutput $file.packedSize $onBytes }
+                finally { $localInput.Dispose(); $localOutput.Dispose() }
                 if ((Get-Item -LiteralPath $packed).Length -ne $file.packedSize -or (Get-PatchHash $packed) -cne $file.packedSha256) { throw 'Local asset hash mismatch.' }
             } else {
-                Receive-PatchFile "https://github.com/$script:PatchRepository/releases/download/$($file.assetTag)/$($file.assetName)" $packed $file.packedSize $file.packedSha256
+                Receive-PatchFile "https://github.com/$script:PatchRepository/releases/download/$($file.assetTag)/$($file.assetName)" $packed $file.packedSize $file.packedSha256 $onBytes
             }
+            Send-PatchProgress 'expand' $file.path
             Expand-PatchFile $packed $output $file.size $file.sha256
             Remove-Item -LiteralPath $packed
             $downloaded++; $bytes += [long]$file.packedSize
@@ -224,10 +312,15 @@ function Install-CompanyPatch {
         }
         Assert-PatchInstalled $stage $manifest
         [IO.File]::Copy($ManifestPath, (Join-Path $stage 'family-company-manifest.json'), $false)
+        Send-PatchProgress 'activate'
         [void][IO.Directory]::CreateDirectory((Join-Path $root 'versions'))
         if (Test-Path -LiteralPath $version) { throw 'Version directory already exists; inspect interrupted activation.' }
         [IO.Directory]::Move($stage, $version)
         $stage = $null
+        if ($PrepareOnly) {
+            # A running Unity player is never replaced. The restart helper activates only after exit.
+            return [pscustomobject]@{Status='prepared'; Directory=$version; DownloadedFiles=$downloaded; ReusedFiles=$reused; DownloadedBytes=$bytes}
+        }
         Write-PatchJsonAtomic (Join-Path $root 'current.json') @{directory=$versionRelative; manifestSha256=$ExpectedManifestHash; activatedUtc=[DateTime]::UtcNow.ToString('o')}
         return [pscustomobject]@{Status='updated'; Directory=$version; DownloadedFiles=$downloaded; ReusedFiles=$reused; DownloadedBytes=$bytes}
     } catch {

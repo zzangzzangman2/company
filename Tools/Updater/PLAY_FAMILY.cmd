@@ -1,3 +1,2 @@
 @echo off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0FamilyCompany.Launcher.ps1"
-if errorlevel 1 pause
+start "Family Company" "%~dp0FamilyCompany.exe"

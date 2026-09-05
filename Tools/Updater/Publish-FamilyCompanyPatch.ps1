@@ -56,29 +56,30 @@ if (Test-Path -LiteralPath $packageDirectory) {
 } else {
     $result=New-CompanyPatchPackage -Source $player -OutputRoot (Join-Path $repoRoot 'Artifacts/Patches') -Version $Version -Sequence $Sequence -Commit $commit -PreviousManifest $PreviousManifest
 }
-# Independent receipt is evidence-only. The bootstrap zip contains no credentials or game payload.
+# Independent receipt is evidence-only. First install contains the actual Unity game, not a GUI launcher.
 $receiptCopy=Join-Path $result.Directory 'release-receipt.json'
 if (Test-Path -LiteralPath $receiptCopy) {
     if ((Get-PatchHash $receiptCopy) -cne (Get-PatchHash $ReleaseReceipt)) { throw 'Prepared release receipt changed.' }
 } else { [IO.File]::Copy((Resolve-Path -LiteralPath $ReleaseReceipt).Path, $receiptCopy) }
-$bootstrap=@('FamilyCompany.Launcher.ps1','FamilyCompany.Update.ps1','PLAY_FAMILY.cmd') | ForEach-Object { Join-Path $PSScriptRoot $_ }
-$bootstrapZip=Join-Path $result.Directory 'FamilyCompany-Launcher.zip'
-if (!(Test-Path -LiteralPath $bootstrapZip)) { Compress-Archive -LiteralPath $bootstrap -DestinationPath $bootstrapZip }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+$bootstrapZip=Join-Path $result.Directory 'FamilyCompany-Windows.zip'
+if (!(Test-Path -LiteralPath $bootstrapZip)) { [IO.Compression.ZipFile]::CreateFromDirectory($player,$bootstrapZip,[IO.Compression.CompressionLevel]::Optimal,$false) }
+if ((Get-Item -LiteralPath $bootstrapZip).Length -gt 2GB) { throw 'First-install ZIP exceeds the single GitHub asset limit; do not publish.' }
+$bootstrap=@((Read-PatchManifest (Join-Path $result.Directory 'family-company-manifest.json')).files)
 $archive=[IO.Compression.ZipFile]::OpenRead($bootstrapZip)
 try {
-    if ($archive.Entries.Count -ne $bootstrap.Count) { throw 'Unexpected bootstrap archive entries.' }
+    if (@($archive.Entries | Where-Object Name -NE '').Count -ne $bootstrap.Count) { throw 'Unexpected game archive entries.' }
     foreach ($sourceFile in $bootstrap) {
-        $entry=$archive.GetEntry([IO.Path]::GetFileName($sourceFile))
+        $entry=$archive.GetEntry($sourceFile.path)
         if (!$entry) { throw 'Missing bootstrap file.' }
         $stream=$entry.Open(); $hasher=[Security.Cryptography.SHA256]::Create()
         try { $entryHash=([BitConverter]::ToString($hasher.ComputeHash($stream))).Replace('-','').ToLowerInvariant() }
         finally { $stream.Dispose(); $hasher.Dispose() }
-        if ($entryHash -cne (Get-PatchHash $sourceFile)) { throw 'Prepared bootstrap differs from reviewed source.' }
+        if ($entryHash -cne $sourceFile.sha256) { throw 'Prepared game archive differs from reviewed source.' }
     }
 } finally { $archive.Dispose() }
 $expectedAssets=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-foreach ($name in @('family-company-manifest.json','release-receipt.json','FamilyCompany-Launcher.zip')) { [void]$expectedAssets.Add($name) }
+foreach ($name in @('family-company-manifest.json','release-receipt.json','FamilyCompany-Windows.zip')) { [void]$expectedAssets.Add($name) }
 foreach ($file in (Read-PatchManifest (Join-Path $result.Directory 'family-company-manifest.json')).files | Where-Object assetTag -CEQ $Version) {
     [void]$expectedAssets.Add($file.assetName)
 }
@@ -96,7 +97,7 @@ function Invoke-ReleaseGh([string[]]$Arguments) {
     return $output
 }
 [void](Invoke-ReleaseGh @('release','create',$Version,'--repo',$script:PatchRepository,'--target',$commit,'--draft',
-    '--title',("Family Company "+$Version),'--notes',("Verified Windows patch for commit "+$commit+". Start through PLAY_FAMILY.cmd; saves remain local.")))
+    '--title',("Family Company "+$Version),'--notes',("Verified Windows patch for commit "+$commit+". Extract FamilyCompany-Windows.zip and open the Unity FamilyCompany.exe. Patch progress appears inside the game; saves remain local.")))
 foreach ($asset in Get-ChildItem -LiteralPath $result.Directory -File) {
     [void](Invoke-ReleaseGh @('release','upload',$Version,$asset.FullName,'--repo',$script:PatchRepository))
 }

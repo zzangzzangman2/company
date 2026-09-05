@@ -1,0 +1,20 @@
+{
+  "transport": "inert paced local stream",
+  "passed": true,
+  "screenshotSha256": "b7113cec87de82e028174feb6b0d3ca01d2614f65ef451a89aa7e5bfce34ed0c",
+  "first": {
+    "done": 0,
+    "total": 4195675,
+    "percent": 0.0
+  },
+  "activationPerformed": false,
+  "events": 135,
+  "last": {
+    "done": 4195675,
+    "total": 4195675,
+    "percent": 100.0
+  },
+  "visual": "actual Unity frame inspected 20.3%, 0.81/4.00 MiB",
+  "gitHubGameDownloadTested": false,
+  "downloadBytes": 4195675
+}
