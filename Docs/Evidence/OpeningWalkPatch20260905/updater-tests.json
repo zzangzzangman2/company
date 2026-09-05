@@ -1,0 +1,151 @@
+{
+    "timeUtc":  "2026-09-05T13:10:38.7828434Z",
+    "fixture":  "inert text, no game launched, no network",
+    "checks":  [
+                   {
+                       "name":  "first install downloads every file",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "same version downloads nothing",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "publisher reuses previous release assets",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "changed/addition only download, two files reused",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "removed files absent from active snapshot",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "downgrade denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "same sequence mutation denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "manifest hash mismatch denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path ../escape",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path C:/escape",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path /absolute",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path dir\\\\name",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path file:stream",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path NUL.txt",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path dir/../x",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path dir//x",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path trailing.",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path trail ",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path COM1",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "case insensitive path collision denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "file versus directory collision denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "simultaneous updater denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "corrupt asset rejected",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "failed patch leaves active pointer untouched",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "failed partial executable payload removed",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "failure evidence preserved outside partial payload",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "missing download rejected",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "retry after failed transfer succeeds",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "verified offline installation valid",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "interrupted activation resumes with zero downloads",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unexpected installed binary blocks offline launch",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "tampered installed executable blocks offline launch",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "nonempty unrelated directory never adopted",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "drive root never adopted",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "junction directory rejected",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "save sentinel unchanged",
+                       "passed":  true
+                   }
+               ],
+    "passed":  true
+}

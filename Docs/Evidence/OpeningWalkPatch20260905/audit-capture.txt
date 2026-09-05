@@ -1,0 +1,4 @@
+OPENING_WALK_AUDIT: CAPTURED
+capture complete; visual/tile acceptance is a separate analysis
+frames=433 forcedRoutes=0 teleports=0 fixedCaptureClock=false runtimeErrors=0
+static=0 interaction=0 agentPenetration=0

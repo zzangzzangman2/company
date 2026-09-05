@@ -1,0 +1,37 @@
+{
+  "buildCount": 0,
+  "passed": true,
+  "playerSha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+  "actualSpeeds": [
+    {
+      "restored": 1.0,
+      "member": "player",
+      "invalidKeepsSlow": 0.500013379358326
+    },
+    {
+      "restored": 1.0,
+      "member": "older_sister",
+      "invalidKeepsSlow": 0.5000146873072291
+    },
+    {
+      "restored": 1.0,
+      "member": "father",
+      "invalidKeepsSlow": 0.5000146873072291
+    },
+    {
+      "restored": 1.0,
+      "member": "mother",
+      "invalidKeepsSlow": 0.5000142478556977
+    }
+  ],
+  "nativePointerTested": false,
+  "windowHandleZeroSamples": 157,
+  "applied": [
+    "FAMILY_DEV_SETTINGS: APPLIED revision=2 speed=1 stride=0.7950477 setPrice=400000",
+    "FAMILY_DEV_SETTINGS: APPLIED revision=3 speed=0.5 stride=0.7950477 setPrice=480003",
+    "FAMILY_DEV_SETTINGS: APPLIED revision=4 speed=1 stride=0.7950477 setPrice=400000"
+  ],
+  "rejected": [
+    "FAMILY_DEV_SETTINGS: REJECTED; keeping last valid settings: Missing developer setting."
+  ]
+}

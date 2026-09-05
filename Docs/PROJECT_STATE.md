@@ -27,7 +27,8 @@ Last updated: 2026-09-05. This file contains current handoff state only. Superse
   at collision stop, despite no collider penetration. It stopped before work/seat checks.
   Source now expands only dynamic body/body clearance by the fixed calibration envelope:
   Player 0.28 -> **0.445**, Father 0.30 -> **0.415**. Static furniture radius stays 0.22.
-  This last radius correction **compiled but has NOT been tested in a new player**. Do not call it fixed.
+  This last radius correction and a traffic-recovery semantic-axis guard **compiled but have NOT been
+  tested in a new player**. Do not call the contact overlap fixed.
 - Failed QA executable root:
   `Artifacts/FastQa/cache/WindowsPlayer`. Exact-root cleanup was rejected by the tool safety policy;
   **the payload was NOT deleted**. Non-executable hashes/failure record are preserved under
@@ -56,16 +57,19 @@ Last updated: 2026-09-05. This file contains current handoff state only. Superse
   Furniture validation PASS: `Artifacts/FastQa/dev-pricing-validation.log`.
   Pure simulation PASS 3.978s; latest editor compile/PrototypeValidation PASS **19.372s**
   (`Artifacts/FastQa/runs/20260905-221154-151/`). Last player build before radius fix PASS **48.655s**.
-- Remote fetch found two new source commits, ending `e7830bb1` (Older Sister V3 isolated candidate).
-  Preserve them and the existing untracked Older Sister V2 inputs; do not auto-promote that candidate.
-  Initial complete branch/tag/release/LFS inventory: prohibited=0, unknown=0; source push must rerun it.
+- Remote source through `e7830bb1` (Older Sister V3 isolated candidate) was merged at `bf0c06c1`.
+  Both sides of the documentation were retained. Existing untracked Older Sister V2 inputs remain
+  untouched and unstaged. No sister candidate promotion. Merged-source Editor/PrototypeValidation
+  PASS **19.505s**, `Artifacts/FastQa/runs/20260905-222410-432/`; no Player rebuild or promotion.
+  Complete branch/tag/release/LFS inventory must remain prohibited=0, unknown=0 before source push.
 - Remaining: exact failed-QA cleanup, fresh hidden build/radius + normal four-actor and furniture
   avoidance retest, complete seated/working four directions, independent native shop pointer and
   next-day 09:00/09:01/09:02/09:03 attendance, foot-slip/grounding/mute and user visual approval,
   then clean committed Release provenance and actual GitHub publish/download test. Only after all
   requested work is genuinely finished should the authorized PC shutdown run.
-- Baseline comparisons and their limitations are retained in
-  [Evidence/OpeningWalkPatch20260905/BASELINE.md](Evidence/OpeningWalkPatch20260905/BASELINE.md).
+- Portable non-executable evidence, videos and exact remaining steps are in
+  [Evidence/OpeningWalkPatch20260905/README.md](Evidence/OpeningWalkPatch20260905/README.md).
+  Superseded baseline comparisons are retained there as `BASELINE.md`, not current normal proof.
 
 ## 2026-09-05 current opening: four temporary 3D family bodies + buy/place first
 

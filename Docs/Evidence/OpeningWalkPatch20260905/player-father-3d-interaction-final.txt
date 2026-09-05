@@ -1,0 +1,2 @@
+FAMILY_COMPANY_PLAYER_FATHER_3D_INTERACTION: FAIL
+production actors visually overlap at collision stop pixels=84 playerPixels=1138 fatherPixels=1101

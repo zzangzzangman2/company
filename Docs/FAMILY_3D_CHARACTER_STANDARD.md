@@ -54,6 +54,11 @@ sprite는 fail-closed다. 이 요청은 엄마·누나 정식 외형의 승인 �
 
 ## 3. 캐릭터별 표준 파라미터
 
+2026-09-05 기본 프로필은 아래의 발 중심/고정 접지 보정을 소스에 적용했지만 **배포 보류**다.
+보정 뒤 정면 충돌 시 84픽셀 외곽 겹침이 발견되어 사람 반경을 0.445/0.415로 확장했다.
+반경 확장과 traffic-recovery 축 보호는 컴파일만 확인됐고 새 Player 재검증 전이다.
+승인된 모델/클립/색/가구 크기는 그대로다. 이 수정이 왼쪽의 확대 후보 프로필 승격은 아니다.
+
 | 파라미터 | Player(아들) | Father(아빠) | Older Sister V3 후보 (§4.4) | production 기본(참고) | 상수 위치 |
 | --- | --- | --- | --- | --- | --- |
 | FBX / albedo / material | `Production3D/PlayerV8/player-v8-production.fbx`, `player-v8-albedo.png`, `PlayerV8ProductionSurface.mat` | `Production3D/FatherV19/father-v19-production.fbx`, `father-v19-albedo.png`, Player 계열 material | Experimental `OlderSisterV3HiggsfieldSdRepair613/*`, `OlderSisterV3CandidateSurface.mat` | 동일 | production은 `Family3DProductionPresenter`; 누나는 Experimental QA builder |
@@ -61,12 +66,12 @@ sprite는 fail-closed다. 이 요청은 엄마·누나 정식 외형의 승인 �
 | model scale / StandingHeight | `1.263885643` / `2.291498763` | `1.306909878` / `2.454888000` | `1.154662251` / `2.367000` | `1.024378657/1.857258558`, `0.950318127/1.769311871` | `*Legacy2DMatchedModelScale/TargetHeight`; 누나 QA 상수 |
 | 가로 scale | `1.0` | `0.806840529` | `1.0` | `1.0` / `0.92` | `FatherLegacy2DMatchedHorizontalScale` |
 | 화면 키 (1280x720, 보행 median/목표) | `90px` (85–95) | `93.5px` (91–98) | `86px` median / `93.02px` 목표 | `73px` / `69.5px` | 측정값 |
-| 발-뿌리 offset (local x, forward) | `(0.050989, 0.214083)` | `(0.037517, 0.138023)` | `(0.034554, 0.112794)` (24위상 측정) | `(0,0)` | `*FootCenterOffsetLocal`; 누나 runtime receipt |
-| 바닥 접지 보정 | 기준(0) | `AlignCandidateStandingGround`가 측정: `-0.2910` | `-0.073097`, 최저점 `0.210697→0.137600` | 없음 | 런타임 측정, 상수 아님 |
+| 발-뿌리 offset (local x, forward) | `(0.050989, 0.214083)` | `(0.037517, 0.138023)` | `(0.034554, 0.112794)` (24위상 측정) | Player `(0.042546,0.155708)`, Father `(0.031821,0.105393)`; 48위상 측정 | `CalibrateDefaultStanding` / `*FootCenterOffsetLocal`; 누나 runtime receipt |
+| 바닥 접지 보정 | 기준(0) | `AlignCandidateStandingGround`가 측정: `-0.2910` | `-0.073097`, 최저점 `0.210697→0.137600` | Player 기준, Father `-0.135403` | 런타임 고정 주기 측정, contact별 이동 아님 |
 | 밝기 gain (`_Color`) | `1.26` | `1.28` | `1.0`; 실제 맵 luma `91.49`, clipping `0%` | `1.0` | `*Legacy2DMatchedBrightnessGain` |
 | neutral fill (`_AmbientFactor`) | `0.70` (material 기본) | `0.82` | `0.70` | `0.70` / material 기본 | material |
 | stride / phase / cycle | `1.98761598` / `0.40` / `1.4 s` (두 발 착지 = 타일 2칸) | 동일 | `1.98761598` / `0.40` / `1.4 s`, 발 중점 오차 `2.715/5.856px`, 접지 발 선 밖 `0/1120` | `0.7950477` / `0` / `1.4 s` | candidate gait constants |
-| 사람 충돌 반경 | `0.475` | `0.578` | 미적용; 보행 reach `0.3937` 측정 | `0.28` / `0.30` | 승인 뒤 `StarterOfficeRuntimeBootstrap`에 추가 |
+| 사람 충돌 반경 | `0.475` | `0.578` | 미적용; 보행 reach `0.3937` 측정 | 소스 `0.445` / `0.415`, 새 Player 검증 대기 (실패 캡처 `0.28/0.30`) | `StarterOfficeRuntimeBootstrap` |
 | 가구 정적 반경 + 패딩 | `0.22 + 0.18` | `0.22 + 0.18` | 미적용·승인 뒤 검증 | `0.22 + 0` | `OfficeRuntimeAgent.DefaultRadius`, `*FurnitureClearancePadding` |
 | 책상 인접 칸 경로 비용 | `+2.5` (패딩>0인 배우) | 동일 | 미적용·승인 뒤 검증 | 없음 | `OfficeRuntimePathService.DeskProximityStepPenalty` |
 | 원본 hash | receipt `player-v8-source-receipt.json` | GLB `210DC2E1…17F9`, FBX `479F883A…AEB5`, albedo `8C1418E1…962C`, Meshy job `865f2115-…-84eb-d38ca106d45d` (38 credits) | paid V2 GLB `62E1366B…3D3DD`; V3 FBX `6639CB85…846D2E`, albedo `7264BEA7…B71473`; new charge `0` | — | `*-source-receipt.json` |
