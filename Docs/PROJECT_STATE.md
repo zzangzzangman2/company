@@ -4,6 +4,10 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
 
 ## 2026-09-06 current continuation: chair tile-centre correction (verification in progress)
 
+- User explicitly stopped foreground testing: **background only; never control their desktop/input**.
+  The brief native session had four walking bodies but no completed purchase before the user closed it;
+  do not claim a native-pointer/UI PASS. Use hidden D3D11 camera-stack renders and independent logs.
+
 - User reported rotation-dependent chair placement on tile seams. Production had projected an elevated
   legacy sprite seat socket onto the floor and then moved the chair again relative to the keyboard.
   The new production root is the semantic seat-cell centre, with zero chair-ground displacement.

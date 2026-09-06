@@ -168,7 +168,13 @@ namespace FamilyCompany.Presentation.Unity
                 if (result.status == "offline-ready")
                 { _failed = true; _offlineAvailable = true; _status = "최신 버전을 확인하지 못했습니다"; _detail = "무결성을 확인한 이전 설치본으로 시작할 수 있습니다."; return; }
                 if (string.Equals(Path.GetFullPath(result.directory), Path.GetFullPath(_gameDirectory), StringComparison.OrdinalIgnoreCase))
-                { _blocking = false; Application.runInBackground = _previousBackground; return; }
+                {
+                    _blocking = false; Application.runInBackground = _previousBackground;
+                    Debug.Log("IN_GAME_PATCH_READY_CURRENT directory=" + _gameDirectory);
+                    if (Application.isBatchMode && Array.IndexOf(Environment.GetCommandLineArgs(),
+                        "-familyCompanyPatchBackgroundExit") >= 0) StartCoroutine(FinishBackgroundPatch());
+                    return;
+                }
                 StartCoroutine(RestartWhenReady(result));
             }
             catch (Exception e) { Fail(e.Message); }
@@ -179,6 +185,12 @@ namespace FamilyCompany.Presentation.Unity
             _restarting = true;
             yield return null; yield return null;
             Application.Quit(_captured ? 0 : 1);
+        }
+
+        private IEnumerator FinishBackgroundPatch()
+        {
+            yield return new WaitForSecondsRealtime(3f);
+            Application.Quit(0);
         }
 
         private IEnumerator RestartWhenReady(PatchResult result)
@@ -204,7 +216,8 @@ namespace FamilyCompany.Presentation.Unity
                 "-ParentId " + self.Id + " -ParentStartTicks " + self.StartTime.ToUniversalTime().Ticks +
                 " -GameDirectory " + Quote(_gameDirectory) + " -InstallRoot " + Quote(_installRoot) +
                 " -PendingDirectory " + Quote(result.directory) + " -ExpectedManifestHash " + Quote(result.manifestHash) +
-                " -ReadyPath " + Quote(ready), false);
+                " -ReadyPath " + Quote(ready) +
+                (_qaRestart && Application.isBatchMode ? " -DiagnosticBatchMode" : ""), false);
             }
             catch (Exception error) { Fail("자동 재시작 준비 실패: " + error.Message); return null; }
         }

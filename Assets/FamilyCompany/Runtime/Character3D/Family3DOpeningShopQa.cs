@@ -227,6 +227,20 @@ namespace FamilyCompany.Runtime.Character3D
                 "invalid confirmation charged cash or mutated layout");
             editor.Close();
             for (int frame = 0; frame < 5; frame++) yield return null;
+            if (Environment.GetCommandLineArgs().Contains(Family3DManualGameplayObserver.BackgroundFlag))
+            {
+                // Let the normal coordinator dock all four actors; never inject a seat or pose.
+                deadline = Time.realtimeSinceStartup + 100f;
+                while (!runtime.Actors.All(actor => actor.Phase == OfficeRuntimeAgentPhase.Working))
+                {
+                    Require(Time.realtimeSinceStartup < deadline, "four actors did not work normally");
+                    AssertNoPenetration(runtime);
+                    yield return null;
+                }
+                float settle = Time.realtimeSinceStartup + 5f;
+                while (Time.realtimeSinceStartup < settle) { AssertNoPenetration(runtime); yield return null; }
+                receipt.AppendLine("normalFourWorking=true routeInjection=false poseInjection=false");
+            }
             Capture("four-family-four-workstations.png");
             yield return new WaitForSecondsRealtime(1f);
             Require(File.Exists(Path.Combine(directory, "wander-000.png")) &&

@@ -2,7 +2,7 @@
 param([Parameter(Mandatory=$true)][int]$ParentId, [Parameter(Mandatory=$true)][long]$ParentStartTicks,
     [Parameter(Mandatory=$true)][string]$GameDirectory, [Parameter(Mandatory=$true)][string]$InstallRoot,
     [Parameter(Mandatory=$true)][string]$PendingDirectory, [Parameter(Mandatory=$true)][string]$ExpectedManifestHash,
-    [Parameter(Mandatory=$true)][string]$ReadyPath)
+    [Parameter(Mandatory=$true)][string]$ReadyPath, [switch]$DiagnosticBatchMode)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'FamilyCompany.Update.ps1')
 $root = Initialize-PatchStore $InstallRoot
@@ -28,7 +28,11 @@ try {
             ($current.Manifest.sequence -eq $manifest.sequence -and $current.Hash -cne $ExpectedManifestHash))) { throw 'Newer/different patch already active.' }
         Assert-PatchInstalled $PendingDirectory $manifest
         Write-PatchJsonAtomic (Join-Path $root 'current.json') @{directory=$relative; manifestSha256=$ExpectedManifestHash; activatedUtc=[DateTime]::UtcNow.ToString('o')}
-        Start-Process -FilePath (Resolve-PatchChild $PendingDirectory 'FamilyCompany.exe') -WorkingDirectory $PendingDirectory | Out-Null
+        if ($DiagnosticBatchMode) {
+            Start-Process -FilePath (Resolve-PatchChild $PendingDirectory 'FamilyCompany.exe') -WorkingDirectory $PendingDirectory -WindowStyle Hidden -ArgumentList ('-batchmode -force-d3d11 -familyCompanyPatchBackgroundExit -logFile "'+(Join-Path $root 'patched-player.log')+'"') | Out-Null
+        } else {
+            Start-Process -FilePath (Resolve-PatchChild $PendingDirectory 'FamilyCompany.exe') -WorkingDirectory $PendingDirectory | Out-Null
+        }
     } finally { $updateLock.Dispose() }
 } catch {
     Write-PatchJsonAtomic ($ReadyPath + '.error.json') @{error=$_.Exception.Message}

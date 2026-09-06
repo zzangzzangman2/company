@@ -18,6 +18,8 @@ namespace FamilyCompany.Runtime.Character3D
     public sealed class Family3DManualGameplayObserver : MonoBehaviour
     {
         public const string Flag = "-familyCompanyManualGameplayObservation";
+        public const string BackgroundFlag = "-familyCompanyBackgroundChairObservation";
+        private bool backgroundMode;
         private string directory;
         private PrototypeBootstrap bootstrap;
         private StarterOfficeRuntimeBootstrap runtime;
@@ -31,7 +33,8 @@ namespace FamilyCompany.Runtime.Character3D
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            if (!Environment.GetCommandLineArgs().Contains(Flag)) return;
+            if (!Environment.GetCommandLineArgs().Contains(Flag) &&
+                !Environment.GetCommandLineArgs().Contains(BackgroundFlag)) return;
             var host = new GameObject("~ManualGameplayObserver");
             DontDestroyOnLoad(host);
             host.AddComponent<Family3DManualGameplayObserver>();
@@ -40,7 +43,8 @@ namespace FamilyCompany.Runtime.Character3D
         private IEnumerator Start()
         {
             string[] args = Environment.GetCommandLineArgs();
-            int index = Array.IndexOf(args, Flag);
+            backgroundMode = args.Contains(BackgroundFlag);
+            int index = Array.IndexOf(args, backgroundMode ? BackgroundFlag : Flag);
             if (index < 0 || index + 1 >= args.Length || !Path.IsPathRooted(args[index + 1]))
                 throw new ArgumentException("Observer needs an absolute evidence directory.");
             directory = Path.GetFullPath(args[index + 1]);
@@ -54,8 +58,7 @@ namespace FamilyCompany.Runtime.Character3D
             Application.logMessageReceived += OnLog;
             Application.runInBackground = true;
             bootstrap = FindFirstObjectByType<PrototypeBootstrap>();
-            bootstrap.StartNewGameNow(1, false);
-            ScenePreviewJump.ShowStarterOffice();
+            if (!backgroundMode) { bootstrap.StartNewGameNow(1, false); ScenePreviewJump.ShowStarterOffice(); }
             Debug.Log("MANUAL_GAMEPLAY_OBSERVATION setup=public-unsaved-new-game actorControl=false routeInjection=false patchNetworkBypassed=true; F8=capture F9=next-day-setup F10=finish");
             yield return null;
         }
@@ -71,13 +74,13 @@ namespace FamilyCompany.Runtime.Character3D
             frame++;
             runtime = FindFirstObjectByType<StarterOfficeRuntimeBootstrap>();
             if (runtime == null || runtime.World == null) return;
-            if (Input.GetKeyDown(KeyCode.F8)) Capture();
-            if (Input.GetKeyDown(KeyCode.F9) && !nextDayRequested)
+            if (!backgroundMode && Input.GetKeyDown(KeyCode.F8)) Capture();
+            if (!backgroundMode && Input.GetKeyDown(KeyCode.F9) && !nextDayRequested)
             {
                 nextDayRequested = true;
                 StartCoroutine(PrepareNextDay());
             }
-            if (Input.GetKeyDown(KeyCode.F10))
+            if (!backgroundMode && Input.GetKeyDown(KeyCode.F10))
             {
                 File.WriteAllText(Path.Combine(directory, "observation-ended.txt"),
                     "CAPTURED, NOT AUTO-PASS; runtimeErrors=" + errors + "; frames=" + frame);
@@ -148,7 +151,9 @@ namespace FamilyCompany.Runtime.Character3D
 
         private void Capture()
         {
-            ScreenCapture.CaptureScreenshot(Path.Combine(directory, "screen-" + (capture++).ToString("D4") + ".png"));
+            string path = Path.Combine(directory, "screen-" + (capture++).ToString("D4") + ".png");
+            if (backgroundMode) Family3DOpeningShopQa.CaptureCameraStack(path);
+            else ScreenCapture.CaptureScreenshot(path);
         }
         private void ObserveChairGeometry(Family3DProductionPresenter presenter)
         {
