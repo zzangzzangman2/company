@@ -231,6 +231,7 @@ namespace FamilyCompany.Runtime.Character3D
             for (int frame = 0; frame < 5; frame++) yield return null;
             if (Environment.GetCommandLineArgs().Contains("-familyCompanyAutonomyTraceQa"))
             {
+                var attendanceFailures = new List<string>();
                 // An idle manually controlled Player cannot satisfy the old simultaneous-four-work
                 // assertion. Collect normal intent/path/blocker evidence without declaring work PASS.
                 deadline = Time.realtimeSinceStartup + 100f;
@@ -276,9 +277,9 @@ namespace FamilyCompany.Runtime.Character3D
                         {
                             checkedNineFour = true;
                             foreach (var actor in runtime.Actors)
-                                Require(!actor.IsPresentationAway &&
-                                    (actor.HasActiveVisibleMotionIntent || actor.AttendanceSeatArrivalCount == 1),
-                                    "09:04 missing live arrival/seat: " + actor.AgentId);
+                                if (actor.IsPresentationAway ||
+                                    !(actor.HasActiveVisibleMotionIntent || actor.AttendanceSeatArrivalCount == 1))
+                                    attendanceFailures.Add("09:04 missing live arrival/seat: " + actor.AgentId);
                         }
                         yield return null;
                     }
@@ -286,19 +287,27 @@ namespace FamilyCompany.Runtime.Character3D
                     {
                         int order = Array.IndexOf(new[] { "player", "older_sister", "father", "mother" }, member);
                         DateTime due = morning.Date.AddHours(9).AddMinutes(order);
-                        Require(released.TryGetValue(member, out DateTime actual) && actual == due,
-                            "staggered release mismatch: " + member);
-                        Require(seated.Contains(member), "normal attendance never reached Working: " + member);
-                        receipt.AppendLine("nextDay=" + member + " released=" + actual.ToString("s") + " seatedNormally=true");
+                        bool appeared = released.TryGetValue(member, out DateTime actual);
+                        if (!appeared || actual != due)
+                            attendanceFailures.Add("staggered release mismatch: " + member);
+                        if (!seated.Contains(member))
+                            attendanceFailures.Add("normal attendance never reached Working: " + member);
+                        receipt.AppendLine("nextDay=" + member + " due=" + due.ToString("s") +
+                            " released=" + (appeared ? actual.ToString("s") : "NOT_OBSERVED") +
+                            " seatedNormally=" + seated.Contains(member));
                     }
                     Capture("next-day-normal-seated.png");
                     receipt.AppendLine("nextDayClockSetupJump=afternoon-night-only nextDayObservedClock=1x nativePointer=false routeInjection=false");
+                    receipt.AppendLine("nextDayAttendanceGatePassed=" + (attendanceFailures.Count == 0));
+                    foreach (string failure in attendanceFailures) receipt.AppendLine("attendanceFailure=" + failure);
                 }
                 File.WriteAllText(Path.Combine(directory, "normal-autonomy-observed.txt"),
                     "OBSERVED, NOT A WORK/RELEASE PASS\n" + receipt +
                     "normalClock=true actorControl=false routeInjection=false poseInjection=false nativePointer=false\n" +
                     "runtimeErrors=" + runtimeErrors.Count);
-                Application.Quit(runtimeErrors.Count == 0 ? 0 : 1);
+                // Keep collecting the complete normal morning after a timing failure. The failed
+                // gate stays failed (exit 1); later arrivals are evidence, not a relaxed PASS.
+                Application.Quit(runtimeErrors.Count == 0 && attendanceFailures.Count == 0 ? 0 : 1);
                 yield break;
             }
             if (Environment.GetCommandLineArgs().Contains("-familyCompanyChairFitQa"))
