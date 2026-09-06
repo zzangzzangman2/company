@@ -2134,9 +2134,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private void TickNavigation(float deltaTime)
         {
             if (!_destination.HasValue) return;
-            if (_emptyOfficeWanderActive &&
-                (_yieldCell.HasValue || _stuckSeconds >= OfficeNavigationTrafficRules.RecoveryThresholdSeconds) &&
-                TryTickWanderRailYield(deltaTime)) return;
+            if ((_yieldCell.HasValue || _stuckSeconds >= OfficeNavigationTrafficRules.RecoveryThresholdSeconds) &&
+                TryTickNavigationRailYield(deltaTime)) return;
             if (_pathRevision != _world.Occupancy.Revision || _path.Count == 0)
             {
                 if (!RebuildPath())
@@ -2198,38 +2197,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     currentCell,
                     _upcomingPathCells);
                 _stuckSeconds += deltaTime;
-                if (_emptyOfficeWanderActive)
-                {
-                    StopMotion(keepStuck: true);
-                    if (_stuckSeconds >= OfficeNavigationTrafficRules.ReplanThresholdSeconds)
-                        _pathRevision = -1;
-                    return;
-                }
-                OfficeTrafficDecision blockedTraffic = _world.ResolveTraffic(
-                    _agentId,
-                    Position,
-                    _desiredVelocity,
-                    AgentRadius,
-                    _stuckSeconds);
-                if (_stuckSeconds >= OfficeNavigationTrafficRules.RecoveryThresholdSeconds &&
-                    TryTickGridYield(
-                        currentCell,
-                        _upcomingPathCells,
-                        deltaTime,
-                        _destination.Value.SeatId))
-                {
-                    if (_stuckSeconds >= 2.0f) _world.Occupancy.ClearReservations(_agentId);
-                    return;
-                }
-                if (blockedTraffic.RecoveryWeight > 0f)
-                {
-                    var recovery = new Vector2(
-                        blockedTraffic.RecoveryDirection.X,
-                        blockedTraffic.RecoveryDirection.Z) * (MoveSpeed * 0.72f);
-                    MoveWithCollision(recovery, deltaTime, _destination.Value.SeatId);
-                }
-                else StopMotion(keepStuck: true);
-                if (blockedTraffic.ShouldReplan || _stuckSeconds >= 1.10f) _pathRevision = -1;
+                // Furniture/attendance routes obey the same centre-line contract as opening
+                // wander. A lateral recovery from a half edge is not a valid grid transition.
+                StopMotion(keepStuck: true);
+                if (_stuckSeconds >= OfficeNavigationTrafficRules.ReplanThresholdSeconds)
+                    _pathRevision = -1;
                 if (_stuckSeconds >= 2.0f) _world.Occupancy.ClearReservations(_agentId);
                 return;
             }
@@ -2255,7 +2227,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _desiredVelocity,
                 DynamicAgentRadius,
                 _stuckSeconds);
-            if (_emptyOfficeWanderActive && traffic.ForwardScale <= 0.0001f)
+            if (traffic.ForwardScale <= 0.0001f)
             {
                 // A deliberate traffic wait has zero target velocity, so MoveWithCollision
                 // cannot count it as blocked motion. Count it here to enable bounded recovery.
@@ -2265,13 +2237,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 return;
             }
             Vector2 targetVelocity = _desiredVelocity * traffic.ForwardScale;
-            if (!_emptyOfficeWanderActive && traffic.RecoveryWeight > 0f)
-            {
-                var recovery = new Vector2(
-                    traffic.RecoveryDirection.X,
-                    traffic.RecoveryDirection.Z) * MoveSpeed;
-                targetVelocity = Vector2.Lerp(targetVelocity, recovery, traffic.RecoveryWeight);
-            }
+            // Recovery is a reserved centre-to-centre retreat above, never a blended sideways
+            // vector that the path-rail constraint then projects back to zero indefinitely.
             if (traffic.ShouldReplan) _pathRevision = -1;
             MoveWithCollision(
                 targetVelocity,
@@ -2282,18 +2249,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 constrainToPathSegment: true);
         }
 
-        private bool TryTickWanderRailYield(float deltaTime)
+        private bool TryTickNavigationRailYield(float deltaTime)
         {
             string permitted = _destination.Value.SeatId;
             if (!_yieldCell.HasValue)
             {
-                // The lower ordinal ID keeps priority. Only the yielding actor retreats, on
-                // its existing cardinal rail, before asking the normal coordinator path again.
+                // Moving peers keep ordinal priority. A stationary/manual/seated peer will not
+                // move out of the way, so even the priority actor must retreat and replan around it.
                 OfficeRuntimeAgent blocker = null;
                 foreach (OfficeRuntimeAgent peer in _world.Registry.Actors)
                 {
                     if (peer == null || peer == this || peer.IsPresentationAway ||
-                        string.CompareOrdinal(_agentId, peer.AgentId) <= 0) continue;
+                        (peer.HasActiveVisibleMotionIntent &&
+                         string.CompareOrdinal(_agentId, peer.AgentId) <= 0)) continue;
                     // Reservation conflicts can stop both actors more than a body radius apart
                     // (two-cell lookahead). The recorded blocking owner is authoritative there.
                     bool reservationOwner = LastReservationBlocker.StartsWith(
@@ -2365,99 +2333,6 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _pathRevision = -1;
             }
             return true;
-        }
-
-        private bool TryTickGridYield(
-            OfficeGridCoordinate currentCell,
-            IReadOnlyList<OfficeGridCoordinate> upcoming,
-            float deltaTime,
-            string permittedSeatId)
-        {
-            if (!_yieldCell.HasValue)
-            {
-                OfficeGridCoordinate forward = upcoming != null && upcoming.Count > 0
-                    ? new OfficeGridCoordinate(
-                        Math.Sign(upcoming[0].X - currentCell.X),
-                        Math.Sign(upcoming[0].Y - currentCell.Y))
-                    : new OfficeGridCoordinate(0, 0);
-                var left = new OfficeGridCoordinate(-forward.Y, forward.X);
-                var right = new OfficeGridCoordinate(forward.Y, -forward.X);
-                bool preferLeft = StableYieldSide(_agentId);
-                OfficeGridCoordinate reverse = new OfficeGridCoordinate(-forward.X, -forward.Y);
-                for (var offsetIndex = 0; offsetIndex < 3; offsetIndex++)
-                {
-                    OfficeGridCoordinate offset = offsetIndex switch
-                    {
-                        0 => preferLeft ? left : right,
-                        1 => preferLeft ? right : left,
-                        _ => reverse
-                    };
-                    if (offset.X == 0 && offset.Y == 0) continue;
-                    var candidate = new OfficeGridCoordinate(
-                        currentCell.X + offset.X,
-                        currentCell.Y + offset.Y);
-                    if (!_world.Grid.Contains(candidate) ||
-                        !_world.Occupancy.IsCellPassable(
-                            candidate,
-                            _agentId,
-                            permittedSeatId,
-                            true)) continue;
-                    _yieldCell = candidate;
-                    break;
-                }
-            }
-            if (!_yieldCell.HasValue) return false;
-
-            Vector3 target3 = _world.Presenter.CellCenterWorld(_yieldCell.Value);
-            Vector2 target = new Vector2(target3.x, target3.y);
-            Vector2 delta = target - Position;
-            if (delta.magnitude <= ArrivalDistance)
-            {
-                if (!TryConsumeExactEndpoint(
-                        target,
-                        deltaTime,
-                        permittedSeatId,
-                        delta.sqrMagnitude > 0.000001f
-                            ? delta.normalized * (MoveSpeed * 0.72f)
-                            : Vector2.zero)) return true;
-                _world.Occupancy.UpdateActor(
-                    _agentId,
-                    Position,
-                    Vector2.zero,
-                    _stuckSeconds,
-                    permittedSeatId);
-                _yieldCell = null;
-                _pathRevision = -1;
-                _stuckSeconds = Mathf.Max(
-                    _stuckSeconds,
-                    OfficeNavigationTrafficRules.ReplanThresholdSeconds);
-                StopMotion(keepStuck: true);
-                return true;
-            }
-
-            float preservedStuck = _stuckSeconds;
-            MoveWithCollision(
-                delta.normalized * (MoveSpeed * 0.72f),
-                deltaTime,
-                permittedSeatId,
-                delta.magnitude);
-            _stuckSeconds = Mathf.Max(preservedStuck, _stuckSeconds);
-            return true;
-        }
-
-        private static bool StableYieldSide(string agentId)
-        {
-            unchecked
-            {
-                uint hash = 2166136261;
-                string value = agentId ?? string.Empty;
-                for (var index = 0; index < value.Length; index++)
-                {
-                    hash ^= value[index];
-                    hash *= 16777619;
-                }
-                return (hash & 1) == 0;
-            }
         }
 
         private void CompleteNavigation()
