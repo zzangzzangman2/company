@@ -56,7 +56,7 @@ namespace FamilyCompany.Runtime.Character3D
             geometry.AutoFlush = true;
             autonomy = new StreamWriter(Path.Combine(directory, "autonomy.csv"), false, new UTF8Encoding(false));
             autonomy.AutoFlush = true;
-            autonomy.WriteLine("seconds,clock,member,playerControlled,phase,cell,x,y,destination,stuck,reservationBlocker,movementBlocker,intent,location,interaction,status,pathIndex,pathLength,seat,interactionPhase,termination,staticHere");
+            autonomy.WriteLine("seconds,clock,member,playerControlled,phase,cell,x,y,destination,stuck,reservationBlocker,movementBlocker,intent,location,interaction,status,pathIndex,pathLength,seat,interactionPhase,termination,staticHere,ready,shopOpen,egressBlocker,egressBlockedAttempts");
             geometry.WriteLine("seconds,seat,turn,chairTileErrorPx,stemTileErrorPx,monitorAxisError,keyboardAxisError,member,phase,handMidpointError,standingHeight");
             trace.WriteLine("frame,seconds,clock,ready,cash,inventory,seats,pointerCommits,member,phase,away,x,y,destination,pathIndex,pathLength,seat,seatDirection,arrivalCount,workFrames,gaitDistance,displacement,staticViolations,interactionViolations,agentPenetrations,bodies,legacyCharacters,legacyFurniture,bgm,sfx,listenerVolume,outputPeak,errors");
             Application.logMessageReceived += OnLog;
@@ -110,7 +110,8 @@ namespace FamilyCompany.Runtime.Character3D
                     intent.AutonomyLocation, Q(intent.AutonomyInteractionId), Q(actor.StatusDetail),
                     actor.PresentationPathIndex, actor.SemanticPathLength, actor.ActiveSeatId,
                     actor.InteractionPhase, actor.LastInteractionEndReason,
-                    runtime.World.Occupancy.CanTraverseStatic(actor.Position, actor.Position, actor.AgentRadius, actor.ActiveSeatId)));
+                    runtime.World.Occupancy.CanTraverseStatic(actor.Position, actor.Position, actor.AgentRadius, actor.ActiveSeatId),
+                    runtime.IsReady, editor != null && editor.IsOpen, Q(actor.LastSeatEgressBlocker), actor.SeatEgressBlockedAttemptCount));
                 rows.AppendLine(string.Join(",", frame, F(Time.realtimeSinceStartup), state.Time.Now.ToString("s"),
                     runtime.IsReady, state.Company.CashWon, state.OfficeFurnitureInventory.Instances.Count,
                     state.OfficeGrid.SeatSlots.Count, editor == null ? -1 : editor.DiagnosticPointerCommitCount,

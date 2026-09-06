@@ -240,6 +240,60 @@ namespace FamilyCompany.Runtime.Character3D
                     yield return null;
                 }
                 Capture("normal-autonomy-end.png");
+                if (Environment.GetCommandLineArgs().Contains("-familyCompanyNextDayAutonomyQa"))
+                {
+                    // Only skip the unobserved afternoon/night. Do not alter actors, routes,
+                    // individual due times or the normal 08:50 -> 09:20 attendance window.
+                    DateTime evening = state.Time.Now.Date.AddHours(17).AddMinutes(50);
+                    bootstrap.AdvanceTimeNow((long)(evening - state.Time.Now).TotalMinutes);
+                    bootstrap.SetWorldTimeScaleNow(4f);
+                    deadline = Time.realtimeSinceStartup + 120f;
+                    while (runtime.Actors.Any(actor => !actor.IsPresentationAway))
+                    {
+                        Require(Time.realtimeSinceStartup < deadline, "normal departure timeout");
+                        AssertNoPenetration(runtime);
+                        yield return null;
+                    }
+                    DateTime morning = state.Time.Now.Date.AddDays(1).AddHours(8).AddMinutes(50);
+                    bootstrap.AdvanceTimeNow((long)(morning - state.Time.Now).TotalMinutes);
+                    bootstrap.SetWorldTimeScaleNow(1f);
+                    var released = new Dictionary<string, DateTime>();
+                    var seated = new HashSet<string>();
+                    bool checkedNineFour = false;
+                    deadline = Time.realtimeSinceStartup + 70f;
+                    while (state.Time.Now < morning.Date.AddHours(9).AddMinutes(20))
+                    {
+                        Require(Time.realtimeSinceStartup < deadline, "normal morning clock timeout");
+                        AssertNoPenetration(runtime);
+                        foreach (var actor in runtime.Actors)
+                        {
+                            if (!actor.IsPresentationAway && !released.ContainsKey(actor.AgentId))
+                                released.Add(actor.AgentId, state.Time.Now);
+                            if (actor.Phase == OfficeRuntimeAgentPhase.Working && actor.AttendanceSeatArrivalCount == 1)
+                                seated.Add(actor.AgentId);
+                        }
+                        if (!checkedNineFour && state.Time.Now >= morning.Date.AddHours(9).AddMinutes(4))
+                        {
+                            checkedNineFour = true;
+                            foreach (var actor in runtime.Actors)
+                                Require(!actor.IsPresentationAway &&
+                                    (actor.HasActiveVisibleMotionIntent || actor.AttendanceSeatArrivalCount == 1),
+                                    "09:04 missing live arrival/seat: " + actor.AgentId);
+                        }
+                        yield return null;
+                    }
+                    foreach (string member in new[] { "player", "older_sister", "father", "mother" })
+                    {
+                        int order = Array.IndexOf(new[] { "player", "older_sister", "father", "mother" }, member);
+                        DateTime due = morning.Date.AddHours(9).AddMinutes(order);
+                        Require(released.TryGetValue(member, out DateTime actual) && actual == due,
+                            "staggered release mismatch: " + member);
+                        Require(seated.Contains(member), "normal attendance never reached Working: " + member);
+                        receipt.AppendLine("nextDay=" + member + " released=" + actual.ToString("s") + " seatedNormally=true");
+                    }
+                    Capture("next-day-normal-seated.png");
+                    receipt.AppendLine("nextDayClockSetupJump=afternoon-night-only nextDayObservedClock=1x nativePointer=false routeInjection=false");
+                }
                 File.WriteAllText(Path.Combine(directory, "normal-autonomy-observed.txt"),
                     "OBSERVED, NOT A WORK/RELEASE PASS\n" + receipt +
                     "normalClock=true actorControl=false routeInjection=false poseInjection=false nativePointer=false\n" +
