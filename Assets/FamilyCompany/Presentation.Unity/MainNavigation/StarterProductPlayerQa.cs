@@ -107,7 +107,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             Require(hud != null, "HUD missing");
             hud.OpenTabNow(MainNavigationTabId.Projects);
             yield return null;
-            Click(hud.GetFeatureButtonForQa("projects-products"));
+            while (!ClickFeatureWhenReady(hud)) yield return null;
             yield return new WaitForSecondsRealtime(0.6f);
             ValidateText();
             ScreenCapture.CaptureScreenshot(Path.Combine(_directory, "01-learning.png"));
@@ -174,7 +174,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             yield return new WaitForSecondsRealtime(0.5f);
             hud.OpenTabNow(MainNavigationTabId.Projects);
             yield return null;
-            Click(hud.GetFeatureButtonForQa("projects-products"));
+            while (!ClickFeatureWhenReady(hud)) yield return null;
             yield return new WaitForSecondsRealtime(0.6f);
             ValidateText();
             ScreenCapture.CaptureScreenshot(Path.Combine(_directory, "04-progress.png"));
@@ -227,7 +227,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 father = runtime.Actors.Single(a => a.AgentId == "father");
                 hud.OpenTabNow(MainNavigationTabId.Projects);
                 yield return null;
-                Click(hud.GetFeatureButtonForQa("projects-products"));
+                while (!ClickFeatureWhenReady(hud)) yield return null;
                 yield return new WaitForSecondsRealtime(0.6f);
                 ValidateText();
                 ScreenCapture.CaptureScreenshot(Path.Combine(_directory, "05-development-checkpoint.png"));
@@ -247,7 +247,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 yield return new WaitForSecondsRealtime(0.7f);
                 hud.OpenTabNow(MainNavigationTabId.Projects);
                 yield return null;
-                Click(hud.GetFeatureButtonForQa("projects-products"));
+                while (!ClickFeatureWhenReady(hud)) yield return null;
                 yield return new WaitForSecondsRealtime(0.6f);
                 ValidateText();
                 ScreenCapture.CaptureScreenshot(Path.Combine(_directory, "06-ready-for-sale.png"));
@@ -299,7 +299,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     "completed billing survives in-memory save roundtrip without duplicate cash");
                 hud.OpenTabNow(MainNavigationTabId.Projects);
                 yield return null;
-                Click(hud.GetFeatureButtonForQa("projects-products"));
+                while (!ClickFeatureWhenReady(hud)) yield return null;
                 yield return new WaitForSecondsRealtime(0.6f);
                 ValidateText();
                 ScreenCapture.CaptureScreenshot(Path.Combine(_directory, "07-weekly-billing.png"));
@@ -312,8 +312,24 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private static Button FindButton(string name) => FindObjectsByType<Button>(FindObjectsSortMode.None)
             .FirstOrDefault(b => b.name == name && b.gameObject.activeInHierarchy);
 
-        private static void Click(Button button)
+        private float _featureWaitStarted = -1;
+        private static string _lastClickDetail = string.Empty;
+
+        private bool ClickFeatureWhenReady(MainNavigationHudPresenter hud)
         {
+            if (Click(hud.GetFeatureButtonForQa("projects-products"), true))
+            {
+                _featureWaitStarted = -1;
+                return true;
+            }
+            if (_featureWaitStarted < 0) _featureWaitStarted = Time.realtimeSinceStartup;
+            Require(Time.realtimeSinceStartup - _featureWaitStarted < 3f, "feature button did not become clickable / " + _lastClickDetail);
+            return false;
+        }
+
+        private static bool Click(Button button, bool waitUntilReady = false)
+        {
+            if (waitUntilReady && (button == null || !button.interactable)) return false;
             Require(button != null && button.interactable, "button missing/disabled");
             var scroll = button.GetComponentInParent<ScrollRect>();
             PointerEventData data = null;
@@ -328,12 +344,16 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 var hits = new List<RaycastResult>();
                 EventSystem.current.RaycastAll(data, hits);
                 found = hits.Count > 0 && hits[0].gameObject.GetComponentInParent<Button>() == button;
+                _lastClickDetail = button.name + " point=" + point + " screen=" + Screen.width + "x" + Screen.height +
+                    " topHits=" + string.Join(";", hits.Take(3).Select(h => h.gameObject.name));
                 if (found || scroll == null) break;
             }
-            Require(found, "button is clipped/occluded: " + button.name);
+            if (!found && waitUntilReady) return false;
+            Require(found, "button is clipped/occluded: " + _lastClickDetail);
             ExecuteEvents.Execute(button.gameObject, data, ExecuteEvents.pointerDownHandler);
             ExecuteEvents.Execute(button.gameObject, data, ExecuteEvents.pointerUpHandler);
             ExecuteEvents.Execute(button.gameObject, data, ExecuteEvents.pointerClickHandler);
+            return true;
         }
 
         private static void ValidateText()
