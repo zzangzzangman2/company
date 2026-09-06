@@ -2,7 +2,65 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## 2026-09-06 current: chair-centre/isolated seated fit PASS; public game Release BLOCKED
+## 2026-09-06 current: normal furnished navigation corrections; public game Release BLOCKED
+
+- **Background only remains mandatory.** No desktop input, foreground game/editor, browser, original
+  main/Downloads mutation, paid generation, Release publication or shutdown in this continuation.
+- Latest tested source `c2644f618994968f4fd0b906491078a8231a97cb` builds with exact Unity 6000.3.21f1
+  (`c02631ffc030`): FastQA `20260906-141432-358`, 21.630s total / 19.549s build. The preceding
+  diagnostic-only 6bc25275 had a CS0136 variable-scope error; c2644f61 fixes it. No failed build was shipped.
+- Final hidden normal Player observation completed: **6,964 independently analyzed navigation rows**,
+  520 paused setup rows excluded, maximum no-progress **1.0169s**, maximum tile-rail fraction error
+  **0.000031125**, occupancy/runtime errors **0**. All four had actual Working samples across the run
+  (Father 183, Mother 59, older sister 364, Player 99). This is not simultaneous four-person or continuous
+  pose/foot-slip approval. Evidence: [NormalAutonomy20260906](Evidence/NormalAutonomy20260906/README.md).
+- **Next-day attendance gate FAIL, not waived:** first visible releases Player 09:00, older sister 09:03,
+  Father 09:07, Mother 09:11 versus due 09:00/09:01/09:02/09:03. At 09:20 Player/older sister were Working;
+  Father/Mother were still navigating. Single-owner 2.5-cell ingress serializes entry; its reservation is
+  released normally, but the due-time gate is not satisfied. No speedup/collision bypass/teleport/timing
+  tolerance was added to manufacture PASS. The full-morning observer exits 1 while preserving later data.
+- Four-rotation live chair-centre maximum screen discrepancy **0.484345px** from pixel snapping;
+  monitor/keyboard lateral-axis errors **0**. The full-morning camera frames contain no IMGUI.
+  Three Working-transition hand-midpoint samples exceeded 0.05 world (max 0.647744); steady samples
+  return near the keyboard, but continuous work-pose validation is **not PASS**. Investigate transition
+  timing with continuous pose evidence before promotion; do not replace this with isolated-fit results.
+- Normal furnished paths now use cardinal centre-line retreat/replan and count traffic/reservation
+  waits, as opening wander already did. `8346ac6a` recorded Father/older-sister no-progress waits
+  12.8896s/13.8225s; first `511321db` run reduced them to 1.88059s/0.75271s, with zero occupancy
+  violations. A repeat `0dcbfdbc` run failed occupancy before next-day setup: it is **not PASS**.
+- The independent CSV parser excludes the shop's paused/rebuild clock and `ready=false`/shop-open
+  samples. A cached Navigating label during layout editing is not live deadlock. The same correction
+  was applied to both red/green raw data; the baseline still fails. Navigation success is separate
+  from work/attendance/Release coverage.
+- Reserved-seat route bug reproduced independently in an Editor grid enumeration: **137 of 472**
+  approach paths crossed their own furniture. Ordinary approach navigation (including recovery and
+  exact endpoints) now keeps that chair blocked; only the actual seating transition retains its
+  permission. Same 472 paths after fix: **0 crossings**. No scale/footprint/radius/pose changes.
+- The old no-input “all four simultaneously Working” oracle is invalid for founding-day gameplay:
+  after furniture placement, Player is manually controlled; NPCs retain normal routine intents,
+  including intents for not-yet-purchased amenities. Neither manual controls nor routine weights
+  have been changed to manufacture all-work results. Normal next-day attendance has a separate test.
+- Actual production shop font metrics PASS: 75 checks over 720/900/1080/1440/2160 heights. This is
+  text/button bounding-box coverage, **not native IMGUI pixels or whole-game UI approval**.
+- Final Editor checks also PASS: 472 reserved-seat approach routes, legacy/shared navigation regression
+  128 seeds / 1,152 paths / 53,108 segment-oracle checks, and R5e static docking with 20 negative fixtures.
+  Inert updater regression rerun: **51 checks PASS**, including byte-accurate progress and safe failures.
+- Failed executable caches `8346ac6a`, `0dcbfdbc`, `30640539`, `c2644f61` and the old local Unity patch test payload
+  `6ff58f22bd39406eb9205400aa49d31d` were identity/hash fenced and sent to Recycle Bin; exact roots
+  were verified absent. Non-executable logs/manifests remain under `Artifacts/FailedPayloadEvidence`.
+  Warm Library/Bee, source, saves, user main, Downloads and unrelated builds were preserved.
+- FastQA executable cache is now absent intentionally; a later corrected candidate must get a fresh
+  build identity. `Tools/Retire-FamilyCompanyFailedFastQa.ps1` enforces exact source/base-data hashes,
+  known failed process, no running payload and evidence-before-recycle; wrong identity was rejected
+  before any mutation. Do not rebuild/promote this same failed attendance candidate as a Release.
+- Chair-centre/isolated fitting and actual Unity patch/restart results below remain scoped evidence,
+  not normal-gameplay or public-patch approval. GitHub game Release stays **BLOCKED** pending real
+  gameplay gates and visual/native-input acceptance; do not promote a test candidate.
+- Next work: inspect entrance queue versus scheduled presentation contract, complete next-day routes
+  and four continuous seated-work transitions without changing approved body scale/stride/radii; then
+  resolve remaining native shop/IMGUI/user approval gates with the user. Background-only remains in force.
+
+## 2026-09-06 earlier evidence: chair-centre/isolated seated fit PASS; public game Release BLOCKED
 
 - User explicitly stopped foreground testing: **background only; never control their desktop/input**.
   The brief native session had four walking bodies but no completed purchase before the user closed it;
@@ -22,9 +80,9 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
   spine lean is bounded at 35 degrees; a 95-degree anatomical knee target sets ankle height without
   lowering feet into the original chair base. Do not revive the larger historical candidate scales.
 - Earlier background 1691618a found a real reach regression (fixed by the isolated fit above) AND
-  the normal four-simultaneous-working wait timed out. The latter remains **unresolved, not PASS**:
-  mother reached Working; the run did not demonstrate all four working. No inferred cause or invented
-  native purchase, normal work, next-day arrival, mute or final Release receipt is permitted.
+  the four-simultaneous-working wait timed out. That run did not demonstrate all four working;
+  the invalid no-input manual-Player expectation is explained in the current section above.
+  No invented native purchase, normal work, next-day arrival, mute or final Release receipt is permitted.
 - Actual Unity patch transport/restart was rerun on the latest tested source 6ce5e0eb, hidden:
   `Artifacts/UnityPatchRestartTests/6ff58f22bd39406eb9205400aa49d31d/`. Changed compressed bytes
   **4,195,602**; all **131** download samples matched measured byte percentages and were monotonic.

@@ -1,0 +1,606 @@
+{
+    "scope": "Actual production font/style metrics, not native UI pixels or Release approval",
+    "passed": true,
+    "samples": [
+        {
+            "screenHeight": 720,
+            "label": "catalog title",
+            "width": 159.0,
+            "height": 16.0,
+            "requiredWidth": 110.87000274658203,
+            "requiredHeight": 14.5
+        },
+        {
+            "screenHeight": 720,
+            "label": "catalog price",
+            "width": 159.0,
+            "height": 14.0,
+            "requiredWidth": 86.05000305175781,
+            "requiredHeight": 10.039999961853028
+        },
+        {
+            "screenHeight": 720,
+            "label": "catalog stock",
+            "width": 159.0,
+            "height": 14.0,
+            "requiredWidth": 76.5,
+            "requiredHeight": 10.039999961853028
+        },
+        {
+            "screenHeight": 720,
+            "label": "purchase",
+            "width": 56.0,
+            "height": 22.0,
+            "requiredWidth": 20.1299991607666,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 720,
+            "label": "stored placement",
+            "width": 56.0,
+            "height": 22.0,
+            "requiredWidth": 44.5,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 720,
+            "label": "details title",
+            "width": 283.0,
+            "height": 17.0,
+            "requiredWidth": 110.87000274658203,
+            "requiredHeight": 14.5
+        },
+        {
+            "screenHeight": 720,
+            "label": "details cost",
+            "width": 283.0,
+            "height": 32.0,
+            "requiredWidth": 123.37999725341797,
+            "requiredHeight": 24.530000686645509
+        },
+        {
+            "screenHeight": 720,
+            "label": "details footprint",
+            "width": 283.0,
+            "height": 14.0,
+            "requiredWidth": 147.55999755859376,
+            "requiredHeight": 10.039999961853028
+        },
+        {
+            "screenHeight": 720,
+            "label": "empty hint",
+            "width": 283.0,
+            "height": 17.0,
+            "requiredWidth": 166.72000122070313,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 720,
+            "label": "controls",
+            "width": 283.0,
+            "height": 30.0,
+            "requiredWidth": 184.38999938964845,
+            "requiredHeight": 20.079999923706056
+        },
+        {
+            "screenHeight": 720,
+            "label": "rotation",
+            "width": 283.0,
+            "height": 32.0,
+            "requiredWidth": 103.12000274658203,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 720,
+            "label": "rotation",
+            "width": 283.0,
+            "height": 32.0,
+            "requiredWidth": 103.93000030517578,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 720,
+            "label": "rotation",
+            "width": 283.0,
+            "height": 32.0,
+            "requiredWidth": 103.12000274658203,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 720,
+            "label": "rotation",
+            "width": 283.0,
+            "height": 32.0,
+            "requiredWidth": 102.30999755859375,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 720,
+            "label": "placement error",
+            "width": 283.0,
+            "height": 27.0,
+            "requiredWidth": 147.47999572753907,
+            "requiredHeight": 10.039999961853028
+        },
+        {
+            "screenHeight": 900,
+            "label": "catalog title",
+            "width": 183.0,
+            "height": 18.0,
+            "requiredWidth": 127.91999816894531,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 900,
+            "label": "catalog price",
+            "width": 183.0,
+            "height": 17.0,
+            "requiredWidth": 105.18000030517578,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 900,
+            "label": "catalog stock",
+            "width": 183.0,
+            "height": 16.0,
+            "requiredWidth": 93.5,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 900,
+            "label": "purchase",
+            "width": 65.0,
+            "height": 25.0,
+            "requiredWidth": 21.959999084472658,
+            "requiredHeight": 13.390000343322754
+        },
+        {
+            "screenHeight": 900,
+            "label": "stored placement",
+            "width": 65.0,
+            "height": 25.0,
+            "requiredWidth": 48.540000915527347,
+            "requiredHeight": 13.390000343322754
+        },
+        {
+            "screenHeight": 900,
+            "label": "details title",
+            "width": 327.0,
+            "height": 20.0,
+            "requiredWidth": 127.91999816894531,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 900,
+            "label": "details cost",
+            "width": 327.0,
+            "height": 37.0,
+            "requiredWidth": 134.58999633789063,
+            "requiredHeight": 26.770000457763673
+        },
+        {
+            "screenHeight": 900,
+            "label": "details footprint",
+            "width": 327.0,
+            "height": 17.0,
+            "requiredWidth": 180.35000610351563,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 900,
+            "label": "empty hint",
+            "width": 327.0,
+            "height": 20.0,
+            "requiredWidth": 181.8699951171875,
+            "requiredHeight": 13.390000343322754
+        },
+        {
+            "screenHeight": 900,
+            "label": "controls",
+            "width": 327.0,
+            "height": 35.0,
+            "requiredWidth": 225.36000061035157,
+            "requiredHeight": 24.530000686645509
+        },
+        {
+            "screenHeight": 900,
+            "label": "rotation",
+            "width": 327.0,
+            "height": 37.0,
+            "requiredWidth": 112.48999786376953,
+            "requiredHeight": 13.390000343322754
+        },
+        {
+            "screenHeight": 900,
+            "label": "rotation",
+            "width": 327.0,
+            "height": 37.0,
+            "requiredWidth": 113.37999725341797,
+            "requiredHeight": 13.390000343322754
+        },
+        {
+            "screenHeight": 900,
+            "label": "rotation",
+            "width": 327.0,
+            "height": 37.0,
+            "requiredWidth": 112.48999786376953,
+            "requiredHeight": 13.390000343322754
+        },
+        {
+            "screenHeight": 900,
+            "label": "rotation",
+            "width": 327.0,
+            "height": 37.0,
+            "requiredWidth": 111.61000061035156,
+            "requiredHeight": 13.390000343322754
+        },
+        {
+            "screenHeight": 900,
+            "label": "placement error",
+            "width": 327.0,
+            "height": 32.0,
+            "requiredWidth": 180.25,
+            "requiredHeight": 12.270000457763672
+        },
+        {
+            "screenHeight": 1080,
+            "label": "catalog title",
+            "width": 220.0,
+            "height": 22.0,
+            "requiredWidth": 153.50999450683595,
+            "requiredHeight": 20.06999969482422
+        },
+        {
+            "screenHeight": 1080,
+            "label": "catalog price",
+            "width": 220.0,
+            "height": 20.0,
+            "requiredWidth": 124.30000305175781,
+            "requiredHeight": 14.5
+        },
+        {
+            "screenHeight": 1080,
+            "label": "catalog stock",
+            "width": 220.0,
+            "height": 19.0,
+            "requiredWidth": 110.5,
+            "requiredHeight": 14.5
+        },
+        {
+            "screenHeight": 1080,
+            "label": "purchase",
+            "width": 78.0,
+            "height": 30.0,
+            "requiredWidth": 27.450000762939454,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 1080,
+            "label": "stored placement",
+            "width": 78.0,
+            "height": 30.0,
+            "requiredWidth": 60.68000030517578,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 1080,
+            "label": "details title",
+            "width": 392.0,
+            "height": 24.0,
+            "requiredWidth": 153.50999450683595,
+            "requiredHeight": 20.079999923706056
+        },
+        {
+            "screenHeight": 1080,
+            "label": "details cost",
+            "width": 392.0,
+            "height": 44.0,
+            "requiredWidth": 168.24000549316407,
+            "requiredHeight": 33.459999084472659
+        },
+        {
+            "screenHeight": 1080,
+            "label": "details footprint",
+            "width": 392.0,
+            "height": 20.0,
+            "requiredWidth": 213.1300048828125,
+            "requiredHeight": 14.5
+        },
+        {
+            "screenHeight": 1080,
+            "label": "empty hint",
+            "width": 392.0,
+            "height": 24.0,
+            "requiredWidth": 227.33999633789063,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 1080,
+            "label": "controls",
+            "width": 392.0,
+            "height": 42.0,
+            "requiredWidth": 266.3299865722656,
+            "requiredHeight": 28.989999771118165
+        },
+        {
+            "screenHeight": 1080,
+            "label": "rotation",
+            "width": 392.0,
+            "height": 44.0,
+            "requiredWidth": 140.61000061035157,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 1080,
+            "label": "rotation",
+            "width": 392.0,
+            "height": 44.0,
+            "requiredWidth": 141.72000122070313,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 1080,
+            "label": "rotation",
+            "width": 392.0,
+            "height": 44.0,
+            "requiredWidth": 140.61000061035157,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 1080,
+            "label": "rotation",
+            "width": 392.0,
+            "height": 44.0,
+            "requiredWidth": 139.50999450683595,
+            "requiredHeight": 16.729999542236329
+        },
+        {
+            "screenHeight": 1080,
+            "label": "placement error",
+            "width": 392.0,
+            "height": 38.0,
+            "requiredWidth": 213.02999877929688,
+            "requiredHeight": 14.5
+        },
+        {
+            "screenHeight": 1440,
+            "label": "catalog title",
+            "width": 293.0,
+            "height": 29.0,
+            "requiredWidth": 204.67999267578126,
+            "requiredHeight": 26.770000457763673
+        },
+        {
+            "screenHeight": 1440,
+            "label": "catalog price",
+            "width": 293.0,
+            "height": 27.0,
+            "requiredWidth": 162.5399932861328,
+            "requiredHeight": 18.959999084472658
+        },
+        {
+            "screenHeight": 1440,
+            "label": "catalog stock",
+            "width": 293.0,
+            "height": 25.0,
+            "requiredWidth": 144.5,
+            "requiredHeight": 18.959999084472658
+        },
+        {
+            "screenHeight": 1440,
+            "label": "purchase",
+            "width": 104.0,
+            "height": 40.0,
+            "requiredWidth": 36.599998474121097,
+            "requiredHeight": 22.299999237060548
+        },
+        {
+            "screenHeight": 1440,
+            "label": "stored placement",
+            "width": 104.0,
+            "height": 40.0,
+            "requiredWidth": 80.9000015258789,
+            "requiredHeight": 22.299999237060548
+        },
+        {
+            "screenHeight": 1440,
+            "label": "details title",
+            "width": 523.0,
+            "height": 32.0,
+            "requiredWidth": 204.67999267578126,
+            "requiredHeight": 26.770000457763673
+        },
+        {
+            "screenHeight": 1440,
+            "label": "details cost",
+            "width": 523.0,
+            "height": 59.0,
+            "requiredWidth": 224.32000732421876,
+            "requiredHeight": 44.599998474121097
+        },
+        {
+            "screenHeight": 1440,
+            "label": "details footprint",
+            "width": 523.0,
+            "height": 27.0,
+            "requiredWidth": 278.7099914550781,
+            "requiredHeight": 18.959999084472658
+        },
+        {
+            "screenHeight": 1440,
+            "label": "empty hint",
+            "width": 523.0,
+            "height": 32.0,
+            "requiredWidth": 303.1199951171875,
+            "requiredHeight": 22.299999237060548
+        },
+        {
+            "screenHeight": 1440,
+            "label": "controls",
+            "width": 523.0,
+            "height": 56.0,
+            "requiredWidth": 348.2799987792969,
+            "requiredHeight": 37.91999816894531
+        },
+        {
+            "screenHeight": 1440,
+            "label": "rotation",
+            "width": 523.0,
+            "height": 59.0,
+            "requiredWidth": 187.47999572753907,
+            "requiredHeight": 22.299999237060548
+        },
+        {
+            "screenHeight": 1440,
+            "label": "rotation",
+            "width": 523.0,
+            "height": 59.0,
+            "requiredWidth": 188.9600067138672,
+            "requiredHeight": 22.299999237060548
+        },
+        {
+            "screenHeight": 1440,
+            "label": "rotation",
+            "width": 523.0,
+            "height": 59.0,
+            "requiredWidth": 187.47999572753907,
+            "requiredHeight": 22.299999237060548
+        },
+        {
+            "screenHeight": 1440,
+            "label": "rotation",
+            "width": 523.0,
+            "height": 59.0,
+            "requiredWidth": 186.00999450683595,
+            "requiredHeight": 22.299999237060548
+        },
+        {
+            "screenHeight": 1440,
+            "label": "placement error",
+            "width": 523.0,
+            "height": 51.0,
+            "requiredWidth": 278.57000732421877,
+            "requiredHeight": 18.959999084472658
+        },
+        {
+            "screenHeight": 2160,
+            "label": "catalog title",
+            "width": 308.0,
+            "height": 31.0,
+            "requiredWidth": 213.1999969482422,
+            "requiredHeight": 27.8799991607666
+        },
+        {
+            "screenHeight": 2160,
+            "label": "catalog price",
+            "width": 308.0,
+            "height": 28.0,
+            "requiredWidth": 172.10000610351563,
+            "requiredHeight": 20.06999969482422
+        },
+        {
+            "screenHeight": 2160,
+            "label": "catalog stock",
+            "width": 308.0,
+            "height": 27.0,
+            "requiredWidth": 153.0,
+            "requiredHeight": 20.06999969482422
+        },
+        {
+            "screenHeight": 2160,
+            "label": "purchase",
+            "width": 109.0,
+            "height": 42.0,
+            "requiredWidth": 38.43000030517578,
+            "requiredHeight": 23.420000076293947
+        },
+        {
+            "screenHeight": 2160,
+            "label": "stored placement",
+            "width": 109.0,
+            "height": 42.0,
+            "requiredWidth": 84.94999694824219,
+            "requiredHeight": 23.420000076293947
+        },
+        {
+            "screenHeight": 2160,
+            "label": "details title",
+            "width": 548.0,
+            "height": 34.0,
+            "requiredWidth": 213.1999969482422,
+            "requiredHeight": 27.8799991607666
+        },
+        {
+            "screenHeight": 2160,
+            "label": "details cost",
+            "width": 548.0,
+            "height": 62.0,
+            "requiredWidth": 235.5399932861328,
+            "requiredHeight": 46.83000183105469
+        },
+        {
+            "screenHeight": 2160,
+            "label": "details footprint",
+            "width": 548.0,
+            "height": 28.0,
+            "requiredWidth": 295.1099853515625,
+            "requiredHeight": 20.079999923706056
+        },
+        {
+            "screenHeight": 2160,
+            "label": "empty hint",
+            "width": 548.0,
+            "height": 34.0,
+            "requiredWidth": 318.2699890136719,
+            "requiredHeight": 23.420000076293947
+        },
+        {
+            "screenHeight": 2160,
+            "label": "controls",
+            "width": 548.0,
+            "height": 59.0,
+            "requiredWidth": 368.7699890136719,
+            "requiredHeight": 40.150001525878909
+        },
+        {
+            "screenHeight": 2160,
+            "label": "rotation",
+            "width": 548.0,
+            "height": 62.0,
+            "requiredWidth": 196.86000061035157,
+            "requiredHeight": 23.420000076293947
+        },
+        {
+            "screenHeight": 2160,
+            "label": "rotation",
+            "width": 548.0,
+            "height": 62.0,
+            "requiredWidth": 198.41000366210938,
+            "requiredHeight": 23.420000076293947
+        },
+        {
+            "screenHeight": 2160,
+            "label": "rotation",
+            "width": 548.0,
+            "height": 62.0,
+            "requiredWidth": 196.86000061035157,
+            "requiredHeight": 23.420000076293947
+        },
+        {
+            "screenHeight": 2160,
+            "label": "rotation",
+            "width": 548.0,
+            "height": 62.0,
+            "requiredWidth": 195.3000030517578,
+            "requiredHeight": 23.420000076293947
+        },
+        {
+            "screenHeight": 2160,
+            "label": "placement error",
+            "width": 548.0,
+            "height": 53.0,
+            "requiredWidth": 294.9599914550781,
+            "requiredHeight": 20.079999923706056
+        }
+    ]
+}

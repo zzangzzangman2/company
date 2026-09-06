@@ -1,0 +1,5 @@
+FAMILY_3D_OPENING_SHOP_QA: FAIL
+System.InvalidOperationException: normal movement penetration detected
+  at FamilyCompany.Runtime.Character3D.Family3DOpeningShopQa.AssertNoPenetration (FamilyCompany.Presentation.Unity.OfficeRuntime.StarterOfficeRuntimeBootstrap runtime) [0x00027] in <04983bf1e4644043b084326069ea59fb>:0 
+  at FamilyCompany.Runtime.Character3D.Family3DOpeningShopQa+<Run>d__11.MoveNext () [0x010bc] in <04983bf1e4644043b084326069ea59fb>:0 
+  at FamilyCompany.Runtime.Character3D.Family3DOpeningShopQa+<RunGuarded>d__10.MoveNext () [0x0002b] in <04983bf1e4644043b084326069ea59fb>:0 

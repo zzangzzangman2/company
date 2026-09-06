@@ -1,0 +1,31 @@
+OBSERVED, NOT A WORK/RELEASE PASS
+initialTime=2000-01-03T08:50:00
+initialCash=5000000 initialSeats=0 initialInventory=0 familyIds=father,mother,older_sister,player
+father maximumNavigatingNoProgressSeconds=0.7530
+father normalTravel=52.7222 destinationFrames=3213 directions=5/7/1/3
+mother maximumNavigatingNoProgressSeconds=0.1957
+mother normalTravel=53.2850 destinationFrames=3172 directions=1/2/3/5/7
+older_sister maximumNavigatingNoProgressSeconds=0.8682
+older_sister normalTravel=51.7955 destinationFrames=3213 directions=1/5/3/7
+player maximumNavigatingNoProgressSeconds=0.1994
+player normalTravel=49.8400 destinationFrames=3158 directions=5/3/7/1
+normalObservationSeconds=60 teleports=0 injectedRoutes=0 injectedClockMinutes=0 staticViolations=0 interactionViolations=0 agentPenetrations=0 finalTime=2000-01-03T09:47:00
+purchase=1 facing=SouthEast cash=4600000 previewCells=3 seats=1
+purchase=2 facing=SouthWest cash=4200000 previewCells=3 seats=2
+purchase=3 facing=NorthWest cash=3800000 previewCells=3 seats=3
+purchase=4 facing=NorthEast cash=3400000 previewCells=3 seats=4
+nextDay=player due=2000-01-04T09:00:00 released=2000-01-04T09:00:00 seatedNormally=True
+nextDay=older_sister due=2000-01-04T09:01:00 released=2000-01-04T09:03:00 seatedNormally=True
+nextDay=father due=2000-01-04T09:02:00 released=2000-01-04T09:07:00 seatedNormally=False
+nextDay=mother due=2000-01-04T09:03:00 released=2000-01-04T09:11:00 seatedNormally=False
+nextDayClockSetupJump=afternoon-night-only nextDayObservedClock=1x nativePointer=false routeInjection=false
+nextDayAttendanceGatePassed=False
+attendanceFailure=09:04 missing live arrival/seat: father
+attendanceFailure=09:04 missing live arrival/seat: mother
+attendanceFailure=staggered release mismatch: older_sister
+attendanceFailure=staggered release mismatch: father
+attendanceFailure=normal attendance never reached Working: father
+attendanceFailure=staggered release mismatch: mother
+attendanceFailure=normal attendance never reached Working: mother
+normalClock=true actorControl=false routeInjection=false poseInjection=false nativePointer=false
+runtimeErrors=0

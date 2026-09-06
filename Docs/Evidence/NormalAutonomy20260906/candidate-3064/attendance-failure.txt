@@ -1,0 +1,4 @@
+FAMILY_3D_OPENING_SHOP_QA: FAIL
+System.InvalidOperationException: 09:04 missing live arrival/seat: father
+  at FamilyCompany.Runtime.Character3D.Family3DOpeningShopQa+<Run>d__11.MoveNext () [0x01445] in <ee1f7abf34c74032894ad6edad7eea1e>:0 
+  at FamilyCompany.Runtime.Character3D.Family3DOpeningShopQa+<RunGuarded>d__10.MoveNext () [0x0002b] in <ee1f7abf34c74032894ad6edad7eea1e>:0 
