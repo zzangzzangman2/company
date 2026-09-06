@@ -3,6 +3,12 @@
 This manifest lists the production Player V8 and Father V19 packages first, followed by current
 family inputs and canonical production assets. Retired iterations are not reusable sources.
 
+2026-09-06 CRT alignment correction: the four `OfficeBuildFurniture/desk_with_pc_*.png` previews were
+rebaked from the same procedural workstation after correcting CRT face normals and its runtime
+desk-axis mapping. No generated model/texture, colour, dimension or source package was replaced.
+All four chair PNG hashes and all importer metadata remain unchanged. Runtime acceptance/publication
+is separate; see `MONITOR_ALIGNMENT_PATCH.md` and the latest PROJECT_STATE entry.
+
 2026-09-06 workstation preview rebake: `OfficeBuildFurniture/desk_with_pc_{se,sw,nw,ne}.png`
 uses the same V31 original chair/desk source with chair ground fixed at the semantic tile centre.
 Source: `Family3DWorkstationSpriteAuthoring.BakeBatch`, Unity 6000.3.21f1, local procedural render;

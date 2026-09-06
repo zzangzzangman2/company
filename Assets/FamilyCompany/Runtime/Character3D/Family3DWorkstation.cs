@@ -45,6 +45,8 @@ namespace FamilyCompany.Runtime.Character3D
         public float CushionWorldY { get; private set; }
         public Vector3 KeyboardWorld { get; private set; }
         public Vector3 MonitorWorld { get; private set; }
+        // Semantic screen-facing tile direction mapped into the overlay. In an oblique
+        // presentation this is not the Euclidean lighting normal of the screen mesh.
         public Vector3 MonitorScreenOutwardWorld { get; private set; }
         public Vector3 WorkSurfaceWorld { get; private set; }
         public Vector3 DeskTopCenterWorld { get; private set; }
@@ -476,8 +478,8 @@ namespace FamilyCompany.Runtime.Character3D
             // screen, keyboard and chair occupy one real perpendicular centreline.
             float gridSkew = Vector3.Dot(gridRightLocalUnit, gridForwardLocalUnit);
             // The occupied chair cell and the desk cell directly behind it share grid x=0.
-            // Keep the screen and keyboard on that tile axis. Their own rectangular parts
-            // use a perpendicular right axis; a projected desk basis is not a monitor normal.
+            // Keep the screen and keyboard on that tile axis. Their visual parts must use
+            // the same mapped basis as the tabletop, not a separately orthogonalized axis.
             if (centerChairOnSeatCell) { monitorRight = 0f; gridSkew = 0f; }
             float keyboardRight =
                 monitorRight + gridSkew * (screenForward - keyboardForward);
@@ -496,7 +498,7 @@ namespace FamilyCompany.Runtime.Character3D
             MonitorWorld = monitor.position;
             for (var line = 0; line < 4; line++)
                 AddGridBox("Crt_TextLine_" + line,
-                    OperatorLocal(monitorRight + (-0.04f + (line % 2) * 0.025f) * h,
+                    GridLocal(monitorRight + (-0.04f + (line % 2) * 0.025f) * h,
                         (0.675f - line * 0.03f) * h,
                         monitorForward - 0.105f * h),
                     (0.125f + (line % 2) * 0.045f) * h,
@@ -518,7 +520,7 @@ namespace FamilyCompany.Runtime.Character3D
             for (var row = 0; row < 4; row++)
             for (var column = 0; column < 9; column++)
                 AddGridBox("Key_" + row + "_" + column,
-                OperatorLocal(keyboardRight + (-0.156f + column * 0.039f) * h,
+                GridLocal(keyboardRight + (-0.156f + column * 0.039f) * h,
                         (0.512f + row * 0.0015f) * h,
                         keyboardForward + (-0.037f + row * 0.025f) * h),
                     0.028f * h,
@@ -685,13 +687,6 @@ namespace FamilyCompany.Runtime.Character3D
                    gridForwardLocalUnit * forward;
         }
 
-        private Vector3 OperatorLocal(float right, float y, float forward)
-        {
-            Vector3 operatorRight = centerChairOnSeatCell
-                ? Vector3.Cross(Vector3.up, gridForwardLocalUnit).normalized : gridRightLocalUnit;
-            return operatorRight * right + Vector3.up * y + gridForwardLocalUnit * forward;
-        }
-
         private Material CreateMaterial(string materialName, Color colour, float metallic, float smoothness)
         {
             Shader shader = Shader.Find("Standard");
@@ -749,11 +744,10 @@ namespace FamilyCompany.Runtime.Character3D
             value.transform.localScale = Vector3.one;
             value.layer = layer;
 
-            bool operatorPart = centerChairOnSeatCell &&
-                (objectName.StartsWith("Crt_", StringComparison.Ordinal) ||
-                 objectName.StartsWith("Key_", StringComparison.Ordinal) || objectName == "Keyboard");
-            Vector3 right = (operatorPart
-                ? Vector3.Cross(Vector3.up, gridForwardLocalUnit).normalized : gridRightLocalUnit) * (width * 0.5f);
+            // The physical authoring basis is orthogonal; the runtime overlay maps the whole
+            // workstation onto the tile camera. Applying a different basis only to the CRT
+            // made its edges diverge from the desk by 19.47 degrees in the mapped world.
+            Vector3 right = gridRightLocalUnit * (width * 0.5f);
             Vector3 forward = gridForwardLocalUnit * (depth * 0.5f);
             Vector3 up = Vector3.up * (height * 0.5f);
             var mesh = new Mesh { name = objectName + "_MappedGridMesh" };
@@ -785,6 +779,20 @@ namespace FamilyCompany.Runtime.Character3D
                     triangles[triangle + 1] = triangles[triangle + 2];
                     triangles[triangle + 2] = swap;
                 }
+            if (objectName.StartsWith("Crt_", StringComparison.Ordinal))
+            {
+                // A rigid CRT casing has planar faces. Sharing eight corner normals smoothed
+                // across every face, making straight panels look melted/leaning under light.
+                // Split only CRT face vertices; dimensions, materials and other furniture stay.
+                Vector3[] corners = mesh.vertices;
+                var faceVertices = new Vector3[triangles.Length];
+                for (int index = 0; index < triangles.Length; index++)
+                {
+                    faceVertices[index] = corners[triangles[index]];
+                    triangles[index] = index;
+                }
+                mesh.vertices = faceVertices;
+            }
             mesh.triangles = triangles;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();

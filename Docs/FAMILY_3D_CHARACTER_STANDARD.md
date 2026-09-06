@@ -239,6 +239,13 @@ sky probe는 캐릭터 밝기에 영향이 없다. 밝기 조정 수단은 `_Col
 
 ## 8. 착석·워크스테이션 계약 (h = WalkActor.StandingHeight)
 
+2026-09-06 모니터 정렬 수정: CRT/키보드는 의자 타일에서 이어지는 중심선을 유지하면서, 모서리는 반드시
+책상 상판과 같은 투영 축을 사용한다. runtime overlay에만 존재하는 비직교 mapped basis를 CRT만 별도로
+직교화하면 책상과 19.47도 틀어진다. `MonitorScreenOutwardWorld`는 의미 타일-facing의 mapped 방향이지
+해당 좌표계의 Euclidean surface normal이 아니다. 실제 메시 면의 법선은 책상 전면의 법선과 대조한다.
+의자 중심/배우 yaw/양손 목표/스케일은 바꾸지 않는다. 자세 수치만으로 CRT와 책상 정렬 PASS를 대체하지
+않으며, 네 방향 메시 모서리 및 CRT 면 normal을 별도 검증한다. physical sprite authoring은 기존 직각 기저다.
+
 2026-09-06 사용자 수정: production 의자 지면 중심은 반드시 `seat.Cell` 타일 중앙이다.
 키보드 기준으로 의자를 이동하던 구형 `0.28h` socket 보정은 production에서 폐기한다.
 의자 부품/크기와 배우 스케일은 유지하되 화면·키보드를 좌석 타일의 책상 방향 축에 정렬한다.

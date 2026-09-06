@@ -2,7 +2,30 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## 2026-09-06 latest: approved public Release v2, fixed main installed, real GitHub boot passed
+## 2026-09-06 latest work: monitor/table alignment correction, next patch pending
+
+User reported that the CRT looks tilted relative to the desk and requested only that correction,
+then will personally start the existing main EXE to observe the patch. Current published version is
+still `.2` below; no new patch is public yet. Keep the fixed Downloads EXE and user's v2 AppData cache
+unchanged so their next launch performs the real update. Do not consume that update in the user's store.
+
+- Root cause reproduced: CRT/key mesh width was independently orthogonalized inside the runtime's
+  mapped overlay, diverging from the tabletop by **19.4712 degrees**. Shared corner normals also smoothed
+  the rigid CRT faces (face-normal error 77.0653 degrees), giving a bent/rounded appearance.
+- Only `Family3DWorkstation` visual geometry changed: use the tabletop's same mapped axes for CRT,
+  keyboard and their details; split CRT face normals. No camera, actor, chair, footprint, sockets,
+  dimensions, materials, collision, navigation, money, save or patch-worker changes.
+- Independent geometry red→green across orthogonal authoring + actual oblique overlay ×4 rotations:
+  alignment error max 0.028 degrees (unchanged 0.1 gate), CRT face-normal error 0, chair/stem shift 0.
+  Actual FastQA four-direction/typing 264 poses PASS, penetrations 0; user-visible review sheet produced.
+  Scripts-only build 23.063s. Four desk preview PNGs rebaked; four chair PNG hashes unchanged.
+- User approved the displayed corrected sheet with "1" / "이 모습으로 배포". No character pose/model approval
+  is invented; existing approved body/seat look remains unchanged and this approval covers the shown CRT fix.
+- Remaining: clean exact-identity Release and normal gameplay
+  gates, GitHub delta publication, independent update verification without touching the user's cache.
+  [Scope and projection contract](MONITOR_ALIGNMENT_PATCH.md). No new runtime build is approved by this note.
+
+## 2026-09-06 published baseline: approved Release v2, fixed main installed, real GitHub boot passed
 
 **Current delivery is complete:** [fc-win-20260906.2](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260906.2),
 source **ee48a72c8e9979a605a64c59820af8d23fdbcf4c**, sequence 2, exact Unity 6000.3.21f1,
