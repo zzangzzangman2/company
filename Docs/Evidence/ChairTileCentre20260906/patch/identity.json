@@ -1,0 +1,11 @@
+{
+    "basePlayerHash":  "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+    "manifest":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\6ff58f22bd39406eb9205400aa49d31d\\feed\\fc-win-20260906.9001\\family-company-manifest.json",
+    "commit":  "6ce5e0eb3c4e06526ee3c3b5706e5649d552daf7",
+    "root":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\6ff58f22bd39406eb9205400aa49d31d",
+    "manifestHash":  "7f94bc73b5e6906d90435a561be4bbe495ab7ebe24b6fd0ebba38a3ec86260a6",
+    "changedPath":  "FamilyCompanyPatch/patch-check.bytes",
+    "scope":  "LOCAL actual Unity file install and restart, not GitHub release",
+    "basePlayer":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\cache\\WindowsPlayer\\FamilyCompany_FastQa.exe",
+    "expectedChangedHash":  "85c27ec1cf92879ab22bd80156b94cccb0fac843feea77cf81ecc1a5ddba6c05"
+}

@@ -1,0 +1,4 @@
+FAMILY_3D_OPENING_SHOP_QA: FAIL
+System.InvalidOperationException: four actors did not work normally
+  at FamilyCompany.Runtime.Character3D.Family3DOpeningShopQa+<Run>d__11.MoveNext () [0x011c8] in <ca4b2dbf225d42f7a86521505c0640c4>:0
+  at FamilyCompany.Runtime.Character3D.Family3DOpeningShopQa+<RunGuarded>d__10.MoveNext () [0x0002b] in <ca4b2dbf225d42f7a86521505c0640c4>:0

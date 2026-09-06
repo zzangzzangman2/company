@@ -1,0 +1,10 @@
+{
+  "scope": "Actual Unity local file download/restart only. No GitHub, no IMGUI visual approval.",
+  "sampleCount": 131,
+  "changedCompressedBytes": 4195602,
+  "lastPercent": 100.0,
+  "monotonicDone": true,
+  "allRoundedPercentagesExact": true,
+  "sourceCommit": "6ce5e0eb3c4e06526ee3c3b5706e5649d552daf7",
+  "releaseEligible": false
+}

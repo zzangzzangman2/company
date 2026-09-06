@@ -103,6 +103,29 @@ batch 모드의 검은 PNG는 시각 PASS가 아니다. 최종 화면 **20.3% / 
 4,195,675바이트 prepare-only 완료 증거는 `Docs/Evidence/InGamePatch20260906/`에 있다.
 이 검증은 실제 GitHub 게임 다운로드/부모 종료/자동 재시작까지 검증한 것이 아니다.
 
+### 후속 실제 Unity 재시작 검사 — 백그라운드 전용 (2026-09-06)
+
+사용자의 최신 지시가 전면 실행/데스크톱 입력을 금지한다. 위 `-ShowWindow` 검사는 역사적 증거이며
+현재는 실행하지 않는다. 다음 명령은 별도 게임 창/입력 없이 실제 Unity 부모와 자식을 실행한다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-FamilyCompanyUnityRestart.ps1 -Background
+```
+
+6ce5e0eb의 실제 FAST_QA Unity payload를 `Artifacts/UnityPatchRestartTests/<GUID>`에만 복제한다.
+같은 payload의 테스트 데이터 파일 하나를 바꿔 원래 파일 재사용 + 실제 변경 파일 전송을 확인한다.
+6ff58f22bd39406eb9205400aa49d31d 실행: 변경 압축 4,195,602바이트, 실제 Unity 수신 progress 131건의
+분모/소수 내림/단조 증가 모두 일치, 검증 대상 1,036,399,960바이트. 부모 정상 종료 0 후 정확한
+새 snapshot 자식(PID 5780)이 `IN_GAME_PATCH_READY_CURRENT`까지 부팅했다. 원래 진입 EXE SHA 불변.
+근거: `Evidence/ChairTileCentre20260906/patch/` (실행 identity, manifest, 부모/자식 trace, 재시작 receipt).
+
+이것은 **로컬 파일 전송**, 독립 gameplay 승인이 아닌 패치 기능 검사다. IMGUI가 실제로 그려진
+화면/현재 문구의 글자 배치, GitHub 다운로드, 외부 인터넷 장애 복구를 PASS로 보고하지 않는다.
+`패치 중입니다 · 다운로드` 문구와 실제 바이트 퍼센트를 보내는 게임 내 로딩 경로는 유지한다.
+원래 메인 파일은 계속 진입점이고 업데이트 실행본은 별도 검증 snapshot에서 재시작한다. 실행 중
+바이너리를 제자리에서 수정하는 방식이 아니다. 기존 사용자 Downloads 실행본은 이번에 교체하지
+않았고 첫 검증 Release가 아직 없으므로, 그 옛 파일도 이미 새 패치를 받는다고 설명하면 안 된다.
+
 ## 실제 배포 전 필수 조건
 
 1. 2026-09-05 exact cleanup 차단은 해결됐다. 실패한 네 QA identity의 각 166개 파일을 해시 검증 후

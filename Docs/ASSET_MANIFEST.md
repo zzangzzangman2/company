@@ -8,6 +8,11 @@ uses the same V31 original chair/desk source with chair ground fixed at the sema
 Source: `Family3DWorkstationSpriteAuthoring.BakeBatch`, Unity 6000.3.21f1, local procedural render;
 no external generation/credits. Chair PNG bytes and actor packages remain unchanged. Preview work
 socket metadata matches the updated bake manifest. Normal-game visual verification remains separate.
+The desktop now fills the depth of its existing two reserved cells (not additional cells), and the
+keyboard front row is inside that edge by `0.002h`. Four desk sprites/work-socket metadata were rebaked
+together. Original chair PNGs, chair parts, character meshes/textures/scale and semantic three-cell
+footprint are unchanged. The new runtime-only spine/knee fitting is documented in the 3D standard;
+it is not a regenerated mesh/rig or an approved new character package.
 
 Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-approved. Older Sister
 and Mother are not complete. See `FAMILY_3D_CHARACTER_STANDARD.md`.

@@ -1,0 +1,9 @@
+member,seat,hipClearance,kneeTarget,handError,maxHandError,leftKnee,rightKnee,chairPenetrations,cushion,upperLeg,torso,rail,stem,leanDegrees
+player,seat_father,0.1130,95.0000,0.0000,0.0000,95.0001,95.0001,0,0,0,0,0,0,18.7817
+player,seat_mother,0.1130,95.0000,0.0000,0.0000,94.9999,95.0000,0,0,0,0,0,0,18.7817
+player,seat_older_sister,0.1130,95.0000,0.0000,0.0000,95.0000,94.9999,0,0,0,0,0,0,18.7817
+player,seat_player,0.1130,95.0000,0.0000,0.0000,94.9999,95.0000,0,0,0,0,0,0,18.7817
+father,seat_father,0.1130,95.0000,0.0066,0.0081,99.1828,99.6458,0,0,0,0,0,0,35.0000
+father,seat_mother,0.1130,95.0000,0.0066,0.0081,99.1827,99.6458,0,0,0,0,0,0,35.0000
+father,seat_older_sister,0.1130,95.0000,0.0066,0.0081,99.1827,99.6458,0,0,0,0,0,0,35.0000
+father,seat_player,0.1130,95.0000,0.0066,0.0081,99.1828,99.6458,0,0,0,0,0,0,35.0000

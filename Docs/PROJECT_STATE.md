@@ -2,19 +2,37 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## 2026-09-06 current continuation: chair tile-centre correction (verification in progress)
+## 2026-09-06 current: chair-centre/isolated seated fit PASS; public game Release BLOCKED
 
 - User explicitly stopped foreground testing: **background only; never control their desktop/input**.
   The brief native session had four walking bodies but no completed purchase before the user closed it;
   do not claim a native-pointer/UI PASS. Use hidden D3D11 camera-stack renders and independent logs.
-- Background 1691618a found a real reach regression (Father wrist midpoint error ~0.186 world) and
-  the normal four-simultaneous-working wait timed out. These are NOT PASS. A spine-only reach fit
-  is under test; no chair/hips/leg-size change. Normal coordinator work/arrival remains a separate gate.
-- Actual Unity patch transport/restart DID run in background: changed compressed bytes 4,195,602,
-  real 1,036,394,024-byte snapshot reverified, parent exit 0, child PID 7820 reached
-  `IN_GAME_PATCH_READY_CURRENT`, original main-entry SHA unchanged. Local transport only, not GitHub.
-  Failed gameplay payload and all its local patch copies were then hashed and recycled. Preserved
-  evidence: `Artifacts/FailedPayloadEvidence/1691618a-chair-reach/`; no Downloads/current promotion.
+- Latest tested source: **6ce5e0eb3c4e06526ee3c3b5706e5649d552daf7**, Unity 6000.3.21f1.
+  FastQA scripts-only build PASS: 20.117s total / 17.426s build; run `20260906-125945-760`.
+  Source commits/evidence are not a Release or a Downloads replacement.
+- Eight isolated fits (Player/Father x four directions) now PASS: actual individual wrist target error
+  at most `0.0081` world; knees Player approximately `95°`, Father `99.18°/99.65°`; actual skinned
+  vertices inside cushion/back/lumbar/stem/foot-base `0` in every case. Runtime errors `0`.
+  Evidence: [ChairTileCentre20260906](Evidence/ChairTileCentre20260906/README.md).
+  This test calls production pose methods directly at one pose phase: **poseInjection=true,
+  nativePointer=false, normal coordinator/continuous animation NOT TESTED**. Eight offscreen engine
+  frames were inspected; they do not contain IMGUI and are not user visual approval.
+- The chair, character scale, bone lengths and pelvis clearance `0.113h` stay unchanged. The desktop
+  uses its existing reserved depth fully; keyboard remains inside its front edge. Minimum necessary
+  spine lean is bounded at 35 degrees; a 95-degree anatomical knee target sets ankle height without
+  lowering feet into the original chair base. Do not revive the larger historical candidate scales.
+- Earlier background 1691618a found a real reach regression (fixed by the isolated fit above) AND
+  the normal four-simultaneous-working wait timed out. The latter remains **unresolved, not PASS**:
+  mother reached Working; the run did not demonstrate all four working. No inferred cause or invented
+  native purchase, normal work, next-day arrival, mute or final Release receipt is permitted.
+- Actual Unity patch transport/restart was rerun on the latest tested source 6ce5e0eb, hidden:
+  `Artifacts/UnityPatchRestartTests/6ff58f22bd39406eb9205400aa49d31d/`. Changed compressed bytes
+  **4,195,602**; all **131** download samples matched measured byte percentages and were monotonic.
+  Real **1,036,399,960-byte** snapshot reverified, parent PID 5164 exit 0, exact child PID 5780 reached
+  `IN_GAME_PATCH_READY_CURRENT` then finished its background boot check. Original main-entry SHA
+  unchanged. Local transport only, not GitHub; no presented IMGUI frame/visual PASS in this run.
+  A prior 1691618a fixture also restarted but its gameplay payload was rejected and all copies recycled;
+  it is superseded by this functional test, never Release proof. Downloads/current remain untouched.
 - Core updater 51 checks and restart guard 10 checks PASS (WinPS 5.1). Evidence:
   `Artifacts/UpdaterTests/0bde902417b64198a5456b2ee805661d/` and
   `Artifacts/UpdaterRestartTests/61cb767f6f144f10ac83eca5d250497a/`.
@@ -28,10 +46,15 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
 - Independent geometry test: 8 cases (four rotations in orthogonal bake and mapped production bases),
   actual chair stem, chair ground, keyboard/screen axis and mesh-screen normal. PASS in
   `Artifacts/WorkstationTileCentre/geometry.json`; this is NOT normal gameplay/release approval.
-- The user-visible b8b954d5 Fast QA payload (166 files) was hashed and recycled; exact target absent.
-  Evidence: `Artifacts/FastQa/FailedPayloadEvidence/20260906-b8b954d5-chair-tile-offset/`.
-  Source, saves and warm Library/Bee retained. Native placement/seated reach and actual patch/restart
-  remain pending. No GitHub game Release or Downloads promotion has been performed.
+- Normal camera observation of all four actual chair/stem floor centres had a maximum `0.484345 px`
+  projection difference from semantic tile centre (camera pixel snapping); no half-tile offset remains.
+  Geometry is independent of the isolated arm/knee fitting. Full native placement/UI validation remains open.
+- Failed test payloads b8b954d5, 1691618a (including all local patch fixture copies), 29b361a1,
+  4852dc41 and 0b008310 were individually hashed and recycled with evidence preserved. Source, saves,
+  unrelated builds and warm Library/Bee retained. No GitHub game Release or Downloads promotion.
+- Remaining work: diagnose normal work timeout independently; finish native UI/placement, continuous
+  seating/work, next-day arrival and mute gates when permitted; then a clean Release + user approval,
+  first GitHub publication and actual internet patch. Do not control the user's screen to bypass this.
 
 ## 2026-09-06 current continuation: shop text correction / restart helper test
 
@@ -47,7 +70,8 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
   windowless probe. Ready before exit, no early activation, normal parent exit, exact snapshot launch,
   pointer identity, wrong-parent rejection and corrupted-payload rejection. Evidence:
   `Artifacts/UpdaterRestartTests/2b5240d05ff8445bbdbcec8d9cc54054/result.json`.
-  This does NOT yet prove Unity-to-Unity restart or GitHub publication/download.
+  This probe itself does NOT prove Unity-to-Unity restart; the separate local Unity test above does.
+  GitHub publication/download remains unverified.
 - `-familyCompanyManualGameplayObservation <absolute evidence directory>` creates an unsaved normal
   new game and logs actual production state/native pointer counts; it never declares itself PASS.
   This explicit offline gameplay diagnostic bypasses patch networking only, so unpublished Release
@@ -80,7 +104,8 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
   finished. `PrepareOnly` downloads/copies and validates a separate immutable snapshot while Unity runs;
   it does NOT activate. The invisible restart helper checks the exact parent PID/start time/path, signals
   readiness, waits for Unity to exit, rechecks all files and only then switches the pointer and restarts.
-  Real-game restart/network interruption end-to-end is still NOT verified.
+  Local actual-Unity restart was subsequently verified (current entry above); GitHub transport and
+  actual-game network interruption/recovery end-to-end remain unverified.
 - Actual Unity UI capture: `Artifacts/InGamePatchTests/e6e108d7f2444cf595a4d2d8db0e2f60/`, visible D3D11
   invocation announced to the user. **20.3% / 0.81 of 4.00 MiB** was visually inspected on the existing
   full-screen loading art; local paced stream total **4,195,675 bytes**, prepared snapshot, no activation.

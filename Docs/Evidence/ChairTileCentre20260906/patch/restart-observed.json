@@ -1,0 +1,8 @@
+{
+    "parentExit":  0,
+    "childPath":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\6ff58f22bd39406eb9205400aa49d31d\\install\\versions\\9001-7f94bc73b5e6\\FamilyCompany.exe",
+    "requiredNext":  "Inspect patched game UI and parent measured progress; not an automatic visual PASS.",
+    "mainEntryUnchanged":  true,
+    "currentDirectory":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\6ff58f22bd39406eb9205400aa49d31d\\install\\versions\\9001-7f94bc73b5e6",
+    "childId":  5780
+}

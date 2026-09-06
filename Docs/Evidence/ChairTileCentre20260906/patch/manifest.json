@@ -1,0 +1,1551 @@
+{
+    "schemaVersion":  1,
+    "product":  "family-company-windows-v1",
+    "repository":  "zzangzzangman2/company",
+    "version":  "fc-win-20260906.9001",
+    "sequence":  9001,
+    "commit":  "6ce5e0eb3c4e06526ee3c3b5706e5649d552daf7",
+    "eligibility":  "verified-release",
+    "entryPoint":  "FamilyCompany.exe",
+    "files":  [
+                  {
+                      "path":  "FamilyCompany.exe",
+                      "size":  667136,
+                      "sha256":  "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556.gz",
+                      "packedSize":  175404,
+                      "packedSha256":  "d21f73eb953338fbc04513070b5fd2569d21ea7ceb8f6ae794bc22f71c2a541e"
+                  },
+                  {
+                      "path":  "UnityCrashHandler64.exe",
+                      "size":  1669552,
+                      "sha256":  "38a87bf9c83b54cda605f4feaced264e6010b69c1f47c80c567213c5c07cc971",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "38a87bf9c83b54cda605f4feaced264e6010b69c1f47c80c567213c5c07cc971.gz",
+                      "packedSize":  522774,
+                      "packedSha256":  "c7886c842b2e26390d400dbb6187b8137ad6ce489ddb82e82039e9c63396ede7"
+                  },
+                  {
+                      "path":  "UnityPlayer.dll",
+                      "size":  36734888,
+                      "sha256":  "35f489b6a7753d536ce2e7b1bd1f729afb8b4e70b43caaa01af03d1c20f64d6c",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "35f489b6a7753d536ce2e7b1bd1f729afb8b4e70b43caaa01af03d1c20f64d6c.gz",
+                      "packedSize":  16014758,
+                      "packedSha256":  "d5b31943a0ade3754807182bd6832f820271a456677cfdcb5e38980b1be543e8"
+                  },
+                  {
+                      "path":  "D3D12/D3D12Core.dll",
+                      "size":  4725304,
+                      "sha256":  "625bd40005b1c3708695d5256ecf230d278e6b8edba5a88af70f3d91324f3052",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "625bd40005b1c3708695d5256ecf230d278e6b8edba5a88af70f3d91324f3052.gz",
+                      "packedSize":  1799098,
+                      "packedSha256":  "93addfc1d39a00eea050cf5ff3b96d5dee29717d1cf40837ff6ffccf1d56c5ef"
+                  },
+                  {
+                      "path":  "FamilyCompanyPatch/FamilyCompany.InGame.ps1",
+                      "size":  3089,
+                      "sha256":  "ed125d881c25735d6332fe2671845a489e3a545664f46260573e63a96bb9166e",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "ed125d881c25735d6332fe2671845a489e3a545664f46260573e63a96bb9166e.gz",
+                      "packedSize":  1269,
+                      "packedSha256":  "644f6ff5d82268252b25774bc183fb4027142a710679ffcefee1113336e4bdea"
+                  },
+                  {
+                      "path":  "FamilyCompanyPatch/FamilyCompany.Restart.ps1",
+                      "size":  2990,
+                      "sha256":  "7a6cbff9ba368019b1d6f47c88bec41472c472da87e6c7ca5c33553deb8c6aef",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "7a6cbff9ba368019b1d6f47c88bec41472c472da87e6c7ca5c33553deb8c6aef.gz",
+                      "packedSize":  1114,
+                      "packedSha256":  "a02ee6e0c6d44b455b95a3795d6bce61aed02239a34cc7392e62f44a59b5e600"
+                  },
+                  {
+                      "path":  "FamilyCompanyPatch/FamilyCompany.Update.ps1",
+                      "size":  20437,
+                      "sha256":  "0c4b79e905c6d2ce1f2a4599530a59e4942905faa5c8efb7d30b9437f087ef6c",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "0c4b79e905c6d2ce1f2a4599530a59e4942905faa5c8efb7d30b9437f087ef6c.gz",
+                      "packedSize":  5839,
+                      "packedSha256":  "0aa2142b0da075e360b51e2491cf59fb9cf3169cf3e68e79b200d978c8d2758c"
+                  },
+                  {
+                      "path":  "FamilyCompanyPatch/patch-check.bytes",
+                      "size":  4194304,
+                      "sha256":  "85c27ec1cf92879ab22bd80156b94cccb0fac843feea77cf81ecc1a5ddba6c05",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "85c27ec1cf92879ab22bd80156b94cccb0fac843feea77cf81ecc1a5ddba6c05.gz",
+                      "packedSize":  4195602,
+                      "packedSha256":  "125e00b2d77297ea32b82f91b8135179b4c86e88d7bac38fd96cab9daaddaeb0"
+                  },
+                  {
+                      "path":  "FamilyCompanyPatch/unity-test-root.json",
+                      "size":  151,
+                      "sha256":  "bc9c6ad756dd3d7d52f0b8581fa95da61bfefef9aa869af77a426c8d32bc8565",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "bc9c6ad756dd3d7d52f0b8581fa95da61bfefef9aa869af77a426c8d32bc8565.gz",
+                      "packedSize":  152,
+                      "packedSha256":  "08af0b8efaeb913c96cd50e8b1e2160d646ecd88cc435b7a8eab4b2c63fea63f"
+                  },
+                  {
+                      "path":  "FamilyCompanyPrototype_BurstDebugInformation_DoNotShip/Data/Plugins/x86_64/lib_burst_generated.txt",
+                      "size":  60653,
+                      "sha256":  "616af08d1e14396def6d7147d04e37a31ef1f866ec7a7786115b02bd15866c1c",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "616af08d1e14396def6d7147d04e37a31ef1f866ec7a7786115b02bd15866c1c.gz",
+                      "packedSize":  3154,
+                      "packedSha256":  "9ad121d6c9a05009ba2a117d202ac8bcb6be9fab98c79c3624f4b305973a4d99"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/app.info",
+                      "size":  36,
+                      "sha256":  "dc492ac0fed43d41a7c2e2dad992ce9a56e3cfcfe1cd8e99f31368b71fd4b690",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "dc492ac0fed43d41a7c2e2dad992ce9a56e3cfcfe1cd8e99f31368b71fd4b690.gz",
+                      "packedSize":  46,
+                      "packedSha256":  "9b67d193d7e7d243874dd05ad216657c2a5eb6e7d6aadc4704ef4295a4bd0f3b"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/boot.config",
+                      "size":  156,
+                      "sha256":  "c01a2ead5b7b4093b7b28012ee640ccdf9870f591179c98c9e5bac359ec7a04d",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "c01a2ead5b7b4093b7b28012ee640ccdf9870f591179c98c9e5bac359ec7a04d.gz",
+                      "packedSize":  144,
+                      "packedSha256":  "9a237f4035bf2f24112886ffb6f8b211ed6326d565ed5f53ce41b4ad32c9d333"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/globalgamemanagers",
+                      "size":  119156,
+                      "sha256":  "ba9d4c74c3a375666f5f42ed723c365dd16260a7c7535761ce1c348bf13c9460",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "ba9d4c74c3a375666f5f42ed723c365dd16260a7c7535761ce1c348bf13c9460.gz",
+                      "packedSize":  40946,
+                      "packedSha256":  "a4c4960f755369464827ee8ff5602e2d4ed3cbf0365dd0c5beec1b71d46ab6ca"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/globalgamemanagers.assets",
+                      "size":  103124,
+                      "sha256":  "6638b4c5dbd8ce47ada18320c6068df3864b1da9b4adc3680ec02e269a9054f3",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "6638b4c5dbd8ce47ada18320c6068df3864b1da9b4adc3680ec02e269a9054f3.gz",
+                      "packedSize":  20117,
+                      "packedSha256":  "f5cfa838b2fafa2982f165d027c6665cfb4760da975814b110a229d9e90dad36"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/globalgamemanagers.assets.resS",
+                      "size":  2796240,
+                      "sha256":  "39dd38fcd8dd95d41d6d55fe16a448d29fe2c31d9a162c825c24c6d99a893d7a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "39dd38fcd8dd95d41d6d55fe16a448d29fe2c31d9a162c825c24c6d99a893d7a.gz",
+                      "packedSize":  67404,
+                      "packedSha256":  "0d56a74f03b7b156c0128e0f821b3f874ae2c5b8744ee9df2e7c41a87b9dcebd"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/level0",
+                      "size":  76100,
+                      "sha256":  "59bfccc28133244760d96f29ce425dc956fc11a6e2220118a133216c26f00086",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "59bfccc28133244760d96f29ce425dc956fc11a6e2220118a133216c26f00086.gz",
+                      "packedSize":  14663,
+                      "packedSha256":  "821c37c7923ebf5532c61a351f0a57a1c733949a5d6adf38832647266b2f424a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/level1",
+                      "size":  9720,
+                      "sha256":  "972cc93958f8c4fe23397e8c04d23798b95b6d704179cf3c262ea8317bf6be4d",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "972cc93958f8c4fe23397e8c04d23798b95b6d704179cf3c262ea8317bf6be4d.gz",
+                      "packedSize":  2595,
+                      "packedSha256":  "2b55354c8e35dad6a6b54b188f7f5c7d3e8b4f0754388b091ddee83b7c93952c"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/resources.assets",
+                      "size":  51488460,
+                      "sha256":  "cc982164f937cbc1aba4ef40df463554af87e40aa6eeb37efb54dc374b22dfae",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "cc982164f937cbc1aba4ef40df463554af87e40aa6eeb37efb54dc374b22dfae.gz",
+                      "packedSize":  24127591,
+                      "packedSha256":  "9403c5956f6c9ef399e103f065edd1959d908cd561486d390411abcb37787c81"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/resources.assets.resS",
+                      "size":  511345600,
+                      "sha256":  "dbeadf7715028cfc34048590330780d40e1709da86a150931841e36025b8e06a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "dbeadf7715028cfc34048590330780d40e1709da86a150931841e36025b8e06a.gz",
+                      "packedSize":  134357686,
+                      "packedSha256":  "cfb54542bcad020cf958497a4893ad5c10074c7c5ee5f62dbf1d972fd273286d"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/resources.resource",
+                      "size":  19510688,
+                      "sha256":  "4da5b018061971572f37d0df616deeaaecd1b60288f8e2a80427ff99f308dffc",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "4da5b018061971572f37d0df616deeaaecd1b60288f8e2a80427ff99f308dffc.gz",
+                      "packedSize":  19323423,
+                      "packedSha256":  "c3b96c282ad03af9de540a75854cffc6e080cef75dca4861eab74d570da4a26b"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/RuntimeInitializeOnLoads.json",
+                      "size":  12308,
+                      "sha256":  "6782b2eec4dd7752ff37735b1523428ee31f05ece9e7b60cd2e38a63f949a6f5",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "6782b2eec4dd7752ff37735b1523428ee31f05ece9e7b60cd2e38a63f949a6f5.gz",
+                      "packedSize":  1129,
+                      "packedSha256":  "774c02c99ae07268a725ad831f0f4ec084cda1f0e6c2262322bcf21923175d3d"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/ScriptingAssemblies.json",
+                      "size":  3726,
+                      "sha256":  "482013bb3aef9453b3fb60ea374f9374c21cec17246fbb3e8aceec2e0a09add8",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "482013bb3aef9453b3fb60ea374f9374c21cec17246fbb3e8aceec2e0a09add8.gz",
+                      "packedSize":  818,
+                      "packedSha256":  "28dd9997b092b187c5555b8a7704dbb4f8cbb4db510cf0e16e7a1434440c1dc2"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/sharedassets0.assets",
+                      "size":  1741676,
+                      "sha256":  "d9523dcaaf1176c80c9ea47a62bd4b569aa590ae0eef5431829615729918e3b9",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "d9523dcaaf1176c80c9ea47a62bd4b569aa590ae0eef5431829615729918e3b9.gz",
+                      "packedSize":  429791,
+                      "packedSha256":  "0598ebfe3eb38d1d48eea54bf847167bca2896734ca324f87ffffaf7fb9df50e"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/sharedassets0.assets.resS",
+                      "size":  336068608,
+                      "sha256":  "219416a068ac6be4a02b21e41e8f9d7326e0a1980fff6faf3c871e1edb8425e3",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "219416a068ac6be4a02b21e41e8f9d7326e0a1980fff6faf3c871e1edb8425e3.gz",
+                      "packedSize":  53795628,
+                      "packedSha256":  "ae53b178b0a15aec246ac6020ae4d046400c60ec348a64c7371f9e4293ae4f0a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/sharedassets1.assets",
+                      "size":  49784,
+                      "sha256":  "8aa86c35781e27641adea1cb90b76ca4e8aecfeda5ead2b3e3a31fd9b2739bc1",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "8aa86c35781e27641adea1cb90b76ca4e8aecfeda5ead2b3e3a31fd9b2739bc1.gz",
+                      "packedSize":  16759,
+                      "packedSha256":  "16dc43e35965935dcd55f916c81096060d6c346e9d8aecbbbe1f09f8101f714a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/sharedassets1.assets.resS",
+                      "size":  17653760,
+                      "sha256":  "71b49129e332b5019c3c24b34d4a0868006cfef7668c622f1d258fcaaa4bb3af",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "71b49129e332b5019c3c24b34d4a0868006cfef7668c622f1d258fcaaa4bb3af.gz",
+                      "packedSize":  1838729,
+                      "packedSha256":  "5aeb3c137d47e8c58100a17b322b018a699fcfcdc4c4470391b036bfbfd52df6"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Assembly-CSharp.dll",
+                      "size":  213504,
+                      "sha256":  "2aca56e36c8992e358ad304c6a00060c652c8e0b06a7e9b486bc8f4c8c984fde",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2aca56e36c8992e358ad304c6a00060c652c8e0b06a7e9b486bc8f4c8c984fde.gz",
+                      "packedSize":  81740,
+                      "packedSha256":  "6fa2644c1be0fd6e2f378a6ea16852d9a6a136d328c3a9b1d75d8bf8d626c4c9"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/FamilyCompany.Infrastructure.Unity.dll",
+                      "size":  13312,
+                      "sha256":  "2e3d3be0fe1edaf13ab10f843620fe8a38cc9554492b14a17a18acad67849723",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2e3d3be0fe1edaf13ab10f843620fe8a38cc9554492b14a17a18acad67849723.gz",
+                      "packedSize":  6019,
+                      "packedSha256":  "324e2a508ec9146dc8f66d7d3fca0e299f097400e6d454ad58b8e542b3b5f9ec"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/FamilyCompany.Presentation.Unity.dll",
+                      "size":  1584640,
+                      "sha256":  "0ce34bf1346a5d018c3219d7a1dbb98b59646bc3193581b4566d7d8baf9e498f",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "0ce34bf1346a5d018c3219d7a1dbb98b59646bc3193581b4566d7d8baf9e498f.gz",
+                      "packedSize":  564884,
+                      "packedSha256":  "d24ac014c45f54701c2dfe1449ccfad82d405c82615f98b958409c8ff3ee3e4a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/FamilyCompany.Qa.Core.dll",
+                      "size":  109056,
+                      "sha256":  "1f5bb65b3a79628582e4742167c033f2a90419bc6849e61588e475bca2044d13",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "1f5bb65b3a79628582e4742167c033f2a90419bc6849e61588e475bca2044d13.gz",
+                      "packedSize":  41926,
+                      "packedSha256":  "eb5b881476c8e6d55933b85eeb76d47acc35e3bc5f9252431078341aa1604c0b"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/FamilyCompany.Save.dll",
+                      "size":  46080,
+                      "sha256":  "81d3f427dad019c56f6d4c0d7464308fad673ab1d3cc7fb065046d60b056160d",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "81d3f427dad019c56f6d4c0d7464308fad673ab1d3cc7fb065046d60b056160d.gz",
+                      "packedSize":  18583,
+                      "packedSha256":  "3adf7be3cbd516231a0f9112c97d96fc9012841ec1801d94721623f1d9055da4"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/FamilyCompany.Simulation.dll",
+                      "size":  636416,
+                      "sha256":  "689533fce874a8860df9e681318f9fab74524e3ca88abab37896670188f033e0",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "689533fce874a8860df9e681318f9fab74524e3ca88abab37896670188f033e0.gz",
+                      "packedSize":  242694,
+                      "packedSha256":  "d0eb325bb2aa46351195bdbe5dc514c6ff185651b5de712d1adce3e1940aea5b"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Mono.Security.dll",
+                      "size":  241152,
+                      "sha256":  "618009319dbf3ae374f9b5dc0d0522e1e1bdd172200c120a5471747b7991a584",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "618009319dbf3ae374f9b5dc0d0522e1e1bdd172200c120a5471747b7991a584.gz",
+                      "packedSize":  99918,
+                      "packedSha256":  "cc75df72eb86cbc0b544472d0b236fb7482e0e9d238bc13fd3f6f05e22ea554f"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/mscorlib.dll",
+                      "size":  4632064,
+                      "sha256":  "6c76e06e6d44cf0f39bf59e6a90770968b70093ad4c1572dfbc5e46e431c5fbf",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "6c76e06e6d44cf0f39bf59e6a90770968b70093ad4c1572dfbc5e46e431c5fbf.gz",
+                      "packedSize":  1595575,
+                      "packedSha256":  "a9eece176fa521719f53b5956fb31ba5af73abbaa5e74365b22cc39780299d67"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/netstandard.dll",
+                      "size":  90112,
+                      "sha256":  "6ae62e082dc494a2433984177f60ca4db5fae69b1f360a8b33754172b310b8c5",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "6ae62e082dc494a2433984177f60ca4db5fae69b1f360a8b33754172b310b8c5.gz",
+                      "packedSize":  26006,
+                      "packedSha256":  "95dfef5ea194423e78b8424152ae6d4cdb180bce26000adfb03526c4bbb22bc3"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.ComponentModel.Composition.dll",
+                      "size":  257024,
+                      "sha256":  "0c3e81771a5fe9657bea02887996de72606c3cb247e4fbe413f743f40e2af244",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "0c3e81771a5fe9657bea02887996de72606c3cb247e4fbe413f743f40e2af244.gz",
+                      "packedSize":  102729,
+                      "packedSha256":  "fcbccf49146d447733484b5358e79f6395f2aca444700676818fa7b2a1ea83c1"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Configuration.dll",
+                      "size":  124928,
+                      "sha256":  "04907729e87a101e62d3a5c93cfa16688bee745d05440d6daa0c541964be27ab",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "04907729e87a101e62d3a5c93cfa16688bee745d05440d6daa0c541964be27ab.gz",
+                      "packedSize":  50655,
+                      "packedSha256":  "1b13ebf5f46121b1769e9ce55e8ba475b7f9fc5c5914cd68f642e412ce6006d1"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Core.dll",
+                      "size":  1113088,
+                      "sha256":  "a5e7d47313da0eca0b92a901a30498f5e970916faf63b70b74dd62b09760ed72",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "a5e7d47313da0eca0b92a901a30498f5e970916faf63b70b74dd62b09760ed72.gz",
+                      "packedSize":  379706,
+                      "packedSha256":  "dcf3c7b9ec75619aa1da0e2a3b03b4bbc6bb22500c9752bc293ae03ff35fb1c2"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Data.DataSetExtensions.dll",
+                      "size":  29696,
+                      "sha256":  "498f14c37d83f946a47a79e01de777e62f269ee9c3820f2026b59ab1c1b9222f",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "498f14c37d83f946a47a79e01de777e62f269ee9c3820f2026b59ab1c1b9222f.gz",
+                      "packedSize":  10895,
+                      "packedSha256":  "c7ebfabf7ab742c00bf7c7ff568dac5597292d245c273ee3fd50670bc2ea0b29"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Data.dll",
+                      "size":  2125312,
+                      "sha256":  "427478545ce66b632414ca838088ea073f250ed16b21c70005f48cb571350e47",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "427478545ce66b632414ca838088ea073f250ed16b21c70005f48cb571350e47.gz",
+                      "packedSize":  738076,
+                      "packedSha256":  "bebaafebf49eebe6d55fd520ae0855359cea9186dde886cf2c0c98b967b44c64"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.dll",
+                      "size":  2641920,
+                      "sha256":  "7019d6b6dbfa07cf30f62e7d3ccb969f70cbf001fd72112938ffb535c7f75d81",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "7019d6b6dbfa07cf30f62e7d3ccb969f70cbf001fd72112938ffb535c7f75d81.gz",
+                      "packedSize":  1012454,
+                      "packedSha256":  "648acf4c72dbf1a642c560fde90a881c69ed285d7bf31f8ebc53355437fd35a1"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Drawing.dll",
+                      "size":  489984,
+                      "sha256":  "e182e688223acedb8135227e8fbff17d5ed22f47f81141aa9cb96ef1ab9926fc",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "e182e688223acedb8135227e8fbff17d5ed22f47f81141aa9cb96ef1ab9926fc.gz",
+                      "packedSize":  182205,
+                      "packedSha256":  "31d3dc4005c365160412320f2db0e8aacff4be34e7ee0d065edbce9df5aef96d"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.EnterpriseServices.dll",
+                      "size":  44544,
+                      "sha256":  "84af394ad863e31407eb2b9555ca7e96a9f1966630f5d7f0eec54f0011f6babc",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "84af394ad863e31407eb2b9555ca7e96a9f1966630f5d7f0eec54f0011f6babc.gz",
+                      "packedSize":  17593,
+                      "packedSha256":  "2a31bdf3cad3e6d2bad2f74ca93395a0a50b4ea3b7631f28298d3c42e062259a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.IO.Compression.dll",
+                      "size":  114688,
+                      "sha256":  "80421a67b4162a5f1b4aad6a8327c6d1fb4b04dedd39dae14a770b812594fae2",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "80421a67b4162a5f1b4aad6a8327c6d1fb4b04dedd39dae14a770b812594fae2.gz",
+                      "packedSize":  50971,
+                      "packedSha256":  "a3afd9895563566633cec553b64e88eaf292d915fb51946f6778695a927d3e02"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.IO.Compression.FileSystem.dll",
+                      "size":  18432,
+                      "sha256":  "2730d2a27f9362259a406ea14727e5f0a71bc21a6825be94f8623a84bd9f9c79",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2730d2a27f9362259a406ea14727e5f0a71bc21a6825be94f8623a84bd9f9c79.gz",
+                      "packedSize":  6233,
+                      "packedSha256":  "a059503bf40c4f4584261cba3a39ddafd6e184b82ee6e558a032b6a884f64115"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Net.Http.dll",
+                      "size":  122880,
+                      "sha256":  "3cd3ac19050d5031c13644cd87958ad8029b79ce16c7747faf3d0542e7fb45a3",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "3cd3ac19050d5031c13644cd87958ad8029b79ce16c7747faf3d0542e7fb45a3.gz",
+                      "packedSize":  53178,
+                      "packedSha256":  "6ebac44aa462876b9c4a21c6a94cd1b57e38a2d11152f99a934e444f85442ad9"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Numerics.dll",
+                      "size":  119296,
+                      "sha256":  "ac9224b32355a09f09b706cab568384f64cf8116825c5911cef1e13221c61c38",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "ac9224b32355a09f09b706cab568384f64cf8116825c5911cef1e13221c61c38.gz",
+                      "packedSize":  42912,
+                      "packedSha256":  "33b4046a6cc3ff7ce8134d8a32df1676932f1cd60b6a169b74f97038d97b16af"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Runtime.dll",
+                      "size":  12288,
+                      "sha256":  "e0a7334b7ba419aaab6bd3bb6992d693e689341a9178172c9bf99c2aa6a085bd",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "e0a7334b7ba419aaab6bd3bb6992d693e689341a9178172c9bf99c2aa6a085bd.gz",
+                      "packedSize":  4395,
+                      "packedSha256":  "1def0d3b34ec6bc05496d3da9c44ec7754415e1258a0cc9c1193682129e829cc"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Runtime.Serialization.dll",
+                      "size":  934400,
+                      "sha256":  "1152ef687dbe39e0ccb6b9a68f6501004415a729072df29abab3bc7c66840217",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "1152ef687dbe39e0ccb6b9a68f6501004415a729072df29abab3bc7c66840217.gz",
+                      "packedSize":  306877,
+                      "packedSha256":  "dd67ba7dfcb773f7c368ff847ae9a98b6cfc65aa25276cd37474bd025d32c53d"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Security.dll",
+                      "size":  320000,
+                      "sha256":  "2101a4dd4475285f96b1ac3ba1715a52aa8067690709e675cc49a9eb8ed901a4",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2101a4dd4475285f96b1ac3ba1715a52aa8067690709e675cc49a9eb8ed901a4.gz",
+                      "packedSize":  121290,
+                      "packedSha256":  "5226b4e3b5917f7402d56042f42cce959f7aa4c98e705b3c249db2b62329d14c"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.ServiceModel.Internals.dll",
+                      "size":  215040,
+                      "sha256":  "888ec94a59c127854871b76afa49fdcefdf723c0f0b6fd78e87f73a8495b63b5",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "888ec94a59c127854871b76afa49fdcefdf723c0f0b6fd78e87f73a8495b63b5.gz",
+                      "packedSize":  83989,
+                      "packedSha256":  "a57f473d0e0f4a40e41e545be4c1021ad6b5997937df27f406b7d25c30e6ddfa"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Transactions.dll",
+                      "size":  35328,
+                      "sha256":  "f65dbc257d26a361dcc01edd58bf3e542d186c8ee492a4f7a62b0dd7d59f7050",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "f65dbc257d26a361dcc01edd58bf3e542d186c8ee492a4f7a62b0dd7d59f7050.gz",
+                      "packedSize":  13358,
+                      "packedSha256":  "37966bca5c817378490a311d8586f3c6b0e83895535417d54ae93e58d6491e9a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Xml.dll",
+                      "size":  3160064,
+                      "sha256":  "79194220adfcf027a334c87b1adcc6d07b9660a4061e04b3d9500c10d30f7d49",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "79194220adfcf027a334c87b1adcc6d07b9660a4061e04b3d9500c10d30f7d49.gz",
+                      "packedSize":  1064457,
+                      "packedSha256":  "87b98dbe9d2dc0b8ca911ca2bdfecea178c66efc8e39a041ccc15e48e7836396"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/System.Xml.Linq.dll",
+                      "size":  136704,
+                      "sha256":  "4f5d6bf313cbf091e7bff83d07dd03ed93d0ecb3ddb025ae786aadd6b5f477fb",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "4f5d6bf313cbf091e7bff83d07dd03ed93d0ecb3ddb025ae786aadd6b5f477fb.gz",
+                      "packedSize":  54693,
+                      "packedSha256":  "2167e60a021506991ceba0b698df7505b9dca186b13ccfd4e27f056bb8dc3412"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.2D.Animation.Runtime.dll",
+                      "size":  87040,
+                      "sha256":  "26abbcadd8355381e454f613f754edad343bbbab613a5d5a2146561cf9d00683",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "26abbcadd8355381e454f613f754edad343bbbab613a5d5a2146561cf9d00683.gz",
+                      "packedSize":  37109,
+                      "packedSha256":  "4a10e8d315eaec779a204115a6870bce26a94f1b66dbdad61245376c3a79d61c"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.2D.Common.Runtime.dll",
+                      "size":  58368,
+                      "sha256":  "7fb602da41f533a558ecd0765a916ff6a868273738715794d88fc7a7d7b3fa94",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "7fb602da41f533a558ecd0765a916ff6a868273738715794d88fc7a7d7b3fa94.gz",
+                      "packedSize":  25565,
+                      "packedSha256":  "f2c1e4af471703f981e8e004eef293bf6198d45917e51c66756d4eb52bd12d13"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.2D.IK.Runtime.dll",
+                      "size":  27136,
+                      "sha256":  "d9d80936f3b8ba0fd0f5e6e03c3f04678b7c550fd4effb9a4913073399a134b6",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "d9d80936f3b8ba0fd0f5e6e03c3f04678b7c550fd4effb9a4913073399a134b6.gz",
+                      "packedSize":  11896,
+                      "packedSha256":  "5c1772da98c34d558d64303ca505496f6c5646da799dccf5dcc0b0edcb7c7898"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.Burst.dll",
+                      "size":  304640,
+                      "sha256":  "11da77fa69dbfeaa2b176df8cb035179c5c03427fe171b9099aa3e8b9e3a3829",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "11da77fa69dbfeaa2b176df8cb035179c5c03427fe171b9099aa3e8b9e3a3829.gz",
+                      "packedSize":  93133,
+                      "packedSha256":  "4156723eeadc6157be0e94e2a3385901cf4c86fc8d97bc338198fef02c5732ca"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.Burst.Unsafe.dll",
+                      "size":  5632,
+                      "sha256":  "9d9c1ff52411decbee5d9f0d1cd61ebeaa222077aa77a52101ea3debafae98e2",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "9d9c1ff52411decbee5d9f0d1cd61ebeaa222077aa77a52101ea3debafae98e2.gz",
+                      "packedSize":  2103,
+                      "packedSha256":  "5366ec44972c15a588081aae7bd4e73dcabb9aa53a600b82d61ea256c8354cf3"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.Collections.dll",
+                      "size":  453632,
+                      "sha256":  "3676182e3a7b9923a00a7a412ca2b0fd1aff088284dc2c10f9fca2bd5d0c86fe",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "3676182e3a7b9923a00a7a412ca2b0fd1aff088284dc2c10f9fca2bd5d0c86fe.gz",
+                      "packedSize":  149437,
+                      "packedSha256":  "18f19281166236d82f2284294e885aea08f07cdc9c3515e7cddc37aeaf1fd1b8"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.Collections.LowLevel.ILSupport.dll",
+                      "size":  5120,
+                      "sha256":  "ff50383f807f9692e4913b97e47d86fefcb8faa33d6d48cd3e3fd6fc7ffb448d",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "ff50383f807f9692e4913b97e47d86fefcb8faa33d6d48cd3e3fd6fc7ffb448d.gz",
+                      "packedSize":  2066,
+                      "packedSha256":  "4a8fcf5bcbf1f2813faa4365314af00b7ef7fe2f0e985afeba28fcffd81cdc53"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.InternalAPIEngineBridge.001.dll",
+                      "size":  6656,
+                      "sha256":  "de631c521b0ba4d1c0000fff7427b84dcbb2b1bf6d263b8365b836d6f611258e",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "de631c521b0ba4d1c0000fff7427b84dcbb2b1bf6d263b8365b836d6f611258e.gz",
+                      "packedSize":  2835,
+                      "packedSha256":  "849f7230ea45e778dd21c380916b8600173933808f68cf2d976f18f28837ef8a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.InternalAPIEngineBridge.004.dll",
+                      "size":  4608,
+                      "sha256":  "43cee541d0d787a135bd8f428b9fef705853ce4438f843b6883522edebf07be0",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "43cee541d0d787a135bd8f428b9fef705853ce4438f843b6883522edebf07be0.gz",
+                      "packedSize":  1973,
+                      "packedSha256":  "e8ce26f64889611d0e66a927f496efc8cdec0ac3f25397493b25b9b3deeef319"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.Mathematics.dll",
+                      "size":  752640,
+                      "sha256":  "b9b406ffa90b647d98ddf318e0601ca39345817203337f00ad9c99a881be428a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "b9b406ffa90b647d98ddf318e0601ca39345817203337f00ad9c99a881be428a.gz",
+                      "packedSize":  200552,
+                      "packedSha256":  "c226706c2be9a83ea71891dc1d3652d3ba35a8f35bad16c5e8fa7807bfa98e9a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/Unity.TextMeshPro.dll",
+                      "size":  445952,
+                      "sha256":  "c483c183254c1b40597604ff7b9dadb61d7eb838784dd586bfb406324f5124c9",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "c483c183254c1b40597604ff7b9dadb61d7eb838784dd586bfb406324f5124c9.gz",
+                      "packedSize":  160394,
+                      "packedSha256":  "4046f2d7d7748da2c6b973d3179806d2f386b821472e6080f4ebb5c8b9141140"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.AccessibilityModule.dll",
+                      "size":  51120,
+                      "sha256":  "b938cb9a95f53d398f884c9e64f0cca94dadb1e46161a9703c4e8d626049f73a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "b938cb9a95f53d398f884c9e64f0cca94dadb1e46161a9703c4e8d626049f73a.gz",
+                      "packedSize":  25212,
+                      "packedSha256":  "3d3f9ac9d5e2bd7f54e59ed66afaf2eff25ec7a6ed85eb4a5433c25ebf204f38"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.AdaptivePerformanceModule.dll",
+                      "size":  124840,
+                      "sha256":  "9bf45a2fc40d8223e3ad9e066b614e982d9e4cba3c4c54a7ba2904090885f794",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "9bf45a2fc40d8223e3ad9e066b614e982d9e4cba3c4c54a7ba2904090885f794.gz",
+                      "packedSize":  50845,
+                      "packedSha256":  "cb2319efe4ff4604e7efbe88ef3f8329d715b8a2f9e36bf1bf9dd181d52a65b5"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.AIModule.dll",
+                      "size":  77224,
+                      "sha256":  "6c7175da9f74b999bb21308729972c626da8e0aa4fe885f8f94bbb968f98ddc7",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "6c7175da9f74b999bb21308729972c626da8e0aa4fe885f8f94bbb968f98ddc7.gz",
+                      "packedSize":  31894,
+                      "packedSha256":  "8a7dd0a5fb4d907e3ab138be2058a245f4ad5ac586803d8352d1f898424914a5"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.AMDModule.dll",
+                      "size":  21928,
+                      "sha256":  "81cae0a385ab12b78f1d1c5b32463a7d74be5e12213518bea2328f87cbf3267a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "81cae0a385ab12b78f1d1c5b32463a7d74be5e12213518bea2328f87cbf3267a.gz",
+                      "packedSize":  13342,
+                      "packedSha256":  "1e58b89b8756d5c1837610b4e8a415142a972de25b7951ee8e9bdbeca8f38cf1"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.AndroidJNIModule.dll",
+                      "size":  121776,
+                      "sha256":  "775359cbaa592bce728b36bfd150c11c457d95c771e8669adabfe193e3edce13",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "775359cbaa592bce728b36bfd150c11c457d95c771e8669adabfe193e3edce13.gz",
+                      "packedSize":  46334,
+                      "packedSha256":  "250b16b63ff428f12a743bc65b6fec2e0a018c24974685abca56d6759f381d84"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.AnimationModule.dll",
+                      "size":  225200,
+                      "sha256":  "d35bc846afbdf0d404b743296fc26303db8f9eed5dca2d0172078f62652b5659",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "d35bc846afbdf0d404b743296fc26303db8f9eed5dca2d0172078f62652b5659.gz",
+                      "packedSize":  75530,
+                      "packedSha256":  "36df78ecee17d4558bfba1b4db7b21d6830e53fdcc9c2db769bedb2e7ec8cfca"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ARModule.dll",
+                      "size":  25520,
+                      "sha256":  "04057a2c10d7b3775f469c23c732da29b64c7642378607fadf35bb9fc651363b",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "04057a2c10d7b3775f469c23c732da29b64c7642378607fadf35bb9fc651363b.gz",
+                      "packedSize":  12859,
+                      "packedSha256":  "035bce1ab4aead18897fa0d93347dfa86cfe046c190770996c5d88e8b9f07bf0"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.AssetBundleModule.dll",
+                      "size":  41904,
+                      "sha256":  "7e3ce4d7c118bf933fd36da08ddbce84f9cfa2063d81d51fabd9d557ec19df42",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "7e3ce4d7c118bf933fd36da08ddbce84f9cfa2063d81d51fabd9d557ec19df42.gz",
+                      "packedSize":  18830,
+                      "packedSha256":  "d1438cef956ee99e3aca5f3ed06750cefd4024b836deff60840b831013546a63"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.AudioModule.dll",
+                      "size":  142768,
+                      "sha256":  "c6e1f30f2f481773971371b0ea65383ec80bca8574f7d7db3385ae07655db93d",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "c6e1f30f2f481773971371b0ea65383ec80bca8574f7d7db3385ae07655db93d.gz",
+                      "packedSize":  54869,
+                      "packedSha256":  "f43876e53ab818d08de7807d610b27ae345a85eb374bdd4b0a5f197f38b804d2"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ClothModule.dll",
+                      "size":  36272,
+                      "sha256":  "5d1e50260bb45ee6cbf7b3905356e48dfca89f840d51fbc1fa79666b91f6a805",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "5d1e50260bb45ee6cbf7b3905356e48dfca89f840d51fbc1fa79666b91f6a805.gz",
+                      "packedSize":  16210,
+                      "packedSha256":  "33620507b76d0f144672b563f6845c9a0f13b24f3447a05f94fe44d84c354482"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ClusterInputModule.dll",
+                      "size":  28080,
+                      "sha256":  "2d319b6d5e9195f26d85e31ac93a1ea6a8de869dacdb0163d06a0ad2743dbcac",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2d319b6d5e9195f26d85e31ac93a1ea6a8de869dacdb0163d06a0ad2743dbcac.gz",
+                      "packedSize":  13599,
+                      "packedSha256":  "6dedc19524677e06d75a1267bed0cc725eeeeffd8eba4beac9cebc28d50e7d44"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ClusterRendererModule.dll",
+                      "size":  26536,
+                      "sha256":  "978343f296bf550d8bbeb11a159aeae93dd739919355ed02acda86c9e00bf8e9",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "978343f296bf550d8bbeb11a159aeae93dd739919355ed02acda86c9e00bf8e9.gz",
+                      "packedSize":  13069,
+                      "packedSha256":  "00c3da0f5e79572ea4376939260fb23a04a10d24d9e0ddf4ad2bcf5d2877629b"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ContentLoadModule.dll",
+                      "size":  32680,
+                      "sha256":  "bc86a7a83ef517632b8d616b6505567b9362b4b1ce648e17e2d68d4c1c968a82",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "bc86a7a83ef517632b8d616b6505567b9362b4b1ce648e17e2d68d4c1c968a82.gz",
+                      "packedSize":  15676,
+                      "packedSha256":  "48ff7230f467b0d6cba62bcf11aa1bdbd797ef9e7c1e5a12127f930b59918cb9"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.CoreModule.dll",
+                      "size":  1984432,
+                      "sha256":  "9d7c73852c89503f348b05a8337f280fa813cf8e885d52c86a8c9580e68ec76b",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "9d7c73852c89503f348b05a8337f280fa813cf8e885d52c86a8c9580e68ec76b.gz",
+                      "packedSize":  621297,
+                      "packedSha256":  "7b558f53f2ebef41e768804680bacc2107feaa953a0ded0f1200a6a857db5786"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.CrashReportingModule.dll",
+                      "size":  26544,
+                      "sha256":  "15fb1de26e84c876ca51af99d5445c0634ed3f4ffe8ff8dd4fc0fb4ee1eb36d2",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "15fb1de26e84c876ca51af99d5445c0634ed3f4ffe8ff8dd4fc0fb4ee1eb36d2.gz",
+                      "packedSize":  13216,
+                      "packedSha256":  "d203800db8e93fa552894b1113e469fdd7b638d2f73b0e41761dfaaa81716b98"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.DirectorModule.dll",
+                      "size":  41904,
+                      "sha256":  "1415c13a6951425eb83b281ce2c22985ac1b671d052760bd56b46652d4b125af",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "1415c13a6951425eb83b281ce2c22985ac1b671d052760bd56b46652d4b125af.gz",
+                      "packedSize":  19870,
+                      "packedSha256":  "bd76ce60f520043ccc76e4d4a7cd9ce61b0c884e81024b00de5bdb52296d10a9"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.dll",
+                      "size":  197544,
+                      "sha256":  "1908e048275864af9cd99fd78e7c9d0f9ebd08c271830b575da213951b3393e9",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "1908e048275864af9cd99fd78e7c9d0f9ebd08c271830b575da213951b3393e9.gz",
+                      "packedSize":  56564,
+                      "packedSha256":  "84359c0db9773ed1833a7c63d8d40c5dce1d1cf06e786f08e450dc3b891fd405"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.DSPGraphModule.dll",
+                      "size":  31664,
+                      "sha256":  "1860e8e8258763c550713a192592a6518ad36ea21b217da074c4766e4af7fb02",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "1860e8e8258763c550713a192592a6518ad36ea21b217da074c4766e4af7fb02.gz",
+                      "packedSize":  14823,
+                      "packedSha256":  "edf70a4fed1ca5f1d41b1528ed3e25b5c9fa9fe5a43c4d4417fc054bbc1107bf"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.GameCenterModule.dll",
+                      "size":  46000,
+                      "sha256":  "7104f4a9250469fd511f7c66731a6cbcaf9e9305507d65d10e41b214cd8a4573",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "7104f4a9250469fd511f7c66731a6cbcaf9e9305507d65d10e41b214cd8a4573.gz",
+                      "packedSize":  21363,
+                      "packedSha256":  "23b9b1ce6949c9b81cd12be1bf2654719537d6e8843d167ef70b648830a5796d"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.GIModule.dll",
+                      "size":  24488,
+                      "sha256":  "af152bc998967d23c2c208bfe18ac32844dab6f8b19e16b21537191547be4383",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "af152bc998967d23c2c208bfe18ac32844dab6f8b19e16b21537191547be4383.gz",
+                      "packedSize":  12236,
+                      "packedSha256":  "cb8d6517867860ec3790de452d9306243c414738286843f787254f556945b292"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.GraphicsStateCollectionSerializerModule.dll",
+                      "size":  14256,
+                      "sha256":  "fac5a539925fbfd71648412da7a63dea6dc07d336ff9818fa515aad4dcee1124",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "fac5a539925fbfd71648412da7a63dea6dc07d336ff9818fa515aad4dcee1124.gz",
+                      "packedSize":  9270,
+                      "packedSha256":  "e1d7a4d2f367c1219aa4a9f815817e9f5710e054e8571f08d800308b1daa4c2f"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.GridModule.dll",
+                      "size":  30640,
+                      "sha256":  "f300e06a4431b535bf9ebfea4292f96c6f46c7d36feccdd5144224c38d2dc8d5",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "f300e06a4431b535bf9ebfea4292f96c6f46c7d36feccdd5144224c38d2dc8d5.gz",
+                      "packedSize":  14502,
+                      "packedSha256":  "e507f13094621727fb419f9b562793e6c92f22c920374d4d9b62f7612f257d20"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.HierarchyCoreModule.dll",
+                      "size":  109488,
+                      "sha256":  "bf0dc55d5287447f2db62f2c8830b4a18ab7c992090a97d6416184b7f76294b9",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "bf0dc55d5287447f2db62f2c8830b4a18ab7c992090a97d6416184b7f76294b9.gz",
+                      "packedSize":  43995,
+                      "packedSha256":  "9666386d038e37cff31367b35048c44d9a73a34194a3995792f4245909f42e56"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.HierarchyModule.dll",
+                      "size":  102312,
+                      "sha256":  "dec942f79f73cd4c422839d8fca4dfd0cca3a2883d772a06dd4565a0c54d8d26",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "dec942f79f73cd4c422839d8fca4dfd0cca3a2883d772a06dd4565a0c54d8d26.gz",
+                      "packedSize":  48206,
+                      "packedSha256":  "9372ea473716074135f06f8e92d4e822415599c5af7ea283c3789636eba65edb"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.HotReloadModule.dll",
+                      "size":  24496,
+                      "sha256":  "b23da30d411aa5fcd1446b346eec73aea5cb723c5dd547855a0ecacaeafc8b94",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "b23da30d411aa5fcd1446b346eec73aea5cb723c5dd547855a0ecacaeafc8b94.gz",
+                      "packedSize":  12242,
+                      "packedSha256":  "14654eaf7ac56979af301777170cd0cd41a75791fbf3a1ac4b8e23400c7aba7e"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.IdentifiersModule.dll",
+                      "size":  16808,
+                      "sha256":  "0358cd6cd686c340797700e6e11321b7d9e2e03196dcab4164831336960cdc09",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "0358cd6cd686c340797700e6e11321b7d9e2e03196dcab4164831336960cdc09.gz",
+                      "packedSize":  10528,
+                      "packedSha256":  "b6f678cba9c73ac12add81e74e42086ab10d6c147e5727a10714bcb7eb1e5748"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ImageConversionModule.dll",
+                      "size":  31152,
+                      "sha256":  "dccc9ccfb963999d0f56e75e7f03b139dfb4360765cb9821d68905d8e3bb983d",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "dccc9ccfb963999d0f56e75e7f03b139dfb4360765cb9821d68905d8e3bb983d.gz",
+                      "packedSize":  14584,
+                      "packedSha256":  "7d5e6213711b805cf182de82b617fa418062e9db4d22e50010d45db19530a3db"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.IMGUIModule.dll",
+                      "size":  214440,
+                      "sha256":  "4cac987739607c9ac2f4dd00a83c083faf43a4fd331312895a5c833d1e3cf4da",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "4cac987739607c9ac2f4dd00a83c083faf43a4fd331312895a5c833d1e3cf4da.gz",
+                      "packedSize":  85421,
+                      "packedSha256":  "2cfd86fd37c41f2679b93a68287d134d7e92e8185c350314895cfac9b804d5f7"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.InputForUIModule.dll",
+                      "size":  57768,
+                      "sha256":  "05a7b03438b888ca8354125ab69139a8fdc41380b251887086593f4f41193909",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "05a7b03438b888ca8354125ab69139a8fdc41380b251887086593f4f41193909.gz",
+                      "packedSize":  29356,
+                      "packedSha256":  "0ee8bce62a6024d824a47c5b341bcf0f0b0de93a8ccf3aaf211889656c7ca48a"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.InputLegacyModule.dll",
+                      "size":  45488,
+                      "sha256":  "2606ef2449dcc94220a349fa13c8a46ab337c8e68175c19a0cfa1efe16d8adce",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2606ef2449dcc94220a349fa13c8a46ab337c8e68175c19a0cfa1efe16d8adce.gz",
+                      "packedSize":  21363,
+                      "packedSha256":  "2c4da06ffcc178a630a82d89199d9a72c17c2d4c4438ca986f3d7daf5e1317a0"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.InputModule.dll",
+                      "size":  28584,
+                      "sha256":  "2d7b2cf3ecb9f2815835bdc8f3919a79ada4829e4ec1cfd513a069c8eae95220",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2d7b2cf3ecb9f2815835bdc8f3919a79ada4829e4ec1cfd513a069c8eae95220.gz",
+                      "packedSize":  14312,
+                      "packedSha256":  "3e60b1b6005e84f74a8d0eba3dcec70fb13020317c328018a8410c78b8e9ce05"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.InsightsModule.dll",
+                      "size":  14256,
+                      "sha256":  "2f112d7cb9a57199e805eac1c8657afed4bd006e3aae62c117958938f5d7133b",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2f112d7cb9a57199e805eac1c8657afed4bd006e3aae62c117958938f5d7133b.gz",
+                      "packedSize":  9231,
+                      "packedSha256":  "34e6eec342aa3e64876dc2fa4def333b950e9002fad5942dfc2c962bc7c47de7"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.JSONSerializeModule.dll",
+                      "size":  27056,
+                      "sha256":  "b5a4d55026fb3a339b8036fa0a71c7056d8c1f22bc92a64d2c7b50bd16fe0ff1",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "b5a4d55026fb3a339b8036fa0a71c7056d8c1f22bc92a64d2c7b50bd16fe0ff1.gz",
+                      "packedSize":  13725,
+                      "packedSha256":  "6fdf519b34a97761fa2c7d7d232f91f779047a2a0c3f3e887c5c9f140659ad47"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.LocalizationModule.dll",
+                      "size":  27056,
+                      "sha256":  "984ec80263a72d8ec1357f71b91f9bb4edb7aa8fe3fbe3f9963777f20223aa36",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "984ec80263a72d8ec1357f71b91f9bb4edb7aa8fe3fbe3f9963777f20223aa36.gz",
+                      "packedSize":  13411,
+                      "packedSha256":  "6e53e61b000b1544e90c60ed82b27e5e0371d29b8d755b8a44310a17b5708025"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.MarshallingModule.dll",
+                      "size":  83880,
+                      "sha256":  "a7927ac8a453bef37ad7a8e399f90160a5f2eb4c21c0ca51e9548576025ca3c6",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "a7927ac8a453bef37ad7a8e399f90160a5f2eb4c21c0ca51e9548576025ca3c6.gz",
+                      "packedSize":  29357,
+                      "packedSha256":  "c04c6e2efe84f8dd4126689788179a42d570a2c5cd797cdae3c1d766583ae217"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.MultiplayerModule.dll",
+                      "size":  17832,
+                      "sha256":  "acf1c328505c1c72557b2e40636bc13a67ca8df53478cc8867eee9956035584a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "acf1c328505c1c72557b2e40636bc13a67ca8df53478cc8867eee9956035584a.gz",
+                      "packedSize":  11106,
+                      "packedSha256":  "ab0e43fee81b9b09773c5bc74555448dc7476fe7eed51480da025e4af9c72297"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.NVIDIAModule.dll",
+                      "size":  40880,
+                      "sha256":  "08b0ecf62a12b3948dc85f37e8452c363bcb718828bfcb6dc55061f48bc33eaf",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "08b0ecf62a12b3948dc85f37e8452c363bcb718828bfcb6dc55061f48bc33eaf.gz",
+                      "packedSize":  19803,
+                      "packedSha256":  "3be78e8b96e5048718f53768bd2dedf958c68d85638749807a575389f8d17988"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ParticleSystemModule.dll",
+                      "size":  171952,
+                      "sha256":  "50531fd98b502bb1e34a93709f1e1de588c69d12d6ddd8ab6d7528b5fc76e3f9",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "50531fd98b502bb1e34a93709f1e1de588c69d12d6ddd8ab6d7528b5fc76e3f9.gz",
+                      "packedSize":  62134,
+                      "packedSha256":  "425309df1cdaf79133cca3c92494bdc596cc140b88b0f76d187aa3b32dfb19f9"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.PerformanceReportingModule.dll",
+                      "size":  25008,
+                      "sha256":  "776da621a59c52f1bf1411590569d0fb6e700d0c297fd9f3f390f1c2c044dcf5",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "776da621a59c52f1bf1411590569d0fb6e700d0c297fd9f3f390f1c2c044dcf5.gz",
+                      "packedSize":  12509,
+                      "packedSha256":  "7bd1d9655d4cc4d7b7717e06cb508fb271db9436c0fe4803eba30ed57bf4d0f4"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.Physics2DModule.dll",
+                      "size":  586664,
+                      "sha256":  "2d8146faef524030f9ced62547cf065f353af34b7aaae483290aa503ab3b2e63",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "2d8146faef524030f9ced62547cf065f353af34b7aaae483290aa503ab3b2e63.gz",
+                      "packedSize":  170945,
+                      "packedSha256":  "846c76c9744cc1509edb21d21bafbc7e0b327ba1f8ce7a637963bc2d397e7dd4"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.PhysicsBackendPhysXModule.dll",
+                      "size":  14256,
+                      "sha256":  "5667d6732f1680a1eecd6263c3a00d11656d9fdb67be86463777805bdcf31c3e",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "5667d6732f1680a1eecd6263c3a00d11656d9fdb67be86463777805bdcf31c3e.gz",
+                      "packedSize":  9249,
+                      "packedSha256":  "8c1977bd14291ffbe56bfcc07dfb8e0e2f206f41cad6d25036e36a40712f1bef"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.PhysicsModule.dll",
+                      "size":  183720,
+                      "sha256":  "111dbf28bc7f52939ba3263aa097c34c824f6392f4534330a6729e04f056f085",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "111dbf28bc7f52939ba3263aa097c34c824f6392f4534330a6729e04f056f085.gz",
+                      "packedSize":  64372,
+                      "packedSha256":  "f710c27e32554e1fccf7e2796461ab2229da983c1c212fd3cfbf931b58c2f85c"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.PropertiesModule.dll",
+                      "size":  134064,
+                      "sha256":  "67c369be2be35fde1b3ab82672e141142d593030f5f59f075a41322fefb08ac6",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "67c369be2be35fde1b3ab82672e141142d593030f5f59f075a41322fefb08ac6.gz",
+                      "packedSize":  56543,
+                      "packedSha256":  "22a024e511ad79cd09d30314c7b03f1ccc6b7fe3d453fba706b4dd329a628e2f"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.RenderAs2DModule.dll",
+                      "size":  25512,
+                      "sha256":  "75260cf6e28b4d0722619b702576e99c0dc745d8051b67d0b28609f61bf1ff82",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "75260cf6e28b4d0722619b702576e99c0dc745d8051b67d0b28609f61bf1ff82.gz",
+                      "packedSize":  12792,
+                      "packedSha256":  "02076552bb1b60734df225874e3f011f87af4a71ef5052285c3668a01d06cd03"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll",
+                      "size":  24488,
+                      "sha256":  "92da1547ab20fe2c5ddf24154e8c2b9410decd2dd5d2e861cc7ab850f156dbcb",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "92da1547ab20fe2c5ddf24154e8c2b9410decd2dd5d2e861cc7ab850f156dbcb.gz",
+                      "packedSize":  12268,
+                      "packedSha256":  "a471bde8795debe93cf42ef9e63c8aff03cd5b82adf4615e8685a325c7b40dc6"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ScreenCaptureModule.dll",
+                      "size":  26544,
+                      "sha256":  "9719a51d44409a5fe1a0d8a09941370f6917098223eb4e0c5a91a2cb14c9d870",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "9719a51d44409a5fe1a0d8a09941370f6917098223eb4e0c5a91a2cb14c9d870.gz",
+                      "packedSize":  13156,
+                      "packedSha256":  "ee475a3123fa713c3badf2200704524fdcdda38401b9ca1092c68fb2b7ff26d5"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ShaderRuntimeModule.dll",
+                      "size":  25512,
+                      "sha256":  "75d3475fb66e7683cb6b899c794ee6dc74496193dc86bda5bd351f2f94e9e34f",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "75d3475fb66e7683cb6b899c794ee6dc74496193dc86bda5bd351f2f94e9e34f.gz",
+                      "packedSize":  12831,
+                      "packedSha256":  "f8a7cd616732d81628ea29093d2883b7cd222a24eb94428ef0295f994e101012"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.ShaderVariantAnalyticsModule.dll",
+                      "size":  24496,
+                      "sha256":  "58905bb22aa76cf176e0d26cb5bc59a5678f4ea4e040e67bef8064c151697e35",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "58905bb22aa76cf176e0d26cb5bc59a5678f4ea4e040e67bef8064c151697e35.gz",
+                      "packedSize":  12255,
+                      "packedSha256":  "34467c6a95d7b4510ce71f7524d289e8c4bd523498673129a7dfb2674f7bd111"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.SharedInternalsModule.dll",
+                      "size":  38320,
+                      "sha256":  "58899aa9aa119b2ecafb1a41167d967167d9542dbe8f2f1882a62a96c6151391",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "58899aa9aa119b2ecafb1a41167d967167d9542dbe8f2f1882a62a96c6151391.gz",
+                      "packedSize":  17950,
+                      "packedSha256":  "1d158eb389816ee0ab82a253d8ca18fcae94fa1ad63727cfec1b255fc5a2aa86"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.SpriteMaskModule.dll",
+                      "size":  28592,
+                      "sha256":  "d28c6ac9d8bab5b79d0887599cbc8ec21c6069eb0019efb1d2abfd258d02156f",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "d28c6ac9d8bab5b79d0887599cbc8ec21c6069eb0019efb1d2abfd258d02156f.gz",
+                      "packedSize":  13734,
+                      "packedSha256":  "981d3e64985d9b7208cdcaa10f7d527b471fcf1e581a25fd12ce3d65ec3e0e51"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.SpriteShapeModule.dll",
+                      "size":  32688,
+                      "sha256":  "c41f362c94817bb38fb2136ff82b7bf0ebfae5f8fa53276df547e09667b28ec1",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "c41f362c94817bb38fb2136ff82b7bf0ebfae5f8fa53276df547e09667b28ec1.gz",
+                      "packedSize":  15738,
+                      "packedSha256":  "7b6c2aba42ced6a87fc6441ccf09055eb984cc2927eab628a3998afe7d6d7e4f"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.StreamingModule.dll",
+                      "size":  26024,
+                      "sha256":  "6b953a6877294447752889f8fc77424b632422e3b0e83814857fb8af15756517",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "6b953a6877294447752889f8fc77424b632422e3b0e83814857fb8af15756517.gz",
+                      "packedSize":  12874,
+                      "packedSha256":  "a1cab7e9e1570358981d5e2d061279573077348a87cd816b2880ec10d7dd55e2"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.SubstanceModule.dll",
+                      "size":  29104,
+                      "sha256":  "6f2d6fc5f08357405375c797652f35eb6f8a62ab35858dc4f2de7b3ff429b290",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "6f2d6fc5f08357405375c797652f35eb6f8a62ab35858dc4f2de7b3ff429b290.gz",
+                      "packedSize":  14567,
+                      "packedSha256":  "5b77e52437307bc73854f2708de95ecde203f2df897d2a9dc53972168de2e212"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.SubsystemsModule.dll",
+                      "size":  41904,
+                      "sha256":  "926ff6d3495d8722af436153063a22ef62ae39f4e3f3a2d657939555fcb935ab",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "926ff6d3495d8722af436153063a22ef62ae39f4e3f3a2d657939555fcb935ab.gz",
+                      "packedSize":  19839,
+                      "packedSha256":  "56e48ad1f058442449b3b5b9a7c5851f10f10512935c6c4916554a68e8fa9db1"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.TerrainModule.dll",
+                      "size":  134056,
+                      "sha256":  "77cb4042c3fdc4eebe2ccb006dc171477eeb2b3628973735fbe6db24b601071d",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "77cb4042c3fdc4eebe2ccb006dc171477eeb2b3628973735fbe6db24b601071d.gz",
+                      "packedSize":  51438,
+                      "packedSha256":  "f9260cd489d0bcd5a19ea5b2c9e49175dd6b2918a61b7f1caaa67a7786fc542d"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.TerrainPhysicsModule.dll",
+                      "size":  25512,
+                      "sha256":  "9023c9fb3efdfe49d49348c09a9b1e59eed40a8b04d57e592ff0392ba5f52d6c",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "9023c9fb3efdfe49d49348c09a9b1e59eed40a8b04d57e592ff0392ba5f52d6c.gz",
+                      "packedSize":  12867,
+                      "packedSha256":  "963c1b99f30df4768c3a334b266a84c4bc407698e11bedbc67a93adabd885169"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.TextCoreFontEngineModule.dll",
+                      "size":  81832,
+                      "sha256":  "bd8d2db5008a6b200275938b76249254cdea2a3854e04dcc9ee36246eb5b1798",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "bd8d2db5008a6b200275938b76249254cdea2a3854e04dcc9ee36246eb5b1798.gz",
+                      "packedSize":  31729,
+                      "packedSha256":  "e7fe186c9ecfd5fcd1ecbd1988a16de25be7bd2f229f549e302432054a619119"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.TextCoreTextEngineModule.dll",
+                      "size":  334256,
+                      "sha256":  "e259924a4588f7a2c09d68342e6fadc6a44e1471d020632600d89edc44f06bd9",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "e259924a4588f7a2c09d68342e6fadc6a44e1471d020632600d89edc44f06bd9.gz",
+                      "packedSize":  136340,
+                      "packedSha256":  "ad13b701e39f529b2de91016c54fcc0d239e1bb7cadf884cd5a9dbcb2c3d25d8"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.TextRenderingModule.dll",
+                      "size":  39344,
+                      "sha256":  "1807c017e2d32a6143423aeec12af3a8a354174ce9cb97b853d8c49bce9661c3",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "1807c017e2d32a6143423aeec12af3a8a354174ce9cb97b853d8c49bce9661c3.gz",
+                      "packedSize":  19827,
+                      "packedSha256":  "d8b3d94c25d845a52da2a7f133e6f348dd3be81d6f77aed5ed32fa6737f45118"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.TilemapModule.dll",
+                      "size":  58800,
+                      "sha256":  "231b46bcedd2c267490ae0d376fc444c64ea69f63b281a536d45e9557c75994f",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "231b46bcedd2c267490ae0d376fc444c64ea69f63b281a536d45e9557c75994f.gz",
+                      "packedSize":  25122,
+                      "packedSha256":  "42c8a708f0218d63d05d7228f8f13ebc16f91273d7440f01793b40c1fe21c40f"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.TLSModule.dll",
+                      "size":  32168,
+                      "sha256":  "b84e55abcefa836699f9226acd38ceebbc7f6028462d149530c6d1f04bcac67f",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "b84e55abcefa836699f9226acd38ceebbc7f6028462d149530c6d1f04bcac67f.gz",
+                      "packedSize":  15187,
+                      "packedSha256":  "c816c59ca19ecf89e05fcf45ef4473a2f65cf2338980fa1a34966ca88272b685"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UI.dll",
+                      "size":  276480,
+                      "sha256":  "81b0d46d7e8554933e3a3957f93e7c0aea3be8bf563b3b5f8f0bb90c9b4ba24b",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "81b0d46d7e8554933e3a3957f93e7c0aea3be8bf563b3b5f8f0bb90c9b4ba24b.gz",
+                      "packedSize":  112498,
+                      "packedSha256":  "a1fd60fd2b1f89eb5319d3a13638d209092ff4fd90c25981cd3cbbb5a31a21b5"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UIElementsModule.dll",
+                      "size":  2452392,
+                      "sha256":  "43ac212ba5b7e4388bc78aaa7319b30697ff65d660d9927753b920f6ebb1e874",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "43ac212ba5b7e4388bc78aaa7319b30697ff65d660d9927753b920f6ebb1e874.gz",
+                      "packedSize":  892484,
+                      "packedSha256":  "7e9868d445a824e26300e795a1db86b8076d6afc63a0dd062ebbac0c9fef335b"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UIModule.dll",
+                      "size":  49576,
+                      "sha256":  "a5bd71b67273ee23cf66dbbb368caed7baa178fea8e5c83d3918c73e45650282",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "a5bd71b67273ee23cf66dbbb368caed7baa178fea8e5c83d3918c73e45650282.gz",
+                      "packedSize":  22112,
+                      "packedSha256":  "ddbb71e7215d9513b83c564975497182e94d56eb563a1af971f58077074db017"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UmbraModule.dll",
+                      "size":  24496,
+                      "sha256":  "340b29e1a683604597d56742d285751e29a32f39e95fabb5d25f23b87d51733c",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "340b29e1a683604597d56742d285751e29a32f39e95fabb5d25f23b87d51733c.gz",
+                      "packedSize":  12238,
+                      "packedSha256":  "37ed994ab6bbabe08e458861a8c18820d1da40949a4391e9823b201a210c7299"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityAnalyticsCommonModule.dll",
+                      "size":  35760,
+                      "sha256":  "9801408f619fcf7593762965b3c0ed19764f14a8f5ea7bffa5dfdf50b92c403f",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "9801408f619fcf7593762965b3c0ed19764f14a8f5ea7bffa5dfdf50b92c403f.gz",
+                      "packedSize":  16934,
+                      "packedSha256":  "a83883ddef2930e0019ddea3a5fa6118af8dcb67a7aae40f4675e5eb5d77fca5"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityAnalyticsModule.dll",
+                      "size":  60848,
+                      "sha256":  "b63e23118ce510d66ddd550ec9c975067ec572620dbe9290080f11ff262a5e3a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "b63e23118ce510d66ddd550ec9c975067ec572620dbe9290080f11ff262a5e3a.gz",
+                      "packedSize":  25059,
+                      "packedSha256":  "314edfbaef6c5d716750fc332d41f49a006886d503c99f34ba64b5fc3adcad33"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityConnectModule.dll",
+                      "size":  27568,
+                      "sha256":  "19f83b05aa0e9017b2d4a1618418324c7f4b06364e8363317761a45c84e62858",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "19f83b05aa0e9017b2d4a1618418324c7f4b06364e8363317761a45c84e62858.gz",
+                      "packedSize":  13550,
+                      "packedSha256":  "53b19d43751d2d89b60d7f043f5efc4f803dfb65033dee54d3a3b517c66a8e9d"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityConsentModule.dll",
+                      "size":  16296,
+                      "sha256":  "51d01896a417916decc234362880df087c585d2835befe4bee8f67d0338692b8",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "51d01896a417916decc234362880df087c585d2835befe4bee8f67d0338692b8.gz",
+                      "packedSize":  10231,
+                      "packedSha256":  "a2ab4a10f0ebe0cad79a12b6ea057221ec84a6a869759befd507bdc2fd657f8f"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityCurlModule.dll",
+                      "size":  26024,
+                      "sha256":  "17a917401c997837e04cb041530dffd70f11db910592b6bcc26d6d9b7c48d439",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "17a917401c997837e04cb041530dffd70f11db910592b6bcc26d6d9b7c48d439.gz",
+                      "packedSize":  13147,
+                      "packedSha256":  "4d44718690cce8b6979395a340594a17fd54e10782165fc5689cb21023d192f0"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestAssetBundleModule.dll",
+                      "size":  28592,
+                      "sha256":  "8456f735b1e579bc4ebdc792181c60b567a34a850fef0af5c667124f73e0ef25",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "8456f735b1e579bc4ebdc792181c60b567a34a850fef0af5c667124f73e0ef25.gz",
+                      "packedSize":  14106,
+                      "packedSha256":  "1a44bf40b57b9ff76cdb11a010cf4b867886558c8f86f8bce7c1f9e52e33a2ec"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestAudioModule.dll",
+                      "size":  28592,
+                      "sha256":  "5af0cebc11eff4b1f3eb1a972981f7043ffce2d5dd21ef8b121d5d14a710cfa9",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "5af0cebc11eff4b1f3eb1a972981f7043ffce2d5dd21ef8b121d5d14a710cfa9.gz",
+                      "packedSize":  14135,
+                      "packedSha256":  "ceecb6571a67fa03ecc862b89af85e5a975b5d6217133f1eea5a0983faca8913"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestModule.dll",
+                      "size":  70056,
+                      "sha256":  "4d6488302d28b9af1dbc344f44930ebdb43be2ca253e2fd9ec6d67d97b7f7974",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "4d6488302d28b9af1dbc344f44930ebdb43be2ca253e2fd9ec6d67d97b7f7974.gz",
+                      "packedSize":  30459,
+                      "packedSha256":  "a255a5d9202f3aabef872253c854be3d138c2ff9b808a07e0e110e43a882a1b5"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestTextureModule.dll",
+                      "size":  27568,
+                      "sha256":  "1657aecd9a482b0ed7644d5d51972bc51a771391ff78c9dd562599fe93733381",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "1657aecd9a482b0ed7644d5d51972bc51a771391ff78c9dd562599fe93733381.gz",
+                      "packedSize":  13817,
+                      "packedSha256":  "dc8332664e67da64242780e9ee14043fbb461fba212cc20704b807388ed243e6"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestWWWModule.dll",
+                      "size":  36776,
+                      "sha256":  "de4f56c0285f4ade09f9eb5bc46255777e3f8daeead712577226bed150a62931",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "de4f56c0285f4ade09f9eb5bc46255777e3f8daeead712577226bed150a62931.gz",
+                      "packedSize":  17439,
+                      "packedSha256":  "8cc05cc20841725f53763363cd24d06654f52e63e70ba6dcaed626109b198676"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.VectorGraphicsModule.dll",
+                      "size":  252840,
+                      "sha256":  "ce967bc80735f45f183f0ae1395a67067c0a9841b7c2cd83d7ea0c622405c4dc",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "ce967bc80735f45f183f0ae1395a67067c0a9841b7c2cd83d7ea0c622405c4dc.gz",
+                      "packedSize":  112555,
+                      "packedSha256":  "ae30b6a0accb0d244ad1507e92a837930a9c3d727074588f74f1610105e858fe"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.VehiclesModule.dll",
+                      "size":  31656,
+                      "sha256":  "fcd9d44b967ba40c0d0eac7be8e90fd0c6b1b9a2bb5f13496a18804a9e0cbe28",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "fcd9d44b967ba40c0d0eac7be8e90fd0c6b1b9a2bb5f13496a18804a9e0cbe28.gz",
+                      "packedSize":  14658,
+                      "packedSha256":  "412b4875a2cac6a712d6cbe99e13161a55777450d68ad13be61e3aecbcebb06c"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.VFXModule.dll",
+                      "size":  78248,
+                      "sha256":  "524d2cd3caa42f9b338b0e4547c3b69ecfac143b28eaf5c72b3173b4dcdd3b96",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "524d2cd3caa42f9b338b0e4547c3b69ecfac143b28eaf5c72b3173b4dcdd3b96.gz",
+                      "packedSize":  30110,
+                      "packedSha256":  "3485baac60ba81eda4d84b5c2885914fdd115a6de3ffc006724325bdd6f7c5d0"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.VideoModule.dll",
+                      "size":  49064,
+                      "sha256":  "9f5f6e01ed017dc64a8380f04ea7f0b3ff529ddc7c7afa4dc8e78bc397716c89",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "9f5f6e01ed017dc64a8380f04ea7f0b3ff529ddc7c7afa4dc8e78bc397716c89.gz",
+                      "packedSize":  21610,
+                      "packedSha256":  "dbe26de4441682be7e31cf3f30ad7d1b75df0185cf3460ee4c7736ebc402202f"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.VirtualTexturingModule.dll",
+                      "size":  42920,
+                      "sha256":  "3e5c37ed06a3cc12cc41d1c1a491c95f844d292741a4aea9aeb7e28a7d9afb71",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "3e5c37ed06a3cc12cc41d1c1a491c95f844d292741a4aea9aeb7e28a7d9afb71.gz",
+                      "packedSize":  20546,
+                      "packedSha256":  "f5fb35679dc888d85172d588cf28830a429bbbc605b16f1586ba29fe5e42a9f3"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.VRModule.dll",
+                      "size":  31656,
+                      "sha256":  "8c3d91a08f37f87019d58f079b6b9b03f10907bde5da8c2c0209841b179a4c43",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "8c3d91a08f37f87019d58f079b6b9b03f10907bde5da8c2c0209841b179a4c43.gz",
+                      "packedSize":  15797,
+                      "packedSha256":  "3aad1f72110e2c2d29d20cbe8266bd24e7f39632e199c283c5b6f4d6c733346e"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.WindModule.dll",
+                      "size":  26536,
+                      "sha256":  "59a021dcd451443b866a407eead2d6647c793abfead8676290f413db80f5d6ea",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "59a021dcd451443b866a407eead2d6647c793abfead8676290f413db80f5d6ea.gz",
+                      "packedSize":  12991,
+                      "packedSha256":  "d815cbf869d53e48b41f35aa37b011dd79e438740b450e735e6edb1745784249"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Managed/UnityEngine.XRModule.dll",
+                      "size":  88488,
+                      "sha256":  "108e2c56e20e34b14bf1b3527c99e5aa0b985df2080addb202b5a3ad98e0f7e4",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "108e2c56e20e34b14bf1b3527c99e5aa0b985df2080addb202b5a3ad98e0f7e4.gz",
+                      "packedSize":  36167,
+                      "packedSha256":  "a908f3c84871d3468de742271483e16733585642f66006f576a8444827d0dc13"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Plugins/x86_64/lib_burst_generated.dll",
+                      "size":  104448,
+                      "sha256":  "f28ff2fdaa701cc3201e6787cfa651a74be3f9a262eede01d9b00952384ecb62",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "f28ff2fdaa701cc3201e6787cfa651a74be3f9a262eede01d9b00952384ecb62.gz",
+                      "packedSize":  44625,
+                      "packedSha256":  "e3a834a7422c7aa7c5afd341cd5180abb82b965a5c74e879bcaf34b60b820d93"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Resources/unity default resources",
+                      "size":  5883716,
+                      "sha256":  "32b58bdb9cf090212b46a8ca7436dcdae89e4ef43e9d55a835233c21d1347734",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "32b58bdb9cf090212b46a8ca7436dcdae89e4ef43e9d55a835233c21d1347734.gz",
+                      "packedSize":  950304,
+                      "packedSha256":  "401ad0deef222a4fdce99cb2d387459875880f4aed91c10967174c0f00cc7713"
+                  },
+                  {
+                      "path":  "FamilyCompany_Data/Resources/unity_builtin_extra",
+                      "size":  396568,
+                      "sha256":  "4287b68afb9ea5713e3a6cf9afa04734cfe6cb35e3ac5defe408d8504e4c6735",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "4287b68afb9ea5713e3a6cf9afa04734cfe6cb35e3ac5defe408d8504e4c6735.gz",
+                      "packedSize":  86493,
+                      "packedSha256":  "b6239224645702c38643c923c273803c7731a4b5d87837f1b430018f146a0757"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/EmbedRuntime/mono-2.0-bdwgc.dll",
+                      "size":  7828904,
+                      "sha256":  "872a64a28333d54346f5e38d8420ff40e50769dc546b241ede1889531b6a9150",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "872a64a28333d54346f5e38d8420ff40e50769dc546b241ede1889531b6a9150.gz",
+                      "packedSize":  3143348,
+                      "packedSha256":  "153b260a5065abe3cec6e4193c9e77cc87e3a61fd331409b4080e8c9ecfc92d9"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/EmbedRuntime/MonoPosixHelper.dll",
+                      "size":  611248,
+                      "sha256":  "3e2781b551c03139020719c43b2efff0f3021b663889c3ea095a1f769d688d84",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "3e2781b551c03139020719c43b2efff0f3021b663889c3ea095a1f769d688d84.gz",
+                      "packedSize":  269710,
+                      "packedSha256":  "2234d630700d9027054830c95cff9fcaa87a9d8c655a2bade82e1fc8bf1f8793"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/browscap.ini",
+                      "size":  311984,
+                      "sha256":  "4ddd50f31fb968f30bedefc253a46dc3f2890192d05cdaa9e0a64a056eee807e",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "4ddd50f31fb968f30bedefc253a46dc3f2890192d05cdaa9e0a64a056eee807e.gz",
+                      "packedSize":  35877,
+                      "packedSha256":  "71c635b68cb89390a0afce4969c73d7aec851d658e4df963d9f1343899e14dab"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/config",
+                      "size":  3815,
+                      "sha256":  "5776169973a26a387b8b3e5c0f2301a7ab9a6dd7c7d3efa22a96abc47fbf8662",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "5776169973a26a387b8b3e5c0f2301a7ab9a6dd7c7d3efa22a96abc47fbf8662.gz",
+                      "packedSize":  970,
+                      "packedSha256":  "02351897e79c223567c9ad6da8613ce2da67d1828d169dcad0e4b5eb317e2c91"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/2.0/DefaultWsdlHelpGenerator.aspx",
+                      "size":  60575,
+                      "sha256":  "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a.gz",
+                      "packedSize":  14285,
+                      "packedSha256":  "1eb678cefa18fd0ce64c5546caf69e8d6eb9367288a15ed742cc4614eb520698"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/2.0/machine.config",
+                      "size":  29066,
+                      "sha256":  "e91782a27fa39fc6c1d6ee8b08529f5d35052310d0006034b878eb04b8f2af30",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "e91782a27fa39fc6c1d6ee8b08529f5d35052310d0006034b878eb04b8f2af30.gz",
+                      "packedSize":  4094,
+                      "packedSha256":  "e6b4e6c5ab8a7b7baf2e584d730cb6b09895284f963dda164e5c036e0a4f23c7"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/2.0/settings.map",
+                      "size":  2622,
+                      "sha256":  "49c6160f9d54af4270a3b4e997fc4a8301f79b9e2070118fa46ddbcbbc44f9a2",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "49c6160f9d54af4270a3b4e997fc4a8301f79b9e2070118fa46ddbcbbc44f9a2.gz",
+                      "packedSize":  669,
+                      "packedSha256":  "6e8796a3f6921c0e8599cbcdd8a8e1b38b46e2dbbd929998cf0ec8bc1107aef1"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/2.0/web.config",
+                      "size":  11635,
+                      "sha256":  "cf2b54339e069b9e42f7d6795eecbf562c50c1011f4ca8f65f578fe52d97ff92",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "cf2b54339e069b9e42f7d6795eecbf562c50c1011f4ca8f65f578fe52d97ff92.gz",
+                      "packedSize":  1982,
+                      "packedSha256":  "d8823bc54e585bf8a60db8ad1fe0bce5993307509d15cdfbcc9e22a709514597"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/2.0/Browsers/Compat.browser",
+                      "size":  1605,
+                      "sha256":  "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741.gz",
+                      "packedSize":  585,
+                      "packedSha256":  "52cc17851281f14de308633996bf311c6cef3e447134b448bff30d5518f98e5d"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.0/DefaultWsdlHelpGenerator.aspx",
+                      "size":  60575,
+                      "sha256":  "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a.gz",
+                      "packedSize":  14285,
+                      "packedSha256":  "1eb678cefa18fd0ce64c5546caf69e8d6eb9367288a15ed742cc4614eb520698"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.0/machine.config",
+                      "size":  33598,
+                      "sha256":  "e60aec2c5115d65b3acb3c55ea21576dbd770f579166c017125571e46ae560ed",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "e60aec2c5115d65b3acb3c55ea21576dbd770f579166c017125571e46ae560ed.gz",
+                      "packedSize":  4479,
+                      "packedSha256":  "bdcb19d16d474d8e2310ee3bbdc2e2d54cd2ec3d93987eb456fe8523a38b90fe"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.0/settings.map",
+                      "size":  2622,
+                      "sha256":  "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8.gz",
+                      "packedSize":  669,
+                      "packedSha256":  "f927e49e3541993c29f211d210e8fe34614ea16cb89b250395f27cf67320c668"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.0/web.config",
+                      "size":  18802,
+                      "sha256":  "e38bb8cc68fe5b4edecdfd288d094b9e8ced7629039b2a347682aba0d8bd7492",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "e38bb8cc68fe5b4edecdfd288d094b9e8ced7629039b2a347682aba0d8bd7492.gz",
+                      "packedSize":  2811,
+                      "packedSha256":  "c42d2ac721b0b55f97ad79040bf3e3d6a50d1e3d8273985d1c7f73037c3c3c02"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.0/Browsers/Compat.browser",
+                      "size":  1605,
+                      "sha256":  "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741.gz",
+                      "packedSize":  585,
+                      "packedSha256":  "52cc17851281f14de308633996bf311c6cef3e447134b448bff30d5518f98e5d"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.5/DefaultWsdlHelpGenerator.aspx",
+                      "size":  60575,
+                      "sha256":  "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a.gz",
+                      "packedSize":  14285,
+                      "packedSha256":  "1eb678cefa18fd0ce64c5546caf69e8d6eb9367288a15ed742cc4614eb520698"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.5/machine.config",
+                      "size":  34056,
+                      "sha256":  "ee950004b576fb28dc85f4b0435ed04bf96612de2e8b53be84d07afe85a0de6c",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "ee950004b576fb28dc85f4b0435ed04bf96612de2e8b53be84d07afe85a0de6c.gz",
+                      "packedSize":  4542,
+                      "packedSha256":  "e28f098c4709e856539a76f649d6425cfd9914fc4d701df46f3254945add4036"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.5/settings.map",
+                      "size":  2622,
+                      "sha256":  "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8.gz",
+                      "packedSize":  669,
+                      "packedSha256":  "f927e49e3541993c29f211d210e8fe34614ea16cb89b250395f27cf67320c668"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.5/web.config",
+                      "size":  18811,
+                      "sha256":  "c4cbddd4fd9347b58cc5a72b36dc4ba1ad2bb699e65869d05cd3fb9865f0d824",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "c4cbddd4fd9347b58cc5a72b36dc4ba1ad2bb699e65869d05cd3fb9865f0d824.gz",
+                      "packedSize":  2813,
+                      "packedSha256":  "33528b3c01dbdf38ce71b254184bdfb77c5b60b451c1a7bb3bd1236b2a5248c8"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/4.5/Browsers/Compat.browser",
+                      "size":  1605,
+                      "sha256":  "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741.gz",
+                      "packedSize":  585,
+                      "packedSha256":  "52cc17851281f14de308633996bf311c6cef3e447134b448bff30d5518f98e5d"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge/etc/mono/mconfig/config.xml",
+                      "size":  25817,
+                      "sha256":  "0c56e34c69124510fa8c19e7b4c2ca6c1c4ff460ae19f798dd0ca035809e396d",
+                      "assetTag":  "fc-win-20260906.9001",
+                      "assetName":  "0c56e34c69124510fa8c19e7b4c2ca6c1c4ff460ae19f798dd0ca035809e396d.gz",
+                      "packedSize":  3170,
+                      "packedSha256":  "66b46dc797cf0935f451ffb1e6091d21b02a7baf7fcf97f077506d37e19640e7"
+                  }
+              ]
+}
