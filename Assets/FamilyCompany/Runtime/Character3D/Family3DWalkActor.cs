@@ -583,9 +583,17 @@ namespace FamilyCompany.Runtime.Character3D
             if (upper == null || lower == null || end == null)
                 throw new InvalidOperationException("A required Humanoid limb bone is missing.");
 
-            Vector3 rootPosition = upper.position;
-            Vector3 middlePosition = lower.position;
-            Vector3 endPosition = end.position;
+            // The approved Father's ancestor has non-uniform horizontal scale. World-space
+            // circles are ellipses under that transform: rotating a world-space triangle
+            // changes its apparent lengths and misses the hand target. Solve in the upper
+            // bone parent's metric, then apply local rotations without moving any bone.
+            Transform metric = upper.parent;
+            if (metric == null) throw new InvalidOperationException("Limb parent metric is missing.");
+            Vector3 rootPosition = metric.InverseTransformPoint(upper.position);
+            Vector3 middlePosition = metric.InverseTransformPoint(lower.position);
+            Vector3 endPosition = metric.InverseTransformPoint(end.position);
+            target = metric.InverseTransformPoint(target);
+            pole = metric.InverseTransformPoint(pole);
             float upperLength = Vector3.Distance(rootPosition, middlePosition);
             float lowerLength = Vector3.Distance(middlePosition, endPosition);
             if (upperLength <= 0.000001f || lowerLength <= 0.000001f)
@@ -630,19 +638,21 @@ namespace FamilyCompany.Runtime.Character3D
             Quaternion upperDelta = Quaternion.FromToRotation(
                 middlePosition - rootPosition,
                 desiredMiddle - rootPosition);
-            upper.rotation = Quaternion.Slerp(
-                upper.rotation,
-                upperDelta * upper.rotation,
+            upper.localRotation = Quaternion.Slerp(
+                upper.localRotation,
+                upperDelta * upper.localRotation,
                 weight);
 
-            middlePosition = lower.position;
-            endPosition = end.position;
+            Transform lowerMetric = lower.parent;
+            middlePosition = lowerMetric.InverseTransformPoint(lower.position);
+            endPosition = lowerMetric.InverseTransformPoint(end.position);
+            reachableTarget = lowerMetric.InverseTransformPoint(metric.TransformPoint(reachableTarget));
             Quaternion lowerDelta = Quaternion.FromToRotation(
                 endPosition - middlePosition,
                 reachableTarget - middlePosition);
-            lower.rotation = Quaternion.Slerp(
-                lower.rotation,
-                lowerDelta * lower.rotation,
+            lower.localRotation = Quaternion.Slerp(
+                lower.localRotation,
+                lowerDelta * lower.localRotation,
                 weight);
         }
 

@@ -17,7 +17,9 @@ if (!$AnalyzeOnly) {
         '" -logFile "' + (Join-Path $EvidenceDirectory 'player.log') + '"'
     if ($NextDay) { $start.Arguments += ' -familyCompanyNextDayAutonomyQa' }
     Copy-Item -LiteralPath (Join-Path $qaRepo 'Artifacts/FastQa/cache/player-cache.json') -Destination (Join-Path $EvidenceDirectory 'base-data-build.json')
-    $process = [Diagnostics.Process]::Start($start)
+    if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'Background/CompanyQaDesktop.cs') }
+    $isolation = [CompanyQaDesktop]::Start($qaPlayer, $start.Arguments, $qaRepo)
+    $process = $isolation.Process
     $watch = [Diagnostics.Stopwatch]::StartNew(); $windowChecks = 0
     $runnerFailure = ''; $forcedStop = $false; $lastWindowHandle = 0L
     Write-Host "HIDDEN NORMAL AUTONOMY pid=$($process.Id) evidence=$EvidenceDirectory"
@@ -33,11 +35,17 @@ if (!$AnalyzeOnly) {
         $runnerFailure = $_.Exception.Message
         throw
     } finally {
-        if (!$process.HasExited) { $forcedStop = $true; $process.Kill(); $process.WaitForExit() }
-        @{pid=$process.Id;exitCode=$process.ExitCode;windowChecks=$windowChecks;seconds=$watch.Elapsed.TotalSeconds;
-            runnerFailure=$runnerFailure;forcedStop=$forcedStop;lastWindowHandle=$lastWindowHandle} |
-            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'process.json') -Encoding UTF8
-        $process.Dispose()
+        try {
+            if (!$process.HasExited) { $forcedStop = $true; $process.Kill(); $process.WaitForExit() }
+            $desktopAtEnd = $null; $desktopReadError = ''
+            try { $desktopAtEnd = [CompanyQaDesktop]::ReadInteractiveDesktopName() }
+            catch { $desktopReadError = $_.Exception.Message }
+            @{pid=$process.Id;exitCode=$process.ExitCode;windowChecks=$windowChecks;seconds=$watch.Elapsed.TotalSeconds;
+                runnerFailure=$runnerFailure;forcedStop=$forcedStop;lastWindowHandle=$lastWindowHandle;
+                privateDesktop=$isolation.DesktopName;interactiveDesktopAtStart=$isolation.InteractiveDesktopAtStart;
+                interactiveDesktopAtEnd=$desktopAtEnd;desktopReadError=$desktopReadError;desktopSwitchAllowed=$false} |
+                ConvertTo-Json | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'process.json') -Encoding UTF8
+        } finally { $isolation.Dispose() }
     }
 }
 if (!(Test-Path -LiteralPath (Join-Path $EvidenceDirectory 'normal-autonomy-observed.txt'))) { throw 'Missing completed normal observation.' }

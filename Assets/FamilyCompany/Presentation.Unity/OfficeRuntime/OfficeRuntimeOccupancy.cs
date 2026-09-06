@@ -546,6 +546,30 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        public bool TryClaimQueuedAttendanceIngress(
+            string agentId,
+            Vector2 exterior,
+            Vector2 interior,
+            float radius,
+            out Vector2 queuedExterior)
+        {
+            // An actor that has not appeared yet joins the outside queue. Never relocate
+            // a visible actor, reduce body clearance, or skip the swept ingress checks.
+            queuedExterior = exterior;
+            Vector2 outward = exterior - interior;
+            if (outward.sqrMagnitude <= 0.0001f) return false;
+            float maximumQueueExtension = outward.magnitude;
+            outward.Normalize();
+            for (float distance = 0f; distance <= maximumQueueExtension; distance += 0.05f)
+            {
+                Vector2 candidate = exterior + outward * distance;
+                if (!TryClaimAttendanceIngress(agentId, candidate, interior, radius)) continue;
+                queuedExterior = candidate;
+                return true;
+            }
+            return false;
+        }
+
         public bool CanMoveAttendanceIngress(
             string agentId,
             Vector2 start,

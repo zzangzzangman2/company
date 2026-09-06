@@ -1903,11 +1903,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (inwardSegment.sqrMagnitude <= 0.0001f) return false;
             Vector2 exteriorWorld =
                 entranceWorld - inwardSegment * AttendanceExteriorPathSegmentMultiplier;
-            if (!_world.Occupancy.TryClaimAttendanceIngress(
+            if (!_world.Occupancy.TryClaimQueuedAttendanceIngress(
                     _agentId,
                     exteriorWorld,
                     entranceWorld,
-                    AgentRadius)) return false;
+                    AgentRadius,
+                    out exteriorWorld)) return false;
 
             _standingFacingDirection = -1;
             _navigationSegmentDirection = -1;

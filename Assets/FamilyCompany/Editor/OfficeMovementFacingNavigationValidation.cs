@@ -266,6 +266,18 @@ namespace FamilyCompany.Editor
             Require(harness.Occupancy.TryClaimAttendanceIngress("leader", exterior, entrance, 0.22f), "Leader claim failed.");
             harness.Occupancy.SetActorPresent("leader", true);
             Require(!harness.Occupancy.TryClaimAttendanceIngress("follower", exterior, entrance, 0.22f), "Spawn overlap accepted.");
+            Require(harness.Occupancy.TryClaimQueuedAttendanceIngress(
+                    "follower", exterior, entrance, 0.22f, out Vector2 queuedExterior),
+                "Due entrant could not join the safe outside queue.");
+            Require(Vector2.Dot(queuedExterior - exterior, inward) < 0f &&
+                    Vector2.Distance(queuedExterior, exterior) >= 0.95f,
+                "Queued entrant did not preserve the registered body clearance.");
+            harness.Occupancy.SetActorPresent("follower", true);
+            Require(!harness.Occupancy.CanMoveAttendanceIngress(
+                    "follower", queuedExterior, exterior, 0.22f),
+                "Queued entrant crossed the leader body.");
+            harness.Occupancy.SetActorPresent("follower", false);
+            harness.Occupancy.ReleaseAttendanceIngress("follower");
             Vector2 ahead = exterior + inward.normalized * 1.05f;
             Require(harness.Occupancy.CanMoveAttendanceIngress("leader", exterior, ahead, 0.22f), "Leader cannot advance.");
             harness.Occupancy.UpdateActor("leader", ahead, Vector2.zero, 0f);

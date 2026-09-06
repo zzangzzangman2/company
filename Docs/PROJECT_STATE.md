@@ -2,6 +2,23 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
+## 2026-09-06 follow-up in progress: outside queue, scale-correct seated IK, isolated QA desktop
+
+- Continuing all requested work in the background; no user desktop input, foreground window, shutdown,
+  main install change or Release publication. Normal Player QA now owns a separate Windows desktop
+  created without switch-desktop access and a kill-on-close job. Inert exit-code probes passed (0/7),
+  interactive desktop remained Default. Actual Player validation follows; no visual PASS inferred.
+- Previously hidden due entrants can claim a safe position farther outside on the same door axis.
+  Registered body clearance and every swept ingress collision check remain intact; visible actors are
+  never relocated. Removed the redundant fixed-spawn distance gate that delayed the fourth arrival.
+- Seated two-bone IK now solves in its parent metric instead of incorrectly assuming world-space
+  segment lengths remain constant under Father's approved nonuniform ancestor scale. Bone translation,
+  character scale, gait and materials are unchanged. Independent 32-case rotation/target regression:
+  before max endpoint error 0.01507213; after max 0.000000129906, bone translations unchanged.
+  Logs: `Artifacts/NormalAutonomy/ik-metric-before-behaviour.log`, `ik-metric-after.log`.
+- Current runtime attendance/hand/skin validation and public delivery are still pending. The older
+  evidence below remains a failed candidate, not completion evidence for this correction.
+
 ## 2026-09-06 current: fixed main entry/latest-only boot; attendance and live hand reach still BLOCKED
 
 - **Background only.** No desktop input, foreground launch, browser, generation, public game Release,

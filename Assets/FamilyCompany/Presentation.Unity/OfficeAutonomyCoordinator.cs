@@ -37,8 +37,6 @@ namespace FamilyCompany.Presentation.Unity
         private OfficeAttendancePhase? _lastRuntimeAttendancePhase;
         private int _nextAttendanceArrivalIndex;
         private float _arrivalReleaseRemaining;
-        private IOfficeRuntimeAgent _lastAttendanceEntrant;
-        private Vector2 _lastAttendanceEntryPosition;
         private GameState _attendanceAudioState;
         private long _attendanceDoorSfxShiftKey = long.MinValue;
         private long _attendanceDoorSfxArmedShiftKey = long.MinValue;
@@ -54,7 +52,6 @@ namespace FamilyCompany.Presentation.Unity
         // pacing right, turning around, pacing left, and repeating for the whole day.
         private readonly Dictionary<string, OfficeGridCoordinate> _emptyOfficeWanderPreviousOrigins =
             new Dictionary<string, OfficeGridCoordinate>(StringComparer.Ordinal);
-        private const float MinimumAttendanceEntranceClearance = 0.72f;
         private const int MinimumEmptyOfficeWanderDistance = 4;
 
         public OfficeSeatingState SeatingState => _seatingState;
@@ -102,8 +99,6 @@ namespace FamilyCompany.Presentation.Unity
             _lastRuntimeAttendancePhase = null;
             _nextAttendanceArrivalIndex = 0;
             _arrivalReleaseRemaining = 0f;
-            _lastAttendanceEntrant = null;
-            _lastAttendanceEntryPosition = Vector2.zero;
             ResetEmptyOfficeWanderTracking();
             BindAttendanceAudioState(newBootstrap != null ? newBootstrap.State : null);
             _initialized = false;
@@ -125,8 +120,6 @@ namespace FamilyCompany.Presentation.Unity
             _lastRuntimeAttendancePhase = null;
             _nextAttendanceArrivalIndex = 0;
             _arrivalReleaseRemaining = 0f;
-            _lastAttendanceEntrant = null;
-            _lastAttendanceEntryPosition = Vector2.zero;
             ResetEmptyOfficeWanderTracking();
             BindAttendanceAudioState(newBootstrap != null ? newBootstrap.State : null);
             _initialized = false;
@@ -379,32 +372,21 @@ namespace FamilyCompany.Presentation.Unity
             {
                 _nextAttendanceArrivalIndex = 0;
                 _arrivalReleaseRemaining = 0f;
-                _lastAttendanceEntrant = null;
-                _lastAttendanceEntryPosition = Vector2.zero;
             }
             else
             {
                 while (_nextAttendanceArrivalIndex < orderedAgents.Length &&
                        !orderedAgents[_nextAttendanceArrivalIndex].IsPresentationAway)
                     _nextAttendanceArrivalIndex++;
-                bool entranceIsClear = _lastAttendanceEntrant == null ||
-                                       _lastAttendanceEntrant.IsPresentationAway ||
-                                       Vector2.Distance(
-                                           _lastAttendanceEntrant.Position,
-                                           _lastAttendanceEntryPosition) >=
-                                       MinimumAttendanceEntranceClearance;
                 if (_nextAttendanceArrivalIndex < orderedAgents.Length &&
                     OfficeAttendanceRules.HasArrived(now, _nextAttendanceArrivalIndex) &&
-                    _arrivalReleaseRemaining <= 0f &&
-                    entranceIsClear)
+                    _arrivalReleaseRemaining <= 0f)
                 {
                     IOfficeRuntimeAgent entrant = orderedAgents[_nextAttendanceArrivalIndex];
                     entrant.SetAttendanceOutside(false, false);
                     if (!entrant.IsPresentationAway)
                     {
                         TryPlayAttendanceDoorSfx(now);
-                        _lastAttendanceEntrant = entrant;
-                        _lastAttendanceEntryPosition = entrant.Position;
                         _nextAttendanceArrivalIndex++;
                         _arrivalReleaseRemaining = 0.35f;
                     }
