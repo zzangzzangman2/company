@@ -1,0 +1,92 @@
+{
+  "playerSha256": "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+  "productionEligible": true,
+  "nativeScope": "No new native input: explicitly bound original identity via full object-content equivalence. Fresh normal/chair/walk run on this exact release build.",
+  "buildInfoSha256": "138181afedb27d0bd2386a8a8ac00f74c214105d447f0cfb3b0355e03b89efdf",
+  "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+  "gates": [
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "dcbd10bb9ec676676b9453390b1f980ce3122006e68391b6561c0bb637f3a440",
+      "independent": true,
+      "name": "opening-four-actors",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/normal-runtime.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "0fb12463e2b3fccf6651bacc2fb6bb1ed165b94595dd45a44865eb1454121f37",
+      "independent": true,
+      "name": "shop-native-pointer-four-rotations",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/native-binding.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "dcbd10bb9ec676676b9453390b1f980ce3122006e68391b6561c0bb637f3a440",
+      "independent": true,
+      "name": "normal-walk-tile-centres",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/normal-runtime.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "c0af7651e3cabaa02781457a4bd3a7f4f2478cc45d872da8dd4ef1fea19ff51a",
+      "independent": true,
+      "name": "walking-visual-foot-slip-grounding",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/walk-acceptance.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "dcbd10bb9ec676676b9453390b1f980ce3122006e68391b6561c0bb637f3a440",
+      "independent": true,
+      "name": "furniture-avoidance",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/normal-runtime.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "0a6a8be839fef9a434c24dbec98b1142ee473e384afc3ba6622513de8da4602e",
+      "independent": true,
+      "name": "four-seated-working-directions",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/seated-fit.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "dcbd10bb9ec676676b9453390b1f980ce3122006e68391b6561c0bb637f3a440",
+      "independent": true,
+      "name": "next-day-four-staggered-arrivals",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/normal-runtime.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "dcbd10bb9ec676676b9453390b1f980ce3122006e68391b6561c0bb637f3a440",
+      "independent": true,
+      "name": "mute",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/normal-runtime.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "dcbd10bb9ec676676b9453390b1f980ce3122006e68391b6561c0bb637f3a440",
+      "independent": true,
+      "name": "runtime-exception-zero",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/normal-runtime.json"
+    },
+    {
+      "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+      "passed": true,
+      "evidenceSha256": "7ab69d21134addc974f1cc23393afd7707ea738005b56fe7656c504f26cb61f8",
+      "independent": true,
+      "name": "updater-regressions",
+      "evidencePath": "Artifacts/ReleaseApproval/ee48a72c/updater-regressions.json"
+    }
+  ],
+  "userVisualApproval": true,
+  "approvalReference": "Current user message on 2026-09-06: \"ㅇㅇ 승인배포\", explicitly approving the displayed 8ce7d3ed walk video and four-direction seated sheet for release.",
+  "schemaVersion": 1
+}

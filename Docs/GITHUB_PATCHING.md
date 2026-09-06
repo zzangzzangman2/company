@@ -1,8 +1,15 @@
 # 개발 설정 즉시 반영과 GitHub 자동패치
 
-현재 상태: **로컬 구현/부분 검증 완료, 실제 게임 Release 미공개**. 최종 판정은 PROJECT_STATE.md.
+현재 상태(2026-09-06): **`fc-win-20260906.2` 공개·고정 메인 설치·실제 GitHub repair/main 재시작 PASS**.
+게임 commit은 `ee48a72c8e9979a605a64c59820af8d23fdbcf4c`이며 최종 판정은 PROJECT_STATE.md.
 정본 저장소는 `main`, `https://github.com/zzangzzangman2/company`다. 개발 소스 push와 게임 배포는 다르다.
-Release 업로드나 PC 종료를 이미 완료했다고 설명하지 않는다.
+Release는 공개했으며 PC 종료는 하지 않았다. [최종 증거와 범위](Evidence/FirstPublicRelease20260906/README.md).
+
+실제 production Unity가 public GitHub에서 536,348 compressed bytes를 받아 6개 실제 progress event와
+100%를 기록했고, 검증→정상 부모 종료→최신 child 준비를 통과했다. 이 repair는 optional crash-handler가
+빠진 별도 seed이며 신규 gameplay revision 업그레이드는 아니다. 실제 설치된 Downloads 메인도 같은 경로로
+최신 child에 진입했다(이미 최신이므로 다운로드 0). public N→N+1과 실제 인터넷 장애 복구는 미실행이며,
+해당 delta/fault recovery는 local fixture 증거와 구분한다. 이번 배포의 로컬 updater 회귀는 총 81/81이다.
 
 고정 메인 경로와 회사 PC 사용법은 **[MAIN_GAME_ENTRY.md](MAIN_GAME_ENTRY.md)**가 소유한다.
 2026-09-06 사용자 추가 계약: **최신 정식 게임 Release 확인에 실패하면 시작하지 않는다.** 이전 버전
@@ -59,7 +66,7 @@ Editor/Development/FastQA만 허용하며 일반 `FamilyCompany_Data` Release는
 
 사용자가 별도 Windows 창을 거부했다. **외부 로딩창은 사용하지 않는다.** 검증된 첫 Release 공개 후
 `FamilyCompany-Windows.zip`을 풀고 그 안의 **실제 Unity `FamilyCompany.exe`**를 실행한다.
-기존 UiRemasterV3 게임 로딩 화면에서 패치를 확인한다. 아직 Release/Downloads 교체는 하지 않았다.
+기존 UiRemasterV3 게임 로딩 화면에서 패치를 확인한다. 현재 v2 Release 공개와 집 Downloads 설치는 완료했다.
 
 2026-09-06 구현:
 
@@ -126,7 +133,7 @@ batch 모드의 검은 PNG는 시각 PASS가 아니다. 최종 화면 **20.3% / 
 4,195,675바이트 prepare-only 완료 증거는 `Docs/Evidence/InGamePatch20260906/`에 있다.
 이 검증은 실제 GitHub 게임 다운로드/부모 종료/자동 재시작까지 검증한 것이 아니다.
 
-### 후속 실제 Unity 재시작 검사 — 백그라운드 전용 (2026-09-06)
+### 이전 로컬 Unity 재시작 검사 — 백그라운드 전용 (2026-09-06, public v2 검증 이전)
 
 사용자의 최신 지시가 전면 실행/데스크톱 입력을 금지한다. 위 `-ShowWindow` 검사는 역사적 증거이며
 현재는 실행하지 않는다. 다음 명령은 별도 게임 창/입력 없이 실제 Unity 부모와 자식을 실행한다.
@@ -146,8 +153,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-Famil
 화면/현재 문구의 글자 배치, GitHub 다운로드, 외부 인터넷 장애 복구를 PASS로 보고하지 않는다.
 `패치 중입니다 · 다운로드` 문구와 실제 바이트 퍼센트를 보내는 게임 내 로딩 경로는 유지한다.
 원래 메인 파일은 계속 진입점이고 업데이트 실행본은 별도 검증 snapshot에서 재시작한다. 실행 중
-바이너리를 제자리에서 수정하는 방식이 아니다. 기존 사용자 Downloads 실행본은 이번에 교체하지
-않았고 첫 검증 Release가 아직 없으므로, 그 옛 파일도 이미 새 패치를 받는다고 설명하면 안 된다.
+바이너리를 제자리에서 수정하는 방식이 아니다. 이 로컬 검사 당시에는 Downloads 교체/공개 Release가
+없었다. 이후 v2에서 실제 public GitHub repair/main 검증과 최초 설치를 완료한 기록은 문서 맨 위를 따른다.
 
 ## 실제 배포 전 필수 조건
 
@@ -155,8 +162,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-Famil
    휴지통으로 옮기고 target=0을 확인했다. 새 검사에서도 실패하면 같은 evidence-before-delete 원칙을
    적용한다. source/Library/Bee/다른 실행본/저장 파일은 제외한다. 상세 기록은 PROJECT_STATE.md.
 2. 보행·충돌 보정, 4방향 착석/업무, native shop 클릭, 다음 날 가족별 출근, 음소거를 독립 runner로 검증한다.
-3. 사용자 실제 보행 화면 승인은 2026-09-06 받았다. clean committed main, 정확한 Unity 6000.3.21f1
-   Release 빌드가 아직 필요하다. 기존 미추적 누나 입력 13개는 이후 사용자 continuation으로 원본 그대로
+3. 사용자 실제 보행/착석 화면 승인은 2026-09-06 받았고 clean committed ee48a72c, 정확한 Unity
+   6000.3.21f1 Release로 v2를 공개했다. 다음 변경판도 새 identity의 검증/승인 조건을 지킨다.
+   기존 미추적 누나 입력 13개는 이후 사용자 continuation으로 원본 그대로
    3b47605e에 보존했다. 이는 누나 모델 생성/게임 승격이 아니다.
 4. `REGRESSION_BUILD_POLICY.md`의 독립 gate 및 실패 후 삭제/복귀 계약을 만족하는 빌드 경로를 사용한다.
    현재 기존 BUILD/DEPLOY 스크립트는 완전한 독립 gate/실패 cleanup 구현이 확인되지 않았으므로 자동 실행하지 않는다.
@@ -170,13 +178,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-Famil
 독립 receipt 해시를 `Docs/Evidence/VerifiedReleaseInventory.json`에 기록해야 다음 정상 배포를 허용한다.
 이 목록에 없는 assets를 임의 허용하지 말고 조사한다. 예전 archive를 정상 source dependency로 오분류하지 않는다.
 
-## 배포 도구 (아직 live publication 미검증)
+## 배포 도구 (v2 실제 공개 및 자산 검증 완료)
 
 `Tools/Updater/Publish-FamilyCompanyPatch.ps1`은 clean main, `BUILD_INFO.txt`의 commit/Release/Unity,
 독립 receipt와 현재 사용자 승인을 확인하기 전에는 gzip 패키지조차 만들지 않는다.
 `-Publish` 없이는 로컬 패키지만 만들며 외부 쓰기는 없다. 준비된 동일 패키지는 재검증 후 재사용한다.
 `-Publish` 때만 draft 생성→asset 업로드→GitHub digest 대조→공개한다. 업로드 실패 시 공개하지 않으며,
 실패 draft/asset 정리는 정책에 맞는 exact inventory·evidence와 별도 확인이 필요하다.
+
+실제 첫 `.1`의 production manifest 조회 실패를 감지해 그 릴리스/태그를 철회하고 faulty payload를
+휴지통으로 보냈다. 자동 `$Matches`와 충돌하던 배열을 `$manifestAssets`로 분리하고 production block의
+정상 single/page-2 응답 및 거부 조건 7개를 red→green 검증했다. draft는 published-only tag endpoint가
+아니라 검증된 numeric release ID로 조회한다(별도 응답 회귀 7개). Gate를 느슨하게 하거나 실패를 우회하지 않았다.
+v2는 이 수정으로 167개 asset의 정확한 크기/digest를 확인한 뒤 공개했고 실제 GitHub 게임 boot도 통과했다.
 
 receipt 필수 필드는 `schemaVersion:1`, `commit`, `productionEligible:true`, `userVisualApproval:true`,
 `approvalReference`, `playerSha256`, `buildInfoSha256`, `gates`다. gate마다 `name`, `passed:true`,
@@ -189,5 +203,7 @@ release receipt는 공개되므로 계정 정보·토큰·개인 로그를 포�
 깨진다. 출시 뒤 생성되는 `Artifacts/UpdaterRemoteInventory/published-<tag>.json`은 다음 inventory의
 검토용 자료이지 자동 승인서가 아니다.
 
-출시된 실제 게임의 최초 설치→새 버전 일부 변경→네트워크 실패 복구까지 확인하기 전에는
-“GitHub 자동패치 배포 완료”라고 기록하지 않는다. 작업 미완료 상태에서 완료 후 PC 종료도 실행하지 않는다.
+검증 범위를 구분해 보고한다. v2 최초 공개/설치와 실제 public repair/main boot는 완료했고,
+새 gameplay revision 사이의 실제 public 업그레이드·실제 인터넷 장애 복구까지 모두 검증했다고 쓰지 않는다.
+다음 변경판 공개 때 해당 N→N+1 경로를 추가 검증한다. 로컬 fixture PASS만으로 실제 인터넷 성공을 대신하지
+않으며, 문서 push 때문에 이미 공개·검증된 바이너리를 새 identity로 다시 빌드하지 않는다.

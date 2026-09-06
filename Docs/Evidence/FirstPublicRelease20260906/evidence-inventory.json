@@ -1,0 +1,174 @@
+{
+  "actualGitHubBoot": true,
+  "productionEligible": true,
+  "mainInstalled": true,
+  "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+  "version": "fc-win-20260906.2",
+  "files": [
+    {
+      "sha256": "416cab9ee5be03199662ca759f80a95fdd9b6abc3d3929219267969a22011ee3",
+      "path": "approval.json",
+      "bytes": 788
+    },
+    {
+      "sha256": "138181afedb27d0bd2386a8a8ac00f74c214105d447f0cfb3b0355e03b89efdf",
+      "path": "BUILD_INFO.txt",
+      "bytes": 446
+    },
+    {
+      "sha256": "18a940461bed65e97220327688f0b208f1db6c6821e0b74d5894fef370602cc8",
+      "path": "chair-fit.csv",
+      "bytes": 24843
+    },
+    {
+      "sha256": "797c96f68a15c6e84ea7dfe986d82e930997dad9b42323d0ac12565d98bf1028",
+      "path": "draft-lookup.json",
+      "bytes": 1428
+    },
+    {
+      "sha256": "0f29216d2fea0986f1676bcc0fb2858a43190371f719b10cde113ca15bc2fedb",
+      "path": "failed-release1-retirement.json",
+      "bytes": 1074
+    },
+    {
+      "sha256": "13a1a4035565b4de4936588e02e49bca012ae580c95e772703289b98e57e2260",
+      "path": "failed-release1.json",
+      "bytes": 639
+    },
+    {
+      "sha256": "89443922be9191c9c8e3d20e776b4b26daf91d284b6db15a45bf5b941450fd8f",
+      "path": "game-content-binding.json",
+      "bytes": 23519
+    },
+    {
+      "sha256": "24b611ad7cf34f461ed77bf988c6987e3272b641c09aab37480d02e955447ccc",
+      "path": "installation.json",
+      "bytes": 531
+    },
+    {
+      "sha256": "5d4b2bbf0c2861a81aeb73dc00b44da388b232689f0f2f5bc75b8cf9e5b16d5c",
+      "path": "main-child.log",
+      "bytes": 19314
+    },
+    {
+      "sha256": "3529f522847afe4861a1b1fd3d0e51a66fba23af15c1b34f65adc0c045c94842",
+      "path": "main-parent.log",
+      "bytes": 16073
+    },
+    {
+      "sha256": "3bf78dfd14daa55c72de5793f038b4fd1417ad1a61be18ec2b683cf5c2e6dc82",
+      "path": "main-result.json",
+      "bytes": 967
+    },
+    {
+      "sha256": "8c781f3e2c824d8be16db356977a51158f5b454173491e81409b56e9feae5b1d",
+      "path": "manifest-after-fix.json",
+      "bytes": 1999
+    },
+    {
+      "sha256": "5c60005dc9c0e724fce9514e26a11505800e192c9f23d06be3b6a0f08cd011a1",
+      "path": "manifest-before-fix.json",
+      "bytes": 2190
+    },
+    {
+      "sha256": "0fb12463e2b3fccf6651bacc2fb6bb1ed165b94595dd45a44865eb1454121f37",
+      "path": "native-binding.json",
+      "bytes": 2883
+    },
+    {
+      "sha256": "dcbd10bb9ec676676b9453390b1f980ce3122006e68391b6561c0bb637f3a440",
+      "path": "normal-runtime.json",
+      "bytes": 7342
+    },
+    {
+      "sha256": "69b827fd09c34dd56ca62fd0a117c1622711662b0972a86741e4cb22e0d6d20f",
+      "path": "prior-gameplay-content-binding.json",
+      "bytes": 24744
+    },
+    {
+      "sha256": "0e69519f2f1ffb90150f30b68a5faaa1acf37b5378800740f72ddca91833b575",
+      "path": "release-receipt.json",
+      "bytes": 4129
+    },
+    {
+      "sha256": "92df237865a3d23fde6176f6ff1ccbe902b7f4841129228b663ac99840291501",
+      "path": "repair-child.log",
+      "bytes": 19314
+    },
+    {
+      "sha256": "e0c2f45777e7053acbba673d687326dd4fae482000307c0fde3cb67b777a579d",
+      "path": "repair-parent.log",
+      "bytes": 39417
+    },
+    {
+      "sha256": "c925866ec237cdf8b3a86c0287b64c462e743f9ada5965dfbea6ff5fb67df661",
+      "path": "repair-result.json",
+      "bytes": 985
+    },
+    {
+      "sha256": "0a6a8be839fef9a434c24dbec98b1142ee473e384afc3ba6622513de8da4602e",
+      "path": "seated-fit.json",
+      "bytes": 867
+    },
+    {
+      "sha256": "7ab69d21134addc974f1cc23393afd7707ea738005b56fe7656c504f26cb61f8",
+      "path": "updater-regressions.json",
+      "bytes": 14303
+    },
+    {
+      "sha256": "c0af7651e3cabaa02781457a4bd3a7f4f2478cc45d872da8dd4ef1fea19ff51a",
+      "path": "walk-acceptance.json",
+      "bytes": 6477
+    },
+    {
+      "sha256": "46189854917aaecfadb1d616c66ad75cd7280ec26d10c5a2ca6b5f9f3aa0a0cd",
+      "path": "main-runs\\0f654a43b59d4ba5b1a649bbe744fd5c\\result.json",
+      "bytes": 229
+    },
+    {
+      "sha256": "d4d1768eed8954812ed2e8f16151441165db813c2a9186d3e360f5ff116071b7",
+      "path": "main-runs\\0f654a43b59d4ba5b1a649bbe744fd5c\\worker.txt",
+      "bytes": 28128
+    },
+    {
+      "sha256": "5937892625c9a02e7cf2fcfbca6b2c8cabf566adf2e8b6e6c38490332c59c817",
+      "path": "main-runs\\1a67bab3b734422f92fa150e84b59479\\restart-ready.json",
+      "bytes": 86
+    },
+    {
+      "sha256": "46189854917aaecfadb1d616c66ad75cd7280ec26d10c5a2ca6b5f9f3aa0a0cd",
+      "path": "main-runs\\1a67bab3b734422f92fa150e84b59479\\result.json",
+      "bytes": 229
+    },
+    {
+      "sha256": "d4d1768eed8954812ed2e8f16151441165db813c2a9186d3e360f5ff116071b7",
+      "path": "main-runs\\1a67bab3b734422f92fa150e84b59479\\worker.txt",
+      "bytes": 28128
+    },
+    {
+      "sha256": "db455834807eb9f82e5de6136502eafc517885f3381bfb72d3666f3499cd02eb",
+      "path": "repair-runs\\0e2937ee73b842b786c3b744fae9249f\\restart-ready.json",
+      "bytes": 87
+    },
+    {
+      "sha256": "858f3f698fa4b664ea4d1ec177b5c91c910dc8d0a637e4ca5f7b34cb6a733192",
+      "path": "repair-runs\\0e2937ee73b842b786c3b744fae9249f\\result.json",
+      "bytes": 230
+    },
+    {
+      "sha256": "a5446f277c30ad00dfe9c0ff8290da5c22d64956174b1fd4c743a2abefcf0658",
+      "path": "repair-runs\\0e2937ee73b842b786c3b744fae9249f\\worker.txt",
+      "bytes": 78871
+    },
+    {
+      "sha256": "46189854917aaecfadb1d616c66ad75cd7280ec26d10c5a2ca6b5f9f3aa0a0cd",
+      "path": "repair-runs\\414f3db694424ba0b50a265df7d7fc97\\result.json",
+      "bytes": 229
+    },
+    {
+      "sha256": "d4d1768eed8954812ed2e8f16151441165db813c2a9186d3e360f5ff116071b7",
+      "path": "repair-runs\\414f3db694424ba0b50a265df7d7fc97\\worker.txt",
+      "bytes": 28128
+    }
+  ]
+}

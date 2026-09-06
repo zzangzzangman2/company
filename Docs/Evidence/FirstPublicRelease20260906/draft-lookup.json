@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "passed": true,
+      "name": "valid"
+    },
+    {
+      "passed": true,
+      "name": "missing-id"
+    },
+    {
+      "passed": true,
+      "name": "wrong-id"
+    },
+    {
+      "passed": true,
+      "name": "published"
+    },
+    {
+      "passed": true,
+      "name": "prerelease"
+    },
+    {
+      "passed": true,
+      "name": "wrong-tag"
+    },
+    {
+      "passed": true,
+      "name": "wrong-commit"
+    }
+  ],
+  "scope": "Production function with inert GitHub responses; no release created/edited/uploaded",
+  "calls": [
+    "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+    "api repos/owner/repo/releases/383541607",
+    "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+    "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+    "api repos/owner/repo/releases/383541607",
+    "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+    "api repos/owner/repo/releases/383541607",
+    "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+    "api repos/owner/repo/releases/383541607",
+    "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+    "api repos/owner/repo/releases/383541607",
+    "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+    "api repos/owner/repo/releases/383541607"
+  ]
+}

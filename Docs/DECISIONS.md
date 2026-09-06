@@ -1,5 +1,22 @@
 # DECISIONS
 
+## 2026-09-06 / 승인 릴리스 공개와 고정 메인 실제 검증 완료
+
+- `fc-win-20260906.2` / ee48a72c 비 Development Release를 사용자 승인과 독립 receipt로 공개했다.
+  공개 자산 167개와 설치 파일 169개의 크기/해시를 확인했다. 실패 `.1`은 철회 상태를 유지한다.
+- 실제 production Unity가 공개 GitHub에서 536,348 bytes를 받는 repair run과 실제 Downloads 메인의
+  변경 없음 run을 각각 수행했다. 정상 부모 종료→검증된 최신 child 준비까지 통과했고 세이브 5개는 같다.
+  repair는 crash-handler만 빠진 seed이며 새 gameplay revision 업그레이드를 가장하지 않는다.
+  public N→N+1 및 실제 인터넷 장애 복구는 미실행; local delta/fault fixture와 구분해 기록한다.
+- 최초 ZIP은 고정 메인 폴더에 한 번 설치한다. 이후 같은 EXE가 게임 내부 로딩에서 최신판을 검증하고
+  시작한다. 실패 시 retry/quit만 유지한다. 플레이 PC에는 Unity/git/빌드가 필요 없다.
+  개발자의 코드 컴파일·릴리스 검증은 여전히 필요하며 소스 push만으로 게임 배포가 바뀌지 않는다.
+- 승인된 외형/크기는 바꾸지 않았다. fresh normal/chair/walk 증거와 1,751 resource object의 독립 동등성
+  증거로 기존 실제 클릭/시각 승인 identity를 연결했다. 과거 native 검사를 새 검사로 다시 명명하지 않는다.
+- 구 메인 전체는 휴지통으로 이동하여 복구 가능하고 saves는 별도 보존했다. 회사/집 세이브 자동 동기화나
+  이번 문서 push를 위한 재빌드, 추가 사용자 PC 조작·종료는 하지 않는다. 최종 증거 정본은
+  `Docs/Evidence/FirstPublicRelease20260906/README.md`다.
+
 ## 2026-09-06 / 승인 후 실제 GitHub boot 실패의 철회와 회귀 검사
 
 - 사용자가 "ㅇㅇ 승인배포"로 보행·착석 외형과 배포를 승인했다. 외형/C#/좌석/크기는 변경하지 않는다.

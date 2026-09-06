@@ -1,0 +1,49 @@
+﻿{
+    "scope":  "Exact production worker pagination/digest/hash block; realistic API object responses; no network or executable run",
+    "workerSha256":  "425C0223A758B8432443DD9DEFDF998483D3966B1262E18F941F009996C0D40D",
+    "checks":  [
+                   {
+                       "apiPages":  1,
+                       "error":  "The property \u0027digest\u0027 cannot be found on this object. Verify that the property exists.",
+                       "name":  "valid",
+                       "passed":  false
+                   },
+                   {
+                       "apiPages":  2,
+                       "error":  "The property \u0027digest\u0027 cannot be found on this object. Verify that the property exists.",
+                       "name":  "page2",
+                       "passed":  false
+                   },
+                   {
+                       "apiPages":  1,
+                       "error":  "Missing authenticated manifest digest.",
+                       "name":  "bad-digest",
+                       "passed":  true
+                   },
+                   {
+                       "apiPages":  1,
+                       "error":  "The property \u0027digest\u0027 cannot be found on this object. Verify that the property exists.",
+                       "name":  "missing-digest",
+                       "passed":  true
+                   },
+                   {
+                       "apiPages":  1,
+                       "error":  "Missing authenticated manifest digest.",
+                       "name":  "oversize",
+                       "passed":  true
+                   },
+                   {
+                       "apiPages":  1,
+                       "error":  "Missing authenticated manifest digest.",
+                       "name":  "duplicate",
+                       "passed":  true
+                   },
+                   {
+                       "apiPages":  1,
+                       "error":  "Missing authenticated manifest digest.",
+                       "name":  "missing",
+                       "passed":  true
+                   }
+               ],
+    "passed":  false
+}

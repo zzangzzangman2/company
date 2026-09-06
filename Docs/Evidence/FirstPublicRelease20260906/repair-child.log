@@ -1,0 +1,237 @@
+Mono path[0] = 'C:/Users/godho/AppData/Local/FamilyCompany/PatchedGame/versions/2-91134aeba7d3/FamilyCompany_Data/Managed'
+Mono config path = 'C:/Users/godho/AppData/Local/FamilyCompany/PatchedGame/versions/2-91134aeba7d3/MonoBleedingEdge/etc'
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.3.21f1 (c02631ffc030)
+[Subsystems] Discovering subsystems at path C:/Users/godho/AppData/Local/FamilyCompany/PatchedGame/versions/2-91134aeba7d3/FamilyCompany_Data/UnitySubsystems
+[D3D12 Device Filter] Vendor Name: NVIDIA
+[D3D12 Device Filter] Device Name: NVIDIA GeForce RTX 3080 Ti
+[D3D12 Device Filter] Driver Version: 32.0.15.9186
+[D3D12 Device Filter] Feature Level: 12.2
+[D3D12 Device Filter] Graphics Memory: 12086 MB
+[D3D12 Device Filter] Processor Count: 24
+[D3D12 Device Filter] Device Type: Discrete
+GfxDevice: creating device client; kGfxThreadingModeSplitJobs
+d3d12: failed to query info queue interface (0x80004002).
+Direct3D:
+    Version:         Direct3D 12 [level 12.2]
+    Renderer:        NVIDIA GeForce RTX 3080 Ti (ID=0x2208)
+    Vendor:          NVIDIA
+    VRAM:            12086 MB
+    App VRAM Budget: 11318 MB
+    Driver:          32.0.15.9186
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.170 seconds
+- Finished resetting the current domain, in  0.002 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+<RI> Initializing input.
+<RI> Input initialized.
+UnloadTime: 0.658700 ms
+MANAGEMENT_UI_KOREAN_GLYPHS: PASS complete,jamo,digits,won,punctuation
+MANAGEMENT_UI_V2_RUNTIME: READY
+MAIN_NAVIGATION_HUD_RUNTIME: READY V2 generated-sprite-only
+OFFICE_SEAT_RUNTIME_EXCLUDED count=1
+PIXEL_CLARITY_PROFILE_ACTIVE | reference=1920x1080 renderScale=1.00 legacyPixelation=disabled cameraSnap=True actorSnap=True pixelArtPPU=180 aa=0
+IN_GAME_PATCH_START actualUnityUi=true qa=False
+IN_GAME_PATCH_PROGRESS phase=check done=0 total=0 percent=-1.0
+IN_GAME_PATCH_PROGRESS phase=verify done=0 total=1032153757 percent=0.0
+IN_GAME_PATCH_PROGRESS phase=verify done=446 total=1032153757 percent=0.0
+IN_GAME_PATCH_PROGRESS phase=verify done=667582 total=1032153757 percent=0.0
+IN_GAME_PATCH_PROGRESS phase=verify done=2337134 total=1032153757 percent=0.2
+IN_GAME_PATCH_PROGRESS phase=verify done=39072022 total=1032153757 percent=3.7
+IN_GAME_PATCH_PROGRESS phase=verify done=43797326 total=1032153757 percent=4.2
+IN_GAME_PATCH_PROGRESS phase=verify done=43800682 total=1032153757 percent=4.2
+IN_GAME_PATCH_PROGRESS phase=verify done=43803672 total=1032153757 percent=4.2
+IN_GAME_PATCH_PROGRESS phase=verify done=43824109 total=1032153757 percent=4.2
+IN_GAME_PATCH_PROGRESS phase=verify done=43824145 total=1032153757 percent=4.2
+IN_GAME_PATCH_PROGRESS phase=verify done=43824301 total=1032153757 percent=4.2
+IN_GAME_PATCH_PROGRESS phase=verify done=43943457 total=1032153757 percent=4.2
+IN_GAME_PATCH_PROGRESS phase=verify done=44046581 total=1032153757 percent=4.2
+IN_GAME_PATCH_PROGRESS phase=verify done=46842821 total=1032153757 percent=4.5
+IN_GAME_PATCH_PROGRESS phase=verify done=46918921 total=1032153757 percent=4.5
+IN_GAME_PATCH_PROGRESS phase=verify done=46928641 total=1032153757 percent=4.5
+IN_GAME_PATCH_PROGRESS phase=verify done=98417101 total=1032153757 percent=9.5
+IN_GAME_PATCH_PROGRESS phase=verify done=609762701 total=1032153757 percent=59.0
+IN_GAME_PATCH_PROGRESS phase=verify done=629273389 total=1032153757 percent=60.9
+IN_GAME_PATCH_PROGRESS phase=verify done=629285697 total=1032153757 percent=60.9
+IN_GAME_PATCH_PROGRESS phase=verify done=629289423 total=1032153757 percent=60.9
+IN_GAME_PATCH_PROGRESS phase=verify done=631031099 total=1032153757 percent=61.1
+IN_GAME_PATCH_PROGRESS phase=verify done=967099707 total=1032153757 percent=93.6
+IN_GAME_PATCH_PROGRESS phase=verify done=967149491 total=1032153757 percent=93.7
+IN_GAME_PATCH_PROGRESS phase=verify done=984803251 total=1032153757 percent=95.4
+IN_GAME_PATCH_PROGRESS phase=verify done=985025459 total=1032153757 percent=95.4
+IN_GAME_PATCH_PROGRESS phase=verify done=985038771 total=1032153757 percent=95.4
+IN_GAME_PATCH_PROGRESS phase=verify done=986622899 total=1032153757 percent=95.5
+IN_GAME_PATCH_PROGRESS phase=verify done=986731955 total=1032153757 percent=95.5
+IN_GAME_PATCH_PROGRESS phase=verify done=986778035 total=1032153757 percent=95.6
+IN_GAME_PATCH_PROGRESS phase=verify done=987414451 total=1032153757 percent=95.6
+IN_GAME_PATCH_PROGRESS phase=verify done=987655603 total=1032153757 percent=95.6
+IN_GAME_PATCH_PROGRESS phase=verify done=992287667 total=1032153757 percent=96.1
+IN_GAME_PATCH_PROGRESS phase=verify done=992377779 total=1032153757 percent=96.1
+IN_GAME_PATCH_PROGRESS phase=verify done=992634803 total=1032153757 percent=96.1
+IN_GAME_PATCH_PROGRESS phase=verify done=992759731 total=1032153757 percent=96.1
+IN_GAME_PATCH_PROGRESS phase=verify done=993872819 total=1032153757 percent=96.2
+IN_GAME_PATCH_PROGRESS phase=verify done=993902515 total=1032153757 percent=96.2
+IN_GAME_PATCH_PROGRESS phase=verify done=996027827 total=1032153757 percent=96.4
+IN_GAME_PATCH_PROGRESS phase=verify done=998669747 total=1032153757 percent=96.7
+IN_GAME_PATCH_PROGRESS phase=verify done=999159731 total=1032153757 percent=96.8
+IN_GAME_PATCH_PROGRESS phase=verify done=999204275 total=1032153757 percent=96.8
+IN_GAME_PATCH_PROGRESS phase=verify done=999318963 total=1032153757 percent=96.8
+IN_GAME_PATCH_PROGRESS phase=verify done=999337395 total=1032153757 percent=96.8
+IN_GAME_PATCH_PROGRESS phase=verify done=999460275 total=1032153757 percent=96.8
+IN_GAME_PATCH_PROGRESS phase=verify done=999579571 total=1032153757 percent=96.8
+IN_GAME_PATCH_PROGRESS phase=verify done=999591859 total=1032153757 percent=96.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1000526259 total=1032153757 percent=96.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1000846259 total=1032153757 percent=96.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1001061299 total=1032153757 percent=96.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1001096627 total=1032153757 percent=96.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1004256691 total=1032153757 percent=97.2
+IN_GAME_PATCH_PROGRESS phase=verify done=1004393395 total=1032153757 percent=97.3
+IN_GAME_PATCH_PROGRESS phase=verify done=1004480435 total=1032153757 percent=97.3
+IN_GAME_PATCH_PROGRESS phase=verify done=1004538803 total=1032153757 percent=97.3
+IN_GAME_PATCH_PROGRESS phase=verify done=1004565939 total=1032153757 percent=97.3
+IN_GAME_PATCH_PROGRESS phase=verify done=1004870579 total=1032153757 percent=97.3
+IN_GAME_PATCH_PROGRESS phase=verify done=1004876211 total=1032153757 percent=97.3
+IN_GAME_PATCH_PROGRESS phase=verify done=1005329843 total=1032153757 percent=97.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1005334963 total=1032153757 percent=97.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1005341619 total=1032153757 percent=97.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1005346227 total=1032153757 percent=97.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1006098867 total=1032153757 percent=97.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1006544819 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1006595939 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1006720779 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1006798003 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1006819931 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1006941707 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1007166907 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1007192427 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1007234331 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1007377099 total=1032153757 percent=97.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1007413371 total=1032153757 percent=97.6
+IN_GAME_PATCH_PROGRESS phase=verify done=1007441451 total=1032153757 percent=97.6
+IN_GAME_PATCH_PROGRESS phase=verify done=1007467987 total=1032153757 percent=97.6
+IN_GAME_PATCH_PROGRESS phase=verify done=1007500667 total=1032153757 percent=97.6
+IN_GAME_PATCH_PROGRESS phase=verify done=1009485099 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1009511643 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1009553547 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1009751091 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1009782755 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1009828755 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1009853243 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1009867499 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1009898139 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1010007627 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1010109939 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1010134435 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1010151243 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1010182395 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1010396835 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1010454603 total=1032153757 percent=97.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1010500091 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010528675 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010542931 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010569987 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010597043 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010680923 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010698755 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010739635 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010911587 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1010936595 total=1032153757 percent=97.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1011523259 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1011537515 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1011721235 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1011855299 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1011880811 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1011905299 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1011931843 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1011957355 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1011981851 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012020171 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012048763 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012081451 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012107475 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012136579 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012178483 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012312539 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012338051 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012419883 total=1032153757 percent=98.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1012754139 total=1032153757 percent=98.1
+IN_GAME_PATCH_PROGRESS phase=verify done=1012793483 total=1032153757 percent=98.1
+IN_GAME_PATCH_PROGRESS phase=verify done=1012852283 total=1032153757 percent=98.1
+IN_GAME_PATCH_PROGRESS phase=verify done=1012884451 total=1032153757 percent=98.1
+IN_GAME_PATCH_PROGRESS phase=verify done=1013160931 total=1032153757 percent=98.1
+IN_GAME_PATCH_PROGRESS phase=verify done=1015613323 total=1032153757 percent=98.3
+IN_GAME_PATCH_PROGRESS phase=verify done=1015662899 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015687395 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015723155 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015784003 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015811571 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015827867 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015853891 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015882483 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015911075 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1015981131 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016008699 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016045475 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016298315 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016329971 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016408219 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016457283 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016500203 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016531859 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016558395 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016646883 total=1032153757 percent=98.4
+IN_GAME_PATCH_PROGRESS phase=verify done=1016751331 total=1032153757 percent=98.5
+IN_GAME_PATCH_PROGRESS phase=verify done=1022635047 total=1032153757 percent=99.0
+IN_GAME_PATCH_PROGRESS phase=verify done=1023031615 total=1032153757 percent=99.1
+IN_GAME_PATCH_PROGRESS phase=verify done=1030860519 total=1032153757 percent=99.8
+IN_GAME_PATCH_PROGRESS phase=verify done=1031471767 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031783751 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031787566 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031848141 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031877207 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031879829 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031891464 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031893069 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031953644 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031987242 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1031989864 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1032008666 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1032010271 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1032070846 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1032104902 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1032107524 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1032126335 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1032127940 total=1032153757 percent=99.9
+IN_GAME_PATCH_PROGRESS phase=verify done=1032153757 total=1032153757 percent=100.0
+IN_GAME_PATCH_PROGRESS phase=ready done=1 total=1 percent=100.0
+IN_GAME_PATCH_READY_CURRENT directory=C:\Users\godho\AppData\Local\FamilyCompany\PatchedGame\versions\2-91134aeba7d3
+[StarterOfficeTileRuntime] 처음하기/불러오기 = Starter 타일 사무실 · F2 = 배치 편집 · F9 = 단방향 복구
+MANAGEMENT_UI_LOADING_PREWARM: PASS family,offers,layout,glyphs,canvas,tmp-mesh hidden=1
+STARTER_OFFICE_SEATING_PRESENTATION | mode=Animated profiles=56 facing=Northwest
+STARTER_OFFICE_LOCOMOTION_TRANSITIONS | mode=WalkIdleOnly contract=FC-WALK-GUARDRAIL-V1
+FAMILY_3D_VISUAL_PRESENTATION | member=player mode=PlayerV8 temporaryStandIn=False | legacy2DVisible=false fallback=false
+FAMILY_3D_VISUAL_PRESENTATION | member=older_sister mode=OlderSisterPlayerV8StandIn temporaryStandIn=True | legacy2DVisible=false fallback=false
+FAMILY_3D_VISUAL_PRESENTATION | member=father mode=FatherV19 temporaryStandIn=False | legacy2DVisible=false fallback=false
+FAMILY_3D_VISUAL_PRESENTATION | member=mother mode=MotherFatherV19StandIn temporaryStandIn=True | legacy2DVisible=false fallback=false
+STARTER_OFFICE_ATTENDANCE_PREWARM_PASS | routes=4 | entrance=(8,1)
+OFFICE_EMPTY_WANDER_START | actors=4 time=08:50
+OFFICE_EMPTY_WANDER_SELECT | actor=player sequence=1 origin=2:2 candidate=8:4 candidateCount=9 rejected=0 reason=distant-reachable
+OFFICE_EMPTY_WANDER_SELECT | actor=older_sister sequence=1 origin=10:4 candidate=4:9 candidateCount=24 rejected=0 reason=distant-reachable
+OFFICE_EMPTY_WANDER_SELECT | actor=father sequence=1 origin=1:9 candidate=4:5 candidateCount=24 rejected=0 reason=distant-reachable
+OFFICE_EMPTY_WANDER_SELECT | actor=mother sequence=1 origin=9:6 candidate=8:11 candidateCount=25 rejected=0 reason=distant-reachable
+STARTER_OFFICE_ATTENDANCE | phase=Working time=08:50 actors=4
+STARTER_OFFICE_NAVIGATION_PREWARM_PASS | keys=1 nodes=169 edges=676 elapsed=0.56s
+STARTER_OFFICE_RUNTIME_OWNERSHIP_PASS · actors=4 legacy=0 preview=0 layoutHash=104C121BBA787A22
+FAMILY_3D_STANDING_CALIBRATION: actor=player offset=(0.042546, 0.155708) cycleMinimum=0.121649
+FAMILY_3D_STANDING_CALIBRATION: actor=father offset=(0.031821, 0.105393) cycleMinimum=0.257052
+FAMILY_3D_PRODUCTION: BOUND | contract=FC-PLAYER-FATHER-3D-PRODUCTION-PRESENTATION-V1 actors=player,older_sister,father,mother temporaryStandIns=older_sister:PlayerV8,mother:FatherV19 playerScale=1.024379000 playerHeight=1.857259 fatherScale=0.950318100 fatherHorizontalScale=0.920 fatherHeight=1.775838 scaleProfile=ApprovedProduction productionEligible=False runtimeReview=TileCentreCollisionRetestRequired approvedPackageBaseline=True stride=0.7950477 candidatePhaseOffsetCycles=0.000000 workstations=0 legacyCharacterVisible=0 legacyWorkstationVisible=0
+PIXEL_CLARITY_FRAME | screen=2560x1440 aspect=1.77778 orthographicSize=7.569445 camera=(0.000000,6.812500) layoutHash=104C121BBA787A22
+STARTER_OFFICE_LOADING_UI_COMPLETE | elapsed=4.24s maxDisplayedStep=0.0127 samples=86 ready=True
+[StarterOfficeTileRuntime] PASS · StarterOfficeV1 기본 표시 · legacyRenderers=94 actors=4

@@ -1,0 +1,32 @@
+{
+  "sourceAndWarmCachePreserved": true,
+  "releaseDeleted": true,
+  "ownTagDeleted": true,
+  "retired": [
+    {
+      "target": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\PatchCandidates\\44d02547-b54c34d4c104489792fb982701e4a638\\payload",
+      "files": 169,
+      "recoverable": true,
+      "remaining": 0
+    },
+    {
+      "target": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\LiveRelease\\fc-win-20260906.1-repair\\seed",
+      "files": 168,
+      "recoverable": true,
+      "remaining": 0
+    },
+    {
+      "target": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\Patches\\fc-win-20260906.1",
+      "files": 167,
+      "recoverable": true,
+      "remaining": 0
+    },
+    {
+      "target": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\PatchCandidates\\8ce7d3ed-5912b1b0536541e5b9e6a4694cbc2eb4\\payload",
+      "files": 170,
+      "recoverable": true,
+      "remaining": 0
+    }
+  ],
+  "userMainUnchanged": true
+}

@@ -22,8 +22,9 @@
 ## 필수 작업 규칙
 
 - `b397af9`의 사무실 관리 구매 클릭과 빈 사무실 자율 산책 회귀는 `a9c6885e`에서 수정되었고 실제 native
-  pointer 클릭과 normal 08:50→09:50 관측으로 확인되었다. 현재 열린 gate는 가족 4명의 최종 3D
-  mesh·Humanoid rig·실게임 검증이며 아직 정상 릴리스는 아니다. `Docs/PROJECT_STATE.md` 맨 위를 먼저 읽고, 삭제된 이전 작업방
+  pointer 클릭과 normal 08:50→09:50 관측으로 확인되었다. 2026-09-06 현재 Player/Father 각 2명의 임시
+  4인 구성은 사용자 승인 후 `fc-win-20260906.2`로 공개되었다. 엄마/누나의 고유 3D 모델은 추후 작업이다.
+  `Docs/PROJECT_STATE.md` 맨 위를 먼저 읽고, 삭제된 이전 작업방
   outputs나 `Docs/History/Reports`의 PASS를 현재 정상 증거로 재사용하지 않는다. 상태를 바꾸는 주장은
   normal 새 게임에서 다시 재현·검증한다.
 - 정본 개발 브랜치는 `main` 하나다. `agent/*`, 기능·임시 브랜치, 새 branch와 별도 worktree를 만들거나 전환하지 않는다.

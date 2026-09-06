@@ -2,7 +2,61 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## 2026-09-06 latest: Release candidate 8ce7d3ed runtime/native checks passed; visual approval and delivery pending
+## 2026-09-06 latest: approved public Release v2, fixed main installed, real GitHub boot passed
+
+**Current delivery is complete:** [fc-win-20260906.2](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260906.2),
+source **ee48a72c8e9979a605a64c59820af8d23fdbcf4c**, sequence 2, exact Unity 6000.3.21f1,
+non-Development Release. The user's "ㅇㅇ 승인배포" approves the displayed walk/seated look and deployment.
+The immutable release receipt records `productionEligible=true` and the approval reference.
+This section supersedes every pending/failed candidate statement below; those are dated evidence only.
+
+- **Main installed and tested:** `C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`.
+  Company uses `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe` after extracting the
+  entire official ZIP there once. Normal play needs no Unity, git pull or build. Keep this same entry point.
+  [Main/company instructions](MAIN_GAME_ENTRY.md) · [final immutable evidence](Evidence/FirstPublicRelease20260906/README.md).
+- Public ZIP: **271,062,921 bytes**, SHA-256
+  `8808d81987cdd997f5b70bdd7151304b798c9f6b12cbd71e5f32b019f456c303`.
+  All **167 GitHub assets** matched expected size/digest before publication; all **169 installed game files**
+  matched the authenticated manifest. Source/docs commits after ee48a72c do not relabel the published binary.
+- Fresh pre-push remote branch/tag/release inventory PASS: **prohibited=0, unknown=0**,
+  only public release ID 383548158 (`fc-win-20260906.2`) with 167 reviewed assets. The repo-relative
+  verified inventory preserves the exact approval receipt hash for company checkout.
+- **Actual production Unity/public GitHub repair PASS:** an isolated seed omitted only the optional crash
+  handler. It really downloaded **536,348 compressed bytes**, emitted 6 byte-based progress events including
+  100%, verified files, exited the parent normally (0), and started the authenticated latest child through
+  `IN_GAME_PATCH_READY_CURRENT`. No fake worker, offline QA bypass, desktop switch or user input.
+- **Actual installed fixed-main boot PASS:** public latest/integrity checks, normal parent exit 0 and verified
+  latest child. Download was **0 bytes** because current files were already verified; no pretend percentage.
+  Current snapshot is `%LOCALAPPDATA%\FamilyCompany\PatchedGame\versions\2-91134aeba7d3`.
+  Owned private-desktop jobs were closed after child readiness; child automatic normal exit is not claimed.
+- **Five save files/backups unchanged.** The exact old 9144fa0e main folder (157 files) was hash-recorded and
+  moved to Windows Recycle Bin, recoverable. It is not an old-version fallback. Main installation is complete;
+  `installation.json` predates boot testing and its original PENDING is superseded by `main-result.json` PASS.
+- Fresh ee48a72c gameplay: **8,112** normal navigation samples, tile-rail error ≤0.0000245625,
+  collision/interaction/runtime errors 0; **3,096** settled Working samples with hand error ≤0.008899.
+  Next-day releases 09:00/09:01/09:02/09:03; first Working 09:09/09:06/09:17/09:19, unchanged gates PASS.
+  Controlled four-direction chair/typing **264 samples**, penetration 0; normal walk **434 frames**, all four
+  foot-midpoint gates PASS. Controlled pose tests are distinct from actual normal navigation.
+- Original approved/native 8ce visual and purchase tests retain that identity. Independent object analysis
+  bound **1,751 unchanged resource objects**, gameplay assemblies/scenes/textures to the fresh build;
+  no repeat desktop clicks or relabelled old runtime PASS. Only updater tools changed after visual approval.
+  Four family identities still use Player V8 ×2 / Father V19 ×2; unique Mother/Sister models remain future work.
+- Corrected updater local regressions **81/81**: core 51, latest-only 6, restart worker 10, exact manifest
+  block 7, draft lookup 7. Public repair/main tests are separate. Real public N→N+1 gameplay revision upgrade
+  and real network-outage recovery were not exercised; delta/fault recovery is covered by local fixtures.
+- First `.1` release was withdrawn after a real manifest lookup failure and its owned release/tag removed.
+  Faulty owned payloads were evidenced/recycled, not reused. `.2` fixes automatic `$Matches` collision and
+  draft ID lookup without changing gameplay. Historical runtime `productionEligible=False` review text is
+  not the deployment decision: the verified release manifest/immutable receipt owns that decision.
+- Latest-only remains fail-closed: network/latest/integrity failure offers retry/quit, never old/offline play.
+  Company/home saves are separate; no save synchronization was added. No browser, paid generation,
+  additional native input, delegation or PC shutdown was used for this publication.
+
+Next work: use the fixed main for play; develop any next approved gameplay revision on canonical `main`
+at `C:\Users\godho\Documents\Codex\fc_agents\integration_p0`, keeping warm Library/Bee. Compile/package only
+when developing/publishing changed code, not when playing. Do not rebuild this release for a docs-only push.
+
+## 2026-09-06 earlier: 8ce7d3ed approval checkpoint and withdrawn first publication (not current status)
 
 **Superseding deployment update:** user explicitly approved the displayed look with "ㅇㅇ 승인배포".
 44d02547 fresh Release gameplay passed (8,100 navigation, 3,270 settled hand samples; exact arrivals,

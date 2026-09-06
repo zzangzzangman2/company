@@ -1,0 +1,24 @@
+{
+  "process": {
+    "playerSha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+    "pid": 18116,
+    "forcedStop": false,
+    "desktopSwitchAllowed": false,
+    "seconds": 111.650767,
+    "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+    "exitCode": 0,
+    "privateDesktop": "FamilyCompanyQa_3a985b0f8e0b4b17a90dae73fbb5a4dd",
+    "inputDesktopAtStart": "Default"
+  },
+  "csvSha256": "18a940461bed65e97220327688f0b208f1db6c6821e0b74d5894fef370602cc8",
+  "visualReference": "User approved equivalent content sheet; current actual chair frames reviewed as well.",
+  "penetrations": 0,
+  "passed": true,
+  "normalLiveSamples": 3096,
+  "poseInjection": true,
+  "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+  "independent": true,
+  "normalLiveFailures": 0,
+  "samples": 264,
+  "maxIndividualHand": 0.0089
+}

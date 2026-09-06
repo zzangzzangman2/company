@@ -1,0 +1,23 @@
+{
+  "version": "fc-win-20260906.2",
+  "parentId": 1356,
+  "seconds": 59.983784,
+  "verifiedChildId": 21384,
+  "savesUnchanged": true,
+  "parentExitCode": 0,
+  "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+  "desktopSwitchAllowed": false,
+  "realPublicGitHub": true,
+  "downloadedCompressedBytes": 0,
+  "cleanup": "Only owned private-desktop job closed after success or diagnosed failure; readiness is reported separately, child automatic normal exit is not claimed",
+  "mode": "main",
+  "productionWorker": true,
+  "inputDesktopAtEnd": "Default",
+  "saveCount": 5,
+  "passed": true,
+  "downloadEvents": 0,
+  "expectedCompressedBytes": 0,
+  "failure": "",
+  "scope": "Actual production Unity boot/download/verify/normal-parent-exit/child-latest-start. Repair uses a separate seed missing only the optional crash-handler, not a new gameplay revision or fake progress. No user input or public desktop capture.",
+  "offlineQaBypass": false
+}

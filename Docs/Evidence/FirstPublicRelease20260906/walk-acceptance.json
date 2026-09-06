@@ -1,0 +1,213 @@
+{
+  "reviewedOriginalFrames": 427,
+  "approvedEvidenceCommit": "8ce7d3edee4b53477739e2a0bd848cc51c6b1e46",
+  "scope": "User-accepted multi-cycle visual foot motion/grounding, bound by independent runtime/resource equivalence and fresh current normal measurements. This is not a mathematical zero-skin-slip claim; per-six-frame skin and ankle limitations remain in analysis.",
+  "reviewedOriginalContactSheets": 22,
+  "actualCurrentCapture": {
+    "artifact": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\ReleaseGameplay\\ee48a72c-walk",
+    "capture": "OPENING_WALK_AUDIT: CAPTURED\ncapture complete; visual/tile acceptance is a separate analysis\nframes=434 forcedRoutes=0 teleports=0 fixedCaptureClock=false runtimeErrors=0\nstatic=0 interaction=0 agentPenetration=0\n",
+    "footGate": "moving foot midpoint projected to ground: median <= 4px, max <= 8px",
+    "note": "Ankle contact travel includes foot roll; it is not an independent skin-slip PASS/FAIL. Retained path polyline distance may increase when a replan omits the segment from the current root to its first waypoint; do not call it tile-lane deviation. Lowest skin Y is sampled every six frames and is not a completed grounding gate.",
+    "actors": {
+      "father": {
+        "frames": 434,
+        "movingFrames": 400,
+        "seconds": 23.966,
+        "footMidPx": {
+          "median": 1.516482,
+          "max": 3.324561,
+          "min": 0.020753
+        },
+        "straightFootMidPx": {
+          "median": 1.493683,
+          "max": 3.324561,
+          "min": 0.020753
+        },
+        "footMidGate": true,
+        "retainedPathPolylinePx": {
+          "median": 0.000136,
+          "max": 0.000409,
+          "min": 0.0
+        },
+        "nearestCardinalCellCentreLinePx": {
+          "median": 0.0,
+          "max": 3.8E-05,
+          "min": 0.0
+        },
+        "lowestSkinY": {
+          "median": 0.126392,
+          "max": 0.132705,
+          "min": 0.111714
+        },
+        "distance": 20.221,
+        "leadAlternations": 51,
+        "turnEpisodes": 7,
+        "contactAnkleDeltaWorld": {
+          "median": 0.012236,
+          "max": 0.088146,
+          "min": 0.000239
+        },
+        "directions": [
+          "1",
+          "3",
+          "5",
+          "6",
+          "7"
+        ]
+      },
+      "mother": {
+        "frames": 434,
+        "movingFrames": 418,
+        "seconds": 23.966,
+        "footMidPx": {
+          "median": 1.598754,
+          "max": 3.294316,
+          "min": 0.030275
+        },
+        "straightFootMidPx": {
+          "median": 1.586561,
+          "max": 3.294316,
+          "min": 0.030275
+        },
+        "footMidGate": true,
+        "retainedPathPolylinePx": {
+          "median": 0.000136,
+          "max": 0.000409,
+          "min": 0.0
+        },
+        "nearestCardinalCellCentreLinePx": {
+          "median": 0.0,
+          "max": 7.6E-05,
+          "min": 0.0
+        },
+        "lowestSkinY": {
+          "median": 0.126885,
+          "max": 0.132714,
+          "min": 0.111662
+        },
+        "distance": 21.7314,
+        "leadAlternations": 54,
+        "turnEpisodes": 9,
+        "contactAnkleDeltaWorld": {
+          "median": 0.0117,
+          "max": 0.055672,
+          "min": 0.000468
+        },
+        "directions": [
+          "1",
+          "2",
+          "3",
+          "5",
+          "7"
+        ]
+      },
+      "older_sister": {
+        "frames": 434,
+        "movingFrames": 390,
+        "seconds": 23.966,
+        "footMidPx": {
+          "median": 2.060105,
+          "max": 4.363526,
+          "min": 0.062782
+        },
+        "straightFootMidPx": {
+          "median": 2.005531,
+          "max": 4.213612,
+          "min": 0.062782
+        },
+        "footMidGate": true,
+        "retainedPathPolylinePx": {
+          "median": 0.000178,
+          "max": 46.06316,
+          "min": 0.0
+        },
+        "nearestCardinalCellCentreLinePx": {
+          "median": 0.0,
+          "max": 7.6E-05,
+          "min": 0.0
+        },
+        "lowestSkinY": {
+          "median": 0.13392,
+          "max": 0.143372,
+          "min": 0.124065
+        },
+        "distance": 19.7623,
+        "leadAlternations": 49,
+        "turnEpisodes": 8,
+        "contactAnkleDeltaWorld": {
+          "median": 0.005207,
+          "max": 0.132315,
+          "min": 0.0
+        },
+        "directions": [
+          "1",
+          "3",
+          "5",
+          "7"
+        ]
+      },
+      "player": {
+        "frames": 434,
+        "movingFrames": 414,
+        "seconds": 23.966,
+        "footMidPx": {
+          "median": 2.009246,
+          "max": 4.297872,
+          "min": 0.062738
+        },
+        "straightFootMidPx": {
+          "median": 1.996862,
+          "max": 4.297872,
+          "min": 0.062738
+        },
+        "footMidGate": true,
+        "retainedPathPolylinePx": {
+          "median": 0.000136,
+          "max": 0.000382,
+          "min": 0.0
+        },
+        "nearestCardinalCellCentreLinePx": {
+          "median": 0.0,
+          "max": 3.8E-05,
+          "min": 0.0
+        },
+        "lowestSkinY": {
+          "median": 0.13198,
+          "max": 0.143359,
+          "min": 0.124065
+        },
+        "distance": 20.9647,
+        "leadAlternations": 52,
+        "turnEpisodes": 10,
+        "contactAnkleDeltaWorld": {
+          "median": 0.004032,
+          "max": 0.069592,
+          "min": 1E-05
+        },
+        "directions": [
+          "1",
+          "3",
+          "5",
+          "7"
+        ]
+      }
+    }
+  },
+  "passed": true,
+  "approvalReference": "Current user message on 2026-09-06: \"ㅇㅇ 승인배포\", explicitly approving the displayed 8ce7d3ed walk video and four-direction seated sheet for release.",
+  "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+  "independent": true,
+  "currentFreshFrames": 434,
+  "process": {
+    "playerSha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+    "pid": 18068,
+    "forcedStop": false,
+    "desktopSwitchAllowed": false,
+    "seconds": 32.6019922,
+    "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+    "exitCode": 0,
+    "privateDesktop": "FamilyCompanyQa_28a2fdd1072444668c21af2331b8ab4d",
+    "inputDesktopAtStart": "Default"
+  },
+  "userVisualApproval": true
+}

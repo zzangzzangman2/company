@@ -2,11 +2,11 @@
 
 **집·회사에서 같은 메인 EXE로 실행하는 방법:** [MAIN_GAME_ENTRY.md](Docs/MAIN_GAME_ENTRY.md).
 최초 패치 지원 버전 설치 후에는 빌드 없이 같은 EXE로 최신 공개 게임 패치를 받습니다.
-현재 집 PC의 기존 파일은 아직 구버전이며, 첫 게임 Release는 미공개입니다.
+2026-09-06 `fc-win-20260906.2` 공개와 집 메인 설치·실제 GitHub 패치 재시작 검증을 완료했습니다.
 
 14살 플레이어가 엄마·아빠·누나와 2000년의 작은 사무실에서 시작해, 하청을 버티고 자체 사업을 세우며 실제 기업들과 경쟁하는 싱글플레이 생활 경영 RPG입니다.
 
-## 최종 통합 후보 상태
+## 현재 공개 게임 상태
 
 - **가족 캐릭터 신규 구현은 2026-08-24부터 3D 전용이다.** Player/Father/Mother/Older Sister의 기존 2D
   sprite·atlas·PSB·R-series·분리 신체·보행 프레임은 mesh/texture/motion donor나 fallback으로 사용하지
@@ -14,20 +14,23 @@
   `Docs/FAMILY_3D_CHARACTER_STANDARD.md`다.
 - 현재 일반 게임의 몸체는 Player V8 × 2, Father V19 × 2다. 누나/엄마는 독립된 가족 identity를 유지하되
   아들/아빠의 3D 외형을 임시 사용한다. 구형 2D나 Styloo proxy를 현행 기본 캐릭터로 안내하지 않는다.
-  누나/엄마의 최종 모델은 추후 추가한다. 최신 실게임 검증/배포 차단 상태는 PROJECT_STATE가 소유한다.
+  누나/엄마의 최종 모델은 추후 추가한다. 현재 임시 4인 구성은 사용자 승인 후 공개했다.
+  최신 실게임 검증/배포 상태는 PROJECT_STATE가 소유한다.
 
 - **`b397af9`의 두 차단 회귀는 `a9c6885e`에서 수정되어 더 이상 현재 기준선이 아니다.** 배치 편집기의 pending
   분기는 preview 셀을 갱신한 뒤 같은 frame에서 `Input.GetMouseButtonDown(0)` → `ConfirmPreview()`까지
   진행하고, 빈 사무실 fallback은 `OfficeAutonomyCoordinator`의 destination 있는 타일 중심 산책으로 바뀌었다.
   실제 Windows native pointer 1회 클릭에서 자금 `5,000,000→4,986,250`, furniture `52→53`, 실제 Release
   Player normal 빈 사무실 08:50→09:50 관측에서 `currentLook=0`, `duplicatePivot=0`을 확인했다.
-- **현재 열린 gate는 가족 4명의 최종 3D mesh·rig·실게임 검증이다.** 각 역할은 한 몸/한 Humanoid Avatar,
-  공통 clip/clock/cadence, SW/NW/NE/SE 여러 주기, P0/P3 앞발 교대, bottom-centre 이동, 충돌 회피와 mute를
-  실제 D3D11에서 통과해야 한다.
+- **공개판 ee48a72c의 4인 정상 보행·출근·착석과 승인된 배치/외형 검증을 완료했다.** 향후 고유 모델도
+  한 몸/한 Humanoid Avatar, 공통 clip/clock/cadence, SW/NW/NE/SE 여러 주기, P0/P3 앞발 교대,
+  bottom-centre 이동, 충돌 회피와 mute를 실제 D3D11에서 별도로 검증해야 한다.
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
-- 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고, GitHub history·tags·Releases·Actions 감사 결과 executable payload는 0입니다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`에서 도입한 CI guard가 향후 tracked Windows Player payload를 fail-closed 차단합니다.
+- 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거했다. 현재 승인된 게임 파일은 공개
+  Release의 정확한 ID/size/digest allowlist로 관리하며 Git source tree에는 넣지 않는다.
+  CI guard와 remote inventory는 미검토·회귀 실행본을 fail-closed 차단한다.
 - 집·회사 공통 메인 경로는 `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`다.
-  집의 실제 파일은 현재 `9144fa0e` 구버전이며 아직 패치 worker가 없다. 검증된 첫 전체 설치가 필요하다.
+  집에는 패치 지원 `ee48a72c` 전체 설치를 완료했고 실제 최신 snapshot 재시작도 통과했다.
   날짜별 QA/Builds/LKG 경로를 메인으로 안내하거나 실패한 테스트 payload를 복사하지 않는다.
   과거 `Downloads\Family`/`8fa5fa74` 배포 기록은 현행 HEAD/패치 성공 증거가 아니다.
 
@@ -57,12 +60,13 @@
 
 2026-09-06: **게임 내부**의 기존 로딩 화면에서 실제 받은 바이트 기반 소수 1자리 퍼센트/MiB를
 표시하도록 구현했습니다. 별도 Windows 로딩창은 사용자 정정에 따라 폐기했습니다.
-**게임 Release는 아직 미공개**이며 기존 Downloads Unity 실행본은 아직 교체하지 않았습니다.
-위 과거 실행본 경로는 이 PC의 현행 증거가 아닙니다.
+**게임 Release `fc-win-20260906.2`를 공개했고 Downloads 고정 메인 설치도 완료했습니다.** 실제 공개
+GitHub에서 수신 바이트→100%→검증→정상 재시작을 확인했습니다. 검증 범위와 원본 로그는
+[최종 배포 기록](Docs/Evidence/FirstPublicRelease20260906/README.md)에 있습니다.
 
-2026-09-05: 개발용 JSON 즉시 반영과 GitHub 파일 단위 패치 런처 코드를 추가했습니다.
+이전 기록(2026-09-05): 개발용 JSON 즉시 반영과 GitHub 파일 단위 패치 런처 코드를 추가했습니다.
 [설정·패치 사용법과 배포 차단 조건](Docs/GITHUB_PATCHING.md)을 먼저 확인하세요.
-아직 게임 Release는 공개하지 않았으며, 실패한 QA 실행본은 실행/배포하지 않습니다.
+당시에는 미공개였으며 현재 공개 상태는 위 2026-09-06 기록을 따릅니다. 실패 QA 실행본은 배포하지 않습니다.
 
 **한 곳을 고치고 결과만 보려면 `BUILD_WINDOWS.cmd`를 쓰지 않습니다.** 릴리스 빌드는 매번 새 staging 폴더와
 전역 lock, 사전 validator, 배포 manifest를 모두 처리하므로 반복 확인에는 낭비입니다.
@@ -81,18 +85,23 @@ FAST_QA_WINDOWS.cmd
 
 ## Windows에서 바로 실행하기
 
-Unity `6000.3.21f1`이 설치된 저장소 루트에서 다음 명령을 사용합니다. 이 경로는 그 PC의 실행본을 처음 만들
-때와 배포 후보를 확정할 때만 사용합니다.
+**플레이에는 Unity 설치나 빌드가 필요 없습니다.** 집에서는 다음 메인 파일만 실행합니다.
+
+`%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`
+
+회사 PC는 [공식 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260906.2/FamilyCompany-Windows.zip)
+전체를 위 폴더에 한 번 풀고 같은 EXE를 사용합니다. EXE만 복사하지 않습니다. 이후 게임 내부 로딩 화면이
+최신 공개 패치를 확인·다운로드·검증하고 시작합니다. [상세 안내](Docs/MAIN_GAME_ENTRY.md).
+저장소가 있는 PC에서는 아래 명령도 같은 고정 메인만 엽니다. 자동 빌드는 하지 않습니다.
 
 ```powershell
-.\BUILD_WINDOWS.cmd
 .\RUN_WINDOWS.cmd
 ```
 
-- 빌드 출력: `Builds/Windows/FamilyCompany_Playtest/FamilyCompany.exe`
-- 빌드 출처: 같은 폴더의 `BUILD_INFO.txt`에서 commit SHA와 Unity 버전을 현재 `git rev-parse HEAD`와 비교합니다.
-- `Builds/`는 Git에 포함되지 않습니다. 다른 PC에서는 pull 후 직접 빌드하거나 검증된 빌드 폴더 전체를 복사해야 합니다.
-- 상세 절차와 오류 해결은 [PLAYTEST_BUILD.md](Docs/PLAYTEST_BUILD.md)를 따릅니다.
+- **개발/배포만:** clean main과 Unity `6000.3.21f1`에서
+  `Tools/Updater/Build-FamilyCompanyPatchCandidate.ps1 -ExpectedHead <full SHA>`로 후보를 만듭니다.
+  빌드 출처·실게임·독립 승인 검증 후 별도 publish하며, 자세한 절차는 [GITHUB_PATCHING.md](Docs/GITHUB_PATCHING.md)입니다.
+- 개발자의 코드 변경에는 컴파일이 필요하지만 플레이어가 매번 빌드하는 방식은 아닙니다.
 - user-visible regression, failed gate, stale/unverified provenance, self-PASS-only candidate는 current/Downloads에 둘 수 없습니다. 비실행 evidence를 먼저 보존한 뒤 해당 실행 payload 전체를 즉시 삭제하는 강제 규칙은 [REGRESSION_BUILD_POLICY.md](Docs/REGRESSION_BUILD_POLICY.md)를 따릅니다.
 
 Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 열고 Play를 누릅니다.
@@ -112,7 +121,8 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 | 계약 | [CONTRACTS_V0_3.md](Docs/CONTRACTS_V0_3.md), [CONTRACT_CLIENT_PROGRESSION_V1.md](Docs/CONTRACT_CLIENT_PROGRESSION_V1.md) | 계약 실행과 T0~T4 성장 |
 | 주식 | [SIMUL_MARKET_PORT.md](Docs/SIMUL_MARKET_PORT.md), [STOCK_MARKET_LANDSCAPE_V1.md](Docs/STOCK_MARKET_LANDSCAPE_V1.md) | 시장 코어와 가로형 UI |
 | 실제 회사 역사 | [CLAUDE_HANDOFF_HISTORY_DATA.md](Docs/CLAUDE_HANDOFF_HISTORY_DATA.md), [CLAUDE_HISTORY_PROGRESS.md](Docs/CLAUDE_HISTORY_PROGRESS.md) | History 전용 경로와 데이터 상태 |
-| 다른 PC 재개 | [HOME_PC_CONTINUATION_GUIDE.md](Docs/HOME_PC_CONTINUATION_GUIDE.md) | pull·빌드·실행·검증 순서 |
+| 집·회사 플레이 | [MAIN_GAME_ENTRY.md](Docs/MAIN_GAME_ENTRY.md) | 최초 ZIP 설치·고정 메인·게임 내부 최신 패치 |
+| 다른 PC 개발 재개 | [HOME_PC_CONTINUATION_GUIDE.md](Docs/HOME_PC_CONTINUATION_GUIDE.md) | 개발용 pull·빌드·검증; 일반 플레이와 구분 |
 | 빌드 회귀 삭제 | [REGRESSION_BUILD_POLICY.md](Docs/REGRESSION_BUILD_POLICY.md) | 실패/회귀 실행본의 evidence·삭제·rollback·재빌드 강제 계약 |
 
 `Docs/History/Reports/`의 문서는 당시 구현 증거를 보존한 역사 보고서이며 현재 상태를 덮어쓰지 않습니다.

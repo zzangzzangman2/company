@@ -1,0 +1,16 @@
+{
+  "zipDownloadedFromGitHub": true,
+  "zipBytes": 271062921,
+  "postInstallBoot": "PENDING",
+  "fileCount": 169,
+  "version": "fc-win-20260906.2",
+  "savesUnchanged": true,
+  "oldFilesRecycled": 157,
+  "target": "C:\\Users\\godho\\Downloads\\FamilyCompany_Playtest",
+  "commit": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+  "saveCount": 5,
+  "oldFolderRecoverable": true,
+  "exactFileIntegrityVerified": true,
+  "installed": true,
+  "zipSha256": "8808d81987cdd997f5b70bdd7151304b798c9f6b12cbd71e5f32b019f456c303"
+}

@@ -1,0 +1,12 @@
+{
+  "rollback": "none",
+  "cause": "PowerShell $matches collides with automatic $Matches after digest regex; strict mode then reads digest on the regex string",
+  "mainInstalled": false,
+  "tag": "fc-win-20260906.1",
+  "releaseId": 383541607,
+  "actualEvidence": "Artifacts/LiveRelease/fc-win-20260906.1-repair",
+  "commit": "44d025474cc1c5415e0d8e43877dacd2fac5c2ef",
+  "classification": "Actual production in-game worker failure before authenticated manifest download",
+  "scope": "Rollback only the release/tag and executable artifacts created for this deployment; existing user main is untouched",
+  "savesUnchanged": true
+}

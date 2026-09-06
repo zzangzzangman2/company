@@ -12,24 +12,30 @@
   메인으로 삼지 않는다. 이 폴더의 `FamilyCompany_Data`, `UnityPlayer.dll`, `FamilyCompanyPatch`는 한 설치
   단위이므로 EXE 하나만 옮기지 않는다.
 - 저장소의 `RUN_WINDOWS.cmd`도 이 고정 경로만 연다. 로컬 Builds/QA를 실행하거나 자동으로 빌드하지
-  않으며, 설치가 없거나 패치 worker가 없는 구버전이면 안내 후 차단한다. 이번에는 실행하지 않았다.
+  않으며, 설치가 없거나 패치 worker가 없는 구버전이면 안내 후 차단한다.
 
 ## 지금 상태와 최초 한 번의 설치
 
-현재 검증 후보는 `8ce7d3ed`의 비 Development Release다. 실제 네 방향 구매·겹침 차단, 정상 보행·출근·
-착석 검사는 통과했고 [영상과 검증 기록](Evidence/ReleaseCandidate8ce7d3ed20260906/README.md)을 남겼다.
-**현재 외형 승인, 첫 GitHub 게임 Release 공개, 고정 메인 최초 설치 및 실제 인터넷 패치 확인은 남아 있다.**
-아래 옛 설치본을 이 후보와 혼동하지 않는다. 소스·문서 push와 게임 배포는 별도다.
+**2026-09-06: 사용자 승인 후 `fc-win-20260906.2` 공개·집 메인 설치·실제 GitHub 패치 재시작 검증 완료.**
+게임 빌드 commit은 `ee48a72c8e9979a605a64c59820af8d23fdbcf4c`다. 이후 문서 push의 SHA와 구분한다.
+집에서는 위 고정 메인을 바로 사용한다. [최종 검증 기록](Evidence/FirstPublicRelease20260906/README.md).
 
-**아직 자동 최신 실행이 배포된 상태는 아니다.** 2026-09-06 읽기 전용 확인에서 위 집 PC 파일의
-`BUILD_INFO.txt`는 commit `9144fa0ef3904c267d043ad65af44b817a4f3bea`, 2026-08-18 구버전이다.
-패치 worker 폴더도 없다. 이 옛 바이너리는 새 소스를 push하는 것만으로 자동패치 기능을 얻지 못한다.
-사용자의 기존 폴더/EXE/저장 데이터는 아직 변경하지 않았다. 이 파일을 최신판이라고 실행 안내하지 않는다.
+회사 PC 최초 설치는 다음 한 번만 필요하다.
 
-검증된 첫 게임 Release가 공개되면 개발자가 **최초 한 번** `FamilyCompany-Windows.zip` 전체를 위 고정
-폴더에 설치한다. 회사 PC도 같은 공개 패키지를 한 번 받으면 된다. 사용자가 빌드할 필요는 없다.
-아직 Release가 없으므로 설치/다운로드 완료로 보고하지 않는다. 실패하거나 검증되지 않은 QA payload는
-이 경로에 복사하지 않는다. 기존 파일의 교체는 정확한 identity·증거·저장 보존과 배포 게이트를 따른다.
+1. [공개 설치 ZIP 받기](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260906.2/FamilyCompany-Windows.zip).
+2. `%USERPROFILE%\Downloads\FamilyCompany_Playtest` 폴더를 만들고 ZIP **전체 내용**을 그 안에 푼다.
+   EXE 바로 옆에 `FamilyCompany_Data`, `UnityPlayer.dll`, `FamilyCompanyPatch`가 있어야 한다.
+   ZIP 안에서 실행하거나 EXE 하나만 복사하지 않는다. 기존 설치/개인 파일이 있으면 무작정 덮어쓰지 않는다.
+3. 그 폴더의 `FamilyCompany.exe`로 실행하거나 그 파일의 바로가기를 만든다. Unity/git/빌드는 필요 없다.
+
+이후 신규 PC용 [최신 공개 설치 ZIP](https://github.com/zzangzzangman2/company/releases/latest/download/FamilyCompany-Windows.zip)도
+제공한다. 이미 설치된 PC는 ZIP을 매번 받을 필요 없이 같은 메인 EXE가 패치를 확인한다.
+이번 ZIP은 271,062,921 bytes이며 SHA-256은
+`8808d81987cdd997f5b70bdd7151304b798c9f6b12cbd71e5f32b019f456c303`이다.
+
+집 설치에서는 169개 게임 파일을 검증했고 세이브/백업 5개를 보존했다. 구형 `9144fa0e` 폴더의
+157개 파일은 해시 기록 후 **휴지통으로 이동**했으므로 복구 가능하다. 최신 확인 실패 시 사용하는
+fallback은 아니다. 철회된 `fc-win-20260906.1` 또는 실패 QA 실행본을 설치하지 않는다.
 
 ## 매번 실행할 때
 
