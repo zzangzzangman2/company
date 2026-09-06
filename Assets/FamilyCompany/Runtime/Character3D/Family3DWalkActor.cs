@@ -445,7 +445,8 @@ namespace FamilyCompany.Runtime.Character3D
             float floorWorldY,
             float seatedBlend01,
             double workClockSeconds,
-            bool typing)
+            bool typing,
+            float kneeTargetDegrees = 100f)
         {
             Initialize();
             float weight = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(seatedBlend01));
@@ -515,8 +516,8 @@ namespace FamilyCompany.Runtime.Character3D
             footCentre.y = floorWorldY + 0.158f * h;
             Vector3 leftFootTarget = footCentre - right * (0.12f * h);
             Vector3 rightFootTarget = footCentre + right * (0.12f * h);
-            leftFootTarget.y = BentKneeAnkleHeight(leftUpperLeg, leftLowerLeg, leftFoot, leftFootTarget);
-            rightFootTarget.y = BentKneeAnkleHeight(rightUpperLeg, rightLowerLeg, rightFoot, rightFootTarget);
+            leftFootTarget.y = BentKneeAnkleHeight(leftUpperLeg, leftLowerLeg, leftFoot, leftFootTarget, kneeTargetDegrees);
+            rightFootTarget.y = BentKneeAnkleHeight(rightUpperLeg, rightLowerLeg, rightFoot, rightFootTarget, kneeTargetDegrees);
             Vector3 leftKneePole = leftUpperLeg.position - right * (0.12f * h) +
                                    forward * (0.23f * h) + up * (0.01f * h);
             Vector3 rightKneePole = rightUpperLeg.position + right * (0.12f * h) +
@@ -531,13 +532,13 @@ namespace FamilyCompany.Runtime.Character3D
 
         public float LastSeatedTorsoLeanDegrees { get; private set; }
 
-        private static float BentKneeAnkleHeight(Transform thigh, Transform shin, Transform ankle, Vector3 target)
+        private static float BentKneeAnkleHeight(Transform thigh, Transform shin, Transform ankle, Vector3 target, float kneeDegrees)
         {
             // Short avatars naturally dangle their feet from the unchanged shared chair.
             // Do not force a floor-height endpoint that straightens the knee through the cushion.
             float a = Vector3.Distance(thigh.position, shin.position);
             float b = Vector3.Distance(shin.position, ankle.position);
-            float spanSquared = a * a + b * b - 2f * a * b * Mathf.Cos(110f * Mathf.Deg2Rad);
+            float spanSquared = a * a + b * b - 2f * a * b * Mathf.Cos(Mathf.Clamp(kneeDegrees, 90f, 110f) * Mathf.Deg2Rad);
             Vector3 horizontal = target - thigh.position; horizontal.y = 0;
             float vertical = Mathf.Sqrt(Mathf.Max(0, spanSquared - horizontal.sqrMagnitude));
             return Mathf.Max(target.y, thigh.position.y - vertical);
