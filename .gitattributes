@@ -4,3 +4,5 @@ ArtSources/PlayerEastMixamoTraceV2/*.md text eol=lf
 ArtSources/PlayerEastMixamoTraceV2/*.txt text eol=lf
 ArtSources/PlayerEastMixamoTraceV2/**/*.json text eol=lf
 ArtSources/PlayerEastMixamoTraceV2/**/*.md text eol=lf
+# QA receipts hash the original bytes; preserve them across home/company checkouts.
+Docs/Evidence/ReleaseCandidate8ce7d3ed20260906/* -text
