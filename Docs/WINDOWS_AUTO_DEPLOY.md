@@ -1,5 +1,15 @@
 # WINDOWS AUTO DEPLOY
 
+## 2026-09-06 현재 계약이 우선
+
+고정 메인 경로는 `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`다.
+**[MAIN_GAME_ENTRY.md](MAIN_GAME_ENTRY.md)**의 최초 패키지 설치 + 게임 내부 GitHub 패치를 사용한다.
+이 문서의 아래 `Downloads\Family`, 옛 branch와 watcher는 과거 개발자 로컬 배포 기록이다.
+회사 플레이 PC에서 watcher/Unity/빌드를 실행하지 않는다. 아래 옛 경로를 현재 대상으로 사용하지 않는다.
+현재 승인/배포 상태는 **[PROJECT_STATE.md](PROJECT_STATE.md)**, 공개 패키지는 **[GITHUB_PATCHING.md](GITHUB_PATCHING.md)**를 따른다.
+
+## 과거 개발자 로컬 배포 절차 (현재 플레이 경로 아님)
+
 clean integration HEAD를 Windows Release player로 만든 뒤 사용자의 Downloads에 안전하게 승격하는 절차다.
 자동화와 격리 dry-run은 검증되어 있고 실제 1회 배포도 수행된 적이 있다. watcher 상시 구동은 최종 QA를
 통과한 clean HEAD에서만 시작한다.

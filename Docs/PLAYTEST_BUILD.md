@@ -3,7 +3,17 @@
 저장소를 받은 Windows PC에서 Unity 편집기를 직접 열지 않고 플레이테스트 실행본을 만드는 절차다.
 빌드 결과물 자체는 매우 크기 때문에 Git에 넣지 않고, 재현 가능한 빌드 명령만 저장소에서 관리한다.
 
-## 현재 최종 build handoff
+## 2026-09-06 현재 실행 계약
+
+- 집·회사 고정 메인은 `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`다.
+  플레이 PC는 최초 검증된 전체 패키지를 한 번 설치한 뒤 같은 EXE에서 최신 GitHub 게임 패치를 받는다.
+  상세 설치/상태는 **[MAIN_GAME_ENTRY.md](MAIN_GAME_ENTRY.md)**와 **[PROJECT_STATE.md](PROJECT_STATE.md)**가 정본이다.
+- 이 문서는 개발자의 Release 후보 빌드용이다. 게임을 플레이하려고 매번 빌드하지 않는다.
+- `RUN_WINDOWS.cmd`는 이제 고정 Downloads 설치만 실행하며, 방금 만든 `Builds` 후보를 실행하지 않는다.
+  소스 push나 BUILD 성공만으로 최신 게임 Release 공개/설치가 완료된 것은 아니다.
+- 아래 2026-08-18 경로·build identity 기록은 역사적 참고이며 현재 실행본 안내에 사용하지 않는다.
+
+## 2026-08-18 과거 build handoff (현재 상태 아님)
 
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0을 통과해 integration에 단일 merge되었다. 가족 4명의 Work 0..5, atomic seat/root/pelvis, microslide 0, exit/turn/first-walk, stationary endpoint, safe egress와 furniture 0이 실제 Player에서 확인되었다.
 - 과거·회귀 실행 payload는 evidence 보존 뒤 허용 root에서 제거되었고, 이전 GitHub history·tags·Releases·Actions 감사의 executable payload는 0이다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`의 tracked Player payload CI guard를 build 전 필수 gate로 유지한다.
@@ -23,11 +33,11 @@
 이 문서는 배포 후보를 만드는 절차다. 한 곳을 고치고 결과만 확인할 때는 `BUILD_WINDOWS.cmd` 대신
 `FAST_QA_WINDOWS.cmd`를 쓴다. 변경 종류별 명령과 실측 근거는 [ITERATION_LOOP.md](ITERATION_LOOP.md)가 정본이다.
 
-## 가장 간단한 사용법
+## 개발자가 Release 후보를 만드는 방법 (플레이 PC는 불필요)
 
 1. Unity Hub에서 프로젝트 버전과 같은 `6000.3.21f1` 및 Windows Build Support를 설치한다.
 2. 저장소 루트의 `BUILD_WINDOWS.cmd`를 더블 클릭한다.
-3. 성공 후 `RUN_WINDOWS.cmd`를 더블 클릭한다.
+3. 독립 gameplay/배포 검증을 수행한다. `RUN_WINDOWS.cmd`는 후보를 열지 않으므로 검증용 실행과 혼동하지 않는다.
 
 생성되는 실행 파일:
 

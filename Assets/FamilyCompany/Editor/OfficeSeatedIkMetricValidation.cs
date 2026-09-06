@@ -15,6 +15,7 @@ namespace FamilyCompany.Editor
         }
         public static void Run()
         {
+            ValidateAttendanceVisibilityKeepsRigAlive();
             Type actorType=AppDomain.CurrentDomain.GetAssemblies().Select(a=>a.GetType("FamilyCompany.Runtime.Character3D.Family3DWalkActor")).First(t=>t!=null);
             MethodInfo solve=actorType.GetMethod("ApplyTwoBoneIk",BindingFlags.NonPublic|BindingFlags.Static);
             MethodInfo reachable=actorType.GetMethod("IsArmTargetReachable",BindingFlags.NonPublic|BindingFlags.Static);
@@ -47,6 +48,32 @@ namespace FamilyCompany.Editor
                 finally { UnityEngine.Object.DestroyImmediate(root); }
             }
             Debug.Log("SEATED_IK_METRIC: PASS cases=32 maxEndpointError="+maximum+" boneTranslationsUnchanged=true");
+        }
+
+        private static void ValidateAttendanceVisibilityKeepsRigAlive()
+        {
+            Type presenter = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(a => a.GetType("FamilyCompany.Runtime.Character3D.Family3DProductionPresenter")).First(t => t != null);
+            Type binding = presenter.GetNestedType("CharacterBinding", BindingFlags.NonPublic);
+            var host = new GameObject("AttendanceVisibilityContract");
+            try
+            {
+                var renderer = host.AddComponent<MeshRenderer>();
+                object instance = binding.GetConstructors().Single().Invoke(
+                    new object[] { null, host, host, null, null, 1f, 1f, Vector2.zero });
+                MethodInfo setHidden = binding.GetMethod("SetPresentationHidden");
+                for (int cycle = 0; cycle < 4; cycle++)
+                {
+                    setHidden.Invoke(instance, new object[] { true });
+                    if (!host.activeSelf || !renderer.forceRenderingOff)
+                        throw new InvalidOperationException("Away visibility must hide pixels without deactivating the rig.");
+                    setHidden.Invoke(instance, new object[] { false });
+                    if (!host.activeSelf || renderer.forceRenderingOff)
+                        throw new InvalidOperationException("Arrival must restore pixels without restarting the rig.");
+                }
+                Debug.Log("ATTENDANCE_RIG_VISIBILITY: PASS cycles=4 hostRemainedActive=true");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(host); }
         }
     }
 }

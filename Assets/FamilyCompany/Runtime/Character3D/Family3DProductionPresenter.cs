@@ -597,9 +597,13 @@ namespace FamilyCompany.Runtime.Character3D
             OfficeRuntimeAgent actor = binding.Agent;
             if (actor.Phase == OfficeRuntimeAgentPhase.Outside)
             {
-                binding.Host.SetActive(false);
+                binding.SetPresentationHidden(true);
                 return;
             }
+            // Attendance visibility is not an avatar lifecycle boundary. Deactivating the
+            // host destroys the walk graph and recaptures a neutral pose/height on re-entry.
+            // Preserve the calibrated rig and hide only its pixels while the actor is away.
+            binding.SetPresentationHidden(false);
             if (!binding.Host.activeSelf)
                 binding.Host.SetActive(true);
 
@@ -1058,6 +1062,17 @@ namespace FamilyCompany.Runtime.Character3D
                 AppliedScale = appliedScale;
                 ApprovedHeight = approvedHeight;
                 StandingFootCenterOffsetLocal = standingFootCenterOffsetLocal;
+                PresentationRenderers = host.GetComponentsInChildren<Renderer>(true);
+            }
+
+            private Renderer[] PresentationRenderers { get; }
+            public bool PresentationHidden { get; private set; }
+            public void SetPresentationHidden(bool hidden)
+            {
+                if (PresentationHidden == hidden) return;
+                foreach (Renderer renderer in PresentationRenderers)
+                    if (renderer != null) renderer.forceRenderingOff = hidden;
+                PresentationHidden = hidden;
             }
 
             public string AgentId => Agent == null ? string.Empty : Agent.AgentId;

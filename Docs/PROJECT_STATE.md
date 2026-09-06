@@ -4,6 +4,12 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
 
 ## 2026-09-06 follow-up in progress: outside queue, scale-correct seated IK, isolated QA desktop
 
+- `e3def356` also passed exact normal attendance/navigation and isolated clean shutdown, plus 264 direct
+  actor/direction/typing skin checks (penetrations 0, max hand 0.0089). However all 139 live hand failures
+  occurred only after next-day reactivation; its full 166-file payload was retired too. Attendance now
+  hides renderers without deactivating/reinitializing the calibrated rig. New normal verification pending.
+- Actual game patch UI was captured on a private Windows desktop (no switch/input), showing measured
+  20.3% / 0.81 of 4.00 MiB; local UI test exited 0. It is not public GitHub patch delivery evidence.
 - Actual `bfe9853b` normal Player: all four releases exactly 09:00/01/02/03 and first Working
   09:09/06/17/19, strict attendance PASS. Independent navigation PASS: 8,048 rows, body/static/errors 0,
   max rail fraction error 0.0000755625, max stall 1.78467s. Private desktop stayed isolated; game exited 0.

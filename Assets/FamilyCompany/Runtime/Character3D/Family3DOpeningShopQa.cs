@@ -122,7 +122,8 @@ namespace FamilyCompany.Runtime.Character3D
             float nextSample = 0f;
             float nextCapture = 0f;
             int captures = 0;
-            bool fitOnly = Environment.GetCommandLineArgs().Contains("-familyCompanyChairFitQa");
+            bool uiOnly = Environment.GetCommandLineArgs().Contains("-familyCompanyShopUiQa");
+            bool fitOnly = Environment.GetCommandLineArgs().Contains("-familyCompanyChairFitQa") || uiOnly;
             while (!fitOnly && Time.realtimeSinceStartup - start < 60f)
             {
                 float elapsed = Time.realtimeSinceStartup - start;
@@ -227,6 +228,12 @@ namespace FamilyCompany.Runtime.Character3D
             confirm.Invoke(editor, null);
             Require(state.Company.CashWon == cashBeforeInvalid && editor.DiagnosticStateMutationCount == 4,
                 "invalid confirmation charged cash or mutated layout");
+            if (uiOnly)
+            {
+                receipt.AppendLine("shopUiOnly=true nativePointer=false normalAutonomy=NOT_TESTED");
+                Finish(true, receipt.ToString());
+                yield break;
+            }
             editor.Close();
             for (int frame = 0; frame < 5; frame++) yield return null;
             if (Environment.GetCommandLineArgs().Contains("-familyCompanyAutonomyTraceQa"))
@@ -455,7 +462,11 @@ namespace FamilyCompany.Runtime.Character3D
         }
 
         private void Capture(string name)
-            => CaptureCameraStack(Path.Combine(directory, name));
+        {
+            CaptureCameraStack(Path.Combine(directory, name));
+            if (!Application.isBatchMode && Environment.GetCommandLineArgs().Contains("-familyCompanyShopUiQa"))
+                ScreenCapture.CaptureScreenshot(Path.Combine(directory, "presented-" + name));
+        }
 
         internal static void CaptureCameraStack(string path)
         {

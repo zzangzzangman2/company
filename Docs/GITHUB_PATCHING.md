@@ -106,7 +106,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-Famil
 설치본이 있어도 네트워크 실패/잘못된 Release/초안 Release에서 시작하지 않는지 검사한다. 게임 내부
 worker와 유지된 개발용 CLI 모두 6개 실패 차단 사례를 통과해야 한다. 이전 설치와 pointer는 보존한다.
 
-`Test-FamilyCompanyInGamePatch.ps1 -ShowWindow`는 실제 Unity 게임에 inert 로컬 전송을 연결한다.
+현재 백그라운드 지시에서는 `Test-FamilyCompanyInGamePatch.ps1 -PrivateDesktop`을 사용한다.
+QA 전용 Windows desktop을 전환 권한 없이 생성하고, 그 안의 실제 Unity 프레임을 캡처한다.
+사용자 바탕화면 전환·전역 입력·전면 창은 없다. `e3def356`에서 실제 presented PNG의
+`패치 중입니다 · 다운로드`, **20.3% / 0.81 of 4.00 MiB**를 확인했고 process exit 0이다.
+근거: `Artifacts/InGamePatchTests/8740361b011f43809110e1e0ee6b61ef`.
+로컬 inert 전송만 사용했으므로 GitHub 실배포나 현재 게임 전체 승인 증거로 확장하지 않는다.
+
+아래 `Test-FamilyCompanyInGamePatch.ps1 -ShowWindow`는 과거 전면 실행 허용 시 사용한 경로다.
+실제 Unity 게임에 inert 로컬 전송을 연결한다.
 IMGUI는 presented frame이 필요해서 검증 전에 사용자에게 실제 게임 창이 열린다고 알린다.
 batch 모드의 검은 PNG는 시각 PASS가 아니다. 최종 화면 **20.3% / 0.81 of 4.00 MiB**와
 4,195,675바이트 prepare-only 완료 증거는 `Docs/Evidence/InGamePatch20260906/`에 있다.
