@@ -27,6 +27,15 @@ namespace FamilyCompany.Editor
             ValidateWholeBusiness(clients);
             ValidateOldSaveAndCorruption();
             ValidateScheduledSleep();
+            foreach (int x in new[] { -1, 1 }) foreach (int y in new[] { -1, 1 })
+            {
+                var intended = new OfficeNavPoint(x * .012f, y * .006f);
+                Require(!OfficeNavigationMotionIntegrator.PreservesRequestedSegment(intended, new OfficeNavPoint(x * .012f, 0)),
+                    "endpoint collision slide must not leave the tile rail");
+                Require(OfficeNavigationMotionIntegrator.PreservesRequestedSegment(intended, intended * .5f) &&
+                    OfficeNavigationMotionIntegrator.PreservesRequestedSegment(intended, new OfficeNavPoint(0, 0)),
+                    "partial collinear motion or a blocked wait preserves the tile rail");
+            }
             return "STARTER_PRODUCT: PASS | four-member settlement, exactly-once, time gate, pinned lessons, actual credited work, trial, weekly support, save/reload, v11 migration";
         }
 

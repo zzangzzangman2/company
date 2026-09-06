@@ -67,6 +67,10 @@ namespace FamilyCompany.Simulation.Navigation
 
     public static class OfficeNavigationMotionIntegrator
     {
+        public static bool PreservesRequestedSegment(OfficeNavPoint intended, OfficeNavPoint actual) =>
+            Math.Abs(intended.X * actual.Z - intended.Z * actual.X) <= 0.0000001f &&
+            intended.X * actual.X + intended.Z * actual.Z >= -0.0000001f;
+
         public const float MaximumStableStepSeconds = 0.05f;
         public const float DefaultAcceleration = 8f;
         public const float FinalApproachSlowRadius = 0.48f;

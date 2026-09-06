@@ -4351,7 +4351,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 permittedSeatId,
                 out bool collisionProjected);
             if (constrainToPathSegment && collisionProjected &&
-                Mathf.Abs(intended.x * actual.y - intended.y * actual.x) > 0.0000001f)
+                !OfficeNavigationMotionIntegrator.PreservesRequestedSegment(
+                    new OfficeNavPoint(intended.x, intended.y), new OfficeNavPoint(actual.x, actual.y)))
             {
                 // Do not slide sideways off a semantic rail. Wait/replan through a real cell.
                 actual = Vector2.zero;
@@ -4424,6 +4425,11 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 AgentRadius,
                 permittedSeatId,
                 out bool collisionProjected);
+            // The final few centimetres must obey the same rail as the full step.
+            // A collision-projected x/y slide here used to permanently offset the next route.
+            if (collisionProjected && !OfficeNavigationMotionIntegrator.PreservesRequestedSegment(
+                    new OfficeNavPoint(intended.x, intended.y), new OfficeNavPoint(actual.x, actual.y)))
+                actual = Vector2.zero;
             if (actual.sqrMagnitude > OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
             {
                 transform.position = new Vector3(
@@ -4446,6 +4452,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     _seat?.SeatId ?? string.Empty);
             }
             bool reached = Vector2.Distance(actual, intended) <= 0.00001f;
+            if (!reached && actual.sqrMagnitude <= OfficeRuntimeCollisionMotion.MinimumDisplacementSquared)
+            {
+                _currentVelocity = Vector2.zero;
+                _stuckSeconds += deltaTime;
+                if (_stuckSeconds >= OfficeNavigationTrafficRules.ReplanThresholdSeconds) _pathRevision = -1;
+            }
             if (reached) LastMovementBlocker = string.Empty;
             else LastMovementBlocker = _world.Occupancy.DescribeMoveBlocker(
                 _agentId,
