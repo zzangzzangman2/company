@@ -624,7 +624,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 foreach (ActorState peer in _actors.Values)
                 {
                     if (ReferenceEquals(peer, self) || !peer.IsPresent) continue;
-                    if (!peer.CurrentCell.Equals(cell) && !peer.Reservations.Contains(cell)) continue;
+                    if (!OccupiesIndoorCell(peer, cell) && !peer.Reservations.Contains(cell)) continue;
                     blocked = true;
                     break;
                 }
@@ -1013,7 +1013,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 foreach (ActorState peer in _actors.Values)
                 {
                     if (ReferenceEquals(peer, self) || !peer.IsPresent) continue;
-                    if (peer.CurrentCell.Equals(cell))
+                    if (OccupiesIndoorCell(peer, cell))
                         return $"peer={peer.AgentId}:current={cell}";
                     if (peer.Reservations.Contains(cell))
                         return $"peer={peer.AgentId}:reserved={cell}";
@@ -1039,7 +1039,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             foreach (ActorState peer in _actors.Values)
             {
                 if (!peer.IsPresent || string.Equals(peer.AgentId, agentId, StringComparison.Ordinal)) continue;
-                if (peer.CurrentCell.Equals(cell) || peer.Reservations.Contains(cell)) return false;
+                if (OccupiesIndoorCell(peer, cell) || peer.Reservations.Contains(cell)) return false;
             }
             return true;
         }
@@ -1227,6 +1227,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         }
 
         public OfficeGridCoordinate CurrentCell(string agentId) => RequiredActor(agentId).CurrentCell;
+
+        // An ingress capsule can round to the doorway cell while it is still outside the
+        // interior endpoint. It must not own that whole indoor cell and trap its predecessor.
+        // Swept body collision remains active in both ingress and ordinary movement.
+        private bool OccupiesIndoorCell(ActorState actor, OfficeGridCoordinate cell) =>
+            !_attendanceIngressClaims.ContainsKey(actor.AgentId) && actor.CurrentCell.Equals(cell);
 
         private bool PointInsideAttendanceIngress(string agentId, Vector2 point, float radius)
         {

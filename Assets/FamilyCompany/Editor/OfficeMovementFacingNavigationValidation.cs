@@ -56,6 +56,7 @@ namespace FamilyCompany.Editor
             ValidateActorScopedDebtTransitionsAndRoundRobin();
             ValidateFourActorAttendanceIngressReservation();
             ValidateFollowingAttendanceIngress();
+            ValidateIngressToGridReservationHandoff();
             ValidateCanonicalFurniturePathDetours();
             Debug.Log(
                 "OFFICE_MOVEMENT_FACING_NAVIGATION_VALIDATION: PASS | " +
@@ -280,6 +281,30 @@ namespace FamilyCompany.Editor
             harness.Occupancy.ReleaseAttendanceIngress("follower");
             Require(harness.Occupancy.AttendanceIngressClaimCount == 0, "Ingress claim leaked.");
             Debug.Log("ATTENDANCE_FOLLOWING_INGRESS: PASS independent claims, safe spawn, swept peer collision, own corridor, release cleanup");
+        }
+
+        private static void ValidateIngressToGridReservationHandoff()
+        {
+            using var harness = new OccupancyHarness(OfficeGridLayouts.CreateNewGameEmptyOfficeV1());
+            var cell = new OfficeGridCoordinate(8, 1);
+            Vector2 entrance = harness.Position(cell);
+            Vector2 inward = harness.Position(new OfficeGridCoordinate(8, 2)) - entrance;
+            Vector2 exterior = entrance - inward * 2.5f;
+            harness.Occupancy.RegisterActor("leader", entrance, 0.445f, 0.22f);
+            harness.Occupancy.RegisterActor("follower", harness.Position(new OfficeGridCoordinate(10, 2)), 0.445f, 0.22f);
+            harness.Occupancy.SetActorPresent("follower", false);
+            Require(harness.Occupancy.TryClaimAttendanceIngress("follower", exterior, entrance, 0.22f), "Follower ingress setup failed.");
+            harness.Occupancy.SetActorPresent("follower", true);
+            Vector2 leaderPosition = entrance + inward * 0.43f;
+            Vector2 followerPosition = entrance - inward * 0.49f;
+            harness.Occupancy.UpdateActor("leader", leaderPosition, inward.normalized, 0f);
+            Require(harness.Occupancy.CanMoveAttendanceIngress("follower", exterior, followerPosition, 0.22f), "Nonoverlapping follower step rejected.");
+            harness.Occupancy.UpdateActor("follower", followerPosition, inward.normalized, 0f);
+            Require(harness.Occupancy.CurrentCell("leader").Equals(cell) && harness.Occupancy.CurrentCell("follower").Equals(cell), "Same nearest-cell counterexample missing.");
+            Require(harness.Occupancy.TryReservePath("leader", cell, new[] { new OfficeGridCoordinate(8, 2) }), "Ingress follower falsely blocks the indoor leader's rounded cell.");
+            Require(harness.Occupancy.CanMove("leader", leaderPosition, harness.Position(new OfficeGridCoordinate(8, 2)), 0.22f, string.Empty), "Indoor leader cannot leave doorway.");
+            Require(!harness.Occupancy.CanMove("leader", leaderPosition, followerPosition, 0.22f, string.Empty), "Handoff bypassed actual body collision.");
+            Debug.Log("ATTENDANCE_GRID_HANDOFF: PASS same-cell followers do not deadlock indoor reservations; body collision retained");
         }
 
         private static void ValidateFourActorAttendanceIngressReservation()
