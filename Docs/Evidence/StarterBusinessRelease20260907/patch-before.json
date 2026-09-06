@@ -1,0 +1,40 @@
+{
+    "userPointerSha256":  "440287eb38e7676b144314cfee57215a48191019bf6dca314715be539ac530f0",
+    "userPointer":  {
+                        "activatedUtc":  "2026-09-06T10:55:04.9797912Z",
+                        "directory":  "versions/2-91134aeba7d3",
+                        "manifestSha256":  "91134aeba7d32f91a6c5e25fea06a7c59ae693d852ba3153c045ac7a61e42612"
+                    },
+    "mainFilesVerified":  169,
+    "userSequence":  2,
+    "saves":  [
+                  {
+                      "sha256":  "cbab58f558d5de0509fc44f661b2b2cb87675bc3462cbe99baf8e53f0cebaf17",
+                      "name":  "family-company-save-slot-1.json",
+                      "size":  45348
+                  },
+                  {
+                      "sha256":  "7bbc978f0d98193260568e1c93ddae89e1edab116f471176ca41c2944be91e93",
+                      "name":  "family-company-save-slot-1.json.bak",
+                      "size":  45309
+                  },
+                  {
+                      "sha256":  "2a32f9560471d357aa5a30ba3e9dbe219c7238c190445c82bde41baf6e779d44",
+                      "name":  "family-company-save-slot-2.json",
+                      "size":  6814
+                  },
+                  {
+                      "sha256":  "68a2a89bf9356026c19c47b9854100eb0ba51c3ca5272e3c5c0847248e882209",
+                      "name":  "family-company-save-slot-3.json",
+                      "size":  53992
+                  },
+                  {
+                      "sha256":  "3d3580e166d9737a755f5c001b0aefca9fff6acaa9ba3099b6b9150855b15fa7",
+                      "name":  "family-company-save-slot-3.json.bak",
+                      "size":  53993
+                  }
+              ],
+    "mainManifestSha256":  "91134aeba7d32f91a6c5e25fea06a7c59ae693d852ba3153c045ac7a61e42612",
+    "userManifestSha256":  "91134aeba7d32f91a6c5e25fea06a7c59ae693d852ba3153c045ac7a61e42612",
+    "main":  "C:\\Users\\godho\\Downloads\\FamilyCompany_Playtest"
+}

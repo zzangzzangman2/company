@@ -1,0 +1,7 @@
+{
+  "path": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\Patches\\fc-win-20260907.1\\FamilyCompany-Windows.zip",
+  "sha256": "b9a7c1e866f3df57846e818cf9767095112fc348528514ce2ba11a99cc587b5e",
+  "size": 268640920,
+  "reason": "Publisher correctly rejected ZIP before any GitHub write: Windows PowerShell 5.1/.NET Framework used backslash ZIP entry names, manifest requires forward slash names. 169 entries matched count but nested GetEntry failed. Game candidate unchanged and passed separately.",
+  "utc": "2026-09-06T16:54:16.6274440Z"
+}

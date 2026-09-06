@@ -182,7 +182,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-Famil
 독립 receipt 해시를 `Docs/Evidence/VerifiedReleaseInventory.json`에 기록해야 다음 정상 배포를 허용한다.
 이 목록에 없는 assets를 임의 허용하지 말고 조사한다. 예전 archive를 정상 source dependency로 오분류하지 않는다.
 
-## 배포 도구 (v3 실제 공개 및 자산 검증 완료)
+## 배포 도구 (v4 실제 공개 및 자산 검증 완료)
+
+제작용 publisher는 **PowerShell 7.2 이상(`pwsh`)**이 필요하다. Windows PowerShell 5.1의
+`ZipFile.CreateFromDirectory`는 Windows에서 ZIP entry에 역슬래시를 써 manifest의 슬래시 경로와
+일치하지 않는 실제 실패를 재현했다. 검사를 완화하지 않고 PS7로 만들며, 스크립트의 `#Requires`가
+구 host를 외부 쓰기 전에 차단한다. 게임에 포함된 기존 Windows PowerShell 5.1 worker 지원은 그대로다.
+플레이어가 게임을 켜기 위해 PowerShell 7/Unity를 설치해야 한다는 뜻이 아니다.
 
 `Tools/Updater/Publish-FamilyCompanyPatch.ps1`은 clean main, `BUILD_INFO.txt`의 commit/Release/Unity,
 독립 receipt와 현재 사용자 승인을 확인하기 전에는 gzip 패키지조차 만들지 않는다.
@@ -208,6 +214,8 @@ release receipt는 공개되므로 계정 정보·토큰·개인 로그를 포�
 검토용 자료이지 자동 승인서가 아니다.
 
 검증 범위를 구분해 보고한다. v2 최초 설치와 실제 public repair/main Unity boot는 완료했다.
-v3의 별도 설치 root production worker 수신 시험은 실제 public N→N+1 전송이며, 그 자체로 Unity
+v3/v4의 별도 설치 root production worker 수신 시험은 실제 public 버전 간 전송이며, 그 자체로 Unity
 재시작이나 사용자가 본 다운로드 화면을 검사했다고 쓰지 않는다. 로컬 fixture PASS만으로 인터넷 성공을
 대신하지 않으며, 문서 push 때문에 이미 공개·검증된 바이너리를 새 identity로 다시 빌드하지 않는다.
+
+현재 최신은 `fc-win-20260907.1` / 게임 소스 `c0709823`이다. [v4 실제 증거](Evidence/StarterBusinessRelease20260907/README.md).

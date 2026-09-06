@@ -1,7 +1,7 @@
 # 첫 자체 제품: 하청 → 개발 → 판매 → 유지보수
 
-2026-09-06 구현 작업. 공개 버전과 구분: 현재 GitHub 게임 패치는 `fc-win-20260906.3`이며 이 콘텐츠는
-아직 출시 승인·Release 검증·패치 게시 전이다. 사용자 메인 EXE/캐시/세이브를 교체하지 않는다.
+2026-09-07 `fc-win-20260907.1`로 공개했다. 게임 소스는 `c0709823c0e45c4152c673ca0b67d7a1e1506bc7`이다.
+[실제 Release/패치 검증](Evidence/StarterBusinessRelease20260907/README.md). 기존 메인 EXE/사용자 캐시/세이브는 보존했다.
 
 ## 플레이 흐름
 
@@ -22,6 +22,10 @@
 자동으로 진척을 주지 않는다. 사무실로 돌아가 내 책상의 접근 칸에서 **E를 유지**해야 한다.
 다른 가족은 기존 이동·예약·착석·업무 coordinator를 통과한다. 학교·외부 일정·체력·좌석 부족·이미 작업 중인
 경우의 거부 사유를 그대로 알린다. 저장 후 장기 진행은 유지되지만 이동/배정 명령은 다시 내린다.
+
+초기 상점은 책상 세트만 판매하므로 정수기·휴게석이 아직 없다. 실제 사무실 밖에서 일정상
+23:00~07:00 수면을 취하면 8게임시간당 체력 한 바를 회복한다. 일반 OffDuty·사무실 근무·벽시계
+경과만으로 회복하지 않는다. 소진된 가족을 계속 배정하지 말고 다음 날 회복 후 업무를 분담한다.
 
 이 입문 두 계약과 자체 개발/지원은 PC만 쓰는 업무다. 초기 상점에 없는 회의탁자/프린터 때문에
 첫 계약이 막히지 않는다. 다른 기존 계약의 장비 필요 조건을 전부 없앤 것은 아니다.
@@ -83,20 +87,27 @@
 ```powershell
 .\FAST_QA_WINDOWS.cmd -Profile simulation-pure
 .\FAST_QA_WINDOWS.cmd -Profile editor-validation
+.\FAST_QA_WINDOWS.cmd -Profile editor-broad
 .\FAST_QA_WINDOWS.cmd -Profile player-scripts -NoPlayerSmoke
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Background/Invoke-StarterProductQa.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Background/Invoke-StarterProductQa.ps1 -Lifecycle
 ```
 
 순수 harness는 네 가족의 정산, 중복 방지, 시간 게이트, 입문 단계, 실제 기여가 없는 개발 정지,
 시험 판매, 유지보수 성공/누락, 분할 시간 진행/저장 재개, v11 이관을 검증한다.
 Unity에서는 동일 DTO를 실제 JsonUtility 직렬화로도 왕복한다.
 
-Player QA는 별도 private desktop의 FastQA EXE만 실행한다. 유저 화면·입력·메인·세이브를 건드리지 않는다.
+Player QA는 기본적으로 별도 private desktop의 FastQA EXE를 실행한다. `-Player <exact Release EXE>`를
+명시하면 같은 opt-in 검사를 그 배포 후보에서 수행한다. 유저 화면·입력·메인·세이브를 건드리지 않는다.
 정상 새 게임에서 거래 API로 세트 4개 구매, 실제 UI raycast+managed pointer event로 입문 계약 수락/배정,
 4배속 정상 GameTime과 실제 이동·착석을 거친 첫 4인시를 계측한다. Native pointer 구매 인증이나
 전체 사업 주기를 정상 플레이로 관측했다는 증거로 확대 해석하지 않는다. 공개 배포 PASS와도 별개다.
 
-## 실제 업무 연결에서 고친 두 문제
+`-Lifecycle`은 입문 기록/개발 앞 20인시를 코어 체크포인트로 구성한 뒤 실제 NPC의 마지막 개발 4인시와
+지원 2인시를 확인한다. 주간 정산 시각만 이동하며 save는 메모리에서 왕복한다. 이번 공개 후보에서는
+이 검사와 별도의 정상 4인 이동/출근/착석, 공개 전송 검사를 모두 통과했다. 중단 없는 전체 주간 native 플레이를 뜻하지 않는다.
+
+## 실제 업무 연결에서 고친 문제
 
 - 배정 후 이동·교통 정체·착석 준비 시간을 업무로 계산하지 않는다. 실제 `Working` 또는 도착/정렬 완료된
   비좌석 업무 중에만 배정 작업 시계가 감소한다. 4인시 테스트는 필요 착석 시간도 별도로 검증한다.
@@ -104,3 +115,7 @@ Player QA는 별도 private desktop의 FastQA EXE만 실행한다. 유저 화면
   동적 우회 경로를 사용하고, 경로 탐색은 빈 칸 여부 외에 구간 전체의 몸체 여유를 검사한다. 정지한 상대의
   오래된 이동 의도만으로 우선권을 계속 보장하지 않는다. 타일 중앙 축·실제 충돌 반경·접촉 허용치는 유지한다.
   캐시/BFS/가중/비캐시 경로가 같은 조건을 사용한다. 겹침을 허용하거나 캐릭터를 숨겨 통과시키지 않는다.
+- 경로의 마지막 짧은 구간도 일반 이동과 같은 축 제약을 사용한다. 충돌 투영이 옆으로 밀면 정지 후
+  재경로를 요청한다. 실제 Release에서 검출한 0.006725칸 이탈을 수정했으며 기준 0.0001칸은 유지한다.
+- 일정상 야간 수면 회복으로 다일 진행 시 전원 소진 후 영구 정지하던 문제를 해소했다.
+  정수 GameTime 경계 계산은 1/2/4/17분 분할 및 중간 저장/복원에서 같은 값을 낸다.

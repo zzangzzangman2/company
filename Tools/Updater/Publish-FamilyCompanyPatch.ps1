@@ -1,3 +1,5 @@
+#Requires -Version 7.2
+# Packaging requires modern .NET ZIP entry separators. The shipping game worker still supports Windows PowerShell 5.1.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][string]$VerifiedPlayerDirectory,

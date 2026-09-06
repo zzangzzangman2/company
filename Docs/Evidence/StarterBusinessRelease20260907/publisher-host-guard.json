@@ -1,0 +1,10 @@
+{
+  "oldHostExitCode": 1,
+  "publisherSha256": "552e32bbc70d538ba6dd8926e781b2082ab48d3a6ae3df97c69e18b046729a93",
+  "requiredPSVersion": "7.2",
+  "productionPlayerCommit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "scope": "Post-publication packaging-only guard; Windows PowerShell 5.1 rejected before parameter/path/network handling. No shipping worker or Unity asset changes.",
+  "astParseErrors": 0,
+  "passed": true,
+  "oldHostOutput": "The script 'Publish-FamilyCompanyPatch.ps1' cannot be run because it contained a \"#requires\" statement for Windows Powe\nrShell 7.2. The version of Windows PowerShell that is required by the script does not match the currently running versi\non of Windows PowerShell 5.1.26100.9168.\n    + CategoryInfo          : ResourceUnavailable: (Publish-FamilyCompanyPatch.ps1:String) [], ParentContainsErrorReco \n   rdException\n    + FullyQualifiedErrorId : ScriptRequiresUnmatchedPSVersion\n "
+}

@@ -1,0 +1,59 @@
+{
+  "scope": "Two existing real bodies x four controlled seated directions; separate fresh normal seated work observation, not eight native desk interactions. No model/pose reauthoring.",
+  "poseInjection": true,
+  "normalLiveSamples": 2939,
+  "normalLiveFailures": 0,
+  "process": {
+    "playerSha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+    "seconds": 111.14560589999999,
+    "desktopSwitchAllowed": false,
+    "scenario": "chair",
+    "inputDesktopAtEnd": "Default",
+    "forcedStop": false,
+    "inputDesktopAtStart": "Default",
+    "privateDesktop": "FamilyCompanyQa_b9e5bf33a52e44dd92c72037d74900e9",
+    "pid": 15220,
+    "exitCode": 0
+  },
+  "csvSha256": "d7413bf0cf9431361653c2519b9169d9e537eb4079e31a4d100deb3bb8ab80f5",
+  "penetrations": 0,
+  "passed": true,
+  "samples": 264,
+  "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "maxIndividualHand": 0.0089,
+  "frames": [
+    {
+      "sha256": "dedb764adb97e6ff779aff16f5e1d7db9b81d0d957ae39507728fe9032e5ea27",
+      "name": "chair-fit-father-seat_father.png"
+    },
+    {
+      "sha256": "b3b7db4fb47d86eec5319190abd09966940630afc2cd059ee5c17938764b6a73",
+      "name": "chair-fit-father-seat_mother.png"
+    },
+    {
+      "sha256": "42c2eda443f935939928abceb435f75b54b3f9d08fed5a318c7051d29283f269",
+      "name": "chair-fit-father-seat_older_sister.png"
+    },
+    {
+      "sha256": "f4ab1892b6b31e85127ab0b3cc71ee3d0f128e40dff413588244d450a484062c",
+      "name": "chair-fit-father-seat_player.png"
+    },
+    {
+      "sha256": "b7c1714f87f6340c4a97d31f52f57c8a43e1f42a90c0c92531d34381ef4c0698",
+      "name": "chair-fit-player-seat_father.png"
+    },
+    {
+      "sha256": "18f46546d43d15656c19c325d7f5ae5647ce6e07b77a486f4f876e5a80147491",
+      "name": "chair-fit-player-seat_mother.png"
+    },
+    {
+      "sha256": "94506efe6994e807148cd46bba0fa464a15eab978ae19802e2dca5bdcece7ea9",
+      "name": "chair-fit-player-seat_older_sister.png"
+    },
+    {
+      "sha256": "6b929db12ca081c11182af611c2319e0dadac34f5f3d8769bb7e6e14e108212c",
+      "name": "chair-fit-player-seat_player.png"
+    }
+  ],
+  "independent": true
+}

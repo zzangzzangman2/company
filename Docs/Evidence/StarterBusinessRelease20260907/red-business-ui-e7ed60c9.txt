@@ -1,0 +1,11 @@
+STARTER_PRODUCT_PLAYER_QA=FAIL
+normalNewGame=true furniturePurchase=transactionAPI nativePointer=false managedPointer=raycast+click
+normalClock=4x noTimeJump=true noRouteOrPoseInjection=true noSaveWrites=true
+work=타자 연습 프로그램 단어 DB 입력 credited=4 elapsedMinutes=265 seatedSamples=3681 travelSamples=244
+requiredDeskMinutes=248 observedDeskMinutes=248
+scope=normal first-lesson acceptance and 4-person-hour physical work only; full business lifecycle is covered separately by pure simulation tests
+System.InvalidOperationException: StarterProductPlayerQa: button is clipped/occluded: Feature projects-products
+  at FamilyCompany.Presentation.Unity.MainNavigation.StarterProductPlayerQa.Require (System.Boolean ok, System.String message) [0x0000e] in <93fcb0382f814e18946bb9e61a495107>:0 
+  at FamilyCompany.Presentation.Unity.MainNavigation.StarterProductPlayerQa.Click (UnityEngine.UI.Button button) [0x00102] in <93fcb0382f814e18946bb9e61a495107>:0 
+  at FamilyCompany.Presentation.Unity.MainNavigation.StarterProductPlayerQa+<Run>d__8.MoveNext () [0x017f7] in <93fcb0382f814e18946bb9e61a495107>:0 
+  at FamilyCompany.Presentation.Unity.MainNavigation.StarterProductPlayerQa+<Start>d__7.MoveNext () [0x00091] in <93fcb0382f814e18946bb9e61a495107>:0 

@@ -1,0 +1,178 @@
+{
+  "verifiedFiles": 169,
+  "beforeStateSha256": "3fd817dd2de22a0befcc565be6fefe481e09cadab9fb9ecf1703afb25568ffdb",
+  "saveFilesUnchanged": 5,
+  "manifestSha256": "60efe105a85b0d306c132e3c11a97d4f769dccb15778123fdc0eefe924d3a95b",
+  "changedFiles": [
+    {
+      "path": "BUILD_INFO.txt",
+      "size": 449,
+      "sha256": "cde580548cd363e6377614231a7ff09171e61dc35742ada4cfd54e52842ca912",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "cde580548cd363e6377614231a7ff09171e61dc35742ada4cfd54e52842ca912.gz",
+      "packedSize": 341,
+      "packedSha256": "859354a0d16ff6ffb8de063c18f7123f4f406a782291a0b21be17d902dec1e0b"
+    },
+    {
+      "path": "FamilyCompany_Data/boot.config",
+      "size": 156,
+      "sha256": "10d8ff0259fe2c77f98ab03c5565d64160c391541ab97ef5c972664221db29b7",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "10d8ff0259fe2c77f98ab03c5565d64160c391541ab97ef5c972664221db29b7.gz",
+      "packedSize": 143,
+      "packedSha256": "e7914a5cf022d5994b9af1e062bd86c3c2d6b2e434f209a73af7ccb1da7d85ce"
+    },
+    {
+      "path": "FamilyCompany_Data/globalgamemanagers",
+      "size": 119252,
+      "sha256": "86b0c840886eb439ad09a38d906a0f8f8624d201694f5ea2d5a16d5a234ea9de",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "86b0c840886eb439ad09a38d906a0f8f8624d201694f5ea2d5a16d5a234ea9de.gz",
+      "packedSize": 41004,
+      "packedSha256": "5600b66070999819eaa093fae88904c1748f66c2a1d0d0dff183f142e2df5a7b"
+    },
+    {
+      "path": "FamilyCompany_Data/globalgamemanagers.assets",
+      "size": 103492,
+      "sha256": "7385bf931763983aa3891ac83241457ff6a9bf824762068a801aab5e8159f5e7",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "7385bf931763983aa3891ac83241457ff6a9bf824762068a801aab5e8159f5e7.gz",
+      "packedSize": 20197,
+      "packedSha256": "fc9f5f1acc1536ec7e2947b41b914d5ff16539a442a76a6c3f50d5e269092729"
+    },
+    {
+      "path": "FamilyCompany_Data/level0",
+      "size": 76100,
+      "sha256": "1e39907f9349e2a0a26a5f5122ad4124559f1f6a4cf6b074df3ef37cfced9d30",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "1e39907f9349e2a0a26a5f5122ad4124559f1f6a4cf6b074df3ef37cfced9d30.gz",
+      "packedSize": 14663,
+      "packedSha256": "06595c888076da314c068975da93a46d3e415311a4f54f5d9b1abbfe17315673"
+    },
+    {
+      "path": "FamilyCompany_Data/level1",
+      "size": 9720,
+      "sha256": "3c8d7da077efe1202ba71ea54d1fcfb11a69c037028523323aed39f339456985",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "3c8d7da077efe1202ba71ea54d1fcfb11a69c037028523323aed39f339456985.gz",
+      "packedSize": 2594,
+      "packedSha256": "2af1ba8bf69068f9108a8913c379c2f1a421490bde3ef67c833c42fedfb5285a"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.assets",
+      "size": 51488460,
+      "sha256": "b09d736d900c4e46b5aec93c23d2a2adcc3a1c1eccbbd875d45573e9f91899be",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "b09d736d900c4e46b5aec93c23d2a2adcc3a1c1eccbbd875d45573e9f91899be.gz",
+      "packedSize": 24127558,
+      "packedSha256": "123519e98129b22db02d85325ebd2731b824da2d7fa19f156143b7a872592979"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.assets.resS",
+      "size": 511345600,
+      "sha256": "2bf2dca105ceccba4ca4fbf07a3ce48f05d1be2df5d996ae64337dcdef90d854",
+      "assetTag": "fc-win-20260906.3",
+      "assetName": "2bf2dca105ceccba4ca4fbf07a3ce48f05d1be2df5d996ae64337dcdef90d854.gz",
+      "packedSize": 135017887,
+      "packedSha256": "e65129f4b8bc6d5714670d4be325fdf07c6c82aa877a9f032f37a074b6d36e8b"
+    },
+    {
+      "path": "FamilyCompany_Data/RuntimeInitializeOnLoads.json",
+      "size": 12517,
+      "sha256": "80256baf92a4de1d4f04658ba55cc70d2f9792e85a019ef22c134119abb98240",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "80256baf92a4de1d4f04658ba55cc70d2f9792e85a019ef22c134119abb98240.gz",
+      "packedSize": 1140,
+      "packedSha256": "ec774961055a26ac9e19caac14e86d0bb413483d77be74354a5cc238e3b2a9a4"
+    },
+    {
+      "path": "FamilyCompany_Data/sharedassets0.assets",
+      "size": 1741676,
+      "sha256": "2c245a2c814acba0450bece45c280b7c7aab5f97aa3c43e7406e32049e4b39b3",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "2c245a2c814acba0450bece45c280b7c7aab5f97aa3c43e7406e32049e4b39b3.gz",
+      "packedSize": 429791,
+      "packedSha256": "20d9961a4cdb5d145a8f171ef28b1466f2cf2e40249d3a3020d1ffbbc89fa3e7"
+    },
+    {
+      "path": "FamilyCompany_Data/sharedassets1.assets",
+      "size": 49784,
+      "sha256": "41df60fa184848c36f51038c73875fa892151a2427cee2da268077cb63ceb7ca",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "41df60fa184848c36f51038c73875fa892151a2427cee2da268077cb63ceb7ca.gz",
+      "packedSize": 16759,
+      "packedSha256": "f4eec3ee6d872511290b202fa852f5f5d043365dd78a40a4d6a594cda7bc5192"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Assembly-CSharp.dll",
+      "size": 222208,
+      "sha256": "46cd9d394077094752aa5df86ff5050bb6db8c6be165fa75266a772000e6e863",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "46cd9d394077094752aa5df86ff5050bb6db8c6be165fa75266a772000e6e863.gz",
+      "packedSize": 84597,
+      "packedSha256": "aa5d00a65f1fbaf11044b7d0fd8e822eecdfb44dafa105de7e44b7833cafe7a0"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Infrastructure.Unity.dll",
+      "size": 13312,
+      "sha256": "ca52e5683a0983ddbdff1d27674da0d18d1cb2c8af9d33e4f4260750241e79a8",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "ca52e5683a0983ddbdff1d27674da0d18d1cb2c8af9d33e4f4260750241e79a8.gz",
+      "packedSize": 6016,
+      "packedSha256": "800a7a06587e0e2fe1a4fc11b87b9bb34826e28f9f1767dd17394c25e3f5d081"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Presentation.Unity.dll",
+      "size": 1608704,
+      "sha256": "f7c1babf0ee9e00357f4f366505088d3b28c42f8c82f570a2e6fa38e46251349",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "f7c1babf0ee9e00357f4f366505088d3b28c42f8c82f570a2e6fa38e46251349.gz",
+      "packedSize": 573296,
+      "packedSha256": "f5c8ae7958b7d8f1c0ff5b53101a8f4dc2f6f00098979eb23165917d3dc17965"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Save.dll",
+      "size": 48128,
+      "sha256": "d6a2b3f94b9afc7a3f921dfbe37a7536939f717e1aeda7dfa0ca82d2bd0846c5",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "d6a2b3f94b9afc7a3f921dfbe37a7536939f717e1aeda7dfa0ca82d2bd0846c5.gz",
+      "packedSize": 19311,
+      "packedSha256": "70066cf3fb38e2c121018dbf71015b7c20521d0939ffac4667bce7dad89df484"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Simulation.dll",
+      "size": 648704,
+      "sha256": "f9ba53e6a24709b2b7d702ce4df4b12b92069fbc1e1bc082cf3b181a9bf2d549",
+      "assetTag": "fc-win-20260907.1",
+      "assetName": "f9ba53e6a24709b2b7d702ce4df4b12b92069fbc1e1bc082cf3b181a9bf2d549.gz",
+      "packedSize": 246734,
+      "packedSha256": "d3dfae274011291ddf5f8c05f6163f76d347e4eaa6252ac7f070fe1f5d44208a"
+    }
+  ],
+  "publicWorkerExitCode": 0,
+  "passed": true,
+  "lastDownloadEvent": {
+    "schemaVersion": 1,
+    "phase": "download",
+    "detail": "FamilyCompany_Data/Managed/FamilyCompany.Simulation.dll",
+    "done": 160602031,
+    "total": 160602031,
+    "percent": 100
+  },
+  "downloadedCompressedBytes": 160602031,
+  "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "scope": "Actual unchanged shipping worker with public GitHub latest/API/download, isolated v2 to v4 store; SHA validation of all 169 files and real compressed-byte progress through 100%. PrepareOnly does not activate or launch Unity. Existing v2 Unity patch UI/restart implementation unchanged and previously tested. User will personally observe next real main launch; user cache/main/saves were read only and unchanged.",
+  "nativeInputUsed": false,
+  "reusedFiles": 153,
+  "version": "fc-win-20260907.1",
+  "qaCurrentStillOnSequence": 2,
+  "userMainUnchanged": true,
+  "workerLogSha256": "efb0b185e9d0335299212e20a417d8d43abb72cda83df33bbab1305c4263663a",
+  "afterStateSha256": "611ac53cb15a89896a594735b08c3f3c6adb841a1fa8ed8a9cfb07e1d3bcc87a",
+  "independent": true,
+  "downloadProgressEvents": 92,
+  "unityRestartExercised": false,
+  "publicWorkerSha256": "90d1f5aa8304fc6e2caa5f386149b3497d8a440f7dbaea7b4c8b142c09d806c2",
+  "userCacheUnchanged": true,
+  "userStillOnSequence": 2
+}

@@ -1,0 +1,8 @@
+{
+  "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "scope": "Managed UI plus real first 4 lesson hours, final 4 development hours and 2 support hours. Core checkpoint seeds earlier history; billing-only time jump. In-memory save roundtrip, no user save writes. Not uninterrupted full-week native play. Pure lifecycle/save suite provides a separate core oracle.",
+  "independent": false,
+  "result": "STARTER_PRODUCT_PLAYER_QA=PASS\nnormalNewGame=true furniturePurchase=transactionAPI nativePointer=false managedPointer=raycast+click\r\nnormalClock=4x noTimeJump=true noRouteOrPoseInjection=true noSaveWrites=true\r\nwork=타자 연습 프로그램 단어 DB 입력 credited=4 elapsedMinutes=265 seatedSamples=3694 travelSamples=244\r\nrequiredDeskMinutes=248 observedDeskMinutes=248\r\nscope=normal first-lesson acceptance and 4-person-hour physical work only; full business lifecycle is covered separately by pure simulation tests\r\ncheckpointIntegration=PASS actualDevelopmentHours=4 developmentSeated=3893 actualSupportHours=2 supportWorker=mother supportSeated=1846 firstSale=180000 weekRevenue=60000 customers=3\r\ncheckpointScope=lesson history and first 20 development hours seeded through core; normal 4x real work for final development/support; billing-only time jump; not uninterrupted full-week native play\r\n",
+  "rawResultSha256": "e065f2c0412dba63404c69b1df91d53112332be0d91ff4199dfdd5f9b5425fe2",
+  "passed": true
+}

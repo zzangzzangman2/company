@@ -1,0 +1,312 @@
+{
+  "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "files": [
+    {
+      "sha256": "cde580548cd363e6377614231a7ff09171e61dc35742ada4cfd54e52842ca912",
+      "path": "BUILD_INFO.txt",
+      "size": 449
+    },
+    {
+      "sha256": "0065559b2a6f6cfc82e72bdb46c405af08addf29f869076ff6227e9d3a8a7ddb",
+      "path": "business-billing.png",
+      "size": 763811
+    },
+    {
+      "sha256": "00f5d2a1b71d8e9b8dfec22e897098750fe22956ee13b07f7896cec73b079a97",
+      "path": "business-learning.png",
+      "size": 756352
+    },
+    {
+      "sha256": "ac13a4ec40ce85b805946ed09671f1a2bdcc90686a356ee2a173d62cfd317242",
+      "path": "business-physical-work.csv",
+      "size": 1027
+    },
+    {
+      "sha256": "e065f2c0412dba63404c69b1df91d53112332be0d91ff4199dfdd5f9b5425fe2",
+      "path": "business-result.txt",
+      "size": 907
+    },
+    {
+      "sha256": "0fbf053733712a2667f27b236c604d0b35f2079f382cbb0f3f4b72be8c72e15f",
+      "path": "business-runtime.json",
+      "size": 1448
+    },
+    {
+      "sha256": "3bebc0187c160e354b5ea553e4f2d36458cdaddab1ae681847a7d3d5209372e7",
+      "path": "business-support-work.csv",
+      "size": 1062
+    },
+    {
+      "sha256": "dedb764adb97e6ff779aff16f5e1d7db9b81d0d957ae39507728fe9032e5ea27",
+      "path": "chair-fit-father-seat_father.png",
+      "size": 757505
+    },
+    {
+      "sha256": "b3b7db4fb47d86eec5319190abd09966940630afc2cd059ee5c17938764b6a73",
+      "path": "chair-fit-father-seat_mother.png",
+      "size": 757560
+    },
+    {
+      "sha256": "42c2eda443f935939928abceb435f75b54b3f9d08fed5a318c7051d29283f269",
+      "path": "chair-fit-father-seat_older_sister.png",
+      "size": 757712
+    },
+    {
+      "sha256": "f4ab1892b6b31e85127ab0b3cc71ee3d0f128e40dff413588244d450a484062c",
+      "path": "chair-fit-father-seat_player.png",
+      "size": 757187
+    },
+    {
+      "sha256": "b7c1714f87f6340c4a97d31f52f57c8a43e1f42a90c0c92531d34381ef4c0698",
+      "path": "chair-fit-player-seat_father.png",
+      "size": 757850
+    },
+    {
+      "sha256": "18f46546d43d15656c19c325d7f5ae5647ce6e07b77a486f4f876e5a80147491",
+      "path": "chair-fit-player-seat_mother.png",
+      "size": 757743
+    },
+    {
+      "sha256": "94506efe6994e807148cd46bba0fa464a15eab978ae19802e2dca5bdcece7ea9",
+      "path": "chair-fit-player-seat_older_sister.png",
+      "size": 758214
+    },
+    {
+      "sha256": "6b929db12ca081c11182af611c2319e0dadac34f5f3d8769bb7e6e14e108212c",
+      "path": "chair-fit-player-seat_player.png",
+      "size": 757586
+    },
+    {
+      "sha256": "d7413bf0cf9431361653c2519b9169d9e537eb4079e31a4d100deb3bb8ab80f5",
+      "path": "chair-fit.csv",
+      "size": 24843
+    },
+    {
+      "sha256": "ada6dc8dc25e2a82c6cfa6e7fc1ea50e277f43f90873bcc78fb6c158672986bd",
+      "path": "editor-broad-result.json",
+      "size": 1821
+    },
+    {
+      "sha256": "ff3be45ff5badbb94c341a5baf1600e6e776a9b68597aa7423fcee5509bc7c75",
+      "path": "editor-broad.log",
+      "size": 84299
+    },
+    {
+      "sha256": "a7e8e4cc379d3110a5bcb7a68db77a0116b8d1490e8c85563597e85165c2c669",
+      "path": "fastqa-business-result.txt",
+      "size": 907
+    },
+    {
+      "sha256": "a7a53bc451b72f74b7b82e7d08ffa1b5d1a39963d14143840e6eb8014b87a50a",
+      "path": "four-actors-closeup.mp4",
+      "size": 10200472
+    },
+    {
+      "sha256": "8be257120813489d2260e6cee9fcf55714a7449e8ca853ec2af4167b1e52ce4d",
+      "path": "github-source-ci.json",
+      "size": 225
+    },
+    {
+      "sha256": "960458f27a1992cd869e34dc6675bfac32ddbda467ad27dfe871345d8fb5a084",
+      "path": "native-binding.json",
+      "size": 5802
+    },
+    {
+      "sha256": "1fcaf4a3ef15bccdd5ed59864bae3c9526f50666ebdb7e69f393f26e7d332bbd",
+      "path": "normal-autonomy.csv",
+      "size": 2049615
+    },
+    {
+      "sha256": "4e6bfa037f479c4a1425675d186ba33f8f11a4487e3c61d9bf4e746670f71dac",
+      "path": "normal-chair-geometry.csv",
+      "size": 2031869
+    },
+    {
+      "sha256": "d2ac48fbd37ea816b91b70fd9c755ced803a99e8b5dfada3d779387c7fea88b6",
+      "path": "normal-navigation.json",
+      "size": 1823
+    },
+    {
+      "sha256": "27d27914d11014ccba4f8d4a803130641b1dbbe3218bc68f11cc48651e4f3db9",
+      "path": "normal-next-day.png",
+      "size": 758557
+    },
+    {
+      "sha256": "430193c43d599fd8f0a2055803aa05db1564bb25d8c86b654d3353c0a1d38a95",
+      "path": "normal-observations.csv",
+      "size": 1590144
+    },
+    {
+      "sha256": "ea33a53a1fb2bf44e3cc2bb28ad24038b630adc48671b91826bb8c26cd583dc7",
+      "path": "normal-observed.txt",
+      "size": 1847
+    },
+    {
+      "sha256": "dda101aa7bbdc216da1257f225a16564a997ff76d09b0a44e0bb7d51d6967c34",
+      "path": "normal-runtime.json",
+      "size": 7099
+    },
+    {
+      "sha256": "46cab2401ceabdfd717ab58f77963873fbf8562b286a14887a157475741f705b",
+      "path": "normal-seat-blend.json",
+      "size": 4855
+    },
+    {
+      "sha256": "07ab4e201f4f97b1bf527cc6f86a4f971fb501a75b4ed165b801d63ddb0bab87",
+      "path": "opening-shop-final.txt",
+      "size": 730
+    },
+    {
+      "sha256": "611ac53cb15a89896a594735b08c3f3c6adb841a1fa8ed8a9cfb07e1d3bcc87a",
+      "path": "patch-after.json",
+      "size": 1493
+    },
+    {
+      "sha256": "3fd817dd2de22a0befcc565be6fefe481e09cadab9fb9ecf1703afb25568ffdb",
+      "path": "patch-before.json",
+      "size": 2005
+    },
+    {
+      "sha256": "3b136cf0e8d79eb05f9b306958441af6e733cd34bbb6bfe01868d05b4ac5204b",
+      "path": "patch-public-delta.json",
+      "size": 8549
+    },
+    {
+      "sha256": "efb0b185e9d0335299212e20a417d8d43abb72cda83df33bbab1305c4263663a",
+      "path": "patch-worker.txt",
+      "size": 93727
+    },
+    {
+      "sha256": "391a4199adc298e3edfe419e22b9188f0a682a73c9ab6c03d760f602306e4c47",
+      "path": "published-inventory.json",
+      "size": 5318
+    },
+    {
+      "sha256": "ba4d0c2c682f96c4dc132fef172822aa4b1fcecf29e12aeda4c0729b524cd70a",
+      "path": "publisher-host-guard.json",
+      "size": 946
+    },
+    {
+      "sha256": "56ab05c4051b637ac68736b85d394b1818bd1b06fca145b09898e4d524deb9a3",
+      "path": "README.md",
+      "size": 6826
+    },
+    {
+      "sha256": "b5104fcae6ae5d36321f3a93c56e6fc617b5c86cd7fc8dfa9a2c23ae337aa79f",
+      "path": "receipt-builder.ps1",
+      "size": 11056
+    },
+    {
+      "sha256": "ea2b0c3a578b44a9aa3a1663d8d35c6743be4d2020ea623ad722647e78d4e439",
+      "path": "red-business-ui-deletion.json",
+      "size": 256
+    },
+    {
+      "sha256": "9f1d5dbb5bd9272dcda2556e39d093f5076c96cd7ebf0bfae9eb89f21721047e",
+      "path": "red-business-ui-e7ed60c9.txt",
+      "size": 1281
+    },
+    {
+      "sha256": "c6680787aa064477ddcc250677ed8b3c64814bb3442b9a07af0036d2f128e38d",
+      "path": "red-business-ui-retirement.json",
+      "size": 47585
+    },
+    {
+      "sha256": "0af1e77166d8eab4fa792df65e52460ce947a79aeb2b803ab23bec84e2492c0c",
+      "path": "red-candidate-deletion.json",
+      "size": 256
+    },
+    {
+      "sha256": "f1d0c8df9d9e14a2ced816e173b1115f8ac35abd5b46f3006fb79ba53e21d511",
+      "path": "red-candidate-retirement.json",
+      "size": 47399
+    },
+    {
+      "sha256": "a58e2521a091daf34ee5092c89ff2df4f24899d06118c20a0eb1a287c3403220",
+      "path": "red-navigation-a307c597.json",
+      "size": 1821
+    },
+    {
+      "sha256": "1f53b5ecac00b536516c6b64e3a22e1ea48641f403347a0f6af7c9dc333d839a",
+      "path": "rejected-ps51-zip.json",
+      "size": 575
+    },
+    {
+      "sha256": "c570808d9710cee735347f534d5872d184bdf86f30fcf6762361e6faa88b23a6",
+      "path": "release-receipt.json",
+      "size": 4380
+    },
+    {
+      "sha256": "3f5494f76cbe8f40e2cabfad26676748a6aaa62d05e42a896c900a9266b3c9d6",
+      "path": "remote-public-inventory.json",
+      "size": 92808
+    },
+    {
+      "sha256": "af6b2645bbf3181de9a95662150b825a115bd9df0be9be15c24d697caded2815",
+      "path": "seated-fit.json",
+      "size": 2187
+    },
+    {
+      "sha256": "00987b4581ded342c8c7909f263ad8e7b05b4c1e4d020da17767c531d77819eb",
+      "path": "simulation-pure-result.json",
+      "size": 1799
+    },
+    {
+      "sha256": "be118a2fc013595e81322f6dce169b3763205e39b900506c9c74f88bee3c60df",
+      "path": "updater-regressions.json",
+      "size": 15902
+    },
+    {
+      "sha256": "6c3f24849db93977a0a65c80ee99c81bae633c7b45f379421d269a40a82b00ee",
+      "path": "visual-review.json",
+      "size": 3294
+    },
+    {
+      "sha256": "91ae81a0cf2d005f205bc3bf313a2118ad3f0d789484229f44f955cc3a1055a3",
+      "path": "walk-acceptance.json",
+      "size": 6112
+    },
+    {
+      "sha256": "fc1bbbbe40e80082982b347f2885058a015e5ffe2d11cb55e0b4e34bf3efc716",
+      "path": "walk-analysis.json",
+      "size": 4905
+    },
+    {
+      "sha256": "c256a7d42197b701406d1ee99da2d2c3d59c46281adbe3c91c0be91639a3a916",
+      "path": "walk-review-00.png",
+      "size": 1059962
+    },
+    {
+      "sha256": "228c94aeb9db334f4b48ac9b9d41dfd84cb8b51e7b30734115125b3bc31f17fc",
+      "path": "walk-review-03.png",
+      "size": 984280
+    },
+    {
+      "sha256": "f3e4e33e19e104978440ede9a6bd11eb99da10750eac9e94ab26d9b0cbde66aa",
+      "path": "walk-review-07.png",
+      "size": 971916
+    },
+    {
+      "sha256": "2faac1e0b7185161c925298c6ada041419450e830dbdf164244b25842f102906",
+      "path": "walk-review-11.png",
+      "size": 943078
+    },
+    {
+      "sha256": "e81336c662fea122df3f4a8eeb2056df94a0704a87fabd9ef9cbaf6fdecb4d69",
+      "path": "walk-review-15.png",
+      "size": 957186
+    },
+    {
+      "sha256": "636e6fc6586c77f49054db38aab4f081983fa74147b4183f7d42164e90e99f62",
+      "path": "walk-review-19.png",
+      "size": 694563
+    },
+    {
+      "sha256": "18386748c252871eb19efab4afacc82147cfa3998f6a0bd835b081935b431caf",
+      "path": "walk-trace.csv",
+      "size": 552289
+    }
+  ],
+  "scope": "Non-player release evidence plus post-publication publisher-only host guard; archived paths are historical, not reusable fresh approval.",
+  "utc": "2026-09-06T17:08:16.7266053Z"
+}

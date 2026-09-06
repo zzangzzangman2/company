@@ -1,0 +1,178 @@
+{
+  "independent": true,
+  "attendance": "OBSERVED, NOT A WORK/RELEASE PASS\ninitialTime=2000-01-03T08:50:00\r\ninitialCash=5000000 initialSeats=0 initialInventory=0 familyIds=father,mother,older_sister,player\r\nfather maximumNavigatingNoProgressSeconds=1.0825\r\nfather normalTravel=52.6779 destinationFrames=3413 directions=5/7/3/1\r\nmother maximumNavigatingNoProgressSeconds=0.0899\r\nmother normalTravel=54.0063 destinationFrames=3422 directions=1/2/3/5/7\r\nolder_sister maximumNavigatingNoProgressSeconds=0.8632\r\nolder_sister normalTravel=53.2499 destinationFrames=3424 directions=1/3/5/7\r\nplayer maximumNavigatingNoProgressSeconds=0.0887\r\nplayer normalTravel=50.2686 destinationFrames=3382 directions=5/3/7/1\r\nnormalObservationSeconds=60 teleports=0 injectedRoutes=0 injectedClockMinutes=0 staticViolations=0 interactionViolations=0 agentPenetrations=0 finalTime=2000-01-03T09:47:00\r\npurchase=1 facing=SouthEast cash=4600000 previewCells=3 seats=1\r\npurchase=2 facing=SouthWest cash=4200000 previewCells=3 seats=2\r\npurchase=3 facing=NorthWest cash=3800000 previewCells=3 seats=3\r\npurchase=4 facing=NorthEast cash=3400000 previewCells=3 seats=4\r\nnextDay=player due=2000-01-04T09:00:00 released=2000-01-04T09:00:00 seatedNormally=True firstWorking=2000-01-04T09:09:00\r\nnextDay=older_sister due=2000-01-04T09:01:00 released=2000-01-04T09:01:00 seatedNormally=True firstWorking=2000-01-04T09:06:00\r\nnextDay=father due=2000-01-04T09:02:00 released=2000-01-04T09:02:00 seatedNormally=True firstWorking=2000-01-04T09:17:00\r\nnextDay=mother due=2000-01-04T09:03:00 released=2000-01-04T09:03:00 seatedNormally=True firstWorking=2000-01-04T09:19:00\r\nnextDayClockSetupJump=afternoon-night-only nextDayObservedClock=1x nativePointer=false routeInjection=false\r\nnextDayAttendanceGatePassed=True\r\nnormalClock=true actorControl=false routeInjection=false poseInjection=false nativePointer=false\nruntimeErrors=0",
+  "rawObservationSha256": "430193c43d599fd8f0a2055803aa05db1564bb25d8c86b654d3353c0a1d38a95",
+  "runtimeErrors": 0,
+  "scope": "Fresh exact Release: actual normal routes, seat transitions and next-day attendance. Programmatic shop plus explicit afternoon/night checkpoint setup. No native pointer, route or pose injection. Private desktop.",
+  "passed": true,
+  "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "mutedMaxOutput": 0.0,
+  "seated": {
+    "transitions": [
+      {
+        "member": "older_sister",
+        "secondsFromFirstPositiveSample": 0.4515999999999849,
+        "end": 171.4244
+      },
+      {
+        "member": "older_sister",
+        "secondsFromFirstPositiveSample": 0.42670000000001096,
+        "end": 210.2707
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.43159999999997467,
+        "end": 144.307
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.41669999999999163,
+        "end": 177.7892
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.4176999999999964,
+        "end": 187.9984
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.43250000000000455,
+        "end": 221.4307
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.400100000000009,
+        "end": 245.548
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.4065999999999974,
+        "end": 134.636
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.41679999999999495,
+        "end": 148.803
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.4170000000000016,
+        "end": 185.3561
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.433400000000006,
+        "end": 226.5469
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.41660000000001673,
+        "end": 235.5302
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.4328000000000145,
+        "end": 244.1978
+      },
+      {
+        "member": "player",
+        "secondsFromFirstPositiveSample": 0.4487999999999772,
+        "end": 212.9003
+      }
+    ],
+    "transitionMidpointOutliers": 117,
+    "blendContractSeconds": 0.42,
+    "passed": true,
+    "productionEligible": false,
+    "scope": "Independent real normal Player CSV analysis; not skin-intersection, foot-slip, full visual or Release approval",
+    "maximumSettledIndividualHandError": 0.008899,
+    "coverage": [
+      {
+        "turns": [
+          "SouthWest"
+        ],
+        "member": "mother",
+        "samples": 279
+      },
+      {
+        "turns": [
+          "SouthEast"
+        ],
+        "member": "father",
+        "samples": 744
+      },
+      {
+        "turns": [
+          "NorthEast"
+        ],
+        "member": "older_sister",
+        "samples": 986
+      },
+      {
+        "turns": [
+          "NorthWest"
+        ],
+        "member": "player",
+        "samples": 930
+      }
+    ],
+    "settledSamples": 2939,
+    "settledFailureSamples": 0
+  },
+  "mutedSamples": 8208,
+  "process": {
+    "seconds": 255.9507701,
+    "lastWindowHandle": 0,
+    "interactiveDesktopAtEnd": "Default",
+    "windowChecks": 967,
+    "interactiveDesktopAtStart": "Default",
+    "desktopReadError": "",
+    "runnerFailure": "",
+    "desktopSwitchAllowed": false,
+    "privateDesktop": "FamilyCompanyQa_5473f1b44ee344d1959b8ef17f67fae0",
+    "pid": 2420,
+    "forcedStop": false,
+    "exitCode": 0
+  },
+  "navigation": {
+    "scope": "Independent CSV navigation analysis; programmatic shop setup; no native input/pose/route injection; not Release approval",
+    "navigationPassed": true,
+    "sampleCount": 8096,
+    "excludedPausedSetupSamples": 516,
+    "maxRailFractionError": 2.2875000000865953E-05,
+    "violationSamples": 0,
+    "actors": [
+      {
+        "member": "father",
+        "maximumNavigatingNoProgressSeconds": 0.9780399999999929,
+        "navigationDistance": 96.45402169337513,
+        "workingSamples": 312,
+        "lastPhase": "Idle"
+      },
+      {
+        "member": "mother",
+        "maximumNavigatingNoProgressSeconds": 0.7635999999999967,
+        "navigationDistance": 107.25005085966126,
+        "workingSamples": 138,
+        "lastPhase": "ApproachingSeat"
+      },
+      {
+        "member": "older_sister",
+        "maximumNavigatingNoProgressSeconds": 3.0452999999999975,
+        "navigationDistance": 86.35301222557696,
+        "workingSamples": 394,
+        "lastPhase": "Working"
+      },
+      {
+        "member": "player",
+        "maximumNavigatingNoProgressSeconds": 0,
+        "navigationDistance": 57.74532175092187,
+        "workingSamples": 368,
+        "lastPhase": "Working"
+      }
+    ],
+    "allNpcSeatingObserved": true,
+    "manualPlayerAutoWorkExpected": false,
+    "productionEligible": false
+  }
+}

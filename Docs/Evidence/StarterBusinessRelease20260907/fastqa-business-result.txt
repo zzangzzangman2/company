@@ -1,0 +1,8 @@
+STARTER_PRODUCT_PLAYER_QA=PASS
+normalNewGame=true furniturePurchase=transactionAPI nativePointer=false managedPointer=raycast+click
+normalClock=4x noTimeJump=true noRouteOrPoseInjection=true noSaveWrites=true
+work=타자 연습 프로그램 단어 DB 입력 credited=4 elapsedMinutes=265 seatedSamples=3681 travelSamples=243
+requiredDeskMinutes=248 observedDeskMinutes=248
+scope=normal first-lesson acceptance and 4-person-hour physical work only; full business lifecycle is covered separately by pure simulation tests
+checkpointIntegration=PASS actualDevelopmentHours=4 developmentSeated=3892 actualSupportHours=2 supportWorker=mother supportSeated=1847 firstSale=180000 weekRevenue=60000 customers=3
+checkpointScope=lesson history and first 20 development hours seeded through core; normal 4x real work for final development/support; billing-only time jump; not uninterrupted full-week native play

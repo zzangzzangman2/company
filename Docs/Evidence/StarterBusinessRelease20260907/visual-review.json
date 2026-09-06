@@ -1,0 +1,72 @@
+{
+  "retainedVisualSourcePaths": [
+    "Assets/FamilyCompany/Runtime/Character3D",
+    "Assets/FamilyCompany/Presentation.Unity/Resources/Family3D*",
+    "ArtSources"
+  ],
+  "retainedVisualSourceCommit": "4b06247e",
+  "reviewedChairCaptures": [
+    {
+      "sha256": "dedb764adb97e6ff779aff16f5e1d7db9b81d0d957ae39507728fe9032e5ea27",
+      "name": "chair-fit-father-seat_father.png"
+    },
+    {
+      "sha256": "b3b7db4fb47d86eec5319190abd09966940630afc2cd059ee5c17938764b6a73",
+      "name": "chair-fit-father-seat_mother.png"
+    },
+    {
+      "sha256": "42c2eda443f935939928abceb435f75b54b3f9d08fed5a318c7051d29283f269",
+      "name": "chair-fit-father-seat_older_sister.png"
+    },
+    {
+      "sha256": "f4ab1892b6b31e85127ab0b3cc71ee3d0f128e40dff413588244d450a484062c",
+      "name": "chair-fit-father-seat_player.png"
+    },
+    {
+      "sha256": "b7c1714f87f6340c4a97d31f52f57c8a43e1f42a90c0c92531d34381ef4c0698",
+      "name": "chair-fit-player-seat_father.png"
+    },
+    {
+      "sha256": "18f46546d43d15656c19c325d7f5ae5647ce6e07b77a486f4f876e5a80147491",
+      "name": "chair-fit-player-seat_mother.png"
+    },
+    {
+      "sha256": "94506efe6994e807148cd46bba0fa464a15eab978ae19802e2dca5bdcece7ea9",
+      "name": "chair-fit-player-seat_older_sister.png"
+    },
+    {
+      "sha256": "6b929db12ca081c11182af611c2319e0dadac34f5f3d8769bb7e6e14e108212c",
+      "name": "chair-fit-player-seat_player.png"
+    }
+  ],
+  "passed": true,
+  "observations": "Direct review: all eight current seated images, normal next-day scene and actual frames at start/middle/end of 24 seconds. Bent knees/chair stems/typing hands retained; both feet alternate over multiple cycles and directions. Screenshots are not byte-identical because non-participating actor UI positions differ; no byte-identical-frame claim. Reviewed sheets are a chronological subset, not every one of the 393 frames.",
+  "limitations": "No new body/rig/clip promotion, no original-360 model reapproval, no pixel skin-centroid or zero foot-slip claim.",
+  "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "reviewedWalkingSheets": [
+    {
+      "sha256": "c256a7d42197b701406d1ee99da2d2c3d59c46281adbe3c91c0be91639a3a916",
+      "path": "Artifacts/ReleaseGameplay/c0709823-walk/review/sheets/all-frames-00.png"
+    },
+    {
+      "sha256": "228c94aeb9db334f4b48ac9b9d41dfd84cb8b51e7b30734115125b3bc31f17fc",
+      "path": "Artifacts/ReleaseGameplay/c0709823-walk/review/sheets/all-frames-03.png"
+    },
+    {
+      "sha256": "f3e4e33e19e104978440ede9a6bd11eb99da10750eac9e94ab26d9b0cbde66aa",
+      "path": "Artifacts/ReleaseGameplay/c0709823-walk/review/sheets/all-frames-07.png"
+    },
+    {
+      "sha256": "2faac1e0b7185161c925298c6ada041419450e830dbdf164244b25842f102906",
+      "path": "Artifacts/ReleaseGameplay/c0709823-walk/review/sheets/all-frames-11.png"
+    },
+    {
+      "sha256": "e81336c662fea122df3f4a8eeb2056df94a0704a87fabd9ef9cbaf6fdecb4d69",
+      "path": "Artifacts/ReleaseGameplay/c0709823-walk/review/sheets/all-frames-15.png"
+    },
+    {
+      "sha256": "636e6fc6586c77f49054db38aab4f081983fa74147b4183f7d42164e90e99f62",
+      "path": "Artifacts/ReleaseGameplay/c0709823-walk/review/sheets/all-frames-19.png"
+    }
+  ]
+}

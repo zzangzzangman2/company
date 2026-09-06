@@ -2,8 +2,10 @@
 
 **집·회사에서 같은 메인 EXE로 실행하는 방법:** [MAIN_GAME_ENTRY.md](Docs/MAIN_GAME_ENTRY.md).
 최초 패치 지원 버전 설치 후에는 빌드 없이 같은 EXE로 최신 공개 게임 패치를 받습니다.
-2026-09-06 모니터·키보드 정렬 패치 `fc-win-20260906.3`를 공개했습니다. 기존 메인 EXE를 그대로
-열면 약 152.1 MiB의 변경 파일을 받습니다. 캐릭터 크기·의자·이동은 바꾸지 않았습니다.
+2026-09-07 첫 하청→자체 제품→주간 유지보수 패치 `fc-win-20260907.1`를 공개했습니다.
+기존 메인 EXE를 그대로 엽니다. 집의 v2 기준 약 153.2 MiB를 받고 최신 게임으로 들어갑니다.
+캐릭터·가구 외형은 유지하며 실제 업무 시간, 동적 회피, 타일 경로 끝점과 야간 회복을 수정했습니다.
+**회사에서 이어받기:** [COMPANY_HANDOFF_2026-09-07.md](Docs/COMPANY_HANDOFF_2026-09-07.md).
 
 14살 플레이어가 엄마·아빠·누나와 2000년의 작은 사무실에서 시작해, 하청을 버티고 자체 사업을 세우며 실제 기업들과 경쟁하는 싱글플레이 생활 경영 RPG입니다.
 
@@ -23,7 +25,7 @@
   진행하고, 빈 사무실 fallback은 `OfficeAutonomyCoordinator`의 destination 있는 타일 중심 산책으로 바뀌었다.
   실제 Windows native pointer 1회 클릭에서 자금 `5,000,000→4,986,250`, furniture `52→53`, 실제 Release
   Player normal 빈 사무실 08:50→09:50 관측에서 `currentLook=0`, `duplicatePivot=0`을 확인했다.
-- **공개판 4b06247e의 모니터 정렬과 4인 정상 보행·출근·착석 회귀 검증을 완료했다.** 향후 고유 모델도
+- **공개판 c0709823의 4인 정상 보행·출근·착석 회귀 검증을 완료했다.** 승인된 모니터 정렬을 유지한다. 향후 고유 모델도
   한 몸/한 Humanoid Avatar, 공통 clip/clock/cadence, SW/NW/NE/SE 여러 주기, P0/P3 앞발 교대,
   bottom-centre 이동, 충돌 회피와 mute를 실제 D3D11에서 별도로 검증해야 한다.
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
@@ -37,8 +39,8 @@
 
 ## 현재 구현 기준선
 
-- **미배포 개발분:** [첫 하청 → 자체 제품 → 주간 유지보수](Docs/STARTER_BUSINESS_LOOP.md).
-  새 콘텐츠는 로컬 FastQA 검증 단계이며 기존 공개 패치와 메인 EXE는 변경하지 않았습니다.
+- **공개 v4:** [첫 하청 → 자체 제품 → 주간 유지보수](Docs/STARTER_BUSINESS_LOOP.md).
+  실제 Release 업무·이동 검증과 GitHub 패치 수신 검증을 완료했습니다. 기존 메인 EXE는 유지합니다.
 - 새 게임은 `2000-01-03 08:50`, 가족 4명, 자본금 500만 원으로 시작합니다.
 - 사무실은 13×13 바닥과 외곽만 있는 빈 상태로 시작합니다. 현재 구매 대상은 책상·PC·의자 한 세트
   40만 원/3칸이며, `회사 → 사무실 관리`에서 네 방향으로 회전하고 정확한 타일 중심에 배치합니다.
@@ -47,10 +49,12 @@
 - `MainNavigationV2`의 회사·인사·사업·연구·투자 5개 허브를 사용합니다. 회사 허브는 사무실 편집, 사업 허브는 계약/제품, 투자 허브는 주식으로 연결됩니다.
 - 계약 고객은 `T0 → T1 → T2 → T3 → T4` 순차 해금과 등급 하락/회복 규칙을 가집니다.
 - 사무실 편집기의 배치·회전·이동·회수·재고·저장 계약을 유지하며, pending 구매 좌클릭은 같은 frame에
-  `ConfirmPreview()`까지 도달합니다. 이번 미배포 개발분의 전체 저장 스키마는 `v12`이고 `v1`~`v11`을 읽어 이관합니다.
+  `ConfirmPreview()`까지 도달합니다. 현재 공개판의 전체 저장 스키마는 `v12`이고 `v1`~`v11`을 읽어 이관합니다.
   `v12` 세이브를 구 공개판으로 되돌려 읽지는 않습니다.
 - Title·Loading·HUD·5개 허브·인사 roster는 UI Remaster V3 공용 스킨과 프로젝트에 포함된 Maplestory Light/Bold 폰트를 사용합니다.
 - 가족 4명은 같은 10,000 체력 기준으로 시작하며, 업무 중 체력이 25%까지 내려가면 실제 배치·접근·사용 가능한 정수기·자판기·휴식 좌석을 찾아 회복한 뒤 원래 자리와 남은 업무로 돌아갑니다.
+  초기 상점은 책상 세트만 제공하므로 낮 회복 시설은 아직 살 수 없습니다. 실제 사무실 밖의 일정상
+  23:00~07:00 수면은 8게임시간당 체력 한 바를 회복합니다. 일반 대기/근무나 오프라인 수입 기능이 아닙니다.
 - 캐릭터 방향과 걷기 애니메이션의 정본은 요청 방향이 아니라 프레임의 실제 이동량입니다. 빈 사무실 산책도
   destination을 가진 타일 중심 경로를 쓰며, 각 cardinal 구간의 pivot을 끝낸 뒤 translation합니다.
 - 현재 일반 화면은 3D 캐릭터/가구를 사용합니다. 남아 있는 legacy 소스/회귀 fixture는 현재 외형이나
@@ -64,10 +68,11 @@
 
 2026-09-06: **게임 내부**의 기존 로딩 화면에서 실제 받은 바이트 기반 소수 1자리 퍼센트/MiB를
 표시하도록 구현했습니다. 별도 Windows 로딩창은 사용자 정정에 따라 폐기했습니다.
-**최신 게임 Release는 `fc-win-20260906.3`이며 Downloads의 패치 지원 메인은 유지합니다.**
+**최신 게임 Release는 `fc-win-20260907.1`이며 Downloads의 패치 지원 메인은 유지합니다.**
 v2에서 실제 공개 GitHub 수신 바이트→100%→검증→정상 Unity 재시작을 확인했습니다.
 v3 변경과 별도 root 전송 검증의 범위는 [모니터 정렬 패치](Docs/MONITOR_ALIGNMENT_PATCH.md)를,
 기존 재시작 검증은 [v2 배포 기록](Docs/Evidence/FirstPublicRelease20260906/README.md)을 따릅니다.
+v4 사업/이동/실제 공개 전송 검증은 [이번 배포 기록](Docs/Evidence/StarterBusinessRelease20260907/README.md)을 따릅니다.
 
 이전 기록(2026-09-05): 개발용 JSON 즉시 반영과 GitHub 파일 단위 패치 런처 코드를 추가했습니다.
 [설정·패치 사용법과 배포 차단 조건](Docs/GITHUB_PATCHING.md)을 먼저 확인하세요.
@@ -94,7 +99,7 @@ FAST_QA_WINDOWS.cmd
 
 `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`
 
-회사 PC는 [공식 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260906.2/FamilyCompany-Windows.zip)
+회사 PC는 [공식 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260907.1/FamilyCompany-Windows.zip)
 전체를 위 폴더에 한 번 풀고 같은 EXE를 사용합니다. EXE만 복사하지 않습니다. 이후 게임 내부 로딩 화면이
 최신 공개 패치를 확인·다운로드·검증하고 시작합니다. [상세 안내](Docs/MAIN_GAME_ENTRY.md).
 저장소가 있는 PC에서는 아래 명령도 같은 고정 메인만 엽니다. 자동 빌드는 하지 않습니다.
@@ -127,6 +132,7 @@ Editor에서 실행하려면 `Assets/FamilyCompany/Scenes/Prototype01.unity`를 
 | 주식 | [SIMUL_MARKET_PORT.md](Docs/SIMUL_MARKET_PORT.md), [STOCK_MARKET_LANDSCAPE_V1.md](Docs/STOCK_MARKET_LANDSCAPE_V1.md) | 시장 코어와 가로형 UI |
 | 실제 회사 역사 | [CLAUDE_HANDOFF_HISTORY_DATA.md](Docs/CLAUDE_HANDOFF_HISTORY_DATA.md), [CLAUDE_HISTORY_PROGRESS.md](Docs/CLAUDE_HISTORY_PROGRESS.md) | History 전용 경로와 데이터 상태 |
 | 집·회사 플레이 | [MAIN_GAME_ENTRY.md](Docs/MAIN_GAME_ENTRY.md) | 최초 ZIP 설치·고정 메인·게임 내부 최신 패치 |
+| 회사 이어받기 | [COMPANY_HANDOFF_2026-09-07.md](Docs/COMPANY_HANDOFF_2026-09-07.md) | 작업 위치·pull·첫 사업 루프·검증 범위 |
 | 다른 PC 개발 재개 | [HOME_PC_CONTINUATION_GUIDE.md](Docs/HOME_PC_CONTINUATION_GUIDE.md) | 개발용 pull·빌드·검증; 일반 플레이와 구분 |
 | 빌드 회귀 삭제 | [REGRESSION_BUILD_POLICY.md](Docs/REGRESSION_BUILD_POLICY.md) | 실패/회귀 실행본의 evidence·삭제·rollback·재빌드 강제 계약 |
 

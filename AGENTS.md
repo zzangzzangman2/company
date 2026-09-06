@@ -23,7 +23,8 @@
 
 - `b397af9`의 사무실 관리 구매 클릭과 빈 사무실 자율 산책 회귀는 `a9c6885e`에서 수정되었고 실제 native
   pointer 클릭과 normal 08:50→09:50 관측으로 확인되었다. 2026-09-06 현재 Player/Father 각 2명의 임시
-  4인 구성은 사용자 승인 후 공개되었으며 현재 최신은 모니터 정렬 패치 `fc-win-20260906.3`다.
+  4인 구성은 사용자 승인 후 공개되었으며 현재 최신은 첫 사업 루프 패치 `fc-win-20260907.1`다.
+  회사 인수인계는 `Docs/COMPANY_HANDOFF_2026-09-07.md`; 게임 소스는 `c0709823`이며 이후 문서 SHA와 구분한다.
   기존 패치 지원 메인은 유지한다. 엄마/누나의 고유 3D 모델은 추후 작업이다.
   `Docs/PROJECT_STATE.md` 맨 위를 먼저 읽고, 삭제된 이전 작업방
   outputs나 `Docs/History/Reports`의 PASS를 현재 정상 증거로 재사용하지 않는다. 상태를 바꾸는 주장은
@@ -35,6 +36,8 @@
 - 회사 PC에서는 사용자의 업무 화면을 방해하지 않도록 Unity Editor와 플레이테스트 EXE를 전면 실행하지 않는다. 컴파일·로직 검증은 `-batchmode -nographics -quit`, 렌더·PlayMode 캡처는 `-batchmode`를 사용해 백그라운드로 실행하고 로그의 PASS/FAIL까지 확인한다.
 - 시각 검증에서 `Camera.Render`가 필요하면 `-nographics`를 사용하지 않으며, 자동 종료가 검증 coroutine을 끊는 경우 `-quit`도 사용하지 않는다. GUI나 EXE의 직접 조작이 꼭 필요하면 먼저 사용자에게 알린다.
 - Unity 버전은 6000.3.21f1로 고정한다.
+- 제작용 `Publish-FamilyCompanyPatch.ps1`은 PowerShell 7.2 이상(`pwsh`)에서만 실행한다.
+  5.1/.NET Framework ZIP entry 구분자가 manifest와 달라 검사에서 거부된다. 게임의 기존 5.1 패치 worker는 변경하지 않는다.
 
 ### 빌드와 검증 명령
 

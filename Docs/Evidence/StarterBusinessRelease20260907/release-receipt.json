@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "userVisualApproval": true,
+  "approvalReference": "User explicitly requested verified deployment, push, company handoff and shutdown without questions on 2026-09-07. Existing previously approved body/pose/monitor appearance is retained; no new asset promotion.",
+  "productionEligible": true,
+  "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "gates": [
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "dda101aa7bbdc216da1257f225a16564a997ff76d09b0a44e0bb7d51d6967c34",
+      "name": "opening-four-actors",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/normal-runtime.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "960458f27a1992cd869e34dc6675bfac32ddbda467ad27dfe871345d8fb5a084",
+      "name": "shop-native-pointer-four-rotations",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/native-binding.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "dda101aa7bbdc216da1257f225a16564a997ff76d09b0a44e0bb7d51d6967c34",
+      "name": "normal-walk-tile-centres",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/normal-runtime.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "91ae81a0cf2d005f205bc3bf313a2118ad3f0d789484229f44f955cc3a1055a3",
+      "name": "walking-visual-foot-slip-grounding",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/walk-acceptance.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "dda101aa7bbdc216da1257f225a16564a997ff76d09b0a44e0bb7d51d6967c34",
+      "name": "furniture-avoidance",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/normal-runtime.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "af6b2645bbf3181de9a95662150b825a115bd9df0be9be15c24d697caded2815",
+      "name": "four-seated-working-directions",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/seated-fit.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "dda101aa7bbdc216da1257f225a16564a997ff76d09b0a44e0bb7d51d6967c34",
+      "name": "next-day-four-staggered-arrivals",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/normal-runtime.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "dda101aa7bbdc216da1257f225a16564a997ff76d09b0a44e0bb7d51d6967c34",
+      "name": "mute",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/normal-runtime.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "dda101aa7bbdc216da1257f225a16564a997ff76d09b0a44e0bb7d51d6967c34",
+      "name": "runtime-exception-zero",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/normal-runtime.json"
+    },
+    {
+      "passed": true,
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "evidenceSha256": "be118a2fc013595e81322f6dce169b3763205e39b900506c9c74f88bee3c60df",
+      "name": "updater-regressions",
+      "independent": true,
+      "evidencePath": "Artifacts/StarterBusinessRelease20260907/approval/updater-regressions.json"
+    }
+  ],
+  "playerSha256": "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+  "scope": "First business-loop content plus verified path/work-clock fixes. Fresh Release actual gameplay/geometry/walk, explicit scoped old native source binding. Public transfer verified separately after publication.",
+  "buildInfoSha256": "cde580548cd363e6377614231a7ff09171e61dc35742ada4cfd54e52842ca912"
+}

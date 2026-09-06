@@ -1075,6 +1075,124 @@
       ],
       "independentReceiptPath": "Docs/Evidence/MonitorAlignmentPatch20260906/release-receipt.json",
       "id": 383586367
+    },
+    {
+      "approvalReference": "User explicitly requested verified deployment, push, company handoff and shutdown without questions on 2026-09-07. Existing previously approved body/pose/monitor appearance is retained; no new asset promotion.",
+      "id": 383654897,
+      "assets": [
+        {
+          "digest": "sha256:e7914a5cf022d5994b9af1e062bd86c3c2d6b2e434f209a73af7ccb1da7d85ce",
+          "id": 547437880,
+          "size": 143,
+          "name": "10d8ff0259fe2c77f98ab03c5565d64160c391541ab97ef5c972664221db29b7.gz"
+        },
+        {
+          "digest": "sha256:06595c888076da314c068975da93a46d3e415311a4f54f5d9b1abbfe17315673",
+          "id": 547437893,
+          "size": 14663,
+          "name": "1e39907f9349e2a0a26a5f5122ad4124559f1f6a4cf6b074df3ef37cfced9d30.gz"
+        },
+        {
+          "digest": "sha256:20d9961a4cdb5d145a8f171ef28b1466f2cf2e40249d3a3020d1ffbbc89fa3e7",
+          "id": 547437912,
+          "size": 429791,
+          "name": "2c245a2c814acba0450bece45c280b7c7aab5f97aa3c43e7406e32049e4b39b3.gz"
+        },
+        {
+          "digest": "sha256:2af1ba8bf69068f9108a8913c379c2f1a421490bde3ef67c833c42fedfb5285a",
+          "id": 547437935,
+          "size": 2594,
+          "name": "3c8d7da077efe1202ba71ea54d1fcfb11a69c037028523323aed39f339456985.gz"
+        },
+        {
+          "digest": "sha256:f4eec3ee6d872511290b202fa852f5f5d043365dd78a40a4d6a594cda7bc5192",
+          "id": 547437963,
+          "size": 16759,
+          "name": "41df60fa184848c36f51038c73875fa892151a2427cee2da268077cb63ceb7ca.gz"
+        },
+        {
+          "digest": "sha256:aa5d00a65f1fbaf11044b7d0fd8e822eecdfb44dafa105de7e44b7833cafe7a0",
+          "id": 547438011,
+          "size": 84597,
+          "name": "46cd9d394077094752aa5df86ff5050bb6db8c6be165fa75266a772000e6e863.gz"
+        },
+        {
+          "digest": "sha256:fc9f5f1acc1536ec7e2947b41b914d5ff16539a442a76a6c3f50d5e269092729",
+          "id": 547438049,
+          "size": 20197,
+          "name": "7385bf931763983aa3891ac83241457ff6a9bf824762068a801aab5e8159f5e7.gz"
+        },
+        {
+          "digest": "sha256:ec774961055a26ac9e19caac14e86d0bb413483d77be74354a5cc238e3b2a9a4",
+          "id": 547438057,
+          "size": 1140,
+          "name": "80256baf92a4de1d4f04658ba55cc70d2f9792e85a019ef22c134119abb98240.gz"
+        },
+        {
+          "digest": "sha256:5600b66070999819eaa093fae88904c1748f66c2a1d0d0dff183f142e2df5a7b",
+          "id": 547438072,
+          "size": 41004,
+          "name": "86b0c840886eb439ad09a38d906a0f8f8624d201694f5ea2d5a16d5a234ea9de.gz"
+        },
+        {
+          "digest": "sha256:123519e98129b22db02d85325ebd2731b824da2d7fa19f156143b7a872592979",
+          "id": 547438089,
+          "size": 24127558,
+          "name": "b09d736d900c4e46b5aec93c23d2a2adcc3a1c1eccbbd875d45573e9f91899be.gz"
+        },
+        {
+          "digest": "sha256:800a7a06587e0e2fe1a4fc11b87b9bb34826e28f9f1767dd17394c25e3f5d081",
+          "id": 547438138,
+          "size": 6016,
+          "name": "ca52e5683a0983ddbdff1d27674da0d18d1cb2c8af9d33e4f4260750241e79a8.gz"
+        },
+        {
+          "digest": "sha256:859354a0d16ff6ffb8de063c18f7123f4f406a782291a0b21be17d902dec1e0b",
+          "id": 547438143,
+          "size": 341,
+          "name": "cde580548cd363e6377614231a7ff09171e61dc35742ada4cfd54e52842ca912.gz"
+        },
+        {
+          "digest": "sha256:70066cf3fb38e2c121018dbf71015b7c20521d0939ffac4667bce7dad89df484",
+          "id": 547438173,
+          "size": 19311,
+          "name": "d6a2b3f94b9afc7a3f921dfbe37a7536939f717e1aeda7dfa0ca82d2bd0846c5.gz"
+        },
+        {
+          "digest": "sha256:f5c8ae7958b7d8f1c0ff5b53101a8f4dc2f6f00098979eb23165917d3dc17965",
+          "id": 547438204,
+          "size": 573296,
+          "name": "f7c1babf0ee9e00357f4f366505088d3b28c42f8c82f570a2e6fa38e46251349.gz"
+        },
+        {
+          "digest": "sha256:d3dfae274011291ddf5f8c05f6163f76d347e4eaa6252ac7f070fe1f5d44208a",
+          "id": 547438239,
+          "size": 246734,
+          "name": "f9ba53e6a24709b2b7d702ce4df4b12b92069fbc1e1bc082cf3b181a9bf2d549.gz"
+        },
+        {
+          "digest": "sha256:60efe105a85b0d306c132e3c11a97d4f769dccb15778123fdc0eefe924d3a95b",
+          "id": 547438270,
+          "size": 100051,
+          "name": "family-company-manifest.json"
+        },
+        {
+          "digest": "sha256:31318593d41f50bb512d1734f17c571613bc7320d3c9e5e4d35e52c14d26fea0",
+          "id": 547438283,
+          "size": 271014149,
+          "name": "FamilyCompany-Windows.zip"
+        },
+        {
+          "digest": "sha256:c570808d9710cee735347f534d5872d184bdf86f30fcf6762361e6faa88b23a6",
+          "id": 547438550,
+          "size": 4380,
+          "name": "release-receipt.json"
+        }
+      ],
+      "independentReceiptSha256": "c570808d9710cee735347f534d5872d184bdf86f30fcf6762361e6faa88b23a6",
+      "tag": "fc-win-20260907.1",
+      "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+      "independentReceiptPath": "Docs/Evidence/StarterBusinessRelease20260907/release-receipt.json"
     }
   ],
   "schemaVersion": 1

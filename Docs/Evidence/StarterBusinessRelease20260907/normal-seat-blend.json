@@ -1,0 +1,112 @@
+﻿{
+    "transitions":  [
+                        {
+                            "member":  "older_sister",
+                            "secondsFromFirstPositiveSample":  0.4515999999999849,
+                            "end":  171.4244
+                        },
+                        {
+                            "member":  "older_sister",
+                            "secondsFromFirstPositiveSample":  0.42670000000001096,
+                            "end":  210.2707
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.43159999999997467,
+                            "end":  144.307
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.41669999999999163,
+                            "end":  177.7892
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.41769999999999641,
+                            "end":  187.9984
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.43250000000000455,
+                            "end":  221.4307
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.400100000000009,
+                            "end":  245.548
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.40659999999999741,
+                            "end":  134.636
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.41679999999999495,
+                            "end":  148.803
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.41700000000000159,
+                            "end":  185.3561
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.433400000000006,
+                            "end":  226.5469
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.41660000000001673,
+                            "end":  235.5302
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.43280000000001451,
+                            "end":  244.1978
+                        },
+                        {
+                            "member":  "player",
+                            "secondsFromFirstPositiveSample":  0.44879999999997722,
+                            "end":  212.9003
+                        }
+                    ],
+    "transitionMidpointOutliers":  117,
+    "blendContractSeconds":  0.42,
+    "passed":  true,
+    "productionEligible":  false,
+    "scope":  "Independent real normal Player CSV analysis; not skin-intersection, foot-slip, full visual or Release approval",
+    "maximumSettledIndividualHandError":  0.008899,
+    "coverage":  [
+                     {
+                         "turns":  [
+                                       "SouthWest"
+                                   ],
+                         "member":  "mother",
+                         "samples":  279
+                     },
+                     {
+                         "turns":  [
+                                       "SouthEast"
+                                   ],
+                         "member":  "father",
+                         "samples":  744
+                     },
+                     {
+                         "turns":  [
+                                       "NorthEast"
+                                   ],
+                         "member":  "older_sister",
+                         "samples":  986
+                     },
+                     {
+                         "turns":  [
+                                       "NorthWest"
+                                   ],
+                         "member":  "player",
+                         "samples":  930
+                     }
+                 ],
+    "settledSamples":  2939,
+    "settledFailureSamples":  0
+}

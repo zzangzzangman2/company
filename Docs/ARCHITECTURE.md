@@ -40,7 +40,7 @@ cross the data-build boundary and fall back.
 - 저장 대상은 의미 상태다. Transform, 렌더러 캐시, UI 선택 상태는 저장하지 않는다.
 - 가족 자율 행동은 30분 절대 경계에서 진행하며 현재 행동·의미 목적지·처리 시각·누적 업무/휴식·사건만 저장한다. 같은 seed와 목표 시각이면 시간 진행 호출을 나눠도 결과가 같다.
 - P1.5 `OfficeInteractions`는 Unity 참조가 없는 Interaction Definition/Catalog와 정수 Utility 점수 추적을 소유한다. 현재 선택 정본은 기존 `WeightedPick`이며 Shadow 선택과 score trace는 저장 상태나 행동 결과를 변경하지 않는다.
-- 개발본 저장 스키마는 `GameSaveDto v12`이며 v1~v11을 읽는다. v2 계약, v9 semantic stamina,
+- 현재 공개판 저장 스키마는 `GameSaveDto v12`이며 v1~v11을 읽는다. v2 계약, v9 semantic stamina,
   v10 업무 능력/XP, v11 기술점수를 유지한다. v12는 첫 제품·고객·주간 정산과 내부 업무 목적/정확한 마감,
   수락 시 고정된 기술 보너스와 완료 품질을 추가한다. 과거 기술 보상을 추측해 소급 지급하지 않는다.
 - 별도 Speed 능력은 없다. 업무 진행률은 `WorkTaskProfile`의 6능력 가중 점수로 계산하고 1인시마다 필요한 정수 GameTime 분을 확정한 뒤에만 계약 기여·XP를 기록한다. E키 유지 실시간이나 프레임 시간은 입력이 아니다. legacy Speed/Stamina/Mental은 v1~v9 이관 경계 밖에서 읽지 않는다. Mental은 계약 품질이 아니라 GameTime 스트레스 증가량을 보정하는 스트레스 저항으로만 이관한다.
@@ -76,7 +76,7 @@ Prototype01은 집, 거리, 작은 사무실을 한 씬의 구역으로 보여 �
 - `FamilyCompany.Simulation.OfficeLayout.OfficeGrid`가 폭·높이·바닥·통행 가능 셀·배치 가구·좌석 슬롯을 의미 상태로 소유한다. Unity Transform과 화면 픽셀은 저장 정본이 아니다.
 - 실제 새 게임은 `CreateNewGameEmptyOfficeV1()`의 13×13 바닥과 외곽 bay 52개만 사용하며 플레이어 배치 가구·좌석·워크스테이션은 0개다. furnished `StarterOfficeV1`과 `CreateMigrationPreview()`는 기존 저장 호환 및 회귀 fixture이며 게임 기본값이 아니다.
 - `OfficeGridTilemapPresenter`는 320×160, 180 PPU 등각 Tile을 투영하고 `OfficeGridFurniturePresenter`는 같은 placement anchor/footprint를 렌더한다.
-- 전체 저장은 v10이며 `officeGrid` 하위 스키마 v4와 가구 재고 하위 스키마 v1을 보존한다. v1~v9 이관 뒤 `ComputeLayoutHash()`가 같아야 한다.
+- 전체 저장은 v12이며 `officeGrid` 하위 스키마 v4와 가구 재고 하위 스키마 v1을 보존한다. v1~v11 이관 뒤 `ComputeLayoutHash()`가 같아야 한다.
 - 가구 시각 정본은 `OfficeFurnitureVisualCatalog` calibration v3, 착석 정본은 `OfficeCharacterSeatPoseCatalog` v5다. 의미 root는 scale 1이며 가구 보정은 승인된 균등 scale/socket, 착석 보정은 실제 pelvis/hand 기반 translation만 허용한다.
 - `OfficeGridCharacterMover`의 SpriteRenderer는 균등 scale 1.55를 사용한다. 1.69는 화면을 과도하게 점유해 폐기된 값이다.
 - 16:9가 아닌 화면에서도 타일·캐릭터를 비균등하게 늘리지 않는다. `OfficeGridCameraFitter`가 aspect-safe하게 균등 직교 크기를 조정한다.

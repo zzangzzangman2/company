@@ -1,0 +1,459 @@
+{
+  "commit": "c0709823c0e45c4152c673ca0b67d7a1e1506bc7",
+  "scope": "81 fresh worker regressions, shipping workers byte-identical to tested source. Actual public transfer is verified after publish.",
+  "independent": true,
+  "results": {
+    "independent": true,
+    "scope": "Fresh unchanged-worker local regressions, no public upgrade claim",
+    "tests": [
+      {
+        "path": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UpdaterTests\\54d56c55a34a44c89b00e8a99e3d7e65\\result.json",
+        "sha256": "d42c19f5d7ad11763f6ec812a45799d8988d51282733808dc2df2a2fed041e04",
+        "result": {
+          "timeUtc": "2026-09-06T15:34:36.1852492Z",
+          "fixture": "inert text, no game launched, no network",
+          "checks": [
+            {
+              "name": "first install downloads every file",
+              "passed": true
+            },
+            {
+              "name": "download denominator equals changed compressed byte sum",
+              "passed": true
+            },
+            {
+              "name": "download completion uses actual bytes not file count",
+              "passed": true
+            },
+            {
+              "name": "verification is a separate measured phase",
+              "passed": true
+            },
+            {
+              "name": "in-game preparation reuses authenticated base files",
+              "passed": true
+            },
+            {
+              "name": "preparation does not activate while game runs",
+              "passed": true
+            },
+            {
+              "name": "prepared snapshot activates after separate closed-game gate",
+              "passed": true
+            },
+            {
+              "name": "same version downloads nothing",
+              "passed": true
+            },
+            {
+              "name": "unchanged version never pretends to download",
+              "passed": true
+            },
+            {
+              "name": "publisher reuses previous release assets",
+              "passed": true
+            },
+            {
+              "name": "changed/addition only download, two files reused",
+              "passed": true
+            },
+            {
+              "name": "delta progress excludes reused file bytes",
+              "passed": true
+            },
+            {
+              "name": "download percentage is monotonic and rounded down",
+              "passed": true
+            },
+            {
+              "name": "removed files absent from active snapshot",
+              "passed": true
+            },
+            {
+              "name": "downgrade denied",
+              "passed": true
+            },
+            {
+              "name": "same sequence mutation denied",
+              "passed": true
+            },
+            {
+              "name": "manifest hash mismatch denied",
+              "passed": true
+            },
+            {
+              "name": "unsafe path ../escape",
+              "passed": true
+            },
+            {
+              "name": "unsafe path C:/escape",
+              "passed": true
+            },
+            {
+              "name": "unsafe path /absolute",
+              "passed": true
+            },
+            {
+              "name": "unsafe path dir\\\\name",
+              "passed": true
+            },
+            {
+              "name": "unsafe path file:stream",
+              "passed": true
+            },
+            {
+              "name": "unsafe path NUL.txt",
+              "passed": true
+            },
+            {
+              "name": "unsafe path dir/../x",
+              "passed": true
+            },
+            {
+              "name": "unsafe path dir//x",
+              "passed": true
+            },
+            {
+              "name": "unsafe path trailing.",
+              "passed": true
+            },
+            {
+              "name": "unsafe path trail ",
+              "passed": true
+            },
+            {
+              "name": "unsafe path COM1",
+              "passed": true
+            },
+            {
+              "name": "case insensitive path collision denied",
+              "passed": true
+            },
+            {
+              "name": "file versus directory collision denied",
+              "passed": true
+            },
+            {
+              "name": "simultaneous updater denied",
+              "passed": true
+            },
+            {
+              "name": "cancel after received bytes aborts before activation",
+              "passed": true
+            },
+            {
+              "name": "cancellation preserves previous pointer",
+              "passed": true
+            },
+            {
+              "name": "cancelled staging is completely removed",
+              "passed": true
+            },
+            {
+              "name": "corrupt asset rejected",
+              "passed": true
+            },
+            {
+              "name": "failed patch leaves active pointer untouched",
+              "passed": true
+            },
+            {
+              "name": "failed partial executable payload removed",
+              "passed": true
+            },
+            {
+              "name": "failure evidence preserved outside partial payload",
+              "passed": true
+            },
+            {
+              "name": "missing download rejected",
+              "passed": true
+            },
+            {
+              "name": "retry after failed transfer succeeds",
+              "passed": true
+            },
+            {
+              "name": "previous snapshot integrity valid (not offline launch permission)",
+              "passed": true
+            },
+            {
+              "name": "interrupted activation resumes with zero downloads",
+              "passed": true
+            },
+            {
+              "name": "unexpected installed binary fails snapshot integrity",
+              "passed": true
+            },
+            {
+              "name": "tampered installed executable fails snapshot integrity",
+              "passed": true
+            },
+            {
+              "name": "nonempty unrelated directory never adopted",
+              "passed": true
+            },
+            {
+              "name": "drive root never adopted",
+              "passed": true
+            },
+            {
+              "name": "junction directory rejected",
+              "passed": true
+            },
+            {
+              "name": "save sentinel unchanged",
+              "passed": true
+            },
+            {
+              "name": "stream cannot exceed manifest size",
+              "passed": true
+            },
+            {
+              "name": "truncated stream never reaches completion",
+              "passed": true
+            },
+            {
+              "name": "invalid progress exceeds total rejected",
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "path": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\LatestOnlyTests\\b1f145c9c65a49cc8e6344278ea3aa60\\result.json",
+        "sha256": "c55c9bd1197e34b51138174f50458b50ff520cf99e2eb91e2eeaf9acc1da9882",
+        "result": {
+          "scope": "Real production workers; API faults injected; verified inert previous install; no network or executable run",
+          "checks": [
+            {
+              "passed": true,
+              "exitCode": 1,
+              "oldVerifiedInstallPreserved": true,
+              "scenario": "network",
+              "oldVersionLaunchAllowed": false,
+              "legacyEntry": false
+            },
+            {
+              "passed": true,
+              "exitCode": 1,
+              "oldVerifiedInstallPreserved": true,
+              "scenario": "missing",
+              "oldVersionLaunchAllowed": false,
+              "legacyEntry": false
+            },
+            {
+              "passed": true,
+              "exitCode": 1,
+              "oldVerifiedInstallPreserved": true,
+              "scenario": "draft",
+              "oldVersionLaunchAllowed": false,
+              "legacyEntry": false
+            },
+            {
+              "passed": true,
+              "exitCode": 1,
+              "oldVerifiedInstallPreserved": true,
+              "scenario": "network",
+              "oldVersionLaunchAllowed": false,
+              "legacyEntry": true
+            },
+            {
+              "passed": true,
+              "exitCode": 1,
+              "oldVerifiedInstallPreserved": true,
+              "scenario": "missing",
+              "oldVersionLaunchAllowed": false,
+              "legacyEntry": true
+            },
+            {
+              "passed": true,
+              "exitCode": 1,
+              "oldVerifiedInstallPreserved": true,
+              "scenario": "draft",
+              "oldVersionLaunchAllowed": false,
+              "legacyEntry": true
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "path": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UpdaterRestartTests\\ca6872a6c47b43819693337cb0d982d1\\result.json",
+        "sha256": "0200aa882a208e510eb35e17686f23e8708f829a483dbad6fbe7ebd455e840b5",
+        "result": {
+          "scope": "Actual production restart helper with windowless probe, NOT real Unity/GitHub end-to-end",
+          "root": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UpdaterRestartTests\\ca6872a6c47b43819693337cb0d982d1",
+          "restartScriptSha256": "7a6cbff9ba368019b1d6f47c88bec41472c472da87e6c7ca5c33553deb8c6aef",
+          "checks": [
+            {
+              "name": "helper sends ready before parent normal exit",
+              "passed": true
+            },
+            {
+              "name": "current pointer absent while parent still runs",
+              "passed": true
+            },
+            {
+              "name": "parent exits normally without forced termination",
+              "passed": true
+            },
+            {
+              "name": "restart helper completes",
+              "passed": true
+            },
+            {
+              "name": "new process launches exact verified snapshot",
+              "passed": true
+            },
+            {
+              "name": "atomic current matches prepared manifest",
+              "passed": true
+            },
+            {
+              "name": "wrong-parent rejected before ready or activation",
+              "passed": true
+            },
+            {
+              "name": "wrong-parent leaves parent alive",
+              "passed": true
+            },
+            {
+              "name": "corrupted-payload rejected before ready or activation",
+              "passed": true
+            },
+            {
+              "name": "corrupted-payload leaves parent alive",
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "path": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\ManifestAssetTests\\bc8e280014674baf9582d3da37619a43\\result.json",
+        "sha256": "8c781f3e2c824d8be16db356977a51158f5b454173491e81409b56e9feae5b1d",
+        "result": {
+          "scope": "Exact production worker pagination/digest/hash block; realistic API object responses; no network or executable run",
+          "workerSha256": "90D1F5AA8304FC6E2CAA5F386149B3497D8A440F7DBAEA7B4C8B142C09D806C2",
+          "checks": [
+            {
+              "apiPages": 1,
+              "error": null,
+              "name": "valid",
+              "passed": true
+            },
+            {
+              "apiPages": 2,
+              "error": null,
+              "name": "page2",
+              "passed": true
+            },
+            {
+              "apiPages": 1,
+              "error": "Missing authenticated manifest digest.",
+              "name": "bad-digest",
+              "passed": true
+            },
+            {
+              "apiPages": 1,
+              "error": "The property 'digest' cannot be found on this object. Verify that the property exists.",
+              "name": "missing-digest",
+              "passed": true
+            },
+            {
+              "apiPages": 1,
+              "error": "Missing authenticated manifest digest.",
+              "name": "oversize",
+              "passed": true
+            },
+            {
+              "apiPages": 1,
+              "error": "Missing authenticated manifest digest.",
+              "name": "duplicate",
+              "passed": true
+            },
+            {
+              "apiPages": 1,
+              "error": "Missing authenticated manifest digest.",
+              "name": "missing",
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      },
+      {
+        "path": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\StarterBusinessRelease20260907\\updater\\draft-lookup.json",
+        "sha256": "70039ea8b869b986c9902b35258a2d022406618a1ab34f1d6ea04b3a2c5a7797",
+        "result": {
+          "passed": true,
+          "checks": [
+            {
+              "name": "valid",
+              "passed": true
+            },
+            {
+              "name": "missing-id",
+              "passed": true
+            },
+            {
+              "name": "wrong-id",
+              "passed": true
+            },
+            {
+              "name": "published",
+              "passed": true
+            },
+            {
+              "name": "prerelease",
+              "passed": true
+            },
+            {
+              "name": "wrong-tag",
+              "passed": true
+            },
+            {
+              "name": "wrong-commit",
+              "passed": true
+            }
+          ],
+          "scope": "Production function with inert GitHub responses; no release created/edited/uploaded",
+          "calls": [
+            "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+            "api repos/owner/repo/releases/383541607",
+            "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+            "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+            "api repos/owner/repo/releases/383541607",
+            "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+            "api repos/owner/repo/releases/383541607",
+            "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+            "api repos/owner/repo/releases/383541607",
+            "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+            "api repos/owner/repo/releases/383541607",
+            "release view fc-win-20260906.1 --repo owner/repo --json databaseId",
+            "api repos/owner/repo/releases/383541607"
+          ]
+        }
+      }
+    ],
+    "commit": "dc18bc12c5f561e8652be4a3d2f6f47f971a7f75",
+    "passed": true
+  },
+  "shippingWorkerHashBinding": [
+    {
+      "sha256": "90d1f5aa8304fc6e2caa5f386149b3497d8a440f7dbaea7b4c8b142c09d806c2",
+      "path": "FamilyCompanyPatch/FamilyCompany.InGame.ps1"
+    },
+    {
+      "sha256": "7a6cbff9ba368019b1d6f47c88bec41472c472da87e6c7ca5c33553deb8c6aef",
+      "path": "FamilyCompanyPatch/FamilyCompany.Restart.ps1"
+    },
+    {
+      "sha256": "0c4b79e905c6d2ce1f2a4599530a59e4942905faa5c8efb7d30b9437f087ef6c",
+      "path": "FamilyCompanyPatch/FamilyCompany.Update.ps1"
+    }
+  ],
+  "passed": true
+}
