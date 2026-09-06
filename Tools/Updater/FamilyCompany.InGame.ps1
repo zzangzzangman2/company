@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param([Parameter(Mandatory=$true)][string]$GameDirectory,
     [Parameter(Mandatory=$true)][string]$ResultPath,
-    [string]$InstallRoot = '', [string]$CancelPath = '', [switch]$OfflineOnly)
+    [string]$InstallRoot = '', [string]$CancelPath = '')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 . (Join-Path $PSScriptRoot 'FamilyCompany.Update.ps1')
@@ -17,7 +17,6 @@ try {
     $temporary = Join-Path $root ('manifest-' + [Guid]::NewGuid().ToString('N') + '.json')
     try {
         Send-PatchProgress 'check'
-        if ($OfflineOnly) { throw 'Verified offline mode requested.' }
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $headers = @{'User-Agent'='FamilyCompany-InGame/1'; 'Accept'='application/vnd.github+json'; 'X-GitHub-Api-Version'='2022-11-28'}
         $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$script:PatchRepository/releases/latest" -Headers $headers -TimeoutSec 15
@@ -36,15 +35,9 @@ try {
         Receive-PatchFile "https://github.com/$script:PatchRepository/releases/download/$($release.tag_name)/family-company-manifest.json" $temporary $matches[0].size $hash
         $manifest = Read-PatchManifest $temporary
         if ($manifest.version -cne $release.tag_name) { throw 'Release identity mismatch.' }
-        # Register the first verified snapshot too, so later offline startup has an authenticated baseline.
+        # Even the first install enters the authenticated immutable snapshot store.
         $installed = Install-CompanyPatch $root $temporary $hash -PrepareOnly -SeedDirectory $GameDirectory
         $result = @{status=$installed.Status; directory=$installed.Directory; manifestHash=$hash}
-    } catch {
-        Test-PatchCancellation
-        $current = Get-PatchCurrent $root
-        if (!$current) { throw }
-        Assert-PatchInstalled $current.Directory $current.Manifest
-        $result = @{status=$(if ($OfflineOnly) {'current'} else {'offline-ready'}); directory=$current.Directory; manifestHash=$current.Hash}
     } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary } }
     Write-PatchJsonAtomic $ResultPath $result
     Send-PatchProgress 'ready' $result.status 1 1

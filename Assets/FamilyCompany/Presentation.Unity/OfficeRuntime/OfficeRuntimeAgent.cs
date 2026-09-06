@@ -1892,7 +1892,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 !route[route.Count - 1].Equals(destination.Cell)) return false;
 
             Vector3 entranceWorld3 = _world.Presenter.CellCenterWorld(route[0]);
-            Vector3 nextWorld3 = _world.Presenter.CellCenterWorld(route[1]);
+            // Everyone enters through the authored door at (8,0), regardless of which
+            // direction their desk route turns after reaching the interior tile (8,1).
+            Vector3 nextWorld3 = _world.Presenter.CellCenterWorld(new OfficeGridCoordinate(
+                route[0].X, route[0].Y + 1));
             var entranceWorld = new Vector2(entranceWorld3.x, entranceWorld3.y);
             var inwardSegment = new Vector2(
                 nextWorld3.x - entranceWorld3.x,

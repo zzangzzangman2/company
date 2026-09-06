@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$InstallRoot = '', [switch]$UpdateOnly, [switch]$ProgressProtocol, [string]$CancelPath = '', [switch]$OfflineOnly)
+param([string]$InstallRoot = '', [switch]$UpdateOnly, [switch]$ProgressProtocol, [string]$CancelPath = '')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 . (Join-Path $PSScriptRoot 'FamilyCompany.Update.ps1')
@@ -20,7 +20,6 @@ Assert-PatchGameClosed $root
 $temporary = Join-Path $root ('manifest-' + [Guid]::NewGuid().ToString('N') + '.json')
 try {
     Send-PatchProgress 'check'
-    if ($OfflineOnly) { throw 'User requested the verified installed version.' }
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$script:PatchRepository/releases/latest" -TimeoutSec 15 -Headers @{
         'User-Agent'='FamilyCompany-Updater/1'; 'Accept'='application/vnd.github+json'; 'X-GitHub-Api-Version'='2022-11-28'
@@ -47,19 +46,6 @@ try {
     if ($manifest.version -cne $release.tag_name) { throw 'Release/manifest version mismatch.' }
     $result = Install-CompanyPatch -InstallRoot $root -ManifestPath $temporary -ExpectedManifestHash $hash
     Write-Host "[PATCH] $($result.Status): downloaded $($result.DownloadedFiles), reused $($result.ReusedFiles)."
-} catch {
-    Test-PatchCancellation
-    if ($_.Exception -is [OperationCanceledException]) { throw }
-    Write-Warning ('Update unavailable: ' + $_.Exception.Message)
-    # No incomplete payload is run. Offline fallback is the previously validated installation only.
-    $current = Get-PatchCurrent $root
-    if (!$current) { throw 'No verified installation yet. Ask the developer for the first game release.' }
-    Assert-PatchInstalled $current.Directory $current.Manifest
-    if ($ProgressProtocol -and !$OfflineOnly) {
-        Send-PatchProgress 'offline-ready' 'Cannot check the latest patch. Only the verified installed version is available.'
-        exit 3
-    }
-    $result = [pscustomobject]@{Directory=$current.Directory; Status='verified-offline'}
 } finally {
     if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary }
 }

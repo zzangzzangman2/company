@@ -253,11 +253,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             new Dictionary<int, string>();
         private OfficeGrid _grid;
         private OfficeGridTilemapPresenter _presenter;
-        private string _attendanceIngressOwner = string.Empty;
+        private readonly Dictionary<string, AttendanceIngressClaim> _attendanceIngressClaims =
+            new Dictionary<string, AttendanceIngressClaim>(StringComparer.Ordinal);
+        private readonly struct AttendanceIngressClaim
+        {
+            public readonly Vector2 Exterior, Interior;
+            public readonly float Radius;
+            public AttendanceIngressClaim(Vector2 exterior, Vector2 interior, float radius)
+            { Exterior = exterior; Interior = interior; Radius = radius; }
+        }
         private string _qaInvalidatedAtomicAgentId = string.Empty;
-        private Vector2 _attendanceIngressExterior;
-        private Vector2 _attendanceIngressInterior;
-        private float _attendanceIngressRadius;
         private ContinuousGridTransform _gridTransform;
 
         public int Revision { get; private set; }
@@ -270,7 +275,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public int CanonicalGeometryObstacleCount { get; private set; }
         public int LegacyCollisionFallbackCount { get; private set; }
         public int FullCellFallbackCount { get; private set; }
-        public string AttendanceIngressOwner => _attendanceIngressOwner;
+        public string AttendanceIngressOwner => string.Join(",", _attendanceIngressClaims.Keys);
+        public int AttendanceIngressClaimCount => _attendanceIngressClaims.Count;
         public float MinimumAgentSeparationMargin { get; private set; } = float.PositiveInfinity;
 
         public void ResetMetrics()
@@ -295,11 +301,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _profiledInteractionSeatIds.Clear();
             _narrowCorridorIds.Clear();
             _narrowCorridorOwners.Clear();
-            _attendanceIngressOwner = string.Empty;
+            _attendanceIngressClaims.Clear();
             _qaInvalidatedAtomicAgentId = string.Empty;
-            _attendanceIngressExterior = Vector2.zero;
-            _attendanceIngressInterior = Vector2.zero;
-            _attendanceIngressRadius = 0f;
             CanonicalGeometryObstacleCount = 0;
             LegacyCollisionFallbackCount = 0;
             FullCellFallbackCount = 0;
@@ -482,9 +485,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 state.Epoch++;
                 return;
             }
-            bool insideClaimedIngress =
-                string.Equals(_attendanceIngressOwner, state.AgentId, StringComparison.Ordinal) &&
-                PointInsideAttendanceIngress(position, state.Radius);
+            bool insideClaimedIngress = PointInsideAttendanceIngress(state.AgentId, position, state.Radius);
             if (!insideClaimedIngress &&
                 !PointClearsStatic(
                     position,
@@ -521,25 +522,25 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             ActorState actor = RequiredActor(agentId);
             if (actor.IsPresent || radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
                 return false;
-            if (_attendanceIngressOwner.Length > 0 &&
-                !string.Equals(_attendanceIngressOwner, actor.AgentId, StringComparison.Ordinal))
-                return false;
+            if (_attendanceIngressClaims.ContainsKey(actor.AgentId)) return false;
             if ((interior - exterior).sqrMagnitude <= 0.0001f) return false;
+            foreach (var pending in _attendanceIngressClaims)
+            {
+                ActorState owner = RequiredActor(pending.Key);
+                if (!owner.IsPresent && Vector2.Distance(pending.Value.Exterior, exterior) <
+                    actor.Radius + owner.Radius + 0.06f) return false;
+            }
 
             foreach (ActorState peer in _actors.Values)
             {
                 if (ReferenceEquals(peer, actor) || !peer.IsPresent) continue;
                 float required = actor.Radius + peer.Radius + 0.06f;
-                if (DistanceToSegment(peer.Position, exterior, interior) < required) return false;
-                OfficeGridCoordinate interiorCell = _presenter.NearestCell(
-                    new Vector3(interior.x, interior.y, 0f));
-                if (peer.Reservations.Contains(interiorCell)) return false;
+                // Claim only this actor's corridor and safe spawn, not exclusive ownership of
+                // the whole doorway. A following entrant still collision-checks every step.
+                if (Vector2.Distance(peer.Position, exterior) < required) return false;
             }
 
-            _attendanceIngressOwner = actor.AgentId;
-            _attendanceIngressExterior = exterior;
-            _attendanceIngressInterior = interior;
-            _attendanceIngressRadius = radius;
+            _attendanceIngressClaims.Add(actor.AgentId, new AttendanceIngressClaim(exterior, interior, radius));
             actor.Position = exterior;
             actor.CurrentCell = _presenter.NearestCell(new Vector3(exterior.x, exterior.y, 0f));
             return true;
@@ -553,10 +554,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             ActorState actor = RequiredActor(agentId);
             if (!actor.IsPresent ||
-                !string.Equals(_attendanceIngressOwner, actor.AgentId, StringComparison.Ordinal) ||
-                Mathf.Abs(radius - _attendanceIngressRadius) > 0.0001f ||
-                !PointInsideAttendanceIngress(start, radius) ||
-                !PointInsideAttendanceIngress(end, radius))
+                !_attendanceIngressClaims.TryGetValue(actor.AgentId, out AttendanceIngressClaim claim) ||
+                Mathf.Abs(radius - claim.Radius) > 0.0001f ||
+                !PointInsideAttendanceIngress(actor.AgentId, start, radius) ||
+                !PointInsideAttendanceIngress(actor.AgentId, end, radius))
                 return false;
 
             Vector2 delta = end - start;
@@ -581,14 +582,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public void ReleaseAttendanceIngress(string agentId)
         {
-            if (!string.Equals(
-                    _attendanceIngressOwner,
-                    agentId ?? string.Empty,
-                    StringComparison.Ordinal)) return;
-            _attendanceIngressOwner = string.Empty;
-            _attendanceIngressExterior = Vector2.zero;
-            _attendanceIngressInterior = Vector2.zero;
-            _attendanceIngressRadius = 0f;
+            _attendanceIngressClaims.Remove(agentId ?? string.Empty);
         }
 
         public bool TryReservePath(
@@ -1234,14 +1228,14 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public OfficeGridCoordinate CurrentCell(string agentId) => RequiredActor(agentId).CurrentCell;
 
-        private bool PointInsideAttendanceIngress(Vector2 point, float radius)
+        private bool PointInsideAttendanceIngress(string agentId, Vector2 point, float radius)
         {
-            if (_attendanceIngressOwner.Length == 0) return false;
+            if (!_attendanceIngressClaims.TryGetValue(agentId, out AttendanceIngressClaim claim)) return false;
             float tolerance = Mathf.Min(0.04f, Mathf.Max(0.01f, radius * 0.20f));
             return DistanceToSegment(
                        point,
-                       _attendanceIngressExterior,
-                       _attendanceIngressInterior) <= tolerance;
+                       claim.Exterior,
+                       claim.Interior) <= tolerance;
         }
 
         private static float DistanceToSegment(Vector2 point, Vector2 start, Vector2 end)

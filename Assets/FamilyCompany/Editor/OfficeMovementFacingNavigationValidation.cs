@@ -55,6 +55,7 @@ namespace FamilyCompany.Editor
             ValidateHighRefreshFirstAccelerationStep();
             ValidateActorScopedDebtTransitionsAndRoundRobin();
             ValidateFourActorAttendanceIngressReservation();
+            ValidateFollowingAttendanceIngress();
             ValidateCanonicalFurniturePathDetours();
             Debug.Log(
                 "OFFICE_MOVEMENT_FACING_NAVIGATION_VALIDATION: PASS | " +
@@ -247,6 +248,38 @@ namespace FamilyCompany.Editor
                         stoppedSpriteDirection == heldFacing,
                     "Stopped sprite consumer did not retain screen-right art: " + stopped);
             }
+        }
+
+        private static void ValidateFollowingAttendanceIngress()
+        {
+            using var harness = new OccupancyHarness(OfficeGridLayouts.CreateNewGameEmptyOfficeV1());
+            foreach (string id in new[] { "leader", "follower" })
+            {
+                harness.Occupancy.RegisterActor(id, harness.Position(new OfficeGridCoordinate(4, 4)), 0.445f, 0.22f);
+                harness.Occupancy.SetActorPresent(id, false);
+            }
+            Vector2 entrance = harness.Position(new OfficeGridCoordinate(8, 1));
+            Vector2 inward = harness.Position(new OfficeGridCoordinate(8, 2)) - entrance;
+            Vector2 exterior = entrance - inward * 2.5f;
+            Require(harness.Occupancy.TryClaimAttendanceIngress("leader", exterior, entrance, 0.22f), "Leader claim failed.");
+            harness.Occupancy.SetActorPresent("leader", true);
+            Require(!harness.Occupancy.TryClaimAttendanceIngress("follower", exterior, entrance, 0.22f), "Spawn overlap accepted.");
+            Vector2 ahead = exterior + inward.normalized * 1.05f;
+            Require(harness.Occupancy.CanMoveAttendanceIngress("leader", exterior, ahead, 0.22f), "Leader cannot advance.");
+            harness.Occupancy.UpdateActor("leader", ahead, Vector2.zero, 0f);
+            Require(harness.Occupancy.TryClaimAttendanceIngress("follower", exterior, entrance, 0.22f), "Safe following entrant blocked by whole-corridor ownership.");
+            harness.Occupancy.SetActorPresent("follower", true);
+            Require(harness.Occupancy.AttendanceIngressClaimCount == 2, "Following claims were not independent.");
+            Require(harness.Occupancy.CanMoveAttendanceIngress("follower", exterior, exterior + inward.normalized * 0.05f, 0.22f), "Safe follow step rejected.");
+            Require(!harness.Occupancy.CanMoveAttendanceIngress("follower", exterior, ahead, 0.22f), "Follower crossed leader body.");
+            Require(!harness.Occupancy.CanMoveAttendanceIngress("follower", exterior, exterior + Vector2.right, 0.22f), "Follower escaped its claimed corridor.");
+            harness.Occupancy.ReleaseAttendanceIngress("leader");
+            Require(harness.Occupancy.AttendanceIngressClaimCount == 1, "Leader exit revoked follower claim.");
+            harness.Occupancy.SetActorPresent("leader", false);
+            Require(harness.Occupancy.CanMoveAttendanceIngress("follower", exterior, entrance, 0.22f), "Follower lost valid corridor after leader left.");
+            harness.Occupancy.ReleaseAttendanceIngress("follower");
+            Require(harness.Occupancy.AttendanceIngressClaimCount == 0, "Ingress claim leaked.");
+            Debug.Log("ATTENDANCE_FOLLOWING_INGRESS: PASS independent claims, safe spawn, swept peer collision, own corridor, release cleanup");
         }
 
         private static void ValidateFourActorAttendanceIngressReservation()

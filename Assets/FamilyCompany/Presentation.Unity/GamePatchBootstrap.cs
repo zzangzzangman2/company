@@ -26,7 +26,7 @@ namespace FamilyCompany.Presentation.Unity
         private string _gameDirectory, _workerDirectory, _installRoot, _runRoot, _qaRoot;
         private string _status = "최신 버전을 확인하고 있습니다", _detail = "", _phase = "check";
         private double _percent = -1;
-        private bool _blocking = true, _failed, _offlineAvailable, _restarting, _captured, _previousBackground, _qaRestart;
+        private bool _blocking = true, _failed, _restarting, _captured, _previousBackground, _qaRestart;
         private float _started;
         private GUIStyle _button;
 
@@ -44,7 +44,9 @@ namespace FamilyCompany.Presentation.Unity
             string workers = Path.Combine(game ?? "", "FamilyCompanyPatch");
             bool qaPlayer = Debug.isDebugBuild || Path.GetFileName(Application.dataPath) == "FamilyCompany_FastQa_Data";
             string qa = qaPlayer ? ReadArgument("-familyCompanyInGamePatchQa") : null;
-            if (string.IsNullOrEmpty(qa) && !File.Exists(Path.Combine(workers, "FamilyCompany.InGame.ps1"))) return;
+            // Development players may omit shipping workers. A normal main EXE must fail
+            // closed if its updater is missing, never silently launch an unverified old game.
+            if (qaPlayer && string.IsNullOrEmpty(qa) && !File.Exists(Path.Combine(workers, "FamilyCompany.InGame.ps1"))) return;
             var host = new GameObject("~InGamePatchLoading");
             DontDestroyOnLoad(host);
             _instance = host.AddComponent<GamePatchBootstrap>();
@@ -63,7 +65,7 @@ namespace FamilyCompany.Presentation.Unity
             Debug.Log("IN_GAME_PATCH_START actualUnityUi=true qa=" + !string.IsNullOrEmpty(_qaRoot));
             _previousBackground = Application.runInBackground;
             Application.runInBackground = true;
-            StartAttempt(false);
+            StartAttempt();
         }
 
         private static string ReadArgument(string name)
@@ -101,11 +103,11 @@ namespace FamilyCompany.Presentation.Unity
             return process;
         }
 
-        private void StartAttempt(bool offline)
+        private void StartAttempt()
         {
             if (_worker != null && !_worker.HasExited) return;
             _worker?.Dispose(); _worker = null;
-            _failed = false; _offlineAvailable = false; _percent = -1; _phase = "check";
+            _failed = false; _percent = -1; _phase = "check";
             _status = "최신 버전을 확인하고 있습니다"; _detail = "";
             _started = Time.realtimeSinceStartup;
             try
@@ -115,8 +117,7 @@ namespace FamilyCompany.Presentation.Unity
                 Directory.CreateDirectory(_runRoot);
                 _worker = StartHidden(Path.Combine(_workerDirectory, "FamilyCompany.InGame.ps1"),
                     "-GameDirectory " + Quote(_gameDirectory) + " -ResultPath " + Quote(Path.Combine(_runRoot, "result.json")) +
-                    " -InstallRoot " + Quote(_installRoot) + " -CancelPath " + Quote(Path.Combine(_runRoot, "cancel.request")) +
-                    (offline ? " -OfflineOnly" : ""), true);
+                    " -InstallRoot " + Quote(_installRoot) + " -CancelPath " + Quote(Path.Combine(_runRoot, "cancel.request")), true);
             }
             catch (Exception e) { Fail(e.Message); }
         }
@@ -160,13 +161,13 @@ namespace FamilyCompany.Presentation.Unity
             try
             {
                 var result = JsonUtility.FromJson<PatchResult>(File.ReadAllText(Path.Combine(_runRoot, "result.json")));
+                if (result.status != "current" && result.status != "prepared")
+                    throw new InvalidOperationException("최신 공개 버전 확인이 완료되지 않았습니다. 이전 버전은 실행하지 않습니다.");
                 if (!string.IsNullOrEmpty(_qaRoot))
                 {
                     File.WriteAllText(Path.Combine(_qaRoot, "unity-patch-result.json"), JsonUtility.ToJson(result, true));
                     if (!_qaRestart) { StartCoroutine(FinishQa()); return; }
                 }
-                if (result.status == "offline-ready")
-                { _failed = true; _offlineAvailable = true; _status = "최신 버전을 확인하지 못했습니다"; _detail = "무결성을 확인한 이전 설치본으로 시작할 수 있습니다."; return; }
                 if (string.Equals(Path.GetFullPath(result.directory), Path.GetFullPath(_gameDirectory), StringComparison.OrdinalIgnoreCase))
                 {
                     _blocking = false; Application.runInBackground = _previousBackground;
@@ -222,7 +223,12 @@ namespace FamilyCompany.Presentation.Unity
             catch (Exception error) { Fail("자동 재시작 준비 실패: " + error.Message); return null; }
         }
 
-        private void Fail(string reason) { _failed = true; _status = reason; _percent = -1; Debug.LogWarning("IN_GAME_PATCH_UNAVAILABLE " + reason); }
+        private void Fail(string reason)
+        {
+            _failed = true; _status = reason; _percent = -1;
+            _detail = "최신 버전 확인과 검증을 완료해야 시작할 수 있습니다. 다시 확인하거나 종료해 주세요.";
+            Debug.LogWarning("IN_GAME_PATCH_UNAVAILABLE " + reason);
+        }
 
         private void OnGUI()
         {
@@ -237,8 +243,7 @@ namespace FamilyCompany.Presentation.Unity
                     _button = new GUIStyle(GUI.skin.button) { fontSize = 18, font = bodyFont };
                 }
                 var panel = UIRemaster.UiRemasterLayout.CalculateLoading(Screen.width, Screen.height).Panel;
-                if (GUI.Button(new Rect(panel.x, panel.yMax + 12, 150, 42), "다시 확인", _button)) StartAttempt(false);
-                if (_offlineAvailable && GUI.Button(new Rect(panel.x + 160, panel.yMax + 12, 190, 42), "이전 버전으로 시작", _button)) StartAttempt(true);
+                if (GUI.Button(new Rect(panel.x, panel.yMax + 12, 150, 42), "다시 확인", _button)) StartAttempt();
                 if (GUI.Button(new Rect(panel.xMax - 100, panel.yMax + 12, 100, 42), "종료", _button)) Application.Quit();
             }
             GUI.depth = oldDepth;

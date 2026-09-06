@@ -57,7 +57,7 @@ namespace FamilyCompany.Runtime.Character3D
             autonomy = new StreamWriter(Path.Combine(directory, "autonomy.csv"), false, new UTF8Encoding(false));
             autonomy.AutoFlush = true;
             autonomy.WriteLine("seconds,clock,member,playerControlled,phase,cell,x,y,destination,stuck,reservationBlocker,movementBlocker,intent,location,interaction,status,pathIndex,pathLength,seat,interactionPhase,termination,staticHere,ready,shopOpen,egressBlocker,egressBlockedAttempts");
-            geometry.WriteLine("seconds,seat,turn,chairTileErrorPx,stemTileErrorPx,monitorAxisError,keyboardAxisError,member,phase,handMidpointError,standingHeight");
+            geometry.WriteLine("seconds,seat,turn,chairTileErrorPx,stemTileErrorPx,monitorAxisError,keyboardAxisError,member,phase,handMidpointError,standingHeight,seatedBlend,workClock,leftHandError,rightHandError,leftKneeDegrees,rightKneeDegrees,frame,ready");
             trace.WriteLine("frame,seconds,clock,ready,cash,inventory,seats,pointerCommits,member,phase,away,x,y,destination,pathIndex,pathLength,seat,seatDirection,arrivalCount,workFrames,gaitDistance,displacement,staticViolations,interactionViolations,agentPenetrations,bodies,legacyCharacters,legacyFurniture,bgm,sfx,listenerVolume,outputPeak,errors");
             Application.logMessageReceived += OnLog;
             Application.runInBackground = true;
@@ -89,6 +89,12 @@ namespace FamilyCompany.Runtime.Character3D
                 File.WriteAllText(Path.Combine(directory, "observation-ended.txt"),
                     "CAPTURED, NOT AUTO-PASS; runtimeErrors=" + errors + "; frames=" + frame);
                 Application.Quit(errors == 0 ? 0 : 1);
+            }
+            var geometryPresenter = Family3DProductionPresenter.Instance;
+            if (geometryPresenter != null && geometryPresenter.IsBound && Time.realtimeSinceStartup >= nextGeometry)
+            {
+                nextGeometry = Time.realtimeSinceStartup + 1f / 30f;
+                ObserveChairGeometry(geometryPresenter);
             }
             if (Time.realtimeSinceStartup < nextSample) return;
             nextSample = Time.realtimeSinceStartup + 0.1f;
@@ -128,11 +134,6 @@ namespace FamilyCompany.Runtime.Character3D
             }
             trace.Write(rows.ToString());
             File.WriteAllText(Path.Combine(directory, "latest.csv"), rows.ToString());
-            if (presenter != null && presenter.IsBound && Time.realtimeSinceStartup >= nextGeometry)
-            {
-                nextGeometry = Time.realtimeSinceStartup + 1f;
-                ObserveChairGeometry(presenter);
-            }
             if (Time.realtimeSinceStartup >= nextCapture && runtime.IsReady)
             {
                 nextCapture = Time.realtimeSinceStartup + 10;
@@ -198,15 +199,29 @@ namespace FamilyCompany.Runtime.Character3D
                                      avatar.GetBoneTransform(HumanBodyBones.RightHand).position) * 0.5f;
                     Vector3 expected = desk.KeyboardWorld + Vector3.up * (0.022f * body.StandingHeight) -
                                        desk.SeatedBodyForwardWorld * (0.035f * body.StandingHeight);
+                    float seatedBlend = (float)type.GetProperty("SeatedBlend01").GetValue(binding);
+                    double workClock = (double)type.GetProperty("WorkClockSeconds").GetValue(binding);
+                    Vector3 bodyRight = Vector3.Cross(Vector3.up, desk.SeatedBodyForwardWorld).normalized;
+                    float tap = agent.Phase == OfficeRuntimeAgentPhase.Working && seatedBlend > 0.999f
+                        ? Mathf.Sin((float)(workClock / 0.8 % 1.0) * Mathf.PI * 2f) * (0.010f * body.StandingHeight) : 0f;
+                    float leftError = Vector3.Distance(avatar.GetBoneTransform(HumanBodyBones.LeftHand).position,
+                        expected - bodyRight * (0.12f * body.StandingHeight) + Vector3.up * tap);
+                    float rightError = Vector3.Distance(avatar.GetBoneTransform(HumanBodyBones.RightHand).position,
+                        expected + bodyRight * (0.12f * body.StandingHeight) - Vector3.up * tap);
+                    float Knee(HumanBodyBones hip, HumanBodyBones knee, HumanBodyBones foot) => Vector3.Angle(
+                        avatar.GetBoneTransform(hip).position - avatar.GetBoneTransform(knee).position,
+                        avatar.GetBoneTransform(foot).position - avatar.GetBoneTransform(knee).position);
                     geometry.WriteLine(string.Join(",", F(Time.realtimeSinceStartup), seat.SeatId,
                         seat.Facing, F(chairError), F(stemError), F(Vector3.Cross(screen, desk.ForwardWorld).magnitude),
                         F(Vector3.Cross(key, desk.ForwardWorld).magnitude), agent.AgentId, agent.Phase,
-                        F(Vector3.Distance(hands, expected)), F(body.StandingHeight)));
+                        F(Vector3.Distance(hands, expected)), F(body.StandingHeight), F(seatedBlend), F((float)workClock),
+                        F(leftError), F(rightError), F(Knee(HumanBodyBones.LeftUpperLeg, HumanBodyBones.LeftLowerLeg, HumanBodyBones.LeftFoot)),
+                        F(Knee(HumanBodyBones.RightUpperLeg, HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot)), frame, runtime.IsReady));
                     occupied = true;
                 }
                 if (!occupied) geometry.WriteLine(string.Join(",", F(Time.realtimeSinceStartup), seat.SeatId,
                     seat.Facing, F(chairError), F(stemError), F(Vector3.Cross(screen, desk.ForwardWorld).magnitude),
-                    F(Vector3.Cross(key, desk.ForwardWorld).magnitude), "none", "none", "", ""));
+                    F(Vector3.Cross(key, desk.ForwardWorld).magnitude), "none", "none", "", "", "", "", "", "", "", "", frame, runtime.IsReady));
             }
         }
         private static string F(float value) => value.ToString("F6", CultureInfo.InvariantCulture);

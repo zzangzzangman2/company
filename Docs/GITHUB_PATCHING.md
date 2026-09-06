@@ -4,6 +4,10 @@
 정본 저장소는 `main`, `https://github.com/zzangzzangman2/company`다. 개발 소스 push와 게임 배포는 다르다.
 Release 업로드나 PC 종료를 이미 완료했다고 설명하지 않는다.
 
+고정 메인 경로와 회사 PC 사용법은 **[MAIN_GAME_ENTRY.md](MAIN_GAME_ENTRY.md)**가 소유한다.
+2026-09-06 사용자 추가 계약: **최신 정식 게임 Release 확인에 실패하면 시작하지 않는다.** 이전 버전
+실행/오프라인 우회는 폐기했다. 플레이 PC는 매번 빌드하지 않으며 최초 패치 지원 설치만 한 번 필요하다.
+
 ## 무엇이 빨라지는가
 
 - 이동 속도, 보폭, phase, 아들/아빠의 발 중심 미세 오프셋, 테스트 상점 가격은 JSON 저장 후 0.5초 이내
@@ -58,8 +62,9 @@ Editor/Development/FastQA만 허용하며 일반 `FamilyCompany_Data` Release는
   함께 표시한다. 재사용 파일은 분모에서 빼며, 변경 없음은 가짜 다운로드 없이 검증 후 시작한다.
 - 검증 진행률은 해시 검증을 완료한 원본 파일의 바이트 합계다. 확인·복사·해제처럼 전체량이 정해지지
   않은 단계에는 퍼센트를 만들지 않고 진행 중 표시를 쓴다. 다운로드 100%와 설치 완료를 구분한다.
-- 취소/실패 때 불완전 payload는 실행하지 않는다. 서버에 연결할 수 없으면 기존 설치를 전부 검증한 뒤
-  `검증된 이전 버전 실행`을 따로 제공한다. 취소 응답은 진행 중 네트워크 I/O 때문에 최대 30초 걸릴 수 있다.
+- 취소/실패 때 불완전 payload는 실행하지 않는다. 서버에 연결할 수 없거나 최신판을 확인하지 못하면
+  기존 설치가 온전해도 시작하지 않는다. 재시도/종료만 제공한다. 취소 응답은 진행 중 네트워크 I/O
+  때문에 최대 30초 걸릴 수 있다.
 - `GamePatchBootstrap`이 worker의 `FC_PROGRESS` JSON을 메인 thread에서 읽고 기존
   `ScenePreviewJump.DrawPatchLoading`에 전달한다. 타이틀 조작과 사무실 warmup은 확인 후 허용한다.
 - Release 빌더는 `FamilyCompanyPatch/`에 Update/InGame/Restart 세 worker만 넣는다. 세 worker는
@@ -70,7 +75,7 @@ Editor/Development/FastQA만 허용하며 일반 `FamilyCompany_Data` Release는
 - 최초 설치 파일도 서버 manifest와 일치하는 파일만 seed로 재사용한다. 최초 한 번은 검증된 AppData
   snapshot을 만들기 때문에 추가 로컬 저장 공간과 재시작이 필요하다. 옛 최초 설치 EXE를 다시 열면
   게임 로딩 화면을 거쳐 검증된 최신 snapshot으로 다시 이동한다. 무중단 실행 파일 교체는 아니다.
-- 일반 개발 캐시는 worker가 없으면 패치 모드가 꺼진다. 명시적 QA root는 Editor가 아닌
+- 일반 개발 캐시는 worker가 없으면 패치 모드가 꺼지지만, 배포용 main은 worker 누락 시 시작을 차단한다. 명시적 QA root는 Editor가 아닌
   Development/FastQA에서만 허용하며, test worker는 배포에 포함하지 않는다.
 
 - 설치 루트: `%LOCALAPPDATA%/FamilyCompany/PatchedGame` 전용 디렉터리.
@@ -80,7 +85,7 @@ Editor/Development/FastQA만 허용하며 일반 `FamilyCompany_Data` Release는
 - 각 원본 파일과 gzip 자산의 SHA-256/크기를 모두 검증한다. 토큰/쿠키/계정 비밀을 런처에 넣지 않는다.
 - 그대로인 설치 파일은 해시 검사 후 새 snapshot에 복사, 바뀐 파일만 다운로드·해제한다.
 - 모두 검증된 뒤 `current.json`만 원자 교체한다. 저장 데이터는 설치 루트 밖에 그대로 둔다.
-- 불완전 파일은 실행하지 않는다. 다운로드 실패 시 기존 설치도 다시 해시 검증된 경우에만 실행한다.
+- 불완전 파일은 실행하지 않는다. 다운로드/최신 확인 실패 시 구버전 설치를 실행하지 않는다.
 - 경로 탈출/ADS/장치명/대소문자 충돌/junction/동일 버전 변조/다운그레이드/동시 실행은 거부한다.
 - 실행 중인 게임을 강제 종료하지 않는다. 완성 폴더 이동 직후 중단된 경우 재시작은 검증 후 활성화만 한다.
 - 실패한 staging은 외부 evidence에 해시/오류를 남긴 뒤 자기 GUID staging만 정리한다. 설치된 이전 버전의
@@ -96,6 +101,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-Famil
 손상·누락 다운로드/재시도/중단 활성화 복구/오프라인 무결성/경로·접합점·동시 잠금/세이브 보존 포함.
 추가로 실제 바이트 분모·소수 내림·단조 증가·변경 없음·전송 중 취소·과다/부족 수신을 검사한다.
 결과는 `Artifacts/UpdaterTests/<GUID>/result.json`. GitHub 실배포/실게임 patch 다운로드 검증은 별도다.
+
+`Test-FamilyCompanyLatestOnly.ps1`은 실제 production worker에 API 오류만 주입하여, 검증된 이전
+설치본이 있어도 네트워크 실패/잘못된 Release/초안 Release에서 시작하지 않는지 검사한다. 게임 내부
+worker와 유지된 개발용 CLI 모두 6개 실패 차단 사례를 통과해야 한다. 이전 설치와 pointer는 보존한다.
 
 `Test-FamilyCompanyInGamePatch.ps1 -ShowWindow`는 실제 Unity 게임에 inert 로컬 전송을 연결한다.
 IMGUI는 presented frame이 필요해서 검증 전에 사용자에게 실제 게임 창이 열린다고 알린다.
