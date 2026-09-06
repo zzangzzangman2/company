@@ -45,6 +45,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public GUIStyle PanelStyle { get; private set; }
         public GUIStyle HeaderStyle { get; private set; }
         public GUIStyle TitleStyle { get; private set; }
+        public GUIStyle CatalogTitleStyle { get; private set; }
+        public GUIStyle CatalogHintStyle { get; private set; }
         public GUIStyle BodyStyle { get; private set; }
         public GUIStyle HintStyle { get; private set; }
         public GUIStyle ValueStyle { get; private set; }
@@ -116,6 +118,19 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             {
                 normal = { textColor = InkSoft },
                 fontSize = Round(13)
+            };
+            // The catalog has a reserved action column. Text must never overflow into its buttons.
+            CatalogTitleStyle = new GUIStyle(TitleStyle)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = false,
+                clipping = TextClipping.Clip
+            };
+            CatalogHintStyle = new GUIStyle(HintStyle)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                wordWrap = false,
+                clipping = TextClipping.Clip
             };
             ValueStyle = new GUIStyle(BodyStyle)
             {

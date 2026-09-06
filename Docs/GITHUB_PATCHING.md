@@ -110,7 +110,8 @@ batch 모드의 검은 PNG는 시각 PASS가 아니다. 최종 화면 **20.3% / 
    적용한다. source/Library/Bee/다른 실행본/저장 파일은 제외한다. 상세 기록은 PROJECT_STATE.md.
 2. 보행·충돌 보정, 4방향 착석/업무, native shop 클릭, 다음 날 가족별 출근, 음소거를 독립 runner로 검증한다.
 3. 사용자 실제 보행 화면 승인은 2026-09-06 받았다. clean committed main, 정확한 Unity 6000.3.21f1
-   Release 빌드가 아직 필요하다. 기존 미추적 누나 입력 13개는 무단 stage/이동하지 않는다.
+   Release 빌드가 아직 필요하다. 기존 미추적 누나 입력 13개는 이후 사용자 continuation으로 원본 그대로
+   3b47605e에 보존했다. 이는 누나 모델 생성/게임 승격이 아니다.
 4. `REGRESSION_BUILD_POLICY.md`의 독립 gate 및 실패 후 삭제/복귀 계약을 만족하는 빌드 경로를 사용한다.
    현재 기존 BUILD/DEPLOY 스크립트는 완전한 독립 gate/실패 cleanup 구현이 확인되지 않았으므로 자동 실행하지 않는다.
 5. 소스 push 전 fresh remote branch/tag/release/LFS 전체 검사:

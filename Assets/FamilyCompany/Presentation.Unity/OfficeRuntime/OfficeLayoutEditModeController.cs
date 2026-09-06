@@ -889,21 +889,21 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             DrawSprite(icon, OfficeBuildFurnitureVisualLibrary.Thumbnail(
                 _runtime.World.FurniturePresenter.VisualCatalog, definition.DefinitionId, definition.DesiredFacing));
             float x = icon.xMax + _skin.Round(8);
-            float textWidth = rect.xMax - x - _skin.Round(92);
+            float bx = rect.xMax - _skin.Round(84);
+            float textWidth = bx - _skin.Round(10) - x;
+            bool workstationSet = OfficeFurnitureCatalog.IsWorkstationSetOffer(definition.DefinitionId);
             GUI.Label(new Rect(x, rect.y + _skin.Round(7), textWidth, _skin.Round(22)),
-                definition.KoreanDisplayName, _skin.TitleStyle);
+                workstationSet ? "책상·PC·의자 세트" : definition.KoreanDisplayName, _skin.CatalogTitleStyle);
             long price = OfficeFurnitureCatalog.GameplayShopPrice(definition);
-            string footprint = OfficeFurnitureCatalog.IsWorkstationSetOffer(definition.DefinitionId)
-                ? "3칸 세트"
+            string footprint = workstationSet
+                ? "3칸 점유"
                 : definition.BaseWidth + "×" + definition.BaseHeight;
             GUI.Label(new Rect(x, rect.y + _skin.Round(31), textWidth, _skin.Round(20)),
-                $"{Won(price)} · {footprint} · {CapabilityText(definition)}",
-                _skin.HintStyle);
+                $"{price:N0}원 · {footprint}", _skin.CatalogHintStyle);
             int owned = Inventory.CountOwned(definition.DefinitionId);
             int placed = Inventory.CountPlaced(definition.DefinitionId);
             GUI.Label(new Rect(x, rect.y + _skin.Round(52), textWidth, _skin.Round(19)),
-                $"보유 {owned} / 배치 {placed}", _skin.HintStyle);
-            float bx = rect.xMax - _skin.Round(84);
+                $"보유 {owned} · 배치 {placed}", _skin.CatalogHintStyle);
             if (Button(new Rect(bx, rect.y + _skin.Round(8), _skin.Round(78), _skin.Round(30)), "구매", true))
                 BeginPurchase(definition);
             OfficeFurnitureInstanceState stored = Inventory.Instances.FirstOrDefault(item =>

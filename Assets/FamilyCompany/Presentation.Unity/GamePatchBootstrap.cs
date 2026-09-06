@@ -37,6 +37,9 @@ namespace FamilyCompany.Presentation.Unity
         private static void Install()
         {
             if (Application.isEditor || Application.platform != RuntimePlatform.WindowsPlayer) return;
+            // Explicit offline gameplay diagnostic, never evidence that patch/restart passed.
+            // This allows the independent gameplay observer to validate a pre-publication Release.
+            if (ReadArgument("-familyCompanyManualGameplayObservation") != null) return;
             string game = Directory.GetParent(Application.dataPath)?.FullName;
             string workers = Path.Combine(game ?? "", "FamilyCompanyPatch");
             bool qaPlayer = Debug.isDebugBuild || Path.GetFileName(Application.dataPath) == "FamilyCompany_FastQa_Data";

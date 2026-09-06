@@ -2,6 +2,36 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
+## 2026-09-06 current continuation: shop text correction / restart helper test
+
+- User reported the catalog title overlapping the purchase button (`이거글씨도맞춰줘`).
+  The visible offer is now `책상·PC·의자 세트`, `400,000원 · 3칸 점유`, `보유 N · 배치 N`.
+  Dedicated clipped single-line catalog styles and a 10-unit gap reserve the action column.
+  No price, footprint, furniture model, seating or character-size changes. Visual retest pending.
+- Source Editor/PrototypeValidation PASS 29.029s, `Artifacts/FastQa/runs/20260906-115604-803/`.
+  The user-visible overflow test payload (`20260906-114922-700`, 166 files) was hashed and recycled;
+  its exact cache root is absent. Evidence: `Artifacts/FastQa/FailedPayloadEvidence/20260906-114922-shop-text-overflow/`.
+  Source, saves, unrelated builds, Library/Bee and sister originals remain intact.
+- `Test-FamilyCompanyRestart.ps1`: **10 checks PASS**, actual production restart helper with a
+  windowless probe. Ready before exit, no early activation, normal parent exit, exact snapshot launch,
+  pointer identity, wrong-parent rejection and corrupted-payload rejection. Evidence:
+  `Artifacts/UpdaterRestartTests/2b5240d05ff8445bbdbcec8d9cc54054/result.json`.
+  This does NOT yet prove Unity-to-Unity restart or GitHub publication/download.
+- `-familyCompanyManualGameplayObservation <absolute evidence directory>` creates an unsaved normal
+  new game and logs actual production state/native pointer counts; it never declares itself PASS.
+  This explicit offline gameplay diagnostic bypasses patch networking only, so unpublished Release
+  gameplay can be tested. F8 captures; F9 skips only unobserved afternoon/night around normal departure
+  and next-day 08:50 observation; F10 exits. It injects no actor route/pose/seat/control. Do not use this
+  flag as patch/restart proof or a normal player launch command.
+- Initial native session reached the real company menu -> shop, then the game window closed before
+  purchase. `Artifacts/ManualGameplay/20260906-115142/` is **incomplete, not a shop PASS** (cash still
+  5000000, pointer commits 0). Do not fabricate the remaining native/seat/attendance/mute release gates.
+- User's continuation authorized preserving the exact 13 Older Sister V2 source inputs; image hashes
+  match their original README. Committed unchanged as **3b47605e**, references only, no model promotion.
+  Current sister V3/candidate status is not superseded by the preserved historical V2 README.
+- No game Release, Downloads replacement or shutdown has occurred. Continue corrected shop visual
+  verification and independent game gates before publishing the first actual game patch.
+
 ## 2026-09-06 IN-GAME patch loading: UI VERIFIED, GAME RELEASE STILL BLOCKED
 
 - User accepted the latest default four-body walk video (`괜찮아 패치배포하고 ... 로딩창 ... 정확히`).
@@ -41,10 +71,8 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
   first-release-unavailable error in the now-rejected external prototype; no random Downloads build was started. No game Release, Downloads
   replacement, actual internet game update, or PC shutdown has occurred.
 - Release packaging still requires clean committed source, independent gameplay gates and provenance.
-  The 13 pre-existing `OlderSisterIdentityTurnaroundV2` image/meta/README files remain untouched and
-  unstaged. Asked whether to commit these exact originals for clean source; no answer recorded yet.
-  Do not silently stage, delete, move or hide them. This is separate from the still-needed game gates
-  listed below; source push is not game publication.
+  The 13 pre-existing `OlderSisterIdentityTurnaroundV2` originals were subsequently preserve-committed
+  at 3b47605e after user continuation; see the current entry above. Source push is not game publication.
 
 ## 2026-09-05 tile-centre fixes + hot settings + GitHub patcher: RELEASE BLOCKED
 
