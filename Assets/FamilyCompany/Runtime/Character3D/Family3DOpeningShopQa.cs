@@ -362,7 +362,7 @@ namespace FamilyCompany.Runtime.Character3D
             foreach (GameObject host in hosts)
                 foreach (Renderer renderer in host.GetComponentsInChildren<Renderer>()) renderer.forceRenderingOff = true;
             bool sweep = Environment.GetCommandLineArgs().Contains("-familyCompanyChairFitSweep");
-            var metrics = new StringBuilder("member,seat,hipClearance,kneeTarget,handError,maxHandError,leftKnee,rightKnee,chairPenetrations,cushion,upperLeg,torso,rail,stem,leanDegrees\n");
+            var metrics = new StringBuilder("member,seat,hipClearance,kneeTarget,handError,maxHandError,leftKnee,rightKnee,chairPenetrations,cushion,upperLeg,torso,rail,stem,leanDegrees,workClock\n");
             bool passed = true;
             foreach (string member in new[] { "player", "father" })
             {
@@ -378,13 +378,18 @@ namespace FamilyCompany.Runtime.Character3D
                       from knee in new[] { 95f, 100f, 105f, 110f } select new Vector2(clearance, knee)
                     : new[] { new Vector2(0.113f, 95f) }))
                   {
+                   // Include a complete typing cycle; a neutral screenshot missed a live reach failure.
+                   for (int sample = 0; sample < (sweep ? 1 : 33); sample++)
+                   {
+                    double workClock = (sample - 1) * (0.8 / 32.0);
+                    bool typing = sample > 0;
                     Vector3 root = desk.SeatGroundWorld;
-                    body.TickSeatedDeskWork(0d, root, desk.SeatedRotationWorld, 1f, false);
+                    body.TickSeatedDeskWork(workClock, root, desk.SeatedRotationWorld, 1f, typing);
                     var pose = body.ReadPoseSnapshot();
                     root.y = desk.CushionWorldY + fitting.x * pose.standingHeight - pose.hipsLocal.y;
                     root += desk.SeatedBodyForwardWorld * (0.07f * pose.standingHeight);
                     host.transform.position = root;
-                    body.AlignSeatedDeskLimbs(desk.KeyboardWorld, desk.SeatedBodyForwardWorld, 0, 1, 0, false, fitting.y);
+                    body.AlignSeatedDeskLimbs(desk.KeyboardWorld, desk.SeatedBodyForwardWorld, 0, 1, workClock, typing, fitting.y);
                     pose = body.ReadPoseSnapshot();
                     Vector3 hands = (avatar.GetBoneTransform(HumanBodyBones.LeftHand).position +
                                      avatar.GetBoneTransform(HumanBodyBones.RightHand).position) * 0.5f;
@@ -392,9 +397,10 @@ namespace FamilyCompany.Runtime.Character3D
                                        desk.SeatedBodyForwardWorld * (0.035f * body.StandingHeight);
                     float error = Vector3.Distance(hands, expected);
                     Vector3 handRight = Vector3.Cross(Vector3.up, desk.SeatedBodyForwardWorld).normalized * (0.12f * body.StandingHeight);
+                    Vector3 tap = Vector3.up * (typing ? Mathf.Sin((float)(workClock / 0.8) * Mathf.PI * 2f) * 0.01f * body.StandingHeight : 0f);
                     float maxHandError = Mathf.Max(
-                        Vector3.Distance(avatar.GetBoneTransform(HumanBodyBones.LeftHand).position, expected - handRight),
-                        Vector3.Distance(avatar.GetBoneTransform(HumanBodyBones.RightHand).position, expected + handRight));
+                        Vector3.Distance(avatar.GetBoneTransform(HumanBodyBones.LeftHand).position, expected - handRight + tap),
+                        Vector3.Distance(avatar.GetBoneTransform(HumanBodyBones.RightHand).position, expected + handRight - tap));
                     float left = Vector3.Angle(pose.leftHipWorld - pose.leftKneeWorld, pose.leftFootWorld - pose.leftKneeWorld);
                     float right = Vector3.Angle(pose.rightHipWorld - pose.rightKneeWorld, pose.rightFootWorld - pose.rightKneeWorld);
                     var vertices = new List<Vector3>(); var regions = new List<Family3DWalkActor.SeatedSkinRegion>();
@@ -403,10 +409,11 @@ namespace FamilyCompany.Runtime.Character3D
                     metrics.AppendLine(string.Join(",", member, desk.WorkstationSetId, F(fitting.x), F(fitting.y), F(error), F(maxHandError), F(left), F(right),
                         penetration.totalPenetratingVertexCount, penetration.cushionVertexCount,
                         penetration.cushionUpperLegVertexCount, penetration.cushionPelvisOrTorsoVertexCount,
-                        penetration.lumbarVertexCount, penetration.stemVertexCount, F(body.LastSeatedTorsoLeanDegrees)));
-                    if (!sweep) Capture("chair-fit-" + member + "-" + desk.WorkstationSetId + ".png");
-                    passed &= sweep || maxHandError <= 0.02f * body.StandingHeight && left >= 80 && left <= 140 &&
+                        penetration.lumbarVertexCount, penetration.stemVertexCount, F(body.LastSeatedTorsoLeanDegrees), F((float)workClock)));
+                    if (!sweep && sample == 0) Capture("chair-fit-" + member + "-" + desk.WorkstationSetId + ".png");
+                    passed &= sweep || maxHandError <= 0.015f && left >= 80 && left <= 140 &&
                               right >= 80 && right <= 140 && penetration.totalPenetratingVertexCount == 0;
+                   }
                   }
                 }
                 foreach (Renderer renderer in host.GetComponentsInChildren<Renderer>()) renderer.forceRenderingOff = true;

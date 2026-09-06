@@ -20,7 +20,9 @@ if ($DeveloperSettings) {
     if ($walkSettings.Contains('"')) { throw 'Invalid developer settings path.' }
     $walkStart.Arguments += ' -familyCompanyDevSettings "' + $walkSettings + '"'
 }
-$walkProcess = [Diagnostics.Process]::Start($walkStart)
+if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'Background/CompanyQaDesktop.cs') }
+$walkIsolation = [CompanyQaDesktop]::Start($walkPlayer, $walkStart.Arguments, $walkProject)
+$walkProcess = $walkIsolation.Process
 $walkTimer = [Diagnostics.Stopwatch]::StartNew()
 $walkWindowSamples = 0
 Write-Host "[WALK AUDIT] profile=$walkProfile pid=$($walkProcess.Id) artifacts=$walkOutput"
@@ -39,6 +41,11 @@ try {
     }
     Write-Host "[WALK AUDIT] Captured; MainWindowHandle=0 samples=$walkWindowSamples. This is not a visual PASS."
 } finally {
-    if (-not $walkProcess.HasExited) { $walkProcess.Kill(); [void]$walkProcess.WaitForExit(10000) }
-    $walkProcess.Dispose()
+    try {
+        if (-not $walkProcess.HasExited) { $walkProcess.Kill(); [void]$walkProcess.WaitForExit(10000) }
+        @{pid=$walkProcess.Id;exitCode=$walkProcess.ExitCode;privateDesktop=$walkIsolation.DesktopName;
+            interactiveDesktopAtStart=$walkIsolation.InteractiveDesktopAtStart;desktopSwitchAllowed=$false;
+            windowChecks=$walkWindowSamples;seconds=$walkTimer.Elapsed.TotalSeconds} |
+            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $walkOutput 'process.json') -Encoding UTF8
+    } finally { $walkIsolation.Dispose() }
 }

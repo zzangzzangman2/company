@@ -4,6 +4,15 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
 
 ## 2026-09-06 follow-up in progress: outside queue, scale-correct seated IK, isolated QA desktop
 
+- Actual `bfe9853b` normal Player: all four releases exactly 09:00/01/02/03 and first Working
+  09:09/06/17/19, strict attendance PASS. Independent navigation PASS: 8,048 rows, body/static/errors 0,
+  max rail fraction error 0.0000755625, max stall 1.78467s. Private desktop stayed isolated; game exited 0.
+  Runner itself hit a shutdown property race (null MainWindowHandle), not a game failure; fixed for next run.
+- Live settled pose still FAIL: 139 of 3,936 samples, Mother/SW max hand error 0.029807 world. This failed
+  payload was fully recycled (166 files), preserving source, warm Library/Bee and all evidence. No main change.
+  Reach prediction now uses the same parent metric as IK at every proposed spine angle. The chair fixture
+  now covers neutral plus 32 typing samples per actor/direction, with the existing strict 0.015 hand gate.
+  This follow-up still needs actual Player validation; no production/Release promotion is claimed.
 - Continuing all requested work in the background; no user desktop input, foreground window, shutdown,
   main install change or Release publication. Normal Player QA now owns a separate Windows desktop
   created without switch-desktop access and a kill-on-close job. Inert exit-code probes passed (0/7),

@@ -26,7 +26,12 @@ if (!$AnalyzeOnly) {
     try {
         while (!$process.WaitForExit(250)) {
             $process.Refresh(); $windowChecks++
-            $lastWindowHandle = $process.MainWindowHandle.ToInt64()
+            $observedWindowHandle = $process.MainWindowHandle
+            if ($null -eq $observedWindowHandle) {
+                if ($process.HasExited) { break }
+                throw 'Live process window state unavailable.'
+            }
+            $lastWindowHandle = $observedWindowHandle.ToInt64()
             if ($lastWindowHandle -ne 0) { throw 'Hidden-window guard failed.' }
             if ($watch.Elapsed.TotalSeconds -gt 450) { throw 'Normal observation timed out.' }
         }

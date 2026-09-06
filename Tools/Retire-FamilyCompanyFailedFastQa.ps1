@@ -22,11 +22,15 @@ $failure = if (Test-Path -LiteralPath $processPath) { Get-Content -LiteralPath $
 $attendancePath = Join-Path $FailureDirectory 'normal-autonomy-observed.txt'
 $attendanceFailed = (Test-Path -LiteralPath $attendancePath) -and
     (Select-String -LiteralPath $attendancePath -SimpleMatch 'nextDayAttendanceGatePassed=False' -Quiet)
+$posePath = Join-Path $FailureDirectory 'independent-seat-blend.json'
+$poseReceipt = if (Test-Path -LiteralPath $posePath) { Get-Content -LiteralPath $posePath -Raw | ConvertFrom-Json } else { $null }
+$poseFailed = $null -ne $poseReceipt -and $poseReceipt.passed -eq $false -and
+    $poseReceipt.settledSamples -gt 0 -and $poseReceipt.settledFailureSamples -gt 0
 # A runner guard can abort before older runners wrote process.json. Accept the actual
 # completed, explicitly failed production attendance receipt, never invent an exit code.
 $failedProcess = $null -ne $failure -and $null -ne $failure.exitCode -and $failure.exitCode -ne 0
 if (!$build.passed -or $build.head -cne $ExpectedSourceHead -or $cache.head -cne $ExpectedBaseDataHead -or
-    (!$failedProcess -and !$attendanceFailed) -or $cache.output -cne (Join-Path $qaTarget 'FamilyCompany_FastQa.exe')) { throw 'Failed-test/build identity mismatch.' }
+    (!$failedProcess -and !$attendanceFailed -and !$poseFailed) -or $cache.output -cne (Join-Path $qaTarget 'FamilyCompany_FastQa.exe')) { throw 'Failed-test/build identity mismatch.' }
 foreach ($baseFile in $cache.baseDataFiles) {
     if ((Get-FileHash -LiteralPath (Join-Path $qaTarget $baseFile.relativePath)).Hash -cne $baseFile.sha256) { throw 'Base data mismatch.' }
 }
@@ -43,12 +47,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Unknown source tree.' }
 @{root=$qaTarget;sourceHead=$build.head;sourceTree=$tree;baseDataHead=$cache.head;unityVersion=$build.unityVersion;
     compiledScriptsHash=$compiledHash;classification='failed gate';oracle='Hidden normal Player observation';
     expected='All required gameplay assertions pass';actualExitCode=$failure.exitCode;attendanceReceiptFailed=$attendanceFailed;
+    settledPoseFailed=$poseFailed;poseReceiptSha256=$(if($poseFailed){(Get-FileHash -LiteralPath $posePath).Hash}else{$null});
     processReceiptPresent=($null -ne $failure);rollback='none';files=$files;
     capturedUtc=[DateTime]::UtcNow.ToString('o')} | ConvertTo-Json -Depth 6 |
     Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'identity-and-hashes.json') -Encoding UTF8
 Copy-Item -LiteralPath $BuildResult -Destination (Join-Path $EvidenceDirectory 'build-result.json')
 Copy-Item -LiteralPath $cachePath -Destination (Join-Path $EvidenceDirectory 'base-data-identity.json')
-foreach ($name in @('process.json','player.log','opening-shop-final.txt','normal-autonomy-observed.txt')) {
+foreach ($name in @('process.json','player.log','opening-shop-final.txt','normal-autonomy-observed.txt','independent-seat-blend.json','independent-navigation.json')) {
     $inputPath = Join-Path $FailureDirectory $name
     if (Test-Path -LiteralPath $inputPath) { Copy-Item -LiteralPath $inputPath -Destination (Join-Path $EvidenceDirectory $name) }
 }

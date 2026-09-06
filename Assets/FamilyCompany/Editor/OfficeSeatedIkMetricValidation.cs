@@ -17,6 +17,7 @@ namespace FamilyCompany.Editor
         {
             Type actorType=AppDomain.CurrentDomain.GetAssemblies().Select(a=>a.GetType("FamilyCompany.Runtime.Character3D.Family3DWalkActor")).First(t=>t!=null);
             MethodInfo solve=actorType.GetMethod("ApplyTwoBoneIk",BindingFlags.NonPublic|BindingFlags.Static);
+            MethodInfo reachable=actorType.GetMethod("IsArmTargetReachable",BindingFlags.NonPublic|BindingFlags.Static);
             float maximum=0f;
             for(int turn=0;turn<4;turn++) for(int sample=0;sample<8;sample++)
             {
@@ -30,6 +31,9 @@ namespace FamilyCompany.Editor
                     lower.localPosition=new Vector3(0,-0.3f,0); lower.localRotation=Quaternion.Euler(30,0,0);
                     Transform end=new GameObject("end").transform; end.SetParent(lower,false);
                     end.localPosition=new Vector3(0,-0.3f,0);
+                    Vector3 outsideReach=root.transform.TransformPoint(new Vector3(0.3f,-0.3f,0.42f));
+                    if ((bool)reachable.Invoke(null,new object[]{upper,lower,end,outsideReach}))
+                        throw new InvalidOperationException("Reach predicate used a different metric from IK.");
                     Vector3 localTarget=new Vector3(0.21f,-0.41f,0.1f+sample*0.012f);
                     Vector3 target=root.transform.TransformPoint(localTarget);
                     Vector3 pole=root.transform.TransformPoint(new Vector3(0.4f,-0.2f,0.4f));

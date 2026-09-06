@@ -1,7 +1,7 @@
 [CmdletBinding()]
-param([string]$Player = '', [switch]$ShowWindow)
+param([string]$Player = '', [switch]$ShowWindow, [switch]$PrivateDesktop)
 $ErrorActionPreference = 'Stop'
-if (!$ShowWindow) { throw 'IMGUI needs a presented frame. Tell the user before using -ShowWindow; a batch-mode black PNG is not a pass.' }
+if ($ShowWindow -eq $PrivateDesktop) { throw 'Choose isolated -PrivateDesktop or explicitly authorized -ShowWindow. A black PNG is not a pass.' }
 . (Join-Path $PSScriptRoot 'FamilyCompany.Package.ps1')
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if (!$Player) { $Player=Join-Path $repo 'Artifacts/FastQa/cache/WindowsPlayer/FamilyCompany_FastQa.exe' }
@@ -22,7 +22,12 @@ $start=[Diagnostics.ProcessStartInfo]::new()
 $start.FileName=(Resolve-Path -LiteralPath $Player).Path
 $start.WorkingDirectory=$repo; $start.UseShellExecute=$false; $start.CreateNoWindow=$true; $start.WindowStyle='Normal'
 $start.Arguments='-force-d3d11 -screen-fullscreen 0 -screen-width 1280 -screen-height 720 -familyCompanyInGamePatchQa "'+$root+'" -logFile "'+(Join-Path $root 'player.log')+'"'
-$process=[Diagnostics.Process]::Start($start)
+$isolation=$null
+if ($PrivateDesktop) {
+    if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $repo 'Tools/Background/CompanyQaDesktop.cs') }
+    $isolation=[CompanyQaDesktop]::Start($start.FileName,$start.Arguments,$repo)
+    $process=$isolation.Process
+} else { $process=[Diagnostics.Process]::Start($start) }
 $timer=[Diagnostics.Stopwatch]::StartNew()
 Write-Host "IN-GAME PATCH QA pid=$($process.Id) root=$root"
 try {
@@ -45,6 +50,13 @@ try {
     if (Select-String -LiteralPath (Join-Path $root 'player.log') -Pattern 'Exception:|error CS|IN_GAME_PATCH_UNAVAILABLE' -Quiet) { throw 'Runtime patch error.' }
     Write-Host "IN-GAME PATCH QA PASS: $root"
 } finally {
-    if (!$process.HasExited) { $process.Kill(); [void]$process.WaitForExit(10000) }
-    $process.Dispose()
+    try {
+        if (!$process.HasExited) { $process.Kill(); [void]$process.WaitForExit(10000) }
+        Write-PatchJsonAtomic (Join-Path $root 'process.json') @{
+            pid=$process.Id;exitCode=$process.ExitCode;privateDesktop=$(if($isolation){$isolation.DesktopName}else{$null});
+            interactiveDesktopAtStart=$(if($isolation){$isolation.InteractiveDesktopAtStart}else{$null});
+            desktopSwitchAllowed=$false;scope='Own Unity UI on an isolated desktop; no desktop switch or native input'}
+    } finally {
+        if ($isolation) { $isolation.Dispose() } else { $process.Dispose() }
+    }
 }

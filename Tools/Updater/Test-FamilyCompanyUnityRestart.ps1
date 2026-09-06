@@ -37,8 +37,14 @@ $info=[Diagnostics.ProcessStartInfo]::new($Player)
 $info.UseShellExecute=$false; $info.CreateNoWindow=$true; $info.WorkingDirectory=$repo
 $info.Arguments='-force-d3d11 -screen-fullscreen 0 -screen-width 1280 -screen-height 720 -familyCompanyInGamePatchQa "'+$root+'" -familyCompanyInGamePatchRestartQa -logFile "'+(Join-Path $root 'parent.log')+'"'
 if ($Background) {$info.Arguments='-batchmode '+$info.Arguments; $info.WindowStyle='Hidden'}
-$parent=[Diagnostics.Process]::Start($info)
+$isolation=$null
+if ($Background) {
+    if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $repo 'Tools/Background/CompanyQaDesktop.cs') }
+    $isolation=[CompanyQaDesktop]::Start($Player,$info.Arguments,$repo)
+    $parent=$isolation.Process
+} else { $parent=[Diagnostics.Process]::Start($info) }
 Write-Host "ACTUAL UNITY PATCH TEST parent=$($parent.Id) root=$root"
+try {
 $deadline=[DateTime]::UtcNow.AddSeconds(180)
 while(!$parent.WaitForExit(200) -and [DateTime]::UtcNow -lt $deadline) {}
 if(!$parent.HasExited) {throw 'Parent did not exit normally; do not force-kill or claim PASS.'}
@@ -61,5 +67,9 @@ if ($Background) {
 if((Get-PatchHash $Player) -cne (Get-Content -LiteralPath (Join-Path $root 'identity.json') -Raw | ConvertFrom-Json).basePlayerHash) {throw 'Main entry changed.'}
 Write-PatchJsonAtomic (Join-Path $root 'restart-observed.json') @{parentExit=$parent.ExitCode; childId=$child.Id;
     childPath=$observedChildPath; currentDirectory=$current.Directory;mainEntryUnchanged=$true;
+    privateDesktop=$(if($isolation){$isolation.DesktopName}else{$null});desktopSwitchAllowed=$false;
     requiredNext='Inspect patched game UI and parent measured progress; not an automatic visual PASS.'}
 Write-Host "UNITY RESTART OBSERVED: $root"
+} finally {
+    if ($isolation) { $isolation.Dispose() } else { $parent.Dispose() }
+}

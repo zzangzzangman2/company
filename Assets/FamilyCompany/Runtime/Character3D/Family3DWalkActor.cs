@@ -551,12 +551,8 @@ namespace FamilyCompany.Runtime.Character3D
             LastSeatedTorsoLeanDegrees = 0f;
             Transform spine = animator.GetBoneTransform(HumanBodyBones.Spine);
             if (spine == null) return;
-            float leftReach = (Vector3.Distance(leftUpper.position, leftLower.position) +
-                               Vector3.Distance(leftLower.position, leftHand.position)) * 0.98f;
-            float rightReach = (Vector3.Distance(rightUpper.position, rightLower.position) +
-                                Vector3.Distance(rightLower.position, rightHand.position)) * 0.98f;
-            bool Reachable() => Vector3.Distance(leftUpper.position, leftTarget) <= leftReach &&
-                                Vector3.Distance(rightUpper.position, rightTarget) <= rightReach;
+            bool Reachable() => IsArmTargetReachable(leftUpper, leftLower, leftHand, leftTarget) &&
+                                IsArmTargetReachable(rightUpper, rightLower, rightHand, rightTarget);
             if (Reachable()) return;
             // Rotate the existing spine only; pelvis, thighs, chair and bone lengths never move.
             // TickSeatedDeskWork restores the neutral pose each frame, so this cannot accumulate.
@@ -570,6 +566,18 @@ namespace FamilyCompany.Runtime.Character3D
             }
             LastSeatedTorsoLeanDegrees = high * weight;
             spine.rotation = Quaternion.AngleAxis(LastSeatedTorsoLeanDegrees, rightAxis) * neutral;
+        }
+
+        private static bool IsArmTargetReachable(Transform upper, Transform lower, Transform hand, Vector3 target)
+        {
+            // Match the IK metric after each proposed spine rotation. World-space lengths
+            // measured before leaning are not constant under the approved nonuniform scale.
+            Transform metric = upper.parent;
+            Vector3 root = metric.InverseTransformPoint(upper.position);
+            Vector3 elbow = metric.InverseTransformPoint(lower.position);
+            Vector3 end = metric.InverseTransformPoint(hand.position);
+            float reach = (Vector3.Distance(root, elbow) + Vector3.Distance(elbow, end)) * 0.98f;
+            return Vector3.Distance(root, metric.InverseTransformPoint(target)) <= reach;
         }
 
         private static void ApplyTwoBoneIk(
