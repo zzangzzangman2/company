@@ -1,5 +1,16 @@
 # DECISIONS
 
+## 2026-09-06 / 3D Release 후보와 측정·화면 검사 분리
+
+- 옛 Release entry가 가족 2D seating/HighMotion catalog를 다시 생성하던 호출을 제거하고 정본
+  Player/Father 3D asset·Avatar·walk clip의 읽기 전용 preflight와 기존 이동/IK gate로 대체한다.
+  게임 입력/생성 에셋을 빌드 과정에서 다시 쓰지 않는다.
+- `Tools/Updater/Build-FamilyCompanyPatchCandidate.ps1 -ExpectedHead <full SHA>`는 clean main과
+  exact Unity에서 Artifacts 전용 후보만 만든다. 이전 current를 옮기거나 Downloads를 교체하지 않으며
+  build 실패 시 exact payload의 hash/evidence를 남긴 뒤 그 payload만 휴지통으로 보낸다.
+- normal 출근 시간 검사는 주기적인 PNG 재렌더링 없이 trace-only로 수행한다. 속도·시간·반경·마감
+  oracle은 그대로이며, 캡처가 있는 기존 09:20 실패는 실패로 보존한다. presented UI/보행 영상은 별도다.
+
 ## 2026-09-06 / 백그라운드 격리·문 밖 대기열·착석 IK 좌표계
 
 - 실제 후속 검사에서 139개 손 오차가 전부 다음날 재입장 이후에만 발생했다. 출퇴근 표시를 위해

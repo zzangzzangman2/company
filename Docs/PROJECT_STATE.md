@@ -4,6 +4,17 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
 
 ## 2026-09-06 follow-up in progress: outside queue, scale-correct seated IK, isolated QA desktop
 
+- `19d49b3e`: actual live hand/seat gate PASS, 2,483 settled samples, max hand 0.008899, failures 0;
+  navigation 8,088 samples PASS, collisions/errors 0. Strict arrival times still correct, but Mother first
+  Working at 09:20 failed the unchanged **before** 09:20 deadline. This candidate was fully recycled.
+  Periodic PNG capture is now removed from the timing run through explicit trace-only diagnostics;
+  visual capture remains a separate run. No speed/clock/deadline/radius change. Recheck is pending.
+- User explicitly allowed **only the final foreground purchase/rotation/placement click check** in this
+  conversation. Everything else stays background. Computer-use skill/runtime initialized; native inputs
+  have NOT been sent yet. Private presented shop UI passed with title/price/balance/buttons fitting.
+- Release preflight is being updated to read the approved 3D resources, not regenerate retired 2D family
+  catalogs. A new candidate-only builder keeps payloads under Artifacts, records evidence before retiring
+  a failed owned payload, and never promotes to Builds/Downloads. Public delivery remains pending.
 - `e3def356` also passed exact normal attendance/navigation and isolated clean shutdown, plus 264 direct
   actor/direction/typing skin checks (penetrations 0, max hand 0.0089). However all 139 live hand failures
   occurred only after next-day reactivation; its full 166-file payload was retired too. Attendance now

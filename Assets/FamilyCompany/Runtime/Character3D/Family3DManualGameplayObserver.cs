@@ -20,6 +20,7 @@ namespace FamilyCompany.Runtime.Character3D
         public const string Flag = "-familyCompanyManualGameplayObservation";
         public const string BackgroundFlag = "-familyCompanyBackgroundChairObservation";
         private bool backgroundMode;
+        private bool traceOnly;
         private string directory;
         private PrototypeBootstrap bootstrap;
         private StarterOfficeRuntimeBootstrap runtime;
@@ -45,6 +46,7 @@ namespace FamilyCompany.Runtime.Character3D
         {
             string[] args = Environment.GetCommandLineArgs();
             backgroundMode = args.Contains(BackgroundFlag);
+            traceOnly = args.Contains("-familyCompanyTraceOnlyQa");
             int index = Array.IndexOf(args, backgroundMode ? BackgroundFlag : Flag);
             if (index < 0 || index + 1 >= args.Length || !Path.IsPathRooted(args[index + 1]))
                 throw new ArgumentException("Observer needs an absolute evidence directory.");
@@ -134,7 +136,7 @@ namespace FamilyCompany.Runtime.Character3D
             }
             trace.Write(rows.ToString());
             File.WriteAllText(Path.Combine(directory, "latest.csv"), rows.ToString());
-            if (Time.realtimeSinceStartup >= nextCapture && runtime.IsReady)
+            if (!traceOnly && Time.realtimeSinceStartup >= nextCapture && runtime.IsReady)
             {
                 nextCapture = Time.realtimeSinceStartup + 10;
                 Capture();

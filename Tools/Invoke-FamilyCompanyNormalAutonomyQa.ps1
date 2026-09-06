@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$EvidenceDirectory = '', [switch]$AnalyzeOnly, [switch]$NextDay)
+param([string]$EvidenceDirectory = '', [switch]$AnalyzeOnly, [switch]$NextDay, [string]$Player = '')
 $ErrorActionPreference = 'Stop'
 $qaRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (!$EvidenceDirectory) { $EvidenceDirectory = Join-Path $qaRepo ('Artifacts/NormalAutonomy/' + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
@@ -7,16 +7,19 @@ $EvidenceDirectory = [IO.Path]::GetFullPath($EvidenceDirectory)
 if (!$AnalyzeOnly) {
     if (Test-Path -LiteralPath $EvidenceDirectory) { throw 'Use a new evidence directory.' }
     [void][IO.Directory]::CreateDirectory($EvidenceDirectory)
-    $qaPlayer = Join-Path $qaRepo 'Artifacts/FastQa/cache/WindowsPlayer/FamilyCompany_FastQa.exe'
+    $qaPlayer = if ($Player) { (Resolve-Path -LiteralPath $Player).Path } else { Join-Path $qaRepo 'Artifacts/FastQa/cache/WindowsPlayer/FamilyCompany_FastQa.exe' }
     $start = [Diagnostics.ProcessStartInfo]::new($qaPlayer)
     $start.WorkingDirectory = $qaRepo; $start.UseShellExecute = $false
     $start.CreateNoWindow = $true; $start.WindowStyle = 'Hidden'
     $start.Arguments = '-batchmode -force-d3d11 -screen-width 1280 -screen-height 720 -screen-fullscreen 0 ' +
-        '-familyCompanyOpeningShopQa -familyCompanyAutonomyTraceQa -familyCompanyOpeningShopArtifacts "' +
+        '-familyCompanyTraceOnlyQa -familyCompanyOpeningShopQa -familyCompanyAutonomyTraceQa -familyCompanyOpeningShopArtifacts "' +
         $EvidenceDirectory + '" -familyCompanyBackgroundChairObservation "' + (Join-Path $EvidenceDirectory 'observer') +
         '" -logFile "' + (Join-Path $EvidenceDirectory 'player.log') + '"'
     if ($NextDay) { $start.Arguments += ' -familyCompanyNextDayAutonomyQa' }
-    Copy-Item -LiteralPath (Join-Path $qaRepo 'Artifacts/FastQa/cache/player-cache.json') -Destination (Join-Path $EvidenceDirectory 'base-data-build.json')
+    if ($Player) {
+        Copy-Item -LiteralPath (Join-Path ([IO.Path]::GetDirectoryName($qaPlayer)) 'BUILD_INFO.txt') -Destination $EvidenceDirectory
+        $start.Arguments += ' -familyCompanyManualGameplayObservation "' + (Join-Path $EvidenceDirectory 'observer') + '"'
+    } else { Copy-Item -LiteralPath (Join-Path $qaRepo 'Artifacts/FastQa/cache/player-cache.json') -Destination (Join-Path $EvidenceDirectory 'base-data-build.json') }
     if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'Background/CompanyQaDesktop.cs') }
     $isolation = [CompanyQaDesktop]::Start($qaPlayer, $start.Arguments, $qaRepo)
     $process = $isolation.Process

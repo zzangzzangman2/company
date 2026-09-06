@@ -150,7 +150,7 @@ namespace FamilyCompany.Runtime.Character3D
                             actor.LastReservationBlocker.Replace(',', ':'), actor.LastMovementBlocker.Replace(',', ':')));
                 }
                 if (elapsed >= nextSample) nextSample += 0.5f;
-                if (elapsed >= nextCapture)
+                if (elapsed >= nextCapture && !Environment.GetCommandLineArgs().Contains("-familyCompanyTraceOnlyQa"))
                 {
                     Capture("wander-" + captures.ToString("D3") + ".png");
                     captures++;

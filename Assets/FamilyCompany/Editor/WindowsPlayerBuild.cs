@@ -39,14 +39,14 @@ namespace FamilyCompany.Editor
                 throw new InvalidOperationException("The Windows player output directory is missing: " + outputPath);
             Directory.CreateDirectory(outputDirectory);
 
-            OfficeFurnitureAssetBuilder.UpgradePoseCatalog();
-            OfficeRuntimeCharacterArtCatalogBuilder.Build();
+            Office3DReleaseAssetValidation.Run();
             OfficeGridValidation.Run();
             OfficeAttendanceValidation.Run();
             OfficeFurnitureTileSnapValidation.Run();
             OfficeLocomotionTransitionQa.Run();
             OfficeLayoutValidator.Run();
-            OfficeCharacterDirectionQa.ValidateApprovedDirections();
+            OfficeMovementFacingNavigationValidation.Run();
+            OfficeSeatedIkMetricValidation.Run();
 
             var scenes = EditorBuildSettings.scenes
                 .Where(scene => scene != null && scene.enabled)

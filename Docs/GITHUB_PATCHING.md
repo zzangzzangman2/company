@@ -51,6 +51,12 @@ Editor/Development/FastQA만 허용하며 일반 `FamilyCompany_Data` Release는
 
 ## 게임 내부 패치 로딩
 
+배포 후보 제작은 clean main에서 `Tools/Updater/Build-FamilyCompanyPatchCandidate.ps1 -ExpectedHead <full SHA>`를
+사용한다. 출력은 `Artifacts/PatchCandidates/<identity>/payload`이며, 그 자체는 설치/공개가 아니다.
+일상 수정 검사는 FAST_QA를 유지한다. 후보에는 non-Development BUILD_INFO와 세 patch worker가 필요하다.
+후보를 실제 검증할 때 `Invoke-FamilyCompanyNormalAutonomyQa.ps1 -Player <candidate EXE> -NextDay`는
+패치 서버가 아직 없는 상태의 명시적 진단만 우회한다. GitHub/업데이트 성공 증거로 쓰지 않는다.
+
 사용자가 별도 Windows 창을 거부했다. **외부 로딩창은 사용하지 않는다.** 검증된 첫 Release 공개 후
 `FamilyCompany-Windows.zip`을 풀고 그 안의 **실제 Unity `FamilyCompany.exe`**를 실행한다.
 기존 UiRemasterV3 게임 로딩 화면에서 패치를 확인한다. 아직 Release/Downloads 교체는 하지 않았다.
