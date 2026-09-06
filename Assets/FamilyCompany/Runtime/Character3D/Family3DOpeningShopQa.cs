@@ -122,7 +122,8 @@ namespace FamilyCompany.Runtime.Character3D
             float nextSample = 0f;
             float nextCapture = 0f;
             int captures = 0;
-            while (Time.realtimeSinceStartup - start < 60f)
+            bool fitOnly = Environment.GetCommandLineArgs().Contains("-familyCompanyChairFitQa");
+            while (!fitOnly && Time.realtimeSinceStartup - start < 60f)
             {
                 float elapsed = Time.realtimeSinceStartup - start;
                 foreach (OfficeRuntimeAgent actor in runtime.Actors)
@@ -160,6 +161,7 @@ namespace FamilyCompany.Runtime.Character3D
             File.WriteAllText(Path.Combine(directory, "normal-wander.csv"), samples.ToString());
             foreach (string id in ids)
             {
+                if (fitOnly) continue;
                 receipt.AppendLine(id + " maximumNavigatingNoProgressSeconds=" + F(maximumStall[id]));
                 Require(maximumStall[id] < 8f, "normal actor deadlocked for eight seconds: " + id);
                 Require(travel[id] > 1f && pathFrames[id] > 10 && directions[id].Count >= 2,
@@ -168,7 +170,7 @@ namespace FamilyCompany.Runtime.Character3D
                     " directions=" + string.Join("/", directions[id]));
             }
             AssertFourBodies(runtime);
-            receipt.AppendLine("normalObservationSeconds=60 teleports=0 injectedRoutes=0 injectedClockMinutes=0 " +
+            receipt.AppendLine("normalObservationSeconds=" + (fitOnly ? "0 (fit-only, wander NOT TESTED)" : "60") + " teleports=0 injectedRoutes=0 injectedClockMinutes=0 " +
                 "staticViolations=0 interactionViolations=0 agentPenetrations=0 finalTime=" + state.Time.Now.ToString("s"));
 
             var editor = FindFirstObjectByType<OfficeLayoutEditModeController>();
@@ -265,14 +267,17 @@ namespace FamilyCompany.Runtime.Character3D
             var desks = presenter.GetComponentsInChildren<Family3DWorkstation>().OrderBy(d => d.WorkstationSetId).ToArray();
             var hosts = runtime.Actors.Select(actor => GameObject.Find(
                 OfficeFamily3DVisualRoster.ProductionName(actor.AgentId) + "ProductionHost")).ToArray();
-            foreach (GameObject host in hosts) host.SetActive(false);
+            // Hide pixels only. Deactivating/re-enabling a host rebuilds its animation graph
+            // and remeasures bounds mid-pose, invalidating the production standing-height input.
+            foreach (GameObject host in hosts)
+                foreach (Renderer renderer in host.GetComponentsInChildren<Renderer>()) renderer.forceRenderingOff = true;
             var metrics = new StringBuilder("member,seat,handError,leftKnee,rightKnee,chairPenetrations,leanDegrees\n");
             bool passed = true;
             foreach (string member in new[] { "player", "father" })
             {
                 GameObject host = hosts.Single(item => item.name ==
                     OfficeFamily3DVisualRoster.ProductionName(member) + "ProductionHost");
-                host.SetActive(true);
+                foreach (Renderer renderer in host.GetComponentsInChildren<Renderer>()) renderer.forceRenderingOff = false;
                 var body = host.GetComponent<Family3DWalkActor>();
                 var avatar = host.GetComponentInChildren<Animator>();
                 foreach (var desk in desks)
@@ -301,7 +306,7 @@ namespace FamilyCompany.Runtime.Character3D
                     passed &= error <= 0.02f * body.StandingHeight && left >= 80 && left <= 140 &&
                               right >= 80 && right <= 140 && penetration.totalPenetratingVertexCount == 0;
                 }
-                host.SetActive(false);
+                foreach (Renderer renderer in host.GetComponentsInChildren<Renderer>()) renderer.forceRenderingOff = true;
             }
             File.WriteAllText(Path.Combine(directory, "chair-fit.csv"), metrics.ToString());
             Require(passed, "chair pose fit failed; inspect chair-fit.csv (not normal navigation)");
