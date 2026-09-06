@@ -215,6 +215,10 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     Require(++guard < 2500 && development.Status == SubcontractStatus.Active, "development checkpoint setup");
                 }
                 var nextMorning = state.Time.Now.Date.AddDays(1).AddHours(9).AddMinutes(5);
+                // A checkpoint may finish on Friday. Respect the normal family's
+                // weekend availability instead of expecting an invalid assignment.
+                while (nextMorning.DayOfWeek == DayOfWeek.Saturday || nextMorning.DayOfWeek == DayOfWeek.Sunday)
+                    nextMorning = nextMorning.AddDays(1);
                 bootstrap.AdvanceTimeNow((long)(nextMorning - state.Time.Now).TotalMinutes);
                 state.BindStaminaRuntimeBridge(runtimeStamina);
                 runtime.ApplyLayoutForQa(state.OfficeGrid);
@@ -229,7 +233,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 ScreenCapture.CaptureScreenshot(Path.Combine(_directory, "05-development-checkpoint.png"));
                 Click(FindButton(fatherLabel));
                 yield return null;
-                Require(father.HasAssignedTask, "development UI assignment reaches real actor");
+                Require(father.HasAssignedTask, "development UI assignment reaches real actor / " + bootstrap.WorldNotice);
                 hud.ReturnToOfficeNow();
                 end = Time.realtimeSinceStartup + 160;
                 int developmentSeated = 0;
