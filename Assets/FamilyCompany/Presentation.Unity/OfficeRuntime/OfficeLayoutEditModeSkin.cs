@@ -65,9 +65,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         public float Scale { get; private set; } = 1f;
 
-        public void EnsureBuilt()
+        public void EnsureBuilt() => EnsureBuilt(Screen.height);
+
+        // Explicit size keeps responsive typography measurable without changing the user's display.
+        public void EnsureBuilt(int screenHeight)
         {
-            int height = Mathf.Max(720, Screen.height);
+            int height = Mathf.Max(720, screenHeight);
             if (PanelStyle != null && _builtForHeight == height) return;
             _builtForHeight = height;
             Scale = Mathf.Clamp(height / 1080f, 0.72f, 1.4f);

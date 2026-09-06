@@ -422,7 +422,11 @@ namespace FamilyCompany.Runtime.Character3D
         {
             var occupancy = runtime.World.Occupancy;
             Require(occupancy.StaticViolationCount == 0 && occupancy.InteractionViolationCount == 0 &&
-                occupancy.AgentPenetrationCount == 0, "normal movement penetration detected");
+                occupancy.AgentPenetrationCount == 0, "normal movement penetration detected " +
+                "static=" + occupancy.StaticViolationCount + " interaction=" + occupancy.InteractionViolationCount +
+                " agents=" + occupancy.AgentPenetrationCount + " | " + string.Join(" | ", runtime.Actors.Select(actor =>
+                    actor.AgentId + ":" + actor.Phase + ":" + actor.Position + ":seat=" + actor.ActiveSeatId + ":" +
+                    occupancy.DescribeMoveBlocker(actor.AgentId, actor.Position, actor.Position, actor.AgentRadius, actor.ActiveSeatId))));
         }
 
         private void Capture(string name)

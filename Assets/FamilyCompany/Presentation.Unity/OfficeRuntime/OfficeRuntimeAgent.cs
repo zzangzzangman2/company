@@ -2134,6 +2134,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private void TickNavigation(float deltaTime)
         {
             if (!_destination.HasValue) return;
+            string permitted = _world.Paths.ResolveNavigationSeatPermission(
+                _destination.Value.Cell, _destination.Value.SeatId);
             if ((_yieldCell.HasValue || _stuckSeconds >= OfficeNavigationTrafficRules.RecoveryThresholdSeconds) &&
                 TryTickNavigationRailYield(deltaTime)) return;
             if (_pathRevision != _world.Occupancy.Revision || _path.Count == 0)
@@ -2154,7 +2156,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 _agentId,
                 Position,
                 AgentRadius,
-                _destination.Value.SeatId);
+                permitted);
             _pathIndex = OfficeSemanticPathProgressRules.AdvanceThroughOccupiedCell(
                 _path,
                 _pathIndex,
@@ -2214,7 +2216,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 if (!TryConsumeExactEndpoint(
                         target,
                         deltaTime,
-                        _destination.Value.SeatId,
+                        permitted,
                         desiredDirection * MoveSpeed)) return;
                 _pathIndex = presentationTargetIndex + 1;
                 if (_pathIndex >= _path.Count) CompleteNavigation();
@@ -2243,7 +2245,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             MoveWithCollision(
                 targetVelocity,
                 deltaTime,
-                _destination.Value.SeatId,
+                permitted,
                 delta.magnitude,
                 presentationSemanticDirection * targetVelocity.magnitude,
                 constrainToPathSegment: true);
@@ -2251,7 +2253,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private bool TryTickNavigationRailYield(float deltaTime)
         {
-            string permitted = _destination.Value.SeatId;
+            string permitted = _world.Paths.ResolveNavigationSeatPermission(
+                _destination.Value.Cell, _destination.Value.SeatId);
             if (!_yieldCell.HasValue)
             {
                 // Moving peers keep ordinal priority. A stationary/manual/seated peer will not

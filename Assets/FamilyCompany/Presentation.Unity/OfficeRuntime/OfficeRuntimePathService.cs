@@ -67,6 +67,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             if (radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius))
                 throw new ArgumentOutOfRangeException(nameof(radius));
             if (!_grid.Contains(start) || !_grid.Contains(goal)) return Array.Empty<OfficeGridCoordinate>();
+            // A seat claim authorizes the atomic seating transition, not walking through
+            // its furniture on the way to the approach tile. Apply this before selecting
+            // either cached or uncached traversal so both planners obey the same boundary.
+            permittedSeatId = ResolveNavigationSeatPermission(goal, permittedSeatId);
             PathSearchCount++;
             if (OfficeRuntimePerformanceProbe.UseUncachedNavigation)
                 return FindPathUncached(
@@ -116,6 +120,15 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 path.Add(_pathParents[path[path.Count - 1]]);
             path.Reverse();
             return path;
+        }
+
+        public string ResolveNavigationSeatPermission(OfficeGridCoordinate goal, string seatId)
+        {
+            if (!string.IsNullOrEmpty(seatId))
+                foreach (var seat in _grid.SeatSlots)
+                    if (seat.SeatId == seatId && seat.ApproachCell.Equals(goal))
+                        return string.Empty;
+            return seatId;
         }
 
         // Wide-bodied (furniture-padded) actors: a cell touching a blocking desk footprint costs
