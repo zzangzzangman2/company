@@ -446,7 +446,7 @@ namespace FamilyCompany.Runtime.Character3D
             float seatedBlend01,
             double workClockSeconds,
             bool typing,
-            float kneeTargetDegrees = 100f)
+            float kneeTargetDegrees = 95f)
         {
             Initialize();
             float weight = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(seatedBlend01));

@@ -286,7 +286,7 @@ namespace FamilyCompany.Runtime.Character3D
                   foreach (Vector2 fitting in (sweep
                     ? from clearance in new[] { 0.113f, 0.123f, 0.133f, 0.143f }
                       from knee in new[] { 95f, 100f, 105f, 110f } select new Vector2(clearance, knee)
-                    : new[] { new Vector2(0.113f, 100f) }))
+                    : new[] { new Vector2(0.113f, 95f) }))
                   {
                     Vector3 root = desk.SeatGroundWorld;
                     body.TickSeatedDeskWork(0d, root, desk.SeatedRotationWorld, 1f, false);
