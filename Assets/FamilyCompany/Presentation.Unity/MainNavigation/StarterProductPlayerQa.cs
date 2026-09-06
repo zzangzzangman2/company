@@ -260,16 +260,30 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 yield return new WaitForSecondsRealtime(0.6f);
                 var support = product.CurrentWork(state);
                 Require(support.RemainingPersonHours == 2, "two support hours required");
-                Click(FindButton(fatherLabel));
+                // The lesson checkpoint spent Father's stamina. Exercise normal team
+                // assignment instead of ignoring energy and expecting unpaid exhausted work.
+                var supporter = runtime.Actors.Where(a => a.AgentId != "player")
+                    .OrderByDescending(a => state.Family.Get(a.AgentId).Energy).First();
+                Require(state.Family.Get(supporter.AgentId).Energy >= 35, "support worker has actual stamina");
+                Click(FindButton(state.Family.Get(supporter.AgentId).DisplayName + " · 최대 4인시"));
                 yield return null;
-                Require(father.HasAssignedTask, "support UI assignment reaches real actor");
+                Require(supporter.HasAssignedTask, "support UI assignment reaches real actor");
                 hud.ReturnToOfficeNow();
                 end = Time.realtimeSinceStartup + 100;
                 int supportSeated = 0;
+                var supportTrace = new StringBuilder("second,minute,phase,assigned,remaining,hours,energy,result,blocker\n");
+                float nextSupportTrace = 0;
                 while (support.Status == SubcontractStatus.Active)
                 {
-                    Require(Time.realtimeSinceStartup < end, "actual support block timeout / " + father.Phase);
-                    if (father.Phase == OfficeRuntimeAgentPhase.Working) supportSeated++;
+                    if (Time.realtimeSinceStartup >= nextSupportTrace)
+                    {
+                        nextSupportTrace = Time.realtimeSinceStartup + 2;
+                        var tasks = FindFirstObjectByType<OfficeContractTaskCoordinator>();
+                        supportTrace.AppendLine($"{Time.realtimeSinceStartup:F1},{state.Time.Now:O},{supporter.Phase},{supporter.HasAssignedTask},{supporter.CaptureLayoutSnapshot().AssignedWorkRemainingMinutes},{support.CompletedPersonHours},{state.Family.Get(supporter.AgentId).Energy},{tasks?.LastWorkResult?.RejectionReason},{supporter.LastMovementBlocker}");
+                        File.WriteAllText(Path.Combine(_directory, "support-work.csv"), supportTrace.ToString());
+                    }
+                    Require(Time.realtimeSinceStartup < end, "actual support block timeout / " + supporter.Phase + " / " + bootstrap.WorldNotice);
+                    if (supporter.Phase == OfficeRuntimeAgentPhase.Working) supportSeated++;
                     yield return null;
                 }
                 Require(support.Status == SubcontractStatus.Completed && supportSeated > 10, "real support completion");
@@ -288,7 +302,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 ValidateText();
                 ScreenCapture.CaptureScreenshot(Path.Combine(_directory, "07-weekly-billing.png"));
                 yield return new WaitForSecondsRealtime(0.5f);
-                _report.AppendLine($"checkpointIntegration=PASS actualDevelopmentHours=4 developmentSeated={developmentSeated} actualSupportHours=2 supportSeated={supportSeated} firstSale=180000 weekRevenue={product.LastPeriodRevenueWon} customers={product.Customers}");
+                _report.AppendLine($"checkpointIntegration=PASS actualDevelopmentHours=4 developmentSeated={developmentSeated} actualSupportHours=2 supportWorker={supporter.AgentId} supportSeated={supportSeated} firstSale=180000 weekRevenue={product.LastPeriodRevenueWon} customers={product.Customers}");
                 _report.AppendLine("checkpointScope=lesson history and first 20 development hours seeded through core; normal 4x real work for final development/support; billing-only time jump; not uninterrupted full-week native play");
             }
         }
