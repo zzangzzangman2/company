@@ -25,6 +25,7 @@ namespace FamilyCompany.Runtime.Character3D
         private StarterOfficeRuntimeBootstrap runtime;
         private StreamWriter trace;
         private StreamWriter geometry;
+        private StreamWriter autonomy;
         private float nextGeometry;
         private int errors, frame, capture;
         private float nextSample, nextCapture;
@@ -53,6 +54,9 @@ namespace FamilyCompany.Runtime.Character3D
             trace.AutoFlush = true;
             geometry = new StreamWriter(Path.Combine(directory, "chair-geometry.csv"), false, new UTF8Encoding(false));
             geometry.AutoFlush = true;
+            autonomy = new StreamWriter(Path.Combine(directory, "autonomy.csv"), false, new UTF8Encoding(false));
+            autonomy.AutoFlush = true;
+            autonomy.WriteLine("seconds,clock,member,playerControlled,phase,cell,x,y,destination,stuck,reservationBlocker,movementBlocker,intent,location,interaction,status,pathIndex,pathLength,seat,interactionPhase,termination,staticHere");
             geometry.WriteLine("seconds,seat,turn,chairTileErrorPx,stemTileErrorPx,monitorAxisError,keyboardAxisError,member,phase,handMidpointError,standingHeight");
             trace.WriteLine("frame,seconds,clock,ready,cash,inventory,seats,pointerCommits,member,phase,away,x,y,destination,pathIndex,pathLength,seat,seatDirection,arrivalCount,workFrames,gaitDistance,displacement,staticViolations,interactionViolations,agentPenetrations,bodies,legacyCharacters,legacyFurniture,bgm,sfx,listenerVolume,outputPeak,errors");
             Application.logMessageReceived += OnLog;
@@ -98,6 +102,15 @@ namespace FamilyCompany.Runtime.Character3D
             var rows = new StringBuilder();
             foreach (var actor in runtime.Actors)
             {
+                var intent = actor.CaptureLayoutSnapshot();
+                autonomy.WriteLine(string.Join(",", F(Time.realtimeSinceStartup), state.Time.Now.ToString("s"),
+                    actor.AgentId, actor.IsPlayerControlled, actor.Phase, Q(actor.CurrentCell.ToString()),
+                    F(actor.Position.x), F(actor.Position.y), Q(actor.ActiveDestinationCell.ToString()), F(actor.StuckSeconds),
+                    Q(actor.LastReservationBlocker), Q(actor.LastMovementBlocker), Q(intent.AutonomyIntentId),
+                    intent.AutonomyLocation, Q(intent.AutonomyInteractionId), Q(actor.StatusDetail),
+                    actor.PresentationPathIndex, actor.SemanticPathLength, actor.ActiveSeatId,
+                    actor.InteractionPhase, actor.LastInteractionEndReason,
+                    runtime.World.Occupancy.CanTraverseStatic(actor.Position, actor.Position, actor.AgentRadius, actor.ActiveSeatId)));
                 rows.AppendLine(string.Join(",", frame, F(Time.realtimeSinceStartup), state.Time.Now.ToString("s"),
                     runtime.IsReady, state.Company.CashWon, state.OfficeFurnitureInventory.Instances.Count,
                     state.OfficeGrid.SeatSlots.Count, editor == null ? -1 : editor.DiagnosticPointerCommitCount,
@@ -196,6 +209,7 @@ namespace FamilyCompany.Runtime.Character3D
             }
         }
         private static string F(float value) => value.ToString("F6", CultureInfo.InvariantCulture);
-        private void OnDestroy() { Application.logMessageReceived -= OnLog; trace?.Dispose(); geometry?.Dispose(); }
+        private static string Q(string value) => "\"" + (value ?? string.Empty).Replace("\"", "\"\"") + "\"";
+        private void OnDestroy() { Application.logMessageReceived -= OnLog; trace?.Dispose(); geometry?.Dispose(); autonomy?.Dispose(); }
     }
 }

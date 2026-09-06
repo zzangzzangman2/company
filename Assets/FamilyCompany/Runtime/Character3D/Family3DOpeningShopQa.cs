@@ -229,6 +229,24 @@ namespace FamilyCompany.Runtime.Character3D
                 "invalid confirmation charged cash or mutated layout");
             editor.Close();
             for (int frame = 0; frame < 5; frame++) yield return null;
+            if (Environment.GetCommandLineArgs().Contains("-familyCompanyAutonomyTraceQa"))
+            {
+                // An idle manually controlled Player cannot satisfy the old simultaneous-four-work
+                // assertion. Collect normal intent/path/blocker evidence without declaring work PASS.
+                deadline = Time.realtimeSinceStartup + 100f;
+                while (Time.realtimeSinceStartup < deadline)
+                {
+                    AssertNoPenetration(runtime);
+                    yield return null;
+                }
+                Capture("normal-autonomy-end.png");
+                File.WriteAllText(Path.Combine(directory, "normal-autonomy-observed.txt"),
+                    "OBSERVED, NOT A WORK/RELEASE PASS\n" + receipt +
+                    "normalClock=true actorControl=false routeInjection=false poseInjection=false nativePointer=false\n" +
+                    "runtimeErrors=" + runtimeErrors.Count);
+                Application.Quit(runtimeErrors.Count == 0 ? 0 : 1);
+                yield break;
+            }
             if (Environment.GetCommandLineArgs().Contains("-familyCompanyChairFitQa"))
             {
                 RunChairFit(runtime);
