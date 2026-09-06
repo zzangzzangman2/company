@@ -1,4 +1,4 @@
-param([string]$InstallRoot, [string]$GameDirectory, [string]$ResultPath, [string]$CancelPath, [switch]$OfflineOnly)
+param([string]$InstallRoot, [string]$GameDirectory, [string]$ResultPath, [string]$CancelPath)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'FamilyCompany.Update.ps1')
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)

@@ -260,9 +260,13 @@ namespace FamilyCompany.Runtime.Character3D
                     bootstrap.SetWorldTimeScaleNow(1f);
                     var released = new Dictionary<string, DateTime>();
                     var seated = new HashSet<string>();
+                    var firstSeated = new Dictionary<string, DateTime>();
                     bool checkedNineFour = false;
-                    deadline = Time.realtimeSinceStartup + 70f;
-                    while (state.Time.Now < morning.Date.AddHours(9).AddMinutes(20))
+                    DateTime seatDeadline = morning.Date.AddHours(9).AddMinutes(20);
+                    deadline = Time.realtimeSinceStartup + 100f;
+                    // Preserve the strict 09:20 oracle, but collect later normal arrival data
+                    // for diagnosis/pose coverage. A late seat must never become a gate PASS.
+                    while (state.Time.Now < morning.Date.AddHours(9).AddMinutes(50))
                     {
                         Require(Time.realtimeSinceStartup < deadline, "normal morning clock timeout");
                         AssertNoPenetration(runtime);
@@ -271,7 +275,10 @@ namespace FamilyCompany.Runtime.Character3D
                             if (!actor.IsPresentationAway && !released.ContainsKey(actor.AgentId))
                                 released.Add(actor.AgentId, state.Time.Now);
                             if (actor.Phase == OfficeRuntimeAgentPhase.Working && actor.AttendanceSeatArrivalCount == 1)
-                                seated.Add(actor.AgentId);
+                            {
+                                if (!firstSeated.ContainsKey(actor.AgentId)) firstSeated.Add(actor.AgentId, state.Time.Now);
+                                if (state.Time.Now < seatDeadline) seated.Add(actor.AgentId);
+                            }
                         }
                         if (!checkedNineFour && state.Time.Now >= morning.Date.AddHours(9).AddMinutes(4))
                         {
@@ -294,7 +301,8 @@ namespace FamilyCompany.Runtime.Character3D
                             attendanceFailures.Add("normal attendance never reached Working: " + member);
                         receipt.AppendLine("nextDay=" + member + " due=" + due.ToString("s") +
                             " released=" + (appeared ? actual.ToString("s") : "NOT_OBSERVED") +
-                            " seatedNormally=" + seated.Contains(member));
+                            " seatedNormally=" + seated.Contains(member) +
+                            " firstWorking=" + (firstSeated.TryGetValue(member, out DateTime firstWork) ? firstWork.ToString("s") : "NOT_OBSERVED"));
                     }
                     Capture("next-day-normal-seated.png");
                     receipt.AppendLine("nextDayClockSetupJump=afternoon-night-only nextDayObservedClock=1x nativePointer=false routeInjection=false");

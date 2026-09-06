@@ -271,10 +271,18 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!_initialized) InitializeNow();
             if (!_initialized) return;
+            _arrivalReleaseRemaining = Mathf.Max(0f, _arrivalReleaseRemaining - Time.unscaledDeltaTime);
             _refreshRemaining -= Time.unscaledDeltaTime;
             if (_refreshRemaining > 0f) return;
-            _refreshRemaining = Mathf.Max(0.05f, refreshIntervalSeconds);
             RefreshNow();
+            // A one-game-minute arrival slot is about one real second. Polling the safe
+            // spawn gate only every 0.35s accumulates a full missed slot across four people.
+            // Retry the pending door queue promptly; keep normal autonomy at its old cadence
+            // and retain the actual 0.35s cooldown plus all physical clearance checks.
+            bool pendingArrival = _runtimeAgents.Length > 0 && bootstrap?.State != null &&
+                OfficeAttendanceRules.ResolveOfficePresentation(bootstrap.State.Time.Now) == OfficeAttendancePhase.Working &&
+                _nextAttendanceArrivalIndex < _runtimeAgents.Length;
+            _refreshRemaining = pendingArrival ? 0.05f : Mathf.Max(0.05f, refreshIntervalSeconds);
         }
 
         private void OnDisable()
@@ -376,7 +384,6 @@ namespace FamilyCompany.Presentation.Unity
             }
             else
             {
-                _arrivalReleaseRemaining = Mathf.Max(0f, _arrivalReleaseRemaining - refreshIntervalSeconds);
                 while (_nextAttendanceArrivalIndex < orderedAgents.Length &&
                        !orderedAgents[_nextAttendanceArrivalIndex].IsPresentationAway)
                     _nextAttendanceArrivalIndex++;
