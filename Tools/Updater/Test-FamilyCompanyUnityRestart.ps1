@@ -52,6 +52,7 @@ while([DateTime]::UtcNow -lt $deadline) {
     Start-Sleep -Milliseconds 200
 }
 if(!$child) {throw 'Exact patched Unity child not observed.'}
+$observedChildPath=$child.Path
 Assert-PatchInstalled $current.Directory $current.Manifest
 if ($Background) {
     if (!$child.WaitForExit(30000)) {throw 'Patched Unity did not finish its background boot check.'}
@@ -59,6 +60,6 @@ if ($Background) {
 }
 if((Get-PatchHash $Player) -cne (Get-Content -LiteralPath (Join-Path $root 'identity.json') -Raw | ConvertFrom-Json).basePlayerHash) {throw 'Main entry changed.'}
 Write-PatchJsonAtomic (Join-Path $root 'restart-observed.json') @{parentExit=$parent.ExitCode; childId=$child.Id;
-    childPath=$child.Path; currentDirectory=$current.Directory;mainEntryUnchanged=$true;
+    childPath=$observedChildPath; currentDirectory=$current.Directory;mainEntryUnchanged=$true;
     requiredNext='Inspect patched game UI and parent measured progress; not an automatic visual PASS.'}
 Write-Host "UNITY RESTART OBSERVED: $root"

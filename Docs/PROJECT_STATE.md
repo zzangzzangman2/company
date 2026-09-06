@@ -7,6 +7,17 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
 - User explicitly stopped foreground testing: **background only; never control their desktop/input**.
   The brief native session had four walking bodies but no completed purchase before the user closed it;
   do not claim a native-pointer/UI PASS. Use hidden D3D11 camera-stack renders and independent logs.
+- Background 1691618a found a real reach regression (Father wrist midpoint error ~0.186 world) and
+  the normal four-simultaneous-working wait timed out. These are NOT PASS. A spine-only reach fit
+  is under test; no chair/hips/leg-size change. Normal coordinator work/arrival remains a separate gate.
+- Actual Unity patch transport/restart DID run in background: changed compressed bytes 4,195,602,
+  real 1,036,394,024-byte snapshot reverified, parent exit 0, child PID 7820 reached
+  `IN_GAME_PATCH_READY_CURRENT`, original main-entry SHA unchanged. Local transport only, not GitHub.
+  Failed gameplay payload and all its local patch copies were then hashed and recycled. Preserved
+  evidence: `Artifacts/FailedPayloadEvidence/1691618a-chair-reach/`; no Downloads/current promotion.
+- Core updater 51 checks and restart guard 10 checks PASS (WinPS 5.1). Evidence:
+  `Artifacts/UpdaterTests/0bde902417b64198a5456b2ee805661d/` and
+  `Artifacts/UpdaterRestartTests/61cb767f6f144f10ac83eca5d250497a/`.
 
 - User reported rotation-dependent chair placement on tile seams. Production had projected an elevated
   legacy sprite seat socket onto the floor and then moved the chair again relative to the keyboard.

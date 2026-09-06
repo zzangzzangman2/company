@@ -227,6 +227,13 @@ namespace FamilyCompany.Runtime.Character3D
                 "invalid confirmation charged cash or mutated layout");
             editor.Close();
             for (int frame = 0; frame < 5; frame++) yield return null;
+            if (Environment.GetCommandLineArgs().Contains("-familyCompanyChairFitQa"))
+            {
+                RunChairFit(runtime);
+                receipt.AppendLine("chairFitOnly=true poseInjection=true nativePointer=false normalFourWorking=NOT_TESTED");
+                Finish(true, receipt.ToString());
+                yield break;
+            }
             if (Environment.GetCommandLineArgs().Contains(Family3DManualGameplayObserver.BackgroundFlag))
             {
                 // Let the normal coordinator dock all four actors; never inject a seat or pose.
@@ -249,6 +256,55 @@ namespace FamilyCompany.Runtime.Character3D
             receipt.AppendLine("capture=explicitD3D11CameraStack IMGUI=NOT_CAPTURED nativePointer=NOT_TESTED " +
                 "finalMotherSisterAssets=NOT_PRESENT temporaryPresentationOnly=true");
             Finish(true, receipt.ToString());
+        }
+
+        private void RunChairFit(StarterOfficeRuntimeBootstrap runtime)
+        {
+            var presenter = Family3DProductionPresenter.Instance;
+            presenter.enabled = false;
+            var desks = presenter.GetComponentsInChildren<Family3DWorkstation>().OrderBy(d => d.WorkstationSetId).ToArray();
+            var hosts = runtime.Actors.Select(actor => GameObject.Find(
+                OfficeFamily3DVisualRoster.ProductionName(actor.AgentId) + "ProductionHost")).ToArray();
+            foreach (GameObject host in hosts) host.SetActive(false);
+            var metrics = new StringBuilder("member,seat,handError,leftKnee,rightKnee,chairPenetrations,leanDegrees\n");
+            bool passed = true;
+            foreach (string member in new[] { "player", "father" })
+            {
+                GameObject host = hosts.Single(item => item.name ==
+                    OfficeFamily3DVisualRoster.ProductionName(member) + "ProductionHost");
+                host.SetActive(true);
+                var body = host.GetComponent<Family3DWalkActor>();
+                var avatar = host.GetComponentInChildren<Animator>();
+                foreach (var desk in desks)
+                {
+                    Vector3 root = desk.SeatGroundWorld;
+                    body.TickSeatedDeskWork(0d, root, desk.SeatedRotationWorld, 1f, false);
+                    var pose = body.ReadPoseSnapshot();
+                    root.y = desk.CushionWorldY + 0.113f * pose.standingHeight - pose.hipsLocal.y;
+                    root += desk.SeatedBodyForwardWorld * (0.07f * pose.standingHeight);
+                    host.transform.position = root;
+                    body.AlignSeatedDeskLimbs(desk.KeyboardWorld, desk.SeatedBodyForwardWorld, 0, 1, 0, false);
+                    pose = body.ReadPoseSnapshot();
+                    Vector3 hands = (avatar.GetBoneTransform(HumanBodyBones.LeftHand).position +
+                                     avatar.GetBoneTransform(HumanBodyBones.RightHand).position) * 0.5f;
+                    Vector3 expected = desk.KeyboardWorld + Vector3.up * (0.022f * body.StandingHeight) -
+                                       desk.SeatedBodyForwardWorld * (0.035f * body.StandingHeight);
+                    float error = Vector3.Distance(hands, expected);
+                    float left = Vector3.Angle(pose.leftHipWorld - pose.leftKneeWorld, pose.leftFootWorld - pose.leftKneeWorld);
+                    float right = Vector3.Angle(pose.rightHipWorld - pose.rightKneeWorld, pose.rightFootWorld - pose.rightKneeWorld);
+                    var vertices = new List<Vector3>(); var regions = new List<Family3DWalkActor.SeatedSkinRegion>();
+                    body.CollectCurrentWorldSkinVertices(vertices, regions);
+                    var penetration = desk.MeasureChairSkinPenetration(vertices, regions);
+                    metrics.AppendLine(string.Join(",", member, desk.WorkstationSetId, F(error), F(left), F(right),
+                        penetration.totalPenetratingVertexCount, F(body.LastSeatedTorsoLeanDegrees)));
+                    Capture("chair-fit-" + member + "-" + desk.WorkstationSetId + ".png");
+                    passed &= error <= 0.02f * body.StandingHeight && left >= 80 && left <= 140 &&
+                              right >= 80 && right <= 140 && penetration.totalPenetratingVertexCount == 0;
+                }
+                host.SetActive(false);
+            }
+            File.WriteAllText(Path.Combine(directory, "chair-fit.csv"), metrics.ToString());
+            Require(passed, "chair pose fit failed; inspect chair-fit.csv (not normal navigation)");
         }
 
         private static void AssertFourBodies(StarterOfficeRuntimeBootstrap runtime)

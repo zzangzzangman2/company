@@ -482,6 +482,8 @@ namespace FamilyCompany.Runtime.Character3D
             Vector3 handCentre = keyboardWorld + up * (0.022f * h) - forward * (0.035f * h);
             Vector3 leftHandTarget = handCentre - right * (0.12f * h) + up * tap;
             Vector3 rightHandTarget = handCentre + right * (0.12f * h) - up * tap;
+            LeanTorsoForKeyboard(leftHandTarget, rightHandTarget, right, weight,
+                leftUpperArm, leftLowerArm, leftHand, rightUpperArm, rightLowerArm, rightHand);
             Vector3 leftElbowPole = leftUpperArm.position - right * (0.34f * h) +
                                     forward * (0.16f * h) - up * (0.16f * h);
             Vector3 rightElbowPole = rightUpperArm.position + right * (0.34f * h) +
@@ -523,6 +525,36 @@ namespace FamilyCompany.Runtime.Character3D
             ApplyTwoBoneIk(
                 rightUpperLeg, rightLowerLeg, rightFoot,
                 rightFootTarget, rightKneePole, weight);
+        }
+
+        public float LastSeatedTorsoLeanDegrees { get; private set; }
+
+        private void LeanTorsoForKeyboard(Vector3 leftTarget, Vector3 rightTarget, Vector3 rightAxis,
+            float weight, Transform leftUpper, Transform leftLower, Transform leftHand,
+            Transform rightUpper, Transform rightLower, Transform rightHand)
+        {
+            LastSeatedTorsoLeanDegrees = 0f;
+            Transform spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+            if (spine == null) return;
+            float leftReach = (Vector3.Distance(leftUpper.position, leftLower.position) +
+                               Vector3.Distance(leftLower.position, leftHand.position)) * 0.98f;
+            float rightReach = (Vector3.Distance(rightUpper.position, rightLower.position) +
+                                Vector3.Distance(rightLower.position, rightHand.position)) * 0.98f;
+            bool Reachable() => Vector3.Distance(leftUpper.position, leftTarget) <= leftReach &&
+                                Vector3.Distance(rightUpper.position, rightTarget) <= rightReach;
+            if (Reachable()) return;
+            // Rotate the existing spine only; pelvis, thighs, chair and bone lengths never move.
+            // TickSeatedDeskWork restores the neutral pose each frame, so this cannot accumulate.
+            Quaternion neutral = spine.rotation;
+            float low = 0f, high = 35f;
+            for (int i = 0; i < 12; i++)
+            {
+                float angle = (low + high) * 0.5f;
+                spine.rotation = Quaternion.AngleAxis(angle, rightAxis) * neutral;
+                if (Reachable()) high = angle; else low = angle;
+            }
+            LastSeatedTorsoLeanDegrees = high * weight;
+            spine.rotation = Quaternion.AngleAxis(LastSeatedTorsoLeanDegrees, rightAxis) * neutral;
         }
 
         private static void ApplyTwoBoneIk(
