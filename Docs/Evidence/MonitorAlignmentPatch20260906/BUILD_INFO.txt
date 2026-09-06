@@ -1,0 +1,11 @@
+Family Company Windows x64 patch candidate
+Commit: 4b06247ea2c4652fc320fa13c141f3501e3b5cae
+Branch: main
+WorkingTreeDirty: False
+BuildInputFingerprint: 643BD98021EC5BFF5B3035AB0F48096AC43B43CFAEFD6368F6F2A511198B7C2D
+BuildStartedUtc: 2026-09-06T11:28:34.4869322Z
+BuildCompletedUtc: 2026-09-06T11:29:37.4089968Z
+UnityVersion: 6000.3.21f1
+UnityRevision: c02631ffc030
+BuildTarget: StandaloneWindows64
+BuildType: Release (non-Development)

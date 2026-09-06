@@ -1,0 +1,163 @@
+{
+  "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+  "scope": "Byte-identical preserved receipts. Original artifact paths are historical provenance; use this filename/hash map after company checkout. These diagnostic scripts describe the exact home run, not a request to rerun stale releases.",
+  "schemaVersion": 1,
+  "files": [
+    {
+      "name": "approval.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\approval.json",
+      "sha256": "e2161e397270fe22a72c3d894c409515fce139e2be78788fe2e1dd2cefb3278b",
+      "size": 691
+    },
+    {
+      "name": "content-binding.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\content-binding.json",
+      "sha256": "83c7b437c53a6a579e487973b9ef40c50d3e74e22e4fc73b12f8953944f1f9eb",
+      "size": 40989
+    },
+    {
+      "name": "geometry.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\geometry.json",
+      "sha256": "a5eade29ae5deabb37b2192f0eb207327574245877233efda5dec53c2b3ff009",
+      "size": 6474
+    },
+    {
+      "name": "native-binding.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\native-binding.json",
+      "sha256": "f82301b8d40f9d59368192dd6c20216610b9ee4786644fe3ab3c9d7fadbd64b5",
+      "size": 3248
+    },
+    {
+      "name": "normal-runtime.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\normal-runtime.json",
+      "sha256": "f488310369cd9dcaf6b5bd1208f256d6075d35ba0ca374682f0ecbb965f4a60c",
+      "size": 7220
+    },
+    {
+      "name": "release-receipt.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\release-receipt.json",
+      "sha256": "4762696df411582826697c52b9225a8e7521f92d66dcbd85722ff740d7c6749e",
+      "size": 4765
+    },
+    {
+      "name": "seated-fit.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\seated-fit.json",
+      "sha256": "94dac610f8f3f57874946bd02e61dbcc7d320cfd2dd9fa911401c5ba99661285",
+      "size": 962
+    },
+    {
+      "name": "updater-regressions.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\updater-regressions.json",
+      "sha256": "135ab515db0d016c184dfa3a77303c3c5f467c88ff187070d3ad2a377b6b60d1",
+      "size": 14234
+    },
+    {
+      "name": "walk-acceptance.json",
+      "originalPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\walk-acceptance.json",
+      "sha256": "ee0b0278d0f14c75364bbd092e7a4346bcde309b0f0b546faf025f890225702e",
+      "size": 6342
+    },
+    {
+      "name": "BUILD_INFO.txt",
+      "originalPath": "Artifacts/PatchCandidates/4b06247e-fad8442a745048b786236332580394fc/payload/BUILD_INFO.txt",
+      "sha256": "b5a7c01782ded4d50be8d6d5c8461aeacd59b0ab2a064cc62c947c1b313d3a63",
+      "size": 446
+    },
+    {
+      "name": "seated-four-directions-review.png",
+      "originalPath": "Artifacts/ReleaseGameplay/4b06247e-chair/seated-four-directions-review.png",
+      "sha256": "a75ee3f2f54b412ab8bf5e065af87edf633f4f7a968390eca4eff5300dbac722",
+      "size": 613735
+    },
+    {
+      "name": "chair-fit.csv",
+      "originalPath": "Artifacts/ReleaseGameplay/4b06247e-chair/chair-fit.csv",
+      "sha256": "18a940461bed65e97220327688f0b208f1db6c6821e0b74d5894fef370602cc8",
+      "size": 24843
+    },
+    {
+      "name": "opening-shop-final.txt",
+      "originalPath": "Artifacts/ReleaseGameplay/4b06247e-chair/opening-shop-final.txt",
+      "sha256": "07ab4e201f4f97b1bf527cc6f86a4f971fb501a75b4ed165b801d63ddb0bab87",
+      "size": 730
+    },
+    {
+      "name": "normal-autonomy-observed.txt",
+      "originalPath": "Artifacts/NormalAutonomy/4b06247e-release/normal-autonomy-observed.txt",
+      "sha256": "777f7b07c91dca33efbdc264202b6bb1831e085181ba49bc6d1f913575abad7b",
+      "size": 1847
+    },
+    {
+      "name": "walk-analysis.json",
+      "originalPath": "Artifacts/ReleaseGameplay/4b06247e-walk/review/analysis.json",
+      "sha256": "603e5501f8b342d8510752f8418c0565d084b1cd6ba36772e237b9e18c316a2a",
+      "size": 4888
+    },
+    {
+      "name": "red-geometry.json",
+      "originalPath": "Artifacts/MonitorAlignment20260906/red/geometry.json",
+      "sha256": "345ac74a72dca58129eb5fd78877cbc9016958eacab531e6db6c1887388fa0b2",
+      "size": 3472
+    },
+    {
+      "name": "green-geometry.json",
+      "originalPath": "Artifacts/MonitorAlignment20260906/green/geometry.json",
+      "sha256": "caae52036eb02e4ec8993282ad95fe90170ca34b56c3e16b8845a2bc703b7fef",
+      "size": 3211
+    },
+    {
+      "name": "patch-public-delta.json",
+      "originalPath": "Artifacts/MonitorAlignment20260906/public-delta/public-delta.json",
+      "sha256": "16ad19fca7c64f3f8478fbb6b6706dd7694c8993886894acc3b7d0d928176a20",
+      "size": 4184
+    },
+    {
+      "name": "patch-before.json",
+      "originalPath": "Artifacts/MonitorAlignment20260906/public-delta/before.json",
+      "sha256": "e68b54c5ef4d0ad43c13696f8f75269bcb66d966e149dd6f33ca5c4ce5e7ab2a",
+      "size": 1493
+    },
+    {
+      "name": "patch-after.json",
+      "originalPath": "Artifacts/MonitorAlignment20260906/public-delta/after.json",
+      "sha256": "9ae59fef8d42a6d1134d46f374f25f360033fb380391c37c91d79d049d0887fe",
+      "size": 1493
+    },
+    {
+      "name": "patch-seed.json",
+      "originalPath": "Artifacts/MonitorAlignment20260906/public-delta/seed.json",
+      "sha256": "3396007ce42e64acdb51be9a9fc888af1dfccb4868ad0a33a13ed7ab1db00779",
+      "size": 267
+    },
+    {
+      "name": "patch-worker-result.json",
+      "originalPath": "Artifacts/MonitorAlignment20260906/public-delta/worker-result.json",
+      "sha256": "cf785b6ec566af3b8afe4c844c1dd0ed8b432de5df0f043ab2027843199a7c14",
+      "size": 291
+    },
+    {
+      "name": "patch-worker.txt",
+      "originalPath": "Artifacts/MonitorAlignment20260906/public-delta/worker.txt",
+      "sha256": "d1530bfc608b94ad515623c590de672e3734d374f9241290026efff8364bb570",
+      "size": 101724
+    },
+    {
+      "name": "published-inventory.json",
+      "originalPath": "Artifacts/UpdaterRemoteInventory/published-fc-win-20260906.3.json",
+      "sha256": "c69c67ac224351d6ad1f45bd37d0cc25ee7e644f28e94023e5f097292b5a430f",
+      "size": 2913
+    },
+    {
+      "name": "receipt-builder.ps1",
+      "originalPath": "Artifacts/MonitorAlignment20260906/Approve-4b06247e.ps1",
+      "sha256": "44200cbc89c3560e78bfe2fdf86a5d9ad5bcea510a28cd22b8954aff73fdd1c9",
+      "size": 10685
+    },
+    {
+      "name": "public-delta-runner.ps1",
+      "originalPath": "Artifacts/MonitorAlignment20260906/Test-PublicDelta.ps1",
+      "sha256": "b8c906a9b21deeb7946547700bd20add1c3e513e5370a39f044f6954574265c9",
+      "size": 6014
+    }
+  ]
+}

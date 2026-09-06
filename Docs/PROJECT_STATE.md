@@ -2,12 +2,14 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## 2026-09-06 latest work: monitor/table alignment correction, next patch pending
+## 2026-09-06 latest delivery: monitor/table alignment patch v3 published
 
 User reported that the CRT looks tilted relative to the desk and requested only that correction,
-then will personally start the existing main EXE to observe the patch. Current published version is
-still `.2` below; no new patch is public yet. Keep the fixed Downloads EXE and user's v2 AppData cache
-unchanged so their next launch performs the real update. Do not consume that update in the user's store.
+then will personally start the existing main EXE to observe the patch. Latest public release is now
+[fc-win-20260906.3](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260906.3), sequence 3,
+source **4b06247ea2c4652fc320fa13c141f3501e3b5cae**. The existing Downloads main and user's v2 AppData
+cache are deliberately retained so their next launch performs the real update. Do not consume that
+update in the user's store. This section supersedes the dated v2 delivery details below.
 
 - Root cause reproduced: CRT/key mesh width was independently orthogonalized inside the runtime's
   mapped overlay, diverging from the tabletop by **19.4712 degrees**. Shared corner normals also smoothed
@@ -21,13 +23,38 @@ unchanged so their next launch performs the real update. Do not consume that upd
   Scripts-only build 23.063s. Four desk preview PNGs rebaked; four chair PNG hashes unchanged.
 - User approved the displayed corrected sheet with "1" / "이 모습으로 배포". No character pose/model approval
   is invented; existing approved body/seat look remains unchanged and this approval covers the shown CRT fix.
-- Remaining: clean exact-identity Release and normal gameplay
-  gates, GitHub delta publication, independent update verification without touching the user's cache.
-  [Scope and projection contract](MONITOR_ALIGNMENT_PATCH.md). No new runtime build is approved by this note.
+- Exact clean Unity 6000.3.21f1 non-Development Release completed in 67.453s. Fresh normal gameplay:
+  8,104 navigation samples, zero rail violations (maximum fraction error 0.0000256875), collision/runtime
+  errors 0; 2,970 settled Working samples, failures 0, individual hand error <=0.008899.
+  Four staggered next-day arrivals and normal working passed. Controlled seat/typing 264 samples passed,
+  penetration 0; normal walk 414 frames, all four foot-midpoint/alternation gates passed; mute output 0.
+- Eight actual Release seated captures are byte-identical to the approved corrected FastQA images.
+  Original native purchase evidence retains its 8ce identity and is bound only to unchanged transaction/
+  rotation/occupancy inputs, not claimed as fresh clicks. The old centreline gate did not detect CRT edge
+  or shading errors; the new independent actual-mesh red/green gate does. Locomotion inputs are unchanged.
+- Independent receipt records current user approval and production eligibility. Public release ID
+  **383586367**, all **9 assets** size/digest verified before publication. Delta is **6 changed files**,
+  **159,476,005 compressed bytes (152.1 MiB)**; 163 files unchanged. Three shipping workers are unchanged.
+  Resources bundles are file-level patch units, so small PNG changes can require a large bundle download.
+- New-PC ZIP: **271,000,614 bytes**, SHA-256
+  `c44257baffd4ad71d7bf3bc6cc42dd9ac34abdf48786ccf01e0c07fde4e79aa4`.
+  Existing installations must keep their main; do not replace it or reinstall this ZIP to receive the patch.
+- Actual public GitHub v2 -> v3 **shipping worker transfer PASS** in isolated QA root: 150 measured
+  download events, 159,476,005 / 159,476,005 bytes (100%), 163 reused files, all 169 files hash-verified.
+  Manifest `c8a152d8e88ec8037e6d635d60a8d7b6460317eaadf9beadf0adbef84c24b84d`.
+  PrepareOnly stopped before activation as designed. No new Unity restart/visible patch-UI run is claimed;
+  that unchanged path has the v2 evidence below. User will personally test their next main launch.
+- Main 169 files, user pointer/snapshot v2 and all 5 saves/backups verified unchanged before/after testing.
+  Fresh unchanged-worker local regressions **81/81**. No native input, foreground window, paid generation,
+  delegation, cache replacement or shutdown. [Immutable evidence](Evidence/MonitorAlignmentPatch20260906/README.md).
+- Fresh pre-push full remote inventory PASS: prohibited 0 / unknown 0, reviewed v2 + v3 only, **176 assets**
+  in total. New evidence hashes and all 11 receipt gate copies match; v3 receipt is preserved byte-for-byte.
+- [Scope and projection contract](MONITOR_ALIGNMENT_PATCH.md) · [main/company instructions](MAIN_GAME_ENTRY.md).
+  Preserve v2 public assets because the new delta manifest references them. No more build for docs-only push.
 
 ## 2026-09-06 published baseline: approved Release v2, fixed main installed, real GitHub boot passed
 
-**Current delivery is complete:** [fc-win-20260906.2](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260906.2),
+**Baseline delivery completed before the v3 visual correction:** [fc-win-20260906.2](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260906.2),
 source **ee48a72c8e9979a605a64c59820af8d23fdbcf4c**, sequence 2, exact Unity 6000.3.21f1,
 non-Development Release. The user's "ㅇㅇ 승인배포" approves the displayed walk/seated look and deployment.
 The immutable release receipt records `productionEligible=true` and the approval reference.

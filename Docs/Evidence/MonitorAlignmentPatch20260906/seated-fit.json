@@ -1,0 +1,24 @@
+{
+  "poseInjection": true,
+  "normalLiveSamples": 2970,
+  "process": {
+    "desktopSwitchAllowed": false,
+    "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+    "inputDesktopAtStart": "Default",
+    "forcedStop": false,
+    "seconds": 111.5897251,
+    "pid": 18408,
+    "exitCode": 0,
+    "playerSha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+    "privateDesktop": "FamilyCompanyQa_2bf1f62277a34f52a106d636cc24d18d"
+  },
+  "penetrations": 0,
+  "independent": true,
+  "maxIndividualHand": 0.0089,
+  "scope": "Two real body models x four controlled seated directions; separate normal live work observations. Current Release sheet visually inspected and all eight frames identical to approved images.",
+  "csvSha256": "18a940461bed65e97220327688f0b208f1db6c6821e0b74d5894fef370602cc8",
+  "passed": true,
+  "samples": 264,
+  "normalLiveFailures": 0,
+  "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae"
+}

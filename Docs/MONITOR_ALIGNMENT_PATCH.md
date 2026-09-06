@@ -42,3 +42,30 @@ chair PNG 네 장과 importer 설정은 바꾸지 않는다.
 사용자가 직접 수신 화면을 확인할 수 있도록 **사용자의 AppData snapshot/current pointer를 미리
 업데이트하지 않는다**. 독립 patch 시험은 별도 QA 설치 root에서 수행하고 실제 production 서버/바이트
 수신 여부와 Unity 재시작 시험 여부를 구분한다. 최종 공개 version·SHA·수신량은 PROJECT_STATE에 기록한다.
+
+## 완료 결과 / 회사에서 이어받기
+
+- 최신 공개판: [fc-win-20260906.3](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260906.3).
+  게임 source `4b06247ea2c4652fc320fa13c141f3501e3b5cae`, Release ID 383586367, sequence 3.
+  문서 후속 commit SHA와 게임 빌드 SHA를 혼동하지 않는다.
+- 정확한 Release에서 normal navigation 8,104 samples, live settled Working 2,970 samples,
+  next-day 네 가족 출근·업무, mute, 충돌/런타임 오류 0을 확인했다. 별도 controlled typing/seat
+  264 poses 통과. 실제 Release seated 이미지 8개는 사용자가 승인한 이미지와 해시까지 같다.
+- 수정 전/후 actual mesh red→green은 유지한다. 과거 centreline 검사가 CRT의 잘못된 폭 축과
+  둥글게 보이는 normal까지 통과시킨 것은 아니었다. 승인된 기존 native 구매 입력은 변경 없는
+  transaction 코드에만 연결하며 새 클릭 검사라고 쓰지 않는다. source/digest 바인딩을 증거에 포함했다.
+- 실제 public GitHub v2→v3 전송: **6개 / 159,476,005 bytes / 152.1 MiB**, progress 150건,
+  실제 수신 100%, unchanged 163개 재사용, 총 169개 원본 SHA-256 검증 통과.
+  큰 `resources.assets.resS`/`resources.assets`가 파일 단위로 바뀌므로 작은 PNG 수정도
+  이 묶음을 다시 받는다. 모델별 Addressables 분할을 새로 구현한 것은 아니다.
+- 실제 배포 worker를 별도 QA root로 실행했다. PrepareOnly→ready까지만 검사했으며, 이번에
+  사용자 main에서 Unity 자동 재시작/화면을 직접 보았다고 주장하지 않는다. 해당 코드와 worker는
+  v2에서 이미 검사한 그대로이고 로컬 회귀 81/81도 새로 통과했다.
+- 사용자 main 169개 파일, v2 cache/current pointer, 세이브/백업 5개 모두 전후 해시가 같다.
+  **지금 같은 메인 파일을 직접 열면 게임 내부 로딩의 `패치 중입니다 · 다운로드`에서 실제
+  퍼센트와 MiB를 확인할 수 있다.** 다운로드 100% 뒤에는 해시 검증·정상 재시작이 이어진다.
+- 회사 플레이: 이미 설치돼 있으면 같은 메인 EXE만 실행. 최초 설치는 [MAIN_GAME_ENTRY.md](MAIN_GAME_ENTRY.md).
+  개발을 이어받는 경우 clean main에서 `git pull --ff-only origin main`, AGENTS/PROJECT_STATE부터 읽는다.
+  집 작업 경로는 `C:\Users\godho\Documents\Codex\fc_agents\integration_p0`다. 예전 8월 작업 폴더가 아니다.
+- [불변 증거와 각 검증의 범위](Evidence/MonitorAlignmentPatch20260906/README.md).
+  v2 재사용 공개 assets와 현재 고정 메인을 구버전 정리 대상으로 삭제하지 않는다.

@@ -1,0 +1,88 @@
+{
+  "downloadProgressEvents": 150,
+  "unityRestartExercised": false,
+  "workerLogSha256": "d1530bfc608b94ad515623c590de672e3734d374f9241290026efff8364bb570",
+  "downloadedCompressedBytes": 159476005,
+  "beforeStateSha256": "e68b54c5ef4d0ad43c13696f8f75269bcb66d966e149dd6f33ca5c4ce5e7ab2a",
+  "saveFilesUnchanged": 5,
+  "changedFiles": [
+    {
+      "path": "BUILD_INFO.txt",
+      "size": 446,
+      "sha256": "b5a7c01782ded4d50be8d6d5c8461aeacd59b0ab2a064cc62c947c1b313d3a63",
+      "assetTag": "fc-win-20260906.3",
+      "assetName": "b5a7c01782ded4d50be8d6d5c8461aeacd59b0ab2a064cc62c947c1b313d3a63.gz",
+      "packedSize": 334,
+      "packedSha256": "8eee83a170c5543c947e97ea05cb96b18ba2975df99d638dfd717e8827df1b06"
+    },
+    {
+      "path": "FamilyCompany_Data/boot.config",
+      "size": 156,
+      "sha256": "fe24d30f98292ce9fec14076b65e78c84d9a201c8556f8e4c836d5293c674162",
+      "assetTag": "fc-win-20260906.3",
+      "assetName": "fe24d30f98292ce9fec14076b65e78c84d9a201c8556f8e4c836d5293c674162.gz",
+      "packedSize": 143,
+      "packedSha256": "f3435e4537626aaf4c3a5a99a3c6a6bce77804bc612cac938d9b771e6b26928c"
+    },
+    {
+      "path": "FamilyCompany_Data/globalgamemanagers",
+      "size": 119156,
+      "sha256": "aeba09f4fca9b7aa5ebc6042285319d1f1b05f1fa9723847436b06a5634e2e90",
+      "assetTag": "fc-win-20260906.3",
+      "assetName": "aeba09f4fca9b7aa5ebc6042285319d1f1b05f1fa9723847436b06a5634e2e90.gz",
+      "packedSize": 41993,
+      "packedSha256": "b3b297901fdc9d26cc161dcbca82e4eff4c36e5b8c230e67f0f4a9191ed712e0"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.assets",
+      "size": 51488460,
+      "sha256": "eb82183877a1582d19cffbd2d53bb6703ee8c3aab62c6fae9bdaad6089f00132",
+      "assetTag": "fc-win-20260906.3",
+      "assetName": "eb82183877a1582d19cffbd2d53bb6703ee8c3aab62c6fae9bdaad6089f00132.gz",
+      "packedSize": 24329791,
+      "packedSha256": "362b217a72a9da4cb2f957ecbc1f9a5ad1ede4774a9738b686c72e6d35bd5212"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.assets.resS",
+      "size": 511345600,
+      "sha256": "2bf2dca105ceccba4ca4fbf07a3ce48f05d1be2df5d996ae64337dcdef90d854",
+      "assetTag": "fc-win-20260906.3",
+      "assetName": "2bf2dca105ceccba4ca4fbf07a3ce48f05d1be2df5d996ae64337dcdef90d854.gz",
+      "packedSize": 135017887,
+      "packedSha256": "e65129f4b8bc6d5714670d4be325fdf07c6c82aa877a9f032f37a074b6d36e8b"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Assembly-CSharp.dll",
+      "size": 222208,
+      "sha256": "86dc054e74ea54d18d1577e710963caad7dc519139915435653e72fe9bf6a0f5",
+      "assetTag": "fc-win-20260906.3",
+      "assetName": "86dc054e74ea54d18d1577e710963caad7dc519139915435653e72fe9bf6a0f5.gz",
+      "packedSize": 85857,
+      "packedSha256": "fb47b6fa691cfb5af72917589852a2e5bb45597d36fd1d41f91b9b47a595f112"
+    }
+  ],
+  "publicWorkerSha256": "90d1f5aa8304fc6e2caa5f386149b3497d8a440f7dbaea7b4c8b142c09d806c2",
+  "userCacheUnchanged": true,
+  "nativeInputUsed": false,
+  "scope": "Actual unchanged shipping worker with public GitHub latest/API/download, isolated v2 to v3 store; SHA validation of all 169 files and real compressed-byte progress through 100%. PrepareOnly does not activate or launch Unity. Existing v2 Unity patch UI/restart implementation unchanged and previously tested. User will personally observe next real main launch; user cache/main/saves were read only and unchanged.",
+  "qaCurrentStillOnSequence": 2,
+  "afterStateSha256": "9ae59fef8d42a6d1134d46f374f25f360033fb380391c37c91d79d049d0887fe",
+  "manifestSha256": "c8a152d8e88ec8037e6d635d60a8d7b6460317eaadf9beadf0adbef84c24b84d",
+  "lastDownloadEvent": {
+    "schemaVersion": 1,
+    "phase": "download",
+    "detail": "FamilyCompany_Data/Managed/Assembly-CSharp.dll",
+    "done": 159476005,
+    "total": 159476005,
+    "percent": 100
+  },
+  "passed": true,
+  "version": "fc-win-20260906.3",
+  "reusedFiles": 163,
+  "verifiedFiles": 169,
+  "userMainUnchanged": true,
+  "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+  "userStillOnSequence": 2,
+  "publicWorkerExitCode": 0,
+  "independent": true
+}

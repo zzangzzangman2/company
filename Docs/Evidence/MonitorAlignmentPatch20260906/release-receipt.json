@@ -1,0 +1,100 @@
+{
+  "playerSha256": "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+  "productionEligible": true,
+  "userVisualApproval": true,
+  "schemaVersion": 1,
+  "approvalReference": "User explicitly approved the displayed corrected four-direction seat sheet with \"1\" and \"이 모습으로 배포\" on 2026-09-06; latest message asks to continue.",
+  "gates": [
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/normal-runtime.json",
+      "evidenceSha256": "f488310369cd9dcaf6b5bd1208f256d6075d35ba0ca374682f0ecbb965f4a60c",
+      "passed": true,
+      "name": "opening-four-actors"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/native-binding.json",
+      "evidenceSha256": "f82301b8d40f9d59368192dd6c20216610b9ee4786644fe3ab3c9d7fadbd64b5",
+      "passed": true,
+      "name": "shop-native-pointer-four-rotations"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/normal-runtime.json",
+      "evidenceSha256": "f488310369cd9dcaf6b5bd1208f256d6075d35ba0ca374682f0ecbb965f4a60c",
+      "passed": true,
+      "name": "normal-walk-tile-centres"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/walk-acceptance.json",
+      "evidenceSha256": "ee0b0278d0f14c75364bbd092e7a4346bcde309b0f0b546faf025f890225702e",
+      "passed": true,
+      "name": "walking-visual-foot-slip-grounding"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/normal-runtime.json",
+      "evidenceSha256": "f488310369cd9dcaf6b5bd1208f256d6075d35ba0ca374682f0ecbb965f4a60c",
+      "passed": true,
+      "name": "furniture-avoidance"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/seated-fit.json",
+      "evidenceSha256": "94dac610f8f3f57874946bd02e61dbcc7d320cfd2dd9fa911401c5ba99661285",
+      "passed": true,
+      "name": "four-seated-working-directions"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/normal-runtime.json",
+      "evidenceSha256": "f488310369cd9dcaf6b5bd1208f256d6075d35ba0ca374682f0ecbb965f4a60c",
+      "passed": true,
+      "name": "next-day-four-staggered-arrivals"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/normal-runtime.json",
+      "evidenceSha256": "f488310369cd9dcaf6b5bd1208f256d6075d35ba0ca374682f0ecbb965f4a60c",
+      "passed": true,
+      "name": "mute"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/normal-runtime.json",
+      "evidenceSha256": "f488310369cd9dcaf6b5bd1208f256d6075d35ba0ca374682f0ecbb965f4a60c",
+      "passed": true,
+      "name": "runtime-exception-zero"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/updater-regressions.json",
+      "evidenceSha256": "135ab515db0d016c184dfa3a77303c3c5f467c88ff187070d3ad2a377b6b60d1",
+      "passed": true,
+      "name": "updater-regressions"
+    },
+    {
+      "independent": true,
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "evidencePath": "Artifacts/MonitorAlignment20260906/approval/geometry.json",
+      "evidenceSha256": "a5eade29ae5deabb37b2192f0eb207327574245877233efda5dec53c2b3ff009",
+      "passed": true,
+      "name": "monitor-desk-actual-mesh-axes"
+    }
+  ],
+  "scope": "Approved monitor/keyboard-only visual change. Fresh exact Release normal/chair/walk regressions. Native input and original accepted locomotion reuse are explicitly scoped and source/hash-bound, not relabelled as fresh native input or full binary equivalence. Public patch-transfer check follows publication in isolated QA root, never user cache.",
+  "buildInfoSha256": "b5a7c01782ded4d50be8d6d5c8461aeacd59b0ab2a064cc62c947c1b313d3a63",
+  "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae"
+}

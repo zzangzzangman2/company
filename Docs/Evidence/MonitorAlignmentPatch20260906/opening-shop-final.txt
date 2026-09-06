@@ -1,0 +1,11 @@
+FAMILY_3D_OPENING_SHOP_QA: PASS
+initialTime=2000-01-03T08:50:00
+initialCash=5000000 initialSeats=0 initialInventory=0 familyIds=father,mother,older_sister,player
+normalObservationSeconds=0 (fit-only, wander NOT TESTED) teleports=0 injectedRoutes=0 injectedClockMinutes=0 staticViolations=0 interactionViolations=0 agentPenetrations=0 finalTime=2000-01-03T08:50:00
+purchase=1 facing=SouthEast cash=4600000 previewCells=3 seats=1
+purchase=2 facing=SouthWest cash=4200000 previewCells=3 seats=2
+purchase=3 facing=NorthWest cash=3800000 previewCells=3 seats=3
+purchase=4 facing=NorthEast cash=3400000 previewCells=3 seats=4
+chairFitOnly=true poseInjection=true nativePointer=false normalFourWorking=NOT_TESTED
+
+runtimeErrors=0

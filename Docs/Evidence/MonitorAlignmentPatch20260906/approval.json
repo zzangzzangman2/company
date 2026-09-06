@@ -1,0 +1,8 @@
+{
+  "userVisualApproval": true,
+  "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+  "releaseSheetSha256": "a75ee3f2f54b412ab8bf5e065af87edf633f4f7a968390eca4eff5300dbac722",
+  "scope": "Current monitor/keyboard correction approval. Eight actual Release captures match approved FastQA captures byte-for-byte. Existing accepted character motion is unchanged, not newly approved or reauthored.",
+  "approvalReference": "User explicitly approved the displayed corrected four-direction seat sheet with \"1\" and \"이 모습으로 배포\" on 2026-09-06; latest message asks to continue.",
+  "approvedSheetSha256": "a75ee3f2f54b412ab8bf5e065af87edf633f4f7a968390eca4eff5300dbac722"
+}

@@ -16,13 +16,16 @@
 
 ## 지금 상태와 최초 한 번의 설치
 
-**2026-09-06: 사용자 승인 후 `fc-win-20260906.2` 공개·집 메인 설치·실제 GitHub 패치 재시작 검증 완료.**
-게임 빌드 commit은 `ee48a72c8e9979a605a64c59820af8d23fdbcf4c`다. 이후 문서 push의 SHA와 구분한다.
-집에서는 위 고정 메인을 바로 사용한다. [최종 검증 기록](Evidence/FirstPublicRelease20260906/README.md).
+**2026-09-06: 모니터·키보드 정렬 수정 `fc-win-20260906.3` 공개.**
+최신 게임 빌드 commit은 `4b06247ea2c4652fc320fa13c141f3501e3b5cae`다. 이후 문서 push SHA와 구분한다.
+집의 고정 메인은 패치 지원 v2(`ee48a72c`) 그대로이며 정상이다. **같은 EXE를 열면 v3 패치
+159,476,005 bytes(152.1 MiB)를 받고 최신판으로 진입한다.** 사용자 요청에 따라 캐시를 미리
+업데이트하지 않았다. 이미 설치한 회사 PC도 같은 메인을 사용한다. 재설치나 Unity 빌드는 필요 없다.
+[모니터 수정 기록](MONITOR_ALIGNMENT_PATCH.md) · [v2 최초 설치/재시작 검증](Evidence/FirstPublicRelease20260906/README.md).
 
 회사 PC 최초 설치는 다음 한 번만 필요하다.
 
-1. [공개 설치 ZIP 받기](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260906.2/FamilyCompany-Windows.zip).
+1. [공개 설치 ZIP 받기](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260906.3/FamilyCompany-Windows.zip).
 2. `%USERPROFILE%\Downloads\FamilyCompany_Playtest` 폴더를 만들고 ZIP **전체 내용**을 그 안에 푼다.
    EXE 바로 옆에 `FamilyCompany_Data`, `UnityPlayer.dll`, `FamilyCompanyPatch`가 있어야 한다.
    ZIP 안에서 실행하거나 EXE 하나만 복사하지 않는다. 기존 설치/개인 파일이 있으면 무작정 덮어쓰지 않는다.
@@ -30,8 +33,8 @@
 
 이후 신규 PC용 [최신 공개 설치 ZIP](https://github.com/zzangzzangman2/company/releases/latest/download/FamilyCompany-Windows.zip)도
 제공한다. 이미 설치된 PC는 ZIP을 매번 받을 필요 없이 같은 메인 EXE가 패치를 확인한다.
-이번 ZIP은 271,062,921 bytes이며 SHA-256은
-`8808d81987cdd997f5b70bdd7151304b798c9f6b12cbd71e5f32b019f456c303`이다.
+이번 v3 ZIP은 271,000,614 bytes이며 SHA-256은
+`c44257baffd4ad71d7bf3bc6cc42dd9ac34abdf48786ccf01e0c07fde4e79aa4`이다.
 
 집 설치에서는 169개 게임 파일을 검증했고 세이브/백업 5개를 보존했다. 구형 `9144fa0e` 폴더의
 157개 파일은 해시 기록 후 **휴지통으로 이동**했으므로 복구 가능하다. 최신 확인 실패 시 사용하는

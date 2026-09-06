@@ -1,0 +1,1112 @@
+{
+  "unchangedFileCount": 163,
+  "sourceChangedInputs": [
+    "Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture/desk_with_pc_ne.png",
+    "Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture/desk_with_pc_nw.png",
+    "Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture/desk_with_pc_se.png",
+    "Assets/FamilyCompany/Content/Resources/OfficeBuildFurniture/desk_with_pc_sw.png",
+    "Assets/FamilyCompany/Experimental/Family3DPrototype/Editor/WorkstationTileCentreRegression.cs",
+    "Assets/FamilyCompany/Runtime/Character3D/Family3DWorkstation.cs"
+  ],
+  "independent": true,
+  "approvedFrames": [
+    {
+      "approvedFastFrameIdentical": true,
+      "sha256": "3169b7c58d4adc5acb67997a895c202539c125f944ad41464920f5d9413070d3",
+      "name": "chair-fit-father-seat_father.png"
+    },
+    {
+      "approvedFastFrameIdentical": true,
+      "sha256": "0a994d21776f17c3fc2d8df12d6632d02b2dc9f98a7974a6e1eca3eeda1b295f",
+      "name": "chair-fit-father-seat_mother.png"
+    },
+    {
+      "approvedFastFrameIdentical": true,
+      "sha256": "1c7f9624d5032b5bf942c1d23f07d40f8ca442b9a1de2c984699bae74a4a7b03",
+      "name": "chair-fit-father-seat_older_sister.png"
+    },
+    {
+      "approvedFastFrameIdentical": true,
+      "sha256": "7bde5754a040b7e6037d82150c65d6c9763131520dc848faa3d89a1624ec1b53",
+      "name": "chair-fit-father-seat_player.png"
+    },
+    {
+      "approvedFastFrameIdentical": true,
+      "sha256": "0bbc05d8a99d155aef31d1b340418a314eda82df8eac8af8022abb2e2d8b9359",
+      "name": "chair-fit-player-seat_father.png"
+    },
+    {
+      "approvedFastFrameIdentical": true,
+      "sha256": "78917b107f65f519f9b814f18697ee5293148d7d4e36c8ca14157b3a995b506c",
+      "name": "chair-fit-player-seat_mother.png"
+    },
+    {
+      "approvedFastFrameIdentical": true,
+      "sha256": "4ec6f480600731eeabeaf96f78b98a0c60d226c1fb908cf885ae9dd083dd3747",
+      "name": "chair-fit-player-seat_older_sister.png"
+    },
+    {
+      "approvedFastFrameIdentical": true,
+      "sha256": "b587f5e29b0b801b652d336101f5d1731dfdd5cc4d9a82654a23c3b51c874bb8",
+      "name": "chair-fit-player-seat_player.png"
+    }
+  ],
+  "scope": "All game inputs outside the six exact visual/oracle/preview files are git-byte-identical. Runtime diff manually reviewed: only CRT/keyboard visual basis and CRT normals, no seat/socket/pose/navigation/transaction change. All three shipping workers and 163 payload files byte-identical to v2. Not full gameplay binary equivalence: Assembly-CSharp and resource bundles intentionally differ.",
+  "baseline": "ee48a72c8e9979a605a64c59820af8d23fdbcf4c",
+  "passed": true,
+  "files": [
+    {
+      "path": "BUILD_INFO.txt",
+      "size": 446,
+      "unchanged": false,
+      "sha256": "b5a7c01782ded4d50be8d6d5c8461aeacd59b0ab2a064cc62c947c1b313d3a63"
+    },
+    {
+      "path": "FamilyCompany.exe",
+      "size": 667136,
+      "unchanged": true,
+      "sha256": "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556"
+    },
+    {
+      "path": "UnityCrashHandler64.exe",
+      "size": 1669552,
+      "unchanged": true,
+      "sha256": "38a87bf9c83b54cda605f4feaced264e6010b69c1f47c80c567213c5c07cc971"
+    },
+    {
+      "path": "UnityPlayer.dll",
+      "size": 36734888,
+      "unchanged": true,
+      "sha256": "35f489b6a7753d536ce2e7b1bd1f729afb8b4e70b43caaa01af03d1c20f64d6c"
+    },
+    {
+      "path": "D3D12/D3D12Core.dll",
+      "size": 4725304,
+      "unchanged": true,
+      "sha256": "625bd40005b1c3708695d5256ecf230d278e6b8edba5a88af70f3d91324f3052"
+    },
+    {
+      "path": "FamilyCompanyPatch/FamilyCompany.InGame.ps1",
+      "size": 3356,
+      "unchanged": true,
+      "sha256": "90d1f5aa8304fc6e2caa5f386149b3497d8a440f7dbaea7b4c8b142c09d806c2"
+    },
+    {
+      "path": "FamilyCompanyPatch/FamilyCompany.Restart.ps1",
+      "size": 2990,
+      "unchanged": true,
+      "sha256": "7a6cbff9ba368019b1d6f47c88bec41472c472da87e6c7ca5c33553deb8c6aef"
+    },
+    {
+      "path": "FamilyCompanyPatch/FamilyCompany.Update.ps1",
+      "size": 20437,
+      "unchanged": true,
+      "sha256": "0c4b79e905c6d2ce1f2a4599530a59e4942905faa5c8efb7d30b9437f087ef6c"
+    },
+    {
+      "path": "FamilyCompany_Data/app.info",
+      "size": 36,
+      "unchanged": true,
+      "sha256": "dc492ac0fed43d41a7c2e2dad992ce9a56e3cfcfe1cd8e99f31368b71fd4b690"
+    },
+    {
+      "path": "FamilyCompany_Data/boot.config",
+      "size": 156,
+      "unchanged": false,
+      "sha256": "fe24d30f98292ce9fec14076b65e78c84d9a201c8556f8e4c836d5293c674162"
+    },
+    {
+      "path": "FamilyCompany_Data/globalgamemanagers",
+      "size": 119156,
+      "unchanged": false,
+      "sha256": "aeba09f4fca9b7aa5ebc6042285319d1f1b05f1fa9723847436b06a5634e2e90"
+    },
+    {
+      "path": "FamilyCompany_Data/globalgamemanagers.assets",
+      "size": 103124,
+      "unchanged": true,
+      "sha256": "6638b4c5dbd8ce47ada18320c6068df3864b1da9b4adc3680ec02e269a9054f3"
+    },
+    {
+      "path": "FamilyCompany_Data/globalgamemanagers.assets.resS",
+      "size": 2796240,
+      "unchanged": true,
+      "sha256": "39dd38fcd8dd95d41d6d55fe16a448d29fe2c31d9a162c825c24c6d99a893d7a"
+    },
+    {
+      "path": "FamilyCompany_Data/level0",
+      "size": 76100,
+      "unchanged": true,
+      "sha256": "59bfccc28133244760d96f29ce425dc956fc11a6e2220118a133216c26f00086"
+    },
+    {
+      "path": "FamilyCompany_Data/level1",
+      "size": 9720,
+      "unchanged": true,
+      "sha256": "972cc93958f8c4fe23397e8c04d23798b95b6d704179cf3c262ea8317bf6be4d"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.assets",
+      "size": 51488460,
+      "unchanged": false,
+      "sha256": "eb82183877a1582d19cffbd2d53bb6703ee8c3aab62c6fae9bdaad6089f00132"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.assets.resS",
+      "size": 511345600,
+      "unchanged": false,
+      "sha256": "2bf2dca105ceccba4ca4fbf07a3ce48f05d1be2df5d996ae64337dcdef90d854"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.resource",
+      "size": 19510688,
+      "unchanged": true,
+      "sha256": "4da5b018061971572f37d0df616deeaaecd1b60288f8e2a80427ff99f308dffc"
+    },
+    {
+      "path": "FamilyCompany_Data/RuntimeInitializeOnLoads.json",
+      "size": 12308,
+      "unchanged": true,
+      "sha256": "6782b2eec4dd7752ff37735b1523428ee31f05ece9e7b60cd2e38a63f949a6f5"
+    },
+    {
+      "path": "FamilyCompany_Data/ScriptingAssemblies.json",
+      "size": 3726,
+      "unchanged": true,
+      "sha256": "482013bb3aef9453b3fb60ea374f9374c21cec17246fbb3e8aceec2e0a09add8"
+    },
+    {
+      "path": "FamilyCompany_Data/sharedassets0.assets",
+      "size": 1741676,
+      "unchanged": true,
+      "sha256": "d9523dcaaf1176c80c9ea47a62bd4b569aa590ae0eef5431829615729918e3b9"
+    },
+    {
+      "path": "FamilyCompany_Data/sharedassets0.assets.resS",
+      "size": 336068608,
+      "unchanged": true,
+      "sha256": "219416a068ac6be4a02b21e41e8f9d7326e0a1980fff6faf3c871e1edb8425e3"
+    },
+    {
+      "path": "FamilyCompany_Data/sharedassets1.assets",
+      "size": 49784,
+      "unchanged": true,
+      "sha256": "8aa86c35781e27641adea1cb90b76ca4e8aecfeda5ead2b3e3a31fd9b2739bc1"
+    },
+    {
+      "path": "FamilyCompany_Data/sharedassets1.assets.resS",
+      "size": 17653760,
+      "unchanged": true,
+      "sha256": "71b49129e332b5019c3c24b34d4a0868006cfef7668c622f1d258fcaaa4bb3af"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Assembly-CSharp.dll",
+      "size": 222208,
+      "unchanged": false,
+      "sha256": "86dc054e74ea54d18d1577e710963caad7dc519139915435653e72fe9bf6a0f5"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Infrastructure.Unity.dll",
+      "size": 13312,
+      "unchanged": true,
+      "sha256": "2e3d3be0fe1edaf13ab10f843620fe8a38cc9554492b14a17a18acad67849723"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Presentation.Unity.dll",
+      "size": 1584128,
+      "unchanged": true,
+      "sha256": "6f918070e75a5c7066385da3a176c04e6c61130b6fc3d9fe8b3f7c1124e33ea3"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Qa.Core.dll",
+      "size": 109056,
+      "unchanged": true,
+      "sha256": "1f5bb65b3a79628582e4742167c033f2a90419bc6849e61588e475bca2044d13"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Save.dll",
+      "size": 46080,
+      "unchanged": true,
+      "sha256": "81d3f427dad019c56f6d4c0d7464308fad673ab1d3cc7fb065046d60b056160d"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/FamilyCompany.Simulation.dll",
+      "size": 636416,
+      "unchanged": true,
+      "sha256": "dab860c9cdd955edb6d5251081bddb8420a67f794cd8e648c4d665d6aa18b315"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Mono.Security.dll",
+      "size": 241152,
+      "unchanged": true,
+      "sha256": "618009319dbf3ae374f9b5dc0d0522e1e1bdd172200c120a5471747b7991a584"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/mscorlib.dll",
+      "size": 4632064,
+      "unchanged": true,
+      "sha256": "6c76e06e6d44cf0f39bf59e6a90770968b70093ad4c1572dfbc5e46e431c5fbf"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/netstandard.dll",
+      "size": 90112,
+      "unchanged": true,
+      "sha256": "6ae62e082dc494a2433984177f60ca4db5fae69b1f360a8b33754172b310b8c5"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.ComponentModel.Composition.dll",
+      "size": 257024,
+      "unchanged": true,
+      "sha256": "0c3e81771a5fe9657bea02887996de72606c3cb247e4fbe413f743f40e2af244"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Configuration.dll",
+      "size": 124928,
+      "unchanged": true,
+      "sha256": "04907729e87a101e62d3a5c93cfa16688bee745d05440d6daa0c541964be27ab"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Core.dll",
+      "size": 1113088,
+      "unchanged": true,
+      "sha256": "a5e7d47313da0eca0b92a901a30498f5e970916faf63b70b74dd62b09760ed72"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Data.DataSetExtensions.dll",
+      "size": 29696,
+      "unchanged": true,
+      "sha256": "498f14c37d83f946a47a79e01de777e62f269ee9c3820f2026b59ab1c1b9222f"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Data.dll",
+      "size": 2125312,
+      "unchanged": true,
+      "sha256": "427478545ce66b632414ca838088ea073f250ed16b21c70005f48cb571350e47"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.dll",
+      "size": 2641920,
+      "unchanged": true,
+      "sha256": "7019d6b6dbfa07cf30f62e7d3ccb969f70cbf001fd72112938ffb535c7f75d81"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Drawing.dll",
+      "size": 489984,
+      "unchanged": true,
+      "sha256": "e182e688223acedb8135227e8fbff17d5ed22f47f81141aa9cb96ef1ab9926fc"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.EnterpriseServices.dll",
+      "size": 44544,
+      "unchanged": true,
+      "sha256": "84af394ad863e31407eb2b9555ca7e96a9f1966630f5d7f0eec54f0011f6babc"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.IO.Compression.dll",
+      "size": 114688,
+      "unchanged": true,
+      "sha256": "80421a67b4162a5f1b4aad6a8327c6d1fb4b04dedd39dae14a770b812594fae2"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.IO.Compression.FileSystem.dll",
+      "size": 18432,
+      "unchanged": true,
+      "sha256": "2730d2a27f9362259a406ea14727e5f0a71bc21a6825be94f8623a84bd9f9c79"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Net.Http.dll",
+      "size": 122880,
+      "unchanged": true,
+      "sha256": "3cd3ac19050d5031c13644cd87958ad8029b79ce16c7747faf3d0542e7fb45a3"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Numerics.dll",
+      "size": 119296,
+      "unchanged": true,
+      "sha256": "ac9224b32355a09f09b706cab568384f64cf8116825c5911cef1e13221c61c38"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Runtime.dll",
+      "size": 12288,
+      "unchanged": true,
+      "sha256": "e0a7334b7ba419aaab6bd3bb6992d693e689341a9178172c9bf99c2aa6a085bd"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Runtime.Serialization.dll",
+      "size": 934400,
+      "unchanged": true,
+      "sha256": "1152ef687dbe39e0ccb6b9a68f6501004415a729072df29abab3bc7c66840217"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Security.dll",
+      "size": 320000,
+      "unchanged": true,
+      "sha256": "2101a4dd4475285f96b1ac3ba1715a52aa8067690709e675cc49a9eb8ed901a4"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.ServiceModel.Internals.dll",
+      "size": 215040,
+      "unchanged": true,
+      "sha256": "888ec94a59c127854871b76afa49fdcefdf723c0f0b6fd78e87f73a8495b63b5"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Transactions.dll",
+      "size": 35328,
+      "unchanged": true,
+      "sha256": "f65dbc257d26a361dcc01edd58bf3e542d186c8ee492a4f7a62b0dd7d59f7050"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Xml.dll",
+      "size": 3160064,
+      "unchanged": true,
+      "sha256": "79194220adfcf027a334c87b1adcc6d07b9660a4061e04b3d9500c10d30f7d49"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/System.Xml.Linq.dll",
+      "size": 136704,
+      "unchanged": true,
+      "sha256": "4f5d6bf313cbf091e7bff83d07dd03ed93d0ecb3ddb025ae786aadd6b5f477fb"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.2D.Animation.Runtime.dll",
+      "size": 87040,
+      "unchanged": true,
+      "sha256": "26abbcadd8355381e454f613f754edad343bbbab613a5d5a2146561cf9d00683"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.2D.Common.Runtime.dll",
+      "size": 58368,
+      "unchanged": true,
+      "sha256": "7fb602da41f533a558ecd0765a916ff6a868273738715794d88fc7a7d7b3fa94"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.2D.IK.Runtime.dll",
+      "size": 27136,
+      "unchanged": true,
+      "sha256": "d9d80936f3b8ba0fd0f5e6e03c3f04678b7c550fd4effb9a4913073399a134b6"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.Burst.dll",
+      "size": 304640,
+      "unchanged": true,
+      "sha256": "11da77fa69dbfeaa2b176df8cb035179c5c03427fe171b9099aa3e8b9e3a3829"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.Burst.Unsafe.dll",
+      "size": 5632,
+      "unchanged": true,
+      "sha256": "9d9c1ff52411decbee5d9f0d1cd61ebeaa222077aa77a52101ea3debafae98e2"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.Collections.dll",
+      "size": 453632,
+      "unchanged": true,
+      "sha256": "3676182e3a7b9923a00a7a412ca2b0fd1aff088284dc2c10f9fca2bd5d0c86fe"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.Collections.LowLevel.ILSupport.dll",
+      "size": 5120,
+      "unchanged": true,
+      "sha256": "ff50383f807f9692e4913b97e47d86fefcb8faa33d6d48cd3e3fd6fc7ffb448d"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.InternalAPIEngineBridge.001.dll",
+      "size": 6656,
+      "unchanged": true,
+      "sha256": "de631c521b0ba4d1c0000fff7427b84dcbb2b1bf6d263b8365b836d6f611258e"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.InternalAPIEngineBridge.004.dll",
+      "size": 4608,
+      "unchanged": true,
+      "sha256": "43cee541d0d787a135bd8f428b9fef705853ce4438f843b6883522edebf07be0"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.Mathematics.dll",
+      "size": 752640,
+      "unchanged": true,
+      "sha256": "b9b406ffa90b647d98ddf318e0601ca39345817203337f00ad9c99a881be428a"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Unity.TextMeshPro.dll",
+      "size": 445952,
+      "unchanged": true,
+      "sha256": "c483c183254c1b40597604ff7b9dadb61d7eb838784dd586bfb406324f5124c9"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.AccessibilityModule.dll",
+      "size": 51120,
+      "unchanged": true,
+      "sha256": "b938cb9a95f53d398f884c9e64f0cca94dadb1e46161a9703c4e8d626049f73a"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.AdaptivePerformanceModule.dll",
+      "size": 124840,
+      "unchanged": true,
+      "sha256": "9bf45a2fc40d8223e3ad9e066b614e982d9e4cba3c4c54a7ba2904090885f794"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.AIModule.dll",
+      "size": 77224,
+      "unchanged": true,
+      "sha256": "6c7175da9f74b999bb21308729972c626da8e0aa4fe885f8f94bbb968f98ddc7"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.AMDModule.dll",
+      "size": 21928,
+      "unchanged": true,
+      "sha256": "81cae0a385ab12b78f1d1c5b32463a7d74be5e12213518bea2328f87cbf3267a"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.AndroidJNIModule.dll",
+      "size": 121776,
+      "unchanged": true,
+      "sha256": "775359cbaa592bce728b36bfd150c11c457d95c771e8669adabfe193e3edce13"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.AnimationModule.dll",
+      "size": 225200,
+      "unchanged": true,
+      "sha256": "d35bc846afbdf0d404b743296fc26303db8f9eed5dca2d0172078f62652b5659"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ARModule.dll",
+      "size": 25520,
+      "unchanged": true,
+      "sha256": "04057a2c10d7b3775f469c23c732da29b64c7642378607fadf35bb9fc651363b"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.AssetBundleModule.dll",
+      "size": 41904,
+      "unchanged": true,
+      "sha256": "7e3ce4d7c118bf933fd36da08ddbce84f9cfa2063d81d51fabd9d557ec19df42"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.AudioModule.dll",
+      "size": 142768,
+      "unchanged": true,
+      "sha256": "c6e1f30f2f481773971371b0ea65383ec80bca8574f7d7db3385ae07655db93d"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ClothModule.dll",
+      "size": 36272,
+      "unchanged": true,
+      "sha256": "5d1e50260bb45ee6cbf7b3905356e48dfca89f840d51fbc1fa79666b91f6a805"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ClusterInputModule.dll",
+      "size": 28080,
+      "unchanged": true,
+      "sha256": "2d319b6d5e9195f26d85e31ac93a1ea6a8de869dacdb0163d06a0ad2743dbcac"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ClusterRendererModule.dll",
+      "size": 26536,
+      "unchanged": true,
+      "sha256": "978343f296bf550d8bbeb11a159aeae93dd739919355ed02acda86c9e00bf8e9"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ContentLoadModule.dll",
+      "size": 32680,
+      "unchanged": true,
+      "sha256": "bc86a7a83ef517632b8d616b6505567b9362b4b1ce648e17e2d68d4c1c968a82"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.CoreModule.dll",
+      "size": 1984432,
+      "unchanged": true,
+      "sha256": "9d7c73852c89503f348b05a8337f280fa813cf8e885d52c86a8c9580e68ec76b"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.CrashReportingModule.dll",
+      "size": 26544,
+      "unchanged": true,
+      "sha256": "15fb1de26e84c876ca51af99d5445c0634ed3f4ffe8ff8dd4fc0fb4ee1eb36d2"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.DirectorModule.dll",
+      "size": 41904,
+      "unchanged": true,
+      "sha256": "1415c13a6951425eb83b281ce2c22985ac1b671d052760bd56b46652d4b125af"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.dll",
+      "size": 197544,
+      "unchanged": true,
+      "sha256": "1908e048275864af9cd99fd78e7c9d0f9ebd08c271830b575da213951b3393e9"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.DSPGraphModule.dll",
+      "size": 31664,
+      "unchanged": true,
+      "sha256": "1860e8e8258763c550713a192592a6518ad36ea21b217da074c4766e4af7fb02"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.GameCenterModule.dll",
+      "size": 46000,
+      "unchanged": true,
+      "sha256": "7104f4a9250469fd511f7c66731a6cbcaf9e9305507d65d10e41b214cd8a4573"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.GIModule.dll",
+      "size": 24488,
+      "unchanged": true,
+      "sha256": "af152bc998967d23c2c208bfe18ac32844dab6f8b19e16b21537191547be4383"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.GraphicsStateCollectionSerializerModule.dll",
+      "size": 14256,
+      "unchanged": true,
+      "sha256": "fac5a539925fbfd71648412da7a63dea6dc07d336ff9818fa515aad4dcee1124"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.GridModule.dll",
+      "size": 30640,
+      "unchanged": true,
+      "sha256": "f300e06a4431b535bf9ebfea4292f96c6f46c7d36feccdd5144224c38d2dc8d5"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.HierarchyCoreModule.dll",
+      "size": 109488,
+      "unchanged": true,
+      "sha256": "bf0dc55d5287447f2db62f2c8830b4a18ab7c992090a97d6416184b7f76294b9"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.HierarchyModule.dll",
+      "size": 102312,
+      "unchanged": true,
+      "sha256": "dec942f79f73cd4c422839d8fca4dfd0cca3a2883d772a06dd4565a0c54d8d26"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.HotReloadModule.dll",
+      "size": 24496,
+      "unchanged": true,
+      "sha256": "b23da30d411aa5fcd1446b346eec73aea5cb723c5dd547855a0ecacaeafc8b94"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.IdentifiersModule.dll",
+      "size": 16808,
+      "unchanged": true,
+      "sha256": "0358cd6cd686c340797700e6e11321b7d9e2e03196dcab4164831336960cdc09"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ImageConversionModule.dll",
+      "size": 31152,
+      "unchanged": true,
+      "sha256": "dccc9ccfb963999d0f56e75e7f03b139dfb4360765cb9821d68905d8e3bb983d"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.IMGUIModule.dll",
+      "size": 214440,
+      "unchanged": true,
+      "sha256": "4cac987739607c9ac2f4dd00a83c083faf43a4fd331312895a5c833d1e3cf4da"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.InputForUIModule.dll",
+      "size": 57768,
+      "unchanged": true,
+      "sha256": "05a7b03438b888ca8354125ab69139a8fdc41380b251887086593f4f41193909"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.InputLegacyModule.dll",
+      "size": 45488,
+      "unchanged": true,
+      "sha256": "2606ef2449dcc94220a349fa13c8a46ab337c8e68175c19a0cfa1efe16d8adce"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.InputModule.dll",
+      "size": 28584,
+      "unchanged": true,
+      "sha256": "2d7b2cf3ecb9f2815835bdc8f3919a79ada4829e4ec1cfd513a069c8eae95220"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.InsightsModule.dll",
+      "size": 14256,
+      "unchanged": true,
+      "sha256": "2f112d7cb9a57199e805eac1c8657afed4bd006e3aae62c117958938f5d7133b"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.JSONSerializeModule.dll",
+      "size": 27056,
+      "unchanged": true,
+      "sha256": "b5a4d55026fb3a339b8036fa0a71c7056d8c1f22bc92a64d2c7b50bd16fe0ff1"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.LocalizationModule.dll",
+      "size": 27056,
+      "unchanged": true,
+      "sha256": "984ec80263a72d8ec1357f71b91f9bb4edb7aa8fe3fbe3f9963777f20223aa36"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.MarshallingModule.dll",
+      "size": 83880,
+      "unchanged": true,
+      "sha256": "a7927ac8a453bef37ad7a8e399f90160a5f2eb4c21c0ca51e9548576025ca3c6"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.MultiplayerModule.dll",
+      "size": 17832,
+      "unchanged": true,
+      "sha256": "acf1c328505c1c72557b2e40636bc13a67ca8df53478cc8867eee9956035584a"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.NVIDIAModule.dll",
+      "size": 40880,
+      "unchanged": true,
+      "sha256": "08b0ecf62a12b3948dc85f37e8452c363bcb718828bfcb6dc55061f48bc33eaf"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ParticleSystemModule.dll",
+      "size": 171952,
+      "unchanged": true,
+      "sha256": "50531fd98b502bb1e34a93709f1e1de588c69d12d6ddd8ab6d7528b5fc76e3f9"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.PerformanceReportingModule.dll",
+      "size": 25008,
+      "unchanged": true,
+      "sha256": "776da621a59c52f1bf1411590569d0fb6e700d0c297fd9f3f390f1c2c044dcf5"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.Physics2DModule.dll",
+      "size": 586664,
+      "unchanged": true,
+      "sha256": "2d8146faef524030f9ced62547cf065f353af34b7aaae483290aa503ab3b2e63"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.PhysicsBackendPhysXModule.dll",
+      "size": 14256,
+      "unchanged": true,
+      "sha256": "5667d6732f1680a1eecd6263c3a00d11656d9fdb67be86463777805bdcf31c3e"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.PhysicsModule.dll",
+      "size": 183720,
+      "unchanged": true,
+      "sha256": "111dbf28bc7f52939ba3263aa097c34c824f6392f4534330a6729e04f056f085"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.PropertiesModule.dll",
+      "size": 134064,
+      "unchanged": true,
+      "sha256": "67c369be2be35fde1b3ab82672e141142d593030f5f59f075a41322fefb08ac6"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.RenderAs2DModule.dll",
+      "size": 25512,
+      "unchanged": true,
+      "sha256": "75260cf6e28b4d0722619b702576e99c0dc745d8051b67d0b28609f61bf1ff82"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll",
+      "size": 24488,
+      "unchanged": true,
+      "sha256": "92da1547ab20fe2c5ddf24154e8c2b9410decd2dd5d2e861cc7ab850f156dbcb"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ScreenCaptureModule.dll",
+      "size": 26544,
+      "unchanged": true,
+      "sha256": "9719a51d44409a5fe1a0d8a09941370f6917098223eb4e0c5a91a2cb14c9d870"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ShaderRuntimeModule.dll",
+      "size": 25512,
+      "unchanged": true,
+      "sha256": "75d3475fb66e7683cb6b899c794ee6dc74496193dc86bda5bd351f2f94e9e34f"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.ShaderVariantAnalyticsModule.dll",
+      "size": 24496,
+      "unchanged": true,
+      "sha256": "58905bb22aa76cf176e0d26cb5bc59a5678f4ea4e040e67bef8064c151697e35"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.SharedInternalsModule.dll",
+      "size": 38320,
+      "unchanged": true,
+      "sha256": "58899aa9aa119b2ecafb1a41167d967167d9542dbe8f2f1882a62a96c6151391"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.SpriteMaskModule.dll",
+      "size": 28592,
+      "unchanged": true,
+      "sha256": "d28c6ac9d8bab5b79d0887599cbc8ec21c6069eb0019efb1d2abfd258d02156f"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.SpriteShapeModule.dll",
+      "size": 32688,
+      "unchanged": true,
+      "sha256": "c41f362c94817bb38fb2136ff82b7bf0ebfae5f8fa53276df547e09667b28ec1"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.StreamingModule.dll",
+      "size": 26024,
+      "unchanged": true,
+      "sha256": "6b953a6877294447752889f8fc77424b632422e3b0e83814857fb8af15756517"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.SubstanceModule.dll",
+      "size": 29104,
+      "unchanged": true,
+      "sha256": "6f2d6fc5f08357405375c797652f35eb6f8a62ab35858dc4f2de7b3ff429b290"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.SubsystemsModule.dll",
+      "size": 41904,
+      "unchanged": true,
+      "sha256": "926ff6d3495d8722af436153063a22ef62ae39f4e3f3a2d657939555fcb935ab"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.TerrainModule.dll",
+      "size": 134056,
+      "unchanged": true,
+      "sha256": "77cb4042c3fdc4eebe2ccb006dc171477eeb2b3628973735fbe6db24b601071d"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.TerrainPhysicsModule.dll",
+      "size": 25512,
+      "unchanged": true,
+      "sha256": "9023c9fb3efdfe49d49348c09a9b1e59eed40a8b04d57e592ff0392ba5f52d6c"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.TextCoreFontEngineModule.dll",
+      "size": 81832,
+      "unchanged": true,
+      "sha256": "bd8d2db5008a6b200275938b76249254cdea2a3854e04dcc9ee36246eb5b1798"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.TextCoreTextEngineModule.dll",
+      "size": 334256,
+      "unchanged": true,
+      "sha256": "e259924a4588f7a2c09d68342e6fadc6a44e1471d020632600d89edc44f06bd9"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.TextRenderingModule.dll",
+      "size": 39344,
+      "unchanged": true,
+      "sha256": "1807c017e2d32a6143423aeec12af3a8a354174ce9cb97b853d8c49bce9661c3"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.TilemapModule.dll",
+      "size": 58800,
+      "unchanged": true,
+      "sha256": "231b46bcedd2c267490ae0d376fc444c64ea69f63b281a536d45e9557c75994f"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.TLSModule.dll",
+      "size": 32168,
+      "unchanged": true,
+      "sha256": "b84e55abcefa836699f9226acd38ceebbc7f6028462d149530c6d1f04bcac67f"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UI.dll",
+      "size": 276480,
+      "unchanged": true,
+      "sha256": "81b0d46d7e8554933e3a3957f93e7c0aea3be8bf563b3b5f8f0bb90c9b4ba24b"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UIElementsModule.dll",
+      "size": 2452392,
+      "unchanged": true,
+      "sha256": "43ac212ba5b7e4388bc78aaa7319b30697ff65d660d9927753b920f6ebb1e874"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UIModule.dll",
+      "size": 49576,
+      "unchanged": true,
+      "sha256": "a5bd71b67273ee23cf66dbbb368caed7baa178fea8e5c83d3918c73e45650282"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UmbraModule.dll",
+      "size": 24496,
+      "unchanged": true,
+      "sha256": "340b29e1a683604597d56742d285751e29a32f39e95fabb5d25f23b87d51733c"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityAnalyticsCommonModule.dll",
+      "size": 35760,
+      "unchanged": true,
+      "sha256": "9801408f619fcf7593762965b3c0ed19764f14a8f5ea7bffa5dfdf50b92c403f"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityAnalyticsModule.dll",
+      "size": 60848,
+      "unchanged": true,
+      "sha256": "b63e23118ce510d66ddd550ec9c975067ec572620dbe9290080f11ff262a5e3a"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityConnectModule.dll",
+      "size": 27568,
+      "unchanged": true,
+      "sha256": "19f83b05aa0e9017b2d4a1618418324c7f4b06364e8363317761a45c84e62858"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityConsentModule.dll",
+      "size": 16296,
+      "unchanged": true,
+      "sha256": "51d01896a417916decc234362880df087c585d2835befe4bee8f67d0338692b8"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityCurlModule.dll",
+      "size": 26024,
+      "unchanged": true,
+      "sha256": "17a917401c997837e04cb041530dffd70f11db910592b6bcc26d6d9b7c48d439"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestAssetBundleModule.dll",
+      "size": 28592,
+      "unchanged": true,
+      "sha256": "8456f735b1e579bc4ebdc792181c60b567a34a850fef0af5c667124f73e0ef25"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestAudioModule.dll",
+      "size": 28592,
+      "unchanged": true,
+      "sha256": "5af0cebc11eff4b1f3eb1a972981f7043ffce2d5dd21ef8b121d5d14a710cfa9"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestModule.dll",
+      "size": 70056,
+      "unchanged": true,
+      "sha256": "4d6488302d28b9af1dbc344f44930ebdb43be2ca253e2fd9ec6d67d97b7f7974"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestTextureModule.dll",
+      "size": 27568,
+      "unchanged": true,
+      "sha256": "1657aecd9a482b0ed7644d5d51972bc51a771391ff78c9dd562599fe93733381"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.UnityWebRequestWWWModule.dll",
+      "size": 36776,
+      "unchanged": true,
+      "sha256": "de4f56c0285f4ade09f9eb5bc46255777e3f8daeead712577226bed150a62931"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.VectorGraphicsModule.dll",
+      "size": 252840,
+      "unchanged": true,
+      "sha256": "ce967bc80735f45f183f0ae1395a67067c0a9841b7c2cd83d7ea0c622405c4dc"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.VehiclesModule.dll",
+      "size": 31656,
+      "unchanged": true,
+      "sha256": "fcd9d44b967ba40c0d0eac7be8e90fd0c6b1b9a2bb5f13496a18804a9e0cbe28"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.VFXModule.dll",
+      "size": 78248,
+      "unchanged": true,
+      "sha256": "524d2cd3caa42f9b338b0e4547c3b69ecfac143b28eaf5c72b3173b4dcdd3b96"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.VideoModule.dll",
+      "size": 49064,
+      "unchanged": true,
+      "sha256": "9f5f6e01ed017dc64a8380f04ea7f0b3ff529ddc7c7afa4dc8e78bc397716c89"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.VirtualTexturingModule.dll",
+      "size": 42920,
+      "unchanged": true,
+      "sha256": "3e5c37ed06a3cc12cc41d1c1a491c95f844d292741a4aea9aeb7e28a7d9afb71"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.VRModule.dll",
+      "size": 31656,
+      "unchanged": true,
+      "sha256": "8c3d91a08f37f87019d58f079b6b9b03f10907bde5da8c2c0209841b179a4c43"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.WindModule.dll",
+      "size": 26536,
+      "unchanged": true,
+      "sha256": "59a021dcd451443b866a407eead2d6647c793abfead8676290f413db80f5d6ea"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/UnityEngine.XRModule.dll",
+      "size": 88488,
+      "unchanged": true,
+      "sha256": "108e2c56e20e34b14bf1b3527c99e5aa0b985df2080addb202b5a3ad98e0f7e4"
+    },
+    {
+      "path": "FamilyCompany_Data/Plugins/x86_64/lib_burst_generated.dll",
+      "size": 104448,
+      "unchanged": true,
+      "sha256": "f28ff2fdaa701cc3201e6787cfa651a74be3f9a262eede01d9b00952384ecb62"
+    },
+    {
+      "path": "FamilyCompany_Data/Resources/unity default resources",
+      "size": 5883716,
+      "unchanged": true,
+      "sha256": "32b58bdb9cf090212b46a8ca7436dcdae89e4ef43e9d55a835233c21d1347734"
+    },
+    {
+      "path": "FamilyCompany_Data/Resources/unity_builtin_extra",
+      "size": 396568,
+      "unchanged": true,
+      "sha256": "4287b68afb9ea5713e3a6cf9afa04734cfe6cb35e3ac5defe408d8504e4c6735"
+    },
+    {
+      "path": "MonoBleedingEdge/EmbedRuntime/mono-2.0-bdwgc.dll",
+      "size": 7828904,
+      "unchanged": true,
+      "sha256": "872a64a28333d54346f5e38d8420ff40e50769dc546b241ede1889531b6a9150"
+    },
+    {
+      "path": "MonoBleedingEdge/EmbedRuntime/MonoPosixHelper.dll",
+      "size": 611248,
+      "unchanged": true,
+      "sha256": "3e2781b551c03139020719c43b2efff0f3021b663889c3ea095a1f769d688d84"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/browscap.ini",
+      "size": 311984,
+      "unchanged": true,
+      "sha256": "4ddd50f31fb968f30bedefc253a46dc3f2890192d05cdaa9e0a64a056eee807e"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/config",
+      "size": 3815,
+      "unchanged": true,
+      "sha256": "5776169973a26a387b8b3e5c0f2301a7ab9a6dd7c7d3efa22a96abc47fbf8662"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/2.0/DefaultWsdlHelpGenerator.aspx",
+      "size": 60575,
+      "unchanged": true,
+      "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/2.0/machine.config",
+      "size": 29066,
+      "unchanged": true,
+      "sha256": "e91782a27fa39fc6c1d6ee8b08529f5d35052310d0006034b878eb04b8f2af30"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/2.0/settings.map",
+      "size": 2622,
+      "unchanged": true,
+      "sha256": "49c6160f9d54af4270a3b4e997fc4a8301f79b9e2070118fa46ddbcbbc44f9a2"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/2.0/web.config",
+      "size": 11635,
+      "unchanged": true,
+      "sha256": "cf2b54339e069b9e42f7d6795eecbf562c50c1011f4ca8f65f578fe52d97ff92"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/2.0/Browsers/Compat.browser",
+      "size": 1605,
+      "unchanged": true,
+      "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.0/DefaultWsdlHelpGenerator.aspx",
+      "size": 60575,
+      "unchanged": true,
+      "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.0/machine.config",
+      "size": 33598,
+      "unchanged": true,
+      "sha256": "e60aec2c5115d65b3acb3c55ea21576dbd770f579166c017125571e46ae560ed"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.0/settings.map",
+      "size": 2622,
+      "unchanged": true,
+      "sha256": "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.0/web.config",
+      "size": 18802,
+      "unchanged": true,
+      "sha256": "e38bb8cc68fe5b4edecdfd288d094b9e8ced7629039b2a347682aba0d8bd7492"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.0/Browsers/Compat.browser",
+      "size": 1605,
+      "unchanged": true,
+      "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.5/DefaultWsdlHelpGenerator.aspx",
+      "size": 60575,
+      "unchanged": true,
+      "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.5/machine.config",
+      "size": 34056,
+      "unchanged": true,
+      "sha256": "ee950004b576fb28dc85f4b0435ed04bf96612de2e8b53be84d07afe85a0de6c"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.5/settings.map",
+      "size": 2622,
+      "unchanged": true,
+      "sha256": "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.5/web.config",
+      "size": 18811,
+      "unchanged": true,
+      "sha256": "c4cbddd4fd9347b58cc5a72b36dc4ba1ad2bb699e65869d05cd3fb9865f0d824"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/4.5/Browsers/Compat.browser",
+      "size": 1605,
+      "unchanged": true,
+      "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+    },
+    {
+      "path": "MonoBleedingEdge/etc/mono/mconfig/config.xml",
+      "size": 25817,
+      "unchanged": true,
+      "sha256": "0c56e34c69124510fa8c19e7b4c2ca6c1c4ff460ae19f798dd0ca035809e396d"
+    }
+  ],
+  "changedFiles": [
+    {
+      "path": "BUILD_INFO.txt",
+      "size": 446,
+      "unchanged": false,
+      "sha256": "b5a7c01782ded4d50be8d6d5c8461aeacd59b0ab2a064cc62c947c1b313d3a63"
+    },
+    {
+      "path": "FamilyCompany_Data/boot.config",
+      "size": 156,
+      "unchanged": false,
+      "sha256": "fe24d30f98292ce9fec14076b65e78c84d9a201c8556f8e4c836d5293c674162"
+    },
+    {
+      "path": "FamilyCompany_Data/globalgamemanagers",
+      "size": 119156,
+      "unchanged": false,
+      "sha256": "aeba09f4fca9b7aa5ebc6042285319d1f1b05f1fa9723847436b06a5634e2e90"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.assets",
+      "size": 51488460,
+      "unchanged": false,
+      "sha256": "eb82183877a1582d19cffbd2d53bb6703ee8c3aab62c6fae9bdaad6089f00132"
+    },
+    {
+      "path": "FamilyCompany_Data/resources.assets.resS",
+      "size": 511345600,
+      "unchanged": false,
+      "sha256": "2bf2dca105ceccba4ca4fbf07a3ce48f05d1be2df5d996ae64337dcdef90d854"
+    },
+    {
+      "path": "FamilyCompany_Data/Managed/Assembly-CSharp.dll",
+      "size": 222208,
+      "unchanged": false,
+      "sha256": "86dc054e74ea54d18d1577e710963caad7dc519139915435653e72fe9bf6a0f5"
+    }
+  ],
+  "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae"
+}

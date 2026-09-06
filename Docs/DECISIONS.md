@@ -1,5 +1,20 @@
 # DECISIONS
 
+## 2026-09-06 / 모니터 정렬 v3 공개, 사용자의 첫 패치 수신은 보존
+
+- 사용자 "1" / "이 모습으로 배포" 승인에 따라 `4b06247e` Release를 `fc-win-20260906.3`로 공개했다.
+  정상 보행·출근·착석·mute 회귀와 실제 CRT/table mesh red→green을 통과했다. 8개 Release seated
+  캡처가 승인 이미지와 byte-identical이며 모니터 정렬 이외 gameplay 입력은 변경하지 않았다.
+- 실제 production worker로 별도 QA root에서 public GitHub v2→v3를 받았다. 6개 159,476,005 bytes,
+  progress 150건으로 100%, 163개 재사용, 총 169개 파일 해시 검증까지 통과했다.
+- 사용자가 직접 메인을 켜서 다운로드 화면을 보겠다고 했으므로 사용자 cache를 소비하는 Unity 재시작
+  테스트는 반복하지 않았다. main/cache/세이브 5개는 모두 그대로다. 기존 v2의 실제 Unity 재시작 증거와
+  이번 worker 전송 증거를 분리한다. 새로 수신한 QA snapshot도 PrepareOnly 상태이며 활성화하지 않았다.
+- 파일 단위 리소스 묶음 때문에 변경 다운로드는 152.1 MiB다. 출시 범위에 없는 asset streaming 구조를
+  추가하지 않았다. 기존 main을 재설치하지 않으며 v3 manifest가 참조하는 v2 assets도 보존한다.
+- 회사 사용법과 불변 증거는 `MAIN_GAME_ENTRY.md`, `MONITOR_ALIGNMENT_PATCH.md`,
+  `Evidence/MonitorAlignmentPatch20260906/README.md`에 남긴다. 문서 push만으로 다시 빌드하지 않는다.
+
 ## 2026-09-06 / 모니터·키보드와 책상 축 불일치만 수정
 
 - 사용자가 CRT의 기울어 보이는 자세를 지적했다. 실제 overlay에서 CRT/key에만 별도 직각 축을 적용한

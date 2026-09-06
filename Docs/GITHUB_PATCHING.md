@@ -1,15 +1,19 @@
 # 개발 설정 즉시 반영과 GitHub 자동패치
 
-현재 상태(2026-09-06): **`fc-win-20260906.2` 공개·고정 메인 설치·실제 GitHub repair/main 재시작 PASS**.
-게임 commit은 `ee48a72c8e9979a605a64c59820af8d23fdbcf4c`이며 최종 판정은 PROJECT_STATE.md.
+현재 상태(2026-09-06): **모니터 정렬 패치 `fc-win-20260906.3` 공개, 기존 메인 유지**.
+게임 commit은 `4b06247ea2c4652fc320fa13c141f3501e3b5cae`이며 최종 판정은 PROJECT_STATE.md.
 정본 저장소는 `main`, `https://github.com/zzangzzangman2/company`다. 개발 소스 push와 게임 배포는 다르다.
-Release는 공개했으며 PC 종료는 하지 않았다. [최종 증거와 범위](Evidence/FirstPublicRelease20260906/README.md).
+v3는 변경 파일 6개 / 159,476,005 압축 bytes(152.1 MiB), 나머지 163개와 shipping worker 3개는 같다.
+사용자가 직접 패치를 볼 수 있도록 Downloads 메인과 사용자 v2 cache를 미리 교체하지 않는다.
+v2 assetTag를 재사용하므로 이전 공개 자산도 보존한다. [이번 수정 계약](MONITOR_ALIGNMENT_PATCH.md).
 
-실제 production Unity가 public GitHub에서 536,348 compressed bytes를 받아 6개 실제 progress event와
+이전 v2 검증에서는 실제 production Unity가 public GitHub에서 536,348 compressed bytes를 받아 6개 실제 progress event와
 100%를 기록했고, 검증→정상 부모 종료→최신 child 준비를 통과했다. 이 repair는 optional crash-handler가
 빠진 별도 seed이며 신규 gameplay revision 업그레이드는 아니다. 실제 설치된 Downloads 메인도 같은 경로로
-최신 child에 진입했다(이미 최신이므로 다운로드 0). public N→N+1과 실제 인터넷 장애 복구는 미실행이며,
-해당 delta/fault recovery는 local fixture 증거와 구분한다. 이번 배포의 로컬 updater 회귀는 총 81/81이다.
+최신 child에 진입했다(이미 최신이므로 다운로드 0). 그때는 public N→N+1을 검사하지 않았다.
+v3 공개 후의 별도 QA root 실제 public delta 수신 결과는 PROJECT_STATE에 기록한다. 사용자 cache를
+쓰는 Unity N→N+1 재시작과 실제 인터넷 장애 복구는 이번 백그라운드 검사에 포함하지 않는다.
+현재 4b06247e의 로컬 updater 회귀를 새로 실행했으며 총 81/81이다.
 
 고정 메인 경로와 회사 PC 사용법은 **[MAIN_GAME_ENTRY.md](MAIN_GAME_ENTRY.md)**가 소유한다.
 2026-09-06 사용자 추가 계약: **최신 정식 게임 Release 확인에 실패하면 시작하지 않는다.** 이전 버전
@@ -66,7 +70,7 @@ Editor/Development/FastQA만 허용하며 일반 `FamilyCompany_Data` Release는
 
 사용자가 별도 Windows 창을 거부했다. **외부 로딩창은 사용하지 않는다.** 검증된 첫 Release 공개 후
 `FamilyCompany-Windows.zip`을 풀고 그 안의 **실제 Unity `FamilyCompany.exe`**를 실행한다.
-기존 UiRemasterV3 게임 로딩 화면에서 패치를 확인한다. 현재 v2 Release 공개와 집 Downloads 설치는 완료했다.
+기존 UiRemasterV3 게임 로딩 화면에서 패치를 확인한다. 집 Downloads의 v2 메인은 유지하며 최신 공개판은 v3다.
 
 2026-09-06 구현:
 
@@ -178,7 +182,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools/Updater/Test-Famil
 독립 receipt 해시를 `Docs/Evidence/VerifiedReleaseInventory.json`에 기록해야 다음 정상 배포를 허용한다.
 이 목록에 없는 assets를 임의 허용하지 말고 조사한다. 예전 archive를 정상 source dependency로 오분류하지 않는다.
 
-## 배포 도구 (v2 실제 공개 및 자산 검증 완료)
+## 배포 도구 (v3 실제 공개 및 자산 검증 완료)
 
 `Tools/Updater/Publish-FamilyCompanyPatch.ps1`은 clean main, `BUILD_INFO.txt`의 commit/Release/Unity,
 독립 receipt와 현재 사용자 승인을 확인하기 전에는 gzip 패키지조차 만들지 않는다.
@@ -203,7 +207,7 @@ release receipt는 공개되므로 계정 정보·토큰·개인 로그를 포�
 깨진다. 출시 뒤 생성되는 `Artifacts/UpdaterRemoteInventory/published-<tag>.json`은 다음 inventory의
 검토용 자료이지 자동 승인서가 아니다.
 
-검증 범위를 구분해 보고한다. v2 최초 공개/설치와 실제 public repair/main boot는 완료했고,
-새 gameplay revision 사이의 실제 public 업그레이드·실제 인터넷 장애 복구까지 모두 검증했다고 쓰지 않는다.
-다음 변경판 공개 때 해당 N→N+1 경로를 추가 검증한다. 로컬 fixture PASS만으로 실제 인터넷 성공을 대신하지
-않으며, 문서 push 때문에 이미 공개·검증된 바이너리를 새 identity로 다시 빌드하지 않는다.
+검증 범위를 구분해 보고한다. v2 최초 설치와 실제 public repair/main Unity boot는 완료했다.
+v3의 별도 설치 root production worker 수신 시험은 실제 public N→N+1 전송이며, 그 자체로 Unity
+재시작이나 사용자가 본 다운로드 화면을 검사했다고 쓰지 않는다. 로컬 fixture PASS만으로 인터넷 성공을
+대신하지 않으며, 문서 push 때문에 이미 공개·검증된 바이너리를 새 identity로 다시 빌드하지 않는다.

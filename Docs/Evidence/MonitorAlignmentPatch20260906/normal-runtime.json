@@ -1,0 +1,183 @@
+{
+  "navigation": {
+    "scope": "Independent CSV navigation analysis; programmatic shop setup; no native input/pose/route injection; not Release approval",
+    "navigationPassed": true,
+    "sampleCount": 8104,
+    "excludedPausedSetupSamples": 520,
+    "maxRailFractionError": 2.56875000008705E-05,
+    "violationSamples": 0,
+    "actors": [
+      {
+        "member": "father",
+        "maximumNavigatingNoProgressSeconds": 3.147919999999999,
+        "navigationDistance": 97.71285202771817,
+        "workingSamples": 263,
+        "lastPhase": "Idle"
+      },
+      {
+        "member": "mother",
+        "maximumNavigatingNoProgressSeconds": 0.3429999999999893,
+        "navigationDistance": 105.96414084719954,
+        "workingSamples": 176,
+        "lastPhase": "ApproachingSeat"
+      },
+      {
+        "member": "older_sister",
+        "maximumNavigatingNoProgressSeconds": 3.252769999999998,
+        "navigationDistance": 83.2531339433817,
+        "workingSamples": 420,
+        "lastPhase": "Working"
+      },
+      {
+        "member": "player",
+        "maximumNavigatingNoProgressSeconds": 0.0,
+        "navigationDistance": 57.91027668733578,
+        "workingSamples": 370,
+        "lastPhase": "Working"
+      }
+    ],
+    "allNpcSeatingObserved": true,
+    "manualPlayerAutoWorkExpected": false,
+    "productionEligible": false
+  },
+  "mutedSamples": 8220,
+  "process": {
+    "desktopSwitchAllowed": false,
+    "desktopReadError": "",
+    "interactiveDesktopAtEnd": "Default",
+    "runnerFailure": "",
+    "interactiveDesktopAtStart": "Default",
+    "windowChecks": 977,
+    "forcedStop": false,
+    "seconds": 255.8932138,
+    "pid": 19604,
+    "exitCode": 0,
+    "lastWindowHandle": 0,
+    "privateDesktop": "FamilyCompanyQa_52ab661c938342efb8b8b22d31019605"
+  },
+  "seated": {
+    "productionEligible": false,
+    "transitions": [
+      {
+        "secondsFromFirstPositiveSample": 0.41800000000000637,
+        "end": 149.8297,
+        "member": "father"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.416499999999985,
+        "end": 177.9492,
+        "member": "father"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.39990000000000236,
+        "end": 188.1689,
+        "member": "father"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.416499999999985,
+        "end": 221.3542,
+        "member": "father"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.3837999999999795,
+        "end": 245.4544,
+        "member": "father"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.406400000000005,
+        "end": 125.4115,
+        "member": "mother"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.416499999999985,
+        "end": 131.9365,
+        "member": "mother"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.4327999999999861,
+        "end": 148.9786,
+        "member": "mother"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.4333000000000027,
+        "end": 185.5331,
+        "member": "mother"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.41569999999998686,
+        "end": 226.4537,
+        "member": "mother"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.38339999999999463,
+        "end": 235.4538,
+        "member": "mother"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.3835000000000264,
+        "end": 244.104,
+        "member": "mother"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.41660000000001673,
+        "end": 168.9454,
+        "member": "older_sister"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.4362000000000137,
+        "end": 210.2109,
+        "member": "older_sister"
+      },
+      {
+        "secondsFromFirstPositiveSample": 0.4158999999999935,
+        "end": 212.8181,
+        "member": "player"
+      }
+    ],
+    "coverage": [
+      {
+        "samples": 624,
+        "member": "father",
+        "turns": [
+          "SouthEast"
+        ]
+      },
+      {
+        "samples": 371,
+        "member": "mother",
+        "turns": [
+          "SouthWest"
+        ]
+      },
+      {
+        "samples": 1045,
+        "member": "older_sister",
+        "turns": [
+          "NorthEast"
+        ]
+      },
+      {
+        "samples": 930,
+        "member": "player",
+        "turns": [
+          "NorthWest"
+        ]
+      }
+    ],
+    "settledSamples": 2970,
+    "passed": true,
+    "blendContractSeconds": 0.42,
+    "scope": "Independent real normal Player CSV analysis; not skin-intersection, foot-slip, full visual or Release approval",
+    "settledFailureSamples": 0,
+    "transitionMidpointOutliers": 119,
+    "maximumSettledIndividualHandError": 0.008899
+  },
+  "scope": "Fresh exact Release, normal clock/routes/seat transitions; programmatic shop setup and afternoon/night-only next-day clock setup. Not native pointer input. Private desktop, no input desktop switch.",
+  "independent": true,
+  "mutedMaxOutput": 0.0,
+  "runtimeErrors": 0,
+  "passed": true,
+  "rawObservationSha256": "6521541ccc64e7523b6c84e5354fb32752c03cb7cc916c56673ee2167b19ade1",
+  "attendance": "OBSERVED, NOT A WORK/RELEASE PASS\ninitialTime=2000-01-03T08:50:00\r\ninitialCash=5000000 initialSeats=0 initialInventory=0 familyIds=father,mother,older_sister,player\r\nfather maximumNavigatingNoProgressSeconds=1.9516\r\nfather normalTravel=50.7288 destinationFrames=3407 directions=5/7/1/3\r\nmother maximumNavigatingNoProgressSeconds=0.0919\r\nmother normalTravel=53.7064 destinationFrames=3396 directions=1/2/3/5/7\r\nolder_sister maximumNavigatingNoProgressSeconds=0.9138\r\nolder_sister normalTravel=52.4710 destinationFrames=3441 directions=1/3/7/5\r\nplayer maximumNavigatingNoProgressSeconds=0.0909\r\nplayer normalTravel=50.3186 destinationFrames=3378 directions=5/3/7/1\r\nnormalObservationSeconds=60 teleports=0 injectedRoutes=0 injectedClockMinutes=0 staticViolations=0 interactionViolations=0 agentPenetrations=0 finalTime=2000-01-03T09:47:00\r\npurchase=1 facing=SouthEast cash=4600000 previewCells=3 seats=1\r\npurchase=2 facing=SouthWest cash=4200000 previewCells=3 seats=2\r\npurchase=3 facing=NorthWest cash=3800000 previewCells=3 seats=3\r\npurchase=4 facing=NorthEast cash=3400000 previewCells=3 seats=4\r\nnextDay=player due=2000-01-04T09:00:00 released=2000-01-04T09:00:00 seatedNormally=True firstWorking=2000-01-04T09:09:00\r\nnextDay=older_sister due=2000-01-04T09:01:00 released=2000-01-04T09:01:00 seatedNormally=True firstWorking=2000-01-04T09:06:00\r\nnextDay=father due=2000-01-04T09:02:00 released=2000-01-04T09:02:00 seatedNormally=True firstWorking=2000-01-04T09:17:00\r\nnextDay=mother due=2000-01-04T09:03:00 released=2000-01-04T09:03:00 seatedNormally=True firstWorking=2000-01-04T09:19:00\r\nnextDayClockSetupJump=afternoon-night-only nextDayObservedClock=1x nativePointer=false routeInjection=false\r\nnextDayAttendanceGatePassed=True\r\nnormalClock=true actorControl=false routeInjection=false poseInjection=false nativePointer=false\nruntimeErrors=0",
+  "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae"
+}

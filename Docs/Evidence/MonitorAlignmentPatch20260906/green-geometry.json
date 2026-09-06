@@ -1,0 +1,102 @@
+{
+    "scope": "geometry only; gameplay and release remain separate",
+    "samples": [
+        {
+            "basis": 0,
+            "turn": 0,
+            "chairError": 0.0,
+            "stemError": 0.0,
+            "keyboardLateral": 0.0,
+            "screenLateral": 0.0,
+            "screenNormalError": 0.0,
+            "monitorDeskAxisError": 0.0,
+            "keyboardDeskAxisError": 0.0,
+            "monitorFaceNormalError": 0.0
+        },
+        {
+            "basis": 0,
+            "turn": 1,
+            "chairError": 0.0,
+            "stemError": 0.0,
+            "keyboardLateral": 0.0,
+            "screenLateral": 0.0,
+            "screenNormalError": 0.0,
+            "monitorDeskAxisError": 0.0,
+            "keyboardDeskAxisError": 0.01978234015405178,
+            "monitorFaceNormalError": 0.0
+        },
+        {
+            "basis": 0,
+            "turn": 2,
+            "chairError": 0.0,
+            "stemError": 0.0,
+            "keyboardLateral": 0.0,
+            "screenLateral": 0.0,
+            "screenNormalError": 0.0,
+            "monitorDeskAxisError": 0.0,
+            "keyboardDeskAxisError": 0.0,
+            "monitorFaceNormalError": 0.0
+        },
+        {
+            "basis": 0,
+            "turn": 3,
+            "chairError": 0.0,
+            "stemError": 0.0,
+            "keyboardLateral": 0.0,
+            "screenLateral": 0.0,
+            "screenNormalError": 0.0,
+            "monitorDeskAxisError": 0.0,
+            "keyboardDeskAxisError": 0.01978234015405178,
+            "monitorFaceNormalError": 0.0
+        },
+        {
+            "basis": 1,
+            "turn": 0,
+            "chairError": 0.0,
+            "stemError": 0.0,
+            "keyboardLateral": 5.582127471370768e-8,
+            "screenLateral": 8.018644592766577e-8,
+            "screenNormalError": 0.0,
+            "monitorDeskAxisError": 0.0,
+            "keyboardDeskAxisError": 0.0,
+            "monitorFaceNormalError": 0.0
+        },
+        {
+            "basis": 1,
+            "turn": 1,
+            "chairError": 0.0,
+            "stemError": 0.0,
+            "keyboardLateral": 5.582127471370768e-8,
+            "screenLateral": 8.018644592766577e-8,
+            "screenNormalError": 0.0,
+            "monitorDeskAxisError": 0.0,
+            "keyboardDeskAxisError": 0.0,
+            "monitorFaceNormalError": 0.0
+        },
+        {
+            "basis": 1,
+            "turn": 2,
+            "chairError": 0.0,
+            "stemError": 0.0,
+            "keyboardLateral": 5.582127471370768e-8,
+            "screenLateral": 1.7752041969743005e-7,
+            "screenNormalError": 0.0,
+            "monitorDeskAxisError": 0.02797645516693592,
+            "keyboardDeskAxisError": 0.0,
+            "monitorFaceNormalError": 0.0
+        },
+        {
+            "basis": 1,
+            "turn": 3,
+            "chairError": 0.0,
+            "stemError": 0.0,
+            "keyboardLateral": 8.182975363979495e-8,
+            "screenLateral": 1.5479855619560113e-7,
+            "screenNormalError": 0.0,
+            "monitorDeskAxisError": 0.02797645516693592,
+            "keyboardDeskAxisError": 0.0,
+            "monitorFaceNormalError": 0.0
+        }
+    ],
+    "passed": true
+}

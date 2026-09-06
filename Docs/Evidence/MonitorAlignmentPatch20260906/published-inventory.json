@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "tag": "fc-win-20260906.3",
+      "approvalReference": "User explicitly approved the displayed corrected four-direction seat sheet with \"1\" and \"이 모습으로 배포\" on 2026-09-06; latest message asks to continue.",
+      "independentReceiptSha256": "4762696df411582826697c52b9225a8e7521f92d66dcbd85722ff740d7c6749e",
+      "commit": "4b06247ea2c4652fc320fa13c141f3501e3b5cae",
+      "assets": [
+        {
+          "id": 547201829,
+          "digest": "sha256:e65129f4b8bc6d5714670d4be325fdf07c6c82aa877a9f032f37a074b6d36e8b",
+          "size": 135017887,
+          "name": "2bf2dca105ceccba4ca4fbf07a3ce48f05d1be2df5d996ae64337dcdef90d854.gz"
+        },
+        {
+          "id": 547202032,
+          "digest": "sha256:fb47b6fa691cfb5af72917589852a2e5bb45597d36fd1d41f91b9b47a595f112",
+          "size": 85857,
+          "name": "86dc054e74ea54d18d1577e710963caad7dc519139915435653e72fe9bf6a0f5.gz"
+        },
+        {
+          "id": 547202067,
+          "digest": "sha256:b3b297901fdc9d26cc161dcbca82e4eff4c36e5b8c230e67f0f4a9191ed712e0",
+          "size": 41993,
+          "name": "aeba09f4fca9b7aa5ebc6042285319d1f1b05f1fa9723847436b06a5634e2e90.gz"
+        },
+        {
+          "id": 547202091,
+          "digest": "sha256:8eee83a170c5543c947e97ea05cb96b18ba2975df99d638dfd717e8827df1b06",
+          "size": 334,
+          "name": "b5a7c01782ded4d50be8d6d5c8461aeacd59b0ab2a064cc62c947c1b313d3a63.gz"
+        },
+        {
+          "id": 547202109,
+          "digest": "sha256:362b217a72a9da4cb2f957ecbc1f9a5ad1ede4774a9738b686c72e6d35bd5212",
+          "size": 24329791,
+          "name": "eb82183877a1582d19cffbd2d53bb6703ee8c3aab62c6fae9bdaad6089f00132.gz"
+        },
+        {
+          "id": 547202197,
+          "digest": "sha256:c8a152d8e88ec8037e6d635d60a8d7b6460317eaadf9beadf0adbef84c24b84d",
+          "size": 75169,
+          "name": "family-company-manifest.json"
+        },
+        {
+          "id": 547202218,
+          "digest": "sha256:c44257baffd4ad71d7bf3bc6cc42dd9ac34abdf48786ccf01e0c07fde4e79aa4",
+          "size": 271000614,
+          "name": "FamilyCompany-Windows.zip"
+        },
+        {
+          "id": 547202481,
+          "digest": "sha256:f3435e4537626aaf4c3a5a99a3c6a6bce77804bc612cac938d9b771e6b26928c",
+          "size": 143,
+          "name": "fe24d30f98292ce9fec14076b65e78c84d9a201c8556f8e4c836d5293c674162.gz"
+        },
+        {
+          "id": 547202501,
+          "digest": "sha256:4762696df411582826697c52b9225a8e7521f92d66dcbd85722ff740d7c6749e",
+          "size": 4765,
+          "name": "release-receipt.json"
+        }
+      ],
+      "independentReceiptPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\MonitorAlignment20260906\\approval\\release-receipt.json",
+      "id": 383586367
+    }
+  ]
+}

@@ -2,7 +2,8 @@
 
 **집·회사에서 같은 메인 EXE로 실행하는 방법:** [MAIN_GAME_ENTRY.md](Docs/MAIN_GAME_ENTRY.md).
 최초 패치 지원 버전 설치 후에는 빌드 없이 같은 EXE로 최신 공개 게임 패치를 받습니다.
-2026-09-06 `fc-win-20260906.2` 공개와 집 메인 설치·실제 GitHub 패치 재시작 검증을 완료했습니다.
+2026-09-06 모니터·키보드 정렬 패치 `fc-win-20260906.3`를 공개했습니다. 기존 메인 EXE를 그대로
+열면 약 152.1 MiB의 변경 파일을 받습니다. 캐릭터 크기·의자·이동은 바꾸지 않았습니다.
 
 14살 플레이어가 엄마·아빠·누나와 2000년의 작은 사무실에서 시작해, 하청을 버티고 자체 사업을 세우며 실제 기업들과 경쟁하는 싱글플레이 생활 경영 RPG입니다.
 
@@ -22,7 +23,7 @@
   진행하고, 빈 사무실 fallback은 `OfficeAutonomyCoordinator`의 destination 있는 타일 중심 산책으로 바뀌었다.
   실제 Windows native pointer 1회 클릭에서 자금 `5,000,000→4,986,250`, furniture `52→53`, 실제 Release
   Player normal 빈 사무실 08:50→09:50 관측에서 `currentLook=0`, `duplicatePivot=0`을 확인했다.
-- **공개판 ee48a72c의 4인 정상 보행·출근·착석과 승인된 배치/외형 검증을 완료했다.** 향후 고유 모델도
+- **공개판 4b06247e의 모니터 정렬과 4인 정상 보행·출근·착석 회귀 검증을 완료했다.** 향후 고유 모델도
   한 몸/한 Humanoid Avatar, 공통 clip/clock/cadence, SW/NW/NE/SE 여러 주기, P0/P3 앞발 교대,
   bottom-centre 이동, 충돌 회피와 mute를 실제 D3D11에서 별도로 검증해야 한다.
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
@@ -60,9 +61,10 @@
 
 2026-09-06: **게임 내부**의 기존 로딩 화면에서 실제 받은 바이트 기반 소수 1자리 퍼센트/MiB를
 표시하도록 구현했습니다. 별도 Windows 로딩창은 사용자 정정에 따라 폐기했습니다.
-**게임 Release `fc-win-20260906.2`를 공개했고 Downloads 고정 메인 설치도 완료했습니다.** 실제 공개
-GitHub에서 수신 바이트→100%→검증→정상 재시작을 확인했습니다. 검증 범위와 원본 로그는
-[최종 배포 기록](Docs/Evidence/FirstPublicRelease20260906/README.md)에 있습니다.
+**최신 게임 Release는 `fc-win-20260906.3`이며 Downloads의 패치 지원 메인은 유지합니다.**
+v2에서 실제 공개 GitHub 수신 바이트→100%→검증→정상 Unity 재시작을 확인했습니다.
+v3 변경과 별도 root 전송 검증의 범위는 [모니터 정렬 패치](Docs/MONITOR_ALIGNMENT_PATCH.md)를,
+기존 재시작 검증은 [v2 배포 기록](Docs/Evidence/FirstPublicRelease20260906/README.md)을 따릅니다.
 
 이전 기록(2026-09-05): 개발용 JSON 즉시 반영과 GitHub 파일 단위 패치 런처 코드를 추가했습니다.
 [설정·패치 사용법과 배포 차단 조건](Docs/GITHUB_PATCHING.md)을 먼저 확인하세요.
