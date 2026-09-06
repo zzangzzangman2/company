@@ -168,10 +168,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         {
             switch (facing)
             {
-                case OfficeFurnitureFacing.SouthEast: return new Vector2(449.983f, 206.110f);
-                case OfficeFurnitureFacing.SouthWest: return new Vector2(350.017f, 126.110f);
-                case OfficeFurnitureFacing.NorthWest: return new Vector2(190.017f, 176.093f);
-                default: return new Vector2(289.983f, 256.093f);
+                case OfficeFurnitureFacing.SouthEast: return new Vector2(465.289f, 198.457f);
+                case OfficeFurnitureFacing.SouthWest: return new Vector2(334.712f, 118.457f);
+                case OfficeFurnitureFacing.NorthWest: return new Vector2(174.712f, 183.746f);
+                default: return new Vector2(305.289f, 263.746f);
             }
         }
 

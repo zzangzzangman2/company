@@ -5,11 +5,11 @@ groundAnchorPx=320,64
 meshAxes=orthogonal-90deg
 projectedTileBasisPx=160,80|-160,80
 source=Family3DWorkstation V31 orthogonal true-isometric atomic geometry
-desk_se: operatorSeat=560.000,105.848; workSurface=449.983,206.110
+desk_se: operatorSeat=560.000,105.848; workSurface=465.289,198.457
 chair_nw: seat=320.000,145.848; ground=320,64
-desk_sw: operatorSeat=240.000,25.848; workSurface=350.017,126.110
+desk_sw: operatorSeat=240.000,25.848; workSurface=334.712,118.457
 chair_ne: seat=320.000,145.848; ground=320,64
-desk_nw: operatorSeat=80.000,185.848; workSurface=190.017,176.093
+desk_nw: operatorSeat=80.000,185.848; workSurface=174.712,183.746
 chair_se: seat=320.000,145.848; ground=320,64
-desk_ne: operatorSeat=400.000,265.848; workSurface=289.983,256.093
+desk_ne: operatorSeat=400.000,265.848; workSurface=305.289,263.746
 chair_sw: seat=320.000,145.848; ground=320,64

@@ -388,7 +388,9 @@ namespace FamilyCompany.Runtime.Character3D
             // the real semantic footprint.
             float topY = 0.455f * h;
             float deskWidth = deskFootprintWidthWorld * 0.90f;
-            float deskDepth = deskFootprintDepthWorld * 0.86f;
+            // In the tile-centred set the tabletop uses its full reserved row depth. The
+            // old 14% empty strip unnecessarily lengthened the reach across the chair tile.
+            float deskDepth = deskFootprintDepthWorld * (centerChairOnSeatCell ? 1f : 0.86f);
             Vector2 deskGrid = LocalToGridCoordinates(deskFootprintCenterLocal);
             Vector2 keyboardGrid = LocalToGridCoordinates(keyboardGroundLocal);
             float deskRight = deskGrid.x;
@@ -462,7 +464,7 @@ namespace FamilyCompany.Runtime.Character3D
                 deskRight - deskWidth * 0.5f + keyboardWidth * 0.5f,
                 deskRight + deskWidth * 0.5f - keyboardWidth * 0.5f);
             float keyboardForward =
-                frontForward + keyboardDepth * 0.5f + 0.020f * h;
+                frontForward + keyboardDepth * 0.5f + (centerChairOnSeatCell ? 0.002f : 0.020f) * h;
             float monitorForward = Mathf.Clamp(
                 keyboardForward + deskDepth * 0.43f,
                 deskForward,
