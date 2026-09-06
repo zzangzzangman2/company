@@ -45,7 +45,8 @@ namespace FamilyCompany.Simulation.Prototype
                 ICharacterStaminaRuntimeBridge runtimeBridge = _state.StaminaRuntimeBridge;
                 _state.Stamina.SetActivitiesAtCurrentMinute(characterId =>
                     runtimeBridge?.ResolveActivity(characterId) ??
-                    ResolveSemanticActivity(_state.Family.Get(characterId)));
+                    (FamilyScheduleRules.Resolve(_state.Family.Get(characterId).Role, _state.Time.Now).Kind == FamilyScheduleKind.Sleep
+                        ? StaminaActivityKind.Sleep : ResolveSemanticActivity(_state.Family.Get(characterId))));
 
                 long nextAutonomyBoundary = checked(
                     ((currentMinute / AutonomousOfficeSimulation.PulseMinutes) + 1L) *

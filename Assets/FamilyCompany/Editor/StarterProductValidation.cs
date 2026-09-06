@@ -10,6 +10,7 @@ using FamilyCompany.Simulation.History;
 using FamilyCompany.Simulation.Navigation;
 using FamilyCompany.Simulation.Prototype;
 using FamilyCompany.Simulation.Technology;
+using FamilyCompany.Simulation.Stamina;
 
 namespace FamilyCompany.Editor
 {
@@ -25,6 +26,7 @@ namespace FamilyCompany.Editor
             ValidateFailedAndTimedWork();
             ValidateWholeBusiness(clients);
             ValidateOldSaveAndCorruption();
+            ValidateScheduledSleep();
             return "STARTER_PRODUCT: PASS | four-member settlement, exactly-once, time gate, pinned lessons, actual credited work, trial, weekly support, save/reload, v11 migration";
         }
 
@@ -200,6 +202,43 @@ namespace FamilyCompany.Editor
             bool rejected = false;
             try { GameSaveMapper.FromDto(dto); } catch (InvalidOperationException) { rejected = true; }
             Require(rejected, "missing v12 product state must fail clearly");
+        }
+
+        private static void ValidateScheduledSleep()
+        {
+            var catalog = CharacterStaminaCatalog.CreateCommonDefault();
+            var one = CharacterStaminaSimulation.CreateAt(1, "father", catalog, 100, 0);
+            one.SetActivity(StaminaActivityKind.Sleep, 100);
+            Require(one.AdvanceTo(580, false).RecoveredUnits == one.Profile.MaxUnits,
+                "eight actual sleeping hours replenish one full stamina bar");
+            foreach (int partition in new[] { 1, 2, 4, 17 })
+            {
+                var split = CharacterStaminaSimulation.CreateAt(1, "father", catalog, 100, 0);
+                split.SetActivity(StaminaActivityKind.Sleep, 100);
+                while (split.State.LastProcessedMinute < 580)
+                {
+                    split.AdvanceTo(Math.Min(580, split.State.LastProcessedMinute + partition), false);
+                    split = CharacterStaminaSimulation.Restore(split.ExportSnapshot(), catalog);
+                }
+                Require(split.State.CurrentUnits == one.State.CurrentUnits, "sleep partition and save restore " + partition);
+            }
+            var offDuty = CharacterStaminaSimulation.CreateAt(1, "father", catalog, 0, 100);
+            offDuty.SetActivity(StaminaActivityKind.OffDuty, 0);
+            Require(offDuty.AdvanceTo(480, false).RecoveredUnits == 0 && offDuty.State.CurrentUnits == 100,
+                "ordinary off-duty time does not invent sleep recovery");
+            var pending = CharacterStaminaSimulation.CreateAt(1, "father", catalog, 0, 100);
+            pending.AdvanceTo(0, true);
+            pending.SetActivity(StaminaActivityKind.Sleep, 0);
+            Require(pending.AdvanceTo(480, false).ReachedRequestedMinute &&
+                pending.State.RecoveryPhase == StaminaRecoveryPhase.Working && pending.State.CurrentUnits == pending.Profile.MaxUnits,
+                "sleep clears only unclaimed facility selection requests");
+            var state = PrototypeStateFactory.Create();
+            var runner = new SimulationRunner(state);
+            runner.AdvanceMinutes(850); // first 23:00; existing work consumes stamina
+            Require(state.Family.Members.Any(m => m.Energy < 100), "normal first day consumed stamina");
+            runner.AdvanceMinutes(480);
+            Require(state.Family.Members.All(m => m.Energy == 100), "normal next morning works without unavailable 3D recovery furniture / " +
+                string.Join(";", state.Family.Members.Select(m => m.MemberId + "=" + m.Energy + "/" + m.Autonomy.CurrentAction)));
         }
 
         private static void CompleteWork(GameState state, SubcontractState work, string memberId)

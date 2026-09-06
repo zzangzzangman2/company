@@ -103,7 +103,11 @@ namespace FamilyCompany.Presentation.Unity.Stamina
             if (_runtime == null || !_runtime.IsReady ||
                 !_runtime.World.Registry.TryGet(characterId, out OfficeRuntimeAgent actor) ||
                 actor == null || actor.IsPresentationAway)
-                return StaminaActivityKind.OffDuty;
+            {
+                return _state != null && FamilyScheduleRules.Resolve(
+                    _state.Family.Get(characterId).Role, _state.Time.Now).Kind == FamilyScheduleKind.Sleep
+                    ? StaminaActivityKind.Sleep : StaminaActivityKind.OffDuty;
+            }
 
             if (actor.Phase == OfficeRuntimeAgentPhase.Navigating ||
                 actor.IsEnteringSeat ||

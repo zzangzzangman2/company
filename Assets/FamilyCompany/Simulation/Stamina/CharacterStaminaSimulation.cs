@@ -84,12 +84,14 @@ namespace FamilyCompany.Simulation.Stamina
             long processedToMinute,
             int drainedUnits,
             bool requiresRuntimeDecision,
-            IReadOnlyList<StaminaTransition> transitions)
+            IReadOnlyList<StaminaTransition> transitions,
+            int recoveredUnits = 0)
         {
             FromMinute = fromMinute;
             RequestedToMinute = requestedToMinute;
             ProcessedToMinute = processedToMinute;
             DrainedUnits = drainedUnits;
+            RecoveredUnits = recoveredUnits;
             RequiresRuntimeDecision = requiresRuntimeDecision;
             Transitions = transitions ?? Array.Empty<StaminaTransition>();
         }
@@ -98,7 +100,7 @@ namespace FamilyCompany.Simulation.Stamina
         public long RequestedToMinute { get; }
         public long ProcessedToMinute { get; }
         public int DrainedUnits { get; }
-        public int RecoveredUnits => 0;
+        public int RecoveredUnits { get; }
         public bool RequiresRuntimeDecision { get; }
         public bool ReachedRequestedMinute => ProcessedToMinute == RequestedToMinute;
         public IReadOnlyList<StaminaTransition> Transitions { get; }
@@ -449,6 +451,30 @@ namespace FamilyCompany.Simulation.Stamina
 
             long fromMinute = State.LastProcessedMinute;
             var transitions = new List<StaminaTransition>();
+            if (CanRecoverDuringScheduledSleep(allowOfficeRecoveryRequest))
+            {
+                // No facility claim exists in Working/selection-pending phases. Sleeping
+                // away from the office is a separate recovery source, not a fake facility.
+                if (State.RecoveryPhase == StaminaRecoveryPhase.RecoveryRequested)
+                {
+                    State.RecoveryActivity = StaminaRecoveryActivity.None;
+                    State.RecoveryMinutesApplied = 0;
+                    State.PerformingStartedMinute = -1;
+                    State.SelectionAttempt = 0;
+                    State.ReturnAttempt = 0;
+                    State.RecoveryRetryMinute = -1;
+                    SetPhase(StaminaRecoveryPhase.Working, fromMinute);
+                }
+                long minutes = targetMinute - fromMinute;
+                // Absolute integer boundaries preserve 1/2/4x and save/resume partitioning.
+                long recovered = minutes >= 480 ? _profile.MaxUnits :
+                    ((fromMinute % 480 + minutes) * _profile.MaxUnits / 480) -
+                    ((fromMinute % 480) * _profile.MaxUnits / 480);
+                int applied = (int)Math.Min(_profile.MaxUnits - State.CurrentUnits, recovered);
+                State.CurrentUnits += applied;
+                State.LastProcessedMinute = targetMinute;
+                return new StaminaAdvanceResult(fromMinute, targetMinute, targetMinute, 0, false, transitions, applied);
+            }
             if (HasPendingRuntimeDecision)
                 return AdvanceResult(fromMinute, targetMinute, 0, true, transitions);
             if (TryRequestRecovery(fromMinute, allowOfficeRecoveryRequest, transitions))
@@ -742,6 +768,7 @@ namespace FamilyCompany.Simulation.Stamina
         {
             if (targetMinute < State.LastProcessedMinute)
                 throw new InvalidOperationException("Stamina time cannot move backwards.");
+            if (CanRecoverDuringScheduledSleep(allowOfficeRecoveryRequest)) return targetMinute;
             if (HasPendingRuntimeDecision) return State.LastProcessedMinute;
             if (State.RecoveryPhase == StaminaRecoveryPhase.RecoveryRequested)
                 return Math.Min(targetMinute, State.RecoveryRetryMinute);
@@ -812,6 +839,11 @@ namespace FamilyCompany.Simulation.Stamina
             transitions.Add(Transition(minute, StaminaTransitionKind.RecoveryRequested));
             return true;
         }
+
+        private bool CanRecoverDuringScheduledSleep(bool allowOfficeRecoveryRequest) =>
+            !allowOfficeRecoveryRequest && State.CurrentActivity == StaminaActivityKind.Sleep &&
+            (State.RecoveryPhase == StaminaRecoveryPhase.Working ||
+             State.RecoveryPhase == StaminaRecoveryPhase.RecoveryRequested);
 
         private int ApplyDrain(long minutes, int unitsPerMinute)
         {

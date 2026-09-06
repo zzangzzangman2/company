@@ -288,7 +288,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 }
                 Require(support.Status == SubcontractStatus.Completed && supportSeated > 10, "real support completion");
                 long beforeBilling = state.Company.CashWon;
+                state.UnbindStaminaRuntimeBridge(runtimeStamina);
                 bootstrap.AdvanceTimeNow(product.NextBillingMinute + 1 - state.Time.ElapsedMinutes);
+                state.BindStaminaRuntimeBridge(runtimeStamina);
                 Require(product.BillingPeriod == 1 && product.LastPeriodRevenueWon >= 60000 &&
                     state.Company.CashWon == beforeBilling + product.LastPeriodRevenueWon, "weekly bill after actual support");
                 var restored = GameSaveMapper.FromDto(GameSaveMapper.ToDto(state));
