@@ -1068,6 +1068,23 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return true;
         }
 
+        // Path search must test the swept body, not only the peer's nearest tile.
+        // This read-only query deliberately does not increment attempted-movement metrics.
+        public bool CanTraverseDynamic(string agentId, Vector2 start, Vector2 end)
+        {
+            ActorState self = RequiredActor(agentId);
+            Vector2 edge = end - start;
+            foreach (ActorState peer in _actors.Values)
+            {
+                if (!peer.IsPresent || string.Equals(peer.AgentId, agentId, StringComparison.Ordinal)) continue;
+                float t = edge.sqrMagnitude > 0.0000001f
+                    ? Mathf.Clamp01(Vector2.Dot(peer.Position - start, edge) / edge.sqrMagnitude) : 0f;
+                if (Vector2.Distance(start + edge * t, peer.Position) - (self.Radius + peer.Radius)
+                    < -AgentContactTolerance) return false;
+            }
+            return true;
+        }
+
         public bool CanMove(
             string agentId,
             Vector2 start,

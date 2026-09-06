@@ -20,6 +20,7 @@ namespace FamilyCompany.Tools.FastQa
                 Require(first.Family.Members.Select(item => item.Energy)
                     .SequenceEqual(second.Family.Members.Select(item => item.Energy)), "partitioned energy");
                 StaminaSimulationValidation.RunAll();
+                Console.WriteLine(StarterProductValidation.RunAll());
                 Console.WriteLine("FAST_QA_SIMULATION_HARNESS: PASS");
                 return 0;
             }

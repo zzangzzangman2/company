@@ -33,6 +33,7 @@ namespace FamilyCompany.Simulation.Game
             Events = events ?? throw new ArgumentNullException(nameof(events));
             Contracts = contracts ?? new ContractPortfolio(Family.Members.Count);
             Growth = growth ?? new CompanyGrowthState();
+            Contracts.BindGrowth(Growth);
             StockMarket = stockMarket ?? StockMarketSessionStateDto.Uninitialized();
             OfficeGrid = officeGrid ?? OfficeGridLayouts.CreateNewGameEmptyOfficeV1();
             OfficeFurnitureInventory = officeFurnitureInventory ??

@@ -145,8 +145,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 Feature(
                     "projects-products",
                     "자체 제품",
-                    "현금·평판·분야 경험을 쌓아 자체 제품을 해금합니다.",
-                    "이용 가능 · 진행 보기",
+                    "첫 하청을 배우고 관리 프로그램을 개발·판매·유지보수합니다.",
+                    "이용 가능 · 첫 제품 시작",
                     MainNavigationFeatureAction.OpenProductOpportunities,
                     MainNavigationRouteIds.BusinessProducts),
                 Feature("projects-outsourcing", "외주", "부족한 역량과 시간을 외부 파트너로 보완합니다."),

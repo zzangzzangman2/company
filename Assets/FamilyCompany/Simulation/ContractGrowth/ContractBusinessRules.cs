@@ -416,7 +416,8 @@ namespace FamilyCompany.Simulation.ContractGrowth
             long rewardWon,
             ContractWorkRejectionReason lastRejection,
             IEnumerable<ContractTechnologyGrant> technologyGrants = null,
-            int workRateBasisPoints = CompanyTechnologyBonusRules.NeutralBasisPoints)
+            int workRateBasisPoints = CompanyTechnologyBonusRules.NeutralBasisPoints,
+            IReadOnlyList<CompanyTechnologyGainRecord> technologyGains = null)
         {
             AttemptedHours = attemptedHours;
             AppliedHours = appliedHours;
@@ -425,6 +426,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
             LastRejection = lastRejection;
             _technologyGrants = (technologyGrants ?? Array.Empty<ContractTechnologyGrant>()).ToArray();
             WorkRateBasisPoints = workRateBasisPoints;
+            TechnologyGains = technologyGains ?? Array.Empty<CompanyTechnologyGainRecord>();
         }
 
         public int AttemptedHours { get; }
@@ -437,11 +439,11 @@ namespace FamilyCompany.Simulation.ContractGrowth
         public ContractWorkRejectionReason LastRejection { get; }
 
         /// <summary>
-        /// Know-how the finished contract teaches. Empty while the contract is still in progress, and
-        /// the caller is what writes it into <c>CompanyGrowthState.Technology</c>, so this stays a
-        /// pure result and the state changes in exactly one place.
+        /// Informational grants only. ContractPortfolio already settled TechnologyGains exactly
+        /// once; callers must never apply TechnologyGrants to company state again.
         /// </summary>
         public IReadOnlyList<ContractTechnologyGrant> TechnologyGrants => _technologyGrants;
+        public IReadOnlyList<CompanyTechnologyGainRecord> TechnologyGains { get; }
 
         /// <summary>
         /// Speed the company's existing experience gave this job, in basis points against a neutral
@@ -478,9 +480,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
         /// </summary>
         private static IReadOnlyList<ContractTechnologyGrant> ResolveTechnologyGrants(SubcontractOffer offer)
         {
-            return LegacyContractTemplateCatalog.TryResolve(offer, out var template)
-                ? ContractTechnologyGrantCatalog.ForTemplateIndex(template.LegacyGlobalIndex)
-                : Array.Empty<ContractTechnologyGrant>();
+            return ContractPortfolio.TechnologyGrantsFor(offer);
         }
 
         public AuthoritativeContractWorkAdvanceResult AdvanceTo(
@@ -505,12 +505,11 @@ namespace FamilyCompany.Simulation.ContractGrowth
             // Experience the company already has with this kind of job. Constant for the whole
             // advance: a level earned by finishing this contract only helps the next one.
             var jobGrants = ResolveTechnologyGrants(contract.Offer);
-            var workRate = CompanyTechnologyBonusRules.WorkRateBasisPoints(technology, jobGrants);
+            var workRate = contract.WorkRateBasisPoints;
+            IReadOnlyList<CompanyTechnologyGainRecord> gains = Array.Empty<CompanyTechnologyGainRecord>();
             while (!completed)
             {
-                var minutesPerPersonHour = CompanyTechnologyBonusRules.ApplyWorkRate(
-                    WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(member.Capability, task),
-                    workRate);
+                var minutesPerPersonHour = ContractPortfolio.MinutesPerPersonHour(contract, member);
                 if (authoritativeElapsedMinute - _consumedThroughMinute < minutesPerPersonHour) break;
                 var creditMinute = checked(_consumedThroughMinute + minutesPerPersonHour);
                 var result = portfolio.RecordWork(_offerId, _memberId, 1, creditMinute, family, company);
@@ -518,6 +517,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 attempted++;
                 applied += result.AppliedPersonHours;
                 completed |= result.Completed;
+                if (result.Completed) gains = result.TechnologyGains;
                 reward = checked(reward + result.RewardWon);
                 lastRejection = result.RejectionReason;
                 if (completed || result.RejectionReason == ContractWorkRejectionReason.ContractNotActive) break;
@@ -525,7 +525,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
 
             var grants = completed ? jobGrants : Array.Empty<ContractTechnologyGrant>();
             return new AuthoritativeContractWorkAdvanceResult(
-                attempted, applied, completed, reward, lastRejection, grants, workRate);
+                attempted, applied, completed, reward, lastRejection, grants, workRate, gains);
         }
     }
 }

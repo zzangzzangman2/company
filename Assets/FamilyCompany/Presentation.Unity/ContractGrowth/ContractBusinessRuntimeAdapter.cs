@@ -7,6 +7,7 @@ using FamilyCompany.Simulation.ContractGrowth;
 using FamilyCompany.Simulation.Contracts;
 using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.Technology;
+using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using UnityEngine;
 
 namespace FamilyCompany.Presentation.Unity.ContractGrowth
@@ -38,7 +39,8 @@ namespace FamilyCompany.Presentation.Unity.ContractGrowth
         private ContractClientTierCatalog _clients;
         private DateTime _clientCatalogDate;
         private readonly ContractBusinessRouteStack _routes = new ContractBusinessRouteStack();
-        private AuthoritativeContractWorkSession _playerWorkSession;
+        private int _observedWorkFingerprint;
+        private float _nextWorkRefresh;
 
         public event Action<ContractBusinessRoute> RouteChanged;
         public event Action StateChanged;
@@ -123,6 +125,61 @@ namespace FamilyCompany.Presentation.Unity.ContractGrowth
             return GetHubViewModel().ProductProgress;
         }
 
+        public SubcontractOffer GetStarterLesson() => StarterProductState.NextLessonOffer(_bootstrap.State, Clients);
+
+        public ContractBusinessActionResult TryAcceptStarterLesson()
+        {
+            EnsureReady();
+            var offer = GetStarterLesson();
+            if (offer == null) return Fail("진행 중인 첫 하청을 마치거나 제품 개발을 시작하세요.");
+            var s = _bootstrap.State;
+            var accepted = s.Contracts.Accept(offer, s.Company, s.Family, s.Growth, s.Time.ElapsedMinutes);
+            if (!accepted.Accepted) return Fail(AcceptanceFailureKo(accepted.Decision.RejectionReason), offer.OfferId);
+            return Report(true, "첫 제품을 위한 하청 수락 · " + offer.Title, offer.OfferId);
+        }
+
+        public ContractBusinessActionResult StartStarterDevelopment()
+        {
+            EnsureReady();
+            var ok = _bootstrap.State.Growth.StarterProduct.TryStartDevelopment(_bootstrap.State, out var message);
+            return Report(ok, message);
+        }
+
+        public ContractBusinessActionResult StartStarterTrial()
+        {
+            EnsureReady();
+            var ok = _bootstrap.State.Growth.StarterProduct.TryStartTrial(_bootstrap.State, out var message);
+            return Report(ok, message);
+        }
+
+        public ContractBusinessActionResult StartStarterMaintenance()
+        {
+            EnsureReady();
+            var ok = _bootstrap.State.Growth.StarterProduct.TryStartMaintenance(_bootstrap.State, out var message);
+            return Report(ok, message);
+        }
+
+        private ContractBusinessActionResult Report(bool ok, string message, string offerId = "")
+        {
+            NotificationKo = message;
+            _bootstrap.SetWorldNotice(message);
+            StateChanged?.Invoke();
+            return new ContractBusinessActionResult(ok, message, offerId);
+        }
+
+        private void Update()
+        {
+            if (!IsReady || Time.unscaledTime < _nextWorkRefresh) return;
+            _nextWorkRefresh = Time.unscaledTime + 0.5f;
+            var s = _bootstrap.State;
+            var p = s.Growth.StarterProduct;
+            var fingerprint = s.Contracts.Contracts.Count + s.Contracts.Contracts.Sum(c => c.CompletedPersonHours * 31 + (int)c.Status * 997)
+                + (int)p.Phase * 8191 + p.BillingPeriod * 131071;
+            if (fingerprint == _observedWorkFingerprint) return;
+            _observedWorkFingerprint = fingerprint;
+            StateChanged?.Invoke();
+        }
+
         public ContractBusinessActionResult TryAcceptOffer(string offerId)
         {
             EnsureReady();
@@ -154,61 +211,13 @@ namespace FamilyCompany.Presentation.Unity.ContractGrowth
                 return Fail($"{member.DisplayName}은 지금 {schedule.Label} 중이라 배정할 수 없습니다.", offerId);
             if (member.Role == FamilyRole.Player)
             {
-                _playerWorkSession = new AuthoritativeContractWorkSession(offerId, memberId, _bootstrap.State.Time.ElapsedMinutes);
-                NotificationKo = "플레이어 작업 명령을 시작했습니다. GameTime이 흐를 때만 작업량이 생깁니다.";
-                StateChanged?.Invoke();
-                return new ContractBusinessActionResult(true, NotificationKo, offerId);
+                var controller = FindFirstObjectByType<OfficeRuntimePlayerController>();
+                if (controller == null) return Fail("직접 작업 캐릭터가 준비되지 않았습니다.", offerId);
+                controller.SelectContract(offerId);
+                return Report(true, "사무실로 돌아가 내 책상 접근 칸에서 E를 계속 누르세요. 선택한 업무를 직접 진행합니다.", offerId);
             }
-            _bootstrap.AssignContractWorkNow(offerId, memberId);
-            NotificationKo = $"{member.DisplayName}에게 계약 작업을 요청했습니다.";
-            StateChanged?.Invoke();
-            return new ContractBusinessActionResult(true, NotificationKo, offerId);
-        }
-
-        public AuthoritativeContractWorkAdvanceResult AdvancePlayerWorkFromGameTime()
-        {
-            EnsureReady();
-            if (_playerWorkSession == null)
-                return new AuthoritativeContractWorkAdvanceResult(0, 0, false, 0, ContractWorkRejectionReason.ContractNotActive);
-            var result = _playerWorkSession.AdvanceTo(
-                _bootstrap.State.Time.ElapsedMinutes,
-                _bootstrap.State.Contracts,
-                _bootstrap.State.Family,
-                _bootstrap.State.Company,
-                _bootstrap.State.Growth.Technology);
-            if (result.Completed)
-            {
-                // The two rewards are reported separately on purpose: cash settles into the company
-                // account, technology settles into the company's know-how and is what opens own
-                // products later.
-                var gains = _bootstrap.State.Growth.Technology.ApplyGrants(result.TechnologyGrants);
-                var money = ContractBusinessViewModelRules.Won(result.RewardWon);
-                NotificationKo = gains.Count == 0
-                    ? $"계약 완료 · {money} 정산 · 습득 기술 없음"
-                    : $"계약 완료 · {money} 정산 · 기술 {DescribeGains(gains)}";
-                _playerWorkSession = null;
-            }
-            if (result.AppliedHours > 0 || result.Completed) StateChanged?.Invoke();
-            return result;
-        }
-
-        /// <summary>
-        /// "DB 설계 +40pt (Lv2 달성) · 자료 입력 +15pt" — the level-up is called out because that is the
-        /// moment a product requirement can flip to satisfied.
-        /// </summary>
-        private static string DescribeGains(IReadOnlyList<CompanyTechnologyGainRecord> gains)
-        {
-            return string.Join(" · ", gains.Select(item =>
-            {
-                var name = CompanyTechnologyCatalog.Get(item.TechnologyId).DisplayNameKo;
-                var text = $"{name} +{item.PointsAdded}pt";
-                return item.LeveledUp ? $"{text} (Lv{item.LevelAfter} 달성)" : text;
-            }));
-        }
-
-        public void CancelPlayerWork()
-        {
-            _playerWorkSession = null;
+            var assigned = _bootstrap.AssignContractWorkNow(offerId, memberId);
+            return Report(assigned, _bootstrap.WorldNotice, offerId);
         }
 
         private ContractClientTierCatalog Clients
@@ -240,7 +249,7 @@ namespace FamilyCompany.Presentation.Unity.ContractGrowth
             StateChanged?.Invoke();
         }
 
-        private ContractBusinessActionResult Fail(string message, string offerId)
+        private ContractBusinessActionResult Fail(string message, string offerId = "")
         {
             NotificationKo = message;
             StateChanged?.Invoke();

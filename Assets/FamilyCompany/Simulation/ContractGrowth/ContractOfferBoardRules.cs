@@ -40,7 +40,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
             return new ContractOfferBoardSnapshot(dayIndex, industry, !anyContractAccepted, offers, progress);
         }
 
-        private static ContractOfferDefinition[] GenerateOnboarding(
+        public static ContractOfferDefinition[] GenerateOnboarding(
             int worldSeed,
             ContractClientTierCatalog clients)
         {

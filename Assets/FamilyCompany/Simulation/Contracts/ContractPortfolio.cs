@@ -38,18 +38,21 @@ namespace FamilyCompany.Simulation.Contracts
             ContractWorkRejectionReason rejectionReason,
             int appliedPersonHours,
             bool completed,
-            long rewardWon)
+            long rewardWon,
+            IReadOnlyList<CompanyTechnologyGainRecord> technologyGains = null)
         {
             RejectionReason = rejectionReason;
             AppliedPersonHours = appliedPersonHours;
             Completed = completed;
             RewardWon = rewardWon;
+            TechnologyGains = technologyGains ?? Array.Empty<CompanyTechnologyGainRecord>();
         }
 
         public ContractWorkRejectionReason RejectionReason { get; }
         public int AppliedPersonHours { get; }
         public bool Completed { get; }
         public long RewardWon { get; }
+        public IReadOnlyList<CompanyTechnologyGainRecord> TechnologyGains { get; }
         public bool Applied => RejectionReason == ContractWorkRejectionReason.None;
     }
 
@@ -58,6 +61,7 @@ namespace FamilyCompany.Simulation.Contracts
         private const int EnergyCostPerPersonHour = 2;
         private readonly List<SubcontractState> _contracts;
         private readonly SmallTeamContractPolicy _policy;
+        private CompanyGrowthState _growth;
 
         public ContractPortfolio(int teamMemberCount, IEnumerable<SubcontractState> contracts = null)
         {
@@ -71,6 +75,39 @@ namespace FamilyCompany.Simulation.Contracts
 
         public IReadOnlyList<SubcontractState> Contracts => _contracts;
         public int ActiveCount => _contracts.Count(item => item.Status == SubcontractStatus.Active);
+
+        // Both restored and new games bind here; presentation never owns completion rewards.
+        public void BindGrowth(CompanyGrowthState growth) => _growth = growth ?? throw new ArgumentNullException(nameof(growth));
+
+        internal bool TryAddInternalWork(SubcontractOffer offer, long minute, long dueMinute = -1)
+        {
+            if (offer.IsExternal) throw new ArgumentException("Internal work only.", nameof(offer));
+            if (ActiveCount >= 2 || _contracts.Any(c => c.Offer.OfferId == offer.OfferId)) return false;
+            // Own software reuses DB/tool know-how, without awarding those points again.
+            var knowHow = ContractTechnologyGrantCatalog.ForTemplateIndex(2)
+                .Concat(ContractTechnologyGrantCatalog.ForTemplateIndex(18)).ToArray();
+            _contracts.Add(new SubcontractState(offer, minute, SubcontractStatus.Active, 0, -1, null,
+                CompanyTechnologyBonusRules.WorkRateBasisPoints(_growth?.Technology, knowHow),
+                CompanyTechnologyBonusRules.QualityBonus(_growth?.Technology, knowHow), dueMinute: dueMinute));
+            return true;
+        }
+
+        public static IReadOnlyList<ContractTechnologyGrant> TechnologyGrantsFor(SubcontractOffer offer) =>
+            offer.IsExternal && LegacyContractTemplateCatalog.TryResolve(offer, out var template)
+                ? ContractTechnologyGrantCatalog.ForTemplateIndex(template.LegacyGlobalIndex)
+                : Array.Empty<ContractTechnologyGrant>();
+
+        public static int MinutesPerPersonHour(SubcontractState contract, FamilyMemberState member)
+        {
+            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
+            return CompanyTechnologyBonusRules.ApplyWorkRate(
+                WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(member.Capability, task),
+                contract.WorkRateBasisPoints);
+        }
+
+        public static bool UsesOnlyDesk(SubcontractState contract) => !contract.Offer.IsExternal ||
+            (LegacyContractTemplateCatalog.TryResolve(contract.Offer, out var template) &&
+             (template.LegacyGlobalIndex == 2 || template.LegacyGlobalIndex == 18));
 
         public ContractAcceptanceResult Accept(SubcontractOffer offer, CompanyState company, long elapsedMinute)
         {
@@ -99,6 +136,9 @@ namespace FamilyCompany.Simulation.Contracts
             if (offer == null) throw new ArgumentNullException(nameof(offer));
             if (company == null) throw new ArgumentNullException(nameof(company));
             if (elapsedMinute < 0) throw new ArgumentOutOfRangeException(nameof(elapsedMinute));
+
+            if (!offer.IsExternal) throw new ArgumentException("Use the product workflow for internal work.", nameof(offer));
+            if (growth != null) BindGrowth(growth);
 
             if (_contracts.Any(item => item.Offer.OfferId == offer.OfferId))
             {
@@ -161,7 +201,10 @@ namespace FamilyCompany.Simulation.Contracts
                     $"{offer.ExactClientDisplayName} 계약 착수 비용");
             }
 
-            var contract = new SubcontractState(offer, elapsedMinute);
+            var grants = TechnologyGrantsFor(offer);
+            var contract = new SubcontractState(offer, elapsedMinute, SubcontractStatus.Active, 0, -1, null,
+                CompanyTechnologyBonusRules.WorkRateBasisPoints(_growth?.Technology, grants),
+                CompanyTechnologyBonusRules.QualityBonus(_growth?.Technology, grants));
             _contracts.Add(contract);
             return new ContractAcceptanceResult(decision, contract);
         }
@@ -203,9 +246,7 @@ namespace FamilyCompany.Simulation.Contracts
                 return RejectedWork(ContractWorkRejectionReason.MemberUnavailable);
             }
             var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
-            var minutesPerPersonHour = WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(
-                member.Capability,
-                task);
+            var minutesPerPersonHour = MinutesPerPersonHour(contract, member);
             var existingMemberHours = contract.Contributions
                 .Where(item => string.Equals(item.MemberId, memberId, StringComparison.Ordinal))
                 .Sum(item => item.PersonHours);
@@ -239,12 +280,15 @@ namespace FamilyCompany.Simulation.Contracts
                 return new ContractWorkResult(ContractWorkRejectionReason.None, appliedHours, false, 0);
             }
 
-            contract.MarkCompleted(elapsedMinute);
+            contract.MarkCompleted(elapsedMinute, ContractPerformanceRules.CalculateQuality(contract, family));
+            if (!contract.Offer.IsExternal)
+                return new ContractWorkResult(ContractWorkRejectionReason.None, appliedHours, true, 0);
             company.RecordSale(
                 $"contract:{contract.Offer.OfferId}:settlement",
                 elapsedMinute,
                 contract.Offer.RewardWon);
             company.ChangeReputation(2);
+            var gains = _growth?.Technology.ApplyGrants(TechnologyGrantsFor(contract.Offer));
             var participantIds = contract.Contributions.Select(item => item.MemberId).ToArray();
             foreach (var participantId in participantIds)
             {
@@ -261,7 +305,7 @@ namespace FamilyCompany.Simulation.Contracts
                 ContractWorkRejectionReason.None,
                 appliedHours,
                 true,
-                contract.Offer.RewardWon);
+                contract.Offer.RewardWon, gains);
         }
 
         public int FailOverdue(long elapsedMinute, CompanyState company, FamilyState family = null)
@@ -289,6 +333,7 @@ namespace FamilyCompany.Simulation.Contracts
         private static void Fail(SubcontractState contract, long elapsedMinute, CompanyState company, FamilyState family)
         {
             contract.MarkFailed(elapsedMinute);
+            if (!contract.Offer.IsExternal) return;
             if (contract.Offer.PenaltyWon > 0)
             {
                 company.RecordContractPenalty(

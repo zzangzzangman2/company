@@ -10,7 +10,7 @@ namespace FamilyCompany.Save
     [Serializable]
     public sealed class GameSaveDto
     {
-        public int schemaVersion = 11;
+        public int schemaVersion = 12;
         public int worldSeed;
         public long elapsedMinutes;
         public CompanySaveDto company = new CompanySaveDto();
@@ -142,6 +142,11 @@ namespace FamilyCompany.Save
     [Serializable]
     public sealed class SubcontractSaveDto
     {
+        public int workPurpose;
+        public long workDueMinute = -1;
+        public int workRateBasisPoints = 10000;
+        public int qualityBonus;
+        public int resolvedQuality = -1;
         public string offerId = string.Empty;
         public string clientCompanyId = string.Empty;
         public string exactClientDisplayName = string.Empty;
@@ -188,6 +193,24 @@ namespace FamilyCompany.Save
 
         /// <summary>Schema v11: technology points earned by finishing subcontracts.</summary>
         public List<TechnologyPointsSaveDto> technologyPoints = new List<TechnologyPointsSaveDto>();
+        public StarterProductSaveDto starterProduct = new StarterProductSaveDto();
+    }
+
+    [Serializable]
+    public sealed class StarterProductSaveDto
+    {
+        public int phase;
+        public int developmentAttempt;
+        public string developmentOrderId = string.Empty;
+        public int quality;
+        public int customers;
+        public int satisfaction = 50;
+        public long nextBillingMinute = -1;
+        public int billingPeriod;
+        public string maintenanceOrderId = string.Empty;
+        public long totalRevenueWon;
+        public long lastPeriodRevenueWon;
+        public int missedPeriods;
     }
 
     [Serializable]

@@ -8,7 +8,7 @@ or a dedicated Windows Fast QA build. Release ownership stays with `WindowsPlaye
 `BUILD_WINDOWS.cmd`; Fast QA output can never be promoted by release scripts.
 
 `FamilyCompany.Simulation` keeps `noEngineReferences`; its fast profile uses the compiler bundled with the
-selected Unity installation and runs deterministic smoke/stamina checks without starting Unity. Runtime
+selected Unity installation and runs deterministic smoke/stamina and starter-business/save-mapper checks without starting Unity. Runtime
 scripts-only builds require a compatible prebuilt Fast QA player. Asset and serialization-layout changes
 cross the data-build boundary and fall back.
 
@@ -40,7 +40,9 @@ cross the data-build boundary and fall back.
 - 저장 대상은 의미 상태다. Transform, 렌더러 캐시, UI 선택 상태는 저장하지 않는다.
 - 가족 자율 행동은 30분 절대 경계에서 진행하며 현재 행동·의미 목적지·처리 시각·누적 업무/휴식·사건만 저장한다. 같은 seed와 목표 시각이면 시간 진행 호출을 나눠도 결과가 같다.
 - P1.5 `OfficeInteractions`는 Unity 참조가 없는 Interaction Definition/Catalog와 정수 Utility 점수 추적을 소유한다. 현재 선택 정본은 기존 `WeightedPick`이며 Shadow 선택과 score trace는 저장 상태나 행동 결과를 변경하지 않는다.
-- 전체 저장 스키마는 `GameSaveDto v10`이며 v1~v9를 읽어 결정론적으로 이관한다. 계약 페이로드는 v2에서 도입되었고 제안 원본, 수락·납기·해결 시각, 상태, 완료 인시와 가족별 기여 인시를 보존한다. 계약 이전 v1 저장은 빈 계약 목록으로 이관한다. v9에서 도입한 semantic stamina를 유지하고 v10은 공용 업무 능력·XP remainder·스트레스 증가 배율을 추가한다.
+- 개발본 저장 스키마는 `GameSaveDto v12`이며 v1~v11을 읽는다. v2 계약, v9 semantic stamina,
+  v10 업무 능력/XP, v11 기술점수를 유지한다. v12는 첫 제품·고객·주간 정산과 내부 업무 목적/정확한 마감,
+  수락 시 고정된 기술 보너스와 완료 품질을 추가한다. 과거 기술 보상을 추측해 소급 지급하지 않는다.
 - 별도 Speed 능력은 없다. 업무 진행률은 `WorkTaskProfile`의 6능력 가중 점수로 계산하고 1인시마다 필요한 정수 GameTime 분을 확정한 뒤에만 계약 기여·XP를 기록한다. E키 유지 실시간이나 프레임 시간은 입력이 아니다. legacy Speed/Stamina/Mental은 v1~v9 이관 경계 밖에서 읽지 않는다. Mental은 계약 품질이 아니라 GameTime 스트레스 증가량을 보정하는 스트레스 저항으로만 이관한다.
 - 주식시장 session·호가·체결 계산은 순수 C#이며 `companyId + date + minute + pulse`를 안정 키로 사용한다.
 - 플레이어 지정가 대기주문은 가격우선·시간우선 FIFO와 queue-ahead를 순수 C#으로 유지하고, Unity UI·저장·원장은 이 코어의 결과만 투영한다.
@@ -48,6 +50,12 @@ cross the data-build boundary and fall back.
 - 체결 replay는 batch identity 중복을 막는 FIFO이며 한 단계마다 Arriving과 Draining을 각각 한 렌더 프레임 이상 공개한다. pause 중 cursor는 변하지 않는다.
 
 ## 실제 역사와 회차 상태
+
+첫 입문 사업은 `GameState.Growth.StarterProduct`가 소유한다. 장기 사업/연구 해금과 별도의 작은 시험 제품이며
+`ContractPortfolio`의 공통 실제 업무 경로를 재사용한다. `CompanyWorkPurpose.Subcontract`만 외부 계약의
+현금·평판·기술·실적으로 정산한다. 제품 개발/유지보수는 기여 인시와 개인 XP만 쌓고 주간 고객 수입은
+`SimulationRunner`의 정수 GameTime 경계에서 고유 정산 ID로 처리한다. UI는 정산하지 않는다.
+플레이 흐름과 수치, 향후 시장 연결 경계는 [STARTER_BUSINESS_LOOP.md](STARTER_BUSINESS_LOOP.md)를 따른다.
 
 - HistoricalBaseline은 검증된 읽기 전용 입력이며 저장 게임이 수정하지 않는다.
 - WorldState는 현재 회차의 회사, 소유관계, 제품, 기술, 재무, 주식과 지급능력 상태를 가진다.

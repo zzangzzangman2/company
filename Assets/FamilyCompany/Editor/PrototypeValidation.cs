@@ -36,7 +36,8 @@ namespace FamilyCompany.Editor
                 ValidateFourPersonContractScope();
                 ValidateContractLifecycle();
                 ValidateSaveRoundTrip();
-            ValidateContractTechnologyRewards();
+                ValidateContractTechnologyRewards();
+                Debug.Log(StarterProductValidation.RunAll());
                 ValidateSaveSlots();
                 ValidateWideFrontendSettings();
                 ValidateAssetsAndScene();
@@ -1008,7 +1009,7 @@ namespace FamilyCompany.Editor
             AssertEqual(source.Company.CashWon, restored.Company.CashWon, "save cash");
             AssertEqual(source.Family.Get("older_sister").Energy, restored.Family.Get("older_sister").Energy, "save sister energy");
             AssertEqual(source.Events.Count, restored.Events.Count, "save event count");
-            AssertEqual(11, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
+            AssertEqual(12, JsonUtility.FromJson<GameSaveDto>(json).schemaVersion, "save schema version");
             AssertEqual(source.OfficeGrid.ComputeLayoutHash(), restored.OfficeGrid.ComputeLayoutHash(), "office grid layout hash");
             AssertEqual(source.Contracts.Contracts.Count, restored.Contracts.Contracts.Count, "save contract count");
             var restoredContract = restored.Contracts.Get(offer.OfferId);

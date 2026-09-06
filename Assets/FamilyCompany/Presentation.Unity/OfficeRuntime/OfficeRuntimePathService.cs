@@ -107,7 +107,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     // statically testable. Replans avoid every dynamic cell before that goal.
                     bool includeDynamic = avoidDynamic && !next.Equals(goal);
                     if (includeDynamic &&
-                        !_occupancy.IsCellPassable(next, agentId, permittedSeatId, true)) continue;
+                        (!_occupancy.IsCellPassable(next, agentId, permittedSeatId, true) ||
+                         !_occupancy.CanTraverseDynamic(agentId, _presenter.CellCenterWorld(current),
+                             _presenter.CellCenterWorld(next)))) continue;
                     _pathVisited.Add(next);
                     _pathParents[next] = current;
                     _pathQueue.Enqueue(next);
@@ -188,7 +190,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                     if (_pathVisited.Contains(next)) continue;
                     bool includeDynamic = avoidDynamic && !next.Equals(goal);
                     if (includeDynamic &&
-                        !_occupancy.IsCellPassable(next, agentId, permittedSeatId, true)) continue;
+                        (!_occupancy.IsCellPassable(next, agentId, permittedSeatId, true) ||
+                         !_occupancy.CanTraverseDynamic(agentId, _presenter.CellCenterWorld(current),
+                             _presenter.CellCenterWorld(next)))) continue;
                     float step = (next.X != current.X && next.Y != current.Y) ? 1.41421356f : 1f;
                     if (!next.Equals(goal) &&
                         _occupancy.HasBlockingFurnitureAdjacent(next, permittedSeatId))
@@ -537,6 +541,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                             includeDynamic)) continue;
                     Vector3 currentCenter3 = _presenter.CellCenterWorld(current);
                     Vector3 nextCenter3 = _presenter.CellCenterWorld(next);
+                    if (includeDynamic && !_occupancy.CanTraverseDynamic(
+                            agentId, currentCenter3, nextCenter3)) continue;
                     if (!_occupancy.CanTraverseStatic(
                             new Vector2(currentCenter3.x, currentCenter3.y),
                             new Vector2(nextCenter3.x, nextCenter3.y),

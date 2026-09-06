@@ -1338,6 +1338,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         public void TickRuntime(float deltaTime)
         {
             if (deltaTime <= 0f) return;
+            // Transit, blocked routes and turning are not paid desk time. Reset the observation
+            // boundary while not actually performing the assigned activity, including after rest.
+            if (HasAssignedTask && !IsPerformingAssignedWork())
+                _assignedLastObservedMinute = _bootstrap.State.Time.ElapsedMinutes;
             try
             {
                 TickRuntimeDispatch(deltaTime);
@@ -2119,7 +2123,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 start,
                 _destination.Value.Cell,
                 _destination.Value.SeatId,
-                _emptyOfficeWanderActive ||
+                HasAssignedTask || _emptyOfficeWanderActive ||
                 _stuckSeconds >= OfficeNavigationTrafficRules.ReplanThresholdSeconds,
                 AgentRadius);
             _path.Clear();
@@ -2267,8 +2271,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 foreach (OfficeRuntimeAgent peer in _world.Registry.Actors)
                 {
                     if (peer == null || peer == this || peer.IsPresentationAway ||
-                        (peer.HasActiveVisibleMotionIntent &&
-                         string.CompareOrdinal(_agentId, peer.AgentId) <= 0)) continue;
+                        OfficeNavigationTrafficRules.KeepMovingPeerPriorityForRailYield(
+                            _agentId, peer.AgentId, peer.HasActiveVisibleMotionIntent,
+                            peer._lastActualDisplacement.sqrMagnitude > 0.00000001f)) continue;
                     // Reservation conflicts can stop both actors more than a body radius apart
                     // (two-cell lookahead). The recorded blocking owner is authoritative there.
                     bool reservationOwner = LastReservationBlocker.StartsWith(
@@ -3919,6 +3924,10 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             AssignedTaskCompleted?.Invoke(this, completed);
             ResumeAutonomy();
         }
+
+        private bool IsPerformingAssignedWork() => _assignedActivity == CurrentActivity &&
+            (Phase == OfficeRuntimeAgentPhase.Working ||
+             (_assignedActivity != OfficeActivity.Work && _arrived && _standingFacingDirection < 0));
 
         private void RequestStopAndStand(string reason = "unspecified")
         {

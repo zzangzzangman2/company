@@ -1,0 +1,6 @@
+FAST QA: PASS
+profile=simulation-pure reason=explicit profile
+totalSeconds=8.336 sloSeconds=15 slo=MET
+compileSeconds=0.755 buildSeconds=0 playerSeconds=0 captureSeconds=0
+head=ee3e812fc9feebbb90f6aea83cb77dcc35320bcf baseRef=HEAD
+artifacts=C:\Users\godho\Documents\Codex\fc_agents\integration_p0\Artifacts\FastQa\runs\20260906-235639-393

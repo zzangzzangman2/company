@@ -39,7 +39,11 @@ namespace FamilyCompany.Simulation.Contracts
             SubcontractStatus status,
             int completedPersonHours,
             long resolvedMinute,
-            IEnumerable<ContractWorkerContribution> contributions)
+            IEnumerable<ContractWorkerContribution> contributions,
+            int workRateBasisPoints = 10000,
+            int qualityBonus = 0,
+            int resolvedQuality = -1,
+            long dueMinute = -1)
         {
             Offer = offer ?? throw new ArgumentNullException(nameof(offer));
             if (!Enum.IsDefined(typeof(SubcontractStatus), status)) throw new ArgumentOutOfRangeException(nameof(status));
@@ -71,9 +75,21 @@ namespace FamilyCompany.Simulation.Contracts
 
             AcceptedMinute = acceptedMinute;
             DueMinute = checked(acceptedMinute + offer.DeadlineDays * 1440L);
+            if (dueMinute != -1)
+            {
+                if (dueMinute <= acceptedMinute || dueMinute > DueMinute || (offer.IsExternal && dueMinute != DueMinute))
+                    throw new ArgumentOutOfRangeException(nameof(dueMinute));
+                DueMinute = dueMinute;
+            }
             Status = status;
             CompletedPersonHours = completedPersonHours;
             ResolvedMinute = resolvedMinute;
+            if (workRateBasisPoints < 10000 || workRateBasisPoints > 12000) throw new ArgumentOutOfRangeException(nameof(workRateBasisPoints));
+            if (qualityBonus < 0 || qualityBonus > 12) throw new ArgumentOutOfRangeException(nameof(qualityBonus));
+            if (resolvedQuality < -1 || resolvedQuality > 100) throw new ArgumentOutOfRangeException(nameof(resolvedQuality));
+            WorkRateBasisPoints = workRateBasisPoints;
+            QualityBonus = qualityBonus;
+            ResolvedQuality = resolvedQuality;
             _contributions = contributions == null
                 ? new List<ContractWorkerContribution>()
                 : contributions.Select(item => new ContractWorkerContribution(item.MemberId, item.PersonHours)).ToList();
@@ -97,6 +113,9 @@ namespace FamilyCompany.Simulation.Contracts
         public int RemainingPersonHours => Offer.EstimatedPersonHours - CompletedPersonHours;
         public long ResolvedMinute { get; private set; }
         public IReadOnlyList<ContractWorkerContribution> Contributions => _contributions;
+        public int WorkRateBasisPoints { get; }
+        public int QualityBonus { get; }
+        public int ResolvedQuality { get; private set; }
 
         internal int AddWork(string memberId, int requestedPersonHours)
         {
@@ -119,7 +138,7 @@ namespace FamilyCompany.Simulation.Contracts
             return applied;
         }
 
-        internal void MarkCompleted(long elapsedMinute)
+        internal void MarkCompleted(long elapsedMinute, int quality = -1)
         {
             if (Status != SubcontractStatus.Active) throw new InvalidOperationException("Contract is not active.");
             if (RemainingPersonHours != 0) throw new InvalidOperationException("Contract work is incomplete.");
@@ -130,6 +149,7 @@ namespace FamilyCompany.Simulation.Contracts
 
             Status = SubcontractStatus.Completed;
             ResolvedMinute = elapsedMinute;
+            ResolvedQuality = quality;
         }
 
         internal void MarkFailed(long elapsedMinute)

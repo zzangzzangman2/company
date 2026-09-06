@@ -7,6 +7,10 @@ using FamilyCompany.Presentation.Unity.ManagementUI;
 using FamilyCompany.Presentation.Unity.OfficeRuntime;
 using FamilyCompany.Presentation.Unity.UIRemaster;
 using FamilyCompany.Simulation.ContractGrowth;
+using FamilyCompany.Simulation.Company;
+using FamilyCompany.Simulation.Contracts;
+using FamilyCompany.Simulation.Core;
+using FamilyCompany.Simulation.Family;
 using FamilyCompany.Simulation.ManagementUi;
 using FamilyCompany.Simulation.Technology;
 using TMPro;
@@ -1088,7 +1092,48 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var opportunities = _contractBusinessNavigation.GetProductOpportunities().Take(4).ToArray();
             var root = CreateRect("Product Opportunity Adapter View", _featureHost);
             Stretch(root);
-            var grid = root.gameObject.AddComponent<GridLayoutGroup>();
+            var scroll = root.gameObject.AddComponent<ScrollRect>();
+            root.gameObject.AddComponent<RectMask2D>();
+            // A transparent raycast surface lets the wheel work over gaps as well as cards.
+            var background = root.gameObject.AddComponent<Image>();
+            background.color = Color.clear;
+            var content = CreateRect("Product Workflow Content", root);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.sizeDelta = Vector2.zero;
+            var column = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(column, new RectOffset(8, 8, 8, 8), 14f);
+            column.childForceExpandWidth = true;
+            var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.viewport = root;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 32f;
+            var barRoot = CreateRect("Product Scrollbar", root);
+            barRoot.anchorMin = new Vector2(1f, 0f);
+            barRoot.anchorMax = Vector2.one;
+            barRoot.pivot = new Vector2(1f, 0.5f);
+            barRoot.sizeDelta = new Vector2(CanvasPixels(10f), 0f);
+            barRoot.gameObject.AddComponent<Image>().color = new Color(0.13f, 0.23f, 0.23f, 0.12f);
+            var handle = CreateRect("Handle", barRoot);
+            Stretch(handle);
+            var handleImage = handle.gameObject.AddComponent<Image>();
+            handleImage.color = DeepInk;
+            var bar = barRoot.gameObject.AddComponent<Scrollbar>();
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            bar.handleRect = handle;
+            bar.targetGraphic = handleImage;
+            scroll.verticalScrollbar = bar;
+            content.sizeDelta = new Vector2(-CanvasPixels(18f), 0f);
+            BuildStarterProductCard(content);
+            var futureTitle = AddText(content, "중장기 사업 목표 · 아래는 기존 해금 조건입니다", 18f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            AddLayout(futureTitle.rectTransform, -1f, 32f, 0f, 0f);
+            var gridHost = CreateRect("Future Product Paths", content);
+            AddLayout(gridHost, -1f, 468f, 0f, 0f);
+            var grid = gridHost.gameObject.AddComponent<GridLayoutGroup>();
             grid.padding = new RectOffset();
             grid.spacing = new Vector2(16f, 16f);
             grid.cellSize = new Vector2(505f, 226f);
@@ -1101,7 +1146,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             {
                 var card = CreateSpritePanel(
                     "Product Opportunity " + opportunity.Definition.ProductPathId,
-                    root,
+                    gridHost,
                     opportunity.Unlocked ? _cardNormal : _cardDisabled,
                     true);
                 var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -1126,6 +1171,110 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     DeepInk);
                 AddLayout(conditions.rectTransform, -1f, 112f, 0f, 1f);
             }
+        }
+
+        private void BuildStarterProductCard(RectTransform parent)
+        {
+            var state = _bootstrap.State;
+            var product = state.Growth.StarterProduct;
+            var card = CreateSpritePanel("Starter Product Workflow", parent, _cardNormal, true);
+            var vertical = card.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureLayout(vertical, PixelPadding(22, 22, 22, 20), 10f);
+            var heading = AddText(card, "첫 자체 제품 · " + StarterProductState.Title,
+                23f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            AddLayout(heading.rectTransform, -1f, 34f, 0f, 0f);
+            var db = StarterProductState.HasLesson(state, 2) ? "완료" : "미완료";
+            var tool = StarterProductState.HasLesson(state, 18) ? "완료" : "미완료";
+            string status = $"하청 배우기  →  자체 개발  →  시험 판매  →  매주 유지보수\n단어 DB [{db}] · 대여점 도구 [{tool}]\n";
+            switch (product.Phase)
+            {
+                case StarterProductPhase.Learning:
+                    status += "두 하청의 경험을 우리 제품으로 만듭니다. 고객의 전용 코드·상표를 가져오는 것이 아닙니다.\n개발비 30만 원 · 실제 책상 작업 24인시 · 개발 기한 30일";
+                    if (product.DevelopmentAttempt > 0) status += "\n이전 개발은 마감 실패했습니다. 재개발에는 다시 30만 원이 듭니다.";
+                    break;
+                case StarterProductPhase.Developing:
+                    var development = state.Contracts.Get(product.DevelopmentOrderId);
+                    status += $"개발·시험 {development.CompletedPersonHours}/{development.Offer.EstimatedPersonHours}인시\n달력만 넘겨서는 완성되지 않습니다. 아래에서 가족을 배정하세요.";
+                    break;
+                case StarterProductPhase.ReadyForTrial:
+                    status += $"개발 완료 · 제품 품질 {product.Quality}/100\n시험 고객 3곳 · 사용권은 곳당 6만 원, 유지보수는 주당 2만 원입니다.";
+                    break;
+                default:
+                    status += $"고객 {product.Customers}/8곳 · 품질 {product.Quality} · 만족도 {product.Satisfaction}/100\n" +
+                        $"누적 매출 {product.TotalRevenueWon:N0}원 · 직전 주 정산 {product.LastPeriodRevenueWon:N0}원\n" +
+                        $"다음 정산 {GameTime.CampaignStart.AddMinutes(product.NextBillingMinute):MM/dd HH:mm} · 그 시각까지 유지보수 2인시 완료\n" +
+                        "미완료 주는 요금 0원·고객 1곳 이탈. 좋은 품질과 서비스로 고객을 늘립니다.";
+                    break;
+            }
+            var body = AddText(card, status, 17f, false, TextAlignmentOptions.TopLeft, DeepInk);
+            AddLayout(body.rectTransform, -1f, 174f, 0f, 0f);
+            var actions = StarterButtonRow(card, "Starter Main Actions");
+            var lesson = _contractBusinessNavigation.GetStarterLesson();
+            if (product.Phase == StarterProductPhase.Learning)
+            {
+                if (lesson != null)
+                {
+                    var terms = AddText(card, $"다음 하청: {lesson.Title}\n착수 {lesson.UpfrontCostWon:N0}원 / 완료 보상 {lesson.RewardWon:N0}원 · {lesson.EstimatedPersonHours}인시 · {lesson.DeadlineDays}일",
+                        16f, false, TextAlignmentOptions.TopLeft, DeepInk);
+                    AddLayout(terms.rectTransform, -1f, 54f, 0f, 0f);
+                    StarterButton(actions, "하청 수락", () => _contractBusinessNavigation.TryAcceptStarterLesson());
+                }
+                if (StarterProductState.HasRequiredKnowHow(state))
+                    StarterButton(actions, "30만 원 · 개발 시작", () => _contractBusinessNavigation.StartStarterDevelopment());
+            }
+            if (product.Phase == StarterProductPhase.ReadyForTrial)
+                StarterButton(actions, "시험 판매 시작", () => _contractBusinessNavigation.StartStarterTrial());
+            if (product.Phase == StarterProductPhase.Trading && string.IsNullOrEmpty(product.MaintenanceOrderId))
+                StarterButton(actions, "이번 주 유지보수 접수", () => _contractBusinessNavigation.StartStarterMaintenance());
+            actions.SetAsLastSibling();
+            actions.gameObject.SetActive(actions.childCount > 0);
+
+            foreach (var work in state.Contracts.Contracts.Where(c => c.Status == SubcontractStatus.Active))
+            {
+                var capturedId = work.Offer.OfferId;
+                var label = AddText(card, $"{work.Offer.Title} · {work.CompletedPersonHours}/{work.Offer.EstimatedPersonHours}인시\n" +
+                    (work.Offer.Purpose == CompanyWorkPurpose.StarterMaintenance
+                        ? $"실제 정산 마감 {GameTime.CampaignStart.AddMinutes(product.NextBillingMinute):MM/dd HH:mm}"
+                        : $"마감 {GameTime.CampaignStart.AddMinutes(work.DueMinute):MM/dd HH:mm}"),
+                    17f, true, TextAlignmentOptions.TopLeft, DeepInk);
+                AddLayout(label.rectTransform, -1f, 54f, 0f, 0f);
+                var row = StarterButtonRow(card, "Assign " + capturedId);
+                foreach (var member in state.Family.Members)
+                {
+                    var memberId = member.MemberId;
+                    bool player = member.Role == FamilyRole.Player;
+                    StarterButton(row, member.DisplayName + (player ? " · 직접(E)" : " · 최대 4인시"), () =>
+                    {
+                        var result = _contractBusinessNavigation.RequestFamilyAssignment(capturedId, memberId);
+                        if (result.Succeeded && player) ReturnToOfficeNow();
+                    });
+                }
+            }
+            var notice = AddText(card, string.IsNullOrEmpty(_contractBusinessNavigation.NotificationKo)
+                ? "가족마다 책상·PC·의자 세트가 필요합니다. 배정은 이동·착석 후 진행하며, 완료한 뒤 다시 배정할 수 있습니다."
+                : _contractBusinessNavigation.NotificationKo, 16f, false, TextAlignmentOptions.TopLeft, DeepInk);
+            AddLayout(notice.rectTransform, -1f, 64f, 0f, 0f);
+        }
+
+        private RectTransform StarterButtonRow(RectTransform parent, string name)
+        {
+            var row = CreateRect(name, parent);
+            AddLayout(row, -1f, 44f, 0f, 0f);
+            var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            ConfigureLayout(layout, null, 8f);
+            return row;
+        }
+
+        private void StarterButton(RectTransform parent, string label, Action action)
+        {
+            var button = CreateSpriteButton(parent, label, _cardNormal, _cardHover, _cardNormal,
+                _cardHover, action, 220f, 44f);
+            var element = button.GetComponent<LayoutElement>();
+            element.minWidth = 0f;
+            element.flexibleWidth = 1f;
+            var text = AddText(button.GetComponent<RectTransform>(), label, 16f, true, TextAlignmentOptions.Midline, DeepInk);
+            text.margin = new Vector4(8f, 2f, 8f, 2f);
+            Stretch(text.rectTransform);
         }
 
         private void BuildComingSoonDetail(
@@ -1567,8 +1716,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 Screen.width - safe.xMax,
                 safe.yMin);
             var layout = MainNavigationLayoutMetrics.Calculate(Screen.width, Screen.height, safeInsets);
-            var canvas = _root.GetComponent<Canvas>();
-            var canvasScale = canvas != null ? Mathf.Max(0.01f, canvas.scaleFactor) : WorkforceCanvasScale();
+            // CanvasScaler may still expose the previous resolution's factor during this Update.
+            // Use the same reference-resolution/match calculation as our fonts, not that stale frame.
+            var canvasScale = WorkforceCanvasScale();
             var safeHeight = (float)layout.SafeArea.Height;
             var topMargin = (float)(layout.TopHud.Y - layout.SafeArea.Y) / canvasScale;
             var sideMargin = (float)(layout.TopHud.X - layout.SafeArea.X) / canvasScale;

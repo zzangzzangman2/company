@@ -289,6 +289,9 @@ function Invoke-PureSimulation([object]$Unity) {
     $exe = Join-Path $output 'FamilyCompany.Simulation.FastQa.exe'
     $sources = @(Get-ChildItem -LiteralPath (Join-Path $script:ProjectRoot 'Assets\FamilyCompany\Simulation') -Recurse -Filter '*.cs' -File |
         Select-Object -ExpandProperty FullName | Sort-Object) + @(
+        Get-ChildItem -LiteralPath (Join-Path $script:ProjectRoot 'Assets\FamilyCompany\Save') -Recurse -Filter '*.cs' -File |
+            Select-Object -ExpandProperty FullName | Sort-Object) + @(
+        (Join-Path $script:ProjectRoot 'Assets\FamilyCompany\Editor\StarterProductValidation.cs'),
         (Join-Path $script:ProjectRoot 'Assets\FamilyCompany\Editor\StaminaSimulationValidation.cs'),
         (Join-Path $script:ProjectRoot 'Tools\FastQa\SimulationSmokeHarness.cs'))
     $arguments = @($csc,'-nologo','-langversion:latest','-target:exe','-nostdlib+','-warn:4',

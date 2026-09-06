@@ -17,10 +17,16 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
         private OfficeRuntimeAgent _actor;
         private float _workProgress;
         private string _workingOfferId = string.Empty;
+        private string _selectedOfferId = string.Empty;
         private long _creditedThroughMinute;
         private int _requiredGameMinutesPerPersonHour = 60;
 
         public bool IsWorking => _workingOfferId.Length > 0;
+        public void SelectContract(string offerId)
+        {
+            ResetWork(true);
+            _selectedOfferId = offerId ?? string.Empty;
+        }
         public float WorkProgress01 => Mathf.Clamp01(_workProgress / Mathf.Max(1f, _requiredGameMinutesPerPersonHour));
 
         public void Configure(PrototypeBootstrap bootstrap, OfficeRuntimeAgent actor)
@@ -47,7 +53,8 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
             SubcontractState contract = _bootstrap.State.Contracts.Contracts
                 .Where(item => item.Status == SubcontractStatus.Active)
-                .OrderBy(item => item.DueMinute)
+                .OrderByDescending(item => item.Offer.OfferId == _selectedOfferId)
+                .ThenBy(item => item.DueMinute)
                 .ThenBy(item => item.Offer.OfferId, StringComparer.Ordinal)
                 .FirstOrDefault();
             if (contract == null)
@@ -111,7 +118,9 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
                 _creditedThroughMinute = creditMinute;
                 _bootstrap.SetWorldNotice(result.Completed
-                    ? $"직접 작업으로 계약 완료 · 보상 {result.RewardWon:N0}원"
+                    ? contract.Offer.IsExternal
+                        ? $"직접 작업으로 계약 완료 · {result.RewardWon:N0}원 · 기술 {result.TechnologyGains.Count}종 습득"
+                        : "자체 제품 업무 완료 · 사업 → 자체 제품에서 다음 단계를 확인하세요."
                     : $"직접 작업 1시간 반영 · 남은 작업 {contract.RemainingPersonHours}시간");
                 if (result.Completed)
                 {
@@ -138,12 +147,12 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 
         private static int RequiredGameMinutesPerPersonHour(SubcontractState contract, FamilyMemberState member)
         {
-            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
-            return WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(member.Capability, task);
+            return ContractPortfolio.MinutesPerPersonHour(contract, member);
         }
 
         private static OfficeActivity ResolveActivity(SubcontractState contract)
         {
+            if (ContractPortfolio.UsesOnlyDesk(contract)) return OfficeActivity.Work;
             if (contract.CompletedPersonHours == 0 && contract.Offer.RequiredWorkers > 1)
                 return OfficeActivity.Meeting;
             return contract.RemainingPersonHours <= 4

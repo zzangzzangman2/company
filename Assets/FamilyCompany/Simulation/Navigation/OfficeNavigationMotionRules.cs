@@ -882,6 +882,10 @@ namespace FamilyCompany.Simulation.Navigation
 
     public static class OfficeNavigationTrafficRules
     {
+        public static bool KeepMovingPeerPriorityForRailYield(string actorId, string peerId,
+            bool peerHasIntent, bool peerMadeProgress) =>
+            peerHasIntent && peerMadeProgress && string.CompareOrdinal(actorId, peerId) <= 0;
+
         public const float PredictionSeconds = 0.55f;
         public const float RecoveryThresholdSeconds = 0.80f;
         public const float ReplanThresholdSeconds = 1.10f;

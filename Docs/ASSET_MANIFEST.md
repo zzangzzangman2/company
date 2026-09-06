@@ -3,6 +3,11 @@
 This manifest lists the production Player V8 and Father V19 packages first, followed by current
 family inputs and canonical production assets. Retired iterations are not reusable sources.
 
+2026-09-07 release validation repair: the existing experimental OlderSister V3 SD-repair albedo
+import settings now use Uncompressed instead of Unity's default Compressed on Default/Standalone.
+The source PNG, FBX, material and production roster are unchanged; this resolves the existing
+paid-albedo import gate without waiving it. No generation, charge or candidate promotion occurred.
+
 2026-09-06 CRT alignment correction: the four `OfficeBuildFurniture/desk_with_pc_*.png` previews were
 rebaked from the same procedural workstation after correcting CRT face normals and its runtime
 desk-axis mapping. No generated model/texture, colour, dimension or source package was replaced.

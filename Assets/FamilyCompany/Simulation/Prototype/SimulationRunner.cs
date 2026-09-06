@@ -100,6 +100,7 @@ namespace FamilyCompany.Simulation.Prototype
                 _state.Time.ElapsedMinutes);
             _state.RefreshLegacyEnergyProjection();
             _state.Contracts.FailOverdue(_state.Time.ElapsedMinutes, _state.Company, _state.Family);
+            _state.Growth.StarterProduct.Synchronize(_state);
             _state.Growth.ResolveProductIfDue(
                 _state.WorldSeed,
                 _state.Time.ElapsedMinutes,

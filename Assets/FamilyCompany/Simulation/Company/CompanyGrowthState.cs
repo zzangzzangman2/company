@@ -223,9 +223,11 @@ namespace FamilyCompany.Simulation.Company
             int marketReportSequence = 0,
             int productSequence = 0,
             IEnumerable<OwnedBusinessState> ownedBusinesses = null,
-            IEnumerable<KeyValuePair<string, int>> technologyPoints = null)
+            IEnumerable<KeyValuePair<string, int>> technologyPoints = null,
+            StarterProductState starterProduct = null)
         {
             Technology = new CompanyTechnologyState(technologyPoints);
+            StarterProduct = starterProduct ?? new StarterProductState();
             ResearchCenterUnlocked = researchCenterUnlocked;
             _researchedTechnologyIds = researchedTechnologyIds == null
                 ? new HashSet<string>(StringComparer.Ordinal)
@@ -262,6 +264,7 @@ namespace FamilyCompany.Simulation.Company
         /// which is the older cash-purchased unlock. Money buys a licence; work buys a level.
         /// </summary>
         public CompanyTechnologyState Technology { get; }
+        public StarterProductState StarterProduct { get; }
         public MarketReportState MarketReport { get; private set; }
         public ProductProjectState ProductProject { get; private set; }
         public int MarketReportSequence => _marketReportSequence;

@@ -849,33 +849,34 @@ namespace FamilyCompany.Presentation.Unity
             else GameAudioCoordinator.Instance.PlayUiSfx(GameUiSfx.Error);
         }
 
-        public void AssignContractWorkNow(string offerId, string memberId)
+        public bool AssignContractWorkNow(string offerId, string memberId)
         {
             var member = _state.Family.Get(memberId);
             if (member.Role == FamilyRole.Player)
             {
                 _notice = "나는 월드에서 직접 책상과 상호작용해 작업에 참여합니다.";
-                return;
+                return false;
             }
 
             var schedule = FamilyScheduleRules.Resolve(member.Role, _state.Time.Now);
             if (!schedule.CanPerformCompanyWork)
             {
                 _notice = $"{member.DisplayName}은 지금 {schedule.Label} 중이라 회사 작업을 맡을 수 없습니다.";
-                return;
+                return false;
             }
 
             if (_contractTaskCoordinator == null) InitializeOfficeTaskBridgeNow();
             if (_contractTaskCoordinator != null && _contractTaskCoordinator.AssignContractWork(offerId, memberId, 4))
             {
-                _notice = $"{member.DisplayName}에게 4시간 작업을 배정했습니다.";
-                return;
+                _notice = $"{member.DisplayName}에게 최대 4인시 작업을 배정했습니다. 이동·착석 후 시작합니다.";
+                return true;
             }
 
             _notice = _contractTaskCoordinator != null &&
                       !string.IsNullOrWhiteSpace(_contractTaskCoordinator.LastAssignmentFailureLabel)
                 ? _contractTaskCoordinator.LastAssignmentFailureLabel
                 : "해당 가족이 이미 작업 중이거나 사용할 책상이 없습니다.";
+            return false;
         }
 
         public void OpenResearchCenterNow()
@@ -1001,7 +1002,9 @@ namespace FamilyCompany.Presentation.Unity
             var result = _contractTaskCoordinator.LastWorkResult;
             if (result == null) return;
             _notice = result.Completed
-                ? $"계약 완료 · 보상 {result.RewardWon:N0}원 입금"
+                ? result.RewardWon > 0
+                    ? $"계약 완료 · {result.RewardWon:N0}원 입금 · 기술 {result.TechnologyGains.Count}종 습득"
+                    : "자체 제품 업무 완료 · 사업 → 자체 제품에서 다음 단계를 확인하세요."
                 : result.Applied
                     ? $"작업 {result.AppliedPersonHours}시간 반영"
                     : "작업을 반영하지 못했습니다. 체력과 마감을 확인하세요.";

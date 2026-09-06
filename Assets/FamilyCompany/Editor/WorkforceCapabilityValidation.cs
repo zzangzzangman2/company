@@ -78,8 +78,8 @@ namespace FamilyCompany.Editor
             }
             var migrated = GameSaveMapper.FromDto(legacy);
             var saved = GameSaveMapper.ToDto(migrated);
-            Require(saved.schemaVersion == 10 && saved.family.All(item => item.capability != null),
-                "v1-v9 migration did not emit complete v10 capability snapshots.");
+            Require(saved.schemaVersion == 12 && saved.family.All(item => item.capability != null),
+                "v1-v9 migration did not preserve capability snapshots in schema v12.");
             AssertCapability(migrated.Family.Get("player").Capability, 58, 61, 47, 32, 62, 55, "A", 58);
             var json = JsonUtility.ToJson(saved);
             var restored = GameSaveMapper.FromDto(JsonUtility.FromJson<GameSaveDto>(json));

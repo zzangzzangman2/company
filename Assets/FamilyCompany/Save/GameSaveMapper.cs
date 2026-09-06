@@ -19,6 +19,24 @@ namespace FamilyCompany.Save
 {
     public static class GameSaveMapper
     {
+        private static StarterProductSaveDto ToStarterProductDto(StarterProductState p) => new StarterProductSaveDto
+        {
+            phase = (int)p.Phase, developmentAttempt = p.DevelopmentAttempt,
+            developmentOrderId = p.DevelopmentOrderId, quality = p.Quality,
+            customers = p.Customers, satisfaction = p.Satisfaction, nextBillingMinute = p.NextBillingMinute,
+            billingPeriod = p.BillingPeriod, maintenanceOrderId = p.MaintenanceOrderId,
+            totalRevenueWon = p.TotalRevenueWon, lastPeriodRevenueWon = p.LastPeriodRevenueWon,
+            missedPeriods = p.MissedPeriods
+        };
+
+        private static StarterProductState FromStarterProductDto(StarterProductSaveDto p)
+        {
+            if (p == null) throw new InvalidOperationException("Starter product state is incomplete.");
+            return new StarterProductState((StarterProductPhase)p.phase, p.developmentAttempt,
+                p.developmentOrderId, p.quality, p.customers, p.satisfaction, p.nextBillingMinute,
+                p.billingPeriod, p.maintenanceOrderId, p.totalRevenueWon, p.lastPeriodRevenueWon, p.missedPeriods);
+        }
+
         public static GameSaveDto ToDto(GameState state)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
@@ -120,6 +138,11 @@ namespace FamilyCompany.Save
                 }).ToList(),
                 contracts = state.Contracts.Contracts.Select(contract => new SubcontractSaveDto
                 {
+                    workPurpose = (int)contract.Offer.Purpose,
+                    workDueMinute = contract.DueMinute,
+                    workRateBasisPoints = contract.WorkRateBasisPoints,
+                    qualityBonus = contract.QualityBonus,
+                    resolvedQuality = contract.ResolvedQuality,
                     offerId = contract.Offer.OfferId,
                     clientCompanyId = contract.Offer.ClientCompanyId,
                     exactClientDisplayName = contract.Offer.ExactClientDisplayName,
@@ -149,6 +172,7 @@ namespace FamilyCompany.Save
                 }).ToList(),
                 growth = new CompanyGrowthSaveDto
                 {
+                    starterProduct = ToStarterProductDto(state.Growth.StarterProduct),
                     researchCenterUnlocked = state.Growth.ResearchCenterUnlocked,
                     researchedTechnologyIds = state.Growth.ResearchedTechnologyIds.ToList(),
                     marketReportSequence = state.Growth.MarketReportSequence,
@@ -203,7 +227,7 @@ namespace FamilyCompany.Save
         public static GameState FromDto(GameSaveDto save)
         {
             if (save == null) throw new ArgumentNullException(nameof(save));
-            if (save.schemaVersion < 1 || save.schemaVersion > 11)
+            if (save.schemaVersion < 1 || save.schemaVersion > 12)
             {
                 throw new InvalidOperationException($"Unsupported save schema: {save.schemaVersion}");
             }
@@ -329,7 +353,8 @@ namespace FamilyCompany.Save
                     item.requiredSpeed,
                     item.requiredTechnologyId,
                     save.schemaVersion >= 4 ? (BusinessIndustry)item.industry : BusinessIndustry.WebAndSoftware,
-                    save.schemaVersion >= 10 ? item.requiredCapability : item.requiredDevelopment);
+                    save.schemaVersion >= 10 ? item.requiredCapability : item.requiredDevelopment,
+                    save.schemaVersion >= 12 ? (CompanyWorkPurpose)item.workPurpose : CompanyWorkPurpose.Subcontract);
                 return new SubcontractState(
                     offer,
                     item.acceptedMinute,
@@ -338,7 +363,11 @@ namespace FamilyCompany.Save
                     item.resolvedMinute,
                     item.contributions.Select(contribution => new ContractWorkerContribution(
                         contribution.memberId,
-                        contribution.personHours)));
+                        contribution.personHours)),
+                    save.schemaVersion >= 12 ? item.workRateBasisPoints : 10000,
+                    save.schemaVersion >= 12 ? item.qualityBonus : 0,
+                    save.schemaVersion >= 12 ? item.resolvedQuality : -1,
+                    save.schemaVersion >= 12 ? item.workDueMinute : -1);
             }));
             CompanyGrowthState growth;
             if (save.schemaVersion < 3)
@@ -405,8 +434,10 @@ namespace FamilyCompany.Save
                     save.growth.marketReportSequence,
                     save.growth.productSequence,
                     ownedBusinesses,
-                    technologyPoints);
+                    technologyPoints,
+                    save.schemaVersion >= 12 ? FromStarterProductDto(save.growth.starterProduct) : null);
             }
+            growth.StarterProduct.ValidateOrders(contracts);
             var stockMarket = save.stockMarket != null && save.stockMarket.initialized
                 ? FromStockMarketSaveDto(save.stockMarket)
                 : StockMarketSessionStateDto.Uninitialized();

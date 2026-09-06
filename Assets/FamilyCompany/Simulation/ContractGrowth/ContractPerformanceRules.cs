@@ -22,6 +22,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
 
             var records = new List<ContractPerformanceRecord>();
             foreach (var contract in portfolio.Contracts
+                         .Where(item => item.Offer.IsExternal)
                          .Where(item => item.Status == SubcontractStatus.Completed || item.Status == SubcontractStatus.Failed)
                          .OrderBy(item => item.ResolvedMinute)
                          .ThenBy(item => item.Offer.OfferId, StringComparer.Ordinal))
@@ -115,8 +116,9 @@ namespace FamilyCompany.Simulation.ContractGrowth
                 growth.OwnedBusinesses.Count);
         }
 
-        private static int CalculateQuality(SubcontractState contract, FamilyState family)
+        public static int CalculateQuality(SubcontractState contract, FamilyState family)
         {
+            if (contract.ResolvedQuality >= 0) return contract.ResolvedQuality;
             if (contract.Contributions.Count == 0) return 45;
             var specialty = LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer);
             var task = ContractWorkTaskProfiles.Resolve(specialty);
@@ -127,7 +129,7 @@ namespace FamilyCompany.Simulation.ContractGrowth
             var average = WorkforcePerformanceRules.CalculateWeightedTeamScore(contributions, task, true);
             var requirementPenalty = Math.Max(0, contract.Offer.RequiredCapability - average) / 2;
             var collaborationBonus = Math.Min(6, Math.Max(0, contract.Contributions.Count - 1) * 2);
-            return Clamp100(average + collaborationBonus - requirementPenalty);
+            return Clamp100(average + collaborationBonus - requirementPenalty + contract.QualityBonus);
         }
 
         private static int SchedulePressurePenalty(SubcontractState contract)

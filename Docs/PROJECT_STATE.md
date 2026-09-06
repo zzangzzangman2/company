@@ -1,6 +1,53 @@
 # PROJECT STATE
 
-Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+Last updated: 2026-09-07. This file contains current handoff state only. Superseded Father experiments are not current inputs.
+
+## 2026-09-07 release preparation (user authorized verification, publish, push and shutdown)
+
+The user's latest instruction explicitly authorizes completing validation, publishing this business-loop patch,
+pushing source/handoff and shutting down this PC without more questions. Release gates remain fail-closed.
+The previously failing OlderSister SD-repair albedo import settings are now Uncompressed; source pixels and
+candidate/production roster are unchanged. Full editor-broad PASS: `20260907-001840-518`, 47.914s.
+Fresh remote inventory PASS: `20260907-002100`, prohibited=0, unknown=0. Further Release gates and the
+checkpoint business integration are in progress; these preparation notes are not publication evidence.
+The fixed main, user saves and public v3 remain untouched until the new public patch is actually verified.
+
+## 2026-09-06 implementation snapshot before release approval
+
+User requested content progression and then "진행시켜". Implemented sequentially on existing main at
+`C:\Users\godho\Documents\Codex\fc_agents\integration_p0`, base `ee3e812fc9feebbb90f6aea83cb77dcc35320bcf`.
+This work is local/uncommitted, not a new public patch. Latest delivery remains v3 below.
+
+- `사업 → 자체 제품`: pinned word-DB and rental-management lessons → own management program development
+  → trial licences → weekly support work and customer retention. Uses normal family/seat/work pipeline.
+  Start capital 5,000,000 and set price 400,000 Won stay unchanged. New proposed test balance is development
+  300,000 Won/24 person-hours/30 days; 3 trial customers at 60,000 Won; support 2 person-hours/week,
+  20,000 Won/customer, maximum 8 customers. No unattended calendar-only development/support income.
+- Common contract completion now awards technology once for both player and NPC paths. Frozen work-rate,
+  quality bonus/completion quality; own development reuses DB/tool know-how without farming external
+  rewards/reputation/technology. Internal and external work share two active slots.
+- Save v12 preserves product lifecycle/billing/order semantics; v1–v11 migration supported. No retroactive
+  inferred technology grants, and v12-to-old-public-save downgrade is not supported. User saves untouched.
+- Real first-work QA exposed a stationary-player adjacent-body path blockage and travel time leakage into
+  assigned work. Dynamic swept-body planning and the actual-work clock boundary fix these without changing
+  tile-centre rails, contact tolerance/radii, approved models/scales/poses/furniture. Small-window product
+  UI now uses current screen-derived layout scale and an explicit scrollbar.
+- **Passed:** pure simulation/save suite (`20260906-235639-393`, 8.336s); seven focused Editor validations
+  (`starter-final-validation-2.log`, method total 11.314s); actual private-desktop D3D11 Player
+  (`20260906-235524`): UI acceptance/assignment → father walks/seats → 4/26 person-hours credited,
+  248 required/248 observed desk minutes. An earlier independent Player run also credited 4 hours.
+  Text-overflow checks at 1280x720 pass. See [scoped evidence](Evidence/StarterBusinessLoop20260906/README.md).
+  Final current-source FastQA scripts build `20260906-235739-460` also PASS (16.159s total); all owned QA
+  Players/Editors exited. This last compile/build is separate from the earlier actual Player observation.
+- **Not passed/claimed:** full normal-Player business lifecycle, native purchase clicks, new all-family
+  production walk/seated release gates, internet stock feed, product-to-stock-value linkage, public patch.
+  Full editor-broad is blocked by an untouched OlderSister candidate albedo compression check; no unrelated
+  asset was modified or gate relaxed. Pure lifecycle tests are not called actual full-game play proof.
+- User main `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`, five saves/backups and
+  interactive desktop verified unchanged. No native input, paid generation, delegation, push or shutdown.
+- **Next:** review the first loop/balance in private QA; run complete normal lifecycle and required release
+  gates, resolve/review the separate albedo gate before an approved release. Do not deploy FastQA output.
+  Use [STARTER_BUSINESS_LOOP.md](STARTER_BUSINESS_LOOP.md) for commands, limits and implementation ownership.
 
 ## 2026-09-06 latest delivery: monitor/table alignment patch v3 published
 

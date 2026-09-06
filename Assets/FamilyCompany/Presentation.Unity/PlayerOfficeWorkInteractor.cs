@@ -176,8 +176,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private static int RequiredGameMinutesPerPersonHour(SubcontractState contract, FamilyMemberState member)
         {
-            var task = ContractWorkTaskProfiles.Resolve(LegacyContractTemplateCatalog.ResolveSpecialty(contract.Offer));
-            return WorkforcePerformanceRules.CalculateGameMinutesPerPersonHour(member.Capability, task);
+            return ContractPortfolio.MinutesPerPersonHour(contract, member);
         }
 
         private static float FlatDistance(Vector3 left, Vector3 right)
@@ -189,6 +188,7 @@ namespace FamilyCompany.Presentation.Unity
 
         private static OfficeActivity ResolveActivity(SubcontractState contract)
         {
+            if (ContractPortfolio.UsesOnlyDesk(contract)) return OfficeActivity.Work;
             if (contract.CompletedPersonHours == 0 && contract.Offer.RequiredWorkers > 1)
                 return OfficeActivity.Meeting;
             return contract.RemainingPersonHours <= 4

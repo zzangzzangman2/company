@@ -23,6 +23,7 @@ namespace FamilyCompany.Editor
         public static void Run()
         {
             ValidateDynamicQueriesAndTrafficSnapshot();
+            ValidateAdjacentBodySweptPath();
             ValidateReservationsAndCorridorOwnershipAreReleased();
             ValidateAbsentActorsDoNotAffectSeparationMetrics();
             ValidateRegisteredActorCanMoveWhileAbsentAndReturn();
@@ -99,6 +100,35 @@ namespace FamilyCompany.Editor
                 AssertEqual(2, harness.Occupancy.TrafficSnapshot().Count, "returned traffic count");
                 Require(!harness.Occupancy.IsCellPassable(actorACell, ActorB, string.Empty, true),
                     "A returned actor must rejoin dynamic occupancy.");
+            }
+        }
+
+        private static void ValidateAdjacentBodySweptPath()
+        {
+            var grid = CreateOpenGrid(9, 9);
+            using (var harness = new OccupancyHarness(grid))
+            {
+                var start = new OfficeGridCoordinate(2, 4);
+                var middle = new OfficeGridCoordinate(4, 4);
+                var goal = new OfficeGridCoordinate(6, 4);
+                Vector2 centre = harness.Position(middle);
+                Vector2 edge = harness.Position(new OfficeGridCoordinate(5, 4)) - centre;
+                Vector2 normal = new Vector2(-edge.y, edge.x).normalized;
+                harness.Occupancy.RegisterActor(ActorA, harness.Position(start), 0.35f, 0.22f);
+                // Its nearest tile differs from the route, but the two bodies still collide.
+                harness.Occupancy.RegisterActor(ActorB, centre + normal * 0.55f, 0.35f, 0.22f);
+                Require(harness.Occupancy.IsCellPassable(middle, ActorA, "", true), "fixture: route cell must look free");
+                Require(!harness.Occupancy.CanTraverseDynamic(ActorA,
+                    harness.Position(new OfficeGridCoordinate(3, 4)), centre), "adjacent body blocks swept edge");
+                var paths = new OfficeRuntimePathService(grid, harness.Occupancy, harness.Presenter);
+                var route = paths.FindPath(ActorA, start, goal, "", true, 0.22f);
+                Require(route.Count > 0, "dynamic swept-body detour must remain reachable");
+                for (int i = 1; i < route.Count; i++)
+                    Require(harness.Occupancy.CanMove(ActorA, harness.Position(route[i - 1]),
+                        harness.Position(route[i]), 0.22f, ""), "planned detour must be executable without overlap");
+                harness.Occupancy.SetActorPresent(ActorB, false);
+                Require(harness.Occupancy.CanTraverseDynamic(ActorA,
+                    harness.Position(new OfficeGridCoordinate(3, 4)), centre), "absent body no longer blocks edge");
             }
         }
 
