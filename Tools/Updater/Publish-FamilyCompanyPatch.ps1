@@ -96,14 +96,25 @@ function Invoke-ReleaseGh([string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "GitHub release operation failed; leave draft unpublished for inspection: $($Arguments[0..1]-join ' ')" }
     return $output
 }
+function Read-DraftReleaseForVerification([string]$Repository,[string]$Tag,[string]$ExpectedCommit) {
+    # The REST tag endpoint returns published releases, not an unpublished pending tag.
+    # gh resolves the draft; validate its numeric ID before requesting/publishing anything.
+    $identity=((Invoke-ReleaseGh @('release','view',$Tag,'--repo',$Repository,'--json','databaseId')) -join "`n") | ConvertFrom-Json
+    if (!$identity.databaseId -or [long]$identity.databaseId -le 0) { throw 'Draft release ID missing.' }
+    $draft=((Invoke-ReleaseGh @('api',("repos/"+$Repository+"/releases/"+[long]$identity.databaseId))) -join "`n") | ConvertFrom-Json
+    if ($draft.id -ne $identity.databaseId -or !$draft.draft -or $draft.prerelease -or
+        $draft.tag_name -cne $Tag -or $draft.target_commitish -cne $ExpectedCommit) { throw 'Draft release identity differs.' }
+    return $draft
+}
 [void](Invoke-ReleaseGh @('release','create',$Version,'--repo',$script:PatchRepository,'--target',$commit,'--draft',
     '--title',("Family Company "+$Version),'--notes',("Verified Windows patch for commit "+$commit+". Extract FamilyCompany-Windows.zip and open the Unity FamilyCompany.exe. Patch progress appears inside the game; saves remain local.")))
 foreach ($asset in Get-ChildItem -LiteralPath $result.Directory -File) {
     [void](Invoke-ReleaseGh @('release','upload',$Version,$asset.FullName,'--repo',$script:PatchRepository))
 }
-$release=(Invoke-ReleaseGh @('api',("repos/"+$script:PatchRepository+"/releases/tags/"+$Version))) -join "`n" | ConvertFrom-Json
+$release=Read-DraftReleaseForVerification $script:PatchRepository $Version $commit
 $pages=(Invoke-ReleaseGh @('api','--paginate','--slurp',("repos/"+$script:PatchRepository+"/releases/"+$release.id+"/assets?per_page=100"))) -join "`n" | ConvertFrom-Json
 $uploaded=@(); foreach ($page in $pages) { $uploaded+=@($page) }
+if ($uploaded.Count -ne @(Get-ChildItem -LiteralPath $result.Directory -File).Count) { throw 'Unexpected uploaded asset count; draft stays unpublished.' }
 foreach ($asset in Get-ChildItem -LiteralPath $result.Directory -File) {
     $matches=@($uploaded | Where-Object name -CEQ $asset.Name)
     if ($matches.Count -ne 1 -or $matches[0].size -ne $asset.Length -or $matches[0].digest -cne ('sha256:'+(Get-PatchHash $asset.FullName))) {

@@ -1,5 +1,19 @@
 # DECISIONS
 
+## 2026-09-06 / 승인 후 실제 GitHub boot 실패의 철회와 회귀 검사
+
+- 사용자가 "ㅇㅇ 승인배포"로 보행·착석 외형과 배포를 승인했다. 외형/C#/좌석/크기는 변경하지 않는다.
+- 첫 44d02547 릴리스의 실제 production worker가 `$matches`/자동 `$Matches` 충돌로 manifest digest
+  조회에 실패했다. 최신 확인 실패를 우회하지 않았으며 user main은 설치 전이라 그대로다. 바로 공개를
+  취소하고, 이 작업이 만든 release ID 383541607와 해당 tag만 철회했다. 실패 패키지/후보/seed 및
+  동일 worker의 8ce 후보는 hash/evidence 보존 후 휴지통으로 보냈다. 실패 identity는 재사용하지 않는다.
+- `$manifestAssets`로 분리한다. 실제 production lookup block에 정상 단일 페이지/두 번째 페이지
+  manifest 응답을 넣은 red→green 회귀를 추가했다. 손상 digest/누락/과대/중복도 계속 거부한다.
+- GitHub draft를 published-tag endpoint로 찾던 publisher는 draft의 numeric release ID로 조회한다.
+  정확한 tag/commit/draft/asset 개수와 digest gate는 유지한다. 배포기 7개 mocked 응답 회귀 통과.
+- 출근/보행 검증으로 updater의 실제 인터넷 성공을 대신하지 않는다. 새 identity의 배포 이후 실제
+  GitHub 수신·byte percent·snapshot 활성화·Unity 재시작을 확인한 뒤에만 고정 메인 설치를 안내한다.
+
 ## 2026-09-06 / 마지막 실제 클릭 검사 완료와 배포 승인 경계
 
 - 사용자 예외 허용은 마지막 구매·회전·배치 native 클릭 검사에만 적용했다. 실제 Release에서 네 세트

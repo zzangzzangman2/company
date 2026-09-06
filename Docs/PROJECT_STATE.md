@@ -4,6 +4,22 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
 
 ## 2026-09-06 latest: Release candidate 8ce7d3ed runtime/native checks passed; visual approval and delivery pending
 
+**Superseding deployment update:** user explicitly approved the displayed look with "ㅇㅇ 승인배포".
+44d02547 fresh Release gameplay passed (8,100 navigation, 3,270 settled hand samples; exact arrivals,
+264 typed chair poses; 419 walk frames). Independent binary/object analysis bound the native/approved
+8ce look without pretending to repeat native clicks: 1,751 resource objects identical and all gameplay
+assemblies/scene/texture files identical; only reference order/build GUID/provenance changed.
+First release `fc-win-20260906.1` (ID 383541607) uploaded/verified 167 assets and was briefly published.
+Actual production GitHub boot then FAILED: `$matches` was overwritten by automatic `$Matches` after the
+digest regex. It was immediately made draft, then that exact newly-created release/tag was removed.
+All four known faulty owned payload/package/seed roots were hash-recorded and recycled. Existing user
+main/saves remain unchanged. No broken patch is currently public. Failed live/retirement evidence:
+`Artifacts/FailedReleaseEvidence/fc-win-20260906.1`, `Artifacts/LiveRelease/fc-win-20260906.1-repair`.
+The shipping worker now uses `$manifestAssets`; realistic production-block single/page-2 positive
+regressions reproduced the failure before the fix. Final corrected identity and real GitHub test pending.
+Draft publisher lookup also uses a verified numeric release ID (tag REST lookup is published-only);
+seven independent lookup response cases pass. No current gameplay/C#/asset modification was required.
+
 This section supersedes the dated candidate failures below. Source is on canonical `main` at
 `C:\Users\godho\Documents\Codex\fc_agents\integration_p0`. Source changes through **8ce7d3ed** were pushed.
 The evidence/documentation follow-up does not change runtime inputs and must not relabel this tested binary.
