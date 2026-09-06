@@ -1,0 +1,10 @@
+{
+  "path": "C:/Users/godho/Downloads/FamilyCompany_Playtest/FamilyCompany.exe",
+  "patchWorkerExists": false,
+  "exists": true,
+  "buildInfo": "Family Company Windows x64 Playtest\r\nCommit: 9144fa0ef3904c267d043ad65af44b817a4f3bea\r\nBranch: codex/integration-p0-qa\r\nWorkingTreeDirty: False\r\nBuildInputFingerprint: CFB710429F7B0AF9F94F13EA87C91DF577B3D9EA610F94A2AFEDF0E439206C8F\r\nBuildStartedUtc: 2026-08-17T16:52:58.3823662Z\r\nBuildCompletedUtc: 2026-08-17T16:53:15.9320124Z\r\nUnityVersion: 6000.3.21f1\r\nUnityEditor: C:\\Users\\godho\\Documents\\Codex\\UnityEditors\\6000.3.21f1\\Editor\\Unity.exe\r\nBuildTarget: StandaloneWindows64\r\nBuildType: Release (non-Development)\r\nFirstScene: Assets/FamilyCompany/Scenes/Prototype01.unity\r\nCanonicalProject: C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\r\nUnityLog: C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Builds\\Windows\\Automation\\Deploy\\candidate-build\\logs\\build-20260817-165258-unity.log\r\n",
+  "observedUtc": "2026-09-06T06:44:47.7035932Z",
+  "sha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+  "scope": "Read only; not launched, changed or approved as current",
+  "lastWriteTimeUtc": "2026-08-17T16:53:14.4489380Z"
+}

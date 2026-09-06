@@ -12,9 +12,9 @@
   sprite·atlas·PSB·R-series·분리 신체·보행 프레임은 mesh/texture/motion donor나 fallback으로 사용하지
   않는다. 시작 문서와 실행 순서는 모두
   `Docs/FAMILY_3D_CHARACTER_STANDARD.md`다.
-- 네 가족 identity turnaround는 준비됐고, 공통 3D 보행·방향·루트·mute 구조는 Styloo proxy V3로만
-  검증됐다. 최종 네 가족 textured Humanoid mesh는 아직 없으며, proxy와 Blender V1/V2를 최종 캐릭터로
-  오인하지 않는다. production/default/Downloads 실행본은 사용자 승인 전 바꾸지 않는다.
+- 현재 일반 게임의 몸체는 Player V8 × 2, Father V19 × 2다. 누나/엄마는 독립된 가족 identity를 유지하되
+  아들/아빠의 3D 외형을 임시 사용한다. 구형 2D나 Styloo proxy를 현행 기본 캐릭터로 안내하지 않는다.
+  누나/엄마의 최종 모델은 추후 추가한다. 최신 실게임 검증/배포 차단 상태는 PROJECT_STATE가 소유한다.
 
 - **`b397af9`의 두 차단 회귀는 `a9c6885e`에서 수정되어 더 이상 현재 기준선이 아니다.** 배치 편집기의 pending
   분기는 preview 셀을 갱신한 뒤 같은 frame에서 `Input.GetMouseButtonDown(0)` → `ConfirmPreview()`까지
@@ -26,16 +26,17 @@
   실제 D3D11에서 통과해야 한다.
 - R18 arrival `ce9e3ae4d94a7365c0447103d2ad904013ef58a1`는 독립 static과 Unity `6000.3.21f1` capture-free Player exit 0 검증을 통과한 뒤 현재 integration에 단일 merge되었습니다. 가족 4명의 Work 0..5, 동일 좌석 atomic 정렬, first-walk와 safe egress, 가구 무변형이 확인되었습니다.
 - 과거·회귀 실행 payload는 evidence 보존 후 허용 root에서 제거되었고, GitHub history·tags·Releases·Actions 감사 결과 executable payload는 0입니다. `da5c6e7f9f9d48f0eada245cff727435536c91dd`에서 도입한 CI guard가 향후 tracked Windows Player payload를 fail-closed 차단합니다.
-- 현재 실행 payload는 두 곳뿐이다. 저장소 `Builds/Windows/FamilyCompany_Playtest`는 clean HEAD `8fa5fa74`의
-  Release build이고, 배포본 `%USERPROFILE%\Downloads\Family`는 한 커밋 앞선 `befe937e`다. LKG는
-  `Downloads\Family.last-known-good.<UTC>.<sha>` 한 개로만 보존한다. `%USERPROFILE%\Downloads\FamilyCompany_Playtest`
-  경로는 현재 존재하지 않으며, `Tools/FamilyCompanyBuild.Common.ps1`의 기본값만 아직 그 옛 이름을 가리킨다.
-- 배포본이 HEAD보다 뒤에 있으므로 `Downloads\Family`의 실행 결과를 현재 HEAD의 증거로 사용하지 않는다.
+- 집·회사 공통 메인 경로는 `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`다.
+  집의 실제 파일은 현재 `9144fa0e` 구버전이며 아직 패치 worker가 없다. 검증된 첫 전체 설치가 필요하다.
+  날짜별 QA/Builds/LKG 경로를 메인으로 안내하거나 실패한 테스트 payload를 복사하지 않는다.
+  과거 `Downloads\Family`/`8fa5fa74` 배포 기록은 현행 HEAD/패치 성공 증거가 아니다.
 
 ## 현재 구현 기준선
 
 - 새 게임은 `2000-01-03 08:50`, 가족 4명, 자본금 500만 원으로 시작합니다.
-- 사무실은 13×13 바닥과 외곽만 있는 빈 상태로 시작합니다. `회사 → 사무실 관리`에서 책상·의자·정수기 등 카테고리별 가구를 구매하고, 모든 가구를 회전된 footprint의 정확한 타일 중심에 배치합니다.
+- 사무실은 13×13 바닥과 외곽만 있는 빈 상태로 시작합니다. 현재 구매 대상은 책상·PC·의자 한 세트
+  40만 원/3칸이며, `회사 → 사무실 관리`에서 네 방향으로 회전하고 정확한 타일 중심에 배치합니다.
+  겹침/기존 물건 점유는 거부합니다. 다른 가구는 추후 추가합니다.
 - 가족 4명만 `09:00`~`09:03`에 1분 간격으로 출근하고 `18:00`부터 퇴근합니다. 직원 8명은 시작 인원이 아니라 향후 채용 후보입니다.
 - `MainNavigationV2`의 회사·인사·사업·연구·투자 5개 허브를 사용합니다. 회사 허브는 사무실 편집, 사업 허브는 계약/제품, 투자 허브는 주식으로 연결됩니다.
 - 계약 고객은 `T0 → T1 → T2 → T3 → T4` 순차 해금과 등급 하락/회복 규칙을 가집니다.
@@ -45,8 +46,8 @@
 - 가족 4명은 같은 10,000 체력 기준으로 시작하며, 업무 중 체력이 25%까지 내려가면 실제 배치·접근·사용 가능한 정수기·자판기·휴식 좌석을 찾아 회복한 뒤 원래 자리와 남은 업무로 돌아갑니다.
 - 캐릭터 방향과 걷기 애니메이션의 정본은 요청 방향이 아니라 프레임의 실제 이동량입니다. 빈 사무실 산책도
   destination을 가진 타일 중심 경로를 쓰며, 각 cardinal 구간의 pivot을 끝낸 뒤 translation합니다.
-- 현재 production의 2D 캐릭터는 3D migration 전 보호되는 legacy runtime일 뿐 신규 캐릭터 제작 입력이
-  아닙니다. 최종 3D 네 가족이 모두 사용자 승인을 받은 뒤 별도 migration commit으로만 교체합니다.
+- 현재 일반 화면은 3D 캐릭터/가구를 사용합니다. 남아 있는 legacy 소스/회귀 fixture는 현재 외형이나
+  신규 캐릭터 제작 입력이 아닙니다. 원본 승인 스케일과 보폭을 임의로 바꾸지 않습니다.
 - 기본 렌더는 `1920×1080`, native scale 1, pixel snap을 사용하고 작은 창은 compact UI로 대응합니다.
 - 주식은 회사 자금과 연결되며 시장 시간, 7+7 호가, 가격·시간 우선 FIFO, 수수료·세금, 결정론적 저장 규칙을 유지합니다.
 

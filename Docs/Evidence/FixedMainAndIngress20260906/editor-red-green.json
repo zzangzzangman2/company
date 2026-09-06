@@ -1,0 +1,34 @@
+[
+  {
+    "sha256": "A14A453D2F7731C352509884BC9EEACB6D1F6A9961CC39615450D55DE60F4C8C",
+    "log": "Artifacts\\NormalAutonomy\\ingress-grid-before.log",
+    "lines": [
+      "InvalidOperationException: Ingress follower falsely blocks the indoor leader's rounded cell."
+    ]
+  },
+  {
+    "sha256": "A56172649EAFC93B15DC29D8FC93692678EDB04BEF85D050BA32011509656EB2",
+    "log": "Artifacts\\NormalAutonomy\\ingress-grid-after.log",
+    "lines": [
+      "ATTENDANCE_GRID_HANDOFF: PASS same-cell followers do not deadlock indoor reservations; body collision retained",
+      "OFFICE_MOVEMENT_FACING_NAVIGATION_VALIDATION: PASS | seeds=128 paths=1152 facingChecks=9 gaitChecks=12 | characters=12 directionChecks=288 movingFrames=2642 maxFacingError=22.4990deg minDot=0.923886 reversals=96 reverseFacingFrames=0 movingDuringPivot=0 corners=4 unnecessaryCornerStops=0 blockedPivots=96 collisionSlides=96 lowMagnitudeBoundaries=2 gaitPartitions=27 maxGaitClosureError=0.00000054 interactionFacing=1 managedHeapGrowth10k=0"
+    ]
+  },
+  {
+    "sha256": "A9E2E5803C25E90EC05A2A1FF8433A132F0DB8E611890E6D078F33EF3BF683D4",
+    "log": "Artifacts\\NormalAutonomy\\leader-traffic-before.log",
+    "lines": [
+      "ATTENDANCE_GRID_HANDOFF: PASS same-cell followers do not deadlock indoor reservations; body collision retained",
+      "InvalidOperationException: The indoor door leader incorrectly yields to its approaching follower."
+    ]
+  },
+  {
+    "sha256": "8A081A4D4A6F9750BD3206A3BF04DDC1D6E509BA4E631BA2B4C5A135A3902692",
+    "log": "Artifacts\\NormalAutonomy\\leader-traffic-after.log",
+    "lines": [
+      "ATTENDANCE_GRID_HANDOFF: PASS same-cell followers do not deadlock indoor reservations; body collision retained",
+      "DOOR_LEADER_TRAFFIC_PRIORITY: PASS leader exits first, follower waits; IDs do not reverse queue",
+      "OFFICE_MOVEMENT_FACING_NAVIGATION_VALIDATION: PASS | seeds=128 paths=1152 facingChecks=9 gaitChecks=12 | characters=12 directionChecks=288 movingFrames=2642 maxFacingError=22.4990deg minDot=0.923886 reversals=96 reverseFacingFrames=0 movingDuringPivot=0 corners=4 unnecessaryCornerStops=0 blockedPivots=96 collisionSlides=96 lowMagnitudeBoundaries=2 gaitPartitions=27 maxGaitClosureError=0.00000054 interactionFacing=1 managedHeapGrowth10k=0"
+    ]
+  }
+]

@@ -2,7 +2,63 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## 2026-09-06 current: normal furnished navigation corrections; public game Release BLOCKED
+## 2026-09-06 current: fixed main entry/latest-only boot; attendance and live hand reach still BLOCKED
+
+- **Background only.** No desktop input, foreground launch, browser, generation, public game Release,
+  user main/Downloads/save change or shutdown. The latest hidden Player runner detected a nonzero window
+  handle during shutdown and stopped its owned process; no further Player was launched after that guard.
+  Do not claim uninterrupted no-window PASS for that run. No owned Unity/Player process remains.
+- User's fixed main: `C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`; company uses
+  `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`. Exact instructions and canonical
+  source location are in **[MAIN_GAME_ENTRY.md](MAIN_GAME_ENTRY.md)**. Repository `RUN_WINDOWS.cmd` now
+  points only there, never Builds/QA and never invokes a build. It rejects a missing/worker-less install.
+- **The existing home file is still old** (`9144fa0e`, 2026-08-18, no patch worker). Source push cannot add
+  updater code to that binary. The first verified full Windows package must be installed once at the
+  fixed path on each PC. Thereafter normal play requires no Unity/git pull/build. This first installation
+  and the public game Release have NOT happened. Preserve the old file/saves; do not promote failed QA.
+- Normal boot now requires successful latest **public game Release** lookup and file integrity.
+  No previous-version/offline fallback or UI button remains. Missing workers block a normal Release;
+  explicit prepublication diagnostics remain separate. Real worker fault tests with an intact old inert
+  install: **6/6 PASS** (network, missing game, draft × both worker entries). Core updater: **51/51 PASS**.
+  No new actual internet patch or presented loading-UI test is claimed. Prior local Unity restart evidence
+  below is scoped historical functional evidence; its failed gameplay payload has been removed.
+- Source `22f0be5b` replaced whole-corridor single-owner attendance with per-actor safe ingress claims and
+  the actual door axis. Three actors released on time but rounded-cell ownership deadlocked the leader.
+  `630350c7` separates ingress capsules from whole indoor cell reservations. Independent red→green fixture
+  and normal Player navigation PASS: 6,960 rows, max no-progress 1.77014s, rail error 0.0000256875, errors 0.
+  Mother still released 09:04; nobody reached Working by 09:20. This is a failed attendance candidate.
+- Last actual Player source **`68142d2df9aca9d09080c22461e54b0a8fe84a38`**, Unity 6000.3.21f1
+  (`c02631ffc030`), FastQA `20260906-153146-343`, 26.821s total / 24.635s build. Pending spawn retries now
+  run at 0.05s with a real elapsed-time 0.35s cooldown; normal autonomy cadence is unchanged.
+  Extended normal observation retains the old 09:20 failure and observes until 09:50 for diagnosis.
+- Last actual releases: Player **09:00**, older sister **09:01**, Father **09:02**, Mother **09:04**.
+  First actual Working: **09:33 / 09:24 / 09:22 / 09:24** respectively. All four did enter and sit normally,
+  but the exact due/09:04 progress gate and 09:20 diagnostic gate remain FAIL, not waived.
+  Independent navigation: 8,064 rows, max no-progress 1.79146s, rail error 0.00002625, collision/errors **0**.
+- New source-only traffic correction after that run: an indoor leading actor leaving a corner keeps
+  priority over its approaching follower, instead of yielding by alphabetical ID and retreating into
+  another aisle. Opposing/crossing ties retain ordinal priority; swept body collision is unchanged.
+  Recorded-geometry fixture FAIL before, PASS after, and existing 128-seed/1,152-path/shared gait suite
+  PASS. **Not yet rebuilt or observed in a normal Player** after the window guard; no runtime PASS claim.
+- Live 30Hz pose evidence includes seated blend, both hand targets, knees and ready. All four directions
+  have 2,818 settled Working samples; 20 complete transitions take 0.3840–0.4339s (standard blend 0.42s).
+  Transition outliers are retained. **111 settled Mother/SouthWest samples fail hand reach**, maximum
+  individual error 0.032569 world versus 0.015 gate. Knees were within the gate. This is not merely the
+  startup blend; no pose/scale/clip change was made. Continuous skin/foot-slip/user acceptance remains open.
+- Failed payloads `22f0be5b`, `630350c7`, `68142d2d` were hash/identity-fenced and recycled in full
+  (166 files each; exact cache absent). Evidence/source/warm Library/Bee/saves/unrelated files retained.
+  The older runner omitted `process.json` on its guard exception; retirement used the actual explicit
+  failed attendance receipt, with unknown process exit left null. The runner now records guard failure
+  and owned-process stop in finally. That bookkeeping change is syntax checked, not Player-tested.
+- Portable proof: **[FixedMainAndIngress20260906](Evidence/FixedMainAndIngress20260906/README.md)**.
+  Source push is not playable delivery. Remote inventory is checked before the final source push.
+- Next: investigate the shutdown window handle without touching the user's desktop; run the new leader
+  priority through hidden normal attendance only after that constraint is safely met; diagnose settled
+  Mother/SW reach in real work, then complete remaining visual/native-input acceptance with the user.
+  Only after verified gameplay and approval: first game Release, initial fixed-main install and actual
+  GitHub patch/download percentage/restart proof. Do not rebuild or ship an already failed identity.
+
+## 2026-09-06 earlier: normal furnished navigation corrections; public game Release BLOCKED
 
 - **Background only remains mandatory.** No desktop input, foreground game/editor, browser, original
   main/Downloads mutation, paid generation, Release publication or shutdown in this continuation.

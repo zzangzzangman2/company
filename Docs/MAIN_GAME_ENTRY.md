@@ -11,6 +11,8 @@
 - 바로가기는 이 파일만 가리킨다. `Artifacts/FastQa`, 날짜·커밋별 테스트 EXE, AppData의 특정 버전 EXE를
   메인으로 삼지 않는다. 이 폴더의 `FamilyCompany_Data`, `UnityPlayer.dll`, `FamilyCompanyPatch`는 한 설치
   단위이므로 EXE 하나만 옮기지 않는다.
+- 저장소의 `RUN_WINDOWS.cmd`도 이 고정 경로만 연다. 로컬 Builds/QA를 실행하거나 자동으로 빌드하지
+  않으며, 설치가 없거나 패치 worker가 없는 구버전이면 안내 후 차단한다. 이번에는 실행하지 않았다.
 
 ## 지금 상태와 최초 한 번의 설치
 
@@ -48,6 +50,10 @@
 - 집/회사에서 **플레이할 때마다 빌드하지 않는다**. git pull은 개발 소스를 받는 명령이며 게임 업데이트가 아니다.
 - 회사 Codex는 이 문서와 `PROJECT_STATE.md`, `GITHUB_PATCHING.md`부터 읽고, 고정 메인 경로를 날짜별
   실행본으로 바꾸거나 로컬 소스 push만으로 게임 패치 배포를 완료했다고 보고하지 않는다.
+- 현재 소스 작업 위치는 `C:\Users\godho\Documents\Codex\fc_agents\integration_p0`, 브랜치 `main`이다.
+  회사의 소스 체크아웃 경로는 달라도 된다. 집의 예전 2026-08-25 작업 폴더에서 이어서 수정하지 않는다.
+- 집/회사 게임 저장 파일의 자동 동기화는 이번 기능에 포함되지 않는다. 패치가 최신이어도 각 PC의
+  세이브는 따로 유지되며, 기존 세이브를 패치 파일로 덮어쓰지 않는다.
 
 배포 검증·현재 차단 항목은 [PROJECT_STATE.md](PROJECT_STATE.md), 구현 계약은
 [GITHUB_PATCHING.md](GITHUB_PATCHING.md)가 소유한다.

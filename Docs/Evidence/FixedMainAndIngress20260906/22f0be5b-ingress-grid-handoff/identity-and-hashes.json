@@ -1,0 +1,846 @@
+﻿{
+    "expected":  "All required gameplay assertions pass",
+    "rollback":  "none",
+    "actualExitCode":  1,
+    "oracle":  "Hidden normal Player observation",
+    "files":  [
+                  {
+                      "path":  "FamilyCompany_FastQa.exe",
+                      "bytes":  667136,
+                      "sha256":  "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556"
+                  },
+                  {
+                      "path":  "UnityCrashHandler64.exe",
+                      "bytes":  1669552,
+                      "sha256":  "38A87BF9C83B54CDA605F4FEACED264E6010B69C1F47C80C567213C5C07CC971"
+                  },
+                  {
+                      "path":  "UnityPlayer.dll",
+                      "bytes":  36734888,
+                      "sha256":  "35F489B6A7753D536CE2E7B1BD1F729AFB8B4E70B43CAAA01AF03D1C20F64D6C"
+                  },
+                  {
+                      "path":  "D3D12\\D3D12Core.dll",
+                      "bytes":  4725304,
+                      "sha256":  "625BD40005B1C3708695D5256ECF230D278E6B8EDBA5A88AF70F3D91324F3052"
+                  },
+                  {
+                      "path":  "FamilyCompanyPrototype_BurstDebugInformation_DoNotShip\\Data\\Plugins\\x86_64\\lib_burst_generated.txt",
+                      "bytes":  60653,
+                      "sha256":  "616AF08D1E14396DEF6D7147D04E37A31EF1F866EC7A7786115B02BD15866C1C"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\app.info",
+                      "bytes":  36,
+                      "sha256":  "DC492AC0FED43D41A7C2E2DAD992CE9A56E3CFCFE1CD8E99F31368B71FD4B690"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\boot.config",
+                      "bytes":  156,
+                      "sha256":  "2DE40638BD44B3706C238C5C847DFC054CAA9C6FBF14F7869885B3D517D882E0"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\globalgamemanagers",
+                      "bytes":  119156,
+                      "sha256":  "4FB21E302A6EFF737B4B1244DC2D3F4221A5DE4CF5A2B12FEA940A49783CE922"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\globalgamemanagers.assets",
+                      "bytes":  103124,
+                      "sha256":  "6638B4C5DBD8CE47ADA18320C6068DF3864B1DA9B4ADC3680EC02E269A9054F3"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\globalgamemanagers.assets.resS",
+                      "bytes":  2796240,
+                      "sha256":  "39DD38FCD8DD95D41D6D55FE16A448D29FE2C31D9A162C825C24C6D99A893D7A"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\level0",
+                      "bytes":  76100,
+                      "sha256":  "59BFCCC28133244760D96F29CE425DC956FC11A6E2220118A133216C26F00086"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\level1",
+                      "bytes":  9720,
+                      "sha256":  "972CC93958F8C4FE23397E8C04D23798B95B6D704179CF3C262EA8317BF6BE4D"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\resources.assets",
+                      "bytes":  51488460,
+                      "sha256":  "BDEF647763510132FD90B98E551C6A46489FCAB25808BA8414887EB8DEDB4725"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\resources.assets.resS",
+                      "bytes":  511345600,
+                      "sha256":  "DBEADF7715028CFC34048590330780D40E1709DA86A150931841E36025B8E06A"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\resources.resource",
+                      "bytes":  19510688,
+                      "sha256":  "4DA5B018061971572F37D0DF616DEEAAECD1B60288F8E2A80427FF99F308DFFC"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\RuntimeInitializeOnLoads.json",
+                      "bytes":  12308,
+                      "sha256":  "6782B2EEC4DD7752FF37735B1523428EE31F05ECE9E7B60CD2E38A63F949A6F5"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\ScriptingAssemblies.json",
+                      "bytes":  3726,
+                      "sha256":  "482013BB3AEF9453B3FB60EA374F9374C21CEC17246FBB3E8ACEEC2E0A09ADD8"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\sharedassets0.assets",
+                      "bytes":  1741676,
+                      "sha256":  "D9523DCAAF1176C80C9EA47A62BD4B569AA590AE0EEF5431829615729918E3B9"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\sharedassets0.assets.resS",
+                      "bytes":  336068608,
+                      "sha256":  "219416A068AC6BE4A02B21E41E8F9D7326E0A1980FFF6FAF3C871E1EDB8425E3"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\sharedassets1.assets",
+                      "bytes":  49784,
+                      "sha256":  "8AA86C35781E27641ADEA1CB90B76CA4E8AECFEDA5EAD2B3E3A31FD9B2739BC1"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\sharedassets1.assets.resS",
+                      "bytes":  17653760,
+                      "sha256":  "71B49129E332B5019C3C24B34D4A0868006CFEF7668C622F1D258FCAAA4BB3AF"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Assembly-CSharp.dll",
+                      "bytes":  220672,
+                      "sha256":  "9B0FDEF31A6D88347A68C33C15D62164B0ECD9BAB66FA18AA5305118543BC9CB"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\FamilyCompany.Infrastructure.Unity.dll",
+                      "bytes":  13312,
+                      "sha256":  "2E3D3BE0FE1EDAF13AB10F843620FE8A38CC9554492B14A17A18ACAD67849723"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\FamilyCompany.Presentation.Unity.dll",
+                      "bytes":  1583616,
+                      "sha256":  "DAB7D0FE295E7458DEDF4CFA07F190BD8B6F250CDABD5806EAA3CEDD4B60A582"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\FamilyCompany.Qa.Core.dll",
+                      "bytes":  109056,
+                      "sha256":  "1F5BB65B3A79628582E4742167C033F2A90419BC6849E61588E475BCA2044D13"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\FamilyCompany.Save.dll",
+                      "bytes":  46080,
+                      "sha256":  "81D3F427DAD019C56F6D4C0D7464308FAD673AB1D3CC7FB065046D60B056160D"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\FamilyCompany.Simulation.dll",
+                      "bytes":  636416,
+                      "sha256":  "689533FCE874A8860DF9E681318F9FAB74524E3CA88ABAB37896670188F033E0"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Mono.Security.dll",
+                      "bytes":  241152,
+                      "sha256":  "618009319DBF3AE374F9B5DC0D0522E1E1BDD172200C120A5471747B7991A584"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\mscorlib.dll",
+                      "bytes":  4632064,
+                      "sha256":  "6C76E06E6D44CF0F39BF59E6A90770968B70093AD4C1572DFBC5E46E431C5FBF"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\netstandard.dll",
+                      "bytes":  90112,
+                      "sha256":  "6AE62E082DC494A2433984177F60CA4DB5FAE69B1F360A8B33754172B310B8C5"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.ComponentModel.Composition.dll",
+                      "bytes":  257024,
+                      "sha256":  "0C3E81771A5FE9657BEA02887996DE72606C3CB247E4FBE413F743F40E2AF244"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Configuration.dll",
+                      "bytes":  124928,
+                      "sha256":  "04907729E87A101E62D3A5C93CFA16688BEE745D05440D6DAA0C541964BE27AB"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Core.dll",
+                      "bytes":  1113088,
+                      "sha256":  "A5E7D47313DA0ECA0B92A901A30498F5E970916FAF63B70B74DD62B09760ED72"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Data.DataSetExtensions.dll",
+                      "bytes":  29696,
+                      "sha256":  "498F14C37D83F946A47A79E01DE777E62F269EE9C3820F2026B59AB1C1B9222F"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Data.dll",
+                      "bytes":  2125312,
+                      "sha256":  "427478545CE66B632414CA838088EA073F250ED16B21C70005F48CB571350E47"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.dll",
+                      "bytes":  2641920,
+                      "sha256":  "7019D6B6DBFA07CF30F62E7D3CCB969F70CBF001FD72112938FFB535C7F75D81"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Drawing.dll",
+                      "bytes":  489984,
+                      "sha256":  "E182E688223ACEDB8135227E8FBFF17D5ED22F47F81141AA9CB96EF1AB9926FC"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.EnterpriseServices.dll",
+                      "bytes":  44544,
+                      "sha256":  "84AF394AD863E31407EB2B9555CA7E96A9F1966630F5D7F0EEC54F0011F6BABC"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.IO.Compression.dll",
+                      "bytes":  114688,
+                      "sha256":  "80421A67B4162A5F1B4AAD6A8327C6D1FB4B04DEDD39DAE14A770B812594FAE2"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.IO.Compression.FileSystem.dll",
+                      "bytes":  18432,
+                      "sha256":  "2730D2A27F9362259A406EA14727E5F0A71BC21A6825BE94F8623A84BD9F9C79"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Net.Http.dll",
+                      "bytes":  122880,
+                      "sha256":  "3CD3AC19050D5031C13644CD87958AD8029B79CE16C7747FAF3D0542E7FB45A3"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Numerics.dll",
+                      "bytes":  119296,
+                      "sha256":  "AC9224B32355A09F09B706CAB568384F64CF8116825C5911CEF1E13221C61C38"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Runtime.dll",
+                      "bytes":  12288,
+                      "sha256":  "E0A7334B7BA419AAAB6BD3BB6992D693E689341A9178172C9BF99C2AA6A085BD"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Runtime.Serialization.dll",
+                      "bytes":  934400,
+                      "sha256":  "1152EF687DBE39E0CCB6B9A68F6501004415A729072DF29ABAB3BC7C66840217"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Security.dll",
+                      "bytes":  320000,
+                      "sha256":  "2101A4DD4475285F96B1AC3BA1715A52AA8067690709E675CC49A9EB8ED901A4"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.ServiceModel.Internals.dll",
+                      "bytes":  215040,
+                      "sha256":  "888EC94A59C127854871B76AFA49FDCEFDF723C0F0B6FD78E87F73A8495B63B5"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Transactions.dll",
+                      "bytes":  35328,
+                      "sha256":  "F65DBC257D26A361DCC01EDD58BF3E542D186C8EE492A4F7A62B0DD7D59F7050"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Xml.dll",
+                      "bytes":  3160064,
+                      "sha256":  "79194220ADFCF027A334C87B1ADCC6D07B9660A4061E04B3D9500C10D30F7D49"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\System.Xml.Linq.dll",
+                      "bytes":  136704,
+                      "sha256":  "4F5D6BF313CBF091E7BFF83D07DD03ED93D0ECB3DDB025AE786AADD6B5F477FB"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.2D.Animation.Runtime.dll",
+                      "bytes":  87040,
+                      "sha256":  "26ABBCADD8355381E454F613F754EDAD343BBBAB613A5D5A2146561CF9D00683"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.2D.Common.Runtime.dll",
+                      "bytes":  58368,
+                      "sha256":  "7FB602DA41F533A558ECD0765A916FF6A868273738715794D88FC7A7D7B3FA94"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.2D.IK.Runtime.dll",
+                      "bytes":  27136,
+                      "sha256":  "D9D80936F3B8BA0FD0F5E6E03C3F04678B7C550FD4EFFB9A4913073399A134B6"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.Burst.dll",
+                      "bytes":  304640,
+                      "sha256":  "11DA77FA69DBFEAA2B176DF8CB035179C5C03427FE171B9099AA3E8B9E3A3829"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.Burst.Unsafe.dll",
+                      "bytes":  5632,
+                      "sha256":  "9D9C1FF52411DECBEE5D9F0D1CD61EBEAA222077AA77A52101EA3DEBAFAE98E2"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.Collections.dll",
+                      "bytes":  453632,
+                      "sha256":  "3676182E3A7B9923A00A7A412CA2B0FD1AFF088284DC2C10F9FCA2BD5D0C86FE"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.Collections.LowLevel.ILSupport.dll",
+                      "bytes":  5120,
+                      "sha256":  "FF50383F807F9692E4913B97E47D86FEFCB8FAA33D6D48CD3E3FD6FC7FFB448D"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.InternalAPIEngineBridge.001.dll",
+                      "bytes":  6656,
+                      "sha256":  "DE631C521B0BA4D1C0000FFF7427B84DCBB2B1BF6D263B8365B836D6F611258E"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.InternalAPIEngineBridge.004.dll",
+                      "bytes":  4608,
+                      "sha256":  "43CEE541D0D787A135BD8F428B9FEF705853CE4438F843B6883522EDEBF07BE0"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.Mathematics.dll",
+                      "bytes":  752640,
+                      "sha256":  "B9B406FFA90B647D98DDF318E0601CA39345817203337F00AD9C99A881BE428A"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\Unity.TextMeshPro.dll",
+                      "bytes":  445952,
+                      "sha256":  "C483C183254C1B40597604FF7B9DADB61D7EB838784DD586BFB406324F5124C9"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.AccessibilityModule.dll",
+                      "bytes":  51120,
+                      "sha256":  "B938CB9A95F53D398F884C9E64F0CCA94DADB1E46161A9703C4E8D626049F73A"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.AdaptivePerformanceModule.dll",
+                      "bytes":  124840,
+                      "sha256":  "9BF45A2FC40D8223E3AD9E066B614E982D9E4CBA3C4C54A7BA2904090885F794"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.AIModule.dll",
+                      "bytes":  77224,
+                      "sha256":  "6C7175DA9F74B999BB21308729972C626DA8E0AA4FE885F8F94BBB968F98DDC7"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.AMDModule.dll",
+                      "bytes":  21928,
+                      "sha256":  "81CAE0A385AB12B78F1D1C5B32463A7D74BE5E12213518BEA2328F87CBF3267A"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.AndroidJNIModule.dll",
+                      "bytes":  121776,
+                      "sha256":  "775359CBAA592BCE728B36BFD150C11C457D95C771E8669ADABFE193E3EDCE13"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.AnimationModule.dll",
+                      "bytes":  225200,
+                      "sha256":  "D35BC846AFBDF0D404B743296FC26303DB8F9EED5DCA2D0172078F62652B5659"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ARModule.dll",
+                      "bytes":  25520,
+                      "sha256":  "04057A2C10D7B3775F469C23C732DA29B64C7642378607FADF35BB9FC651363B"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.AssetBundleModule.dll",
+                      "bytes":  41904,
+                      "sha256":  "7E3CE4D7C118BF933FD36DA08DDBCE84F9CFA2063D81D51FABD9D557EC19DF42"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.AudioModule.dll",
+                      "bytes":  142768,
+                      "sha256":  "C6E1F30F2F481773971371B0EA65383EC80BCA8574F7D7DB3385AE07655DB93D"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ClothModule.dll",
+                      "bytes":  36272,
+                      "sha256":  "5D1E50260BB45EE6CBF7B3905356E48DFCA89F840D51FBC1FA79666B91F6A805"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ClusterInputModule.dll",
+                      "bytes":  28080,
+                      "sha256":  "2D319B6D5E9195F26D85E31AC93A1EA6A8DE869DACDB0163D06A0AD2743DBCAC"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ClusterRendererModule.dll",
+                      "bytes":  26536,
+                      "sha256":  "978343F296BF550D8BBEB11A159AEAE93DD739919355ED02ACDA86C9E00BF8E9"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ContentLoadModule.dll",
+                      "bytes":  32680,
+                      "sha256":  "BC86A7A83EF517632B8D616B6505567B9362B4B1CE648E17E2D68D4C1C968A82"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.CoreModule.dll",
+                      "bytes":  1984432,
+                      "sha256":  "9D7C73852C89503F348B05A8337F280FA813CF8E885D52C86A8C9580E68EC76B"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.CrashReportingModule.dll",
+                      "bytes":  26544,
+                      "sha256":  "15FB1DE26E84C876CA51AF99D5445C0634ED3F4FFE8FF8DD4FC0FB4EE1EB36D2"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.DirectorModule.dll",
+                      "bytes":  41904,
+                      "sha256":  "1415C13A6951425EB83B281CE2C22985AC1B671D052760BD56B46652D4B125AF"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.dll",
+                      "bytes":  197544,
+                      "sha256":  "1908E048275864AF9CD99FD78E7C9D0F9EBD08C271830B575DA213951B3393E9"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.DSPGraphModule.dll",
+                      "bytes":  31664,
+                      "sha256":  "1860E8E8258763C550713A192592A6518AD36EA21B217DA074C4766E4AF7FB02"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.GameCenterModule.dll",
+                      "bytes":  46000,
+                      "sha256":  "7104F4A9250469FD511F7C66731A6CBCAF9E9305507D65D10E41B214CD8A4573"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.GIModule.dll",
+                      "bytes":  24488,
+                      "sha256":  "AF152BC998967D23C2C208BFE18AC32844DAB6F8B19E16B21537191547BE4383"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.GraphicsStateCollectionSerializerModule.dll",
+                      "bytes":  14256,
+                      "sha256":  "FAC5A539925FBFD71648412DA7A63DEA6DC07D336FF9818FA515AAD4DCEE1124"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.GridModule.dll",
+                      "bytes":  30640,
+                      "sha256":  "F300E06A4431B535BF9EBFEA4292F96C6F46C7D36FECCDD5144224C38D2DC8D5"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.HierarchyCoreModule.dll",
+                      "bytes":  109488,
+                      "sha256":  "BF0DC55D5287447F2DB62F2C8830B4A18AB7C992090A97D6416184B7F76294B9"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.HierarchyModule.dll",
+                      "bytes":  102312,
+                      "sha256":  "DEC942F79F73CD4C422839D8FCA4DFD0CCA3A2883D772A06DD4565A0C54D8D26"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.HotReloadModule.dll",
+                      "bytes":  24496,
+                      "sha256":  "B23DA30D411AA5FCD1446B346EEC73AEA5CB723C5DD547855A0ECACAEAFC8B94"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.IdentifiersModule.dll",
+                      "bytes":  16808,
+                      "sha256":  "0358CD6CD686C340797700E6E11321B7D9E2E03196DCAB4164831336960CDC09"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ImageConversionModule.dll",
+                      "bytes":  31152,
+                      "sha256":  "DCCC9CCFB963999D0F56E75E7F03B139DFB4360765CB9821D68905D8E3BB983D"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.IMGUIModule.dll",
+                      "bytes":  214440,
+                      "sha256":  "4CAC987739607C9AC2F4DD00A83C083FAF43A4FD331312895A5C833D1E3CF4DA"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.InputForUIModule.dll",
+                      "bytes":  57768,
+                      "sha256":  "05A7B03438B888CA8354125AB69139A8FDC41380B251887086593F4F41193909"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.InputLegacyModule.dll",
+                      "bytes":  45488,
+                      "sha256":  "2606EF2449DCC94220A349FA13C8A46AB337C8E68175C19A0CFA1EFE16D8ADCE"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.InputModule.dll",
+                      "bytes":  28584,
+                      "sha256":  "2D7B2CF3ECB9F2815835BDC8F3919A79ADA4829E4EC1CFD513A069C8EAE95220"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.InsightsModule.dll",
+                      "bytes":  14256,
+                      "sha256":  "2F112D7CB9A57199E805EAC1C8657AFED4BD006E3AAE62C117958938F5D7133B"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.JSONSerializeModule.dll",
+                      "bytes":  27056,
+                      "sha256":  "B5A4D55026FB3A339B8036FA0A71C7056D8C1F22BC92A64D2C7B50BD16FE0FF1"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.LocalizationModule.dll",
+                      "bytes":  27056,
+                      "sha256":  "984EC80263A72D8EC1357F71B91F9BB4EDB7AA8FE3FBE3F9963777F20223AA36"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.MarshallingModule.dll",
+                      "bytes":  83880,
+                      "sha256":  "A7927AC8A453BEF37AD7A8E399F90160A5F2EB4C21C0CA51E9548576025CA3C6"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.MultiplayerModule.dll",
+                      "bytes":  17832,
+                      "sha256":  "ACF1C328505C1C72557B2E40636BC13A67CA8DF53478CC8867EEE9956035584A"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.NVIDIAModule.dll",
+                      "bytes":  40880,
+                      "sha256":  "08B0ECF62A12B3948DC85F37E8452C363BCB718828BFCB6DC55061F48BC33EAF"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ParticleSystemModule.dll",
+                      "bytes":  171952,
+                      "sha256":  "50531FD98B502BB1E34A93709F1E1DE588C69D12D6DDD8AB6D7528B5FC76E3F9"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.PerformanceReportingModule.dll",
+                      "bytes":  25008,
+                      "sha256":  "776DA621A59C52F1BF1411590569D0FB6E700D0C297FD9F3F390F1C2C044DCF5"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.Physics2DModule.dll",
+                      "bytes":  586664,
+                      "sha256":  "2D8146FAEF524030F9CED62547CF065F353AF34B7AAAE483290AA503AB3B2E63"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.PhysicsBackendPhysXModule.dll",
+                      "bytes":  14256,
+                      "sha256":  "5667D6732F1680A1EECD6263C3A00D11656D9FDB67BE86463777805BDCF31C3E"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.PhysicsModule.dll",
+                      "bytes":  183720,
+                      "sha256":  "111DBF28BC7F52939BA3263AA097C34C824F6392F4534330A6729E04F056F085"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.PropertiesModule.dll",
+                      "bytes":  134064,
+                      "sha256":  "67C369BE2BE35FDE1B3AB82672E141142D593030F5F59F075A41322FEFB08AC6"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.RenderAs2DModule.dll",
+                      "bytes":  25512,
+                      "sha256":  "75260CF6E28B4D0722619B702576E99C0DC745D8051B67D0B28609F61BF1FF82"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll",
+                      "bytes":  24488,
+                      "sha256":  "92DA1547AB20FE2C5DDF24154E8C2B9410DECD2DD5D2E861CC7AB850F156DBCB"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ScreenCaptureModule.dll",
+                      "bytes":  26544,
+                      "sha256":  "9719A51D44409A5FE1A0D8A09941370F6917098223EB4E0C5A91A2CB14C9D870"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ShaderRuntimeModule.dll",
+                      "bytes":  25512,
+                      "sha256":  "75D3475FB66E7683CB6B899C794EE6DC74496193DC86BDA5BD351F2F94E9E34F"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.ShaderVariantAnalyticsModule.dll",
+                      "bytes":  24496,
+                      "sha256":  "58905BB22AA76CF176E0D26CB5BC59A5678F4EA4E040E67BEF8064C151697E35"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.SharedInternalsModule.dll",
+                      "bytes":  38320,
+                      "sha256":  "58899AA9AA119B2ECAFB1A41167D967167D9542DBE8F2F1882A62A96C6151391"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.SpriteMaskModule.dll",
+                      "bytes":  28592,
+                      "sha256":  "D28C6AC9D8BAB5B79D0887599CBC8EC21C6069EB0019EFB1D2ABFD258D02156F"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.SpriteShapeModule.dll",
+                      "bytes":  32688,
+                      "sha256":  "C41F362C94817BB38FB2136FF82B7BF0EBFAE5F8FA53276DF547E09667B28EC1"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.StreamingModule.dll",
+                      "bytes":  26024,
+                      "sha256":  "6B953A6877294447752889F8FC77424B632422E3B0E83814857FB8AF15756517"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.SubstanceModule.dll",
+                      "bytes":  29104,
+                      "sha256":  "6F2D6FC5F08357405375C797652F35EB6F8A62AB35858DC4F2DE7B3FF429B290"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.SubsystemsModule.dll",
+                      "bytes":  41904,
+                      "sha256":  "926FF6D3495D8722AF436153063A22EF62AE39F4E3F3A2D657939555FCB935AB"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.TerrainModule.dll",
+                      "bytes":  134056,
+                      "sha256":  "77CB4042C3FDC4EEBE2CCB006DC171477EEB2B3628973735FBE6DB24B601071D"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.TerrainPhysicsModule.dll",
+                      "bytes":  25512,
+                      "sha256":  "9023C9FB3EFDFE49D49348C09A9B1E59EED40A8B04D57E592FF0392BA5F52D6C"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.TextCoreFontEngineModule.dll",
+                      "bytes":  81832,
+                      "sha256":  "BD8D2DB5008A6B200275938B76249254CDEA2A3854E04DCC9EE36246EB5B1798"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.TextCoreTextEngineModule.dll",
+                      "bytes":  334256,
+                      "sha256":  "E259924A4588F7A2C09D68342E6FADC6A44E1471D020632600D89EDC44F06BD9"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.TextRenderingModule.dll",
+                      "bytes":  39344,
+                      "sha256":  "1807C017E2D32A6143423AEEC12AF3A8A354174CE9CB97B853D8C49BCE9661C3"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.TilemapModule.dll",
+                      "bytes":  58800,
+                      "sha256":  "231B46BCEDD2C267490AE0D376FC444C64EA69F63B281A536D45E9557C75994F"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.TLSModule.dll",
+                      "bytes":  32168,
+                      "sha256":  "B84E55ABCEFA836699F9226ACD38CEEBBC7F6028462D149530C6D1F04BCAC67F"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UI.dll",
+                      "bytes":  276480,
+                      "sha256":  "81B0D46D7E8554933E3A3957F93E7C0AEA3BE8BF563B3B5F8F0BB90C9B4BA24B"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UIElementsModule.dll",
+                      "bytes":  2452392,
+                      "sha256":  "43AC212BA5B7E4388BC78AAA7319B30697FF65D660D9927753B920F6EBB1E874"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UIModule.dll",
+                      "bytes":  49576,
+                      "sha256":  "A5BD71B67273EE23CF66DBBB368CAED7BAA178FEA8E5C83D3918C73E45650282"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UmbraModule.dll",
+                      "bytes":  24496,
+                      "sha256":  "340B29E1A683604597D56742D285751E29A32F39E95FABB5D25F23B87D51733C"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityAnalyticsCommonModule.dll",
+                      "bytes":  35760,
+                      "sha256":  "9801408F619FCF7593762965B3C0ED19764F14A8F5EA7BFFA5DFDF50B92C403F"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityAnalyticsModule.dll",
+                      "bytes":  60848,
+                      "sha256":  "B63E23118CE510D66DDD550EC9C975067EC572620DBE9290080F11FF262A5E3A"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityConnectModule.dll",
+                      "bytes":  27568,
+                      "sha256":  "19F83B05AA0E9017B2D4A1618418324C7F4B06364E8363317761A45C84E62858"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityConsentModule.dll",
+                      "bytes":  16296,
+                      "sha256":  "51D01896A417916DECC234362880DF087C585D2835BEFE4BEE8F67D0338692B8"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityCurlModule.dll",
+                      "bytes":  26024,
+                      "sha256":  "17A917401C997837E04CB041530DFFD70F11DB910592B6BCC26D6D9B7C48D439"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityWebRequestAssetBundleModule.dll",
+                      "bytes":  28592,
+                      "sha256":  "8456F735B1E579BC4EBDC792181C60B567A34A850FEF0AF5C667124F73E0EF25"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityWebRequestAudioModule.dll",
+                      "bytes":  28592,
+                      "sha256":  "5AF0CEBC11EFF4B1F3EB1A972981F7043FFCE2D5DD21EF8B121D5D14A710CFA9"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityWebRequestModule.dll",
+                      "bytes":  70056,
+                      "sha256":  "4D6488302D28B9AF1DBC344F44930EBDB43BE2CA253E2FD9EC6D67D97B7F7974"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityWebRequestTextureModule.dll",
+                      "bytes":  27568,
+                      "sha256":  "1657AECD9A482B0ED7644D5D51972BC51A771391FF78C9DD562599FE93733381"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.UnityWebRequestWWWModule.dll",
+                      "bytes":  36776,
+                      "sha256":  "DE4F56C0285F4ADE09F9EB5BC46255777E3F8DAEEAD712577226BED150A62931"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.VectorGraphicsModule.dll",
+                      "bytes":  252840,
+                      "sha256":  "CE967BC80735F45F183F0AE1395A67067C0A9841B7C2CD83D7EA0C622405C4DC"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.VehiclesModule.dll",
+                      "bytes":  31656,
+                      "sha256":  "FCD9D44B967BA40C0D0EAC7BE8E90FD0C6B1B9A2BB5F13496A18804A9E0CBE28"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.VFXModule.dll",
+                      "bytes":  78248,
+                      "sha256":  "524D2CD3CAA42F9B338B0E4547C3B69ECFAC143B28EAF5C72B3173B4DCDD3B96"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.VideoModule.dll",
+                      "bytes":  49064,
+                      "sha256":  "9F5F6E01ED017DC64A8380F04EA7F0B3FF529DDC7C7AFA4DC8E78BC397716C89"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.VirtualTexturingModule.dll",
+                      "bytes":  42920,
+                      "sha256":  "3E5C37ED06A3CC12CC41D1C1A491C95F844D292741A4AEA9AEB7E28A7D9AFB71"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.VRModule.dll",
+                      "bytes":  31656,
+                      "sha256":  "8C3D91A08F37F87019D58F079B6B9B03F10907BDE5DA8C2C0209841B179A4C43"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.WindModule.dll",
+                      "bytes":  26536,
+                      "sha256":  "59A021DCD451443B866A407EEAD2D6647C793ABFEAD8676290F413DB80F5D6EA"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Managed\\UnityEngine.XRModule.dll",
+                      "bytes":  88488,
+                      "sha256":  "108E2C56E20E34B14BF1B3527C99E5AA0B985DF2080ADDB202B5A3AD98E0F7E4"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Plugins\\x86_64\\lib_burst_generated.dll",
+                      "bytes":  104448,
+                      "sha256":  "F28FF2FDAA701CC3201E6787CFA651A74BE3F9A262EEDE01D9B00952384ECB62"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Resources\\unity default resources",
+                      "bytes":  5883716,
+                      "sha256":  "32B58BDB9CF090212B46A8CA7436DCDAE89E4EF43E9D55A835233C21D1347734"
+                  },
+                  {
+                      "path":  "FamilyCompany_FastQa_Data\\Resources\\unity_builtin_extra",
+                      "bytes":  396568,
+                      "sha256":  "4287B68AFB9EA5713E3A6CF9AFA04734CFE6CB35E3AC5DEFE408D8504E4C6735"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\EmbedRuntime\\mono-2.0-bdwgc.dll",
+                      "bytes":  7828904,
+                      "sha256":  "872A64A28333D54346F5E38D8420FF40E50769DC546B241EDE1889531B6A9150"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\EmbedRuntime\\MonoPosixHelper.dll",
+                      "bytes":  611248,
+                      "sha256":  "3E2781B551C03139020719C43B2EFFF0F3021B663889C3EA095A1F769D688D84"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\browscap.ini",
+                      "bytes":  311984,
+                      "sha256":  "4DDD50F31FB968F30BEDEFC253A46DC3F2890192D05CDAA9E0A64A056EEE807E"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\config",
+                      "bytes":  3815,
+                      "sha256":  "5776169973A26A387B8B3E5C0F2301A7AB9A6DD7C7D3EFA22A96ABC47FBF8662"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\2.0\\DefaultWsdlHelpGenerator.aspx",
+                      "bytes":  60575,
+                      "sha256":  "751861040B69EA63A3827507B7C8DA9C7F549DC181C1C8AF4B7CA78CC97D710A"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\2.0\\machine.config",
+                      "bytes":  29066,
+                      "sha256":  "E91782A27FA39FC6C1D6EE8B08529F5D35052310D0006034B878EB04B8F2AF30"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\2.0\\settings.map",
+                      "bytes":  2622,
+                      "sha256":  "49C6160F9D54AF4270A3B4E997FC4A8301F79B9E2070118FA46DDBCBBC44F9A2"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\2.0\\web.config",
+                      "bytes":  11635,
+                      "sha256":  "CF2B54339E069B9E42F7D6795EECBF562C50C1011F4CA8F65F578FE52D97FF92"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\2.0\\Browsers\\Compat.browser",
+                      "bytes":  1605,
+                      "sha256":  "8A1082057AC5681DCD4E9C227ED7FB8EB42AC1618963B5DE3B65739DD77E2741"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.0\\DefaultWsdlHelpGenerator.aspx",
+                      "bytes":  60575,
+                      "sha256":  "751861040B69EA63A3827507B7C8DA9C7F549DC181C1C8AF4B7CA78CC97D710A"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.0\\machine.config",
+                      "bytes":  33598,
+                      "sha256":  "E60AEC2C5115D65B3ACB3C55EA21576DBD770F579166C017125571E46AE560ED"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.0\\settings.map",
+                      "bytes":  2622,
+                      "sha256":  "CE1DB1AD8A9512073164E3ECCDC193F7EDA036E1A9733CAEC4635DE21B2865C8"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.0\\web.config",
+                      "bytes":  18802,
+                      "sha256":  "E38BB8CC68FE5B4EDECDFD288D094B9E8CED7629039B2A347682ABA0D8BD7492"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.0\\Browsers\\Compat.browser",
+                      "bytes":  1605,
+                      "sha256":  "8A1082057AC5681DCD4E9C227ED7FB8EB42AC1618963B5DE3B65739DD77E2741"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.5\\DefaultWsdlHelpGenerator.aspx",
+                      "bytes":  60575,
+                      "sha256":  "751861040B69EA63A3827507B7C8DA9C7F549DC181C1C8AF4B7CA78CC97D710A"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.5\\machine.config",
+                      "bytes":  34056,
+                      "sha256":  "EE950004B576FB28DC85F4B0435ED04BF96612DE2E8B53BE84D07AFE85A0DE6C"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.5\\settings.map",
+                      "bytes":  2622,
+                      "sha256":  "CE1DB1AD8A9512073164E3ECCDC193F7EDA036E1A9733CAEC4635DE21B2865C8"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.5\\web.config",
+                      "bytes":  18811,
+                      "sha256":  "C4CBDDD4FD9347B58CC5A72B36DC4BA1AD2BB699E65869D05CD3FB9865F0D824"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\4.5\\Browsers\\Compat.browser",
+                      "bytes":  1605,
+                      "sha256":  "8A1082057AC5681DCD4E9C227ED7FB8EB42AC1618963B5DE3B65739DD77E2741"
+                  },
+                  {
+                      "path":  "MonoBleedingEdge\\etc\\mono\\mconfig\\config.xml",
+                      "bytes":  25817,
+                      "sha256":  "0C56E34C69124510FA8C19E7B4C2CA6C1C4FF460AE19F798DD0CA035809E396D"
+                  }
+              ],
+    "sourceHead":  "22f0be5bb028c467a3c758b711a6585e1d3de159",
+    "sourceTree":  "ae1c75d2a89778b664cd6276ec957ec6e5062007",
+    "capturedUtc":  "2026-09-06T06:18:05.0062731Z",
+    "classification":  "failed gate",
+    "root":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\cache\\WindowsPlayer",
+    "compiledScriptsHash":  "9B0FDEF31A6D88347A68C33C15D62164B0ECD9BAB66FA18AA5305118543BC9CB",
+    "unityVersion":  "6000.3.21f1",
+    "baseDataHead":  "22f0be5bb028c467a3c758b711a6585e1d3de159"
+}

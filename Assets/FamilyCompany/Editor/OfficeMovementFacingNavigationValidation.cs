@@ -57,6 +57,7 @@ namespace FamilyCompany.Editor
             ValidateFourActorAttendanceIngressReservation();
             ValidateFollowingAttendanceIngress();
             ValidateIngressToGridReservationHandoff();
+            ValidateDoorLeaderTrafficPriority();
             ValidateCanonicalFurniturePathDetours();
             Debug.Log(
                 "OFFICE_MOVEMENT_FACING_NAVIGATION_VALIDATION: PASS | " +
@@ -281,6 +282,27 @@ namespace FamilyCompany.Editor
             harness.Occupancy.ReleaseAttendanceIngress("follower");
             Require(harness.Occupancy.AttendanceIngressClaimCount == 0, "Ingress claim leaked.");
             Debug.Log("ATTENDANCE_FOLLOWING_INGRESS: PASS independent claims, safe spawn, swept peer collision, own corridor, release cleanup");
+        }
+
+        private static void ValidateDoorLeaderTrafficPriority()
+        {
+            // Recorded next-day geometry: the indoor leader turns left while the next
+            // entrant approaches from outside. Alphabetical IDs must not make the leader
+            // retreat into the next person's desk aisle to give way to its own follower.
+            foreach (string leaderId in new[] { "player", "a-leader" })
+            {
+                var leader = new OfficeTrafficAgentState(leaderId, new OfficeNavPoint(0f, 0f),
+                    new OfficeNavPoint(-0.8944272f, -0.4472136f), 0.445f, 0f);
+                var follower = new OfficeTrafficAgentState("older_sister", new OfficeNavPoint(0.85f, -0.425f),
+                    new OfficeNavPoint(-0.8944272f, 0.4472136f), 0.445f, 0f);
+                OfficeTrafficDecision front = OfficeNavigationTrafficRules.Resolve(leader, new[] { follower });
+                OfficeTrafficDecision back = OfficeNavigationTrafficRules.Resolve(follower, new[] { leader });
+                Require(front.ForwardScale > 0f && !front.IsYielding,
+                    "The indoor door leader incorrectly yields to its approaching follower.");
+                Require(back.ForwardScale == 0f && back.IsYielding,
+                    "The door follower must yield while the leading body turns away.");
+            }
+            Debug.Log("DOOR_LEADER_TRAFFIC_PRIORITY: PASS leader exits first, follower waits; IDs do not reverse queue");
         }
 
         private static void ValidateIngressToGridReservationHandoff()

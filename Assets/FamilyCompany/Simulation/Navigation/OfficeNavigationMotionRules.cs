@@ -902,7 +902,7 @@ namespace FamilyCompany.Simulation.Navigation
                 var peer = peers[index];
                 if (string.Equals(self.AgentId, peer.AgentId, StringComparison.Ordinal)) continue;
                 if (!WillConflict(self, peer)) continue;
-                var selfHasPriority = string.CompareOrdinal(self.AgentId, peer.AgentId) < 0;
+                var selfHasPriority = HasPriority(self, peer);
                 if (selfHasPriority)
                 {
                     forwardScale = Math.Min(forwardScale, 0.82f);
@@ -929,6 +929,18 @@ namespace FamilyCompany.Simulation.Navigation
                 recoveryWeight,
                 yielding,
                 shouldReplan);
+        }
+
+        private static bool HasPriority(OfficeTrafficAgentState self, OfficeTrafficAgentState peer)
+        {
+            var towardPeer = peer.Position - self.Position;
+            bool selfLeavingPeer = OfficeNavPoint.Dot(self.DesiredVelocity, towardPeer) < -0.0001f;
+            bool peerLeavingSelf = OfficeNavPoint.Dot(peer.DesiredVelocity, towardPeer) > 0.0001f;
+            // A following queue is not a head-on crossing. Let its leading body finish
+            // leaving the doorway/corner, and stop the approaching follower. Alphabetical
+            // priority remains the stable tie-break for opposing/crossing approaches.
+            if (selfLeavingPeer != peerLeavingSelf) return selfLeavingPeer;
+            return string.CompareOrdinal(self.AgentId, peer.AgentId) < 0;
         }
 
         private static bool WillConflict(OfficeTrafficAgentState self, OfficeTrafficAgentState peer)

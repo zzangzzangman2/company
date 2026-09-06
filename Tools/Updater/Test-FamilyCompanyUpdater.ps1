@@ -115,16 +115,16 @@ try {
     Check 'retry after failed transfer succeeds' ($third.DownloadedFiles -eq 1)
     $state = Get-PatchCurrent $install
     Assert-PatchInstalled $state.Directory $state.Manifest
-    Check 'verified offline installation valid' $true
+    Check 'previous snapshot integrity valid (not offline launch permission)' $true
     # Simulate crash after completed directory rename, before pointer write: restore the old pointer only.
     Write-PatchJsonAtomic (Join-Path $install 'current.json') @{directory=('versions/2-'+$v2.ManifestHash.Substring(0,12)); manifestSha256=$v2.ManifestHash}
     $recovered = Install-CompanyPatch $install $v3.ManifestPath $v3.ManifestHash -LocalFeed $feed
     Check 'interrupted activation resumes with zero downloads' ($recovered.Status -eq 'recovered' -and $recovered.DownloadedFiles -eq 0)
     Test-Bytes $third.Directory 'unexpected.dll' 'not in manifest'
-    Reject 'unexpected installed binary blocks offline launch' { Assert-PatchInstalled $third.Directory $newManifest }
+    Reject 'unexpected installed binary fails snapshot integrity' { Assert-PatchInstalled $third.Directory $newManifest }
     Remove-Item -LiteralPath (Resolve-PatchChild $third.Directory 'unexpected.dll')
     Test-Bytes $third.Directory 'FamilyCompany.exe' 'tampered'
-    Reject 'tampered installed executable blocks offline launch' { Assert-PatchInstalled $third.Directory $newManifest }
+    Reject 'tampered installed executable fails snapshot integrity' { Assert-PatchInstalled $third.Directory $newManifest }
     $unrelated = Join-Path $testRoot 'unrelated'
     Test-Bytes $unrelated 'keep.txt' 'unrelated'
     Reject 'nonempty unrelated directory never adopted' { Initialize-PatchStore $unrelated }

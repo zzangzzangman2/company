@@ -1,0 +1,54 @@
+﻿{
+    "scope":  "Real production workers; API faults injected; verified inert previous install; no network or executable run",
+    "checks":  [
+                   {
+                       "passed":  true,
+                       "exitCode":  1,
+                       "oldVerifiedInstallPreserved":  true,
+                       "scenario":  "network",
+                       "oldVersionLaunchAllowed":  false,
+                       "legacyEntry":  false
+                   },
+                   {
+                       "passed":  true,
+                       "exitCode":  1,
+                       "oldVerifiedInstallPreserved":  true,
+                       "scenario":  "missing",
+                       "oldVersionLaunchAllowed":  false,
+                       "legacyEntry":  false
+                   },
+                   {
+                       "passed":  true,
+                       "exitCode":  1,
+                       "oldVerifiedInstallPreserved":  true,
+                       "scenario":  "draft",
+                       "oldVersionLaunchAllowed":  false,
+                       "legacyEntry":  false
+                   },
+                   {
+                       "passed":  true,
+                       "exitCode":  1,
+                       "oldVerifiedInstallPreserved":  true,
+                       "scenario":  "network",
+                       "oldVersionLaunchAllowed":  false,
+                       "legacyEntry":  true
+                   },
+                   {
+                       "passed":  true,
+                       "exitCode":  1,
+                       "oldVerifiedInstallPreserved":  true,
+                       "scenario":  "missing",
+                       "oldVersionLaunchAllowed":  false,
+                       "legacyEntry":  true
+                   },
+                   {
+                       "passed":  true,
+                       "exitCode":  1,
+                       "oldVerifiedInstallPreserved":  true,
+                       "scenario":  "draft",
+                       "oldVersionLaunchAllowed":  false,
+                       "legacyEntry":  true
+                   }
+               ],
+    "passed":  true
+}

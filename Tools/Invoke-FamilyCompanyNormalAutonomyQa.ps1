@@ -19,18 +19,24 @@ if (!$AnalyzeOnly) {
     Copy-Item -LiteralPath (Join-Path $qaRepo 'Artifacts/FastQa/cache/player-cache.json') -Destination (Join-Path $EvidenceDirectory 'base-data-build.json')
     $process = [Diagnostics.Process]::Start($start)
     $watch = [Diagnostics.Stopwatch]::StartNew(); $windowChecks = 0
+    $runnerFailure = ''; $forcedStop = $false; $lastWindowHandle = 0L
     Write-Host "HIDDEN NORMAL AUTONOMY pid=$($process.Id) evidence=$EvidenceDirectory"
     try {
         while (!$process.WaitForExit(250)) {
             $process.Refresh(); $windowChecks++
-            if ($process.MainWindowHandle -ne [IntPtr]::Zero) { throw 'Hidden-window guard failed.' }
+            $lastWindowHandle = $process.MainWindowHandle.ToInt64()
+            if ($lastWindowHandle -ne 0) { throw 'Hidden-window guard failed.' }
             if ($watch.Elapsed.TotalSeconds -gt 450) { throw 'Normal observation timed out.' }
         }
-        @{pid=$process.Id;exitCode=$process.ExitCode;windowChecks=$windowChecks;seconds=$watch.Elapsed.TotalSeconds} |
-            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'process.json') -Encoding UTF8
         if ($process.ExitCode -ne 0) { throw 'Normal observer exited with errors.' }
+    } catch {
+        $runnerFailure = $_.Exception.Message
+        throw
     } finally {
-        if (!$process.HasExited) { $process.Kill(); $process.WaitForExit() }
+        if (!$process.HasExited) { $forcedStop = $true; $process.Kill(); $process.WaitForExit() }
+        @{pid=$process.Id;exitCode=$process.ExitCode;windowChecks=$windowChecks;seconds=$watch.Elapsed.TotalSeconds;
+            runnerFailure=$runnerFailure;forcedStop=$forcedStop;lastWindowHandle=$lastWindowHandle} |
+            ConvertTo-Json | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'process.json') -Encoding UTF8
         $process.Dispose()
     }
 }

@@ -1,0 +1,142 @@
+﻿{
+    "transitions":  [
+                        {
+                            "member":  "older_sister",
+                            "secondsFromFirstPositiveSample":  0.42320000000000846,
+                            "end":  112.8751
+                        },
+                        {
+                            "member":  "older_sister",
+                            "secondsFromFirstPositiveSample":  0.43389999999999418,
+                            "end":  136.1983
+                        },
+                        {
+                            "member":  "older_sister",
+                            "secondsFromFirstPositiveSample":  0.39999999999997726,
+                            "end":  170.1794
+                        },
+                        {
+                            "member":  "older_sister",
+                            "secondsFromFirstPositiveSample":  0.43319999999999936,
+                            "end":  183.6341
+                        },
+                        {
+                            "member":  "older_sister",
+                            "secondsFromFirstPositiveSample":  0.43110000000001492,
+                            "end":  229.1151
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.41659999999998831,
+                            "end":  122.9823
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.43329999999997426,
+                            "end":  129.1991
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.41660000000001673,
+                            "end":  141.198
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.41630000000000678,
+                            "end":  179.1774
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.41689999999999827,
+                            "end":  188.9941
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.39909999999997581,
+                            "end":  227.2377
+                        },
+                        {
+                            "member":  "father",
+                            "secondsFromFirstPositiveSample":  0.41650000000001342,
+                            "end":  246.5094
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.4164999999999992,
+                            "end":  126.7487
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.41670000000002005,
+                            "end":  133.1809
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.38400000000001455,
+                            "end":  150.1801
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.41669999999999163,
+                            "end":  186.7344
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.4269000000000176,
+                            "end":  228.7641
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.43249999999997613,
+                            "end":  236.4945
+                        },
+                        {
+                            "member":  "mother",
+                            "secondsFromFirstPositiveSample":  0.41650000000001342,
+                            "end":  245.1261
+                        },
+                        {
+                            "member":  "player",
+                            "secondsFromFirstPositiveSample":  0.43299999999999272,
+                            "end":  237.4775
+                        }
+                    ],
+    "transitionMidpointOutliers":  162,
+    "blendContractSeconds":  0.42,
+    "passed":  false,
+    "productionEligible":  false,
+    "scope":  "Independent real normal Player CSV analysis; not skin-intersection, foot-slip, full visual or Release approval",
+    "maximumSettledIndividualHandError":  0.032569,
+    "coverage":  [
+                     {
+                         "turns":  [
+                                       "NorthEast"
+                                   ],
+                         "member":  "older_sister",
+                         "samples":  1280
+                     },
+                     {
+                         "turns":  [
+                                       "SouthEast"
+                                   ],
+                         "member":  "father",
+                         "samples":  834
+                     },
+                     {
+                         "turns":  [
+                                       "SouthWest"
+                                   ],
+                         "member":  "mother",
+                         "samples":  330
+                     },
+                     {
+                         "turns":  [
+                                       "NorthWest"
+                                   ],
+                         "member":  "player",
+                         "samples":  374
+                     }
+                 ],
+    "settledSamples":  2818,
+    "settledFailureSamples":  111
+}

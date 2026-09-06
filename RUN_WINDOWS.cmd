@@ -1,13 +1,22 @@
 @echo off
 setlocal
 
-for %%I in ("%~dp0.") do set "PROJECT_ROOT=%%~fI"
-set "GAME_EXE=%PROJECT_ROOT%\Builds\Windows\FamilyCompany_Playtest\FamilyCompany.exe"
+set "GAME_ROOT=%USERPROFILE%\Downloads\FamilyCompany_Playtest"
+set "GAME_EXE=%GAME_ROOT%\FamilyCompany.exe"
 if not exist "%GAME_EXE%" (
-    echo [Family Company] No verified local game build was found.
-    echo [Family Company] Use the current published Windows game package.
+    echo [Family Company] Install the published FamilyCompany-Windows.zip here once:
+    echo %GAME_ROOT%
+    echo See Docs\MAIN_GAME_ENTRY.md. Playing does not require a local build.
     pause
     exit /b 2
+)
+
+if not exist "%GAME_ROOT%\FamilyCompanyPatch\FamilyCompany.InGame.ps1" (
+    echo [Family Company] This is an old installation without in-game patch support.
+    echo Install the first verified full Windows package. Do not launch this old copy.
+    echo See Docs\MAIN_GAME_ENTRY.md for current release and installation status.
+    pause
+    exit /b 3
 )
 
 start "Family Company" "%GAME_EXE%"
