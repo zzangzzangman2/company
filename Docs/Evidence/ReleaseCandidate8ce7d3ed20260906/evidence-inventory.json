@@ -1,0 +1,71 @@
+{
+  "files": [
+    {
+      "name": "BUILD_INFO.txt",
+      "bytes": 449,
+      "sha256": "3776f6f2f96207a7442285be35416352454c90ff6d9681458f7251dd5d95bd8f"
+    },
+    {
+      "name": "chair-fit.csv",
+      "bytes": 24843,
+      "sha256": "18a940461bed65e97220327688f0b208f1db6c6821e0b74d5894fef370602cc8"
+    },
+    {
+      "name": "four-actors-closeup.mp4",
+      "bytes": 10737827,
+      "sha256": "9ef34a27a7ba845dcffa7631e1bc73f5317aa012f93c1a6299130a07ffda523f"
+    },
+    {
+      "name": "LatestOnlyTests.json",
+      "bytes": 2231,
+      "sha256": "c55c9bd1197e34b51138174f50458b50ff520cf99e2eb91e2eeaf9acc1da9882"
+    },
+    {
+      "name": "native-four-sets.png",
+      "bytes": 2411233,
+      "sha256": "46a47afde11969fed343bb1865e343490fcfaa84afebd1f311d5bb45ecb7ec19"
+    },
+    {
+      "name": "native-overlap-rejected.png",
+      "bytes": 2422616,
+      "sha256": "fbd88322cd89d1c0b88742d3467b54e68cc44f2749f73881efd02a30bcd4ffd1"
+    },
+    {
+      "name": "native-pointer.json",
+      "bytes": 2255,
+      "sha256": "27cf9abcf7611008c9ea52e5f2023f40f877e464b9be4f9fdf79a750d58ab9d7"
+    },
+    {
+      "name": "runtime-summary.json",
+      "bytes": 7645,
+      "sha256": "d4c818519cc03b695552ea77e78520300131c4bdd2d3b9190356cee25bd64daa"
+    },
+    {
+      "name": "seated-four-directions-review.png",
+      "bytes": 626880,
+      "sha256": "598643b14c809a8398a49e150cd8acaeda1c4e4d15b3d0686194e57bc0d14538"
+    },
+    {
+      "name": "tile-centres-overview.mp4",
+      "bytes": 2352441,
+      "sha256": "aa00447fc97c90a63780d66971557f0c8e68368775d470babc76da735ab166f8"
+    },
+    {
+      "name": "UpdaterRestartTests.json",
+      "bytes": 2046,
+      "sha256": "d4fd051d7c3b91c2b2bed8fc84e77fa2ebe0610fd5ed15fa406fd4e4930dfc1b"
+    },
+    {
+      "name": "UpdaterTests.json",
+      "bytes": 8220,
+      "sha256": "8de5e9d32197991aeca43fdf0986ad0b1fc82ec4f4b10dbb38d5d507a1b6943d"
+    },
+    {
+      "name": "walk-analysis.json",
+      "bytes": 4881,
+      "sha256": "12be3afc101c6ae1d6922c875c6320734c8c0e34c510dba1de3debfdfe4c82e1"
+    }
+  ],
+  "productionEligible": false,
+  "commit": "8ce7d3edee4b53477739e2a0bd848cc51c6b1e46"
+}

@@ -1,0 +1,211 @@
+{
+    "timeUtc":  "2026-09-06T09:28:11.8974080Z",
+    "fixture":  "inert text, no game launched, no network",
+    "checks":  [
+                   {
+                       "name":  "first install downloads every file",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "download denominator equals changed compressed byte sum",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "download completion uses actual bytes not file count",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "verification is a separate measured phase",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "in-game preparation reuses authenticated base files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "preparation does not activate while game runs",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "prepared snapshot activates after separate closed-game gate",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "same version downloads nothing",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unchanged version never pretends to download",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "publisher reuses previous release assets",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "changed/addition only download, two files reused",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "delta progress excludes reused file bytes",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "download percentage is monotonic and rounded down",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "removed files absent from active snapshot",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "downgrade denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "same sequence mutation denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "manifest hash mismatch denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path ../escape",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path C:/escape",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path /absolute",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path dir\\\\name",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path file:stream",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path NUL.txt",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path dir/../x",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path dir//x",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path trailing.",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path trail ",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unsafe path COM1",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "case insensitive path collision denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "file versus directory collision denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "simultaneous updater denied",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "cancel after received bytes aborts before activation",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "cancellation preserves previous pointer",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "cancelled staging is completely removed",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "corrupt asset rejected",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "failed patch leaves active pointer untouched",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "failed partial executable payload removed",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "failure evidence preserved outside partial payload",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "missing download rejected",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "retry after failed transfer succeeds",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "previous snapshot integrity valid (not offline launch permission)",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "interrupted activation resumes with zero downloads",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "unexpected installed binary fails snapshot integrity",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "tampered installed executable fails snapshot integrity",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "nonempty unrelated directory never adopted",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "drive root never adopted",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "junction directory rejected",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "save sentinel unchanged",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "stream cannot exceed manifest size",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "truncated stream never reaches completion",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "invalid progress exceeds total rejected",
+                       "passed":  true
+                   }
+               ],
+    "passed":  true
+}

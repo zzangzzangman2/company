@@ -1,5 +1,18 @@
 # DECISIONS
 
+## 2026-09-06 / 마지막 실제 클릭 검사 완료와 배포 승인 경계
+
+- 사용자 예외 허용은 마지막 구매·회전·배치 native 클릭 검사에만 적용했다. 실제 Release에서 네 세트
+  구매와 겹침 거부를 확인한 뒤 해당 게임을 정상 종료했다. 나머지 normal/보행/착석/패치 검사는 전환하지
+  않는 private desktop에서 수행했다. 이 예외를 일반 PC 조작이나 종료 권한으로 확대하지 않는다.
+- 현재 8ce7d3ed의 normal 출근·live hand·회전 배치 결과는 이전 후보 실패를 해결했다. 정확한 수치와
+  시각 자료는 ReleaseCandidate8ce7d3ed20260906 증거를 따른다. 이전 실패 receipt를 수정하지 않는다.
+- 검증 영상과 착석 sheet에 대한 사용자 승인은 아직 별도다. 현 단계 productionEligible=false이며
+  public Release와 Downloads 교체를 하지 않는다. 문서 commit이 HEAD를 바꾸더라도 검증 바이너리의
+  commit을 다시 쓰지 않는다. publisher의 exact-HEAD/receipt/hash 검증을 유지한다.
+- 플레이어는 고정 메인에서 공개된 최신판을 받는다. 개발자의 코드 컴파일이 없어지는 것은 아니다.
+  로컬 percent UI fixture나 git push를 실제 인터넷 패치 배포 완료로 보고하지 않는다.
+
 ## 2026-09-06 / 3D Release 후보와 측정·화면 검사 분리
 
 - 옛 Release entry가 가족 2D seating/HighMotion catalog를 다시 생성하던 호출을 제거하고 정본

@@ -1,0 +1,190 @@
+{
+  "artifact": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\ReleaseGameplay\\8ce7d3ed-walk",
+  "capture": "OPENING_WALK_AUDIT: CAPTURED\ncapture complete; visual/tile acceptance is a separate analysis\nframes=427 forcedRoutes=0 teleports=0 fixedCaptureClock=false runtimeErrors=0\nstatic=0 interaction=0 agentPenetration=0\n",
+  "footGate": "moving foot midpoint projected to ground: median <= 4px, max <= 8px",
+  "note": "Ankle contact travel includes foot roll; it is not an independent skin-slip PASS/FAIL. Retained path polyline distance may increase when a replan omits the segment from the current root to its first waypoint; do not call it tile-lane deviation. Lowest skin Y is sampled every six frames and is not a completed grounding gate.",
+  "actors": {
+    "father": {
+      "frames": 427,
+      "movingFrames": 397,
+      "seconds": 23.967,
+      "footMidPx": {
+        "median": 1.582711,
+        "max": 3.3247,
+        "min": 0.031515
+      },
+      "straightFootMidPx": {
+        "median": 1.571766,
+        "max": 3.3247,
+        "min": 0.031515
+      },
+      "footMidGate": true,
+      "retainedPathPolylinePx": {
+        "median": 0.000136,
+        "max": 0.000356,
+        "min": 0.0
+      },
+      "nearestCardinalCellCentreLinePx": {
+        "median": 0.0,
+        "max": 3.8e-05,
+        "min": 0.0
+      },
+      "lowestSkinY": {
+        "median": 0.127075,
+        "max": 0.132794,
+        "min": 0.111714
+      },
+      "distance": 20.515,
+      "leadAlternations": 51,
+      "turnEpisodes": 7,
+      "contactAnkleDeltaWorld": {
+        "median": 0.012875,
+        "max": 0.080566,
+        "min": 0.0
+      },
+      "directions": [
+        "1",
+        "3",
+        "5",
+        "6",
+        "7"
+      ]
+    },
+    "mother": {
+      "frames": 427,
+      "movingFrames": 417,
+      "seconds": 23.967,
+      "footMidPx": {
+        "median": 1.598853,
+        "max": 3.294316,
+        "min": 0.031829
+      },
+      "straightFootMidPx": {
+        "median": 1.58628,
+        "max": 3.294316,
+        "min": 0.031829
+      },
+      "footMidGate": true,
+      "retainedPathPolylinePx": {
+        "median": 0.000136,
+        "max": 0.000437,
+        "min": 0.0
+      },
+      "nearestCardinalCellCentreLinePx": {
+        "median": 0.0,
+        "max": 7.6e-05,
+        "min": 0.0
+      },
+      "lowestSkinY": {
+        "median": 0.126872,
+        "max": 0.132767,
+        "min": 0.112043
+      },
+      "distance": 22.0103,
+      "leadAlternations": 55,
+      "turnEpisodes": 9,
+      "contactAnkleDeltaWorld": {
+        "median": 0.012253,
+        "max": 0.052951,
+        "min": 0.000376
+      },
+      "directions": [
+        "1",
+        "2",
+        "3",
+        "5",
+        "7"
+      ]
+    },
+    "older_sister": {
+      "frames": 427,
+      "movingFrames": 378,
+      "seconds": 23.967,
+      "footMidPx": {
+        "median": 2.033062,
+        "max": 4.254835,
+        "min": 0.04878
+      },
+      "straightFootMidPx": {
+        "median": 2.007988,
+        "max": 4.254835,
+        "min": 0.04878
+      },
+      "footMidGate": true,
+      "retainedPathPolylinePx": {
+        "median": 0.000193,
+        "max": 46.15723,
+        "min": 0.0
+      },
+      "nearestCardinalCellCentreLinePx": {
+        "median": 0.0,
+        "max": 0.000151,
+        "min": 0.0
+      },
+      "lowestSkinY": {
+        "median": 0.131985,
+        "max": 0.143365,
+        "min": 0.124159
+      },
+      "distance": 19.7204,
+      "leadAlternations": 49,
+      "turnEpisodes": 8,
+      "contactAnkleDeltaWorld": {
+        "median": 0.004983,
+        "max": 0.112876,
+        "min": 0.0
+      },
+      "directions": [
+        "1",
+        "3",
+        "5",
+        "7"
+      ]
+    },
+    "player": {
+      "frames": 427,
+      "movingFrames": 406,
+      "seconds": 23.967,
+      "footMidPx": {
+        "median": 2.009488,
+        "max": 4.29802,
+        "min": 0.048192
+      },
+      "straightFootMidPx": {
+        "median": 1.949356,
+        "max": 4.29802,
+        "min": 0.048192
+      },
+      "footMidGate": true,
+      "retainedPathPolylinePx": {
+        "median": 0.000136,
+        "max": 0.000382,
+        "min": 0.0
+      },
+      "nearestCardinalCellCentreLinePx": {
+        "median": 0.0,
+        "max": 3.8e-05,
+        "min": 0.0
+      },
+      "lowestSkinY": {
+        "median": 0.13244,
+        "max": 0.143359,
+        "min": 0.124062
+      },
+      "distance": 20.9289,
+      "leadAlternations": 52,
+      "turnEpisodes": 10,
+      "contactAnkleDeltaWorld": {
+        "median": 0.004148,
+        "max": 0.057592,
+        "min": 4.3e-05
+      },
+      "directions": [
+        "1",
+        "3",
+        "5",
+        "7"
+      ]
+    }
+  }
+}

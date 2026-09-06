@@ -1,0 +1,81 @@
+{
+  "overlapRejectedWithoutCharge": true,
+  "scope": "Real Windows pointer via approved sky input; public unsaved new game, no injected purchase method",
+  "rawGeometrySha256": "b7275f640ba618a2adc98b178772472d17eb98b15a4e630c76aa95578ca4f534",
+  "rawObservationSha256": "cd171d2a37bc871dde05e0cf8013f6bff88c3a155a2347033eea94ee897c1fbc",
+  "mainAndSaveUnchanged": true,
+  "pointerAttempts": 5,
+  "maximumChairCentrePresentedPixels": 0.484406,
+  "observerEnded": "CAPTURED, NOT AUTO-PASS; runtimeErrors=0; frames=20822",
+  "note": "Subpixel presented projection (<=0.5 px), not a one-tile offset. DiagnosticPointerCommitCount counts attempted native confirmations, including the rejected fifth attempt.",
+  "maximumAxisDegrees": 0.0,
+  "turns": [
+    "NorthWest",
+    "NorthEast",
+    "SouthEast",
+    "SouthWest"
+  ],
+  "states": [
+    {
+      "seats": 4,
+      "lastSeconds": 211.7799,
+      "cash": 3400000,
+      "pointerAttempts": 4,
+      "firstSeconds": 179.8506,
+      "inventory": 8
+    },
+    {
+      "seats": 4,
+      "lastSeconds": 232.4818,
+      "cash": 3400000,
+      "pointerAttempts": 5,
+      "firstSeconds": 211.8824,
+      "inventory": 8
+    },
+    {
+      "seats": 3,
+      "lastSeconds": 179.3895,
+      "cash": 3800000,
+      "pointerAttempts": 3,
+      "firstSeconds": 130.8733,
+      "inventory": 6
+    },
+    {
+      "seats": 2,
+      "lastSeconds": 130.4331,
+      "cash": 4200000,
+      "pointerAttempts": 2,
+      "firstSeconds": 90.38214,
+      "inventory": 4
+    },
+    {
+      "seats": 1,
+      "lastSeconds": 89.92528,
+      "cash": 4600000,
+      "pointerAttempts": 1,
+      "firstSeconds": 59.82809,
+      "inventory": 2
+    },
+    {
+      "seats": 0,
+      "lastSeconds": 6.711886,
+      "cash": 5000000,
+      "pointerAttempts": -1,
+      "firstSeconds": 3.895209,
+      "inventory": 0
+    },
+    {
+      "seats": 0,
+      "lastSeconds": 59.29351,
+      "cash": 5000000,
+      "pointerAttempts": 0,
+      "firstSeconds": 6.859908,
+      "inventory": 0
+    }
+  ],
+  "passed": true,
+  "independent": true,
+  "successfulPurchases": 4,
+  "maximumStemCentrePresentedPixels": 0.484436,
+  "commit": "8ce7d3edee4b53477739e2a0bd848cc51c6b1e46"
+}

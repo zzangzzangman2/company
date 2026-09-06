@@ -1,0 +1,204 @@
+{
+  "seatedBlend": {
+    "transitions": [
+      {
+        "member": "older_sister",
+        "secondsFromFirstPositiveSample": 0.43309999999999604,
+        "end": 146.5148
+      },
+      {
+        "member": "older_sister",
+        "secondsFromFirstPositiveSample": 0.4163000000000068,
+        "end": 168.8324
+      },
+      {
+        "member": "older_sister",
+        "secondsFromFirstPositiveSample": 0.41669999999999163,
+        "end": 182.267
+      },
+      {
+        "member": "older_sister",
+        "secondsFromFirstPositiveSample": 0.4322999999999979,
+        "end": 210.1722
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.43319999999999936,
+        "end": 146.2982
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.43309999999999604,
+        "end": 177.8509
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.41669999999999163,
+        "end": 188.0898
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.4496000000000038,
+        "end": 221.348
+      },
+      {
+        "member": "father",
+        "secondsFromFirstPositiveSample": 0.4333000000000027,
+        "end": 245.4486
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.42389999999998906,
+        "end": 125.3243
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.4165999999999883,
+        "end": 131.8302
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.38349999999999795,
+        "end": 148.8317
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.4338999999999942,
+        "end": 185.4172
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.4491999999999905,
+        "end": 226.4639
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.4000000000000057,
+        "end": 235.4482
+      },
+      {
+        "member": "mother",
+        "secondsFromFirstPositiveSample": 0.41660000000001673,
+        "end": 244.0986
+      },
+      {
+        "member": "player",
+        "secondsFromFirstPositiveSample": 0.41569999999998686,
+        "end": 212.7936
+      }
+    ],
+    "transitionMidpointOutliers": 136,
+    "blendContractSeconds": 0.42,
+    "passed": true,
+    "productionEligible": false,
+    "scope": "Independent real normal Player CSV analysis; not skin-intersection, foot-slip, full visual or Release approval",
+    "maximumSettledIndividualHandError": 0.008899,
+    "coverage": [
+      {
+        "turns": [
+          "SouthWest"
+        ],
+        "member": "mother",
+        "samples": 371
+      },
+      {
+        "turns": [
+          "SouthEast"
+        ],
+        "member": "father",
+        "samples": 701
+      },
+      {
+        "turns": [
+          "NorthEast"
+        ],
+        "member": "older_sister",
+        "samples": 1223
+      },
+      {
+        "turns": [
+          "NorthWest"
+        ],
+        "member": "player",
+        "samples": 934
+      }
+    ],
+    "settledSamples": 3229,
+    "settledFailureSamples": 0
+  },
+  "chairFixture": {
+    "penetratingVertices": 0,
+    "poseInjection": true,
+    "samples": 264,
+    "maxHandError": 0.0089,
+    "normalNavigation": false
+  },
+  "normalProcess": {
+    "seconds": 255.8607467,
+    "lastWindowHandle": 0,
+    "interactiveDesktopAtEnd": "Default",
+    "windowChecks": 966,
+    "interactiveDesktopAtStart": "Default",
+    "desktopReadError": "",
+    "runnerFailure": "",
+    "desktopSwitchAllowed": false,
+    "privateDesktop": "FamilyCompanyQa_19fa91517bb54ab1b72b1ad328bab7a4",
+    "pid": 17160,
+    "forcedStop": false,
+    "exitCode": 0
+  },
+  "publicReleasePublished": false,
+  "nextDayReceipt": "OBSERVED, NOT A WORK/RELEASE PASS\ninitialTime=2000-01-03T08:50:00\r\ninitialCash=5000000 initialSeats=0 initialInventory=0 familyIds=father,mother,older_sister,player\r\nfather maximumNavigatingNoProgressSeconds=1.9304\r\nfather normalTravel=51.0121 destinationFrames=3426 directions=5/7/1/3\r\nmother maximumNavigatingNoProgressSeconds=0.0895\r\nmother normalTravel=53.6534 destinationFrames=3394 directions=1/2/3/5/7\r\nolder_sister maximumNavigatingNoProgressSeconds=0.8752\r\nolder_sister normalTravel=52.1418 destinationFrames=3422 directions=1/3/7/5\r\nplayer maximumNavigatingNoProgressSeconds=0.0897\r\nplayer normalTravel=49.6319 destinationFrames=3338 directions=5/3/7/1\r\nnormalObservationSeconds=60 teleports=0 injectedRoutes=0 injectedClockMinutes=0 staticViolations=0 interactionViolations=0 agentPenetrations=0 finalTime=2000-01-03T09:47:00\r\npurchase=1 facing=SouthEast cash=4600000 previewCells=3 seats=1\r\npurchase=2 facing=SouthWest cash=4200000 previewCells=3 seats=2\r\npurchase=3 facing=NorthWest cash=3800000 previewCells=3 seats=3\r\npurchase=4 facing=NorthEast cash=3400000 previewCells=3 seats=4\r\nnextDay=player due=2000-01-04T09:00:00 released=2000-01-04T09:00:00 seatedNormally=True firstWorking=2000-01-04T09:09:00\r\nnextDay=older_sister due=2000-01-04T09:01:00 released=2000-01-04T09:01:00 seatedNormally=True firstWorking=2000-01-04T09:06:00\r\nnextDay=father due=2000-01-04T09:02:00 released=2000-01-04T09:02:00 seatedNormally=True firstWorking=2000-01-04T09:17:00\r\nnextDay=mother due=2000-01-04T09:03:00 released=2000-01-04T09:03:00 seatedNormally=True firstWorking=2000-01-04T09:19:00\r\nnextDayClockSetupJump=afternoon-night-only nextDayObservedClock=1x nativePointer=false routeInjection=false\r\nnextDayAttendanceGatePassed=True\r\nnormalClock=true actorControl=false routeInjection=false poseInjection=false nativePointer=false\nruntimeErrors=0",
+  "runtimeErrors": 0,
+  "commit": "8ce7d3edee4b53477739e2a0bd848cc51c6b1e46",
+  "productionEligible": false,
+  "mute": {
+    "maxOutputPeak": 0.0,
+    "nativeUnmutedOutputPeak": 0.549983,
+    "mutedSamples": 8212,
+    "passed": true,
+    "scope": "Actual rendered audio output with listener mute; not native settings persistence"
+  },
+  "navigation": {
+    "scope": "Independent CSV navigation analysis; programmatic shop setup; no native input/pose/route injection; not Release approval",
+    "navigationPassed": true,
+    "sampleCount": 8100,
+    "excludedPausedSetupSamples": 516,
+    "maxRailFractionError": 2.6249999999450324E-05,
+    "violationSamples": 0,
+    "actors": [
+      {
+        "member": "father",
+        "maximumNavigatingNoProgressSeconds": 3.198440000000005,
+        "navigationDistance": 95.62249418537611,
+        "workingSamples": 294,
+        "lastPhase": "Idle"
+      },
+      {
+        "member": "mother",
+        "maximumNavigatingNoProgressSeconds": 0.3351000000000113,
+        "navigationDistance": 106.25278037182143,
+        "workingSamples": 178,
+        "lastPhase": "ApproachingSeat"
+      },
+      {
+        "member": "older_sister",
+        "maximumNavigatingNoProgressSeconds": 3.335880000000003,
+        "navigationDistance": 86.03018191829062,
+        "workingSamples": 495,
+        "lastPhase": "Working"
+      },
+      {
+        "member": "player",
+        "maximumNavigatingNoProgressSeconds": 0.11469999999999914,
+        "navigationDistance": 58.38478088663546,
+        "workingSamples": 368,
+        "lastPhase": "Working"
+      }
+    ],
+    "allNpcSeatingObserved": true,
+    "manualPlayerAutoWorkExpected": false,
+    "productionEligible": false
+  },
+  "userVisualApproval": false
+}

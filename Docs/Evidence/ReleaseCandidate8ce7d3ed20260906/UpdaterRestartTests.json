@@ -1,0 +1,48 @@
+{
+    "scope":  "Actual production restart helper with windowless probe, NOT real Unity/GitHub end-to-end",
+    "root":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UpdaterRestartTests\\58efdf39a1a34f98a3369bdfbabca651",
+    "restartScriptSha256":  "7a6cbff9ba368019b1d6f47c88bec41472c472da87e6c7ca5c33553deb8c6aef",
+    "checks":  [
+                   {
+                       "name":  "helper sends ready before parent normal exit",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "current pointer absent while parent still runs",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "parent exits normally without forced termination",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "restart helper completes",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "new process launches exact verified snapshot",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "atomic current matches prepared manifest",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "wrong-parent rejected before ready or activation",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "wrong-parent leaves parent alive",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "corrupted-payload rejected before ready or activation",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "corrupted-payload leaves parent alive",
+                       "passed":  true
+                   }
+               ],
+    "passed":  true
+}

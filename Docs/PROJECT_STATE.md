@@ -2,7 +2,63 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## 2026-09-06 follow-up in progress: outside queue, scale-correct seated IK, isolated QA desktop
+## 2026-09-06 latest: Release candidate 8ce7d3ed runtime/native checks passed; visual approval and delivery pending
+
+This section supersedes the dated candidate failures below. Source is on canonical `main` at
+`C:\Users\godho\Documents\Codex\fc_agents\integration_p0`. Source changes through **8ce7d3ed** were pushed.
+The evidence/documentation follow-up does not change runtime inputs and must not relabel this tested binary.
+
+- Actual **non-Development Release**, clean build input `8ce7d3edee4b53477739e2a0bd848cc51c6b1e46`,
+  exact Unity 6000.3.21f1 (`c02631ffc030`), build 95.169 seconds. Candidate only:
+  `Artifacts/PatchCandidates/8ce7d3ed-5912b1b0536541e5b9e6a4694cbc2eb4/payload/FamilyCompany.exe`.
+  No Builds/Downloads promotion. BUILD_INFO and reviewed evidence are in
+  **[ReleaseCandidate8ce7d3ed20260906](Evidence/ReleaseCandidate8ce7d3ed20260906/README.md)**.
+- User allowed only the final native purchase/rotation/placement check. That check is **completed**;
+  the owned game closed normally. Actual Windows clicks bought four sets in four rotations:
+  5,000,000 → 4,600,000 → 4,200,000 → 3,800,000 → **3,400,000 KRW**. A fifth attempt on an occupied
+  footprint was rejected without a charge or added furniture. The diagnostic counter counts five
+  attempts, not five purchases. Presented shop title, price, balance, help and action labels fit.
+- Chair/stem ground centres were within **0.485 presented pixels** of their tile centres in all four
+  directions (subpixel camera rounding, not a tile offset); monitor/keyboard axis error **0 degrees**.
+  The approved V31 chair model and three-cell atomic desk/PC/chair footprint are unchanged.
+- Normal private-desktop Release run: exit 0, no forced stop, **8,100** independent navigation samples,
+  tile-rail fractional error max **0.00002625**, body/static/interaction penetrations and runtime errors 0.
+  No route/pose injection or teleport. The user desktop stayed Default; no desktop switch or input.
+- Exact next-day releases **Player 09:00 / older sister 09:01 / Father 09:02 / Mother 09:03**.
+  First Working **09:09 / 09:06 / 09:17 / 09:19** respectively, all before the unchanged 09:20 deadline;
+  09:04 arrival/progress gate passed. Later autonomous departure from a desk is not a failed arrival.
+- Actual settled Working: **3,229 samples**, failures 0, max individual hand error **0.008899 world**.
+  Seventeen full seat blends took 0.3835–0.4496 seconds; transitional outliers remain in the raw trace.
+  Independent controlled Player/Father × four directions × 33 typing poses: **264 samples**, knees
+  within 80–140 degrees, hand max 0.0089, chair/skin penetration count 0. The fixture injects poses and
+  is not itself normal navigation evidence; the normal run above supplies that separate evidence.
+- Normal 23.967-second walk capture: **427 rendered frames**, all inspected through 22 contact sheets.
+  Anatomical lead feet alternate through repeated cycles and turns. Four actors' ground-projected foot
+  midpoint gates pass (median ≤4 px, max ≤8 px). Both real-time review MP4s are checked in with evidence.
+  Bone/foot-midpoint metrics do **not** prove mathematically zero skin slip; skin-ground samples were
+  every sixth frame. Current visual acceptance remains pending, not silently replaced by those metrics.
+- Muted rendered output is zero; native unmuted output was nonzero. This verifies output, not native
+  settings persistence. Updater regressions **51/51**, latest-only fault tests **6/6**, restart worker
+  tests **10/10**. These local fixtures are not an actual public GitHub game-patch download.
+- Existing in-game patch UI evidence showed real local bytes at **20.3% / 0.81 of 4.00 MiB** on a private
+  desktop. That earlier gameplay-failed binary was retired; its UI evidence is scoped, not current
+  gameplay or GitHub end-to-end proof. No public game Release has been published yet.
+- **Pending:** user approval of the current walk video and four-direction seated sheet, truthful
+  independent release receipt, public GitHub Release, first fixed-main installation and real GitHub
+  latest/download/restart verification. `productionEligible=false`; no approval reference is invented.
+  The publisher requires clean HEAD == BUILD_INFO == receipt. If this documentation-only follow-up
+  advances HEAD, build/verify the final clean identity at approval time; do not edit BUILD_INFO, reuse
+  an old gate as a new-commit PASS, reset main, or weaken the publication gate.
+- Fixed main is still the **old 9144fa0e** installation without patch workers:
+  `C:\Users\godho\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`. It is **not yet the latest
+  auto-patching game**. Keep that path; install the verified full package there once after approval.
+  Company uses `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`; normal play then
+  needs no Unity/git/build. See **[MAIN_GAME_ENTRY.md](MAIN_GAME_ENTRY.md)**. Main files/saves unchanged.
+- Failed bfe9853b/e3def356/19d49b3e whole owned payloads were identity-fenced and moved to the Recycle
+  Bin; source, warm Library/Bee, saves and failure evidence were preserved. The current Release candidate
+  is retained. No unrelated UI, browser, paid generation, new chat or shutdown was used.
+
+## 2026-09-06 earlier failed candidates: outside queue, seated IK and isolated QA desktop
 
 - `19d49b3e`: actual live hand/seat gate PASS, 2,483 settled samples, max hand 0.008899, failures 0;
   navigation 8,088 samples PASS, collisions/errors 0. Strict arrival times still correct, but Mother first
@@ -45,7 +101,7 @@ Last updated: 2026-09-06. This file contains current handoff state only. Superse
 - Current runtime attendance/hand/skin validation and public delivery are still pending. The older
   evidence below remains a failed candidate, not completion evidence for this correction.
 
-## 2026-09-06 current: fixed main entry/latest-only boot; attendance and live hand reach still BLOCKED
+## 2026-09-06 earlier failed candidates: fixed main entry, attendance and live hand reach
 
 - **Background only.** No desktop input, foreground launch, browser, generation, public game Release,
   user main/Downloads/save change or shutdown. The latest hidden Player runner detected a nonzero window
