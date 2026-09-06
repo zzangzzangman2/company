@@ -3,6 +3,12 @@
 This manifest lists the production Player V8 and Father V19 packages first, followed by current
 family inputs and canonical production assets. Retired iterations are not reusable sources.
 
+2026-09-06 workstation preview rebake: `OfficeBuildFurniture/desk_with_pc_{se,sw,nw,ne}.png`
+uses the same V31 original chair/desk source with chair ground fixed at the semantic tile centre.
+Source: `Family3DWorkstationSpriteAuthoring.BakeBatch`, Unity 6000.3.21f1, local procedural render;
+no external generation/credits. Chair PNG bytes and actor packages remain unchanged. Preview work
+socket metadata matches the updated bake manifest. Normal-game visual verification remains separate.
+
 Completion authority: Father V19/V31 and Player V6/V8 only are complete/user-approved. Older Sister
 and Mother are not complete. See `FAMILY_3D_CHARACTER_STANDARD.md`.
 

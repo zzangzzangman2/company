@@ -2,6 +2,22 @@
 
 Last updated: 2026-09-06. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
+## 2026-09-06 current continuation: chair tile-centre correction (verification in progress)
+
+- User reported rotation-dependent chair placement on tile seams. Production had projected an elevated
+  legacy sprite seat socket onto the floor and then moved the chair again relative to the keyboard.
+  The new production root is the semantic seat-cell centre, with zero chair-ground displacement.
+  Screen and keyboard follow the same tile axis; approved chair parts/character scales remain unchanged.
+- Preview sprites were rebaked from the centred contract. Shop details now share the short offer name,
+  Korean placement/direction messages and separate purchase-price/balance lines; detail space is reserved.
+- Independent geometry test: 8 cases (four rotations in orthogonal bake and mapped production bases),
+  actual chair stem, chair ground, keyboard/screen axis and mesh-screen normal. PASS in
+  `Artifacts/WorkstationTileCentre/geometry.json`; this is NOT normal gameplay/release approval.
+- The user-visible b8b954d5 Fast QA payload (166 files) was hashed and recycled; exact target absent.
+  Evidence: `Artifacts/FastQa/FailedPayloadEvidence/20260906-b8b954d5-chair-tile-offset/`.
+  Source, saves and warm Library/Bee retained. Native placement/seated reach and actual patch/restart
+  remain pending. No GitHub game Release or Downloads promotion has been performed.
+
 ## 2026-09-06 current continuation: shop text correction / restart helper test
 
 - User reported the catalog title overlapping the purchase button (`이거글씨도맞춰줘`).

@@ -145,7 +145,8 @@ namespace FamilyCompany.Experimental.Family3D.Editor
                     keyboardWorld,
                     CharacterHeight,
                     0f,
-                    0f);
+                    0f,
+                    centerChairOnSeatCell: true);
                 if (workstation.GridAxisOrthogonalityErrorDegrees > 0.001f)
                     throw new InvalidOperationException(
                         "Workstation bake attempted to shear a rectangular furniture mesh: " +

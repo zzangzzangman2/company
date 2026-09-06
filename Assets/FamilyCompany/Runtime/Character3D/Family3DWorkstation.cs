@@ -24,6 +24,7 @@ namespace FamilyCompany.Runtime.Character3D
         private Vector3 gridForwardLocalUnit;
         private float deskFootprintWidthWorld;
         private float deskFootprintDepthWorld;
+        private bool centerChairOnSeatCell;
 
         public Vector3 SemanticSeatGroundWorld => transform.position;
         public Vector3 SeatGroundWorld => transform.TransformPoint(resolvedSeatGroundLocal);
@@ -208,7 +209,8 @@ namespace FamilyCompany.Runtime.Character3D
             Vector3 keyboardGroundWorld,
             float characterHeight,
             float modelForwardYawOffsetDegrees,
-            float visualYawOffsetDegrees)
+            float visualYawOffsetDegrees,
+            bool centerChairOnSeatCell = false)
         {
             if (parent == null) throw new ArgumentNullException(nameof(parent));
             gridRightWorld.y = 0f;
@@ -244,6 +246,7 @@ namespace FamilyCompany.Runtime.Character3D
             result.WorkstationSetId = safeId;
             result.seatedVisualYawOffsetDegrees = visualYawOffsetDegrees;
             result.actorModelForwardYawOffsetDegrees = modelForwardYawOffsetDegrees;
+            result.centerChairOnSeatCell = centerChairOnSeatCell;
             result.deskFootprintCenterLocal = root.transform.InverseTransformPoint(
                 deskFootprintCenterWorld);
             result.keyboardGroundLocal = root.transform.InverseTransformPoint(keyboardGroundWorld);
@@ -416,7 +419,7 @@ namespace FamilyCompany.Runtime.Character3D
                 AddGridBox("Desk_Leg", GridLocal(right, 0.215f * h, forward),
                     0.060f * h, 0.43f * h, 0.060f * h, deskEdge, layer);
 
-            float serviceSide = Mathf.Sign(deskRight - keyboardGrid.x);
+            float serviceSide = Mathf.Sign(deskRight - (centerChairOnSeatCell ? 0f : keyboardGrid.x));
             if (Mathf.Abs(serviceSide) < 0.5f) serviceSide = 1f;
             float drawerRight = deskRight + serviceSide * deskWidth * 0.34f;
             float drawerForward = deskForward + deskDepth * 0.03f;
@@ -470,6 +473,10 @@ namespace FamilyCompany.Runtime.Character3D
             // the screen plane. Shift the physical keyboard by the exact skew compensation so
             // screen, keyboard and chair occupy one real perpendicular centreline.
             float gridSkew = Vector3.Dot(gridRightLocalUnit, gridForwardLocalUnit);
+            // The occupied chair cell and the desk cell directly behind it share grid x=0.
+            // Keep the screen and keyboard on that tile axis. Their own rectangular parts
+            // use a perpendicular right axis; a projected desk basis is not a monitor normal.
+            if (centerChairOnSeatCell) { monitorRight = 0f; gridSkew = 0f; }
             float keyboardRight =
                 monitorRight + gridSkew * (screenForward - keyboardForward);
 
@@ -487,7 +494,7 @@ namespace FamilyCompany.Runtime.Character3D
             MonitorWorld = monitor.position;
             for (var line = 0; line < 4; line++)
                 AddGridBox("Crt_TextLine_" + line,
-                    GridLocal(monitorRight + (-0.04f + (line % 2) * 0.025f) * h,
+                    OperatorLocal(monitorRight + (-0.04f + (line % 2) * 0.025f) * h,
                         (0.675f - line * 0.03f) * h,
                         monitorForward - 0.105f * h),
                     (0.125f + (line % 2) * 0.045f) * h,
@@ -509,7 +516,7 @@ namespace FamilyCompany.Runtime.Character3D
             for (var row = 0; row < 4; row++)
             for (var column = 0; column < 9; column++)
                 AddGridBox("Key_" + row + "_" + column,
-                    GridLocal(keyboardRight + (-0.156f + column * 0.039f) * h,
+                OperatorLocal(keyboardRight + (-0.156f + column * 0.039f) * h,
                         (0.512f + row * 0.0015f) * h,
                         keyboardForward + (-0.037f + row * 0.025f) * h),
                     0.028f * h,
@@ -543,14 +550,19 @@ namespace FamilyCompany.Runtime.Character3D
                 gridRightLocalUnit).normalized;
             if (Vector3.Dot(screenOutwardLocal, -gridForwardLocalUnit) < 0f)
                 screenOutwardLocal = -screenOutwardLocal;
+            if (centerChairOnSeatCell) screenOutwardLocal = -gridForwardLocalUnit;
             Vector3 keyboardGroundForSeatLocal = transform.InverseTransformPoint(KeyboardWorld);
             keyboardGroundForSeatLocal.y = 0f;
             // This is the exact V29 screen-front reach point shown in the user's reference. Keep
             // chair and actor here together; the V31 change is grouping only, not a redesign.
-            resolvedSeatGroundLocal = keyboardGroundForSeatLocal +
-                                      screenOutwardLocal * (0.28f * h);
+            resolvedSeatGroundLocal = centerChairOnSeatCell
+                ? Vector3.zero
+                : keyboardGroundForSeatLocal + screenOutwardLocal * (0.28f * h);
 
-            Vector3 deskFrontGroundLocal = GridLocal(deskRight, 0f, frontForward);
+            // Measure at the operator's lane, not the middle of a two-cell desk. In an
+            // oblique projection the latter adds a spurious half-cell clearance offset.
+            Vector3 deskFrontGroundLocal = GridLocal(
+                centerChairOnSeatCell ? keyboardRight : deskRight, 0f, frontForward);
             Vector3 keyboardGroundMeasuredLocal = keyboardGroundForSeatLocal;
             KeyboardInsetFromDeskFrontWorld = -Vector3.Dot(
                 keyboardGroundMeasuredLocal - deskFrontGroundLocal,
@@ -577,7 +589,9 @@ namespace FamilyCompany.Runtime.Character3D
             Vector3 keyboardGround = KeyboardWorld;
             seatGround.y = keyboardGround.y = 0f;
             SeatToKeyboardGroundDistance = Vector3.Distance(seatGround, keyboardGround);
-            MaximumSeatToKeyboardGroundDistanceWorld = 0.30f * h;
+            // A tile-centred chair retains the half-tile aisle. Verify actual avatar hand
+            // errors independently; the old compact reach moved the chair into that aisle.
+            MaximumSeatToKeyboardGroundDistanceWorld = (centerChairOnSeatCell ? 0.50f : 0.30f) * h;
             if (SeatToKeyboardGroundDistance > MaximumSeatToKeyboardGroundDistanceWorld)
                 throw new InvalidOperationException(
                     "Chair must remain within the seated character's compact keyboard reach.");
@@ -669,6 +683,13 @@ namespace FamilyCompany.Runtime.Character3D
                    gridForwardLocalUnit * forward;
         }
 
+        private Vector3 OperatorLocal(float right, float y, float forward)
+        {
+            Vector3 operatorRight = centerChairOnSeatCell
+                ? Vector3.Cross(Vector3.up, gridForwardLocalUnit).normalized : gridRightLocalUnit;
+            return operatorRight * right + Vector3.up * y + gridForwardLocalUnit * forward;
+        }
+
         private Material CreateMaterial(string materialName, Color colour, float metallic, float smoothness)
         {
             Shader shader = Shader.Find("Standard");
@@ -706,7 +727,7 @@ namespace FamilyCompany.Runtime.Character3D
             Renderer renderer = value.GetComponent<Renderer>();
             renderer.sharedMaterial = material;
             Collider collider = value.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
+            if (collider != null) ReleaseOwnedObject(collider);
             return value.transform;
         }
 
@@ -726,7 +747,11 @@ namespace FamilyCompany.Runtime.Character3D
             value.transform.localScale = Vector3.one;
             value.layer = layer;
 
-            Vector3 right = gridRightLocalUnit * (width * 0.5f);
+            bool operatorPart = centerChairOnSeatCell &&
+                (objectName.StartsWith("Crt_", StringComparison.Ordinal) ||
+                 objectName.StartsWith("Key_", StringComparison.Ordinal) || objectName == "Keyboard");
+            Vector3 right = (operatorPart
+                ? Vector3.Cross(Vector3.up, gridForwardLocalUnit).normalized : gridRightLocalUnit) * (width * 0.5f);
             Vector3 forward = gridForwardLocalUnit * (depth * 0.5f);
             Vector3 up = Vector3.up * (height * 0.5f);
             var mesh = new Mesh { name = objectName + "_MappedGridMesh" };
@@ -787,7 +812,7 @@ namespace FamilyCompany.Runtime.Character3D
             value.layer = layer;
             value.GetComponent<Renderer>().sharedMaterial = material;
             Collider collider = value.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
+            if (collider != null) ReleaseOwnedObject(collider);
             return value.transform;
         }
 
@@ -802,12 +827,18 @@ namespace FamilyCompany.Runtime.Character3D
         {
             for (var index = 0; index < ownedMeshes.Count; index++)
                 if (ownedMeshes[index] != null)
-                    Destroy(ownedMeshes[index]);
+                    ReleaseOwnedObject(ownedMeshes[index]);
             ownedMeshes.Clear();
             for (var index = 0; index < ownedMaterials.Count; index++)
                 if (ownedMaterials[index] != null)
-                    Destroy(ownedMaterials[index]);
+                    ReleaseOwnedObject(ownedMaterials[index]);
             ownedMaterials.Clear();
+        }
+
+        private static void ReleaseOwnedObject(UnityEngine.Object value)
+        {
+            if (Application.isPlaying) Destroy(value);
+            else DestroyImmediate(value);
         }
     }
 }

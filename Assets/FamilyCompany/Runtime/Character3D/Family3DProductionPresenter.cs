@@ -565,8 +565,9 @@ namespace FamilyCompany.Runtime.Character3D
                     footprintDepth = previousWidth;
                 }
 
-                Vector3 seatGround = MapOfficeWorldToProductionGround(
-                    world.Workstations.DeskSeatSocketWorld(seat));
+                // An elevated sprite socket is not a floor coordinate. Projecting it onto
+                // the ground displaced the chair differently for every facing.
+                Vector3 seatGround = basisGround;
                 Vector3 keyboardGround = MapOfficeWorldToProductionGround(
                     world.Workstations.DeskWorkSocketWorld(seat));
                 Family3DWorkstation workstation = Family3DWorkstation.Create(
@@ -582,7 +583,8 @@ namespace FamilyCompany.Runtime.Character3D
                     keyboardGround,
                     referenceCharacterHeight,
                     ApprovedFacingOffsetDegrees,
-                    0f);
+                    0f,
+                    centerChairOnSeatCell: true);
                 workstations.Add(workstation);
                 workstationBySeatId.Add(seat.SeatId, workstation);
                 HideFurniture(seat.WorkSurfaceFurnitureId);

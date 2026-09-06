@@ -26,7 +26,7 @@ namespace FamilyCompany.Presentation.Unity
         private string _gameDirectory, _workerDirectory, _installRoot, _runRoot, _qaRoot;
         private string _status = "최신 버전을 확인하고 있습니다", _detail = "", _phase = "check";
         private double _percent = -1;
-        private bool _blocking = true, _failed, _offlineAvailable, _restarting, _captured, _previousBackground;
+        private bool _blocking = true, _failed, _offlineAvailable, _restarting, _captured, _previousBackground, _qaRestart;
         private float _started;
         private GUIStyle _button;
 
@@ -50,6 +50,8 @@ namespace FamilyCompany.Presentation.Unity
             _instance = host.AddComponent<GamePatchBootstrap>();
             _instance._gameDirectory = game;
             _instance._qaRoot = qa;
+            _instance._qaRestart = qaPlayer && !string.IsNullOrEmpty(qa) &&
+                Array.IndexOf(Environment.GetCommandLineArgs(), "-familyCompanyInGamePatchRestartQa") >= 0;
             _instance._workerDirectory = string.IsNullOrEmpty(qa) ? workers : Path.GetFullPath(qa);
             _instance._installRoot = string.IsNullOrEmpty(qa)
                 ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FamilyCompany", "PatchedGame")
@@ -129,7 +131,7 @@ namespace FamilyCompany.Presentation.Unity
                 _phase = message.phase; _percent = message.percent;
                 switch (_phase)
                 {
-                    case "download": _status = message.total == 0 ? "다운로드할 파일이 없습니다" : "패치를 다운로드하고 있습니다"; break;
+                    case "download": _status = message.total == 0 ? "다운로드할 파일이 없습니다" : "패치 중입니다 · 다운로드"; break;
                     case "verify": _status = "게임 파일의 무결성을 확인하고 있습니다"; break;
                     case "check-files": _status = "변경된 파일을 확인하고 있습니다"; break;
                     case "reuse": _status = "변경 없는 파일을 재사용하고 있습니다"; break;
@@ -161,7 +163,7 @@ namespace FamilyCompany.Presentation.Unity
                 if (!string.IsNullOrEmpty(_qaRoot))
                 {
                     File.WriteAllText(Path.Combine(_qaRoot, "unity-patch-result.json"), JsonUtility.ToJson(result, true));
-                    StartCoroutine(FinishQa()); return;
+                    if (!_qaRestart) { StartCoroutine(FinishQa()); return; }
                 }
                 if (result.status == "offline-ready")
                 { _failed = true; _offlineAvailable = true; _status = "최신 버전을 확인하지 못했습니다"; _detail = "무결성을 확인한 이전 설치본으로 시작할 수 있습니다."; return; }

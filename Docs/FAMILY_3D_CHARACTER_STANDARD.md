@@ -239,6 +239,12 @@ sky probe는 캐릭터 밝기에 영향이 없다. 밝기 조정 수단은 `_Col
 
 ## 8. 착석·워크스테이션 계약 (h = WalkActor.StandingHeight)
 
+2026-09-06 사용자 수정: production 의자 지면 중심은 반드시 `seat.Cell` 타일 중앙이다.
+키보드 기준으로 의자를 이동하던 구형 `0.28h` socket 보정은 production에서 폐기한다.
+의자 부품/크기/무릎 자세는 유지하되 화면·키보드를 좌석 타일의 책상 방향 축에 정렬한다.
+반 타일 통로 때문에 구형 `좌석-키보드 ≤0.30h` 수치 대신 실제 손 endpoint/팔 도달성 검증이 필요하다.
+새 geometry sanity bound `≤0.50h`만으로 착석 PASS를 주장하지 않는다. 아래 표의 나머지 접촉/무릎 규칙은 유지한다.
+
 승인 V31 원형 의자 세트(`V31_AtomicWorkstationSet_OriginalChair_<seat>`)는 불변이다. 캐릭터 fitting 중
 의자·책상·CRT 위치와 방향을 바꾸지 않는다. 좌석 한 개 = 책상+CRT+키보드+의자 한 루트.
 

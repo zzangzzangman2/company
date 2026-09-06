@@ -3,6 +3,7 @@ using System.Collections;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using FamilyCompany.Presentation.Unity;
 using FamilyCompany.Presentation.Unity.OfficeGridView;
@@ -21,6 +22,8 @@ namespace FamilyCompany.Runtime.Character3D
         private PrototypeBootstrap bootstrap;
         private StarterOfficeRuntimeBootstrap runtime;
         private StreamWriter trace;
+        private StreamWriter geometry;
+        private float nextGeometry;
         private int errors, frame, capture;
         private float nextSample, nextCapture;
         private bool nextDayRequested;
@@ -44,6 +47,9 @@ namespace FamilyCompany.Runtime.Character3D
             Directory.CreateDirectory(directory);
             trace = new StreamWriter(Path.Combine(directory, "observations.csv"), false, new UTF8Encoding(false));
             trace.AutoFlush = true;
+            geometry = new StreamWriter(Path.Combine(directory, "chair-geometry.csv"), false, new UTF8Encoding(false));
+            geometry.AutoFlush = true;
+            geometry.WriteLine("seconds,seat,turn,chairTileErrorPx,stemTileErrorPx,monitorAxisError,keyboardAxisError,member,phase,handMidpointError,standingHeight");
             trace.WriteLine("frame,seconds,clock,ready,cash,inventory,seats,pointerCommits,member,phase,away,x,y,destination,pathIndex,pathLength,seat,seatDirection,arrivalCount,workFrames,gaitDistance,displacement,staticViolations,interactionViolations,agentPenetrations,bodies,legacyCharacters,legacyFurniture,bgm,sfx,listenerVolume,outputPeak,errors");
             Application.logMessageReceived += OnLog;
             Application.runInBackground = true;
@@ -105,6 +111,11 @@ namespace FamilyCompany.Runtime.Character3D
             }
             trace.Write(rows.ToString());
             File.WriteAllText(Path.Combine(directory, "latest.csv"), rows.ToString());
+            if (presenter != null && presenter.IsBound && Time.realtimeSinceStartup >= nextGeometry)
+            {
+                nextGeometry = Time.realtimeSinceStartup + 1f;
+                ObserveChairGeometry(presenter);
+            }
             if (Time.realtimeSinceStartup >= nextCapture && runtime.IsReady)
             {
                 nextCapture = Time.realtimeSinceStartup + 10;
@@ -139,7 +150,47 @@ namespace FamilyCompany.Runtime.Character3D
         {
             ScreenCapture.CaptureScreenshot(Path.Combine(directory, "screen-" + (capture++).ToString("D4") + ".png"));
         }
+        private void ObserveChairGeometry(Family3DProductionPresenter presenter)
+        {
+            Camera overlay = Camera.allCameras.FirstOrDefault(c => c.name == "Family3DProductionOverlayCamera");
+            if (overlay == null || Camera.main == null) return;
+            var bindings = (IEnumerable)typeof(Family3DProductionPresenter)
+                .GetField("characters", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(presenter);
+            foreach (Family3DWorkstation desk in presenter.GetComponentsInChildren<Family3DWorkstation>())
+            {
+                var seat = runtime.World.Grid.SeatSlots.FirstOrDefault(s => s.SeatId == desk.WorkstationSetId);
+                if (seat == null) continue;
+                Vector2 tile = Camera.main.WorldToScreenPoint(runtime.World.Presenter.CellCenterWorld(seat.Cell));
+                Vector3 stem = desk.transform.Find("Chair_SwivelPivot/Chair_Stem").position; stem.y = 0;
+                float chairError = Vector2.Distance(tile, overlay.WorldToScreenPoint(desk.ChairGroundWorld));
+                float stemError = Vector2.Distance(tile, overlay.WorldToScreenPoint(stem));
+                Vector3 key = desk.KeyboardWorld - desk.ChairGroundWorld; key.y = 0;
+                Vector3 screen = desk.MonitorWorld - desk.ChairGroundWorld; screen.y = 0;
+                bool occupied = false;
+                foreach (object binding in bindings)
+                {
+                    Type type = binding.GetType();
+                    var agent = (OfficeRuntimeAgent)type.GetProperty("Agent").GetValue(binding);
+                    if (agent.ActiveSeatId != seat.SeatId) continue;
+                    var body = (Family3DWalkActor)type.GetProperty("WalkActor").GetValue(binding);
+                    var host = (GameObject)type.GetProperty("Host").GetValue(binding);
+                    Animator avatar = host.GetComponentInChildren<Animator>();
+                    Vector3 hands = (avatar.GetBoneTransform(HumanBodyBones.LeftHand).position +
+                                     avatar.GetBoneTransform(HumanBodyBones.RightHand).position) * 0.5f;
+                    Vector3 expected = desk.KeyboardWorld + Vector3.up * (0.022f * body.StandingHeight) -
+                                       desk.SeatedBodyForwardWorld * (0.035f * body.StandingHeight);
+                    geometry.WriteLine(string.Join(",", F(Time.realtimeSinceStartup), seat.SeatId,
+                        seat.Facing, F(chairError), F(stemError), F(Vector3.Cross(screen, desk.ForwardWorld).magnitude),
+                        F(Vector3.Cross(key, desk.ForwardWorld).magnitude), agent.AgentId, agent.Phase,
+                        F(Vector3.Distance(hands, expected)), F(body.StandingHeight)));
+                    occupied = true;
+                }
+                if (!occupied) geometry.WriteLine(string.Join(",", F(Time.realtimeSinceStartup), seat.SeatId,
+                    seat.Facing, F(chairError), F(stemError), F(Vector3.Cross(screen, desk.ForwardWorld).magnitude),
+                    F(Vector3.Cross(key, desk.ForwardWorld).magnitude), "none", "none", "", ""));
+            }
+        }
         private static string F(float value) => value.ToString("F6", CultureInfo.InvariantCulture);
-        private void OnDestroy() { Application.logMessageReceived -= OnLog; trace?.Dispose(); }
+        private void OnDestroy() { Application.logMessageReceived -= OnLog; trace?.Dispose(); geometry?.Dispose(); }
     }
 }

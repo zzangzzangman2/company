@@ -374,7 +374,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _previewSignature = signature;
             _previewMessage = string.Empty;
             _previewEdit = BuildPreview();
-            if (_previewEdit != null && !_previewEdit.Success) _previewMessage = _previewEdit.Message;
+            if (_previewEdit != null && !_previewEdit.Success) _previewMessage = PlacementMessage(_previewEdit);
             if (_pendingSource == PendingSource.Purchase)
             {
                 OfficeFurnitureDefinition definition = OfficeFurnitureCatalog.Require(_pendingDefinitionId);
@@ -845,7 +845,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
                 "현재 판매: 3D 책상·PC·의자 세트", _skin.BodyStyle);
             y += _skin.Round(42);
 
-            float detailsHeight = _skin.Round(190);
+            float detailsHeight = _skin.Round(260);
             float catalogHeight = Mathf.Max(_skin.Round(180), panel.yMax - y - detailsHeight - pad);
             Rect scrollRect = new Rect(x, y, width, catalogHeight);
             List<OfficeFurnitureDefinition> definitions = OfficeFurnitureCatalog.ShopOffers.ToList();
@@ -923,7 +923,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             OfficeFurnitureDefinition definition = OfficeFurnitureCatalog.Find(TargetDefinitionId());
             if (definition == null)
             {
-                GUI.Label(new Rect(x, y, width, _skin.Round(24)), "가구를 선택하거나 카탈로그에서 구매하세요", _skin.BodyStyle);
+                GUI.Label(new Rect(x, y, width, _skin.Round(24)), "가구 선택 또는 세트 구매 후 배치하세요", _skin.BodyStyle);
                 GUI.Label(new Rect(x, y + _skin.Round(29), width, _skin.Round(42)),
                     "선택/집기 · 미리보기 · 타일 중심 스냅 · R 90° 회전\nESC/우클릭 취소 · 확정 전에는 차감 없음",
                     _skin.HintStyle);
@@ -936,18 +936,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             long price = OfficeFurnitureCatalog.GameplayShopPrice(definition);
             long after = _pendingSource == PendingSource.Purchase ? State.Company.CashWon - price : State.Company.CashWon;
             string footprint = OfficeFurnitureCatalog.IsWorkstationSetOffer(definition.DefinitionId)
-                ? "책상 2칸 + 의자 1칸 세트"
+                ? "책상 2칸 · 의자 1칸"
                 : definition.BaseWidth + "×" + definition.BaseHeight;
             GUI.Label(new Rect(x, y, width, _skin.Round(20)),
-                $"{footprint} · {CapabilityText(definition)} · 유지비 {Won(OfficeFurnitureCatalog.ShopDailyMaintenanceWon(definition))}/일",
+                $"{footprint} · 유지비 {Won(OfficeFurnitureCatalog.ShopDailyMaintenanceWon(definition))}/일",
                 _skin.HintStyle);
             y += _skin.Round(22);
-            GUI.Label(new Rect(x, y, width, _skin.Round(22)),
+            GUI.Label(new Rect(x, y, width, _skin.Round(44)),
                 _pendingSource == PendingSource.Purchase
-                    ? $"구매 {Won(price)} → 확정 후 잔액 {Won(after)}"
-                    : $"R 90° 회전 · 현재 방향 {_previewRotation}",
+                    ? $"구매가 {Won(price)}\n배치 후 잔액 {Won(after)}"
+                    : $"R 90° 회전 · 현재 {FacingText(_previewRotation)}",
                 _skin.BodyStyle);
-            y += _skin.Round(24);
+            y += _skin.Round(46);
             bool valid = PreviewValid;
             GUI.Label(new Rect(x, y, width, _skin.Round(38)),
                 valid ? "● 유효한 위치" : "● " + (_previewMessage.Length > 0 ? _previewMessage : "위치 또는 회전을 변경하세요"),
@@ -980,7 +980,7 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             long refund = instance == null || definition == null ? 0 :
                 OfficeFurnitureEconomyConfig.ResaleValue(instance.PurchaseBasisWon, definition.ResaleRateBasisPoints);
             string text = _confirmation == Confirmation.Sell
-                ? $"{definition?.KoreanDisplayName}\n판매 환급 {Won(refund)} · 구매 basis {Won(instance?.PurchaseBasisWon ?? 0)}"
+                ? $"{definition?.KoreanDisplayName}\n판매 환급 {Won(refund)} · 구매가 {Won(instance?.PurchaseBasisWon ?? 0)}"
                 : $"{definition?.KoreanDisplayName}\n회사 자금 변화 없이 보관함으로 이동합니다.";
             GUI.Label(new Rect(rect.x + _skin.Round(18), rect.y + _skin.Round(60),
                 rect.width - _skin.Round(36), _skin.Round(70)), text, _skin.BodyStyle);
@@ -1014,6 +1014,33 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             return definition.NeedCapabilityTag.Length > 0 ? definition.NeedCapabilityTag : definition.Capabilities.ToString();
         }
 
-        private static string Won(long value) => "₩" + value.ToString("N0");
+        private static string FacingText(OfficeFurnitureFacing facing)
+        {
+            switch (facing)
+            {
+                case OfficeFurnitureFacing.SouthEast: return "오른쪽 아래";
+                case OfficeFurnitureFacing.SouthWest: return "왼쪽 아래";
+                case OfficeFurnitureFacing.NorthWest: return "왼쪽 위";
+                default: return "오른쪽 위";
+            }
+        }
+
+        private static string PlacementMessage(OfficeLayoutEditResult result)
+        {
+            switch (result.Failure)
+            {
+                case OfficeLayoutEditFailure.OutOfBounds:
+                case OfficeLayoutEditFailure.NotOnFloor: return "가구 전체를 사무실 바닥 안에 놓으세요";
+                case OfficeLayoutEditFailure.OverlapsFurniture: return "다른 가구와 겹쳐서 놓을 수 없습니다";
+                case OfficeLayoutEditFailure.EntranceBlocked: return "출입구를 막을 수 없습니다";
+                case OfficeLayoutEditFailure.PathDisconnected:
+                case OfficeLayoutEditFailure.AccessBlocked: return "사람이 지날 통로를 남겨 주세요";
+                case OfficeLayoutEditFailure.SeatBroken: return "의자와 책상 앞에 앉을 공간이 필요합니다";
+                case OfficeLayoutEditFailure.NothingToDo: return "위치나 방향을 바꿔 주세요";
+                default: return "이 위치에는 놓을 수 없습니다";
+            }
+        }
+
+        private static string Won(long value) => value.ToString("N0") + "원";
     }
 }

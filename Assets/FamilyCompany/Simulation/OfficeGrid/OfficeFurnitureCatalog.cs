@@ -193,7 +193,7 @@ namespace FamilyCompany.Simulation.OfficeLayout
         private static readonly ReadOnlyCollection<OfficeFurnitureDefinition> CanonicalDefinitions =
             Array.AsReadOnly(new[]
             {
-                D(OfficeGridLayouts.DeskWithPcKind, "CRT 업무 책상·회전의자 세트", OfficeFurnitureCategory.Work, 2, 1,
+                D(OfficeGridLayouts.DeskWithPcKind, "책상·PC·의자 세트", OfficeFurnitureCategory.Work, 2, 1,
                     1400000, 3500, 900, OfficeFurnitureCapability.WorkDesk, 1,
                     OfficeFurnitureAccessPolicy.AdjacentCardinal, true, "WorkDesk"),
                 D(OfficeGridLayouts.SwivelChairKind, "사무용 회전의자", OfficeFurnitureCategory.Seating, 1, 1,
