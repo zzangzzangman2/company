@@ -299,7 +299,8 @@ namespace FamilyCompany.Runtime.Character3D
                     Capture("next-day-normal-seated.png");
                     receipt.AppendLine("nextDayClockSetupJump=afternoon-night-only nextDayObservedClock=1x nativePointer=false routeInjection=false");
                     receipt.AppendLine("nextDayAttendanceGatePassed=" + (attendanceFailures.Count == 0));
-                    foreach (string failure in attendanceFailures) receipt.AppendLine("attendanceFailure=" + failure);
+                    foreach (string attendanceFailure in attendanceFailures)
+                        receipt.AppendLine("attendanceFailure=" + attendanceFailure);
                 }
                 File.WriteAllText(Path.Combine(directory, "normal-autonomy-observed.txt"),
                     "OBSERVED, NOT A WORK/RELEASE PASS\n" + receipt +
