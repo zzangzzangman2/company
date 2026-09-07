@@ -2,6 +2,28 @@
 
 Last updated: 2026-09-07. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
+## 2026-09-07 deployment validation authorized; release still pending
+
+- After the source push, the user requested patch deployment and explicitly authorized the final
+  game validation in reply to the no-mouse/no-keyboard condition. Graphics permission is limited to
+  this deployment verification; no native input, foreground switching or user-file replacement.
+- The exact failed FastQA cache (166 generated files) was retired after recording its build identity,
+  source/compiled DLL match, hashes and failure logs under
+  `Artifacts/FailedPayloadEvidence/UiLayout20260907`. Source, warm Library and user installation survived.
+- New FastQA build PASS: `Artifacts/FastQa/runs/20260907-203313-827`, 68.385 s with two-core restriction.
+  The previous Canvas lifecycle exception is now cleared in actual D3D11 UI validation:
+  `Artifacts/FastQa/UnifiedOfficeHud/20260907-203440` PASS at all four native resolutions;
+  `20260907-203633` full navigation PASS, 54 EventSystem routes / 33 captures / zero runtime errors.
+  Main/save guards passed. These are pre-release tests, not final Release evidence.
+- Unity rewrote only empty YAML field whitespace in the new icon PNG importer metadata. Preserve
+  Unity's normalized form so the upcoming clean Release does not dirty its source during import.
+  Texture parameters, GUID and image bytes did not change.
+- A clean non-Development Release and fresh release gates, publication and public-download checks
+  are next. Public latest remains v5 until publication actually succeeds. The fixed-entry bootstrap
+  caveat below remains. The user explicitly approved backing up the existing main installation and
+  refreshing it once with the verified official package after deployment, at the same path with saves
+  preserved. No installation refresh has occurred yet; user cache/save stay separate and unchanged.
+
 ## 2026-09-07 source handoff requested: casual UI and background-only QA guards
 
 The user subsequently requested committing and pushing this source snapshot to `origin/main`.
