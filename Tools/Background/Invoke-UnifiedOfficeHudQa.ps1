@@ -1,5 +1,6 @@
-param([string]$Player = '', [int]$TimeoutSeconds = 180, [switch]$FullNavigation)
+param([string]$Player = '', [int]$TimeoutSeconds = 180, [switch]$FullNavigation, [switch]$AllowGraphicsQa)
 $ErrorActionPreference = 'Stop'
+if (!$AllowGraphicsQa) { throw 'Graphics QA is paused by default. Obtain user authorization before -AllowGraphicsQa; private desktop is not headless.' }
 $taskRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if (!$Player) { $Player = Join-Path $taskRepo 'Artifacts/FastQa/cache/WindowsPlayer/FamilyCompany_FastQa.exe' }
 $taskPlayer = (Resolve-Path -LiteralPath $Player).Path
@@ -21,7 +22,7 @@ $taskArgs = '-force-d3d11 -screen-fullscreen 0 -screen-width 1280 -screen-height
 if ($FullNavigation) {
     $taskArgs = $taskArgs.Replace('-unifiedOfficeHudQa -unifiedOfficeHudOutput', '-familyCompanyMainNavigationHudQa -familyCompanyMainNavigationHudQaOutput')
 }
-$taskOwner = [CompanyQaDesktop]::Start($taskPlayer, $taskArgs, (Split-Path $taskPlayer -Parent))
+$taskOwner = [CompanyQaDesktop]::Start($taskPlayer, $taskArgs, (Split-Path $taskPlayer -Parent), $AllowGraphicsQa.IsPresent)
 try {
     Write-Output ('PRIVATE-DESKTOP HUD QA: ' + $taskOutput)
     $taskTimer = [Diagnostics.Stopwatch]::StartNew()

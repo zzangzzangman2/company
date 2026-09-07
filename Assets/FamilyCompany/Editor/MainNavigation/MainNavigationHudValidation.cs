@@ -250,15 +250,14 @@ namespace FamilyCompany.Editor
             var catalog = AssetDatabase.LoadAssetAtPath<UiRemasterFontCatalog>(FontCatalogPath);
             Require(catalog != null && catalog.IsComplete,
                 "Bundled Korean font catalog is missing or incomplete.");
-            Require(catalog.BodySource.name.IndexOf("Maple", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                    catalog.HeadingSource.name.IndexOf("Maple", StringComparison.OrdinalIgnoreCase) >= 0,
-                "Main navigation primary font family must be Maplestory Light/Bold.");
+            Require(catalog.FallbackSource.name.IndexOf("Pretendard", StringComparison.OrdinalIgnoreCase) >= 0,
+                "Casual office menus require bundled Pretendard; shared legacy font sources remain unchanged.");
             var glyphs = new HashSet<char>(
                 string.Concat(MainNavigationCatalog.EnumerateKoreanText())
                     .Where(character => character >= '\uAC00' && character <= '\uD7A3'));
             foreach (var glyph in glyphs)
             {
-                Require(catalog.BodySource.HasCharacter(glyph) || catalog.FallbackSource.HasCharacter(glyph),
+                Require(catalog.FallbackSource.HasCharacter(glyph),
                     $"Bundled Korean font fallback is missing '{glyph}' (U+{(int)glyph:X4}).");
             }
             Debug.Log($"MAIN_NAVIGATION_KOREAN_FONT: PASS glyphs={glyphs.Count}");
@@ -286,7 +285,9 @@ namespace FamilyCompany.Editor
                          "BuildComingSoonDetail",
                          "NavigateBackNow",
                          "ReturnToOfficeNow",
-                         "Selectable.Transition.SpriteSwap",
+                         "OfficeHudVisuals.ButtonColors",
+                         "CasualResponsiveGrid",
+                         "CasualMenuViewport",
                          "MAIN_NAVIGATION_V2_ASSET_MISSING",
                          "World Dim 26 Percent",
                          "MinimumBodyFontSize = UiRemasterTypography.BodyPixels",
@@ -298,6 +299,9 @@ namespace FamilyCompany.Editor
                 Require(presenter.Contains(required),
                     $"Main navigation presenter is missing required runtime structure: {required}");
             }
+            Require(!presenter.Contains("LoadRequiredSprite(V3CommonRoot") && !presenter.Contains("LoadRequiredSprite(FrameRoot") &&
+                    presenter.Contains("CreateFontAsset(catalog.FallbackSource, \"Casual Office Pretendard"),
+                "An obsolete ornamental panel or mixed font remains in casual menus.");
             foreach (var forbidden in new[] { "●  LIVE", "저장 완료", "Ctrl+S", "관리 화면   ESC" })
                 Require(!presenter.Contains(forbidden),
                     $"New main HUD exposes a removed clutter element: {forbidden}");

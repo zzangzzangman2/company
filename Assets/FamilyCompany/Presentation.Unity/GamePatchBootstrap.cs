@@ -26,6 +26,11 @@ namespace FamilyCompany.Presentation.Unity
         private string _gameDirectory, _workerDirectory, _installRoot, _runRoot, _qaRoot;
         private string _status = "최신 버전을 확인하고 있습니다", _detail = "", _phase = "check";
         private double _percent = -1;
+        private readonly PatchDisplayProgress _overall = new PatchDisplayProgress();
+        private bool _noticeDrawn;
+        private float _noticeDrawnAt;
+        private bool _noticeCaptured;
+        private const float RestartNoticeSeconds = 4f;
         private bool _blocking = true, _failed, _restarting, _captured, _previousBackground, _qaRestart;
         private float _started;
         private GUIStyle _button;
@@ -107,7 +112,8 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (_worker != null && !_worker.HasExited) return;
             _worker?.Dispose(); _worker = null;
-            _failed = false; _percent = -1; _phase = "check";
+            _failed = false; _percent = 0; _phase = "check"; _overall.Reset();
+            _noticeDrawn = false; _noticeCaptured = false;
             _status = "최신 버전을 확인하고 있습니다"; _detail = "";
             _started = Time.realtimeSinceStartup;
             try
@@ -129,10 +135,10 @@ namespace FamilyCompany.Presentation.Unity
                 File.AppendAllText(Path.Combine(_runRoot, "worker.txt"), line + "\n");
                 if (!line.StartsWith("FC_PROGRESS ", StringComparison.Ordinal)) continue;
                 var message = JsonUtility.FromJson<ProgressMessage>(line.Substring(12));
-                _phase = message.phase; _percent = message.percent;
+                _phase = message.phase; _percent = _overall.Observe(_phase, message.done, message.total);
                 switch (_phase)
                 {
-                    case "download": _status = message.total == 0 ? "다운로드할 파일이 없습니다" : "패치 중입니다 · 다운로드"; break;
+                    case "download": _status = message.total == 0 ? "다운로드할 파일이 없습니다" : "업데이트 중 · 전체 파일 다운로드"; break;
                     case "verify": _status = "게임 파일의 무결성을 확인하고 있습니다"; break;
                     case "check-files": _status = "변경된 파일을 확인하고 있습니다"; break;
                     case "reuse": _status = "변경 없는 파일을 재사용하고 있습니다"; break;
@@ -142,10 +148,11 @@ namespace FamilyCompany.Presentation.Unity
                     case "error": Fail("패치 서버에 연결하거나 파일을 검증하지 못했습니다."); break;
                     default: _status = "최신 버전을 확인하고 있습니다"; break;
                 }
-                _detail = message.total > 0 && (_phase == "download" || _phase == "verify")
-                    ? $"{message.done / 1048576.0:0.00} / {message.total / 1048576.0:0.00} MiB\n{message.detail}"
-                    : (_phase == "error" ? "다시 확인하거나 게임을 종료해 주세요." : message.detail ?? "");
-                Debug.Log($"IN_GAME_PATCH_PROGRESS phase={_phase} done={message.done} total={message.total} percent={_percent:0.0}");
+                _detail = message.total > 0 && _phase == "download"
+                    ? $"전체 다운로드 {message.done / 1048576.0:0.00} / {message.total / 1048576.0:0.00} MiB\n다운로드와 검증을 합친 전체 업데이트 진행률입니다."
+                    : (_phase == "error" ? "다시 확인하거나 게임을 종료해 주세요." :
+                        "파일 준비 → 다운로드 → 무결성 확인 → 완료");
+                Debug.Log($"IN_GAME_PATCH_PROGRESS phase={_phase} done={message.done} total={message.total} percent={_percent:0.0} stagePercent={message.percent:0.0}");
             }
             if (!string.IsNullOrEmpty(_qaRoot) && !_captured && _phase == "download" && _percent >= 20)
             {
@@ -163,6 +170,8 @@ namespace FamilyCompany.Presentation.Unity
                 var result = JsonUtility.FromJson<PatchResult>(File.ReadAllText(Path.Combine(_runRoot, "result.json")));
                 if (result.status != "current" && result.status != "prepared")
                     throw new InvalidOperationException("최신 공개 버전 확인이 완료되지 않았습니다. 이전 버전은 실행하지 않습니다.");
+                _percent = _overall.Complete();
+                Debug.Log("IN_GAME_PATCH_OVERALL_COMPLETE percent=100 validatedResult=true");
                 if (!string.IsNullOrEmpty(_qaRoot))
                 {
                     File.WriteAllText(Path.Combine(_qaRoot, "unity-patch-result.json"), JsonUtility.ToJson(result, true));
@@ -184,7 +193,8 @@ namespace FamilyCompany.Presentation.Unity
         private IEnumerator FinishQa()
         {
             _restarting = true;
-            yield return null; yield return null;
+            yield return ShowRestartNotice();
+            if (_failed) { Application.Quit(1); yield break; }
             Application.Quit(_captured ? 0 : 1);
         }
 
@@ -196,7 +206,11 @@ namespace FamilyCompany.Presentation.Unity
 
         private IEnumerator RestartWhenReady(PatchResult result)
         {
-            _restarting = true; _percent = -1; _status = "패치 적용을 위해 게임을 다시 시작합니다";
+            _restarting = true; _percent = 100;
+            yield return ShowRestartNotice();
+            if (_failed) yield break;
+            _status = "새 버전으로 다시 시작하고 있습니다";
+            _detail = "업데이트를 모두 받았습니다. 잠시만 기다려 주세요.";
             string ready = Path.Combine(_runRoot, "restart-ready.json");
             using (var helper = TryStartRestart(result, ready))
             {
@@ -206,6 +220,35 @@ namespace FamilyCompany.Presentation.Unity
                 if (File.Exists(ready) && !helper.HasExited) Application.Quit();
                 else { _restarting = false; Fail("자동 재시작을 준비하지 못했습니다. 현재 게임은 유지됩니다."); }
             }
+        }
+
+        private IEnumerator ShowRestartNotice()
+        {
+            _percent = 100;
+            _phase = "restart-notice";
+            _status = "업데이트 완료 · 게임을 다시 시작합니다";
+            _noticeDrawn = false;
+            var deadline = Time.realtimeSinceStartup + 15f;
+            // Count from a real Repaint, not the worker's exit: fast helpers must not close the
+            // game before the user ever sees the notice. A broken renderer fails closed.
+            while (!_noticeDrawn && Time.realtimeSinceStartup < deadline) yield return null;
+            if (!_noticeDrawn)
+            {
+                _restarting = false; Fail("재시작 안내 화면을 준비하지 못했습니다.");
+                yield break;
+            }
+            while (Time.realtimeSinceStartup - _noticeDrawnAt < RestartNoticeSeconds)
+            {
+                int seconds = Mathf.Max(1, Mathf.CeilToInt(RestartNoticeSeconds - (Time.realtimeSinceStartup - _noticeDrawnAt)));
+                _detail = $"{seconds}초 후 새 버전으로 자동 재시작합니다.\n기존 실행 파일과 저장 데이터는 그대로 유지됩니다.";
+                if (!_noticeCaptured && !string.IsNullOrEmpty(_qaRoot) && Time.realtimeSinceStartup - _noticeDrawnAt > .5f)
+                {
+                    _noticeCaptured = true;
+                    ScreenCapture.CaptureScreenshot(Path.Combine(_qaRoot, "restart-notice.png"));
+                }
+                yield return null;
+            }
+            Debug.Log($"IN_GAME_PATCH_RESTART_NOTICE_COMPLETE visibleSeconds={Time.realtimeSinceStartup - _noticeDrawnAt:0.000}");
         }
 
         private Process TryStartRestart(PatchResult result, string ready)
@@ -218,7 +261,8 @@ namespace FamilyCompany.Presentation.Unity
                 " -GameDirectory " + Quote(_gameDirectory) + " -InstallRoot " + Quote(_installRoot) +
                 " -PendingDirectory " + Quote(result.directory) + " -ExpectedManifestHash " + Quote(result.manifestHash) +
                 " -ReadyPath " + Quote(ready) +
-                (_qaRestart && Application.isBatchMode ? " -DiagnosticBatchMode" : ""), false);
+                (_qaRestart && (Application.isBatchMode || Array.IndexOf(Environment.GetCommandLineArgs(),
+                    "-familyCompanyRestartChildBackgroundQa") >= 0) ? " -DiagnosticBatchMode" : ""), false);
             }
             catch (Exception error) { Fail("자동 재시작 준비 실패: " + error.Message); return null; }
         }
@@ -234,7 +278,12 @@ namespace FamilyCompany.Presentation.Unity
         {
             if (!_blocking) return;
             int oldDepth = GUI.depth; GUI.depth = -10000;
-            ScenePreviewJump.DrawPatchLoading(_status, _detail, _percent);
+            bool presented = ScenePreviewJump.DrawPatchLoading(_status, _detail, _percent);
+            if (presented && _phase == "restart-notice" && !_noticeDrawn && Event.current.type == EventType.Repaint)
+            {
+                _noticeDrawn = true; _noticeDrawnAt = Time.realtimeSinceStartup;
+                Debug.Log("IN_GAME_PATCH_RESTART_NOTICE_VISIBLE actualRepaint=true percent=100");
+            }
             if (_failed && !_restarting)
             {
                 if (_button == null)

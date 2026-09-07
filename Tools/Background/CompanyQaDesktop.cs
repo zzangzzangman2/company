@@ -3,8 +3,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
-// Own-process QA isolation. Never switches the interactive desktop or sends native input.
+// Own-process desktop placement, NOT an input/GPU sandbox. The launcher itself does not
+// switch desktops or inject input; a presented child still requires explicit authorization.
 public sealed class CompanyQaDesktop : IDisposable
 {
     public Process Process { get; private set; }
@@ -51,7 +53,24 @@ public sealed class CompanyQaDesktop : IDisposable
             return name.ToString();
         } finally { CloseDesktop(value); }
     }
+    public static void AssertLaunchAllowed(string arguments, bool allowGraphicsQa) {
+        // Check before any Win32 call or process creation. Quoted path substrings are not flags.
+        var flags = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match token in Regex.Matches(arguments ?? "", "\"[^\"]*\"|[^\\s\"]+")) {
+            if (!token.Value.StartsWith("\"", StringComparison.Ordinal)) flags.Add(token.Value);
+        }
+        if (flags.Contains("-familyCompanyCaptureStock") ||
+            flags.Contains("-familyCompanyOfficeBuildNativePointerQa") ||
+            flags.Contains("-familyCompanyOfficeBuildPreviewAlignmentQa"))
+            throw new InvalidOperationException("NATIVE_INPUT_QA_BLOCKED: private desktops do not isolate native mouse input.");
+        if (!allowGraphicsQa && !(flags.Contains("-batchmode") && flags.Contains("-nographics")))
+            throw new InvalidOperationException("GRAPHICS_QA_REQUIRES_EXPLICIT_AUTHORIZATION: private-desktop rendering is not headless. Obtain user authorization before passing -AllowGraphicsQa.");
+    }
     public static CompanyQaDesktop Start(string exe,string arguments,string cwd) {
+        return Start(exe, arguments, cwd, false);
+    }
+    public static CompanyQaDesktop Start(string exe,string arguments,string cwd,bool allowGraphicsQa) {
+        AssertLaunchAllowed(arguments, allowGraphicsQa);
         exe=System.IO.Path.GetFullPath(exe); cwd=System.IO.Path.GetFullPath(cwd);
         var owner=new CompanyQaDesktop(); ProcessInfo info=new ProcessInfo();
         try {

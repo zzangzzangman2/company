@@ -8,6 +8,7 @@ param(
     [int]$TimeoutSeconds = 900,
     [int]$Repeat = 1,
     [switch]$NoPlayerSmoke,
+    [switch]$AllowGraphicsQa,
     [switch]$Diagnose
 )
 
@@ -138,6 +139,11 @@ function Remove-OwnedUnityLock([string]$FilePath, [DateTime]$ProcessStart) {
 }
 
 function Start-OwnedProcess([string]$FilePath, [string[]]$Arguments, [int]$Timeout, [string]$Label) {
+    if ([IO.Path]::GetFileName($FilePath) -match '^(Unity|FamilyCompany.*)\.exe$') {
+        if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'Background/CompanyQaDesktop.cs') }
+        $launchArguments = (($Arguments | ForEach-Object { ConvertTo-ProcessArgument ([string]$_) }) -join ' ')
+        [CompanyQaDesktop]::AssertLaunchAllowed($launchArguments, $AllowGraphicsQa.IsPresent)
+    }
     $psi = [Diagnostics.ProcessStartInfo]::new()
     $psi.FileName = $FilePath
     $psi.WorkingDirectory = $script:ProjectRoot
@@ -472,6 +478,11 @@ try {
     $changed = @(Get-ChangedFiles)
     $manifest = Get-Content -Raw -LiteralPath (Join-Path $script:ProjectRoot 'Tools\FastQa\fast-qa-manifest.json') | ConvertFrom-Json
     $selected = Select-FastQaProfile $changed $manifest
+    $requiresGraphics = $selected.Name -in @('d3d-capture','player-startup') -or
+        (!$NoPlayerSmoke -and $selected.Name -in @('player-scripts','asset-capture','full-fallback'))
+    if ($requiresGraphics -and !$AllowGraphicsQa) {
+        throw 'GRAPHICS_QA_REQUIRES_EXPLICIT_AUTHORIZATION: obtain user authorization before -AllowGraphicsQa. Use a pure profile or -NoPlayerSmoke for build-only checks; these do not prove visual PASS.'
+    }
     $script:CompatibilityFingerprint = Get-CompatibilityFingerprint $script:Unity.Version
     Write-Section "HEAD $head | Unity $($script:Unity.Version)"
     Write-Section "profile=$($selected.Name) | $($selected.Reason) | changed=$($changed.Count)"

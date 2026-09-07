@@ -3,9 +3,8 @@ using UnityEngine;
 namespace FamilyCompany.Presentation.Unity.OfficeRuntime
 {
     /// <summary>
-    /// Look of the in-game layout editor. The palette is sampled from the generated
-    /// MainNavigationV2 frames so the editor reads as the same game as the hubs it opens from:
-    /// cream paper, a gold rim, deep teal ink and a coral accent for destructive actions.
+    /// Native shop/loading surfaces share OfficeCasualPalette with the menu hubs and market:
+    /// paper-white, a quiet one-pixel edge, sage accents and muted terracotta danger actions.
     /// Textures are generated once and reused; nothing here is loaded from disk except the Korean
     /// font, which falls back to the built-in font when it is missing.
     ///
@@ -15,17 +14,17 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
     /// </summary>
     public sealed class OfficeLayoutEditModeSkin
     {
-        // Sampled from Assets/Art/UI/Resources/MainNavigationV2/Frames.
-        public static readonly Color Ink = new Color32(0x24, 0x54, 0x54, 0xFF);
-        public static readonly Color InkSoft = new Color32(0x5E, 0x7C, 0x76, 0xFF);
-        public static readonly Color Cream = new Color32(0xFC, 0xF0, 0xD8, 0xFF);
-        public static readonly Color Panel = new Color32(0xFC, 0xF0, 0xD8, 0xFA);
-        public static readonly Color PanelHeader = new Color32(0xF0, 0xE4, 0xCC, 0xFF);
-        public static readonly Color Gold = new Color32(0xE4, 0x9C, 0x3C, 0xFF);
-        public static readonly Color GoldSoft = new Color32(0xEC, 0xC8, 0x84, 0xFF);
-        public static readonly Color Mint = new Color32(0xE4, 0xF0, 0xDC, 0xFF);
-        public static readonly Color MintDeep = new Color32(0x30, 0x60, 0x60, 0xFF);
-        public static readonly Color Danger = new Color32(0xF0, 0x78, 0x54, 0xFF);
+        // Legacy public colour names are retained for the existing shop consumer API.
+        public static readonly Color Ink = OfficeCasualPalette.Ink;
+        public static readonly Color InkSoft = OfficeCasualPalette.Muted;
+        public static readonly Color Cream = OfficeCasualPalette.Paper;
+        public static readonly Color Panel = OfficeCasualPalette.Paper;
+        public static readonly Color PanelHeader = OfficeCasualPalette.Surface;
+        public static readonly Color Gold = OfficeCasualPalette.Line;
+        public static readonly Color GoldSoft = OfficeCasualPalette.Line;
+        public static readonly Color Mint = OfficeCasualPalette.SageLight;
+        public static readonly Color MintDeep = OfficeCasualPalette.Sage;
+        public static readonly Color Danger = OfficeCasualPalette.Danger;
         public static readonly Color Valid = new Color32(0x4A, 0xA0, 0x70, 0xFF);
         public static readonly Color Shadow = new Color(0f, 0f, 0f, 0.22f);
 
@@ -75,17 +74,18 @@ namespace FamilyCompany.Presentation.Unity.OfficeRuntime
             _builtForHeight = height;
             Scale = Mathf.Clamp(height / 1080f, 0.72f, 1.4f);
 
-            _panel = Rounded(Panel, 18, Gold, rim: 3, inner: GoldSoft);
-            _header = Rounded(PanelHeader, 18, Gold, rim: 3, inner: GoldSoft, topOnly: true);
-            _button = Rounded(Cream, 12, Gold, rim: 2, inner: GoldSoft);
-            _buttonHover = Rounded(Mint, 12, Gold, rim: 2, inner: GoldSoft);
+            _panel = Rounded(Panel, 18, Gold, rim: 1);
+            _header = Rounded(PanelHeader, 18, Gold, rim: 1, topOnly: true);
+            _button = Rounded(Color.white, 12, Gold, rim: 1);
+            _buttonHover = Rounded(Mint, 12, Gold, rim: 1);
             _buttonDown = Rounded(MintDeep, 12, new Color32(0x1C, 0x40, 0x40, 0xFF), rim: 2);
             _buttonOff = Rounded(new Color32(0xE8, 0xE4, 0xD8, 0xFF), 12, new Color32(0xC8, 0xC0, 0xAC, 0xFF), rim: 2);
-            _chip = Rounded(new Color32(0xF7, 0xEA, 0xCE, 0xFF), 12, GoldSoft, rim: 2);
-            _scrollTrack = Rounded(new Color32(0xEC, 0xE0, 0xC4, 0xFF), 6, new Color32(0xDC, 0xCA, 0xA4, 0xFF), rim: 1);
-            _scrollThumb = Rounded(GoldSoft, 6, Gold, rim: 1);
+            _chip = Rounded(Mint, 12, GoldSoft, rim: 1);
+            _scrollTrack = Rounded(OfficeCasualPalette.Line, 6, OfficeCasualPalette.Line, rim: 1);
+            _scrollThumb = Rounded(MintDeep, 6, MintDeep, rim: 1);
             _shadow = Solid(Shadow);
-            _font = Resources.Load<Font>("StockMarket/Fonts/MaplestoryBold");
+            var fonts = Resources.Load<UIRemaster.UiRemasterFontCatalog>(UIRemaster.UiRemasterTypography.FontCatalogResourcePath);
+            _font = fonts != null ? fonts.FallbackSource : null;
 
             PanelStyle = new GUIStyle
             {

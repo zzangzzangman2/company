@@ -6,6 +6,15 @@
 
 ## Quick start
 
+**2026-09-07 input-protection override:** graphics-capable profiles now fail before any build/player
+launch unless `-AllowGraphicsQa` is explicitly supplied after fresh user authorization. Private
+desktops and hidden D3D11 windows are not headless isolation. While the user is working, do not
+supply that switch. Use `simulation-pure`, or `Tools/FastQa/Compile-CasualUiWithoutUnity.ps1` for
+a source-only compile against cached references without starting Unity. `-NoPlayerSmoke` supports
+headless build-only checks but is not visual PASS. Keep approved background workloads low-priority,
+limited to two CPU cores and sequential. The capture/startup examples below require that separate
+graphics authorization; do not execute them as unattended defaults.
+
 ```bat
 FAST_QA_WINDOWS.cmd
 FAST_QA_WINDOWS.cmd -Profile simulation-pure -Repeat 3

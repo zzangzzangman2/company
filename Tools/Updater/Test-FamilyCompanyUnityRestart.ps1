@@ -1,7 +1,8 @@
 [CmdletBinding()]
-param([string]$Player='', [switch]$ShowWindow, [switch]$Background)
+param([string]$Player='', [switch]$ShowWindow, [switch]$Background, [switch]$AllowGraphicsQa)
 $ErrorActionPreference='Stop'
-if (!$ShowWindow -and !$Background) {throw 'Choose -Background (no UI) or explicitly announce -ShowWindow.'}
+if (!$AllowGraphicsQa) {throw 'Obtain user authorization before -AllowGraphicsQa; -Background uses a presented parent, not a headless parent.'}
+if (!$ShowWindow -and !$Background) {throw 'Choose -Background (private desktop) or explicitly announce -ShowWindow.'}
 if ($ShowWindow -and $Background) {throw 'Choose exactly one visibility mode.'}
 . (Join-Path $PSScriptRoot 'FamilyCompany.Package.ps1')
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -36,11 +37,16 @@ Write-PatchJsonAtomic (Join-Path $root 'identity.json') @{scope='LOCAL actual Un
 $info=[Diagnostics.ProcessStartInfo]::new($Player)
 $info.UseShellExecute=$false; $info.CreateNoWindow=$true; $info.WorkingDirectory=$repo
 $info.Arguments='-force-d3d11 -screen-fullscreen 0 -screen-width 1280 -screen-height 720 -familyCompanyInGamePatchQa "'+$root+'" -familyCompanyInGamePatchRestartQa -logFile "'+(Join-Path $root 'parent.log')+'"'
-if ($Background) {$info.Arguments='-batchmode '+$info.Arguments; $info.WindowStyle='Hidden'}
+if ($Background) {
+    # A batchmode parent never repaints OnGUI. Verify the real restart notice on an isolated
+    # presented desktop; only the successor's latest-version boot check is headless.
+    $info.Arguments += ' -familyCompanyRestartChildBackgroundQa'
+    $info.WindowStyle='Hidden'
+}
 $isolation=$null
 if ($Background) {
     if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $repo 'Tools/Background/CompanyQaDesktop.cs') }
-    $isolation=[CompanyQaDesktop]::Start($Player,$info.Arguments,$repo)
+    $isolation=[CompanyQaDesktop]::Start($Player,$info.Arguments,$repo,$AllowGraphicsQa.IsPresent)
     $parent=$isolation.Process
 } else { $parent=[Diagnostics.Process]::Start($info) }
 Write-Host "ACTUAL UNITY PATCH TEST parent=$($parent.Id) root=$root"
@@ -48,6 +54,11 @@ try {
 $deadline=[DateTime]::UtcNow.AddSeconds(180)
 while(!$parent.WaitForExit(200) -and [DateTime]::UtcNow -lt $deadline) {}
 if(!$parent.HasExited) {throw 'Parent did not exit normally; do not force-kill or claim PASS.'}
+if($parent.ExitCode -ne 0){throw "Parent failed: $($parent.ExitCode)"}
+$parentText=Get-Content -LiteralPath (Join-Path $root 'parent.log') -Raw
+if($parentText -notmatch 'IN_GAME_PATCH_RESTART_NOTICE_COMPLETE visibleSeconds=([0-9.]+)' -or
+    [double]::Parse($Matches[1],[Globalization.CultureInfo]::InvariantCulture) -lt 4 -or
+    !(Test-Path -LiteralPath (Join-Path $root 'restart-notice.png'))) {throw 'Restart notice not presented for four seconds.'}
 $current=$null; $child=$null
 while([DateTime]::UtcNow -lt $deadline) {
     $current=Get-PatchCurrent (Join-Path $root 'install')

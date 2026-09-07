@@ -1,6 +1,7 @@
 [CmdletBinding()]
-param([switch]$CompareCandidate, [string]$DeveloperSettings = '', [int]$TimeoutSeconds = 180)
+param([switch]$CompareCandidate, [string]$DeveloperSettings = '', [int]$TimeoutSeconds = 180, [switch]$AllowGraphicsQa)
 $ErrorActionPreference = 'Stop'
+if (!$AllowGraphicsQa) { throw 'Obtain user authorization before -AllowGraphicsQa; private-desktop rendering is not headless.' }
 $walkProject = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $walkPlayer = Join-Path $walkProject 'Artifacts\FastQa\cache\WindowsPlayer\FamilyCompany_FastQa.exe'
 $walkProfile = if ($CompareCandidate) { 'candidate' } else { 'default' }
@@ -21,7 +22,7 @@ if ($DeveloperSettings) {
     $walkStart.Arguments += ' -familyCompanyDevSettings "' + $walkSettings + '"'
 }
 if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'Background/CompanyQaDesktop.cs') }
-$walkIsolation = [CompanyQaDesktop]::Start($walkPlayer, $walkStart.Arguments, $walkProject)
+$walkIsolation = [CompanyQaDesktop]::Start($walkPlayer, $walkStart.Arguments, $walkProject, $AllowGraphicsQa.IsPresent)
 $walkProcess = $walkIsolation.Process
 $walkTimer = [Diagnostics.Stopwatch]::StartNew()
 $walkWindowSamples = 0

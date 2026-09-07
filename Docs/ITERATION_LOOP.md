@@ -1,5 +1,11 @@
 # 반복 개발 루프
 
+> 2026-09-07 사용자 입력 보호: 현재 그래픽 검증은 승인 대기다. 아래 명령 중 D3D11/Player 캡처는
+> `-AllowGraphicsQa`가 없으면 차단되며, 사용자가 새로 승인하기 전에는 이 스위치를 사용하지 않는다.
+> private desktop도 headless가 아니다. 작업 중에는 낮은 우선순위·최대 2 CPU 코어로 순수 검사를
+> 순차 실행한다. `Tools/FastQa/Compile-CasualUiWithoutUnity.ps1`는 warm 컴파일 참조로 소스를 검사하고
+> Unity/Player를 실행하지 않는다. 실제 UI·런타임 검증을 대신하지 않는다.
+
 이 문서는 **한 곳을 고치고 결과를 확인하는 짧은 루프**의 정본이다. 최종 릴리스 빌드와 배포 판정은
 [PLAYTEST_BUILD.md](PLAYTEST_BUILD.md)와 [REGRESSION_BUILD_POLICY.md](REGRESSION_BUILD_POLICY.md)가 정본이며 이
 문서가 그것을 대체하지 않는다. Fast QA 도구 자체의 상세 계약은 [FAST_QA_WINDOWS.md](FAST_QA_WINDOWS.md)에 있다.

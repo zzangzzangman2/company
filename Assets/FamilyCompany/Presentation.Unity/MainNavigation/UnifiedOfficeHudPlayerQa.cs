@@ -98,6 +98,36 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 ScreenCapture.CaptureScreenshot(path);
                 yield return new WaitForSecondsRealtime(.5f);
                 Require(File.Exists(path) && new FileInfo(path).Length > 10000, "Frame not captured.");
+                foreach (var tab in MainNavigationCatalog.All)
+                {
+                    Click(presenter.GetTabButtonForQa(tab.TabId));
+                    yield return new WaitForSecondsRealtime(.4f);
+                    Canvas.ForceUpdateCanvases();
+                    ValidateMenu(presenter);
+                    yield return new WaitForEndOfFrame();
+                    ScreenCapture.CaptureScreenshot(Path.Combine(_output, $"casual-{tab.Id}-{size.x}x{size.y}.png"));
+                    yield return new WaitForSecondsRealtime(.2f);
+                    foreach (var feature in tab.Features)
+                    {
+                        if (feature.Action == MainNavigationFeatureAction.OpenBuildingEditor ||
+                            feature.Action == MainNavigationFeatureAction.OpenStockMarket) continue;
+                        var button = presenter.GetFeatureButtonForQa(feature.Id);
+                        if (button == null) continue; // People is the actual roster, not placeholder feature cards.
+                        Click(button);
+                        yield return new WaitForSecondsRealtime(.3f);
+                        ValidateMenu(presenter);
+                        var viewport = presenter.GetComponentsInChildren<ScrollRect>().FirstOrDefault(s => s.name == "Menu Viewport");
+                        if (viewport != null) viewport.verticalNormalizedPosition = 0;
+                        yield return new WaitForSecondsRealtime(.2f);
+                        yield return new WaitForEndOfFrame();
+                        ScreenCapture.CaptureScreenshot(Path.Combine(_output, $"casual-{feature.Id.Replace('.', '-')}-{size.x}x{size.y}.png"));
+                        yield return new WaitForSecondsRealtime(.2f);
+                        presenter.NavigateBackNow();
+                        yield return new WaitForSecondsRealtime(.2f);
+                    }
+                    presenter.ReturnToOfficeNow();
+                    yield return null;
+                }
             }
             foreach (var definition in MainNavigationCatalog.All)
             {
@@ -155,6 +185,28 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             var corners = new Vector3[4]; rect.GetWorldCorners(corners);
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+        }
+
+        private static void ValidateMenu(MainNavigationHudPresenter presenter)
+        {
+            Canvas.ForceUpdateCanvases();
+            var modal = presenter.GetComponentsInChildren<RectTransform>().Single(r => r.name == "Main Navigation Content Modal");
+            var modalBounds = Bounds(modal);
+            Require(modalBounds.xMin >= 0 && modalBounds.xMax <= Screen.width && modalBounds.yMin >= 0 && modalBounds.yMax <= Screen.height,
+                "Menu escapes screen.");
+            foreach (var text in modal.GetComponentsInChildren<TMP_Text>())
+            {
+                text.ForceMeshUpdate();
+                Require(!text.isTextOverflowing, $"Menu copy overflows [{presenter.ActiveTabId}/{presenter.ActiveFeatureId}]: {text.text}");
+                var bounds = Bounds(text.rectTransform);
+                Require(bounds.xMin >= modalBounds.xMin - 1 && bounds.xMax <= modalBounds.xMax + 1,
+                    "Menu copy escapes horizontally: " + text.text);
+                Require(text.font.name.Contains("Pretendard"), "Mixed menu font: " + text.font.name);
+                Require(text.fontSize * text.canvas.scaleFactor >= 14.9f, "Illegible menu font: " + text.text);
+            }
+            foreach (var image in modal.GetComponentsInChildren<Image>())
+                Require(image.sprite == null || !image.sprite.name.Contains("_v2") && !image.sprite.name.Contains("_v3") && !image.sprite.name.Contains("_v4"),
+                    "Old ornamental frame remains: " + (image.sprite != null ? image.sprite.name : "none"));
         }
 
         private static void Click(Button button)

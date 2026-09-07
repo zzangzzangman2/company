@@ -1,5 +1,11 @@
 # ART STYLE
 
+2026-09-07 UI-only override, user-requested casual redesign (not yet published): all revised office
+menus/details use native paper-white/sage surfaces, bundled Pretendard and the restrained text-free
+`OfficeCasual/office-icons-v1` illustrated atlas. Old decorative frames do not define the new UI.
+See [UI_CASUAL_REDESIGN_2026-09-07.md](UI_CASUAL_REDESIGN_2026-09-07.md). This overrides UI styling only;
+approved world/3D character/furniture geometry, camera and textures remain unchanged.
+
 최종 갱신: 2026-08-15
 
 ## 정본 방향

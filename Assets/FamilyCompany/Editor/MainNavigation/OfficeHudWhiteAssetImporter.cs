@@ -7,7 +7,8 @@ namespace FamilyCompany.Editor
     {
         private void OnPreprocessTexture()
         {
-            if (assetPath != "Assets/Art/UI/Resources/OfficeHudWhite/office-illustrations.png") return;
+            if (assetPath != "Assets/Art/UI/Resources/OfficeHudWhite/office-illustrations.png" &&
+                assetPath != "Assets/Art/UI/Resources/OfficeCasual/office-icons-v1.png") return;
             var importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Default;
             importer.npotScale = TextureImporterNPOTScale.None;

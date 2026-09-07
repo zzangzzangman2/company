@@ -1,7 +1,9 @@
 param([Parameter(Mandatory=$true)][string]$Player,
     [Parameter(Mandatory=$true)][string]$EvidenceDirectory,
-    [Parameter(Mandatory=$true)][ValidateSet('chair','walk')][string]$Scenario)
+    [Parameter(Mandatory=$true)][ValidateSet('chair','walk')][string]$Scenario,
+    [switch]$AllowGraphicsQa)
 $ErrorActionPreference='Stop'
+if (!$AllowGraphicsQa) { throw 'Obtain user authorization before -AllowGraphicsQa; private-desktop rendering is not headless.' }
 $taskRepo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $taskPlayer=(Resolve-Path -LiteralPath $Player).Path
 $taskOutput=[IO.Path]::GetFullPath($EvidenceDirectory)
@@ -14,7 +16,7 @@ if($Scenario -eq 'chair'){
     $taskArgs+=' -familyCompanyOpeningShopQa -familyCompanyChairFitQa -familyCompanyOpeningShopArtifacts "'+$taskOutput+'"'
 }else{$taskArgs+=' -familyCompanyOpeningWalkAudit -familyCompanyOpeningWalkArtifacts "'+$taskOutput+'"'}
 $taskHash=(Get-FileHash $taskPlayer -Algorithm SHA256).Hash
-$taskOwner=[CompanyQaDesktop]::Start($taskPlayer,$taskArgs,$taskRepo)
+$taskOwner=[CompanyQaDesktop]::Start($taskPlayer,$taskArgs,$taskRepo,$AllowGraphicsQa.IsPresent)
 $taskTimer=[Diagnostics.Stopwatch]::StartNew();$taskForced=$false
 Write-Output "RELEASE $Scenario running: $taskOutput"
 try{

@@ -1,5 +1,6 @@
-param([int]$TimeoutSeconds = 480, [string]$Player = '', [switch]$Lifecycle)
+param([int]$TimeoutSeconds = 480, [string]$Player = '', [switch]$Lifecycle, [switch]$AllowGraphicsQa)
 $ErrorActionPreference = 'Stop'
+if (!$AllowGraphicsQa) { throw 'Obtain user authorization before -AllowGraphicsQa; private-desktop rendering is not headless.' }
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $taskPlayer = Join-Path $taskRoot 'Artifacts\FastQa\cache\WindowsPlayer\FamilyCompany_FastQa.exe'
 if ($Player) { $taskPlayer = (Resolve-Path -LiteralPath $Player).Path }
@@ -22,7 +23,7 @@ $taskBefore = Snapshot-UserFiles
 $taskArgs = '-force-d3d11 -screen-fullscreen 0 -screen-width 1280 -screen-height 720 -starterProductQa -starterProductArtifacts "' + $taskOutput + '" -logFile "' + (Join-Path $taskOutput 'player.log') + '"'
 if ($Lifecycle) { $taskArgs += ' -starterProductLifecycleQa' }
 if ($Player) { $taskArgs += ' -familyCompanyManualGameplayObservation "' + $taskOutput + '" -familyCompanyBackgroundChairObservation "' + (Join-Path $taskOutput 'observer') + '" -familyCompanyTraceOnlyQa' }
-$taskOwner = [CompanyQaDesktop]::Start($taskPlayer, $taskArgs, (Split-Path $taskPlayer -Parent))
+$taskOwner = [CompanyQaDesktop]::Start($taskPlayer, $taskArgs, (Split-Path $taskPlayer -Parent), $AllowGraphicsQa.IsPresent)
 try {
     Write-Output ('Background starter-product QA running: ' + $taskOutput)
     $taskTimer = [Diagnostics.Stopwatch]::StartNew()

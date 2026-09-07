@@ -463,7 +463,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 $"Workforce typography coverage mismatch at {pixelWidth}x{pixelHeight}: " +
                 $"title={panelTitles} names={employeeNames} body={bodyTexts}.");
             Append($"WORKFORCE_TYPOGRAPHY_PASS | resolution={pixelWidth}x{pixelHeight} " +
-                   "font=Maplestory panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0");
+                   "font=Pretendard panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0");
         }
 
         private static void ValidateWorkforceTextCollisions(

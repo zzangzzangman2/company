@@ -4,12 +4,13 @@ using UnityEngine.UI;
 
 namespace FamilyCompany.Presentation.Unity.MainNavigation
 {
-    /// <summary>Native white HUD surfaces and the approved, text-free office illustration atlas.</summary>
+    /// <summary>Casual office UI: quiet native surfaces and one text-free illustrated icon family.</summary>
     internal sealed class OfficeHudVisuals : IDisposable
     {
         private readonly Texture2D _surfaceTexture;
         private readonly Sprite _surface;
-        private readonly Sprite[] _icons = new Sprite[5];
+        private readonly Sprite[] _icons = new Sprite[6];
+        public Sprite SurfaceSprite => _surface;
 
         public OfficeHudVisuals()
         {
@@ -29,18 +30,17 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             _surfaceTexture.Apply(false, true);
             _surface = Sprite.Create(_surfaceTexture, new Rect(0, 0, 32, 32), Vector2.one * .5f,
                 100f, 0, SpriteMeshType.FullRect, new Vector4(11, 11, 11, 11));
-            var atlas = Resources.Load<Texture2D>("OfficeHudWhite/office-illustrations");
+            var atlas = Resources.Load<Texture2D>("OfficeCasual/office-icons-v1");
             if (atlas == null || atlas.width != 1536 || atlas.height != 1024)
                 throw new InvalidOperationException("OFFICE_HUD_ATLAS_MISSING_OR_RESIZED");
-            // Same measured crop windows as the approved preview, in Unity bottom-left coordinates.
-            var crops = new[] { new Rect(16, 524, 500, 500), new Rect(518, 524, 500, 500),
-                new Rect(1020, 524, 500, 500), new Rect(16, 0, 500, 500),
-                new Rect(530, 69, 420, 420) };
-            for (var i = 0; i < crops.Length; i++)
-                _icons[i] = Sprite.Create(atlas, crops[i], Vector2.one * .5f, 100f, 0, SpriteMeshType.FullRect);
+            // Six non-overlapping atlas cells; keep the generated alpha and original pixels intact.
+            for (var i = 0; i < _icons.Length; i++)
+                _icons[i] = Sprite.Create(atlas, new Rect(i % 3 * 512, (1 - i / 3) * 512, 512, 512),
+                    Vector2.one * .5f, 100f, 0, SpriteMeshType.FullRect);
         }
 
         public Sprite Icon(MainNavigationTabId tab) => _icons[(int)tab];
+        public Sprite WorkstationIcon => _icons[5];
 
         public RectTransform Surface(string name, Transform parent, bool shadow = false)
         {

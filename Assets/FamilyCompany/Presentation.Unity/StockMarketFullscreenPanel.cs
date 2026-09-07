@@ -25,13 +25,13 @@ namespace FamilyCompany.Presentation.Unity
         private enum DetailTab { Quote, Order, Chart, Info }
         private enum OrderSection { Buy, Sell, AmendCancel, OpenOrders, Balance }
 
-        private static readonly Color MarketInk = Html("24313A");
-        private static readonly Color MarketMuted = Html("687984");
-        private static readonly Color MarketLine = Html("D9E8E8");
-        private static readonly Color MarketSurface = Html("F4FAF8");
-        private static readonly Color PanelSurface = Html("FFFCF5");
-        private static readonly Color CreamHighlight = Html("FFF1D6");
-        private static readonly Color MarketAccent = Html("2F9B83");
+        private static readonly Color MarketInk = OfficeCasualPalette.Ink;
+        private static readonly Color MarketMuted = OfficeCasualPalette.Muted;
+        private static readonly Color MarketLine = OfficeCasualPalette.Line;
+        private static readonly Color MarketSurface = OfficeCasualPalette.Paper;
+        private static readonly Color PanelSurface = OfficeCasualPalette.Surface;
+        private static readonly Color CreamHighlight = OfficeCasualPalette.Apricot;
+        private static readonly Color MarketAccent = OfficeCasualPalette.Sage;
         private static readonly Color SellBlue = Html("3F7FD9");
         private static readonly Color UpRed = Html("F05F6B");
         private static readonly Color AskTint = Html("EAF4FF");
@@ -165,10 +165,11 @@ namespace FamilyCompany.Presentation.Unity
             _bootstrap = GetComponent<PrototypeBootstrap>() ?? FindFirstObjectByType<PrototypeBootstrap>();
             _catalog = FindFirstObjectByType<KoreaHistoryV1RuntimeCatalog>();
             var resources = UnityEngine.Resources.Load<StockMarketUiResources>("StockMarketUiResources");
-            _koreanFont = resources?.PrimaryFont;
-            _boldKoreanFont = resources?.BoldFont;
+            _koreanFont = resources?.FallbackFont;
+            _boldKoreanFont = resources?.FallbackFont;
             _fallbackKoreanFont = resources?.FallbackFont;
-            _skinTexture = UnityEngine.Resources.Load<Texture2D>("StockMarket/stock_market_landscape_skin_v1");
+            // Native quiet surfaces match the office menus; no painted full-screen skin overlay.
+            _skinTexture = null;
             StockMarketLandscapeLayout.Create(1920f).ValidateOrThrow();
         }
 

@@ -34,6 +34,14 @@
 - 회사 PC·집 PC·다른 AI나 도구에서 작업해도 먼저 이 문서와 README의 문서 표를 읽고, clean `main`에서만 `git pull --ff-only origin main`으로 시작한다.
 - 예상하지 못한 tracked·untracked 변경이 있으면 삭제·복원·일괄 stage하지 않고 소유권과 생성 시각을 먼저 확인한다.
 - 회사 PC에서는 사용자의 업무 화면을 방해하지 않도록 Unity Editor와 플레이테스트 EXE를 전면 실행하지 않는다. 컴파일·로직 검증은 `-batchmode -nographics -quit`, 렌더·PlayMode 캡처는 `-batchmode`를 사용해 백그라운드로 실행하고 로그의 PASS/FAIL까지 확인한다.
+- **2026-09-07 사용자 입력 보호 우선 규칙:** 현재 사용자는 다른 작업 중이며 화면·입력에 방해 없이
+  백그라운드로만 진행하도록 지시했다. 위 `-batchmode` 렌더 허용은 현재 적용하지 않는다.
+  private desktop/Hidden/`CreateNoWindow`/D3D11 batch 렌더는 완전한 입력·GPU 격리가 아니다.
+  새 승인을 받기 전에는 게임 실행, 그래픽 렌더, 화면 전환, native mouse/keyboard 입력을 하지 않는다.
+  `-AllowGraphicsQa`는 사용자가 해당 검증을 새로 승인한 뒤에만 전달한다. 차단을 피하려고 다른
+  실행 경로나 별도 데스크톱을 쓰지 않는다. 순수 컴파일/로직 검사는 낮은 우선순위·최대 2 CPU 코어로
+  순차 실행한다. 현재 `Tools/FastQa/Compile-CasualUiWithoutUnity.ps1`와 simulation-pure를 사용할 수
+  있으며, 소스 컴파일 PASS를 실제 화면·게임 동작 PASS로 보고하지 않는다.
 - 시각 검증에서 `Camera.Render`가 필요하면 `-nographics`를 사용하지 않으며, 자동 종료가 검증 coroutine을 끊는 경우 `-quit`도 사용하지 않는다. GUI나 EXE의 직접 조작이 꼭 필요하면 먼저 사용자에게 알린다.
 - Unity 버전은 6000.3.21f1로 고정한다.
 - 제작용 `Publish-FamilyCompanyPatch.ps1`은 PowerShell 7.2 이상(`pwsh`)에서만 실행한다.

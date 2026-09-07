@@ -189,9 +189,43 @@ namespace FamilyCompany.Presentation.Unity
             DrawLoadingPresentation();
         }
 
-        public static void DrawPatchLoading(string stage, string detail, double percent)
+        private OfficeLayoutEditModeSkin _patchSkin;
+        private Texture2D _patchAtlas;
+
+        public static bool DrawPatchLoading(string stage, string detail, double percent)
         {
-            if (_instance != null) _instance.DrawLoadingPresentation("게임 업데이트", stage, detail, percent);
+            if (_instance == null) return false;
+            _instance.DrawCasualPatchLoading(stage, detail, percent);
+            return true;
+        }
+
+        private void DrawCasualPatchLoading(string stage, string detail, double percent)
+        {
+            _patchSkin ??= new OfficeLayoutEditModeSkin();
+            _patchSkin.EnsureBuilt();
+            if (_loadingBackground == null) _loadingBackground = Resources.Load<Texture2D>("UiRemasterV3/Loading/loading_background_v3");
+            if (_patchAtlas == null) _patchAtlas = Resources.Load<Texture2D>("OfficeCasual/office-icons-v1");
+            if (_loadingBackground != null) DrawTextureAspectFill(new Rect(0, 0, Screen.width, Screen.height), _loadingBackground);
+            var layout = UiRemasterLayout.CalculateLoading(Screen.width, Screen.height);
+            GUI.Box(layout.Panel, GUIContent.none, _patchSkin.PanelStyle);
+            if (_patchAtlas != null) GUI.DrawTextureWithTexCoords(layout.Icon, _patchAtlas, new Rect(0, .5f, 1f / 3f, .5f), true);
+            var title = new GUIStyle(_patchSkin.TitleStyle) { fontSize = _patchSkin.Round(28) };
+            var body = new GUIStyle(_patchSkin.BodyStyle) { fontSize = Mathf.Max(16, _patchSkin.Round(17)) };
+            var number = new GUIStyle(title) { alignment = TextAnchor.MiddleRight, fontSize = _patchSkin.Round(25) };
+            GUI.Label(layout.Title, "게임 업데이트", title);
+            GUI.Label(layout.Status, stage, body);
+            GUI.Box(layout.Track, GUIContent.none, _patchSkin.ButtonStyle);
+            var fraction = Mathf.Clamp01((float)percent / 100f);
+            if (fraction > 0)
+            {
+                var fill = new Rect(layout.Track.x + 4, layout.Track.y + 4,
+                    (layout.Track.width - 8) * fraction, layout.Track.height - 8);
+                var fillStyle = new GUIStyle(_patchSkin.ButtonStyle);
+                fillStyle.normal.background = _patchSkin.ButtonStyle.active.background;
+                GUI.Box(fill, GUIContent.none, fillStyle);
+            }
+            GUI.Label(layout.Percent, percent < 0 ? "확인 중" : Math.Floor(percent).ToString("0") + "%", number);
+            GUI.Label(layout.Detail, detail, body);
         }
 
         private void DrawLoadingPresentation(string title = null, string stage = null, string detail = null, double measuredPercent = -2)
@@ -227,7 +261,7 @@ namespace FamilyCompany.Presentation.Unity
             }
 
             GUI.Label(layout.Percent, measuredPercent == -2 ? Mathf.RoundToInt(progress * 100f) + "%" :
-                measuredPercent < 0 ? "확인 중" : measuredPercent.ToString("0.0") + "%", _loadingPercentStyle);
+                measuredPercent < 0 ? "확인 중" : Math.Floor(measuredPercent).ToString("0") + "%", _loadingPercentStyle);
             var dots = Mathf.FloorToInt(Time.unscaledTime * 2.4f) % 4;
             GUI.Label(layout.Detail,
                 detail ?? "가족별 출근 경로와 지정 좌석을 준비하고 있습니다" + new string('·', dots),

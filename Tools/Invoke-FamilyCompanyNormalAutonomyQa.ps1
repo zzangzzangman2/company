@@ -1,6 +1,7 @@
 [CmdletBinding()]
-param([string]$EvidenceDirectory = '', [switch]$AnalyzeOnly, [switch]$NextDay, [string]$Player = '')
+param([string]$EvidenceDirectory = '', [switch]$AnalyzeOnly, [switch]$NextDay, [string]$Player = '', [switch]$AllowGraphicsQa)
 $ErrorActionPreference = 'Stop'
+if (!$AnalyzeOnly -and !$AllowGraphicsQa) { throw 'Obtain user authorization before -AllowGraphicsQa, or use -AnalyzeOnly for existing evidence.' }
 $qaRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (!$EvidenceDirectory) { $EvidenceDirectory = Join-Path $qaRepo ('Artifacts/NormalAutonomy/' + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
 $EvidenceDirectory = [IO.Path]::GetFullPath($EvidenceDirectory)
@@ -21,7 +22,7 @@ if (!$AnalyzeOnly) {
         $start.Arguments += ' -familyCompanyManualGameplayObservation "' + (Join-Path $EvidenceDirectory 'observer') + '"'
     } else { Copy-Item -LiteralPath (Join-Path $qaRepo 'Artifacts/FastQa/cache/player-cache.json') -Destination (Join-Path $EvidenceDirectory 'base-data-build.json') }
     if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'Background/CompanyQaDesktop.cs') }
-    $isolation = [CompanyQaDesktop]::Start($qaPlayer, $start.Arguments, $qaRepo)
+    $isolation = [CompanyQaDesktop]::Start($qaPlayer, $start.Arguments, $qaRepo, $AllowGraphicsQa.IsPresent)
     $process = $isolation.Process
     $watch = [Diagnostics.Stopwatch]::StartNew(); $windowChecks = 0
     $runnerFailure = ''; $forcedStop = $false; $lastWindowHandle = 0L

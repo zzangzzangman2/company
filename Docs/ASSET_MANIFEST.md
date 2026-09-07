@@ -3,6 +3,16 @@
 This manifest lists the production Player V8 and Father V19 packages first, followed by current
 family inputs and canonical production assets. Retired iterations are not reusable sources.
 
+2026-09-07 later, user-requested full casual menu redesign (implemented, not yet publicly released):
+`Assets/Art/UI/Resources/OfficeCasual/office-icons-v1.png`, 1536×1024 RGBA, one new built-in ImageGen
+atlas `exec-f35e4954-8db1-4bd2-84d0-ddabd8f967e3`. SHA256
+`288df4da6f0346b8217622249547d1746e4f20dd1d8c294bca9ba1b832d0aba8`.
+Six 512×512 native crop regions; original pixels/alpha preserved, no CLI fallback or raster edits.
+Full prompt and scope: [UI_CASUAL_REDESIGN_2026-09-07.md](UI_CASUAL_REDESIGN_2026-09-07.md).
+The new menu paths use this family plus native surfaces; shop product previews/world models remain
+unchanged. All revised menu/detail fonts use existing OFL Pretendard; no source font was edited.
+This supersedes the old atlas/ornamental skin only for revised UI consumers, not unrelated assets.
+
 2026-09-07 runtime HUD adoption after the user's build/push request: the previously generated
 `premium-office-ui-illustrations.png` atlas is copied byte-for-byte to
 `Assets/Art/UI/Resources/OfficeHudWhite/office-illustrations.png` (1536×1024).

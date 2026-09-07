@@ -28,14 +28,10 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         public const float CanvasMatchWidthOrHeight = (float)MainNavigationLayoutMetrics.MatchWidthOrHeight;
         public const float MinimumBodyFontSize = UiRemasterTypography.BodyPixels;
 
-        private const string FrameRoot = "MainNavigationV2/Frames/";
-        private const string MarkerRoot = "MainNavigationV2/Markers/";
-        private const string V3CommonRoot = "UiRemasterV3/Common/";
-
-        private static readonly Color DeepInk = Hex("293F49");
-        private static readonly Color Cream = Hex("FFF4D8");
-        private static readonly Color DisabledCardTint = Hex("EAF6EF");
-        private static readonly Color SelectedCompactTint = Hex("FFDCCF");
+        private static readonly Color DeepInk = OfficeCasualPalette.Ink;
+        private static readonly Color Cream = OfficeCasualPalette.Paper;
+        private static readonly Color DisabledCardTint = Hex("F0F3EE");
+        private static readonly Color SelectedCompactTint = Hex("E1EBE2");
         private static readonly Color WorldDim = new Color(0.125f, 0.231f, 0.227f, 0.26f);
 
         private readonly MainNavigationSession _session = new MainNavigationSession();
@@ -60,6 +56,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private RectTransform _contentPanel;
         private RectTransform _bottomNavigation;
         private RectTransform _featureHost;
+        private RectTransform _panelHeader, _panelTitles;
+        private CasualMenuViewport _menuViewport;
+        private ScrollRect _menuScroll;
         private RectTransform _worldDim;
         private TMP_Text _companyText;
         private TMP_Text _cashText;
@@ -261,8 +260,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             MainNavigationCatalog.ValidateOrThrow();
             EnsureEventSystem();
             LoadFonts();
-            LoadRequiredArt();
             _officeVisuals = new OfficeHudVisuals();
+            LoadRequiredArt();
 
             _root = new GameObject(
                 "Main Navigation HUD V2",
@@ -292,33 +291,20 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             RefreshOpenPanel();
             RefreshLiveLabels();
             _root.SetActive(false);
-            Debug.Log("MAIN_NAVIGATION_HUD_RUNTIME: READY V2 generated-sprite-only");
+            Debug.Log("MAIN_NAVIGATION_HUD_RUNTIME: READY casual-v1 unified-surfaces");
         }
 
         private void LoadRequiredArt()
         {
-            _modalFrame = LoadRequiredSprite(V3CommonRoot + "modal_frame_v3");
-            _cardCompact = LoadRequiredSprite(V3CommonRoot + "card_compact_normal_v5");
-            _modalHeader = _cardCompact;
-            _cardNormal = LoadRequiredSprite(V3CommonRoot + "card_normal_v4");
-            _cardHover = LoadRequiredSprite(V3CommonRoot + "card_featured_v4");
-            _cardDisabled = LoadRequiredSprite(V3CommonRoot + "card_disabled_v4");
-            _cardFeatured = LoadRequiredSprite(V3CommonRoot + "card_featured_v4");
-            _cardFeaturedHover = LoadRequiredSprite(V3CommonRoot + "card_featured_v4");
-            _closeNormal = LoadRequiredSprite(FrameRoot + "close_normal_v2");
-            _closeHover = LoadRequiredSprite(FrameRoot + "close_hover_v2");
-            _closePressed = LoadRequiredSprite(FrameRoot + "close_pressed_v2");
-            _notificationBadge = LoadRequiredSprite(MarkerRoot + "notification_badge_v2");
-            _comingSoonRibbon = LoadRequiredSprite(MarkerRoot + "coming_soon_ribbon_v2");
+            // Layout and lettering are native UI. Never stretch painted ornaments into panels.
+            _modalFrame = _modalHeader = _cardCompact = _cardNormal = _cardHover = _cardDisabled =
+                _cardFeatured = _cardFeaturedHover = _closeNormal = _closeHover = _closePressed =
+                _notificationBadge = _comingSoonRibbon = _officeVisuals.SurfaceSprite;
         }
 
 
-        /// <summary>
-        /// Indent for a card's first and last text line so it clears the coral corner ornament.
-        /// `card_normal_v2` draws that ornament at sprite x 33..60 inside a 142px border, and the
-        /// card's own padding only covers the first 18px of it.
-        /// </summary>
-        private const float CardCornerOrnamentInset = 42f;
+        /// <summary>Plain cards have no decorative corner inset.</summary>
+        private const float CardCornerOrnamentInset = 0f;
 
         /// <summary>Copy colour for a contract the company does not yet have the technology for.</summary>
         private static readonly Color LockedInk = new Color(0.42f, 0.47f, 0.46f, 1f);
@@ -438,29 +424,36 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private void BuildContentPanel()
         {
             _contentPanel = CreateSpritePanel("Main Navigation Content Modal", _safeRoot, _modalFrame, true);
+            _contentPanel.GetComponent<Image>().color = Cream;
+            _contentPanel.GetComponent<Image>().raycastTarget = true;
+            var shadow = _contentPanel.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(.10f, .15f, .16f, .16f);
+            shadow.effectDistance = new Vector2(0, -5);
             var panelLayout = _contentPanel.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(panelLayout, new RectOffset(30, 30, 26, 30), 16f);
+            ConfigureLayout(panelLayout, PixelPadding(22, 22, 16, 20), CanvasPixels(14));
             panelLayout.childAlignment = TextAnchor.UpperCenter;
 
             var header = CreateSpritePanel("Main Navigation Modal Header", _contentPanel, _modalHeader, true);
-            header.GetComponent<Image>().type = Image.Type.Simple;
-            var headerHeight = CanvasHeight(104f, 82f);
-            AddLayout(header, -1f, headerHeight, headerHeight, 0f);
+            _panelHeader = header;
+            header.GetComponent<Image>().color = Cream;
+            var headerHeight = CanvasPixels(86);
+            AddLayout(header, -1f, headerHeight, 0f, 1f);
             var headerLayout = header.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(headerLayout, new RectOffset(18, 14, 10, 10), 16f);
+            ConfigureLayout(headerLayout, PixelPadding(4, 4, 4, 4), CanvasPixels(16));
             headerLayout.childAlignment = TextAnchor.MiddleLeft;
-            _panelIcon = AddIcon(header, null, 78f);
-            AddLayout(_panelIcon.rectTransform, 78f, 78f, 78f, 0f);
+            _panelIcon = AddIcon(header, null, CanvasPixels(70));
+            AddLayout(_panelIcon.rectTransform, CanvasPixels(70), CanvasPixels(70), CanvasPixels(70), 0f);
 
             var titleHost = CreateRect("Panel Titles", header);
-            AddLayout(titleHost, -1f, CanvasHeight(82f, 62f), 520f, 1f);
+            _panelTitles = titleHost;
+            AddLayout(titleHost, -1f, CanvasPixels(72), 0f, 1f);
             var titleLayout = titleHost.gameObject.AddComponent<VerticalLayoutGroup>();
             ConfigureLayout(titleLayout, null, 3f);
             titleLayout.childAlignment = TextAnchor.MiddleLeft;
-            _panelTitle = AddText(titleHost, string.Empty, CanvasFont(32f, UiRemasterTypography.PanelTitlePixels), true, TextAlignmentOptions.MidlineLeft, DeepInk);
-            AddLayout(_panelTitle.rectTransform, -1f, CanvasHeight(40f, 36f), 0f, 1f);
-            _panelDescription = AddText(titleHost, string.Empty, CanvasFont(18f, UiRemasterTypography.BodyPixels), false, TextAlignmentOptions.MidlineLeft, DeepInk);
-            AddLayout(_panelDescription.rectTransform, -1f, CanvasHeight(34f, 26f), 0f, 1f);
+            _panelTitle = AddText(titleHost, string.Empty, CanvasPixels(28), true, TextAlignmentOptions.MidlineLeft, DeepInk);
+            AddLayout(_panelTitle.rectTransform, -1f, CanvasPixels(36), 0f, 0f);
+            _panelDescription = AddText(titleHost, string.Empty, CanvasPixels(16), false, TextAlignmentOptions.MidlineLeft, Hex("68726F"));
+            AddLayout(_panelDescription.rectTransform, -1f, CanvasPixels(36), 0f, 0f);
 
             _officeReturnButton = CreateSpriteButton(
                 header,
@@ -470,8 +463,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 _closePressed,
                 _closeHover,
                 NavigateBackNow,
-                Mathf.Max(150f, CanvasPixels(120f)),
-                CanvasHeight(54f, 48f));
+                CanvasPixels(120f),
+                CanvasPixels(44f));
             _officeReturnLabel = AddText(
                 _officeReturnButton.GetComponent<RectTransform>(),
                 "← 사무실",
@@ -481,9 +474,35 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 DeepInk);
             Stretch(_officeReturnLabel.rectTransform);
 
-            _featureHost = CreateRect("Main Navigation Feature Cards", _contentPanel);
-            var featureLayout = AddLayout(_featureHost, -1f, -1f, 0f, 1f);
+            var viewport = CreateRect("Menu Viewport", _contentPanel);
+            var featureLayout = AddLayout(viewport, -1f, -1f, 0f, 1f);
             featureLayout.flexibleHeight = 1f;
+            viewport.gameObject.AddComponent<RectMask2D>();
+            viewport.gameObject.AddComponent<Image>().color = Color.clear;
+            _menuScroll = viewport.gameObject.AddComponent<ScrollRect>();
+            _menuScroll.horizontal = false;
+            _menuScroll.movementType = ScrollRect.MovementType.Clamped;
+            _menuScroll.scrollSensitivity = 42;
+            _menuScroll.viewport = viewport;
+            _featureHost = CreateRect("Main Navigation Feature Cards", viewport);
+            _featureHost.anchorMin = new Vector2(0, 1);
+            _featureHost.anchorMax = Vector2.one;
+            _featureHost.pivot = new Vector2(.5f, 1);
+            _featureHost.sizeDelta = Vector2.zero;
+            _menuScroll.content = _featureHost;
+            _menuViewport = viewport.gameObject.AddComponent<CasualMenuViewport>();
+            _menuViewport.Content = _featureHost;
+            var rail = CreateSpritePanel("Menu Scrollbar", viewport, _cardCompact, true);
+            rail.anchorMin = new Vector2(1, 0); rail.anchorMax = Vector2.one;
+            rail.pivot = new Vector2(1, .5f); rail.sizeDelta = new Vector2(CanvasPixels(5), 0);
+            rail.GetComponent<Image>().color = Hex("E7EBE4");
+            var grip = CreateSpritePanel("Handle", rail, _cardCompact, true);
+            Stretch(grip); grip.GetComponent<Image>().color = Hex("9AAC9C");
+            var bar = rail.gameObject.AddComponent<Scrollbar>();
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            bar.handleRect = grip; bar.targetGraphic = grip.GetComponent<Image>();
+            _menuScroll.verticalScrollbar = bar;
+            _menuScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
             _contentPanel.gameObject.SetActive(false);
         }
 
@@ -498,14 +517,17 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             if (open)
             {
                 var definition = MainNavigationCatalog.Get(_session.ActiveTab);
-                _panelIcon.sprite = LoadRequiredSprite(definition.IconResourcePath);
+                _panelIcon.sprite = _officeVisuals.Icon(definition.TabId);
                 ClearChildren(_featureHost);
+                _menuViewport.MinimumPixels = 350;
+                _menuScroll.StopMovement();
+                _menuScroll.verticalNormalizedPosition = 1;
                 if (_session.HasActiveFeature)
                 {
                     var feature = definition.Features.First(item =>
                         string.Equals(item.Id, _session.ActiveFeatureId, StringComparison.Ordinal));
                     SetText(_panelTitle, feature.DisplayNameKo);
-                    SetText(_panelDescription, definition.DisplayNameKo + " 허브의 전용 화면");
+                    SetText(_panelDescription, definition.DisplayNameKo + "  /  " + feature.DisplayNameKo);
                     SetText(_officeReturnLabel, "← " + definition.DisplayNameKo);
                     BuildFeatureDetail(feature, definition);
                 }
@@ -534,26 +556,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
         private void BuildInvestmentCards(MainNavigationTabDefinition definition)
         {
-            var root = CreateRect("Investment Responsive Cards", _featureHost);
-            Stretch(root);
-            var vertical = root.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(vertical, null, 14f);
-            vertical.childAlignment = TextAnchor.UpperCenter;
-            BuildFeatureCard(definition.Features[0], root, definition, true, 178f);
-
-            var supportGrid = CreateRect("Investment Support Grid", root);
-            AddLayout(supportGrid, -1f, 286f, 0f, 1f);
-            var grid = supportGrid.gameObject.AddComponent<GridLayoutGroup>();
-            grid.padding = new RectOffset();
-            grid.spacing = new Vector2(14f, 14f);
-            grid.cellSize = new Vector2(506f, 136f);
-            grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
-            grid.startAxis = GridLayoutGroup.Axis.Horizontal;
-            grid.childAlignment = TextAnchor.UpperCenter;
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 2;
-            for (var index = 1; index < definition.Features.Count; index++)
-                BuildFeatureCard(definition.Features[index], supportGrid, definition, false, 136f);
+            BuildStandardCards(definition);
         }
 
         private void BuildStandardCards(MainNavigationTabDefinition definition)
@@ -562,19 +565,21 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             Stretch(gridHost);
             var grid = gridHost.gameObject.AddComponent<GridLayoutGroup>();
             grid.padding = new RectOffset();
-            grid.spacing = new Vector2(16f, 16f);
-            grid.cellSize = new Vector2(505f, 232f);
+            grid.spacing = new Vector2(CanvasPixels(14), CanvasPixels(14));
             grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
             grid.startAxis = GridLayoutGroup.Axis.Horizontal;
             grid.childAlignment = TextAnchor.UpperCenter;
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 2;
+            gridHost.gameObject.AddComponent<CasualResponsiveGrid>();
+            _menuViewport.MinimumPixels = Mathf.Ceil(definition.Features.Count / 2f) * 180f - 14f + 4f;
             foreach (var feature in definition.Features)
-                BuildFeatureCard(feature, gridHost, definition, false, 232f);
+                BuildFeatureCard(feature, gridHost, definition, false, CanvasPixels(166));
         }
 
         private void BuildWorkforceRoster()
         {
+            _menuViewport.MinimumPixels = IsCompactWorkforceLayout() ? 380 : 490;
             if (_bootstrap?.State == null)
             {
                 var unavailable = AddText(_featureHost, "직원 정보를 불러오는 중입니다.", 18f, true,
@@ -623,7 +628,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 CanvasFont(28f, UiRemasterTypography.PanelTitlePixels), true, TextAlignmentOptions.MidlineLeft, DeepInk);
             identity.gameObject.name = "Workforce Panel Title";
             identity.textWrappingMode = TextWrappingModes.NoWrap;
-            var identityHeight = CanvasHeight(36f, 32f);
+            var identityHeight = CanvasHeight(44f, 40f);
             var identityElement = AddLayout(identity.rectTransform, -1f, identityHeight, 0f, 0f);
             identityElement.minHeight = identityHeight;
             var potential = AddText(detail,
@@ -665,7 +670,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             }
 
             var state = CreateSpritePanel("Current State Separate", detail, _cardCompact, true);
-            state.GetComponent<Image>().type = Image.Type.Simple;
+            state.GetComponent<Image>().type = Image.Type.Sliced;
             state.GetComponent<Image>().color = SelectedCompactTint;
             var stateHeight = CanvasHeight(82f, 78f);
             var stateElement = AddLayout(state, -1f, stateHeight, 0f, 0f);
@@ -693,7 +698,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             var card = CreateSpritePanel("Employee " + member.MemberId, parent,
                 _cardCompact, true);
-            card.GetComponent<Image>().type = Image.Type.Simple;
+            card.GetComponent<Image>().type = Image.Type.Sliced;
             card.GetComponent<Image>().color = selected ? SelectedCompactTint : Color.white;
             var compact = IsCompactWorkforceLayout();
             var cardHeight = CanvasHeight(104f, compact ? 82f : 104f);
@@ -708,6 +713,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 RefreshOpenPanel();
             });
             ConfigureSpriteSwap(button, _cardCompact, _cardCompact, _cardCompact, _cardCompact);
+            OfficeHudVisuals.ButtonColors(button, selected ? SelectedCompactTint : Color.white, Hex("EDF3EB"), Hex("DCE8DA"));
             _workforceButtons[member.MemberId] = button;
 
             var layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -752,7 +758,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private void BuildWorkforceSkillCard(RectTransform parent, WorkforceSkillViewModel skill)
         {
             var card = CreateSpritePanel("Skill " + skill.SkillId, parent, _cardCompact, true);
-            card.GetComponent<Image>().type = Image.Type.Simple;
+            card.GetComponent<Image>().type = Image.Type.Sliced;
             card.GetComponent<Image>().color = DisabledCardTint;
             AddLayout(card, -1f, -1f, CanvasPixels(150f), 1f);
             var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -763,10 +769,11 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             heading.textWrappingMode = TextWrappingModes.NoWrap;
             AddLayout(heading.rectTransform, -1f, CanvasHeight(24f, 22f), 0f, 0f);
             var bar = CreateRect("Skill Value Bar", card);
-            AddLayout(bar, -1f, CanvasHeight(12f, 10f), 0f, 0f);
+            AddLayout(bar, -1f, CanvasHeight(12f, 10f), 0f, 1f);
             var back = bar.gameObject.AddComponent<Image>();
             back.sprite = _cardCompact;
-            back.type = Image.Type.Simple;
+            back.type = Image.Type.Sliced;
+            back.color = Hex("DDE5DA");
             back.raycastTarget = false;
             var fill = CreateRect("Skill Value Fill", bar);
             fill.anchorMin = Vector2.zero;
@@ -776,7 +783,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var fillImage = fill.gameObject.AddComponent<Image>();
             fillImage.sprite = _notificationBadge;
             fillImage.type = Image.Type.Sliced;
-            fillImage.color = Color.white;
+            fillImage.color = Hex("719A80");
             fillImage.raycastTarget = false;
             var next = skill.NextExperience <= 0
                 ? "최대 숙련"
@@ -799,12 +806,9 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
         private Sprite ResolveWorkforcePortrait(string memberId)
         {
-            var runtime = FindFirstObjectByType<StarterOfficeRuntimeBootstrap>();
-            var actor = runtime?.Actors.FirstOrDefault(item =>
-                string.Equals(item.AgentId, memberId, StringComparison.Ordinal));
-            return actor?.PresentationRenderer != null && actor.PresentationRenderer.sprite != null
-                ? actor.PresentationRenderer.sprite
-                : LoadRequiredSprite(MainNavigationCatalog.Get(MainNavigationTabId.People).IconResourcePath);
+            // No obsolete hidden 2D character renderer in the new roster. This is a neutral
+            // personnel symbol, not a new or regenerated family portrait / 3D asset.
+            return _officeVisuals.Icon(MainNavigationTabId.People);
         }
 
         private void BuildFeatureDetail(
@@ -832,6 +836,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             MainNavigationFeatureDefinition feature,
             MainNavigationTabDefinition tab)
         {
+            _menuViewport.MinimumPixels = 538;
             if (_contractBusinessNavigation?.IsReady != true)
             {
                 _featureRouteFailureKo = "계약 고객 카탈로그를 연결하는 중입니다.";
@@ -843,7 +848,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var root = CreateRect("Contract Board Adapter View", _featureHost);
             Stretch(root);
             var vertical = root.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(vertical, null, 12f);
+            ConfigureLayout(vertical, null, CanvasPixels(14));
             vertical.childAlignment = TextAnchor.UpperCenter;
             var guidance = AddText(
                 root,
@@ -852,11 +857,11 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 false,
                 TextAlignmentOptions.TopLeft,
                 DeepInk);
-            AddLayout(guidance.rectTransform, -1f, 72f, 0f, 0f);
+            AddLayout(guidance.rectTransform, -1f, CanvasPixels(80), 0f, 0f);
 
             var cards = board.Cards.Take(3).ToArray();
             var gridHost = CreateRect("Canonical Contract Offers", root);
-            AddLayout(gridHost, -1f, 354f, 0f, 1f);
+            AddLayout(gridHost, -1f, CanvasPixels(440), 0f, 0f);
             var grid = gridHost.gameObject.AddComponent<GridLayoutGroup>();
             grid.padding = new RectOffset();
             grid.spacing = new Vector2(12f, 0f);
@@ -866,19 +871,22 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             grid.childAlignment = TextAnchor.UpperCenter;
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = Math.Max(1, cards.Length);
+            var responsive = gridHost.gameObject.AddComponent<CasualResponsiveGrid>();
+            responsive.Columns = Math.Max(1, cards.Length);
+            responsive.CellHeightPixels = 440;
             foreach (var offer in cards)
             {
                 var card = CreateSpritePanel("Contract Offer " + offer.OfferId, gridHost, _cardNormal, true);
                 var cardLayout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-                ConfigureLayout(cardLayout, new RectOffset(18, 18, 18, 16), 5f);
+                ConfigureLayout(cardLayout, PixelPadding(18, 18, 18, 16), CanvasPixels(5));
                 cardLayout.childAlignment = TextAnchor.UpperLeft;
                 var tier = AddText(card, offer.TierKo, 15f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
                 tier.margin = new Vector4(CardCornerOrnamentInset, 0f, 0f, 0f);
-                AddLayout(tier.rectTransform, -1f, 24f, 0f, 0f);
+                AddLayout(tier.rectTransform, -1f, CanvasPixels(24), 0f, 0f);
                 var client = AddText(card, offer.ClientNameKo, 21f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
-                AddLayout(client.rectTransform, -1f, 30f, 0f, 0f);
+                AddLayout(client.rectTransform, -1f, CanvasPixels(32), 0f, 0f);
                 var title = AddText(card, offer.TitleKo, 17f, true, TextAlignmentOptions.TopLeft, DeepInk);
-                AddLayout(title.rectTransform, -1f, 46f, 0f, 0f);
+                AddLayout(title.rectTransform, -1f, CanvasPixels(60), 0f, 0f);
                 // The client's experience bar sits right under what the job teaches, so the trade
                 // reads in one place: what it pays, what it builds, and what it demands first.
                 var requirementLine = string.IsNullOrEmpty(offer.RequirementKo)
@@ -892,7 +900,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     false,
                     TextAlignmentOptions.TopLeft,
                     offer.TechnologyRequirementMet ? DeepInk : LockedInk);
-                AddLayout(facts.rectTransform, -1f, 178f, 0f, 1f);
+                AddLayout(facts.rectTransform, -1f, CanvasPixels(222), 0f, 1f);
                 var ready = offer.MemberChoices.Count(item => item.Available);
                 var status = AddText(
                     card,
@@ -902,7 +910,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     TextAlignmentOptions.BottomLeft,
                     DeepInk);
                 status.margin = new Vector4(CardCornerOrnamentInset, 0f, 0f, 0f);
-                AddLayout(status.rectTransform, -1f, 36f, 0f, 0f);
+                AddLayout(status.rectTransform, -1f, CanvasPixels(32), 0f, 0f);
             }
         }
 
@@ -915,6 +923,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             MainNavigationFeatureDefinition feature,
             MainNavigationTabDefinition tab)
         {
+            var trackColumns = Screen.width < 1600 ? 2 : 3;
             var technology = _bootstrap?.State?.Growth?.Technology;
             if (technology == null)
             {
@@ -939,7 +948,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 false,
                 TextAlignmentOptions.TopLeft,
                 DeepInk);
-            AddLayout(summary.rectTransform, -1f, CanvasHeight(30f, 26f), 0f, 0f);
+            AddLayout(summary.rectTransform, -1f, CanvasPixels(48), 0f, 0f);
 
             var grid = CreateRect("Technology Tracks", root);
             AddLayout(grid, -1f, -1f, 0f, 1f);
@@ -952,13 +961,19 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             gridLayout.childAlignment = TextAnchor.UpperCenter;
             gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             gridLayout.constraintCount = 3;
+            var responsive = grid.gameObject.AddComponent<CasualResponsiveGrid>();
+            responsive.Columns = trackColumns;
+            responsive.CellHeightPixels = 280;
 
+            var trackCount = 0;
             foreach (CompanyTechnologyTrack track in Enum.GetValues(typeof(CompanyTechnologyTrack)))
             {
                 var entries = CompanyTechnologyCatalog.ForTrack(track);
                 if (entries.Count == 0) continue;
                 BuildTechnologyTrackCard(grid, track, entries, technology);
+                trackCount++;
             }
+            _menuViewport.MinimumPixels = 70 + Mathf.Ceil(trackCount / (float)trackColumns) * 294;
         }
 
         private void BuildTechnologyTrackCard(
@@ -988,7 +1003,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     points > 0 ? DeepInk : LockedInk);
                 row.textWrappingMode = TextWrappingModes.NoWrap;
                 row.overflowMode = TextOverflowModes.Ellipsis;
-                AddLayout(row.rectTransform, -1f, CanvasHeight(20f, 18f), 0f, 0f);
+                AddLayout(row.rectTransform, -1f, CanvasHeight(28f, 24f), 0f, 0f);
             }
         }
 
@@ -1008,6 +1023,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             MainNavigationFeatureDefinition feature,
             MainNavigationTabDefinition tab)
         {
+            // This workflow has its own content-fitted scroll view; do not nest scroll extents.
+            _menuViewport.MinimumPixels = 0;
             if (_contractBusinessNavigation?.IsReady != true)
             {
                 _featureRouteFailureKo = "사업 성장 상태를 연결하는 중입니다.";
@@ -1058,7 +1075,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var futureTitle = AddText(content, "중장기 사업 목표 · 아래는 기존 해금 조건입니다", 18f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
             AddLayout(futureTitle.rectTransform, -1f, 32f, 0f, 0f);
             var gridHost = CreateRect("Future Product Paths", content);
-            AddLayout(gridHost, -1f, 468f, 0f, 0f);
+            AddLayout(gridHost, -1f, CanvasPixels(534), 0f, 0f);
             var grid = gridHost.gameObject.AddComponent<GridLayoutGroup>();
             grid.padding = new RectOffset();
             grid.spacing = new Vector2(16f, 16f);
@@ -1068,6 +1085,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             grid.childAlignment = TextAnchor.UpperCenter;
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 2;
+            var responsive = gridHost.gameObject.AddComponent<CasualResponsiveGrid>();
+            responsive.CellHeightPixels = 260;
             foreach (var opportunity in opportunities)
             {
                 var card = CreateSpritePanel(
@@ -1076,10 +1095,10 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     opportunity.Unlocked ? _cardNormal : _cardDisabled,
                     true);
                 var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-                ConfigureLayout(layout, new RectOffset(30, 30, 24, 18), 5f);
+                ConfigureLayout(layout, PixelPadding(20, 20, 20, 18), CanvasPixels(8));
                 layout.childAlignment = TextAnchor.UpperLeft;
                 var title = AddText(card, opportunity.Definition.DisplayNameKo, 21f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
-                AddLayout(title.rectTransform, -1f, 30f, 0f, 0f);
+                AddLayout(title.rectTransform, -1f, CanvasPixels(32), 0f, 0f);
                 var progress = AddText(
                     card,
                     $"진행 {opportunity.ProgressBasisPoints / 100}% · {(opportunity.Unlocked ? "해금 조건 충족" : "조건 축적 중")}",
@@ -1087,7 +1106,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     true,
                     TextAlignmentOptions.MidlineLeft,
                     DeepInk);
-                AddLayout(progress.rectTransform, -1f, 26f, 0f, 0f);
+                AddLayout(progress.rectTransform, -1f, CanvasPixels(30), 0f, 0f);
                 var conditions = AddText(
                     card,
                     string.Join("\n", opportunity.ConditionLabels.Take(3)) + "\n수익 구조 · " + opportunity.Definition.RevenueModelKo,
@@ -1095,7 +1114,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     false,
                     TextAlignmentOptions.TopLeft,
                     DeepInk);
-                AddLayout(conditions.rectTransform, -1f, 112f, 0f, 1f);
+                AddLayout(conditions.rectTransform, -1f, CanvasPixels(134), 0f, 1f);
             }
         }
 
@@ -1108,7 +1127,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             ConfigureLayout(vertical, PixelPadding(22, 22, 22, 20), 10f);
             var heading = AddText(card, "첫 자체 제품 · " + StarterProductState.Title,
                 23f, true, TextAlignmentOptions.MidlineLeft, DeepInk);
-            AddLayout(heading.rectTransform, -1f, 34f, 0f, 0f);
+            AddLayout(heading.rectTransform, -1f, CanvasPixels(38), 0f, 0f);
             var db = StarterProductState.HasLesson(state, 2) ? "완료" : "미완료";
             var tool = StarterProductState.HasLesson(state, 18) ? "완료" : "미완료";
             string status = $"하청 배우기  →  자체 개발  →  시험 판매  →  매주 유지보수\n단어 DB [{db}] · 대여점 도구 [{tool}]\n";
@@ -1133,7 +1152,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                     break;
             }
             var body = AddText(card, status, 17f, false, TextAlignmentOptions.TopLeft, DeepInk);
-            AddLayout(body.rectTransform, -1f, 174f, 0f, 0f);
+            AddLayout(body.rectTransform, -1f, CanvasPixels(174), 0f, 0f);
             var actions = StarterButtonRow(card, "Starter Main Actions");
             var lesson = _contractBusinessNavigation.GetStarterLesson();
             if (product.Phase == StarterProductPhase.Learning)
@@ -1142,7 +1161,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 {
                     var terms = AddText(card, $"다음 하청: {lesson.Title}\n착수 {lesson.UpfrontCostWon:N0}원 / 완료 보상 {lesson.RewardWon:N0}원 · {lesson.EstimatedPersonHours}인시 · {lesson.DeadlineDays}일",
                         16f, false, TextAlignmentOptions.TopLeft, DeepInk);
-                    AddLayout(terms.rectTransform, -1f, 54f, 0f, 0f);
+                    AddLayout(terms.rectTransform, -1f, CanvasPixels(72), 0f, 0f);
                     StarterButton(actions, "하청 수락", () => _contractBusinessNavigation.TryAcceptStarterLesson());
                 }
                 if (StarterProductState.HasRequiredKnowHow(state))
@@ -1163,7 +1182,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                         ? $"실제 정산 마감 {GameTime.CampaignStart.AddMinutes(product.NextBillingMinute):MM/dd HH:mm}"
                         : $"마감 {GameTime.CampaignStart.AddMinutes(work.DueMinute):MM/dd HH:mm}"),
                     17f, true, TextAlignmentOptions.TopLeft, DeepInk);
-                AddLayout(label.rectTransform, -1f, 54f, 0f, 0f);
+                AddLayout(label.rectTransform, -1f, CanvasPixels(72), 0f, 0f);
                 var row = StarterButtonRow(card, "Assign " + capturedId);
                 foreach (var member in state.Family.Members)
                 {
@@ -1179,13 +1198,13 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var notice = AddText(card, string.IsNullOrEmpty(_contractBusinessNavigation.NotificationKo)
                 ? "가족마다 책상·PC·의자 세트가 필요합니다. 배정은 이동·착석 후 진행하며, 완료한 뒤 다시 배정할 수 있습니다."
                 : _contractBusinessNavigation.NotificationKo, 16f, false, TextAlignmentOptions.TopLeft, DeepInk);
-            AddLayout(notice.rectTransform, -1f, 64f, 0f, 0f);
+            AddLayout(notice.rectTransform, -1f, CanvasPixels(72), 0f, 0f);
         }
 
         private RectTransform StarterButtonRow(RectTransform parent, string name)
         {
             var row = CreateRect(name, parent);
-            AddLayout(row, -1f, 44f, 0f, 0f);
+            AddLayout(row, -1f, CanvasPixels(44), 0f, 0f);
             var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
             ConfigureLayout(layout, null, 8f);
             return row;
@@ -1194,7 +1213,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private void StarterButton(RectTransform parent, string label, Action action)
         {
             var button = CreateSpriteButton(parent, label, _cardNormal, _cardHover, _cardNormal,
-                _cardHover, action, 220f, 44f);
+                _cardHover, action, CanvasPixels(220), CanvasPixels(44));
             var element = button.GetComponent<LayoutElement>();
             element.minWidth = 0f;
             element.flexibleWidth = 1f;
@@ -1217,16 +1236,17 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             ConfigureLayout(layout, new RectOffset(54, 54, 30, 28), 10f);
             layout.childAlignment = TextAnchor.MiddleCenter;
             var iconPath = string.IsNullOrEmpty(feature.IconResourcePath) ? tab.IconResourcePath : feature.IconResourcePath;
-            var icon = AddIcon(card, LoadRequiredSprite(iconPath), 88f);
+            var icon = AddIcon(card, _officeVisuals.Icon(tab.TabId), 88f);
             AddLayout(icon.rectTransform, 88f, 88f, 88f, 0f);
-            var title = AddText(card, feature.DisplayNameKo + " 전용 화면", 26f, true, TextAlignmentOptions.Midline, DeepInk);
+            var title = AddText(card, feature.DisplayNameKo, 26f, true, TextAlignmentOptions.Midline, DeepInk);
             AddLayout(title.rectTransform, -1f, 38f, 0f, 0f);
             var message = string.IsNullOrEmpty(_featureRouteFailureKo)
-                ? feature.DescriptionKo + "\n현재 버전에서는 준비 중이며, 구현 상태를 숨기지 않습니다."
+                ? feature.DescriptionKo + "\n아직 준비 중이에요. 지금은 다른 메뉴를 둘러보세요."
                 : _featureRouteFailureKo + "\n사무실로 돌아가 다시 시도할 수 있습니다.";
             var body = AddText(card, message, 17f, false, TextAlignmentOptions.Midline, DeepInk);
             AddLayout(body.rectTransform, -1f, 80f, 0f, 0f);
             var marker = CreateSpritePanel("Explicit Coming Soon State", card, _comingSoonRibbon, true);
+            marker.GetComponent<Image>().color = DisabledCardTint;
             AddLayout(marker, 140f, 34f, 140f, 0f);
             var markerText = AddText(marker, "준비 중", 16f, true, TextAlignmentOptions.Midline, DeepInk);
             Stretch(markerText.rectTransform);
@@ -1239,54 +1259,54 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             bool featured,
             float preferredHeight)
         {
-            var actionable = feature.Action != MainNavigationFeatureAction.None;
             var available = feature.Action == MainNavigationFeatureAction.OpenStockMarket ||
                             feature.Action == MainNavigationFeatureAction.OpenBuildingEditor ||
                             feature.Action == MainNavigationFeatureAction.OpenContractBoard ||
-                            feature.Action == MainNavigationFeatureAction.OpenProductOpportunities;
+                            feature.Action == MainNavigationFeatureAction.OpenProductOpportunities ||
+                            feature.Action == MainNavigationFeatureAction.OpenTechnologyLedger;
             var cardSprite = featured ? _cardFeatured : _cardNormal;
             var card = CreateSpritePanel($"Feature {feature.Id}", parent, cardSprite, true);
             AddLayout(card, -1f, preferredHeight, 0f, 1f);
             ConfigureFeatureRoute(feature, card, featured);
 
             var layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
-            var horizontalPadding = featured ? 24 : 18;
-            var verticalPadding = featured ? 18 : 12;
+            const int horizontalPadding = 18;
+            const int verticalPadding = 16;
             ConfigureLayout(
                 layout,
-                new RectOffset(horizontalPadding, horizontalPadding, verticalPadding, verticalPadding),
-                featured ? 22f : 14f);
+                PixelPadding(horizontalPadding, horizontalPadding, verticalPadding, verticalPadding),
+                CanvasPixels(16));
             layout.childAlignment = TextAnchor.MiddleLeft;
 
-            var iconPath = string.IsNullOrEmpty(feature.IconResourcePath) ? tab.IconResourcePath : feature.IconResourcePath;
-            var iconSize = featured ? 92f : preferredHeight >= 200f ? 68f : 60f;
-            var icon = AddIcon(card, LoadRequiredSprite(iconPath), iconSize);
+            var iconSize = CanvasPixels(64);
+            var icon = AddIcon(card, feature.Action == MainNavigationFeatureAction.OpenBuildingEditor
+                ? _officeVisuals.WorkstationIcon : _officeVisuals.Icon(tab.TabId), iconSize);
             AddLayout(icon.rectTransform, iconSize, iconSize, iconSize, 0f);
 
             var textHost = CreateRect("Feature Copy", card);
-            AddLayout(textHost, -1f, preferredHeight - verticalPadding * 2f, 260f, 1f);
+            AddLayout(textHost, -1f, preferredHeight - CanvasPixels(verticalPadding * 2), 0f, 1f);
             var textLayout = textHost.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureLayout(textLayout, null, featured ? 4f : 3f);
+            ConfigureLayout(textLayout, null, CanvasPixels(6));
             textLayout.childAlignment = TextAnchor.MiddleLeft;
             var title = AddText(
                 textHost,
                 feature.DisplayNameKo,
-                featured ? 26f : 21f,
+                CanvasPixels(21),
                 true,
                 TextAlignmentOptions.MidlineLeft,
                 DeepInk);
-            AddLayout(title.rectTransform, -1f, featured ? 34f : 28f, 0f, 1f);
+            AddLayout(title.rectTransform, -1f, CanvasPixels(30), 0f, 0f);
 
             ResolveFeaturePresentation(feature, out var descriptionKo, out var statusKo);
-            var descriptionHeight = featured ? 60f : preferredHeight >= 200f ? 92f : 48f;
+            var descriptionHeight = CanvasPixels(60);
             var description = AddText(
                 textHost,
                 descriptionKo,
-                featured ? 17f : 16f,
+                CanvasPixels(16),
                 false,
                 TextAlignmentOptions.TopLeft,
-                DeepInk);
-            AddLayout(description.rectTransform, -1f, descriptionHeight, 0f, 1f);
+                Hex("69736E"));
+            AddLayout(description.rectTransform, -1f, descriptionHeight, 0f, 0f);
             description.textWrappingMode = TextWrappingModes.Normal;
 
             var marker = CreateSpritePanel(
@@ -1294,14 +1314,15 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 textHost,
                 available ? _notificationBadge : _comingSoonRibbon,
                 true);
-            AddLayout(marker, available ? 126f : 116f, 28f, available ? 126f : 116f, 0f);
+            marker.GetComponent<Image>().color = available ? Hex("E1EBE2") : Hex("EEEFEA");
+            AddLayout(marker, CanvasPixels(100), CanvasPixels(24), CanvasPixels(100), 0f);
             var markerText = AddText(
                 marker,
-                available ? "이용 가능" : "준비 중",
-                15f,
+                available ? "열기  →" : "준비 중",
+                CanvasPixels(15),
                 true,
                 TextAlignmentOptions.Midline,
-                available ? Cream : DeepInk);
+                available ? Hex("416F56") : Hex("727A73"));
             Stretch(markerText.rectTransform);
         }
 
@@ -1444,14 +1465,13 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             foreach (var definition in MainNavigationCatalog.All)
             {
-                var active = _session.HasActiveTab ? _session.ActiveTab == definition.TabId :
-                    definition.TabId == MainNavigationTabId.Company;
+                var active = _session.HasActiveTab && _session.ActiveTab == definition.TabId;
                 if (_tabButtons.TryGetValue(definition.TabId, out var button))
-                    OfficeHudVisuals.ButtonColors(button, Color.white, Hex("F3F7F7"), Hex("E8EEEE"));
+                    OfficeHudVisuals.ButtonColors(button, active ? Hex("E8EFE6") : Color.white, Hex("F0F3ED"), Hex("DAE6DA"));
                 if (_tabLabels.TryGetValue(definition.TabId, out var label))
                 {
-                    label.color = active ? Hex("AD5C43") : Hex("667D86");
-                    label.fontStyle = FontStyles.Bold | (active ? FontStyles.Underline : FontStyles.Normal);
+                    label.color = active ? Hex("416F56") : Hex("69736E");
+                    label.fontStyle = FontStyles.Bold;
                 }
             }
         }
@@ -1492,25 +1512,11 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             Sprite selected)
         {
             if (button == null || button.image == null) return;
-            button.transition = Selectable.Transition.SpriteSwap;
             button.image.sprite = normal;
             button.image.overrideSprite = null;
             button.image.color = Color.white;
             button.image.raycastTarget = true;
-            var state = button.spriteState;
-            state.highlightedSprite = hover;
-            state.pressedSprite = pressed;
-            state.selectedSprite = selected;
-            state.disabledSprite = normal;
-            button.spriteState = state;
-            var colors = ColorBlock.defaultColorBlock;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = Color.white;
-            colors.pressedColor = Color.white;
-            colors.selectedColor = Color.white;
-            colors.disabledColor = Color.white;
-            colors.fadeDuration = 0.06f;
-            button.colors = colors;
+            OfficeHudVisuals.ButtonColors(button, Color.white, Hex("EDF3EB"), Hex("DCE8DA"));
         }
 
         private static RectTransform CreateSpritePanel(
@@ -1526,10 +1532,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             image.type = sliced ? Image.Type.Sliced : Image.Type.Simple;
             image.color = Color.white;
             image.raycastTarget = false;
-            // The generated frames are authored 2-8x larger than the rects they fill, so their
-            // 9-slice borders would otherwise be clamped to the whole rect and collapse the centre
-            // into two touching end caps. The fitter keeps a real stretchable centre.
-            if (sliced) UiNineSliceFitter.Attach(image);
+            // Small native nine-slices keep a consistent corner radius at every panel size.
             return rect;
         }
 
@@ -1604,7 +1607,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var text = rect.gameObject.AddComponent<TextMeshProUGUI>();
             text.font = heading ? _headingFont : _bodyFont;
             text.fontSize = CanvasFont(fontSize, MinimumBodyFontSize);
-            text.fontStyle = FontStyles.Normal;
+            text.fontStyle = heading ? FontStyles.Bold : FontStyles.Normal;
             text.enableAutoSizing = false;
             text.color = color;
             text.alignment = alignment;
@@ -1627,6 +1630,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             _lastSafeArea = safe;
             ApplySafeArea(_safeRoot, safe);
             ApplyAnchoredLayout();
+            if (_built && _session.HasActiveTab) RefreshOpenPanel();
         }
 
         private void ApplyAnchoredLayout()
@@ -1671,6 +1675,27 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             _contentPanel.pivot = new Vector2(0.5f, 0.5f);
             _contentPanel.sizeDelta = new Vector2(panelWidth, panelHeight);
             _contentPanel.anchoredPosition = new Vector2(0f, panelCenterY);
+            // The header exists before the first window resize. Re-evaluate its pixel metrics
+            // too, otherwise fonts/icons built at 720p become 1.5x larger inside a 1080p modal.
+            var panelLayout = _contentPanel.GetComponent<VerticalLayoutGroup>();
+            panelLayout.padding = PixelPadding(22, 22, 16, 20);
+            panelLayout.spacing = CanvasPixels(14);
+            _panelHeader.GetComponent<LayoutElement>().preferredHeight = CanvasPixels(90);
+            _panelHeader.GetComponent<LayoutElement>().minWidth = 0;
+            var headerLayout = _panelHeader.GetComponent<HorizontalLayoutGroup>();
+            headerLayout.padding = PixelPadding(4, 4, 4, 4);
+            headerLayout.spacing = CanvasPixels(16);
+            var iconLayout = _panelIcon.GetComponent<LayoutElement>();
+            iconLayout.preferredWidth = iconLayout.minWidth = iconLayout.preferredHeight = CanvasPixels(70);
+            _panelTitles.GetComponent<LayoutElement>().preferredHeight = CanvasPixels(80);
+            _panelTitle.fontSize = CanvasPixels(28);
+            _panelTitle.GetComponent<LayoutElement>().preferredHeight = CanvasPixels(38);
+            _panelDescription.fontSize = CanvasPixels(16);
+            _panelDescription.GetComponent<LayoutElement>().preferredHeight = CanvasPixels(40);
+            var returnLayout = _officeReturnButton.GetComponent<LayoutElement>();
+            returnLayout.preferredWidth = returnLayout.minWidth = CanvasPixels(120);
+            returnLayout.preferredHeight = CanvasPixels(44);
+            _officeReturnLabel.fontSize = CanvasPixels(16);
         }
 
         private static void ApplySafeArea(RectTransform target, Rect safe)
@@ -1687,8 +1712,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             var catalog = Resources.Load<UiRemasterFontCatalog>(UiRemasterTypography.FontCatalogResourcePath);
             if (catalog != null && catalog.IsComplete)
             {
-                _bodyFont = CreateFontAsset(catalog.BodySource, "Main Navigation Maplestory Light V3");
-                _headingFont = CreateFontAsset(catalog.HeadingSource, "Main Navigation Maplestory Bold V3");
+                _bodyFont = CreateFontAsset(catalog.FallbackSource, "Casual Office Pretendard Body");
+                _headingFont = CreateFontAsset(catalog.FallbackSource, "Casual Office Pretendard Heading");
                 _fallbackFont = CreateFontAsset(catalog.FallbackSource, "Main Navigation Pretendard Fallback V3");
                 _hudFont = CreateFontAsset(catalog.FallbackSource, "Office HUD Pretendard");
             }
@@ -1812,6 +1837,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 // Destroy only takes effect at the end of the frame, so the outgoing content would
                 // still be laid out beside the content built immediately afterwards and both would
                 // render on top of each other. Detaching first removes it from layout right away.
+                child.gameObject.SetActive(false);
                 child.SetParent(null, false);
                 Destroy(child.gameObject);
             }

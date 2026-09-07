@@ -1,6 +1,7 @@
 [CmdletBinding()]
-param([string]$Player = '', [switch]$ShowWindow, [switch]$PrivateDesktop)
+param([string]$Player = '', [switch]$ShowWindow, [switch]$PrivateDesktop, [switch]$AllowGraphicsQa)
 $ErrorActionPreference = 'Stop'
+if (!$AllowGraphicsQa) { throw 'Obtain user authorization before -AllowGraphicsQa; neither visibility mode is headless.' }
 if ($ShowWindow -eq $PrivateDesktop) { throw 'Choose isolated -PrivateDesktop or explicitly authorized -ShowWindow. A black PNG is not a pass.' }
 . (Join-Path $PSScriptRoot 'FamilyCompany.Package.ps1')
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -10,8 +11,11 @@ $source=Join-Path $root 'source'
 [void][IO.Directory]::CreateDirectory((Join-Path $source 'FamilyCompany_Data'))
 [IO.File]::WriteAllText((Join-Path $source 'FamilyCompany.exe'),'INERT NOT EXECUTABLE')
 [IO.File]::WriteAllText((Join-Path $source 'UnityPlayer.dll'),'INERT NOT DLL')
-$bytes=New-Object byte[] (4MB); [Random]::new(917).NextBytes($bytes)
+$bytes=New-Object byte[] (2MB); [Random]::new(917).NextBytes($bytes)
 [IO.File]::WriteAllBytes((Join-Path $source 'FamilyCompany_Data/progress-fixture.bytes'),$bytes)
+[void][IO.Directory]::CreateDirectory((Join-Path $source 'FamilyCompany_Data/StreamingAssets'))
+[Random]::new(918).NextBytes($bytes)
+[IO.File]::WriteAllBytes((Join-Path $source 'FamilyCompany_Data/StreamingAssets/second-folder.bytes'),$bytes)
 $package=New-CompanyPatchPackage $source (Join-Path $root 'feed') 'fc-win-20260906.1' 1 ('1'*40)
 Write-PatchJsonAtomic (Join-Path $root 'test-identity.json') @{type='actual Unity UI with inert paced local transport; not game Release';
     manifest=$package.ManifestPath; manifestSha256=$package.ManifestHash; installRoot=(Join-Path $root 'install');
@@ -25,7 +29,7 @@ $start.Arguments='-force-d3d11 -screen-fullscreen 0 -screen-width 1280 -screen-h
 $isolation=$null
 if ($PrivateDesktop) {
     if (!('CompanyQaDesktop' -as [type])) { Add-Type -Path (Join-Path $repo 'Tools/Background/CompanyQaDesktop.cs') }
-    $isolation=[CompanyQaDesktop]::Start($start.FileName,$start.Arguments,$repo)
+    $isolation=[CompanyQaDesktop]::Start($start.FileName,$start.Arguments,$repo,$AllowGraphicsQa.IsPresent)
     $process=$isolation.Process
 } else { $process=[Diagnostics.Process]::Start($start) }
 $timer=[Diagnostics.Stopwatch]::StartNew()
@@ -38,6 +42,22 @@ try {
     $process.WaitForExit()
     if ($process.ExitCode -ne 0) { throw "Unity patch QA failed: $($process.ExitCode)" }
     if (!(Test-Path -LiteralPath (Join-Path $root 'in-game-patch.png'))) { throw 'Missing actual in-game screenshot.' }
+    if (!(Test-Path -LiteralPath (Join-Path $root 'restart-notice.png'))) { throw 'Missing actual restart notice screenshot.' }
+    $patchLog = Get-Content -LiteralPath (Join-Path $root 'player.log')
+    [double]$previousPercent = 0
+    $observations = 0
+    foreach ($entry in $patchLog) {
+        if ($entry -match 'IN_GAME_PATCH_PROGRESS phase=(\S+).* percent=([0-9.]+) ') {
+            [double]$value = [double]::Parse($Matches[2], [Globalization.CultureInfo]::InvariantCulture)
+            if ($value -lt $previousPercent -or $value -gt 99) { throw "Overall percent reset or premature 100: $entry" }
+            $previousPercent = $value; $observations++
+        }
+    }
+    if ($observations -lt 10 -or !($patchLog -match 'IN_GAME_PATCH_OVERALL_COMPLETE percent=100 validatedResult=true')) { throw 'Overall progress evidence missing.' }
+    $notice = $patchLog | Select-String 'IN_GAME_PATCH_RESTART_NOTICE_COMPLETE visibleSeconds=([0-9.]+)'
+    if (!$notice -or [double]::Parse($notice.Matches[0].Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture) -lt 4) {
+        throw 'Restart notice was not rendered for at least four seconds.'
+    }
     Add-Type -AssemblyName System.Drawing
     $bitmap=[Drawing.Bitmap]::new((Join-Path $root 'in-game-patch.png'))
     try {
@@ -55,7 +75,7 @@ try {
         Write-PatchJsonAtomic (Join-Path $root 'process.json') @{
             pid=$process.Id;exitCode=$process.ExitCode;privateDesktop=$(if($isolation){$isolation.DesktopName}else{$null});
             interactiveDesktopAtStart=$(if($isolation){$isolation.InteractiveDesktopAtStart}else{$null});
-            desktopSwitchAllowed=$false;scope='Own Unity UI on an isolated desktop; no desktop switch or native input'}
+            desktopSwitchAllowed=$false;scope='Presented Unity UI; explicit graphics authorization required. Desktop placement is not an input/resource sandbox.'}
     } finally {
         if ($isolation) { $isolation.Dispose() } else { $process.Dispose() }
     }

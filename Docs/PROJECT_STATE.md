@@ -2,6 +2,76 @@
 
 Last updated: 2026-09-07. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
+## 2026-09-07 source handoff requested: casual UI and background-only QA guards
+
+The user subsequently requested committing and pushing this source snapshot to `origin/main`.
+It includes the casual UI/icon atlas, overall patch progress/restart feedback, headless-check tools,
+graphics-launch authorization guards and current handoff documents. This is **source handoff only**,
+not a new playable Release or approval to run graphics tests. Public latest remains
+`fc-win-20260907.2` (v5). Actual Player layout/lifecycle revalidation and patch publication remain pending.
+The user's fixed main, patch cache and saves are not part of this commit and remain untouched.
+
+## 2026-09-07 current: headless work resumed; graphics/input tests remain stopped
+
+- User reported clicks failing while using other applications during verification, then explicitly
+  requested background work without interference. Source-only work resumed. All Player/GUI rendering
+  and native-input verification remain paused; do not restart them without new user authorization.
+  No Unity Editor or Player was launched during this resumed turn. Use sequential, low-priority,
+  at-most-two-core pure checks while the user is working.
+- Read-only process checks after the complaint found no remaining FamilyCompany Player or Unity
+  processes and no matching QA runner. No user application was stopped or controlled.
+- Private-desktop presentation is not proof of input/resource isolation. The exact cause is unconfirmed.
+  StockMarketFullscreenPanel has native cursor/foreground/mouse injection in its dedicated
+  `-familyCompanyCaptureStock` QA path, but the inspected full-navigation invocation did not enable
+  that flag and its log did not show that path executing. Do not claim native injection caused this incident.
+- Latest expanded UI QA failed on a CasualResponsiveGrid lifecycle NullReferenceException. Canvas
+  guards and deactivate-before-detach fixes are in source. Resumed work also guards zero grid columns,
+  updates changed constraints, and updates viewport width even when height is unchanged. Offline source
+  compilation passes; these fixes are NOT yet rebuilt/retested in a running Player. Work is not complete.
+- The isolated local real-Unity restart test at
+  `Artifacts/UnityPatchRestartTests/24fef00acb93404c9020acab8512ed84` recorded a visible four-second
+  notice, normal parent exit and verified child launch. This is not a public-release or fixed-main test.
+- Resumed headless checks: 146 Presentation C# source files compiled against cached Unity references
+  at `Artifacts/FastQa/OfflineUiCompile/20260907-201223-976` without starting Unity; pure Simulation/save
+  smoke PASS in 11.272 seconds at `Artifacts/FastQa/runs/20260907-201250-632`; overall progress 18
+  assertions PASS; desktop-launch policy 19 assertions PASS in both PS7 and PS5.1. Eleven changed/new
+  PowerShell files parse successfully. None of these are fresh visual or runtime-layout PASS evidence.
+- Common QA desktop launcher, 7 graphics entry scripts and FastQA graphics profiles now require
+  explicit `-AllowGraphicsQa` after user authorization. Known native-input QA flags are separately
+  blocked by the shared launch policy. FastQA default-denial test at
+  `Artifacts/FastQa/runs/20260907-201637-129` deliberately returned FAIL/exit 1 before any compile,
+  build, Player or capture; this proves the denial, not game correctness. Final process inventory: zero
+  Unity/FamilyCompany processes. No public patch, main replacement or shutdown occurred. The subsequent
+  source commit/push request is recorded above; it does not change these verification limits.
+- Current evidence and safe next commands:
+  [BACKGROUND_ONLY_QA_2026-09-07.md](Evidence/OfficeCasual20260907/BACKGROUND_ONLY_QA_2026-09-07.md).
+
+## 2026-09-07 implementation, visual verification pending: casual full-menu redesign and overall patch feedback
+
+User requested a fresh casual design across all five hubs/detail routes, including ImageGen, plus
+one overall patch percentage and a visible restart notice. Implementation is on canonical `main`,
+based on clean `b07e24d1`. **Not published; latest remains v5 below.**
+
+- Shared paper-white/sage native surfaces and Pretendard replace mismatched ornamental menu frames.
+  New text-free built-in ImageGen atlas: `OfficeCasual/office-icons-v1.png`, six transparent cells.
+  Shop and market presentation share the palette/font; semantic adapters and world assets remain unchanged.
+- Masked scrolling, measured viewport-width grids, resize-aware headers; independent expanded Player
+  checks all hubs/internal details at four native resolutions. Initial tests correctly exposed and led to
+  fixes for title sizing, product terms and technology row clipping. No failing captures are PASS evidence.
+- Overall download 0–85%, final verification 85–99%, validated result 100%; stage transitions do not reset.
+  Actual four-second restart notice precedes the existing normal-exit/verified-snapshot handshake.
+- Local 18-case display-model test PASS and two-folder actual Unity streaming/notice test PASS in
+  `Artifacts/InGamePatchTests/f8f97712f046440d9b449586eb35dcb9` (before final loading reskin).
+  Batchmode restart observer had no Repaint and correctly failed closed; the later presented-parent
+  local restart result is recorded above. No verification is currently running.
+- User main/save files remain untouched. User cache was read-only observed at v5, `versions/5-9664e3ec8254`.
+  The fixed v2 entry embeds its own old bootstrap: publishing a new snapshot alone **does not update
+  its first patch screen**. An approved one-time same-path bootstrap/install refresh remains necessary.
+  Source handoff is now requested as recorded above. No Release publication, main migration or PC
+  shutdown has been performed for this work.
+- Design, asset prompt/provenance, verification contract and migration caveat:
+  [UI_CASUAL_REDESIGN_2026-09-07.md](UI_CASUAL_REDESIGN_2026-09-07.md).
+
 ## 2026-09-07 latest delivery: unified white office HUD published (v5)
 
 [fc-win-20260907.2](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260907.2), sequence **5**,
