@@ -3,6 +3,35 @@
 This manifest lists the production Player V8 and Father V19 packages first, followed by current
 family inputs and canonical production assets. Retired iterations are not reusable sources.
 
+2026-09-07 runtime HUD adoption after the user's build/push request: the previously generated
+`premium-office-ui-illustrations.png` atlas is copied byte-for-byte to
+`Assets/Art/UI/Resources/OfficeHudWhite/office-illustrations.png` (1536×1024).
+Source: built-in ImageGen `exec-c90fb2f3-322e-4872-9142-3a5a8ce7c815`; no new generation or paid call.
+`OfficeHudVisuals` selects the same measured illustration rectangles without editing the source bitmap;
+native uGUI code supplies rounded white surfaces and all text. Import is Bilinear/Clamp/no mipmaps,
+NPOT preserved, uncompressed. Only the first five icons are used. Full prompt and hash are recorded in
+`Docs/Evidence/UnifiedOfficeHud20260907/asset-provenance.json`.
+The new office header/dock use the unchanged bundled OFL Pretendard source from the existing catalog;
+no subset or preview screenshot enters Resources, and detailed panels retain their Maplestory fonts.
+Map, furniture and family production packages are not regenerated, replaced or promoted.
+This entry supersedes the import-pending statements below for this atlas and the office HUD only.
+
+2026-09-07 UI proposal only (not imported into Unity): built-in ImageGen created six small office UI
+icons, then corrected an opaque checkerboard output to a white background. Local candidate atlas:
+`C:/Users/godho/Documents/Codex/2026-09-04/older-sister-3d-continuation/outputs/actual-office-ui-icons-white.png`.
+Exact prompts/lineage and screenshot-backed preview scope are in `actual-office-ui-generation-ledger.json`
+beside it. The actual v4 map/3D actors are preserved as an unchanged reference capture, not regenerated.
+No production UI asset, family package, world asset, GUID or importer was replaced. Runtime adoption
+and final visual approval remain pending; no new family character package was generated.
+
+Follow-up unapproved refinement after the user rejected the miniature-icon finish:
+`outputs/premium-office-ui-illustrations.png` in the same continuation task is a new built-in ImageGen
+six-illustration atlas, not a production replacement. Prompt/provenance is in
+`outputs/premium-office-ui-generation-ledger.json`. The screenshot-backed preview embeds a locally
+renamed OFL subset `FC Studio Preview` from the unchanged bundled Pretendard source; the full OFL
+notice is retained with the derivative and in the preview. No Maplestory font was altered and the
+runtime typography contract remains unchanged. Visual acceptance/import remain pending.
+
 2026-09-07 release validation repair: the existing experimental OlderSister V3 SD-repair albedo
 import settings now use Uncompressed instead of Unity's default Compressed on Default/Standalone.
 The source PNG, FBX, material and production roster are unchanged; this resolves the existing

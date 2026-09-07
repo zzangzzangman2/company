@@ -1,0 +1,17 @@
+{
+  "date": "2026-09-07",
+  "source": "OpenAI built-in ImageGen",
+  "generationId": "exec-c90fb2f3-322e-4872-9142-3a5a8ce7c815",
+  "exactPrompt": "Create an exceptionally cohesive bespoke UI illustration atlas for a contemporary Korean cozy office-management game. This is a polished, art-directed family of small painted UI illustrations, NOT stock emoji, generic app icons, clipart, glossy 3D clay toys or a corporate dashboard. White background.\n\nSix illustrations in an exact 3-column by 2-row grid, each centered in an equal cell, generously separated, with no labels or borders. Use a sophisticated 2.5D illustrated style: clean slightly irregular dark blue-gray contour lines, beautifully simplified silhouettes, restrained flat color planes with one gentle shadow plane, a little hand-painted character, precise tiny details only where useful. Almost orthographic/isometric objects. Harmonize a quiet petrol-blue, warm white, desaturated sky blue and a small terracotta/coral accent. Avoid shiny plastic, inflated shapes, photoreal textures, heavy black outlines, bubbly bevels, gold trim, cast floor shadows and random multicolor decoration. The six illustrations must unmistakably be from the same commissioned game art set and read at 40–64 pixels.\n\nTop row, left to right:\n1. A small welcoming Korean office building with a coral awning, two windows and a modest blue door.\n2. Two overlapping cream employee identity cards, held with one small coral clip; only abstract head silhouettes, no detailed faces and no readable writing.\n3. A tidy blue project folder with a cream sheet and one coral floppy disk.\n\nBottom row, left to right:\n4. A magnifying glass over a small blue circuit/technical drawing, suggesting research and invention.\n5. A cream paper financial chart with a restrained rising coral line and one small coin, suggesting investment without a pile of gold.\n6. A charming year-2000 beige CRT computer and keyboard, with two blue/coral floppy disks and a small stack of cream work papers; richer detail than the other five but the same graphic language.\n\nMake the empty background uniformly pure white, not parchment or an artificial checkerboard. Do not render any game screen, office room, character, UI panels, captions, symbols-as-text, numbers, brand logo or watermark. Output only the six-illustration atlas.",
+  "runtimeAsset": "Assets/Art/UI/Resources/OfficeHudWhite/office-illustrations.png",
+  "sha256": "527776D334CC24234B4AEF4E22A9A50F4E198740E91A4510CC400DF3A274E27A",
+  "dimensions": [
+    1536,
+    1024
+  ],
+  "sourceBitmap": "Unmodified byte copy of the previously reviewed six-icon atlas; five measured crops selected as runtime Sprites.",
+  "surfaces": "Native rounded white uGUI nine-slice, no raster text or world screenshot.",
+  "rights": "User stated ownership/use rights for generated project assets.",
+  "typography": "Existing catalog FallbackSource (bundled OFL Pretendard) used only for new office HUD; original font files unchanged.",
+  "scope": "UI display only. No world/family generation, external asset retrieval, or new paid generation."
+}

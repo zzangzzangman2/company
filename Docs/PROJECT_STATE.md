@@ -2,6 +2,35 @@
 
 Last updated: 2026-09-07. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
+## 2026-09-07 current source work: unified white office HUD (not published)
+
+- User requested build and push of the revised UI. Actual `MainNavigationHudPresenter` now renders one
+  white company/cash/date/time/pause/speed header and one compact five-icon bottom rail. The office starts
+  with all business/content panels closed; tab re-click, return and Escape close them. Existing contract,
+  product, build-editor, roster and investment adapters remain authoritative. Live cash/time are not samples.
+- Existing generated illustration atlas was imported byte-for-byte; no new generation or character/world
+  edits. Only the office HUD uses the existing bundled Pretendard font; source font files and detailed-panel
+  Maplestory remain. Existing main EXE, updater/patch activation and save formats are unchanged.
+- Unity **6000.3.21f1 Fast QA Windows build PASS**, latest run `20260907-111725-938`: 21.762s overall,
+  20.276s build. This is a Development/FastQA validation player, **not a clean non-Development Release**.
+  Native Editor `MainNavigationHudValidation.Run` PASS. Actual private-desktop D3D11 HUD QA
+  `20260907-112000` PASS at 1280×720/1024×768/1600×1000/1920×1080: shared row, live cash/date,
+  no overflow, five tab toggles, Business Escape, 1×/2×/4×, pause/resume. Default normal office is unobstructed.
+- Existing independent full navigation suite `20260907-111810`: **PASS**, 54 EventSystem pointer routes,
+  33 captures, contract/product/build/stock routes and isolated save roundtrip; no native mouse was sent.
+  Roster typography/overflow/collision checks passed at its supported sizes. Its 2560×1440 output is an
+  explicit 2× capture from a 1280×720 window, not native 2560×1440 layout evidence. The new HUD's native
+  four-resolution captures are separate. First early captures (`111205`) included loading and are not accepted
+  office evidence; the QA now waits for `ScenePreviewJump.IsPresentationLoading` to clear before every capture.
+- All 19 pre-existing local character/reference files were hash-checked unchanged. No Unity/Player window
+  was placed on the user's interactive desktop; main/save hashes and desktop identity stayed unchanged.
+  Evidence and original image prompt: [UnifiedOfficeHud20260907](Evidence/UnifiedOfficeHud20260907/README.md).
+- Only UI source/assets/tests/docs are selected for main push. Clean Release candidate build is on hold:
+  the pre-existing Father importer change and untracked OlderSister work must not be silently committed,
+  removed or hidden from the dirty guard. Asked permission to temporarily back up/separate and restore them;
+  no answer received yet. No public Release was created, no Downloads installation was changed, and this UI
+  is not available through the fixed main's updater until separately validated/published. Public v4 below remains current.
+
 ## 2026-09-07 latest delivery: first business loop published (v4)
 
 [fc-win-20260907.1](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260907.1), sequence **4**,
@@ -53,6 +82,73 @@ Company handoff: [COMPANY_HANDOFF_2026-09-07.md](COMPANY_HANDOFF_2026-09-07.md).
 - User explicitly authorized verified publish/push/company handoff/shutdown without questions. Work remained background-only,
   with no native input, delegation, paid generation or user save writes. Normal (non-forced) shutdown is requested only
   after final remote/evidence push checks; this document does not claim the PC was already off when written.
+
+### 2026-09-07 company checkout source verification
+
+- Company checkout `family_company_unity/main` fast-forwarded `e7830bb1 -> 889d92b2` (44 commits);
+  HEAD matched `origin/main`. All 19 pre-existing local files were preserved and verified byte-for-byte.
+- Fresh local `FAST_QA_WINDOWS.cmd -Profile simulation-pure` PASS: total `7.245 s`, compile `0.708 s`,
+  Unity toolchain `6000.3.21f1`; result: `Artifacts/FastQa/runs/20260907-094005-616/result.json`.
+- All 61 tracked v4 evidence inventory files and 10 release-gate evidence hashes matched. GitHub latest
+  was independently read as published `fc-win-20260907.1` with 18 assets. These checks do not re-run gameplay.
+- The documented Downloads main EXE was absent on this company PC. No game installation, Unity/Player
+  launch, deployment or save change was performed; the published v4 gameplay status above is unchanged.
+- Follow-up code review confirmed the fixed-main contract: unchanged entry installation; authenticated
+  latest Release manifest; hash-based file reuse/download; in-game byte-based progress; prepared AppData
+  snapshot; normal parent exit before atomic activation/restart. This was code/receipt review only.
+
+### 2026-09-07 company-PC design review (proposal only)
+
+- Reviewed current v4 business/office evidence and HUD/presentation source, plus the earlier patch-screen
+  fixture for visual reference. No fresh Unity/Player run; all work remained background-only.
+- Proposed priority: business goal/progress/family/action hierarchy, simpler common HUD, calmer office
+  floor/grid, and patch-screen styling with the fixed-main/update/restart contract unchanged.
+- A local interactive layout draft passed headless Edge selection/action/details checks and light/dark
+  layouts at 1024/736/360 px without horizontal clipping. This is not Unity runtime or final-art QA.
+- No gameplay code, production art, main EXE, saves or release changed. Design direction is unapproved;
+  next suggested implementation scope is business-screen/common-HUD presentation only. Local findings:
+  `C:/Users/godho/Documents/Codex/2026-09-04/older-sister-3d-continuation/outputs/game-ui-review-20260907.md`.
+
+- Follow-up: user rejected the dashboard-like HTML proposal and requested a prettier, contemporary
+  casual-game treatment with generated artwork. Built-in ImageGen produced an office/HUD visual target,
+  then a targeted UI-only refinement removing stitched/aged frames for warm-white surfaces and matte
+  miniature icons. Initial refined proposal: `family-company-casual-ui-v2.png`; exact prompts/lineage:
+  `C:/Users/godho/Documents/Codex/2026-09-04/older-sister-3d-continuation/outputs/casual-ui-imagegen-ledger.json`.
+  Visual review only, not Unity QA; generated room layout/progress is illustrative, not a new canonical
+  office or gameplay state. No production import or character generation; existing main/patch/save
+  untouched. Await visual-direction selection before generating separate text-free runtime UI assets.
+- User then specified white UI surfaces and a long single-line company/cash header. ImageGen v3 shows
+  `우리 가족회사 | ₩ 3,400,000` in one white bar. Latest local proposal: `family-company-casual-ui-v3.png`;
+  prompt/input record: `casual-ui-imagegen-v3-ledger.json` in the same task outputs directory. Generated
+  office framing drifted and is not approved geometry; only the stated white/single-line preference is
+  user-confirmed. This remains a raster mockup, with no runtime/UI asset import or patch change.
+- Correction after user feedback: invented-office v1–v3 images are NOT the target for the map or actors.
+  The new `actual-office-white-ui.html` uses the actual v4 `normal-next-day.png` unchanged and overlays
+  a compact white HUD, single-line company/cash bar and generated UI icons only. Four actor regions and
+  297,000 central-map pixels are identical at 1280×720; hiding UI restores exact whole-image equality.
+  Headless Edge layout/interaction checks passed at 1024/736/360/320 px. This is a screenshot-backed
+  preview, not a fresh Unity capture. No scene, 3D package, source code, EXE, save or updater changed.
+  Local generation/prompt/QA records: `outputs/actual-office-ui-generation-ledger.json` and
+  `outputs/actual-office-white-ui-qa.json` in the same continuation task. Runtime styling remains next,
+  pending this corrected visual proposal; existing maps and approved 3D actors must remain the base.
+- Further user review rejected the basic bubble-card/miniature-icon finish as cheap, while confirming
+  the actual-map placement approach. New `actual-office-premium-ui.html` proposes a cohesive illustrated
+  icon set, restrained white surfaces, one menu rail, stronger task hierarchy and embedded Korean type.
+  This is still an unapproved visual proposal, not runtime delivery. Headless font/layout/interaction
+  checks passed at 1024/736/360/320; all four actor rectangles and 286,000 central-map pixels are unchanged,
+  and map-only display equals the original full frame. Source fonts, map, 3D packages and patch path
+  are untouched. Latest local output: `outputs/premium-office-ui-1280.png`; exact prompt/provenance/limits:
+  `outputs/premium-office-ui-generation-ledger.json` in the continuation task. UI visual feedback remains next.
+- Latest layout feedback requested one uninterrupted white header from company/cash through date/time,
+  and less obstruction from the current-job panel. The same preview now uses one shared header surface;
+  the job card is hidden initially and opens only from Business (toggle, close and Escape supported).
+  The map/actor image and existing illustration assets were reused without new image generation.
+  Background-only headless QA passed: aligned desktop header groups, zero script errors, responsive
+  layouts at 1024/736/360/320, business open/close interactions, 526,400 unobstructed office pixels and
+  all four actor rectangles unchanged, plus exact full-frame equality with UI hidden. Visual inspection
+  at 1280 and 360 passed. Latest local evidence: `outputs/unified-office-ui-1280.png` and
+  `outputs/unified-office-ui-qa.json` in the continuation task. This remains a screenshot-backed UI
+  proposal awaiting user review; no Unity runtime, scene, EXE, save, source font or updater was changed.
 
 The following dated v3/v2 sections are historical baselines. This v4 section supersedes their “latest”/pending statements.
 

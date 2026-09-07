@@ -32,7 +32,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private const string MarkerRoot = "MainNavigationV2/Markers/";
         private const string V3CommonRoot = "UiRemasterV3/Common/";
 
-        private static readonly Color DeepInk = Hex("203B3A");
+        private static readonly Color DeepInk = Hex("293F49");
         private static readonly Color Cream = Hex("FFF4D8");
         private static readonly Color DisabledCardTint = Hex("EAF6EF");
         private static readonly Color SelectedCompactTint = Hex("FFDCCF");
@@ -62,8 +62,11 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private RectTransform _featureHost;
         private RectTransform _worldDim;
         private TMP_Text _companyText;
+        private TMP_Text _cashText;
+        private TMP_Text _clockText;
+        private TMP_FontAsset _hudFont;
+        private OfficeHudVisuals _officeVisuals;
         private TMP_Text _timeText;
-        private TMP_Text _timeWeekdayText;
         private TMP_Text _panelTitle;
         private TMP_Text _panelDescription;
         private TMP_Text _officeReturnLabel;
@@ -80,18 +83,6 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         private string _featureRouteFailureKo = string.Empty;
         private string _selectedWorkforceMemberId = string.Empty;
 
-        private Sprite _topBackplate;
-        private Sprite _companyBadge;
-        private Sprite _timeBadge;
-        private Sprite _speedNormal;
-        private Sprite _speedHover;
-        private Sprite _speedSelected;
-        private Sprite _speedPressed;
-        private Sprite _bottomDock;
-        private Sprite _tabNormal;
-        private Sprite _tabHover;
-        private Sprite _tabSelected;
-        private Sprite _tabPressed;
         private Sprite _modalFrame;
         private Sprite _modalHeader;
         private Sprite _cardNormal;
@@ -248,6 +239,8 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
         private void OnDestroy()
         {
+            _officeVisuals?.Dispose();
+            if (_hudFont != null) Destroy(_hudFont);
             if (_contractBusinessNavigation != null)
                 _contractBusinessNavigation.StateChanged -= HandleContractBusinessStateChanged;
             if (_bodyFont != null) Destroy(_bodyFont);
@@ -269,6 +262,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             EnsureEventSystem();
             LoadFonts();
             LoadRequiredArt();
+            _officeVisuals = new OfficeHudVisuals();
 
             _root = new GameObject(
                 "Main Navigation HUD V2",
@@ -303,18 +297,6 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
         private void LoadRequiredArt()
         {
-            _topBackplate = LoadRequiredSprite(FrameRoot + "top_hud_backplate_v2");
-            _companyBadge = LoadRequiredSprite(FrameRoot + "company_badge_v2");
-            _timeBadge = LoadRequiredSprite(FrameRoot + "time_badge_v2");
-            _speedNormal = LoadRequiredSprite(FrameRoot + "speed_normal_v2");
-            _speedHover = LoadRequiredSprite(FrameRoot + "speed_hover_v2");
-            _speedSelected = LoadRequiredSprite(FrameRoot + "speed_selected_v2");
-            _speedPressed = LoadRequiredSprite(FrameRoot + "speed_pressed_v2");
-            _bottomDock = LoadRequiredSprite(FrameRoot + "bottom_dock_v2");
-            _tabNormal = LoadRequiredSprite(FrameRoot + "tab_normal_v2");
-            _tabHover = LoadRequiredSprite(FrameRoot + "tab_hover_v2");
-            _tabSelected = LoadRequiredSprite(FrameRoot + "tab_selected_v2");
-            _tabPressed = LoadRequiredSprite(FrameRoot + "tab_pressed_v2");
             _modalFrame = LoadRequiredSprite(V3CommonRoot + "modal_frame_v3");
             _cardCompact = LoadRequiredSprite(V3CommonRoot + "card_compact_normal_v5");
             _modalHeader = _cardCompact;
@@ -330,25 +312,6 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             _comingSoonRibbon = LoadRequiredSprite(MarkerRoot + "coming_soon_ribbon_v2");
         }
 
-        // Badge overlay geometry, measured from the authored frames.
-        //
-        // UiNineSliceFitter draws these sprites at the scale that fits the sprite height into the
-        // badge height, so a sprite pixel lands at (badgeHeight / spriteHeight) canvas pixels and
-        // every overlay can be expressed as a fraction of the badge height.
-        //
-        // company_badge_v2 is 1015x220 and its teal medallion spans x 31..211 centred at x=121, so
-        // the icon sits at 121/220 = 0.550h with an inner disc near 120/220 = 0.545h, and the cream
-        // plaque starts past the medallion at 211/220 = 0.959h plus a gap.
-        // time_badge_v2 is 1012x233 and its teal socket spans x 51..190 centred at x=120, giving
-        // 120/233 = 0.515h and a plaque start at 190/233 = 0.815h plus a gap.
-        private static float BadgeHeight => CanvasHeight(64f, 56f);
-        private static float BadgeMedallionIconSize => BadgeHeight * 0.545f;
-        private static float BadgeMedallionCentreX => BadgeHeight * 0.550f;
-        private static float BadgePlaqueInset => BadgeHeight * 1.06f;
-        private static float TimeSocketSize => BadgeHeight * 0.550f;
-        private static float TimeSocketCentreX => BadgeHeight * 0.515f;
-        private static float TimePlaqueInset => BadgeHeight * 0.92f;
-        private static float TabHeight => CanvasHeight(92f, 82f);
 
         /// <summary>
         /// Indent for a card's first and last text line so it clears the coral corner ornament.
@@ -372,138 +335,101 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
 
         private void BuildTopHud()
         {
-            _topHud = CreateSpritePanel("Main Navigation Top HUD", _safeRoot, _topBackplate, true);
+            _topHud = _officeVisuals.Surface("Main Navigation Top HUD", _safeRoot, true);
             var layout = _topHud.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(layout, new RectOffset(20, 20, 8, 8), 14f);
+            ConfigureLayout(layout, new RectOffset(24, 24, 10, 10), 18f);
             layout.childAlignment = TextAnchor.MiddleCenter;
-
-            var company = CreateSpritePanel("Company Name Badge", _topHud, _companyBadge, true);
-            AddLayout(company, 470f, BadgeHeight, 420f, 0f);
-            var companyIcon = AddIcon(
-                company,
-                LoadRequiredSprite(MainNavigationCatalog.Get(MainNavigationTabId.Company).IconResourcePath),
-                BadgeMedallionIconSize);
-            companyIcon.rectTransform.anchorMin = new Vector2(0f, 0.5f);
-            companyIcon.rectTransform.anchorMax = new Vector2(0f, 0.5f);
-            companyIcon.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            companyIcon.rectTransform.anchoredPosition = new Vector2(BadgeMedallionCentreX, 0f);
-            _companyText = AddText(company, "우리 가족회사", CanvasFont(23f, UiRemasterTypography.TopHudPixels), true, TextAlignmentOptions.MidlineLeft, DeepInk);
-            _companyText.rectTransform.anchorMin = Vector2.zero;
-            _companyText.rectTransform.anchorMax = Vector2.one;
-            _companyText.rectTransform.offsetMin = new Vector2(BadgePlaqueInset, 0f);
-            _companyText.rectTransform.offsetMax = new Vector2(-CanvasPixels(22f), 0f);
-            _companyText.textWrappingMode = TextWrappingModes.NoWrap;
-
+            var icon = AddIcon(_topHud, _officeVisuals.Icon(MainNavigationTabId.Company), 62f);
+            AddLayout(icon.rectTransform, 62f, 62f, 62f, 0f);
+            _companyText = AddHudLabel(_topHud, "우리 가족회사", 32f, 250f, true);
+            AddHudDivider(_topHud);
+            _cashText = AddHudLabel(_topHud, string.Empty, 32f, 300f, true);
             AddFlexibleSpacer(_topHud);
-
-            var time = CreateSpritePanel("Canonical Date Time Badge", _topHud, _timeBadge, true);
-            AddLayout(time, 470f, BadgeHeight, 420f, 0f);
-            // The badge art carries a teal socket on its left. Filling it with the weekday keeps the
-            // date centred on the cream plaque instead of colliding with an empty coloured square.
-            _timeWeekdayText = AddText(time, string.Empty, CanvasFont(19f, UiRemasterTypography.TopHudPixels), true, TextAlignmentOptions.Midline, Color.white);
-            _timeWeekdayText.rectTransform.anchorMin = new Vector2(0f, 0.5f);
-            _timeWeekdayText.rectTransform.anchorMax = new Vector2(0f, 0.5f);
-            _timeWeekdayText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            _timeWeekdayText.rectTransform.sizeDelta = new Vector2(TimeSocketSize, TimeSocketSize);
-            _timeWeekdayText.rectTransform.anchoredPosition = new Vector2(TimeSocketCentreX, 0f);
-            _timeWeekdayText.textWrappingMode = TextWrappingModes.NoWrap;
-            _timeText = AddText(time, string.Empty, CanvasFont(20f, UiRemasterTypography.TopHudPixels), false, TextAlignmentOptions.Midline, DeepInk);
-            _timeText.rectTransform.anchorMin = Vector2.zero;
-            _timeText.rectTransform.anchorMax = Vector2.one;
-            _timeText.rectTransform.offsetMin = new Vector2(TimePlaqueInset, 0f);
-            _timeText.rectTransform.offsetMax = new Vector2(-CanvasPixels(20f), 0f);
-            _timeText.textWrappingMode = TextWrappingModes.NoWrap;
-
-            AddFlexibleSpacer(_topHud);
-
-            var officeViewButton = CreateSpriteButton(
-                _topHud,
-                "Office Observation Camera Guide",
-                _speedNormal,
-                _speedHover,
-                _speedPressed,
-                _speedSelected,
-                _bootstrap.ToggleOfficeObservationCameraNow,
-                206f,
-                BadgeHeight);
-            var officeViewLabel = AddText(
-                officeViewButton.GetComponent<RectTransform>(),
-                "사무실 보기 · C",
-                CanvasFont(17f, UiRemasterTypography.ButtonPixels),
-                true,
-                TextAlignmentOptions.Midline,
-                DeepInk);
-            Stretch(officeViewLabel.rectTransform);
-
-            var speedHost = CreateRect("Canonical Time Speed Segments", _topHud);
-            AddLayout(speedHost, 320f, BadgeHeight, 320f, 0f);
-            var speedLayout = speedHost.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(speedLayout, null, 8f);
-            speedLayout.childAlignment = TextAnchor.MiddleRight;
+            _timeText = AddHudLabel(_topHud, string.Empty, 25f, 230f, false);
+            AddHudDivider(_topHud);
+            _clockText = AddHudLabel(_topHud, string.Empty, 30f, 102f, true);
+            AddHudDivider(_topHud);
+            var pause = CreateHudButton(_topHud, "Main Navigation Pause", _bootstrap.ShowPauseMenuNow, 52f, 52f);
+            var pauseText = AddHudLabel(pause.GetComponent<RectTransform>(), "Ⅱ", 24f, 52f, true);
+            pauseText.alignment = TextAlignmentOptions.Midline;
+            Stretch(pauseText.rectTransform);
             _speedButtons.Clear();
             _speedLabels.Clear();
+            // Keep the game's established 1x/2x/4x time contract; no mockup-only simulation state.
             foreach (var speed in new[] { 1, 2, 4 })
             {
                 var capturedSpeed = speed;
-                var button = CreateSpriteButton(
-                    speedHost,
-                    $"Main Navigation Speed {speed}x",
-                    _speedNormal,
-                    _speedHover,
-                    _speedPressed,
-                    _speedSelected,
-                    () => _bootstrap.SetWorldTimeScaleNow(capturedSpeed),
-                    96f,
-                    BadgeHeight);
-                var label = AddText(button.GetComponent<RectTransform>(), $"{speed}x", CanvasFont(20f, UiRemasterTypography.ButtonPixels), true, TextAlignmentOptions.Midline, DeepInk);
+                var button = CreateHudButton(_topHud, $"Main Navigation Speed {speed}x",
+                    () => _bootstrap.SetWorldTimeScaleNow(capturedSpeed), 52f, 52f);
+                var label = AddHudLabel(button.GetComponent<RectTransform>(), $"{speed}×", 23f, 52f, true);
+                label.alignment = TextAlignmentOptions.Midline;
                 Stretch(label.rectTransform);
                 _speedButtons[speed] = button;
                 _speedLabels[speed] = label;
             }
         }
 
+        private TMP_Text AddHudLabel(RectTransform parent, string value, float size, float width, bool bold)
+        {
+            var text = AddText(parent, value, size, false, TextAlignmentOptions.MidlineLeft, DeepInk);
+            text.font = _hudFont;
+            text.fontStyle = bold ? FontStyles.Bold : FontStyles.Normal;
+            text.fontSize = size;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            AddLayout(text.rectTransform, width, 54f, width, 0f);
+            return text;
+        }
+
+        private static void AddHudDivider(RectTransform parent)
+        {
+            var rect = CreateRect("HUD Divider", parent);
+            var image = rect.gameObject.AddComponent<Image>();
+            image.color = Hex("DCE4E6");
+            image.raycastTarget = false;
+            AddLayout(rect, 1f, 38f, 1f, 0f);
+        }
+
+        private Button CreateHudButton(RectTransform parent, string name, Action action, float width, float height)
+        {
+            var rect = _officeVisuals.Surface(name, parent);
+            AddLayout(rect, width, height, 44f, 0f);
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = rect.GetComponent<Image>();
+            button.onClick.AddListener(() => action());
+            OfficeHudVisuals.ButtonColors(button, Color.white, Hex("F2F6F6"), Hex("E4ECEE"));
+            return button;
+        }
+
+        private void ToggleTabNow(MainNavigationTabId tabId)
+        {
+            if (_session.HasActiveTab && _session.ActiveTab == tabId) ReturnToOfficeNow();
+            else OpenTabNow(tabId);
+        }
+
         private void BuildBottomNavigation()
         {
-            _bottomNavigation = CreateSpritePanel("Main Navigation Floating Dock", _safeRoot, _bottomDock, true);
+            _bottomNavigation = _officeVisuals.Surface("Main Navigation Floating Dock", _safeRoot, true);
             var layout = _bottomNavigation.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ConfigureLayout(layout, PixelPadding(26, 26, 12, 12), CanvasPixels(12f));
+            ConfigureLayout(layout, new RectOffset(14, 14, 8, 8), 8f);
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = true;
             layout.childForceExpandWidth = true;
             _tabButtons.Clear();
             _tabLabels.Clear();
-
             foreach (var definition in MainNavigationCatalog.All)
             {
                 var capturedTab = definition.TabId;
-                var button = CreateSpriteButton(
-                    _bottomNavigation,
-                    $"Main Navigation Tab {definition.Id}",
-                    _tabNormal,
-                    _tabHover,
-                    _tabPressed,
-                    _tabSelected,
-                    () => OpenTabNow(capturedTab),
-                    200f,
-                    TabHeight);
+                var button = CreateHudButton(_bottomNavigation, $"Main Navigation Tab {definition.Id}",
+                    () => ToggleTabNow(capturedTab), 132f, 132f);
                 var buttonLayout = button.gameObject.AddComponent<VerticalLayoutGroup>();
-                // The tab frame draws a gold corner inside each edge, so the content has to stay
-                // clear of it. Padding is in canvas pixels for the same reason the tab is.
-                ConfigureLayout(buttonLayout, PixelPadding(16, 16, 8, 12), CanvasPixels(2f));
+                ConfigureLayout(buttonLayout, new RectOffset(8, 8, 2, 4), 1f);
                 buttonLayout.childAlignment = TextAnchor.MiddleCenter;
-                var navigationIconSize = CanvasPixels(WorkforceCanvasScale() < 0.8f ? 36f : 44f);
-                var icon = AddIcon(button.GetComponent<RectTransform>(), LoadRequiredSprite(definition.IconResourcePath), navigationIconSize);
-                AddLayout(icon.rectTransform, navigationIconSize, navigationIconSize, navigationIconSize, 0f);
-                var label = AddText(
-                    button.GetComponent<RectTransform>(),
-                    definition.DisplayNameKo,
-                    CanvasFont(18f, UiRemasterTypography.BottomNavigationPixels),
-                    true,
-                    TextAlignmentOptions.Midline,
-                    DeepInk);
-                var labelHeight = CanvasHeight(26f, 22f);
-                AddLayout(label.rectTransform, -1f, labelHeight, 0f, 0f).minHeight = labelHeight;
-                label.textWrappingMode = TextWrappingModes.NoWrap;
+                var icon = AddIcon(button.GetComponent<RectTransform>(), _officeVisuals.Icon(definition.TabId), 84f);
+                AddLayout(icon.rectTransform, 84f, 84f, 84f, 0f);
+                var label = AddHudLabel(button.GetComponent<RectTransform>(), definition.DisplayNameKo, 25f, 70f, true);
+                label.alignment = TextAlignmentOptions.Midline;
+                var labelLayout = label.GetComponent<LayoutElement>();
+                labelLayout.preferredHeight = 32f;
+                labelLayout.minHeight = 32f;
                 _tabButtons[definition.TabId] = button;
                 _tabLabels[definition.TabId] = label;
             }
@@ -1491,9 +1417,10 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             if (!_built || _bootstrap.State == null) return;
             SetText(_companyText, _bootstrap.State.Company.CompanyName);
+            SetText(_cashText, $"₩ {_bootstrap.State.Company.CashWon:N0}");
             var now = _bootstrap.State.Time.Now;
-            SetText(_timeText, now.ToString("yyyy년 MM월 dd일  HH:mm"));
-            SetText(_timeWeekdayText, WeekdayKo(now.DayOfWeek));
+            SetText(_timeText, now.ToString("yyyy. MM. dd") + "  " + WeekdayKo(now.DayOfWeek));
+            SetText(_clockText, now.ToString("HH:mm"));
             RefreshSpeedStyles();
         }
 
@@ -1503,16 +1430,12 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
             foreach (var pair in _speedButtons)
             {
                 var active = pair.Key == selected;
-                ConfigureSpriteSwap(
-                    pair.Value,
-                    active ? _speedSelected : _speedNormal,
-                    active ? _speedSelected : _speedHover,
-                    _speedPressed,
-                    _speedSelected);
+                OfficeHudVisuals.ButtonColors(pair.Value, active ? DeepInk : Color.white,
+                    active ? Hex("3A535E") : Hex("F2F6F6"), Hex("DDE7E9"));
                 if (_speedLabels.TryGetValue(pair.Key, out var label))
                 {
-                    SetText(label, $"{pair.Key}x");
-                    label.color = active ? Cream : DeepInk;
+                    SetText(label, $"{pair.Key}×");
+                    label.color = active ? Color.white : DeepInk;
                 }
             }
         }
@@ -1521,15 +1444,15 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
         {
             foreach (var definition in MainNavigationCatalog.All)
             {
-                var active = _session.HasActiveTab && _session.ActiveTab == definition.TabId;
+                var active = _session.HasActiveTab ? _session.ActiveTab == definition.TabId :
+                    definition.TabId == MainNavigationTabId.Company;
                 if (_tabButtons.TryGetValue(definition.TabId, out var button))
-                    ConfigureSpriteSwap(
-                        button,
-                        active ? _tabSelected : _tabNormal,
-                        active ? _tabSelected : _tabHover,
-                        _tabPressed,
-                        _tabSelected);
-                if (_tabLabels.TryGetValue(definition.TabId, out var label)) label.color = DeepInk;
+                    OfficeHudVisuals.ButtonColors(button, Color.white, Hex("F3F7F7"), Hex("E8EEEE"));
+                if (_tabLabels.TryGetValue(definition.TabId, out var label))
+                {
+                    label.color = active ? Hex("AD5C43") : Hex("667D86");
+                    label.fontStyle = FontStyles.Bold | (active ? FontStyles.Underline : FontStyles.Normal);
+                }
             }
         }
 
@@ -1767,6 +1690,7 @@ namespace FamilyCompany.Presentation.Unity.MainNavigation
                 _bodyFont = CreateFontAsset(catalog.BodySource, "Main Navigation Maplestory Light V3");
                 _headingFont = CreateFontAsset(catalog.HeadingSource, "Main Navigation Maplestory Bold V3");
                 _fallbackFont = CreateFontAsset(catalog.FallbackSource, "Main Navigation Pretendard Fallback V3");
+                _hudFont = CreateFontAsset(catalog.FallbackSource, "Office HUD Pretendard");
             }
             if (_bodyFont == null || _headingFont == null || _fallbackFont == null)
             {

@@ -1,5 +1,23 @@
 # Main Navigation HUD V2 — ImageGen 전면 재디자인
 
+## 2026-09-07 통합 흰색 사무실 HUD
+
+사용자의 수정 시안과 빌드·push 요청에 따라 사무실 기본 HUD의 표시 계층만 교체한다.
+아래 V2 장식 프레임 치수는 기존 상세 화면의 역사적 계약이며 새 기본 HUD의 외형 기준이 아니다.
+
+- 회사 아이콘·회사명·실제 회사 자금·날짜·요일·시간·일시정지·1×/2×/4×를 하나의 흰색 상단 표면에 배치한다.
+- 하단은 같은 생성 그림 세트의 회사·인사·사업·연구·투자 아이콘을 한 흰색 바로 묶는다.
+- 기본 사무실에는 일감/사업 패널이나 dim을 상시 띄우지 않는다. 기존 사업 허브의 실제 계약·제품 경로를
+  유지하며 같은 탭 재클릭 또는 ESC/사무실 복귀로 닫는다. 미구현 기능을 가짜 진행률로 표시하지 않는다.
+- 흰색 표면은 native uGUI rounded nine-slice, 아이콘은 `OfficeHudWhite/office-illustrations`다.
+  배경 맵·카메라·가구·3D 인물·보행/착석과 업데이트/저장은 변경하지 않는다.
+- 사무실 상·하단만 기존 OFL Pretendard 원본을 사용한다. 기존 상세 화면의 Maplestory와 폰트 원본은 유지한다.
+  HTML 시안용 subset 폰트나 맵 스크린샷을 게임에 넣지 않는다.
+- 검증 명령: `FAST_QA_WINDOWS.cmd -Profile asset-capture -NoPlayerSmoke`,
+  `powershell -File Tools/Background/Invoke-UnifiedOfficeHudQa.ps1`.
+  실제 창은 비공개 데스크톱에만 표시하고 업무 데스크톱과 사용자 저장/메인의 불변성을 검사한다.
+  최종 빌드·검증 상태는 PROJECT_STATE를 따른다. source push와 공개 패치 배포는 별개다.
+
 ## 현재 통합 상태
 
 - `MainNavigationV2` 구현 `884c53f`, dependency route `bc19d0c`, compile 보강 `4cf6e50`이 local main 기준선에 통합되어 있다.

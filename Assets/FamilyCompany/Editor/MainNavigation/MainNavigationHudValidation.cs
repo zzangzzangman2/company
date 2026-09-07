@@ -276,7 +276,7 @@ namespace FamilyCompany.Editor
                          "MainNavigationCatalog.All",
                          "SetWorldTimeScaleNow(capturedSpeed)",
                          "Image.Type.Sliced",
-                         "OpenTabNow(capturedTab)",
+                         "ToggleTabNow(capturedTab)",
                          "OpenFromInvestment",
                          "TryHandleBackToInvestment",
                          "OfficeBuildEditorNavigationAdapter.TryOpen",
@@ -301,10 +301,15 @@ namespace FamilyCompany.Editor
             foreach (var forbidden in new[] { "●  LIVE", "저장 완료", "Ctrl+S", "관리 화면   ESC" })
                 Require(!presenter.Contains(forbidden),
                     $"New main HUD exposes a removed clutter element: {forbidden}");
-            Require(!presenter.Contains("Selectable.Transition.ColorTint") &&
-                    !presenter.Contains("GUI.Box") &&
+            Require(!presenter.Contains("GUI.Box") &&
                     !presenter.Contains("MintCard"),
-                "Rejected flat ColorTint/GUI.Box card styling remains in the V2 presenter.");
+                "Rejected legacy debug card styling remains in the presenter.");
+            var topStart = presenter.IndexOf("private void BuildTopHud()", StringComparison.Ordinal);
+            var topEnd = presenter.IndexOf("private TMP_Text AddHudLabel", topStart, StringComparison.Ordinal);
+            var topHudSource = presenter.Substring(topStart, topEnd - topStart);
+            Require(!topHudSource.Contains("Badge") && !topHudSource.Contains("CreateSpritePanel") &&
+                    topHudSource.Contains("_officeVisuals.Surface") && presenter.Contains("State.Company.CashWon"),
+                "The white office HUD must use one shared surface and canonical company cash.");
 
             var legacy = File.ReadAllText(Path.GetFullPath(LegacyPresenterPath));
             Require(legacy.Contains("var officeVisible = false;"),
