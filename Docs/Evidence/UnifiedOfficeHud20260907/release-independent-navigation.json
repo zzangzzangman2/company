@@ -1,0 +1,41 @@
+{
+  "scope": "Independent CSV navigation analysis; programmatic shop setup; no native input/pose/route injection; not Release approval",
+  "navigationPassed": true,
+  "sampleCount": 8128,
+  "excludedPausedSetupSamples": 512,
+  "maxRailFractionError": 2.6062499999923716E-05,
+  "violationSamples": 0,
+  "actors": [
+    {
+      "member": "father",
+      "maximumNavigatingNoProgressSeconds": 1.0009000000000015,
+      "navigationDistance": 98.38984017941091,
+      "workingSamples": 341,
+      "lastPhase": "Idle"
+    },
+    {
+      "member": "mother",
+      "maximumNavigatingNoProgressSeconds": 0.42200000000002547,
+      "navigationDistance": 106.47090725406649,
+      "workingSamples": 177,
+      "lastPhase": "ApproachingSeat"
+    },
+    {
+      "member": "older_sister",
+      "maximumNavigatingNoProgressSeconds": 0.7730900000000105,
+      "navigationDistance": 76.6172308812588,
+      "workingSamples": 710,
+      "lastPhase": "Working"
+    },
+    {
+      "member": "player",
+      "maximumNavigatingNoProgressSeconds": 0.11800000000002342,
+      "navigationDistance": 58.910130617549946,
+      "workingSamples": 369,
+      "lastPhase": "Working"
+    }
+  ],
+  "allNpcSeatingObserved": true,
+  "manualPlayerAutoWorkExpected": false,
+  "productionEligible": false
+}

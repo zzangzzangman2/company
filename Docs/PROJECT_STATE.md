@@ -27,11 +27,20 @@ Last updated: 2026-09-07. This file contains current handoff state only. Superse
   Evidence and original image prompt: [UnifiedOfficeHud20260907](Evidence/UnifiedOfficeHud20260907/README.md).
 - UI source/assets/tests/docs committed and pushed as `2ae2256b9469b88668e6c5980fae60f95cdefeac`;
   remote `main` equality was independently confirmed with `git ls-remote`. No character work was staged.
-  Clean Release candidate build is on hold:
-  the pre-existing Father importer change and untracked OlderSister work must not be silently committed,
-  removed or hidden from the dirty guard. Asked permission to temporarily back up/separate and restore them;
-  no answer received yet. No public Release was created, no Downloads installation was changed, and this UI
-  is not available through the fixed main's updater until separately validated/published. Public v4 below remains current.
+  User subsequently approved "응 백업하고빌드": 19 existing character/reference files were backed up,
+  temporarily separated and restored byte-exactly (SHA256 mismatches=0). The backup remains outside the repo.
+- Clean non-Development Windows Release candidate **build PASS** at `66cac4e9c68133ca21f87e186d8ee62400d0f3ec`,
+  58.415s including candidate hashing. Output: `Artifacts/PatchCandidates/66cac4e9-ee41c2270f3f4f2d8d41546e3d8d5cd3/payload`.
+  This follow-up commit only preserves seven Unity-generated trailing spaces in the new HUD texture metadata;
+  no importer values, image pixels, character files or runtime logic changed. The first `56fe0fd4` candidate
+  compiled but failed the post-build dirty guard; its exact payload was recycled, with failure/hash evidence retained.
+- On this Release player, native four-resolution HUD QA `20260907-113734` and independent full navigation
+  QA `20260907-113811` both PASS (54 routes, 33 navigation captures). Main/save/interactive-desktop guards PASS.
+  Normal next-day QA `Artifacts/NormalAutonomy/UnifiedWhiteHudRelease20260907` also PASS: 09:00/01/02/03
+  releases exact, all four first seated before 09:20, runtime errors=0. Independent CSV: 8,128 samples,
+  violations=0, max rail fraction error=0.000026063, maximum navigating stall=1.001s.
+  No public Release was created, no Downloads installation was changed, and this UI is not available through
+  the fixed main's updater until separately published. Public v4 below remains current.
 
 ## 2026-09-07 latest delivery: first business loop published (v4)
 
