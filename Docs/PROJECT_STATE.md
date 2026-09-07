@@ -25,7 +25,9 @@ Last updated: 2026-09-07. This file contains current handoff state only. Superse
 - All 19 pre-existing local character/reference files were hash-checked unchanged. No Unity/Player window
   was placed on the user's interactive desktop; main/save hashes and desktop identity stayed unchanged.
   Evidence and original image prompt: [UnifiedOfficeHud20260907](Evidence/UnifiedOfficeHud20260907/README.md).
-- Only UI source/assets/tests/docs are selected for main push. Clean Release candidate build is on hold:
+- UI source/assets/tests/docs committed and pushed as `2ae2256b9469b88668e6c5980fae60f95cdefeac`;
+  remote `main` equality was independently confirmed with `git ls-remote`. No character work was staged.
+  Clean Release candidate build is on hold:
   the pre-existing Father importer change and untracked OlderSister work must not be silently committed,
   removed or hidden from the dirty guard. Asked permission to temporarily back up/separate and restore them;
   no answer received yet. No public Release was created, no Downloads installation was changed, and this UI
