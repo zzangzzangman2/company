@@ -1,0 +1,6 @@
+Exception: C:\Users\godho\Documents\Codex\fc_agents\integration_p0\Tools\Updater\Test-FamilyCompanyInGamePatch.ps1:14
+Line |
+  14 |      throw 'Patch fixture requires an isolated FamilyCompany_FastQa id …
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Patch fixture requires an isolated FamilyCompany_FastQa identity; normal Release invocation is refused before
+     | launch.

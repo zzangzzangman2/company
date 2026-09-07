@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "tag": "fc-win-20260907.3",
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "id": 384067644,
+      "approvalReference": "User requested casual redesign, overall 1-100 patch feedback and push, then explicitly authorized final game validation/deployment with ㄱ after the narrow graphics permission question. User separately approved 메인도 백업 후 갱신 for same-path whole-backup-first main refresh after verification. Existing world/body/pose/monitor approval retained; no new character promotion, no mouse/keyboard or shutdown.",
+      "independentReceiptSha256": "906f918b44299c1d448f6ea0b01e6c22edae687238bf08a67c2fa3bb2440cb80",
+      "independentReceiptPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\CasualUiRelease20260907\\approval\\release-receipt.json",
+      "assets": [
+        {
+          "id": 548742794,
+          "name": "1023ce6c201a4d9b34fde7919664137b4d67df0ab50476060a4a7d210caf67c6.gz",
+          "digest": "sha256:6c5029b1661d843999e2e0eebf81c7615921d4736633c19a0e8e58f0c41c034a",
+          "size": 2607
+        },
+        {
+          "id": 548742821,
+          "name": "437aa46423aa013f2b754a29bfad98b52ca49ffe0d9db91c07a0b44745547f8a.gz",
+          "digest": "sha256:3765c19b84b858aefd9ebf088c637ef6e1e1c2b066b418d86c739a41108b2437",
+          "size": 586948
+        },
+        {
+          "id": 548742879,
+          "name": "4c68cf0980ed27379671a37bbad02f436a1a7019d3085bde96597cee12fa61c5.gz",
+          "digest": "sha256:0c4a30bc86734d510eb9b78bc4cc87942a575fab5a05a5cbae6be3ef1582e429",
+          "size": 424858
+        },
+        {
+          "id": 548742910,
+          "name": "74fb8d2907ca1fd858f4810cf0e67d7ff52282b43e9b07fa71d00548eefaf933.gz",
+          "digest": "sha256:008cdfa552c27051e9a71a6a16a1bb646d5040ffb86f9373a79e1fc1ac930818",
+          "size": 143
+        },
+        {
+          "id": 548742930,
+          "name": "791821cf6b7387d657c1d3ce48ee04f7f7b027bf83fc67bc1338d47da6f2a794.gz",
+          "digest": "sha256:132d6520813e76e67cae8c501efbaccc657918169cf5602bafcfca39bb6b929f",
+          "size": 140665548
+        },
+        {
+          "id": 548743155,
+          "name": "9fd20b6ba480a0548dc1675b8577c6dca2a8450aca6849b4bdd50b7a35880b6b.gz",
+          "digest": "sha256:593e581a3b804c2ab728388c6aa034d0f53a9cfa544cc6055dcd57b66cc488ed",
+          "size": 42264
+        },
+        {
+          "id": 548743188,
+          "name": "a18e426d9ab795e7aaf22062c6696662a1c5324ab88020fede4a2e5d0dea4323.gz",
+          "digest": "sha256:a10a2b73c3f472f28f621af496b1d5056a90399e627647ae652590e806e9a59c",
+          "size": 335
+        },
+        {
+          "id": 548743222,
+          "name": "a464517b49655df8392bccfa19eece51cff0a92744730e74bd9eefa1200373ff.gz",
+          "digest": "sha256:f12f11fb3497f4cde4ff4ec61b94af1d088faa9552068d9dc0a3f12146ac2feb",
+          "size": 14277
+        },
+        {
+          "id": 548743259,
+          "name": "b2c9aea1a3bbd16630c8be8300fdb9fb38aef3379e00828a36de7557dc2d747f.gz",
+          "digest": "sha256:b209d48ceca4a030938383e72fcf0c4fdeb80adbee31e4ec3f682026600ed6dd",
+          "size": 19867
+        },
+        {
+          "id": 548743288,
+          "name": "cd4dec9e346717b84eec6d2b622b12e7ff62d2eff0c40143a86dbe45d7ee3a2e.gz",
+          "digest": "sha256:1ee05ce810c4c8b136876bcaf65c487896f2ab99ef86728a271db47be88893e3",
+          "size": 24330075
+        },
+        {
+          "id": 548743412,
+          "name": "e6977738d932a7898178cbd4a066d4ee028dd358326d27fe077831ec435dd493.gz",
+          "digest": "sha256:79a91375f7a088a25cf082ac3be5df4a2ccc528ee13279129865d661d4296be7",
+          "size": 16893
+        },
+        {
+          "id": 548743440,
+          "name": "family-company-manifest.json",
+          "digest": "sha256:3c7e0a3ffc11e5fab254c2215337e38ce79cf099592b95a6c8bbb3c50bbf5ce7",
+          "size": 75169
+        },
+        {
+          "id": 548743486,
+          "name": "FamilyCompany-Windows.zip",
+          "digest": "sha256:1f856cb9985adae3ad767d959a4ca76634998411058a951b89c6bc9f5ea6dc66",
+          "size": 276668119
+        },
+        {
+          "id": 548743936,
+          "name": "ff9ee9b4e5be0cdc550c079a0f00310688b76ef8cdb363776d497d08f19f675c.gz",
+          "digest": "sha256:94aab246cb0237070a2cbd79b6219ce941919be477ee02827633031afb3acb33",
+          "size": 85849
+        },
+        {
+          "id": 548743988,
+          "name": "release-receipt.json",
+          "digest": "sha256:906f918b44299c1d448f6ea0b01e6c22edae687238bf08a67c2fa3bb2440cb80",
+          "size": 5382
+        }
+      ]
+    }
+  ]
+}

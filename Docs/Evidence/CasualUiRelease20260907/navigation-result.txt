@@ -1,0 +1,110 @@
+﻿Main Navigation HUD D3D11 Player QA | 2026-09-07 20:54:17
+PLAYER_START | graphics=Direct3D11 | device=NVIDIA GeForce RTX 3080 Ti
+ADAPTER_READY_PASS | contract=ContractBusinessRuntimeAdapter build=OfficeBuildEditorNavigationAdapter stock=investment-only
+POINTER_CLICK_PASS | target=2x position=1772.0,1002.0
+POINTER_CLICK_PASS | target=4x position=1842.0,1002.0
+POINTER_CLICK_PASS | target=1x position=1702.0,1002.0
+SPEED_PASS | routes=1x,2x,4x source=PrototypeBootstrap.WorldTimeScale
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/closed-hud-1920x1080.png | 1920x1080 | bytes=1420806
+POINTER_CLICK_PASS | target=company position=648.0,103.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-company-1920x1080.png | 1920x1080 | bytes=451233
+POINTER_CLICK_PASS | target=company-grade position=691.5,702.0
+POINTER_CLICK_PASS | target=back to company position=1434.0,844.0
+POINTER_CLICK_PASS | target=company-assets position=1228.5,702.0
+POINTER_CLICK_PASS | target=back to company position=1434.0,844.0
+POINTER_CLICK_PASS | target=company-daily-profit position=691.5,522.0
+POINTER_CLICK_PASS | target=back to company position=1434.0,844.0
+POINTER_CLICK_PASS | target=company-building-editor position=1228.5,522.0
+FULL_FRAME_CAPTURE_PASS | C:\Users\godho\Documents\Codex\fc_agents\integration_p0\Artifacts\FastQa\UnifiedOfficeHud\20260907-205413\build-editor-imgui-1920x1080.png
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/build-editor-from-company-1920x1080.png | 1920x1080 | bytes=1410732
+POINTER_CLICK_PASS | target=people position=804.0,103.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-people-1920x1080.png | 1920x1080 | bytes=502640
+WORKFORCE_TYPOGRAPHY_PASS | resolution=1920x1080 font=Pretendard panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0
+POINTER_CLICK_PASS | target=select mother workforce card position=600.0,397.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-people-mother-selected-1920x1080.png | 1920x1080 | bytes=503730
+WORKFORCE_ROSTER_PASS | employed=4 candidates=0 skills=6 potential=letter-only state=separate
+POINTER_CLICK_PASS | target=projects position=960.0,103.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-projects-1920x1080.png | 1920x1080 | bytes=442512
+POINTER_CLICK_PASS | target=projects-contracts position=691.5,702.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/detail-contract-board-1920x1080.png | 1920x1080 | bytes=405752
+POINTER_CLICK_PASS | target=back to projects position=1434.0,844.0
+POINTER_CLICK_PASS | target=projects-products position=1228.5,702.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/detail-product-opportunities-1920x1080.png | 1920x1080 | bytes=460412
+POINTER_CLICK_PASS | target=back to projects position=1434.0,844.0
+POINTER_CLICK_PASS | target=projects-outsourcing position=691.5,522.0
+POINTER_CLICK_PASS | target=back to projects position=1434.0,844.0
+POINTER_CLICK_PASS | target=projects-operations position=1228.5,522.0
+POINTER_CLICK_PASS | target=back to projects position=1434.0,844.0
+POINTER_CLICK_PASS | target=research position=1116.0,103.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-research-1920x1080.png | 1920x1080 | bytes=440002
+POINTER_CLICK_PASS | target=research-tech-tree position=691.5,702.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/detail-research-coming-soon-1920x1080.png | 1920x1080 | bytes=404934
+POINTER_CLICK_PASS | target=back to research position=1434.0,844.0
+POINTER_CLICK_PASS | target=research-efficiency position=1228.5,702.0
+POINTER_CLICK_PASS | target=back to research position=1434.0,844.0
+POINTER_CLICK_PASS | target=research-marketing position=691.5,522.0
+POINTER_CLICK_PASS | target=back to research position=1434.0,844.0
+POINTER_CLICK_PASS | target=research-lineup position=1228.5,522.0
+POINTER_CLICK_PASS | target=back to research position=1434.0,844.0
+POINTER_CLICK_PASS | target=investment position=1272.0,103.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-investment-hub-1920x1080.png | 1920x1080 | bytes=454223
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/interaction-selected-investment-1920x1080.png | 1920x1080 | bytes=453777
+POINTER_CLICK_PASS | target=investment-loans position=1228.5,702.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/detail-investment-coming-soon-1920x1080.png | 1920x1080 | bytes=421335
+POINTER_CLICK_PASS | target=back to investment position=1434.0,844.0
+POINTER_CLICK_PASS | target=investment-property position=691.5,522.0
+POINTER_CLICK_PASS | target=back to investment position=1434.0,844.0
+POINTER_CLICK_PASS | target=investment-angel position=1228.5,522.0
+POINTER_CLICK_PASS | target=back to investment position=1434.0,844.0
+POINTER_CLICK_PASS | target=investment-ma position=691.5,342.0
+POINTER_CLICK_PASS | target=back to investment position=1434.0,844.0
+FEATURE_ROUTE_PASS | visibleCards=21 dedicatedStatus=people,research,company,investment contract=board products=progress build=editor keyboardSubmit=people-hiring
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/interaction-hover-stock-card-1920x1080.png | 1920x1080 | bytes=453672
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/interaction-pressed-stock-card-1920x1080.png | 1920x1080 | bytes=457244
+POINTER_CLICK_PASS | target=investment stock market position=691.5,702.0
+STOCK_STATE_PASS | gameState=same-instance saveRoundTrip=portfolio-preserved runtimeSessions=1
+FULL_FRAME_CAPTURE_PASS | C:\Users\godho\Documents\Codex\fc_agents\integration_p0\Artifacts\FastQa\UnifiedOfficeHud\20260907-205413\stock-market-imgui-1920x1080.png
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/stock-market-from-investment-1920x1080.png | 1920x1080 | bytes=1410751
+BACK_STACK_PASS | stock-market>investment>office
+POINTER_CLICK_PASS | target=investment stock market reopen position=691.5,702.0
+POINTER_CLICK_PASS | target=office return position=1434.0,844.0
+STOCK_LOAD_ROUTE_PASS | jsonRepository=isolated portfolio=preserved route=stock>investment>office runtimeSessionsPerState=1
+POINTER_CLICK_PASS | target=contract after loaded state position=691.5,702.0
+CONTRACT_LOAD_ROUTE_PASS | gameState=rebound route=contract-board>business-hub>office
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/closed-hud-1600x900.png | 1600x900 | bytes=818267
+POINTER_CLICK_PASS | target=company 1600x900 position=540.0,85.8
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-company-1600x900.png | 1600x900 | bytes=300016
+POINTER_CLICK_PASS | target=people 1600x900 position=670.0,85.8
+WORKFORCE_TYPOGRAPHY_PASS | resolution=1600x900 font=Pretendard panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-people-1600x900.png | 1600x900 | bytes=319052
+RESOLUTION_ROUTE_PASS | target=1600x900 window=1600x900 supersize=1
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/closed-hud-1600x1000.png | 1600x1000 | bytes=857321
+POINTER_CLICK_PASS | target=company 1600x1000 position=525.9,90.5
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-company-1600x1000.png | 1600x1000 | bytes=304679
+POINTER_CLICK_PASS | target=people 1600x1000 position=663.0,90.5
+WORKFORCE_TYPOGRAPHY_PASS | resolution=1600x1000 font=Pretendard panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-people-1600x1000.png | 1600x1000 | bytes=325189
+RESOLUTION_ROUTE_PASS | target=1600x1000 window=1600x1000 supersize=1
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/closed-hud-2560x1440.png | 2560x1440 | bytes=2485925
+POINTER_CLICK_PASS | target=company 2560x1440 position=432.0,68.7
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-company-2560x1440.png | 2560x1440 | bytes=446405
+POINTER_CLICK_PASS | target=people 2560x1440 position=536.0,68.7
+WORKFORCE_TYPOGRAPHY_PASS | resolution=1280x720 font=Pretendard panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-people-2560x1440.png | 2560x1440 | bytes=492096
+RESOLUTION_ROUTE_PASS | target=2560x1440 window=1280x720 supersize=2
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/closed-hud-1392x768.png | 1392x768 | bytes=922567
+POINTER_CLICK_PASS | target=company 1392x768 position=472.0,74.0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-company-1392x768.png | 1392x768 | bytes=196446
+POINTER_CLICK_PASS | target=people 1392x768 position=584.0,74.0
+WORKFORCE_TYPOGRAPHY_PASS | resolution=1392x768 font=Pretendard panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-people-1392x768.png | 1392x768 | bytes=213204
+RESOLUTION_ROUTE_PASS | target=1392x768 window=1392x768 supersize=1
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/closed-hud-1280x720.png | 1280x720 | bytes=783027
+POINTER_CLICK_PASS | target=company 1280x720 position=432.0,68.7
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-company-1280x720.png | 1280x720 | bytes=147506
+POINTER_CLICK_PASS | target=people 1280x720 position=536.0,68.7
+WORKFORCE_TYPOGRAPHY_PASS | resolution=1280x720 font=Pretendard panel>=28px names>=18px body>=16px autosize=off overflow=0 collisions=0
+CAPTURE_PASS | C:/Users/godho/Documents/Codex/fc_agents/integration_p0/Artifacts/FastQa/UnifiedOfficeHud/20260907-205413/menu-people-1280x720.png | 1280x720 | bytes=170567
+RESOLUTION_ROUTE_PASS | target=1280x720 window=1280x720 supersize=1
+INPUT_PASS | pointerTabs=5 workforceCards=4 pointerFeatures=16 pointerSpeeds=3 officeReturn=pointer escapePriority=PASS pause=build-only worldInput=stock-suppressed
+PLAYER_QA_PASS | renderer=D3D11 captures=33 pointerRoutes=54 keyboardRoutes=0 adapters=contract,stock build=integrated stockRoute=investment-only spriteStates=hover,pressed,selected

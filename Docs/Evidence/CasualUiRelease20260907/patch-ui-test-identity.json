@@ -1,0 +1,8 @@
+{
+    "manifest":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\InGamePatchTests\\13883aacfb95442cb7312e8b822de592\\feed\\fc-win-20260906.1\\family-company-manifest.json",
+    "manifestSha256":  "57f2a09474e7b62ae25e51bcf2fe4f6193634ff728d6fdff7c94c5a002e91092",
+    "player":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\CasualUiRelease20260907\\patch-ui-parent\\FamilyCompany_FastQa.exe",
+    "type":  "actual Unity UI with inert paced local transport; not game Release",
+    "playerSha256":  "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+    "installRoot":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\InGamePatchTests\\13883aacfb95442cb7312e8b822de592\\install"
+}

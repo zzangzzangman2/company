@@ -8,6 +8,10 @@ if ($ShowWindow -and $Background) {throw 'Choose exactly one visibility mode.'}
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if (!$Player) {$Player=Join-Path $repo 'Artifacts/FastQa/cache/WindowsPlayer/FamilyCompany_FastQa.exe'}
 $Player=(Resolve-Path -LiteralPath $Player).Path
+if ([IO.Path]::GetFileNameWithoutExtension($Player) -cne 'FamilyCompany_FastQa' -or
+    !(Test-Path -LiteralPath (Join-Path (Split-Path $Player -Parent) 'FamilyCompany_FastQa_Data') -PathType Container)) {
+    throw 'Patch fixture requires an isolated FamilyCompany_FastQa identity; normal Release invocation is refused before launch.'
+}
 $root=Join-Path $repo ('Artifacts/UnityPatchRestartTests/'+[Guid]::NewGuid().ToString('N'))
 $base=Join-Path $root 'base'; $source=Join-Path $root 'source'
 [void][IO.Directory]::CreateDirectory($base)

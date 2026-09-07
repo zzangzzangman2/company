@@ -6,6 +6,13 @@ if ($ShowWindow -eq $PrivateDesktop) { throw 'Choose isolated -PrivateDesktop or
 . (Join-Path $PSScriptRoot 'FamilyCompany.Package.ps1')
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if (!$Player) { $Player=Join-Path $repo 'Artifacts/FastQa/cache/WindowsPlayer/FamilyCompany_FastQa.exe' }
+$Player=(Resolve-Path -LiteralPath $Player).Path
+# A normal-named Release ignores fixture flags and would use the user's real patch store.
+# Require the existing explicit QA identity before creating fixtures or launching any process.
+if ([IO.Path]::GetFileNameWithoutExtension($Player) -cne 'FamilyCompany_FastQa' -or
+    !(Test-Path -LiteralPath (Join-Path (Split-Path $Player -Parent) 'FamilyCompany_FastQa_Data') -PathType Container)) {
+    throw 'Patch fixture requires an isolated FamilyCompany_FastQa identity; normal Release invocation is refused before launch.'
+}
 $root=Join-Path $repo ('Artifacts/InGamePatchTests/'+[Guid]::NewGuid().ToString('N'))
 $source=Join-Path $root 'source'
 [void][IO.Directory]::CreateDirectory((Join-Path $source 'FamilyCompany_Data'))

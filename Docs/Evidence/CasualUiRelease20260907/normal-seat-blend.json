@@ -1,0 +1,132 @@
+{
+  "blendContractSeconds": 0.42,
+  "settledSamples": 3727,
+  "scope": "Independent real normal Player CSV analysis; not skin-intersection, foot-slip, full visual or Release approval",
+  "settledFailureSamples": 0,
+  "coverage": [
+    {
+      "member": "father",
+      "turns": [
+        "SouthEast"
+      ],
+      "samples": 812
+    },
+    {
+      "member": "mother",
+      "turns": [
+        "SouthWest"
+      ],
+      "samples": 360
+    },
+    {
+      "member": "older_sister",
+      "turns": [
+        "NorthEast"
+      ],
+      "samples": 1629
+    },
+    {
+      "member": "player",
+      "turns": [
+        "NorthWest"
+      ],
+      "samples": 926
+    }
+  ],
+  "transitions": [
+    {
+      "member": "father",
+      "secondsFromFirstPositiveSample": 0.4333999999999776,
+      "end": 142.4706
+    },
+    {
+      "member": "father",
+      "secondsFromFirstPositiveSample": 0.41660000000001673,
+      "end": 179.0602
+    },
+    {
+      "member": "father",
+      "secondsFromFirstPositiveSample": 0.43319999999999936,
+      "end": 188.9403
+    },
+    {
+      "member": "father",
+      "secondsFromFirstPositiveSample": 0.41620000000000346,
+      "end": 221.8773
+    },
+    {
+      "member": "father",
+      "secondsFromFirstPositiveSample": 0.39999999999997726,
+      "end": 245.9766
+    },
+    {
+      "member": "mother",
+      "secondsFromFirstPositiveSample": 0.41679999999999495,
+      "end": 126.5363
+    },
+    {
+      "member": "mother",
+      "secondsFromFirstPositiveSample": 0.38409999999998945,
+      "end": 133.0368
+    },
+    {
+      "member": "mother",
+      "secondsFromFirstPositiveSample": 0.38340000000002306,
+      "end": 150.0371
+    },
+    {
+      "member": "mother",
+      "secondsFromFirstPositiveSample": 0.43200000000001637,
+      "end": 186.6261
+    },
+    {
+      "member": "mother",
+      "secondsFromFirstPositiveSample": 0.4334999999999809,
+      "end": 226.9767
+    },
+    {
+      "member": "mother",
+      "secondsFromFirstPositiveSample": 0.40099999999998204,
+      "end": 235.9775
+    },
+    {
+      "member": "mother",
+      "secondsFromFirstPositiveSample": 0.4329999999999927,
+      "end": 244.6431
+    },
+    {
+      "member": "older_sister",
+      "secondsFromFirstPositiveSample": 0.4094000000000051,
+      "end": 116.0156
+    },
+    {
+      "member": "older_sister",
+      "secondsFromFirstPositiveSample": 0.4333000000000027,
+      "end": 136.0531
+    },
+    {
+      "member": "older_sister",
+      "secondsFromFirstPositiveSample": 0.4333000000000027,
+      "end": 170.0556
+    },
+    {
+      "member": "older_sister",
+      "secondsFromFirstPositiveSample": 0.4335999999999842,
+      "end": 183.4928
+    },
+    {
+      "member": "older_sister",
+      "secondsFromFirstPositiveSample": 0.3731999999999971,
+      "end": 210.6806
+    },
+    {
+      "member": "player",
+      "secondsFromFirstPositiveSample": 0.44939999999999714,
+      "end": 213.3144
+    }
+  ],
+  "transitionMidpointOutliers": 142,
+  "maximumSettledIndividualHandError": 0.008899,
+  "productionEligible": false,
+  "passed": true
+}

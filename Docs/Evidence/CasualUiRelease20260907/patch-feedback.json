@@ -1,0 +1,30 @@
+{
+  "uiLogSha256": "b66d22e1cd438338a27c931409557b8667c97760ec5ede99a6f0fe9471dbb4f5",
+  "passed": true,
+  "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+  "independent": true,
+  "restartLogSha256": "270838d9946bf9d6c80502c5c934740d411954d2d9a1035f77853c8871ff793e",
+  "ui": {
+    "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+    "passed": true,
+    "scope": "Exact Release bytes, isolated renamed QA parent to activate existing fixture flags. Local multi-folder transport and real rendered UI, not public download.",
+    "root": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\InGamePatchTests\\13883aacfb95442cb7312e8b822de592",
+    "playerSha256": "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556"
+  },
+  "scope": "Exact Release executable/DLL bytes in renamed isolated QA parent use existing diagnostic switch. Real multi-folder download progress plus at least four seconds of repainted notice and real normal-named Unity successor. Local fixture transport; not public-download proof. First normal-name test rejected missing screenshot because qa=False; not counted as PASS.",
+  "restart": {
+    "overallMonotonic": true,
+    "scope": "Exact non-Development Release executable/DLL bytes in renamed QA parent folder activate existing fixture switch; real normal-named Unity successor, local transport fixture workers only. Not a public network/UI test.",
+    "passed": true,
+    "mainEntryUnchanged": true,
+    "privateDesktop": "FamilyCompanyQa_bc8b1b3504a54892bdf96ee31e40b7cf",
+    "desktopSwitchAllowed": false,
+    "nativeInput": false,
+    "currentDirectory": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\057e3616cd924a44ad1fb168ec4aa2e8\\install\\versions\\9001-c52c04889ae0",
+    "noticeAtLeastSeconds": 4,
+    "childPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\057e3616cd924a44ad1fb168ec4aa2e8\\install\\versions\\9001-c52c04889ae0\\FamilyCompany.exe",
+    "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+    "parentExit": 0,
+    "childId": 17480
+  }
+}

@@ -1,0 +1,5 @@
+PRIVATE-DESKTOP HUD QA: C:\Users\godho\Documents\Codex\fc_agents\integration_p0\Artifacts\FastQa\UnifiedOfficeHud\20260907-205247
+USER_MAIN_AND_SAVES_UNCHANGED; INTERACTIVE_DESKTOP_UNCHANGED
+UNIFIED_OFFICE_HUD_QA: PASS
+One surface; default panel closed; live cash/date; 5 tabs; Business toggle; Escape; 1x/2x/4x; pause/resume; safe bounds; no overflow; runtimeErrors=0.
+Fresh normal game; EventSystem pointer events, not native mouse; no saves or updater activation.

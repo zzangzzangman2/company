@@ -1,0 +1,12 @@
+{
+    "basePlayerHash":  "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+    "manifest":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\057e3616cd924a44ad1fb168ec4aa2e8\\feed\\fc-win-20260906.9001\\family-company-manifest.json",
+    "commit":  "cb86605dad19a823551498c2d4bb6bd073031864",
+    "root":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\057e3616cd924a44ad1fb168ec4aa2e8",
+    "manifestHash":  "c52c04889ae0ddc9f5f9e71ec79ca79195eaf1c0ecabde8285eac9c30b8907a8",
+    "changedPath":  "FamilyCompanyPatch/patch-check.bytes",
+    "scope":  "LOCAL exact Release parent/child install and restart; not public transfer",
+    "basePlayer":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\PatchCandidates\\cb86605d-50e1e763ca534f269e904f68698e5383\\payload\\FamilyCompany.exe",
+    "expectedChangedHash":  "85c27ec1cf92879ab22bd80156b94cccb0fac843feea77cf81ecc1a5ddba6c05",
+    "buildInfoSha256":  "a18e426d9ab795e7aaf22062c6696662a1c5324ab88020fede4a2e5d0dea4323"
+}

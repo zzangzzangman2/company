@@ -1,0 +1,467 @@
+{
+  "scope": "Final non-player delivery evidence. Includes original failed attempts and their limits; not reusable fresh release approval.",
+  "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+  "files": [
+    {
+      "path": "BUILD_INFO.txt",
+      "size": 446,
+      "sha256": "a18e426d9ab795e7aaf22062c6696662a1c5324ab88020fede4a2e5d0dea4323"
+    },
+    {
+      "path": "build-candidate.json",
+      "size": 33463,
+      "sha256": "2184d2a22d3f16633663464db0a09d5887704dfe5e30e351221958defcb41c66"
+    },
+    {
+      "path": "build-editor-imgui-1920x1080.png",
+      "size": 1393078,
+      "sha256": "b617b212735c1200039cf0b9735df6492029377b4315556e096527542bf98a9b"
+    },
+    {
+      "path": "business-physical-work.csv",
+      "size": 964,
+      "sha256": "af6afd0dab914b9da92f4727778c1b0c03e46118aaea9c650774f19eba12e992"
+    },
+    {
+      "path": "business-result.txt",
+      "size": 907,
+      "sha256": "3d9f0a7373a664bb0f860eda3525ea591b323a1129d0fc54270e2feabe1b7935"
+    },
+    {
+      "path": "business-runtime.json",
+      "size": 1448,
+      "sha256": "695566ff6527bf02cf6cae6b941c7dd1287cfa2a5b5e166e93dfae96b07504f4"
+    },
+    {
+      "path": "business-support-work.csv",
+      "size": 1062,
+      "sha256": "821b461766357963bb3c4f9816545928301a929649177096c5c735acb17d86b9"
+    },
+    {
+      "path": "casual-company-1280x720.png",
+      "size": 151606,
+      "sha256": "ac5bccba4632a90578848cd8b853ffe7ef65cf92daa92cd085857c8ffbfa77c0"
+    },
+    {
+      "path": "casual-investment-1920x1080.png",
+      "size": 451851,
+      "sha256": "bee73398d3dbde64aab3b394cff1d8d423c9d6af4276bb13fd388ad0b1aaeb2b"
+    },
+    {
+      "path": "casual-people-1280x720.png",
+      "size": 177748,
+      "sha256": "dd6bd569c3a5b0fd06136123e19810894a1d864c4ad93c9bd91e18c1390b65fb"
+    },
+    {
+      "path": "casual-projects-products-1024x768.png",
+      "size": 108145,
+      "sha256": "20cfa2094e4809fd6b960fb212e8020b2495d56eacf486543fc9c02cf661ca5b"
+    },
+    {
+      "path": "casual-research-1600x1000.png",
+      "size": 295228,
+      "sha256": "fc088db415dda6079c566d08ab2d03c63fe25e8dce279e42016a44a0f4484f94"
+    },
+    {
+      "path": "chair-fit-father-seat_father.png",
+      "size": 758142,
+      "sha256": "3169b7c58d4adc5acb67997a895c202539c125f944ad41464920f5d9413070d3"
+    },
+    {
+      "path": "chair-fit-father-seat_mother.png",
+      "size": 758187,
+      "sha256": "0a994d21776f17c3fc2d8df12d6632d02b2dc9f98a7974a6e1eca3eeda1b295f"
+    },
+    {
+      "path": "chair-fit-father-seat_older_sister.png",
+      "size": 758296,
+      "sha256": "1c7f9624d5032b5bf942c1d23f07d40f8ca442b9a1de2c984699bae74a4a7b03"
+    },
+    {
+      "path": "chair-fit-father-seat_player.png",
+      "size": 757760,
+      "sha256": "7bde5754a040b7e6037d82150c65d6c9763131520dc848faa3d89a1624ec1b53"
+    },
+    {
+      "path": "chair-fit-player-seat_father.png",
+      "size": 758494,
+      "sha256": "0bbc05d8a99d155aef31d1b340418a314eda82df8eac8af8022abb2e2d8b9359"
+    },
+    {
+      "path": "chair-fit-player-seat_mother.png",
+      "size": 758389,
+      "sha256": "78917b107f65f519f9b814f18697ee5293148d7d4e36c8ca14157b3a995b506c"
+    },
+    {
+      "path": "chair-fit-player-seat_older_sister.png",
+      "size": 758825,
+      "sha256": "4ec6f480600731eeabeaf96f78b98a0c60d226c1fb908cf885ae9dd083dd3747"
+    },
+    {
+      "path": "chair-fit-player-seat_player.png",
+      "size": 758198,
+      "sha256": "b587f5e29b0b801b652d336101f5d1731dfdd5cc4d9a82654a23c3b51c874bb8"
+    },
+    {
+      "path": "chair-fit.csv",
+      "size": 24843,
+      "sha256": "18a940461bed65e97220327688f0b208f1db6c6821e0b74d5894fef370602cc8"
+    },
+    {
+      "path": "editor-broad-initial-failure.json",
+      "size": 1738,
+      "sha256": "600c19b278518f05201c1bfa0c3da3241f27417b31240ac8128eb769feee538e"
+    },
+    {
+      "path": "editor-broad-initial.log",
+      "size": 30726,
+      "sha256": "ba4c8bb2626d70faab6379a748d7e94bb1fce35f06ae6c5258ae0431cf7c7b2a"
+    },
+    {
+      "path": "editor-broad-repeat-1.log",
+      "size": 84152,
+      "sha256": "cd10137c70346aa8897cd28496e5274bfcd7e11fd50b3b87e03c0d774412630a"
+    },
+    {
+      "path": "editor-broad-repeat-2.log",
+      "size": 84144,
+      "sha256": "f4b583a7caad4721a9863619ec1e45c8e9b58471353e2ea5c51892907982dec0"
+    },
+    {
+      "path": "editor-broad-two-repeat-pass.json",
+      "size": 1439,
+      "sha256": "9514725da05fe37159078d81e0357d80d1a7d47bc796d1be9fbe40f49ec86145"
+    },
+    {
+      "path": "failed-fixture-player.log",
+      "size": 19685,
+      "sha256": "64e0e28286658a49c8b4436149168d21a161902839708998cf0d48f88cc8531d"
+    },
+    {
+      "path": "failed-fixture-run.log",
+      "size": 638,
+      "sha256": "18a0a55b370ad3e4d9a87645fbb6097ef67126b35d3f2a9374f60cbef5c998e5"
+    },
+    {
+      "path": "fixture-entry-guards.json",
+      "size": 1861,
+      "sha256": "0112201e4a52602b2415cf619ddbd56456599ce17ac65c4e15b4d4ad709d6ed4"
+    },
+    {
+      "path": "gui-tests.json",
+      "size": 1054,
+      "sha256": "011020df5c2e38fa8f958170928e2484031f1dd6dd1d13938ff61361ec01fb33"
+    },
+    {
+      "path": "hud-navigation.json",
+      "size": 13319,
+      "sha256": "5260c69363a016e2f178523510d4ae21eb8b039bad1091d0b16933b2ba931770"
+    },
+    {
+      "path": "hud-process-guards.txt",
+      "size": 472,
+      "sha256": "c62ef74deead797b384b747a4be227a10f683b9d67a6f0bdda92d39587049c68"
+    },
+    {
+      "path": "hud-result.txt",
+      "size": 276,
+      "sha256": "38f0e71db97b842899d1606486f198d356351d62bef1f9af6dd1a95456c5cff0"
+    },
+    {
+      "path": "main-navigation-editor.log",
+      "size": 33128,
+      "sha256": "2048833f586ad3d0087436bd0bcc7e57c9f2afcdfdd83318aa065129c8159df6"
+    },
+    {
+      "path": "main-refresh-before.json",
+      "size": 109263,
+      "sha256": "0ef41821085f8688499061991a95609d3cf8459dd867404dc71e0b06025d3d47"
+    },
+    {
+      "path": "main-refresh-result.json",
+      "size": 1129,
+      "sha256": "057a9106263d4c8e556bd043432ec18044319b4df440133393ca2bfb630c6687"
+    },
+    {
+      "path": "Make-Receipt.ps1",
+      "size": 16518,
+      "sha256": "07693df6170a45f08c63bca5c4093b9e798b7820429ce080794e4b43a123ba2e"
+    },
+    {
+      "path": "native-binding.json",
+      "size": 11590,
+      "sha256": "dfb2890430e60bb5261361350c4fbc553fe141f3c3fc5f89d09df7d01b68ae74"
+    },
+    {
+      "path": "navigation-process-guards.txt",
+      "size": 12201,
+      "sha256": "2505dcc4f63f7947202576629861e5c9694c5ab36170c6b9105639704cdcbd06"
+    },
+    {
+      "path": "navigation-result.txt",
+      "size": 12011,
+      "sha256": "fb39d6b45cf16d4602ff8cbac0feb6443adcebab0c68d0efec557cc531b77ba5"
+    },
+    {
+      "path": "normal-navigation.json",
+      "size": 1835,
+      "sha256": "0ed42f6ac6cd4a5a442294a49153d49ed44c65c550bfba13c5a867f4b4f7bd6b"
+    },
+    {
+      "path": "normal-next-day.png",
+      "size": 758850,
+      "sha256": "6f3effd65974bffbcd634e48e6fb74d9ab9889297674c16f5661d00c2894330d"
+    },
+    {
+      "path": "normal-observations.csv",
+      "size": 1586756,
+      "sha256": "5b2eb67808761bbce8b19641927c896065e1fc806571ab25177159bb50a171c5"
+    },
+    {
+      "path": "normal-observed.txt",
+      "size": 1847,
+      "sha256": "4df9ec497d58320868ea32e63091d8d41dfc3a7de9b44bf1343e00a29810f397"
+    },
+    {
+      "path": "normal-runtime.json",
+      "size": 7695,
+      "sha256": "740af06664c5b19e85388dc8575a898efa2b70b0d390689b7a678cc38fa75221"
+    },
+    {
+      "path": "normal-seat-blend.json",
+      "size": 3175,
+      "sha256": "630f280f7d1a41505bfe539654b2bfb873ed1fd12b599e7067388032f8d86202"
+    },
+    {
+      "path": "opening-shop-final.txt",
+      "size": 730,
+      "sha256": "07ab4e201f4f97b1bf527cc6f86a4f971fb501a75b4ed165b801d63ddb0bab87"
+    },
+    {
+      "path": "patch-after.json",
+      "size": 1279,
+      "sha256": "b83889a8acbece2a883247e9b1a04a467cdbe93edb71062974cec83558465f4c"
+    },
+    {
+      "path": "patch-before.json",
+      "size": 1279,
+      "sha256": "b83889a8acbece2a883247e9b1a04a467cdbe93edb71062974cec83558465f4c"
+    },
+    {
+      "path": "patch-feedback.json",
+      "size": 2174,
+      "sha256": "9b93b70cdf07ceeaeb59d3cf7178d5982e8d77c74455c6a82e60d03016435fa8"
+    },
+    {
+      "path": "patch-public-delta.json",
+      "size": 6742,
+      "sha256": "9b7ee29d8d0432a5814072e45ed0ede0fb0465a6220bbfb6313b0bb9b2a5333d"
+    },
+    {
+      "path": "patch-public-worker.txt",
+      "size": 103332,
+      "sha256": "6136650e9e13f4c564109a71b16115e67746fd58de81360f092df8683489c899"
+    },
+    {
+      "path": "patch-ui-in-game-patch.png",
+      "size": 4235313,
+      "sha256": "391cda7f975789ec48ad1311495d7cf54ca1d388c72937ab8094244ca7bbe819"
+    },
+    {
+      "path": "patch-ui-player.log",
+      "size": 16863,
+      "sha256": "b66d22e1cd438338a27c931409557b8667c97760ec5ede99a6f0fe9471dbb4f5"
+    },
+    {
+      "path": "patch-ui-process.json",
+      "size": 335,
+      "sha256": "d9d484dc0337c17cea171a627ceeda454cadb71317d0eba7075ddc44a0e2d6b3"
+    },
+    {
+      "path": "patch-ui-restart-notice.png",
+      "size": 4236173,
+      "sha256": "849a1ff04ae51ce291c4bfdc89b0811ac5162b24d05d806dc7aa4c437abd4b68"
+    },
+    {
+      "path": "patch-ui-test-identity.json",
+      "size": 788,
+      "sha256": "2e71dbb8bed6cf63360148fbc4c518e1f55217a3a69f8309aff95570661b1252"
+    },
+    {
+      "path": "Public-Delta.ps1",
+      "size": 6294,
+      "sha256": "cc319ca834bba24965665ce739a76e032bdfc6ff95c6cfddb02c4cd32876100a"
+    },
+    {
+      "path": "published-inventory.json",
+      "size": 4736,
+      "sha256": "33d1455ec542781baaf2797a344d2442123050f1c96e355d85bc0798ca10b6a7"
+    },
+    {
+      "path": "README.md",
+      "size": 7959,
+      "sha256": "a51336686d7699274e2cac58bd97db7574d4a3eca34862d9e3532ea3310ab2a8"
+    },
+    {
+      "path": "Refresh-Main.ps1",
+      "size": 8841,
+      "sha256": "828037eef49d87cdce5f53912861013dc980ec7af5fa2c083897207c15950304"
+    },
+    {
+      "path": "release-receipt.json",
+      "size": 5382,
+      "sha256": "906f918b44299c1d448f6ea0b01e6c22edae687238bf08a67c2fa3bb2440cb80"
+    },
+    {
+      "path": "remote-after-publication.json",
+      "size": 60803,
+      "sha256": "d0050e9e54d29d8778ba2e27a6f9bb5985618e42ed7b0d0040eef1c7ad1926d9"
+    },
+    {
+      "path": "restart-child.log",
+      "size": 22602,
+      "sha256": "b388edc71174dd53ca29ae6d8eaf15de4023aac8c59c480df51777ec750b9e34"
+    },
+    {
+      "path": "restart-identity.json",
+      "size": 1130,
+      "sha256": "53290ac5c973c4a946a4be454b1a95d5e9a57a1bd04f29e0527ddf8099cd0775"
+    },
+    {
+      "path": "restart-parent.log",
+      "size": 61436,
+      "sha256": "270838d9946bf9d6c80502c5c934740d411954d2d9a1035f77853c8871ff793e"
+    },
+    {
+      "path": "restart-restart-notice.png",
+      "size": 4236173,
+      "sha256": "849a1ff04ae51ce291c4bfdc89b0811ac5162b24d05d806dc7aa4c437abd4b68"
+    },
+    {
+      "path": "restart-restart-observed.json",
+      "size": 1014,
+      "sha256": "15a8bd7253eedf99228c334f49ff1f7029ccb0a99562872817e32e8527ae99b9"
+    },
+    {
+      "path": "retired-failed-cache.json",
+      "size": 276,
+      "sha256": "c809ed1376525d0e1a3fac6e9dbbc36b12d378a980909862639dd7ff3b41be69"
+    },
+    {
+      "path": "Run-IsolatedPatchChecks.ps1",
+      "size": 2917,
+      "sha256": "ff419a115bd4f8e35c1533c3c30ad8fe3bef7000b4af87115d5078be68c250cc"
+    },
+    {
+      "path": "Run-ReleaseRestart.ps1",
+      "size": 6657,
+      "sha256": "6df45314141d800b9307f1fb8a95000c87fa4087f498f8c115ddb60888637d82"
+    },
+    {
+      "path": "seated-fit.json",
+      "size": 2180,
+      "sha256": "33c18f14751d800335f3daf65d04334772f80a4ab8a4b7dab99b570e2244dc13"
+    },
+    {
+      "path": "simulation-pure.json",
+      "size": 1800,
+      "sha256": "c506ab03ed228b7a8c0b812f701ecb4d99a3742410d7dde138aec9dfd96f9d31"
+    },
+    {
+      "path": "stock-market-imgui-1920x1080.png",
+      "size": 224758,
+      "sha256": "a369a7715bcf068ba953332f32df6b96be79b5ab5d6e4030fb975f68f862150e"
+    },
+    {
+      "path": "Test-FixtureEntryGuards.ps1",
+      "size": 2966,
+      "sha256": "7c54a9d0c6d8e6de2309812b7a4a86d1dfd7911fa6d34c3dbb95dd711e26d6af"
+    },
+    {
+      "path": "updater-all.json",
+      "size": 14314,
+      "sha256": "fc4ce76786e0bf75d936bd8e818606d66a31f1e53536f48ac108c1c1cf2b1bb2"
+    },
+    {
+      "path": "updater-regressions.json",
+      "size": 16053,
+      "sha256": "66a81dece5e16714cf9dae42b3cc9d21ba7090b7d93af316b18ea50a0b3f5d39"
+    },
+    {
+      "path": "validation-limitations.json",
+      "size": 734,
+      "sha256": "7f95e8b510b608fc923c87253d3710dc6a4efe0ec0dad7280251667f651df717"
+    },
+    {
+      "path": "visual-review.json",
+      "size": 3454,
+      "sha256": "e7d0f1146dae8b510b08fb6fdbae411a6706d10cea2473a381beb080c844f07c"
+    },
+    {
+      "path": "walk-acceptance.json",
+      "size": 6160,
+      "sha256": "475c4eb93e5a1b12adab8fb900b085cd6b130cc051333149b1f4117b85456429"
+    },
+    {
+      "path": "walk-analysis.json",
+      "size": 4932,
+      "sha256": "aab4a1a53f9527aca69593b6ced734bd6ed849d3de30fa565717e2b6aeb08f25"
+    },
+    {
+      "path": "walk-closeup.mp4",
+      "size": 9690343,
+      "sha256": "97577d9e4dd721c92c323d843c510f588faf5c65f80a79526d0e783b94b85c3f"
+    },
+    {
+      "path": "walk-review-00.png",
+      "size": 1054760,
+      "sha256": "7d3ba499276f98d187ef4503b1a0470327b56e9811ae8ee1c048fc9ee9ad0504"
+    },
+    {
+      "path": "walk-review-03.png",
+      "size": 986527,
+      "sha256": "13ff02c9e6934b8cb02f76e80521f209929b0770ad646f46d0ea9d7592b65f94"
+    },
+    {
+      "path": "walk-review-07.png",
+      "size": 985368,
+      "sha256": "44f7aad73f21edcaa83b768444d3dfebdb8453fcd236f6eb57f24ce492df998c"
+    },
+    {
+      "path": "walk-review-11.png",
+      "size": 1021837,
+      "sha256": "a25588ccb75744a1dacb67e484166bdce83879a4daefc5617b991aad264944f2"
+    },
+    {
+      "path": "walk-review-15.png",
+      "size": 1025498,
+      "sha256": "2eff37beda1a9b7103bb3853c764a15dbd1f3915b4bd5a61e1cc17412f315a68"
+    },
+    {
+      "path": "walk-review-16.png",
+      "size": 933277,
+      "sha256": "fa662853e9629338507d0d74b29f3aa6bfc210c0703467bafadc84313399238a"
+    },
+    {
+      "path": "walk-trace.csv",
+      "size": 473555,
+      "sha256": "0c5120134b436b7534395eb63203f089031e533f25f01faa5a5d3d4eb4f36d0a"
+    },
+    {
+      "path": "fixture-guard-parser-first-attempt/powershell-InGamePatch.log",
+      "size": 658,
+      "sha256": "1a4036a9b7b7d6a0b5559488f6d90d14834788241249a669c0f37a925aa7b282"
+    },
+    {
+      "path": "fixture-guard-parser-first-attempt/powershell-UnityRestart.log",
+      "size": 659,
+      "sha256": "de7146e176e8e62b45898681fa15fb511a03e7d9c96396b8edeca3f6b7e3ca6d"
+    },
+    {
+      "path": "fixture-guard-parser-first-attempt/pwsh-InGamePatch.log",
+      "size": 423,
+      "sha256": "31c467c9d2c2205db170f861827b75da1e5ea2bf26c828998bc78fc4c9dbed36"
+    }
+  ],
+  "utc": "2026-09-07T12:42:03.4941072Z"
+}

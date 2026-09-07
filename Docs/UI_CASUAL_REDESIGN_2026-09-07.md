@@ -1,8 +1,8 @@
 # Casual office UI and update feedback — 2026-09-07
 
-Status: source implementation / headless checks; graphics testing paused by user instruction;
-**not a public patch**. Public latest remains
-`fc-win-20260907.2` (v5). Source starts at clean `b07e24d1` on the canonical `main` checkout.
+Status: **published as fc-win-20260907.3 (sequence 6)**; game source
+`cb86605dad19a823551498c2d4bb6bd073031864`. Final limited graphics validation and same-path,
+backup-first main refresh were explicitly authorized and completed. Future graphics require fresh authorization.
 
 ## Requested scope
 
@@ -59,33 +59,34 @@ A four-second countdown begins only after that repaint. Failure to render is fai
 Only then does the existing verified-parent / normal-exit / atomic-snapshot restart handshake run.
 No forced process kill or incomplete installation fallback is added.
 
-## Fixed-entry migration caveat
+## Fixed-entry migration (completed at home; company instructions apply once)
 
-The currently installed Downloads entry contains the **v2 bootstrap assembly and worker**.
-It checks/downloads the latest immutable snapshot before launching that snapshot. Merely publishing
-a new snapshot changes the in-game menus, but **cannot retroactively change that old entry's first
-patch screen**. Source push or the new snapshot's startup is not proof that the fixed v2 bootstrap
-has received the new progress UI.
+The old v2 Downloads bootstrap could not acquire the new first patch screen merely by launching a new snapshot.
+The user explicitly approved **메인도 백업 후 갱신**. All 169 old installation files are retained in a separate backup;
+the same fixed entry now contains all 169 verified v6 files. Saves and the user's v5 cache remain unchanged.
+The main was not auto-launched. Current workers prefer the existing v5 cache over seed files, so the next home
+launch downloads the verified v5→v6 delta and displays the new UI. Later unchanged runs do not repeat downloads.
 
-The fixed path remains `%USERPROFILE%/Downloads/FamilyCompany_Playtest/FamilyCompany.exe`.
-To fix its first screen, a one-time, approved, backed-up installation/bootstrap refresh at that same
-path must be planned and verified against the final Release; do not silently replace Downloads,
-run a FastQA player there, repoint it to an AppData version, or consume the user's cache to fake proof.
-The current user cache is v5 (`versions/5-9664e3ec8254`), observed read-only after their update.
+[Exact path, backup, ZIP identity and company one-time install](MAIN_GAME_ENTRY.md).
+Do not replace the fixed entry with a FastQA player or point shortcuts to an AppData version.
 
 ## Verification
 
-Pending final results are recorded in PROJECT_STATE. The expanded native UI test visits all five
-hubs and reachable internal detail routes at 1280×720, 1024×768, 1600×1000 and 1920×1080,
-checks real TMP overflow and horizontal containment, and captures scroll endpoints.
-The separate existing full-navigation test covers shop / stock adapters, route back stacks and saves.
-These prior captures are not input/resource isolation proof. Following the user's click-interference
-report, graphics tests are stopped, including private-desktop rendering. The exact interference cause
-is unconfirmed. The latest expanded capture run failed on a layout-component lifecycle exception;
-the subsequent source fix compiles but has not been rerun in a Player. Do not label it visual PASS.
-Only source/logic work resumed after the user's background-only instruction. See
-[headless evidence](Evidence/OfficeCasual20260907/BACKGROUND_ONLY_QA_2026-09-07.md).
+Final exact non-Development Release passed all hubs/internal details at 1280×720, 1024×768, 1600×1000 and
+1920×1080 with TMP overflow/containment checks, plus 54 full-navigation EventSystem routes. The former
+Canvas lifecycle exception is resolved. These are not new OS pointer clicks or proof of total resource isolation.
 
-Progress tests use two large files in different directories and actual paced streaming, not a lone
-percent animation. Restart UI-only preparation, real Unity parent/child local restart and public
-GitHub deployment are separate claims. No new public Release or bootstrap installation is implied.
+Fresh worker regressions: 81 assertions; overall display model: 18 assertions.
+An isolated copy of exact Release executable/DLL bytes, under the existing QA data-folder name, passed
+two-folder streaming and real rendered 100%/four-second notice. A separate fixture installed real Unity bytes
+and observed the normal-named successor verify its snapshot and unlock. Fixture workers are not production network proof.
+The actual unchanged shipping worker separately received the public v5→v6 delta: 12 files / 166,189,664 bytes,
+158 download events, all 169 hashes. User main/cache/saves were unchanged during that test; installation refresh followed.
+
+Original failures are retained: an existing total-Editor-heap assertion failed once, followed by two unchanged PASS
+iterations; exact cause is unconfirmed. The first progress fixture invocation mistakenly used a normal Release name,
+ignored fixture flags and checked public v5; its screenshot gate failed and is not counted as PASS. Corrected artifact
+harnesses isolate the fixture by copy/name without changing runtime bytes. Main/cache pointer/save contents survived.
+
+[Final evidence, installation receipt and scope limits](Evidence/CasualUiRelease20260907/README.md).
+[Earlier headless-only stage](Evidence/OfficeCasual20260907/BACKGROUND_ONLY_QA_2026-09-07.md) is historical.

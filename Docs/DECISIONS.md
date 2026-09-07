@@ -1,5 +1,31 @@
 # DECISIONS
 
+## 2026-09-07 / 캐주얼 v6 공개와 승인된 동일 경로 메인 갱신 완료
+
+- 소스 push 후 사용자가 최종 게임 검증·배포를 `ㄱ`으로 승인했고, 별도 질문에 **메인도 백업 후 갱신**을 승인했다.
+- `fc-win-20260907.3` / sequence 6 / release 384067644. 게임 빌드 SHA는 `cb86605d`이며 후속 MD/도구 SHA와 구분한다.
+  UI·전체 진행률·실제 4초 재시작 안내만 변경하고 Simulation/Save/가족 몸체/가구 형상/shipping worker는 v5와 같다.
+- 정확한 non-Development Release의 메뉴 네 해상도·54 EventSystem 경로·4인 정상 보행/출근/착석/사업과
+  81개 worker + 18개 표시 모델 검사를 통과했다. 이전 native 클릭은 unchanged transaction 코드에만 한정해 연결한다.
+  최초 기존 Editor heap oracle 실패와 무수정 두 번의 PASS는 모두 보존하며 원인을 추측 확정하지 않는다.
+- 실제 공개 v5→v6 수신 12개 / 166,189,664 bytes / 158개 수신 이벤트 / 전체 169개 hash PASS 뒤,
+  Downloads 기존 전체 169개를 AppData InstallationBackups로 먼저 보존하고 같은 메인 경로에 v6를 설치했다.
+  세이브 5개·저장 폴더 10개 파일·사용자 cache 344개 파일을 해시로 보존했다. 사용자 메인은 자동 실행하지 않았다.
+  현재 v5 cache를 먼저 재사용하는 worker 계약 때문에 다음 실제 실행은 위 변경분을 받아 v6로 활성화한다.
+- 사용자 입력/화면 전환은 하지 않았다. 최종 검증만 허용했던 graphics 승인은 종료되고 이후에는 새 승인을 받는다.
+  PC 종료/새 유료 생성/추가 캐릭터 제작은 이번 배포에 포함하지 않는다.
+- 누적 PROJECT_STATE 118KB는 History/Reports에 보존하고 현재 상태만 간결하게 다시 썼다.
+  상세 증거·백업·회사 설치법은 `Docs/Evidence/CasualUiRelease20260907`, `MAIN_GAME_ENTRY.md`가 소유한다.
+
+## 2026-09-07 / 패치 fixture의 정식 이름 실행을 프로세스 생성 전에 차단
+
+- 정식 이름의 Release는 fixture 인자를 무시한다. 초기 검증 명령이 이를 놓쳐 공개 v5를 확인했고,
+  screenshot gate가 실패했다. 해당 실패를 PASS로 재사용하지 않았다. 메인/cache pointer/세이브 내용은 보존됐다.
+- exact Release 바이트를 격리된 QA 이름의 복사본으로만 검사하도록 artifact harness를 고쳤다.
+  실제 화면/4초 안내/정상 이름 Unity 자식 실행이 통과했고 공개 GitHub 수신은 별도로 검사했다.
+- 재발 방지를 위해 두 패치 QA entry script가 명시적인 `FamilyCompany_FastQa` EXE/Data 이름을
+  프로세스·fixture 생성 전에 요구한다. shipping 코드나 게이트 허용치는 바꾸지 않았다.
+
 ## 2026-09-07 / 현재 UI 소스와 안전한 검증 도구를 main으로 인계
 
 - 사용자의 `push해` 요청으로 이번 UI·진행률 수정, 생성 아이콘, 검증 도구와 MD를 커밋·푸시한다.

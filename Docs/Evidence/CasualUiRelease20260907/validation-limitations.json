@@ -1,0 +1,8 @@
+{
+  "independent": true,
+  "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+  "unchangedRepeatPass": "Artifacts/FastQa/runs/20260907-204537-251",
+  "initialEditorBroad": "Artifacts/FastQa/runs/20260907-204226-004",
+  "passed": true,
+  "scope": "Initial existing total-Editor-managed-heap oracle failed once; no source/oracle/tolerance change; two bounded repeat iterations passed. Exact cause not established. Initial progress test used wrong normal-name fixture invocation and did not isolate: qa=False, checked existing public v5; main/cache pointer/save contents unchanged, updater run logs and locks touched. Test rejected. Corrected artifact harness only; shipping payload not changed. Original failures preserved."
+}

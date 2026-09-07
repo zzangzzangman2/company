@@ -1,0 +1,72 @@
+{
+  "observations": "Direct review: all eight current seated images, normal next-day scene and actual frames at start/middle/end of 24 seconds. Bent knees/chair stems/typing hands retained; both feet alternate over multiple cycles and directions. Screenshots are not byte-identical because non-participating actor UI positions differ; no byte-identical-frame claim. Reviewed sheets are a chronological subset, not every one of the 337 frames. Current casual hub/detail/shop/market screenshots were directly reviewed at multiple native resolutions; structural observer checks cover all four resolutions.",
+  "limitations": "No new body/rig/clip promotion, no original-360 model reapproval, no pixel skin-centroid or zero foot-slip claim.",
+  "passed": true,
+  "retainedVisualSourceCommit": "4b06247e",
+  "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+  "reviewedWalkingSheets": [
+    {
+      "sha256": "7d3ba499276f98d187ef4503b1a0470327b56e9811ae8ee1c048fc9ee9ad0504",
+      "path": "Artifacts/ReleaseGameplay/cb86605d-walk/review/sheets/all-frames-00.png"
+    },
+    {
+      "sha256": "13ff02c9e6934b8cb02f76e80521f209929b0770ad646f46d0ea9d7592b65f94",
+      "path": "Artifacts/ReleaseGameplay/cb86605d-walk/review/sheets/all-frames-03.png"
+    },
+    {
+      "sha256": "44f7aad73f21edcaa83b768444d3dfebdb8453fcd236f6eb57f24ce492df998c",
+      "path": "Artifacts/ReleaseGameplay/cb86605d-walk/review/sheets/all-frames-07.png"
+    },
+    {
+      "sha256": "a25588ccb75744a1dacb67e484166bdce83879a4daefc5617b991aad264944f2",
+      "path": "Artifacts/ReleaseGameplay/cb86605d-walk/review/sheets/all-frames-11.png"
+    },
+    {
+      "sha256": "2eff37beda1a9b7103bb3853c764a15dbd1f3915b4bd5a61e1cc17412f315a68",
+      "path": "Artifacts/ReleaseGameplay/cb86605d-walk/review/sheets/all-frames-15.png"
+    },
+    {
+      "sha256": "fa662853e9629338507d0d74b29f3aa6bfc210c0703467bafadc84313399238a",
+      "path": "Artifacts/ReleaseGameplay/cb86605d-walk/review/sheets/all-frames-16.png"
+    }
+  ],
+  "reviewedChairCaptures": [
+    {
+      "name": "chair-fit-father-seat_father.png",
+      "sha256": "3169b7c58d4adc5acb67997a895c202539c125f944ad41464920f5d9413070d3"
+    },
+    {
+      "name": "chair-fit-father-seat_mother.png",
+      "sha256": "0a994d21776f17c3fc2d8df12d6632d02b2dc9f98a7974a6e1eca3eeda1b295f"
+    },
+    {
+      "name": "chair-fit-father-seat_older_sister.png",
+      "sha256": "1c7f9624d5032b5bf942c1d23f07d40f8ca442b9a1de2c984699bae74a4a7b03"
+    },
+    {
+      "name": "chair-fit-father-seat_player.png",
+      "sha256": "7bde5754a040b7e6037d82150c65d6c9763131520dc848faa3d89a1624ec1b53"
+    },
+    {
+      "name": "chair-fit-player-seat_father.png",
+      "sha256": "0bbc05d8a99d155aef31d1b340418a314eda82df8eac8af8022abb2e2d8b9359"
+    },
+    {
+      "name": "chair-fit-player-seat_mother.png",
+      "sha256": "78917b107f65f519f9b814f18697ee5293148d7d4e36c8ca14157b3a995b506c"
+    },
+    {
+      "name": "chair-fit-player-seat_older_sister.png",
+      "sha256": "4ec6f480600731eeabeaf96f78b98a0c60d226c1fb908cf885ae9dd083dd3747"
+    },
+    {
+      "name": "chair-fit-player-seat_player.png",
+      "sha256": "b587f5e29b0b801b652d336101f5d1731dfdd5cc4d9a82654a23c3b51c874bb8"
+    }
+  ],
+  "retainedVisualSourcePaths": [
+    "Assets/FamilyCompany/Runtime/Character3D",
+    "Assets/FamilyCompany/Presentation.Unity/Resources/Family3D*",
+    "ArtSources"
+  ]
+}

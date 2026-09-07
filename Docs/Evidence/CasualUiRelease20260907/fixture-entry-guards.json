@@ -1,0 +1,40 @@
+{
+  "fixtureDirectoriesCreated": 0,
+  "passed": true,
+  "gameProcessesCreated": 0,
+  "checks": [
+    {
+      "scriptSha256": "22a679422b01a47e38ba641ca9e3882047035e2e605adbcc4badb53015222897",
+      "logSha256": "1a4036a9b7b7d6a0b5559488f6d90d14834788241249a669c0f37a925aa7b282",
+      "runtime": "powershell.exe",
+      "passed": true,
+      "script": "Tools/Updater/Test-FamilyCompanyInGamePatch.ps1",
+      "expectedExit": 1
+    },
+    {
+      "scriptSha256": "1d3d994baca751daddb25cc80d8b6e91c3d28dc37e98f02e33e5521312da8a05",
+      "logSha256": "de7146e176e8e62b45898681fa15fb511a03e7d9c96396b8edeca3f6b7e3ca6d",
+      "runtime": "powershell.exe",
+      "passed": true,
+      "script": "Tools/Updater/Test-FamilyCompanyUnityRestart.ps1",
+      "expectedExit": 1
+    },
+    {
+      "scriptSha256": "22a679422b01a47e38ba641ca9e3882047035e2e605adbcc4badb53015222897",
+      "logSha256": "31c467c9d2c2205db170f861827b75da1e5ea2bf26c828998bc78fc4c9dbed36",
+      "runtime": "C:\\Users\\godho\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "passed": true,
+      "script": "Tools/Updater/Test-FamilyCompanyInGamePatch.ps1",
+      "expectedExit": 1
+    },
+    {
+      "scriptSha256": "1d3d994baca751daddb25cc80d8b6e91c3d28dc37e98f02e33e5521312da8a05",
+      "logSha256": "6a19d0df4cf629d48d03d000199f3c21c871399885da8aec9a961852f65eee70",
+      "runtime": "C:\\Users\\godho\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "passed": true,
+      "script": "Tools/Updater/Test-FamilyCompanyUnityRestart.ps1",
+      "expectedExit": 1
+    }
+  ],
+  "scope": "Negative guard tests of normal-name candidate in PS5.1 and PS7. No graphical game was launched. These are post-release test-tool changes, not a rebuilt shipping game."
+}

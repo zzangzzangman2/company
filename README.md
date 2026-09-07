@@ -2,9 +2,9 @@
 
 **집·회사에서 같은 메인 EXE로 실행하는 방법:** [MAIN_GAME_ENTRY.md](Docs/MAIN_GAME_ENTRY.md).
 최초 패치 지원 버전 설치 후에는 빌드 없이 같은 EXE로 최신 공개 게임 패치를 받습니다.
-2026-09-07 흰색 통합 사무실 HUD 패치 `fc-win-20260907.2`를 공개했습니다.
-기존 메인 EXE를 그대로 엽니다. 집의 v2 기준 약 155.4 MiB를 받고 최신 게임으로 들어갑니다.
-회사/자금/시간 상단 바와 하단 5개 메뉴를 통합했습니다. 기존 캐릭터·가구·사업·저장 규칙은 유지합니다.
+2026-09-07 캐주얼 전체 메뉴·전체 패치 진행률·4초 재시작 안내 패치 `fc-win-20260907.3`를 공개했습니다.
+집의 메인 전체를 백업한 뒤 같은 경로에 갱신했습니다. 다음 실행 시 보존한 v5 캐시 기준 약 158.5 MiB를 받습니다.
+기존 캐릭터·가구 형상·사업·저장 규칙은 유지합니다. 회사의 첫 패치 화면 갱신도 위 문서를 따릅니다.
 **회사에서 이어받기:** [COMPANY_HANDOFF_2026-09-07.md](Docs/COMPANY_HANDOFF_2026-09-07.md).
 
 14살 플레이어가 엄마·아빠·누나와 2000년의 작은 사무실에서 시작해, 하청을 버티고 자체 사업을 세우며 실제 기업들과 경쟁하는 싱글플레이 생활 경영 RPG입니다.
@@ -33,15 +33,15 @@
   Release의 정확한 ID/size/digest allowlist로 관리하며 Git source tree에는 넣지 않는다.
   CI guard와 remote inventory는 미검토·회귀 실행본을 fail-closed 차단한다.
 - 집·회사 공통 메인 경로는 `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`다.
-  집에는 패치 지원 `ee48a72c` 전체 설치를 완료했고 실제 최신 snapshot 재시작도 통과했다.
+  집에는 기존 전체 백업 후 `cb86605d` 정식 설치를 같은 경로에 완료했다. 실제 Unity 재시작은 별도 격리 fixture로 검사했다.
   날짜별 QA/Builds/LKG 경로를 메인으로 안내하거나 실패한 테스트 payload를 복사하지 않는다.
   과거 `Downloads\Family`/`8fa5fa74` 배포 기록은 현행 HEAD/패치 성공 증거가 아니다.
 
 ## 현재 구현 기준선
 
-- **공개 v5:** [흰색 통합 HUD 배포 검증](Docs/Evidence/WhiteHudRelease20260907/README.md).
+- **공개 v6:** [캐주얼 UI·패치·메인 갱신 검증](Docs/Evidence/CasualUiRelease20260907/README.md).
   기존 [첫 하청 → 자체 제품 → 주간 유지보수](Docs/STARTER_BUSINESS_LOOP.md)도 유지·재검증했습니다.
-  실제 Release 업무·이동 검증과 GitHub 패치 수신 검증을 완료했습니다. 기존 메인 EXE는 유지합니다.
+  실제 Release 업무·이동 검증과 GitHub 패치 수신 검증을 완료했습니다. 기존 메인 경로는 유지하며 집 설치는 백업 후 갱신했습니다.
 - 새 게임은 `2000-01-03 08:50`, 가족 4명, 자본금 500만 원으로 시작합니다.
 - 사무실은 13×13 바닥과 외곽만 있는 빈 상태로 시작합니다. 현재 구매 대상은 책상·PC·의자 한 세트
   40만 원/3칸이며, `회사 → 사무실 관리`에서 네 방향으로 회전하고 정확한 타일 중심에 배치합니다.
@@ -52,7 +52,7 @@
 - 사무실 편집기의 배치·회전·이동·회수·재고·저장 계약을 유지하며, pending 구매 좌클릭은 같은 frame에
   `ConfirmPreview()`까지 도달합니다. 현재 공개판의 전체 저장 스키마는 `v12`이고 `v1`~`v11`을 읽어 이관합니다.
   `v12` 세이브를 구 공개판으로 되돌려 읽지는 않습니다.
-- Title·Loading·HUD·5개 허브·인사 roster는 UI Remaster V3 공용 스킨과 프로젝트에 포함된 Maplestory Light/Bold 폰트를 사용합니다.
+- HUD·5개 허브·상세·인사 roster·상점/시장은 paper-white/sage/Pretendard를 공유합니다. 패치 표시는 게임 로딩 화면 안에 있습니다.
 - 가족 4명은 같은 10,000 체력 기준으로 시작하며, 업무 중 체력이 25%까지 내려가면 실제 배치·접근·사용 가능한 정수기·자판기·휴식 좌석을 찾아 회복한 뒤 원래 자리와 남은 업무로 돌아갑니다.
   초기 상점은 책상 세트만 제공하므로 낮 회복 시설은 아직 살 수 없습니다. 실제 사무실 밖의 일정상
   23:00~07:00 수면은 8게임시간당 체력 한 바를 회복합니다. 일반 대기/근무나 오프라인 수입 기능이 아닙니다.
@@ -69,12 +69,13 @@
 
 2026-09-06: **게임 내부**의 기존 로딩 화면에서 실제 받은 바이트 기반 소수 1자리 퍼센트/MiB를
 표시하도록 구현했습니다. 별도 Windows 로딩창은 사용자 정정에 따라 폐기했습니다.
-**최신 게임 Release는 `fc-win-20260907.2`이며 Downloads의 패치 지원 메인은 유지합니다.**
+**최신 게임 Release는 `fc-win-20260907.3`이며 Downloads의 같은 메인 경로를 사용합니다.**
+현재 전체 진행률/4초 안내와 백업 후 메인 갱신은 [v6 증거](Docs/Evidence/CasualUiRelease20260907/README.md)가 정본입니다.
 v2에서 실제 공개 GitHub 수신 바이트→100%→검증→정상 Unity 재시작을 확인했습니다.
 v3 변경과 별도 root 전송 검증의 범위는 [모니터 정렬 패치](Docs/MONITOR_ALIGNMENT_PATCH.md)를,
 기존 재시작 검증은 [v2 배포 기록](Docs/Evidence/FirstPublicRelease20260906/README.md)을 따릅니다.
 v4 사업/이동/실제 공개 전송 검증은 [이번 배포 기록](Docs/Evidence/StarterBusinessRelease20260907/README.md)을 따릅니다.
-최신 v5 UI/게임/실제 공개 전송 검증은 [흰색 HUD 배포 기록](Docs/Evidence/WhiteHudRelease20260907/README.md)을 따릅니다.
+이전 v5 UI/게임/실제 공개 전송 검증은 [흰색 HUD 배포 기록](Docs/Evidence/WhiteHudRelease20260907/README.md)을 따릅니다.
 
 이전 기록(2026-09-05): 개발용 JSON 즉시 반영과 GitHub 파일 단위 패치 런처 코드를 추가했습니다.
 [설정·패치 사용법과 배포 차단 조건](Docs/GITHUB_PATCHING.md)을 먼저 확인하세요.
@@ -101,7 +102,7 @@ FAST_QA_WINDOWS.cmd
 
 `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`
 
-회사 PC는 [공식 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260907.2/FamilyCompany-Windows.zip)
+회사 PC는 [공식 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260907.3/FamilyCompany-Windows.zip)
 전체를 위 폴더에 한 번 풀고 같은 EXE를 사용합니다. EXE만 복사하지 않습니다. 이후 게임 내부 로딩 화면이
 최신 공개 패치를 확인·다운로드·검증하고 시작합니다. [상세 안내](Docs/MAIN_GAME_ENTRY.md).
 저장소가 있는 PC에서는 아래 명령도 같은 고정 메인만 엽니다. 자동 빌드는 하지 않습니다.

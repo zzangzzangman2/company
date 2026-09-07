@@ -1,0 +1,8 @@
+{
+    "scope":  "Presented Unity UI; explicit graphics authorization required. Desktop placement is not an input/resource sandbox.",
+    "exitCode":  0,
+    "privateDesktop":  "FamilyCompanyQa_4eebb9794b4940098181f69a5123007b",
+    "pid":  21060,
+    "desktopSwitchAllowed":  false,
+    "interactiveDesktopAtStart":  "Default"
+}

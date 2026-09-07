@@ -1,13 +1,18 @@
 # 개발 설정 즉시 반영과 GitHub 자동패치
 
-최신 상태(2026-09-07): **흰색 통합 HUD `fc-win-20260907.2` / sequence 5 공개**.
-게임 소스 `c519985513f3953e6612467f48c895ac29100bf6`, 기존 메인/worker/세이브 유지.
-실제 public v2→v5 전송: 16개 / 162,939,018 compressed bytes, 175 progress events→100%, 169개 hash PASS.
-[v5 증거](Evidence/WhiteHudRelease20260907/README.md), [고정 메인 안내](MAIN_GAME_ENTRY.md).
-Unity가 부가 출력한 `BurstDebugInformation_DoNotShip` 텍스트는 exact hash를 기록하고 패키지 밖에 보관했다.
-원본 build 170개 기록과 실제 shipping 169개를 구분하며 모든 runtime bytes는 검사 때와 같다.
+최신 상태(2026-09-07): **캐주얼 UI·전체 진행률·재시작 안내 fc-win-20260907.3 / sequence 6 공개**.
+게임 SHA `cb86605dad19a823551498c2d4bb6bd073031864`. shipping worker/Simulation/Save/가구 형상은 v5와 같습니다.
+실제 public v5→v6: 12개 / 166,189,664 compressed bytes / 158 수신 이벤트 / 157개 재사용 / 169개 hash PASS.
+집 메인은 사용자 승인 후 기존 전체 백업 → 같은 경로에 v6로 갱신했고 세이브와 v5 cache는 보존했습니다.
+고정 entry의 첫 패치 UI를 바꾸는 이 최초 1회 갱신과, 이후 snapshot 자동패치를 구분합니다.
+[최신 증거](Evidence/CasualUiRelease20260907/README.md) · [고정 메인/회사 사용법](MAIN_GAME_ENTRY.md).
 
-아래 v2~v4 수치와 기록은 각 당시 검사 범위이며 현재 최신 버전을 덮어쓰지 않는다.
+현재 표시: 전체 압축 수신 0–85%, 전체 파일 검증 85–99%, 성공 결과 100%. 파일/폴더/해제에서 역행하지 않습니다.
+실제 Repaint 뒤 4초 완료 안내 → 정상 종료 → 검증된 최신 Unity snapshot 재시작입니다.
+stage 가중치이며 ETA가 아닙니다. 원시 bytes/단계별 percent는 로그에 별도로 남습니다.
+확인 실패 시 이전 버전 실행은 허용하지 않습니다. 신규 UI가 적용된 메인에서는 이 표시를 사용합니다.
+
+아래 v2~v5 수치/설명은 **역사 기록**이며 현재 v6 상태·전체 표시 계약을 덮어쓰지 않습니다.
 
 현재 상태(2026-09-06): **모니터 정렬 패치 `fc-win-20260906.3` 공개, 기존 메인 유지**.
 게임 commit은 `4b06247ea2c4652fc320fa13c141f3501e3b5cae`이며 최종 판정은 PROJECT_STATE.md.
@@ -79,7 +84,7 @@ Editor/Development/FastQA만 허용하며 일반 `FamilyCompany_Data` Release는
 
 사용자가 별도 Windows 창을 거부했다. **외부 로딩창은 사용하지 않는다.** 검증된 첫 Release 공개 후
 `FamilyCompany-Windows.zip`을 풀고 그 안의 **실제 Unity `FamilyCompany.exe`**를 실행한다.
-기존 UiRemasterV3 게임 로딩 화면에서 패치를 확인한다. 집 Downloads의 v2 메인은 유지하며 최신 공개판은 v3다.
+기존 Unity 게임 로딩 화면에서 패치를 확인한다. 현재 v6 메인 설치와 전체 진행률 계약은 맨 위 최신 상태를 따른다.
 
 2026-09-06 구현:
 

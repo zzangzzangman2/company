@@ -1,0 +1,16 @@
+{
+  "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+  "nativeInput": false,
+  "passed": true,
+  "buildInfoSha256": "a18e426d9ab795e7aaf22062c6696662a1c5324ab88020fede4a2e5d0dea4323",
+  "paths": {
+    "business": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\StarterProduct\\20260907-210145",
+    "normal": "Artifacts/NormalAutonomy/cb86605d-release",
+    "hud": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\UnifiedOfficeHud\\20260907-205247",
+    "chair": "Artifacts/ReleaseGameplay/cb86605d-chair",
+    "navigation": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\UnifiedOfficeHud\\20260907-205413",
+    "walk": "Artifacts/ReleaseGameplay/cb86605d-walk"
+  },
+  "playerSha256": "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+  "player": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\PatchCandidates\\cb86605d-50e1e763ca534f269e904f68698e5383\\payload\\FamilyCompany.exe"
+}

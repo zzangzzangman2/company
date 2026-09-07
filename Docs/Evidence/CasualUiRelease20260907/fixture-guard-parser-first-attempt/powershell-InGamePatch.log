@@ -1,0 +1,8 @@
+Patch fixture requires an isolated FamilyCompany_FastQa identity; normal Release invocation is refused before launch.
+At C:\Users\godho\Documents\Codex\fc_agents\integration_p0\Tools\Updater\Test-FamilyCompanyInGamePatch.ps1:14 char:5
++     throw 'Patch fixture requires an isolated FamilyCompany_FastQa id ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Patch fixture r... before launch.:String) [], RuntimeException
+    + FullyQualifiedErrorId : Patch fixture requires an isolated FamilyCompany_FastQa identity; normal Release invocat 
+   ion is refused before launch.
+ 

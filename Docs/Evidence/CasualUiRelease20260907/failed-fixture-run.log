@@ -1,0 +1,8 @@
+IN-GAME PATCH QA pid=2944 root=C:\Users\godho\Documents\Codex\fc_agents\integration_p0\Artifacts\InGamePatchTests\27532a72fdff47f6904a460f5546ec5f
+Missing actual in-game screenshot.
+At C:\Users\godho\Documents\Codex\fc_agents\integration_p0\Tools\Updater\Test-FamilyCompanyInGamePatch.ps1:44 char:76
++ ... 'in-game-patch.png'))) { throw 'Missing actual in-game screenshot.' }
++                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Missing actual in-game screenshot.:String) [], RuntimeException
+    + FullyQualifiedErrorId : Missing actual in-game screenshot.
+ 

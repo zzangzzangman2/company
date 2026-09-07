@@ -1,0 +1,59 @@
+{
+  "poseInjection": true,
+  "csvSha256": "18a940461bed65e97220327688f0b208f1db6c6821e0b74d5894fef370602cc8",
+  "samples": 264,
+  "frames": [
+    {
+      "name": "chair-fit-father-seat_father.png",
+      "sha256": "3169b7c58d4adc5acb67997a895c202539c125f944ad41464920f5d9413070d3"
+    },
+    {
+      "name": "chair-fit-father-seat_mother.png",
+      "sha256": "0a994d21776f17c3fc2d8df12d6632d02b2dc9f98a7974a6e1eca3eeda1b295f"
+    },
+    {
+      "name": "chair-fit-father-seat_older_sister.png",
+      "sha256": "1c7f9624d5032b5bf942c1d23f07d40f8ca442b9a1de2c984699bae74a4a7b03"
+    },
+    {
+      "name": "chair-fit-father-seat_player.png",
+      "sha256": "7bde5754a040b7e6037d82150c65d6c9763131520dc848faa3d89a1624ec1b53"
+    },
+    {
+      "name": "chair-fit-player-seat_father.png",
+      "sha256": "0bbc05d8a99d155aef31d1b340418a314eda82df8eac8af8022abb2e2d8b9359"
+    },
+    {
+      "name": "chair-fit-player-seat_mother.png",
+      "sha256": "78917b107f65f519f9b814f18697ee5293148d7d4e36c8ca14157b3a995b506c"
+    },
+    {
+      "name": "chair-fit-player-seat_older_sister.png",
+      "sha256": "4ec6f480600731eeabeaf96f78b98a0c60d226c1fb908cf885ae9dd083dd3747"
+    },
+    {
+      "name": "chair-fit-player-seat_player.png",
+      "sha256": "b587f5e29b0b801b652d336101f5d1731dfdd5cc4d9a82654a23c3b51c874bb8"
+    }
+  ],
+  "passed": true,
+  "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+  "process": {
+    "playerSha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+    "seconds": 111.0228015,
+    "desktopSwitchAllowed": false,
+    "scenario": "chair",
+    "inputDesktopAtEnd": "Default",
+    "forcedStop": false,
+    "inputDesktopAtStart": "Default",
+    "privateDesktop": "FamilyCompanyQa_2e1e798ecf5848438559227b801d77c3",
+    "pid": 14356,
+    "exitCode": 0
+  },
+  "independent": true,
+  "normalLiveFailures": 0,
+  "maxIndividualHand": 0.0089,
+  "penetrations": 0,
+  "normalLiveSamples": 3727,
+  "scope": "Two existing real bodies x four controlled seated directions; separate fresh normal seated work observation, not eight native desk interactions. No model/pose reauthoring."
+}

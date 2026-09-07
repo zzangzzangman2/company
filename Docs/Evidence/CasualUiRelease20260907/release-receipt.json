@@ -1,0 +1,108 @@
+{
+  "userVisualApproval": true,
+  "schemaVersion": 1,
+  "productionEligible": true,
+  "buildInfoSha256": "a18e426d9ab795e7aaf22062c6696662a1c5324ab88020fede4a2e5d0dea4323",
+  "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+  "gates": [
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "opening-four-actors",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/normal-runtime.json",
+      "passed": true,
+      "evidenceSha256": "740af06664c5b19e85388dc8575a898efa2b70b0d390689b7a678cc38fa75221"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "shop-native-pointer-four-rotations",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/native-binding.json",
+      "passed": true,
+      "evidenceSha256": "dfb2890430e60bb5261361350c4fbc553fe141f3c3fc5f89d09df7d01b68ae74"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "normal-walk-tile-centres",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/normal-runtime.json",
+      "passed": true,
+      "evidenceSha256": "740af06664c5b19e85388dc8575a898efa2b70b0d390689b7a678cc38fa75221"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "walking-visual-foot-slip-grounding",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/walk-acceptance.json",
+      "passed": true,
+      "evidenceSha256": "475c4eb93e5a1b12adab8fb900b085cd6b130cc051333149b1f4117b85456429"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "furniture-avoidance",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/normal-runtime.json",
+      "passed": true,
+      "evidenceSha256": "740af06664c5b19e85388dc8575a898efa2b70b0d390689b7a678cc38fa75221"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "four-seated-working-directions",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/seated-fit.json",
+      "passed": true,
+      "evidenceSha256": "33c18f14751d800335f3daf65d04334772f80a4ab8a4b7dab99b570e2244dc13"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "next-day-four-staggered-arrivals",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/normal-runtime.json",
+      "passed": true,
+      "evidenceSha256": "740af06664c5b19e85388dc8575a898efa2b70b0d390689b7a678cc38fa75221"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "mute",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/normal-runtime.json",
+      "passed": true,
+      "evidenceSha256": "740af06664c5b19e85388dc8575a898efa2b70b0d390689b7a678cc38fa75221"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "runtime-exception-zero",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/normal-runtime.json",
+      "passed": true,
+      "evidenceSha256": "740af06664c5b19e85388dc8575a898efa2b70b0d390689b7a678cc38fa75221"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "updater-regressions",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/updater-regressions.json",
+      "passed": true,
+      "evidenceSha256": "66a81dece5e16714cf9dae42b3cc9d21ba7090b7d93af316b18ea50a0b3f5d39"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "hud-navigation",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/hud-navigation.json",
+      "passed": true,
+      "evidenceSha256": "5260c69363a016e2f178523510d4ae21eb8b039bad1091d0b16933b2ba931770"
+    },
+    {
+      "independent": true,
+      "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+      "name": "patch-feedback",
+      "evidencePath": "Artifacts/CasualUiRelease20260907/approval/patch-feedback.json",
+      "passed": true,
+      "evidenceSha256": "9b93b70cdf07ceeaeb59d3cf7178d5982e8d77c74455c6a82e60d03016435fa8"
+    }
+  ],
+  "scope": "Casual unified menus and overall patch progress/visible restart notice; no simulation, world, character, furniture geometry or shipping-worker change from public v5. Fresh Release gameplay/geometry/walk, scoped earlier native evidence binding, exact Release bytes under isolated QA name for fixture UI/restart. Public transfer and approved main refresh are separate post-publication checks.",
+  "playerSha256": "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+  "approvalReference": "User requested casual redesign, overall 1-100 patch feedback and push, then explicitly authorized final game validation/deployment with ㄱ after the narrow graphics permission question. User separately approved 메인도 백업 후 갱신 for same-path whole-backup-first main refresh after verification. Existing world/body/pose/monitor approval retained; no new character promotion, no mouse/keyboard or shutdown."
+}

@@ -1,0 +1,15 @@
+{
+    "overallMonotonic":  true,
+    "scope":  "Exact non-Development Release executable/DLL bytes in renamed QA parent folder activate existing fixture switch; real normal-named Unity successor, local transport fixture workers only. Not a public network/UI test.",
+    "passed":  true,
+    "mainEntryUnchanged":  true,
+    "privateDesktop":  "FamilyCompanyQa_bc8b1b3504a54892bdf96ee31e40b7cf",
+    "desktopSwitchAllowed":  false,
+    "nativeInput":  false,
+    "currentDirectory":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\057e3616cd924a44ad1fb168ec4aa2e8\\install\\versions\\9001-c52c04889ae0",
+    "noticeAtLeastSeconds":  4,
+    "childPath":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\UnityPatchRestartTests\\057e3616cd924a44ad1fb168ec4aa2e8\\install\\versions\\9001-c52c04889ae0\\FamilyCompany.exe",
+    "commit":  "cb86605dad19a823551498c2d4bb6bd073031864",
+    "parentExit":  0,
+    "childId":  17480
+}

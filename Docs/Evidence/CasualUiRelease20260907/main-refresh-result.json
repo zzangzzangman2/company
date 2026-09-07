@@ -1,0 +1,18 @@
+{
+  "scope": "Whole previous v2 installation retained in backup; public-verified v6 bootstrap installed at same main path; no saves/cache mutation. Existing user v5 cache remains and takes precedence over seed files in current worker, so next user launch downloads the verified v5-to-v6 delta and activates v6. Thereafter unchanged snapshots require no repeated download.",
+  "sameEntryPath": true,
+  "oldFiles": 169,
+  "commit": "cb86605dad19a823551498c2d4bb6bd073031864",
+  "deletedFiles": 0,
+  "saveDirectoryFilesPreserved": 10,
+  "savesPreserved": 5,
+  "gameLaunched": false,
+  "newFiles": 169,
+  "cacheFilesPreserved": 344,
+  "publicManifestSha256": "3c7e0a3ffc11e5fab254c2215337e38ce79cf099592b95a6c8bbb3c50bbf5ce7",
+  "backup": "C:\\Users\\godho\\AppData\\Local\\FamilyCompany\\InstallationBackups\\20260907-212438-6fe36f2bde9343c0b9f2e6db9f47ea8c-before-fc-win-20260907.3\\FamilyCompany_Playtest",
+  "passed": true,
+  "main": "C:\\Users\\godho\\Downloads\\FamilyCompany_Playtest",
+  "version": "fc-win-20260907.3",
+  "publicZipSha256": "1f856cb9985adae3ad767d959a4ca76634998411058a951b89c6bc9f5ea6dc66"
+}
