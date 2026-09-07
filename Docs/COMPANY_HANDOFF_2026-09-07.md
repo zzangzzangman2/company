@@ -2,12 +2,12 @@
 
 ## 먼저 실행할 게임
 
-- 공개 패치: **fc-win-20260907.1 / sequence 4**.
-- 게임 소스: **c0709823c0e45c4152c673ca0b67d7a1e1506bc7**. 이후 문서/evidence commit은 게임 빌드 SHA가 아니다.
+- 공개 패치: **fc-win-20260907.2 / sequence 5**, 흰색 통합 사무실 HUD.
+- 게임 소스: **c519985513f3953e6612467f48c895ac29100bf6**. 이후 문서/evidence commit은 게임 빌드 SHA가 아니다.
 - 메인: `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`.
 - 이미 설치했다면 같은 EXE를 연다. 게임 안에서 최신 공개 패치 확인 → 실제 수신 바이트 퍼센트 → 검증 → 재시작한다.
   플레이에 Unity나 git pull, 새 빌드는 필요 없다. 메인 EXE 하나만 복사하거나 날짜별 QA 실행본으로 교체하지 않는다.
-- 처음 설치하는 회사 PC는 [전체 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260907.1/FamilyCompany-Windows.zip)을
+- 처음 설치하는 회사 PC는 [전체 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260907.2/FamilyCompany-Windows.zip)을
   위 폴더에 **전체** 압축 해제한다. 개인 파일이나 기존 설치가 있으면 무작정 덮어쓰지 않는다.
 - 집 메인·사용자 패치 캐시(v2)·세이브 5개는 그대로 보존했다. 다음 실제 실행 때 패치 다운로드를 볼 수 있다.
   집/회사 세이브 자동 동기화는 없다. 최신 확인 실패 시 이전 게임을 실행하지 않는 정책이다.
@@ -35,6 +35,16 @@ git pull --ff-only origin main
 사용자 회사 화면을 조작/전면 실행하지 않는다.
 
 ## 이번에 추가한 플레이
+
+최신 v5는 회사에서 만든 흰색 상단 회사/자금/시간 바와 하단 5개 메뉴를 공개한 패치다.
+기본 상세 패널은 닫혀 있으며 재클릭/ESC로 닫는다. 기존 맵·3D 인물·책상·의자·사업/세이브는 그대로다.
+회사 빌드 EXE는 Git에 없어서 집에서 받은 `c5199855`로 정식 Release를 재빌드·재검증했다.
+HUD 네 해상도, 54개 EventSystem 경로, 실제 다음 날 출근/착석/보행과 아래 사업 루프가 통과했다.
+집 v2→v5 실제 공개 다운로드는 16개 / 162,939,018 bytes / 175개 진행 이벤트→100%, 169개 해시 검증.
+전송은 별도 테스트 설치에서 확인했고 사용자 메인·cache·save는 그대로다. 새 Unity 재시작 검증과 혼동하지 않는다.
+설치 ZIP 273,144,271 bytes, SHA-256 `b42c4f76f94766c12179d3086ca2df4e4352145e01ba7cfc99450622abdfbd86`.
+
+아래 첫 사업 루프는 v4에서 추가됐으며 v5에서도 유지·재검증했다.
 
 1. 새 게임: 빈 사무실, 500만 원, 가족 4명. 책상·PC·의자 세트는 40만 원이며 회전/배치/충돌 규칙은 유지.
 2. `사업 → 자체 제품`에서 단어 DB 하청 → 대여점 관리 하청을 완료한다. 초기 상점의 PC 세트만으로 가능하다.
@@ -66,7 +76,8 @@ NPC는 실제 이동·착석·업무 상태에서만 기여한다. 플레이어 
 
 ## 검증 증거와 한계
 
-[이번 공개 배포 증거](Evidence/StarterBusinessRelease20260907/README.md)를 먼저 본다.
+[최신 흰색 HUD 배포 증거](Evidence/WhiteHudRelease20260907/README.md)를 먼저 본다.
+이전 사업 최초 공개 기록은 [v4 증거](Evidence/StarterBusinessRelease20260907/README.md)다.
 동일 Release의 실제 4인 보행·다음 날 출근·착석·가구 회피와 사업 작업 시간을 다시 측정했다.
 사업의 긴 구간은 코어 체크포인트로 구성하고 마지막 개발 4인시/유지보수 2인시는 실제 NPC로 수행했다.
 순수 전체 생명주기 테스트를 중단 없는 전체 주간 플레이로 표현하지 않는다.

@@ -2,9 +2,9 @@
 
 **집·회사에서 같은 메인 EXE로 실행하는 방법:** [MAIN_GAME_ENTRY.md](Docs/MAIN_GAME_ENTRY.md).
 최초 패치 지원 버전 설치 후에는 빌드 없이 같은 EXE로 최신 공개 게임 패치를 받습니다.
-2026-09-07 첫 하청→자체 제품→주간 유지보수 패치 `fc-win-20260907.1`를 공개했습니다.
-기존 메인 EXE를 그대로 엽니다. 집의 v2 기준 약 153.2 MiB를 받고 최신 게임으로 들어갑니다.
-캐릭터·가구 외형은 유지하며 실제 업무 시간, 동적 회피, 타일 경로 끝점과 야간 회복을 수정했습니다.
+2026-09-07 흰색 통합 사무실 HUD 패치 `fc-win-20260907.2`를 공개했습니다.
+기존 메인 EXE를 그대로 엽니다. 집의 v2 기준 약 155.4 MiB를 받고 최신 게임으로 들어갑니다.
+회사/자금/시간 상단 바와 하단 5개 메뉴를 통합했습니다. 기존 캐릭터·가구·사업·저장 규칙은 유지합니다.
 **회사에서 이어받기:** [COMPANY_HANDOFF_2026-09-07.md](Docs/COMPANY_HANDOFF_2026-09-07.md).
 
 14살 플레이어가 엄마·아빠·누나와 2000년의 작은 사무실에서 시작해, 하청을 버티고 자체 사업을 세우며 실제 기업들과 경쟁하는 싱글플레이 생활 경영 RPG입니다.
@@ -39,7 +39,8 @@
 
 ## 현재 구현 기준선
 
-- **공개 v4:** [첫 하청 → 자체 제품 → 주간 유지보수](Docs/STARTER_BUSINESS_LOOP.md).
+- **공개 v5:** [흰색 통합 HUD 배포 검증](Docs/Evidence/WhiteHudRelease20260907/README.md).
+  기존 [첫 하청 → 자체 제품 → 주간 유지보수](Docs/STARTER_BUSINESS_LOOP.md)도 유지·재검증했습니다.
   실제 Release 업무·이동 검증과 GitHub 패치 수신 검증을 완료했습니다. 기존 메인 EXE는 유지합니다.
 - 새 게임은 `2000-01-03 08:50`, 가족 4명, 자본금 500만 원으로 시작합니다.
 - 사무실은 13×13 바닥과 외곽만 있는 빈 상태로 시작합니다. 현재 구매 대상은 책상·PC·의자 한 세트
@@ -68,11 +69,12 @@
 
 2026-09-06: **게임 내부**의 기존 로딩 화면에서 실제 받은 바이트 기반 소수 1자리 퍼센트/MiB를
 표시하도록 구현했습니다. 별도 Windows 로딩창은 사용자 정정에 따라 폐기했습니다.
-**최신 게임 Release는 `fc-win-20260907.1`이며 Downloads의 패치 지원 메인은 유지합니다.**
+**최신 게임 Release는 `fc-win-20260907.2`이며 Downloads의 패치 지원 메인은 유지합니다.**
 v2에서 실제 공개 GitHub 수신 바이트→100%→검증→정상 Unity 재시작을 확인했습니다.
 v3 변경과 별도 root 전송 검증의 범위는 [모니터 정렬 패치](Docs/MONITOR_ALIGNMENT_PATCH.md)를,
 기존 재시작 검증은 [v2 배포 기록](Docs/Evidence/FirstPublicRelease20260906/README.md)을 따릅니다.
 v4 사업/이동/실제 공개 전송 검증은 [이번 배포 기록](Docs/Evidence/StarterBusinessRelease20260907/README.md)을 따릅니다.
+최신 v5 UI/게임/실제 공개 전송 검증은 [흰색 HUD 배포 기록](Docs/Evidence/WhiteHudRelease20260907/README.md)을 따릅니다.
 
 이전 기록(2026-09-05): 개발용 JSON 즉시 반영과 GitHub 파일 단위 패치 런처 코드를 추가했습니다.
 [설정·패치 사용법과 배포 차단 조건](Docs/GITHUB_PATCHING.md)을 먼저 확인하세요.
@@ -99,7 +101,7 @@ FAST_QA_WINDOWS.cmd
 
 `%USERPROFILE%\Downloads\FamilyCompany_Playtest\FamilyCompany.exe`
 
-회사 PC는 [공식 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260907.1/FamilyCompany-Windows.zip)
+회사 PC는 [공식 설치 ZIP](https://github.com/zzangzzangman2/company/releases/download/fc-win-20260907.2/FamilyCompany-Windows.zip)
 전체를 위 폴더에 한 번 풀고 같은 EXE를 사용합니다. EXE만 복사하지 않습니다. 이후 게임 내부 로딩 화면이
 최신 공개 패치를 확인·다운로드·검증하고 시작합니다. [상세 안내](Docs/MAIN_GAME_ENTRY.md).
 저장소가 있는 PC에서는 아래 명령도 같은 고정 메인만 엽니다. 자동 빌드는 하지 않습니다.

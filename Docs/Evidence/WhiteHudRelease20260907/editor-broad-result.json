@@ -1,0 +1,47 @@
+﻿{
+    "schemaVersion":  1,
+    "passed":  true,
+    "sloMet":  null,
+    "sloSeconds":  null,
+    "sloObservedSeconds":  20.919,
+    "totalSeconds":  23.851,
+    "profile":  "editor-broad",
+    "selectionReason":  "explicit profile",
+    "fallbackReasons":  [
+
+                        ],
+    "head":  "c519985513f3953e6612467f48c895ac29100bf6",
+    "baseRef":  "HEAD",
+    "unityVersion":  "6000.3.21f1",
+    "unityEditor":  "C:\\Users\\godho\\Documents\\Codex\\UnityEditors\\6000.3.21f1\\Editor\\Unity.exe",
+    "projectPath":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0",
+    "cache":  {
+                  "status":  "not-used",
+                  "playerExists":  true,
+                  "compatibilityFingerprint":  "095082fb53ce9a4632b916062e7d284bb9bce5966f5467f957ce474c18dde1d8"
+              },
+    "timings":  {
+                    "startupAndOtherSeconds":  0,
+                    "licenseSeconds":  0.39,
+                    "assetImportSeconds":  4.418,
+                    "scriptCompilationSeconds":  0.801,
+                    "domainReloadSeconds":  4.197,
+                    "editorMethodSeconds":  12.685,
+                    "compileSeconds":  20.815,
+                    "buildSeconds":  0,
+                    "playerSeconds":  0,
+                    "captureSeconds":  0
+                },
+    "changedFiles":  [
+
+                     ],
+    "error":  "",
+    "runDirectory":  "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\FastQa\\runs\\20260907-182145-736",
+    "completedUtc":  "2026-09-07T09:22:09.6167365Z",
+    "iterations":  [
+                       {
+                           "number":  1,
+                           "elapsedSeconds":  20.919
+                       }
+                   ]
+}

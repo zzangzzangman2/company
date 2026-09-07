@@ -1,0 +1,100 @@
+{
+  "productionEligible": true,
+  "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+  "scope": "Unified white office HUD publication; no simulation, world, character, furniture or shipping-worker change from public v4. Fresh Release actual gameplay/geometry/walk, explicit scoped old native source binding. Public transfer verified separately after publication.",
+  "buildInfoSha256": "e2e142705751bebb05fe52946a5b8f29108cabd4172c92b93a43a84be323beee",
+  "approvalReference": "User continuation ㄱ after pulling the company white HUD source/build and explaining it was not yet a public patch, 2026-09-07. Deploy the received HUD as-is; existing approved world/body/pose/monitor appearance retained. No new character promotion or shutdown.",
+  "userVisualApproval": true,
+  "gates": [
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/normal-runtime.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "8f564264b965ad886738e52eae170a80cec873f41f32d65fe721a4d4363c55f7",
+      "name": "opening-four-actors",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/native-binding.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "da8db100f24448dc7d66e2a027b6374e5261c4577d730efe203838f8d240e87e",
+      "name": "shop-native-pointer-four-rotations",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/normal-runtime.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "8f564264b965ad886738e52eae170a80cec873f41f32d65fe721a4d4363c55f7",
+      "name": "normal-walk-tile-centres",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/walk-acceptance.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "f535c9ecc4835a8a78d9fdc108d748635c2005d59aef5118d87da09c461abcb1",
+      "name": "walking-visual-foot-slip-grounding",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/normal-runtime.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "8f564264b965ad886738e52eae170a80cec873f41f32d65fe721a4d4363c55f7",
+      "name": "furniture-avoidance",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/seated-fit.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "7f068b1f679e16ba6a9e96eab18a193cd2426cfa2696689e2b8351023a800d5d",
+      "name": "four-seated-working-directions",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/normal-runtime.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "8f564264b965ad886738e52eae170a80cec873f41f32d65fe721a4d4363c55f7",
+      "name": "next-day-four-staggered-arrivals",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/normal-runtime.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "8f564264b965ad886738e52eae170a80cec873f41f32d65fe721a4d4363c55f7",
+      "name": "mute",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/normal-runtime.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "8f564264b965ad886738e52eae170a80cec873f41f32d65fe721a4d4363c55f7",
+      "name": "runtime-exception-zero",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/updater-regressions.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "7bd092ef0f266d02ff97cf37b758c2ed507a17424cf7b14f0cc8488df3b2e4c6",
+      "name": "updater-regressions",
+      "passed": true
+    },
+    {
+      "independent": true,
+      "evidencePath": "Artifacts/WhiteHudRelease20260907/approval/hud-navigation.json",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "evidenceSha256": "464f137836fd0f600f0c85728f4cc84dab2d3337ec6f5b6ebc0fc4098ef6cdd8",
+      "name": "hud-navigation",
+      "passed": true
+    }
+  ],
+  "playerSha256": "48efab523aa684c653bd1254a6962d3410127b5c02dc1310f6f16f4810666556",
+  "schemaVersion": 1
+}

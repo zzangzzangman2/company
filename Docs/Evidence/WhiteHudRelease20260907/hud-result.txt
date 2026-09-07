@@ -1,0 +1,3 @@
+UNIFIED_OFFICE_HUD_QA: PASS
+One surface; default panel closed; live cash/date; 5 tabs; Business toggle; Escape; 1x/2x/4x; pause/resume; safe bounds; no overflow; runtimeErrors=0.
+Fresh normal game; EventSystem pointer events, not native mouse; no saves or updater activation.

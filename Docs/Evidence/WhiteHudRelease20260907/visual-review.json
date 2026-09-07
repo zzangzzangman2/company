@@ -1,0 +1,72 @@
+{
+  "passed": true,
+  "reviewedChairCaptures": [
+    {
+      "name": "chair-fit-father-seat_father.png",
+      "sha256": "3169b7c58d4adc5acb67997a895c202539c125f944ad41464920f5d9413070d3"
+    },
+    {
+      "name": "chair-fit-father-seat_mother.png",
+      "sha256": "0a994d21776f17c3fc2d8df12d6632d02b2dc9f98a7974a6e1eca3eeda1b295f"
+    },
+    {
+      "name": "chair-fit-father-seat_older_sister.png",
+      "sha256": "1c7f9624d5032b5bf942c1d23f07d40f8ca442b9a1de2c984699bae74a4a7b03"
+    },
+    {
+      "name": "chair-fit-father-seat_player.png",
+      "sha256": "7bde5754a040b7e6037d82150c65d6c9763131520dc848faa3d89a1624ec1b53"
+    },
+    {
+      "name": "chair-fit-player-seat_father.png",
+      "sha256": "0bbc05d8a99d155aef31d1b340418a314eda82df8eac8af8022abb2e2d8b9359"
+    },
+    {
+      "name": "chair-fit-player-seat_mother.png",
+      "sha256": "78917b107f65f519f9b814f18697ee5293148d7d4e36c8ca14157b3a995b506c"
+    },
+    {
+      "name": "chair-fit-player-seat_older_sister.png",
+      "sha256": "4ec6f480600731eeabeaf96f78b98a0c60d226c1fb908cf885ae9dd083dd3747"
+    },
+    {
+      "name": "chair-fit-player-seat_player.png",
+      "sha256": "b587f5e29b0b801b652d336101f5d1731dfdd5cc4d9a82654a23c3b51c874bb8"
+    }
+  ],
+  "retainedVisualSourcePaths": [
+    "Assets/FamilyCompany/Runtime/Character3D",
+    "Assets/FamilyCompany/Presentation.Unity/Resources/Family3D*",
+    "ArtSources"
+  ],
+  "limitations": "No new body/rig/clip promotion, no original-360 model reapproval, no pixel skin-centroid or zero foot-slip claim.",
+  "retainedVisualSourceCommit": "4b06247e",
+  "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+  "observations": "Direct review: all eight current seated images, normal next-day scene and actual frames at start/middle/end of 24 seconds. Bent knees/chair stems/typing hands retained; both feet alternate over multiple cycles and directions. Screenshots are not byte-identical because non-participating actor UI positions differ; no byte-identical-frame claim. Reviewed sheets are a chronological subset, not every one of the 391 frames. Four native-resolution current HUD captures were also directly reviewed.",
+  "reviewedWalkingSheets": [
+    {
+      "path": "Artifacts/ReleaseGameplay/c5199855-walk/review/sheets/all-frames-00.png",
+      "sha256": "c151a611b4737d4dd48f612628d257a4d1a8f609b2e6f6968f97a11213e2421f"
+    },
+    {
+      "path": "Artifacts/ReleaseGameplay/c5199855-walk/review/sheets/all-frames-03.png",
+      "sha256": "09fec1b4dedb53c06c56a5b341dabb10d4f3274c2e3d89f8e68c9bbfd4612b87"
+    },
+    {
+      "path": "Artifacts/ReleaseGameplay/c5199855-walk/review/sheets/all-frames-07.png",
+      "sha256": "8d6486698d0cab28fe8275642fd98477c3d70da39455d16c86a0290d31c51508"
+    },
+    {
+      "path": "Artifacts/ReleaseGameplay/c5199855-walk/review/sheets/all-frames-11.png",
+      "sha256": "62b7a576692508b6ed86c06a22477c077441a4fb3edaae83a69005ccfeaa263b"
+    },
+    {
+      "path": "Artifacts/ReleaseGameplay/c5199855-walk/review/sheets/all-frames-15.png",
+      "sha256": "6d9288f3de83e6a17eb9281c57f2bda2e055c5dd2b96009e334975856841b63c"
+    },
+    {
+      "path": "Artifacts/ReleaseGameplay/c5199855-walk/review/sheets/all-frames-19.png",
+      "sha256": "2e1f5078044292dd7ddafc7cc4ab67b60ec62692a5b89c3384a0dc273dc447b4"
+    }
+  ]
+}

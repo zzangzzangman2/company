@@ -1,0 +1,111 @@
+{
+  "releases": [
+    {
+      "independentReceiptPath": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\WhiteHudRelease20260907\\approval\\release-receipt.json",
+      "assets": [
+        {
+          "size": 424859,
+          "name": "22b4d57ed17179b286c9ee821da541eac3e9898ef2301b1906816c6ef421f4c4.gz",
+          "id": 548545436,
+          "digest": "sha256:ab34baef70f8a3ffcf033a244656fc34f4873cd2e539639bc0c1742d1670ff43"
+        },
+        {
+          "size": 137145086,
+          "name": "3da22f118953fa984677beb3a26ed22ea61b99a030fa3b76c08684c643203791.gz",
+          "id": 548545490,
+          "digest": "sha256:7a0baba4b6e01ed4b74534c9c63131bb43eedd639d74cb9a07be61536c3978c9"
+        },
+        {
+          "size": 24329947,
+          "name": "7b6203c94dd55fae4bc0942f46c66c4fda82c751873e9f059c0c4bf07067578c.gz",
+          "id": 548545664,
+          "digest": "sha256:dfe8e7420942f49a3b5f7c542435df3d4b00c538f28d9ca8ff0ac7a6ea0a85b3"
+        },
+        {
+          "size": 16894,
+          "name": "97246ef614e0abe23581bea8e46ff221c5d260347a68e786d4c6b67ef9a67496.gz",
+          "id": 548545788,
+          "digest": "sha256:61161d09684c1e3629e6a7dda38ce7758a9c6535e1b8c544daceca1165f05985"
+        },
+        {
+          "size": 1141,
+          "name": "99f8426a746da785c7888e26e089a80e41fd78968d7d4144c023f44fab93b9fe.gz",
+          "id": 548545835,
+          "digest": "sha256:38f86252122d8d39bdf678f1b9a54f935f83bdee68af252c33ba77f1cbb60209"
+        },
+        {
+          "size": 42121,
+          "name": "ab1efc743773b09b8c1903c9ee9c2e0afa920a1c9ebdecc6065fd8bf5ed296e8.gz",
+          "id": 548545881,
+          "digest": "sha256:02ee4c3d781dfad007d7ae4e2ca92a319c8928e130e968f5c299372e3672482a"
+        },
+        {
+          "size": 583970,
+          "name": "ae45123c9c6d03d2e49632da72ec6055f7c4b032c68411ac95f90ab1c6fb8835.gz",
+          "id": 548545951,
+          "digest": "sha256:c4ef5789b012ce7d9bd29cade1a2ade6c6482ba8a6680a33c8fa96c50c8a0ec8"
+        },
+        {
+          "size": 14275,
+          "name": "ca066fbe82e9dedf69a217cca92effbfd3870c679c210d231b088db979aa9c12.gz",
+          "id": 548546088,
+          "digest": "sha256:c65353f9b9c271f0a793d10142b7bd5b05e432412d5c75f502f8b4827b64dd01"
+        },
+        {
+          "size": 85856,
+          "name": "dcb139ffc07ced30a8d3bd52283a7f642acee6e2a50122e75076a86d57f8c02d.gz",
+          "id": 548546140,
+          "digest": "sha256:5097df66c17815878cf206e3afc4a04dfde0b73e03379424781c4cefb0a59eca"
+        },
+        {
+          "size": 2607,
+          "name": "de21ff61df186c94eea9c082ebef30f207c7b4b13dc59b8ebbdd70514dc79d98.gz",
+          "id": 548546174,
+          "digest": "sha256:4b2d5a0821e1811771dd0ebd8e15c6fc4fea8158f389870b278f9fb7d2075e5e"
+        },
+        {
+          "size": 19723,
+          "name": "e199d067faf3561832cf0e4af967182614034b206935a423215be2a92df624ea.gz",
+          "id": 548546204,
+          "digest": "sha256:7c0dc2051d6a03d0e435e86976a8c8968f4013aa632c7bf66a2ece8a3017b402"
+        },
+        {
+          "size": 335,
+          "name": "e2e142705751bebb05fe52946a5b8f29108cabd4172c92b93a43a84be323beee.gz",
+          "id": 548546216,
+          "digest": "sha256:64b71d58c41ad1880fa6b8e2e96b6e5fcc38346616cc2b01df4f2cdf5a79a4cc"
+        },
+        {
+          "size": 75169,
+          "name": "family-company-manifest.json",
+          "id": 548546249,
+          "digest": "sha256:9664e3ec82544b62d84709cc5a53d7995f78f627fd0f1fed609d819ed2ce78d8"
+        },
+        {
+          "size": 273144271,
+          "name": "FamilyCompany-Windows.zip",
+          "id": 548546276,
+          "digest": "sha256:b42c4f76f94766c12179d3086ca2df4e4352145e01ba7cfc99450622abdfbd86"
+        },
+        {
+          "size": 143,
+          "name": "fed3fe8262144fdfad852295f7650abafbcc2c136f009c6364afdb19765fdb19.gz",
+          "id": 548546701,
+          "digest": "sha256:2b082498f89c090f09a11bfabc327bc8e035484b0fc34a2a3d64483c2e3ce16a"
+        },
+        {
+          "size": 4762,
+          "name": "release-receipt.json",
+          "id": 548546732,
+          "digest": "sha256:aea89c07fd6c093853dbdcee3b6fa8342ca58684aa3e3bda702627aeedc5b788"
+        }
+      ],
+      "id": 383977367,
+      "approvalReference": "User continuation ㄱ after pulling the company white HUD source/build and explaining it was not yet a public patch, 2026-09-07. Deploy the received HUD as-is; existing approved world/body/pose/monitor appearance retained. No new character promotion or shutdown.",
+      "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+      "independentReceiptSha256": "aea89c07fd6c093853dbdcee3b6fa8342ca58684aa3e3bda702627aeedc5b788",
+      "tag": "fc-win-20260907.2"
+    }
+  ],
+  "schemaVersion": 1
+}

@@ -2,7 +2,45 @@
 
 Last updated: 2026-09-07. This file contains current handoff state only. Superseded Father experiments are not current inputs.
 
-## 2026-09-07 current source work: unified white office HUD (not published)
+## 2026-09-07 latest delivery: unified white office HUD published (v5)
+
+[fc-win-20260907.2](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260907.2), sequence **5**,
+release ID **383977367**, game source **c519985513f3953e6612467f48c895ac29100bf6** is published.
+The company-built EXE was not in Git; the home canonical checkout rebuilt and revalidated the exact pulled source.
+No world, character, furniture, simulation/save or shipping-worker source changed from public v4.
+
+- One white live company/cash/date/time/speed header and a compact five-icon footer; default panels closed.
+  Four native HUD resolutions PASS, no overflow; independent full navigation 54 EventSystem routes PASS.
+  These are private-desktop tests, not new native OS mouse clicks. Detailed panels retain their existing skin.
+- Clean Unity 6000.3.21f1 non-Development build PASS, **184.07s** including hashing; initial asset refresh 77.320s.
+  Pure core/save PASS **11.035s**, Editor broad PASS **23.851s**. Warm Library/Bee was retained.
+- Fresh normal Release: **8,148** navigation samples, collision violations **0**, maximum rail error
+  **0.0000991875** cells (unchanged 0.0001 bound). Four exact 09:00/01/02/03 releases; first seated
+  player 09:09, sister 09:06, father 09:17, mother 09:19. 3,248 settled seat samples, failures 0.
+  Controlled two-body/four-direction fit: 264 samples, penetration 0, maximum individual hand error 0.0089.
+  Actual 24-second walk: 391 frames, all four foot-midpoint/lead-alternation gates passed; runtime errors 0.
+  Six chronological sheets and all eight seated images were reviewed, not all 391 frames individually.
+- Business regression PASS: normal first 4 PH, 248/248 required/observed desk minutes; checkpoint integration
+  final development 4 PH + support 2 PH, first sale 180,000 Won, weekly 60,000 Won. Earlier lesson/development
+  history and billing jumps remain explicit checkpoints, not uninterrupted full-week play. Updater tests **81/81**.
+- The build initially emitted 170 files including one Unity `BurstDebugInformation_DoNotShip` diagnostic text.
+  Publishing was stopped before any draft existed; that 60,653-byte text was retained outside the payload.
+  All **169 shipping files** are byte-identical to the tested files; original 170-file construction manifest and
+  packaging-exclusion evidence are preserved. No failed runtime build was reused or gate relaxed.
+- Published 16 assets (13 new gzip files, manifest, receipt, full ZIP), each verified by ID/size/SHA-256.
+  New-PC ZIP: **273,144,271 bytes**, SHA-256
+  `b42c4f76f94766c12179d3086ca2df4e4352145e01ba7cfc99450622abdfbd86`.
+  The fixed Downloads main stays unchanged. Actual public v2→v5 transfer PASS: **16 changed files,
+  162,939,018 compressed bytes (155.4 MiB), 175 download progress events through 100%, 153 reused**,
+  all 169 hashes verified. Main, user v2 cache/pointer and five saves/backups remained unchanged.
+  This was isolated shipping-worker PrepareOnly, not a new Unity activation/restart or user-desktop capture.
+  Evidence: [WhiteHudRelease20260907](Evidence/WhiteHudRelease20260907/README.md).
+- Fresh post-publication remote branch/tag/release inventory PASS: prohibited=0, unknown=0, pagination complete
+  (`2026-09-07T09:48:59Z`). New receipts have byte-preserving Git attributes; staged blobs were checked against raw files.
+- Company continuation: [COMPANY_HANDOFF_2026-09-07.md](COMPANY_HANDOFF_2026-09-07.md).
+  No new character promotion, paid generation, desktop interaction or shutdown was requested/performed this turn.
+
+## 2026-09-07 earlier company source/build: unified white office HUD (subsequently published above)
 
 - User requested build and push of the revised UI. Actual `MainNavigationHudPresenter` now renders one
   white company/cash/date/time/pause/speed header and one compact five-icon bottom rail. The office starts
@@ -42,7 +80,7 @@ Last updated: 2026-09-07. This file contains current handoff state only. Superse
   No public Release was created, no Downloads installation was changed, and this UI is not available through
   the fixed main's updater until separately published. Public v4 below remains current.
 
-## 2026-09-07 latest delivery: first business loop published (v4)
+## 2026-09-07 previous delivery: first business loop published (v4)
 
 [fc-win-20260907.1](https://github.com/zzangzzangman2/company/releases/tag/fc-win-20260907.1), sequence **4**,
 release ID **383654897**, game source **c0709823c0e45c4152c673ca0b67d7a1e1506bc7** is published.

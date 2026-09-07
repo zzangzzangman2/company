@@ -1,5 +1,14 @@
 # 개발 설정 즉시 반영과 GitHub 자동패치
 
+최신 상태(2026-09-07): **흰색 통합 HUD `fc-win-20260907.2` / sequence 5 공개**.
+게임 소스 `c519985513f3953e6612467f48c895ac29100bf6`, 기존 메인/worker/세이브 유지.
+실제 public v2→v5 전송: 16개 / 162,939,018 compressed bytes, 175 progress events→100%, 169개 hash PASS.
+[v5 증거](Evidence/WhiteHudRelease20260907/README.md), [고정 메인 안내](MAIN_GAME_ENTRY.md).
+Unity가 부가 출력한 `BurstDebugInformation_DoNotShip` 텍스트는 exact hash를 기록하고 패키지 밖에 보관했다.
+원본 build 170개 기록과 실제 shipping 169개를 구분하며 모든 runtime bytes는 검사 때와 같다.
+
+아래 v2~v4 수치와 기록은 각 당시 검사 범위이며 현재 최신 버전을 덮어쓰지 않는다.
+
 현재 상태(2026-09-06): **모니터 정렬 패치 `fc-win-20260906.3` 공개, 기존 메인 유지**.
 게임 commit은 `4b06247ea2c4652fc320fa13c141f3501e3b5cae`이며 최종 판정은 PROJECT_STATE.md.
 정본 저장소는 `main`, `https://github.com/zzangzzangman2/company`다. 개발 소스 push와 게임 배포는 다르다.

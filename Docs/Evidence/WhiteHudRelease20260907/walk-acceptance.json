@@ -1,0 +1,209 @@
+{
+  "independent": true,
+  "scope": "Fresh exact Release multi-cycle actual walking capture and independent centre/foot-alternation measurements; retained accepted models/clips. Agent/path planning unchanged from public v4 and freshly exercised. No mathematical zero-skin-slip claim; ankle sampling limitations remain.",
+  "commit": "c519985513f3953e6612467f48c895ac29100bf6",
+  "process": {
+    "playerSha256": "48EFAB523AA684C653BD1254A6962D3410127B5C02DC1310F6F16F4810666556",
+    "seconds": 32.5417724,
+    "desktopSwitchAllowed": false,
+    "scenario": "walk",
+    "inputDesktopAtEnd": "Default",
+    "forcedStop": false,
+    "inputDesktopAtStart": "Default",
+    "privateDesktop": "FamilyCompanyQa_17ff5d1d60b945308f523cb3a8e0daa5",
+    "pid": 21272,
+    "exitCode": 0
+  },
+  "actualCurrentCapture": {
+    "artifact": "C:\\Users\\godho\\Documents\\Codex\\fc_agents\\integration_p0\\Artifacts\\ReleaseGameplay\\c5199855-walk",
+    "capture": "OPENING_WALK_AUDIT: CAPTURED\ncapture complete; visual/tile acceptance is a separate analysis\nframes=391 forcedRoutes=0 teleports=0 fixedCaptureClock=false runtimeErrors=0\nstatic=0 interaction=0 agentPenetration=0\n",
+    "footGate": "moving foot midpoint projected to ground: median <= 4px, max <= 8px",
+    "note": "Ankle contact travel includes foot roll; it is not an independent skin-slip PASS/FAIL. Retained path polyline distance may increase when a replan omits the segment from the current root to its first waypoint; do not call it tile-lane deviation. Lowest skin Y is sampled every six frames and is not a completed grounding gate.",
+    "actors": {
+      "father": {
+        "frames": 391,
+        "movingFrames": 369,
+        "seconds": 23.979,
+        "footMidPx": {
+          "median": 1.5773,
+          "max": 3.324427,
+          "min": 0.022328
+        },
+        "straightFootMidPx": {
+          "median": 1.569227,
+          "max": 3.324427,
+          "min": 0.022328
+        },
+        "footMidGate": true,
+        "retainedPathPolylinePx": {
+          "median": 0.000136,
+          "max": 0.000356,
+          "min": 0.0
+        },
+        "nearestCardinalCellCentreLinePx": {
+          "median": 0.0,
+          "max": 3.8E-05,
+          "min": 0.0
+        },
+        "lowestSkinY": {
+          "median": 0.126398,
+          "max": 0.13286,
+          "min": 0.111714
+        },
+        "distance": 21.084,
+        "leadAlternations": 53,
+        "turnEpisodes": 7,
+        "contactAnkleDeltaWorld": {
+          "median": 0.015616,
+          "max": 0.089136,
+          "min": 0.000282
+        },
+        "directions": [
+          "1",
+          "3",
+          "5",
+          "6",
+          "7"
+        ]
+      },
+      "mother": {
+        "frames": 391,
+        "movingFrames": 378,
+        "seconds": 23.979,
+        "footMidPx": {
+          "median": 1.587563,
+          "max": 3.294316,
+          "min": 0.034383
+        },
+        "straightFootMidPx": {
+          "median": 1.579209,
+          "max": 3.294316,
+          "min": 0.034383
+        },
+        "footMidGate": true,
+        "retainedPathPolylinePx": {
+          "median": 0.000136,
+          "max": 0.000382,
+          "min": 0.0
+        },
+        "nearestCardinalCellCentreLinePx": {
+          "median": 0.0,
+          "max": 7.6E-05,
+          "min": 0.0
+        },
+        "lowestSkinY": {
+          "median": 0.127062,
+          "max": 0.132714,
+          "min": 0.112043
+        },
+        "distance": 21.0724,
+        "leadAlternations": 53,
+        "turnEpisodes": 9,
+        "contactAnkleDeltaWorld": {
+          "median": 0.013231,
+          "max": 0.073475,
+          "min": 0.000338
+        },
+        "directions": [
+          "1",
+          "2",
+          "3",
+          "5",
+          "7"
+        ]
+      },
+      "older_sister": {
+        "frames": 391,
+        "movingFrames": 371,
+        "seconds": 23.979,
+        "footMidPx": {
+          "median": 2.093696,
+          "max": 4.144949,
+          "min": 0.049995
+        },
+        "straightFootMidPx": {
+          "median": 2.11486,
+          "max": 4.144949,
+          "min": 0.049995
+        },
+        "footMidGate": true,
+        "retainedPathPolylinePx": {
+          "median": 0.000136,
+          "max": 0.000409,
+          "min": 0.0
+        },
+        "nearestCardinalCellCentreLinePx": {
+          "median": 0.0,
+          "max": 3.8E-05,
+          "min": 0.0
+        },
+        "lowestSkinY": {
+          "median": 0.13232,
+          "max": 0.143359,
+          "min": 0.124104
+        },
+        "distance": 21.5532,
+        "leadAlternations": 54,
+        "turnEpisodes": 11,
+        "contactAnkleDeltaWorld": {
+          "median": 0.005593,
+          "max": 0.073321,
+          "min": 0.000159
+        },
+        "directions": [
+          "1",
+          "3",
+          "5",
+          "6",
+          "7"
+        ]
+      },
+      "player": {
+        "frames": 391,
+        "movingFrames": 372,
+        "seconds": 23.979,
+        "footMidPx": {
+          "median": 2.007961,
+          "max": 4.297741,
+          "min": 0.062738
+        },
+        "straightFootMidPx": {
+          "median": 2.005636,
+          "max": 4.297741,
+          "min": 0.062738
+        },
+        "footMidGate": true,
+        "retainedPathPolylinePx": {
+          "median": 0.000136,
+          "max": 0.000437,
+          "min": 0.0
+        },
+        "nearestCardinalCellCentreLinePx": {
+          "median": 0.0,
+          "max": 3.8E-05,
+          "min": 0.0
+        },
+        "lowestSkinY": {
+          "median": 0.132165,
+          "max": 0.143359,
+          "min": 0.124225
+        },
+        "distance": 20.715,
+        "leadAlternations": 52,
+        "turnEpisodes": 10,
+        "contactAnkleDeltaWorld": {
+          "median": 0.0047,
+          "max": 0.081193,
+          "min": 5.3E-05
+        },
+        "directions": [
+          "1",
+          "3",
+          "5",
+          "7"
+        ]
+      }
+    }
+  },
+  "passed": true
+}
